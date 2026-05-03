@@ -10,6 +10,7 @@ import {
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import type { CharacterOverviewResponse } from '../../dashboard/types/dashboard.types';
 import {
+    getAutoCombatRecentEvents,
     getAutoCombatStatus,
     startAutoCombat,
     stopAutoCombat,
@@ -238,6 +239,7 @@ export function AutoCombatRealtimeProvider({
   const activeEventTimeoutRef = useRef<number | null>(null);
   const reloadTimeoutRef = useRef<number | null>(null);
   const wasBackgroundedRef = useRef(false);
+  const recentEventsDebugRequestRef = useRef(0);
 
   useEffect(() => {
     stateRef.current = state;
@@ -263,6 +265,55 @@ export function AutoCombatRealtimeProvider({
       activeEventTimeoutRef.current = null;
     }
   }, []);
+
+  /**
+   * Microetapa segura:
+   *
+   * Busca /recent-events apenas para validar se o frontend consegue receber
+   * o histórico salvo no backend.
+   *
+   * Não altera reducer.
+   * Não altera BattleLog.
+   * Não altera ActivityBar.
+   * Não altera AutoCombatPage.
+   */
+  const loadRecentEventsForDebug = useCallback(
+    async (reason: string) => {
+      if (!normalizedCharacterId) return;
+
+      const requestId = recentEventsDebugRequestRef.current + 1;
+      recentEventsDebugRequestRef.current = requestId;
+
+      try {
+        const response = await getAutoCombatRecentEvents(normalizedCharacterId);
+
+        if (recentEventsDebugRequestRef.current !== requestId) {
+          return;
+        }
+
+        console.debug('[auto-combat:recent-events]', {
+          reason,
+          active: response.active,
+          hasActiveAutoCombat: response.hasActiveAutoCombat,
+          sessionId: response.session?.id ?? null,
+          sessionStatus: response.session?.status ?? null,
+          eventsCount: response.events.length,
+          latestSequence: response.latestSequence,
+          firstSequence: response.events[0]?.sequence ?? null,
+          lastSequence:
+            response.events[response.events.length - 1]?.sequence ?? null,
+          lastEventType:
+            response.events[response.events.length - 1]?.type ?? null,
+        });
+      } catch (error) {
+        console.debug('[auto-combat:recent-events:error]', {
+          reason,
+          error,
+        });
+      }
+    },
+    [normalizedCharacterId],
+  );
 
   /**
    * Limpeza suave.
@@ -481,7 +532,14 @@ export function AutoCombatRealtimeProvider({
     scheduleReload(AFTER_VISIBILITY_RELOAD_DELAY_MS, {
       clearVisualTimeline: true,
     });
-  }, [clearVisualTimeline, normalizedCharacterId, scheduleReload]);
+
+    void loadRecentEventsForDebug('return-to-page');
+  }, [
+    clearVisualTimeline,
+    loadRecentEventsForDebug,
+    normalizedCharacterId,
+    scheduleReload,
+  ]);
 
   const start = useCallback(
     async (payload: StartAutoCombatPayload) => {
@@ -537,6 +595,8 @@ export function AutoCombatRealtimeProvider({
           clearVisualTimeline: false,
         });
 
+        void loadRecentEventsForDebug('after-start');
+
         return response;
       } catch (error) {
         const message = getApiErrorMessage(
@@ -552,7 +612,12 @@ export function AutoCombatRealtimeProvider({
         throw error;
       }
     },
-    [normalizedCharacterId, resetFullSessionVisualState, scheduleReload],
+    [
+      loadRecentEventsForDebug,
+      normalizedCharacterId,
+      resetFullSessionVisualState,
+      scheduleReload,
+    ],
   );
 
   const stop = useCallback(async () => {
@@ -583,6 +648,8 @@ export function AutoCombatRealtimeProvider({
         clearVisualTimeline: true,
       });
 
+      void loadRecentEventsForDebug('after-stop');
+
       return response;
     } catch (error) {
       const message = getApiErrorMessage(
@@ -597,7 +664,12 @@ export function AutoCombatRealtimeProvider({
 
       throw error;
     }
-  }, [clearScheduledActiveEvent, normalizedCharacterId, scheduleReload]);
+  }, [
+    clearScheduledActiveEvent,
+    loadRecentEventsForDebug,
+    normalizedCharacterId,
+    scheduleReload,
+  ]);
 
   const handleStatusPayload = useCallback(
     (payload: AutoCombatStatusResponse) => {
@@ -635,8 +707,15 @@ export function AutoCombatRealtimeProvider({
       scheduleReload(AFTER_TERMINAL_RELOAD_DELAY_MS, {
         clearVisualTimeline: true,
       });
+
+      void loadRecentEventsForDebug('finished');
     },
-    [clearVisualTimeline, normalizedCharacterId, scheduleReload],
+    [
+      clearVisualTimeline,
+      loadRecentEventsForDebug,
+      normalizedCharacterId,
+      scheduleReload,
+    ],
   );
 
   const handleStoppedPayload = useCallback(
@@ -658,8 +737,15 @@ export function AutoCombatRealtimeProvider({
       scheduleReload(AFTER_TERMINAL_RELOAD_DELAY_MS, {
         clearVisualTimeline: true,
       });
+
+      void loadRecentEventsForDebug('stopped');
     },
-    [clearVisualTimeline, normalizedCharacterId, scheduleReload],
+    [
+      clearVisualTimeline,
+      loadRecentEventsForDebug,
+      normalizedCharacterId,
+      scheduleReload,
+    ],
   );
 
   const handleRealtimeEvent = useCallback(
@@ -806,6 +892,8 @@ export function AutoCombatRealtimeProvider({
       scheduleReload(AFTER_VISIBILITY_RELOAD_DELAY_MS, {
         clearVisualTimeline: true,
       });
+
+      void loadRecentEventsForDebug('window-focus');
     }
 
     function handlePageShow() {
@@ -829,6 +917,7 @@ export function AutoCombatRealtimeProvider({
     };
   }, [
     clearVisualTimeline,
+    loadRecentEventsForDebug,
     normalizedCharacterId,
     reconcileAfterReturningToPage,
     scheduleReload,
