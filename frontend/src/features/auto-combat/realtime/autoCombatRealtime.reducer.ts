@@ -130,6 +130,12 @@ export type AutoCombatRealtimeAction =
       status: AutoCombatStatusResponse | null;
     }
   | {
+      type: 'HYDRATE_RECENT_EVENTS';
+      characterId: string;
+      sessionId?: string | null;
+      events: AutoCombatRealtimeEvent[];
+    }
+  | {
       type: 'ENQUEUE_EVENT';
       characterId: string;
       event: AutoCombatRealtimeEvent;
@@ -691,12 +697,193 @@ function markEventAsProcessed(
   };
 }
 
+function markEventsAsProcessed(
+  state: AutoCombatRealtimeState,
+  events: AutoCombatRealtimeEvent[],
+) {
+  let processedEventKeys = state.processedEventKeys;
+  let processedGenericFingerprints = state.processedGenericFingerprints;
+  let processedMobSpawnFingerprints = state.processedMobSpawnFingerprints;
+  let processedPotionUsedFingerprints = state.processedPotionUsedFingerprints;
+
+  for (const event of events) {
+    const {
+      eventKey,
+      genericFingerprint,
+      mobSpawnFingerprint,
+      potionUsedFingerprint,
+    } = getEventFingerprints(event);
+
+    processedEventKeys = addUniqueLimited(
+      processedEventKeys,
+      eventKey,
+      MAX_EVENT_CACHE_SIZE,
+    );
+
+    processedGenericFingerprints = addUniqueLimited(
+      processedGenericFingerprints,
+      genericFingerprint,
+      MAX_EVENT_CACHE_SIZE,
+    );
+
+    processedMobSpawnFingerprints = addUniqueLimited(
+      processedMobSpawnFingerprints,
+      mobSpawnFingerprint,
+      MAX_FINGERPRINT_CACHE_SIZE,
+    );
+
+    processedPotionUsedFingerprints = addUniqueLimited(
+      processedPotionUsedFingerprints,
+      potionUsedFingerprint,
+      MAX_FINGERPRINT_CACHE_SIZE,
+    );
+  }
+
+  return {
+    processedEventKeys,
+    processedGenericFingerprints,
+    processedMobSpawnFingerprints,
+    processedPotionUsedFingerprints,
+  };
+}
+
+function getRealtimeEventUnknownField(
+  event: AutoCombatRealtimeEvent,
+  fieldName: string,
+) {
+  const eventRecord = event as unknown as Record<string, unknown>;
+
+  return eventRecord[fieldName];
+}
+
+function getRealtimeEventStringField(
+  event: AutoCombatRealtimeEvent,
+  fieldName: string,
+) {
+  const value = getRealtimeEventUnknownField(event, fieldName);
+
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function getRealtimeEventNumberField(
+  event: AutoCombatRealtimeEvent,
+  fieldName: string,
+) {
+  const value = getRealtimeEventUnknownField(event, fieldName);
+
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getStoredRealtimeEventId(event: AutoCombatRealtimeEvent) {
+  return (
+    getRealtimeEventStringField(event, 'eventId') ??
+    getRealtimeEventStringField(event, 'id')
+  );
+}
+
+function getStoredRealtimeEventSequence(event: AutoCombatRealtimeEvent) {
+  return getRealtimeEventNumberField(event, 'sequence');
+}
+
+function getRealtimeEventCreatedAtTimestamp(event: AutoCombatRealtimeEvent) {
+  const createdAt = getRealtimeEventStringField(event, 'createdAt');
+
+  if (!createdAt) {
+    return 0;
+  }
+
+  const timestamp = new Date(createdAt).getTime();
+
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function getStoredRealtimeEventStableKey(event: AutoCombatRealtimeEvent) {
+  const eventId = getStoredRealtimeEventId(event);
+
+  if (eventId) {
+    return `event:${eventId}`;
+  }
+
+  const sessionId = getEventSessionId(event);
+  const sequence = getStoredRealtimeEventSequence(event);
+
+  if (sessionId && sequence !== null) {
+    return `session:${sessionId}:sequence:${sequence}`;
+  }
+
+  return '';
+}
+
+function isSameBattleLogEvent(
+  firstEvent: AutoCombatRealtimeEvent,
+  secondEvent: AutoCombatRealtimeEvent,
+) {
+  const firstStableKey = getStoredRealtimeEventStableKey(firstEvent);
+  const secondStableKey = getStoredRealtimeEventStableKey(secondEvent);
+
+  if (firstStableKey && secondStableKey && firstStableKey === secondStableKey) {
+    return true;
+  }
+
+  return isSameRealtimeEvent(firstEvent, secondEvent);
+}
+
+function sortBattleLogEventsNewestFirst(events: AutoCombatRealtimeEvent[]) {
+  return [...events].sort((firstEvent, secondEvent) => {
+    const firstSequence = getStoredRealtimeEventSequence(firstEvent);
+    const secondSequence = getStoredRealtimeEventSequence(secondEvent);
+
+    if (firstSequence !== null && secondSequence !== null) {
+      return secondSequence - firstSequence;
+    }
+
+    const firstTimestamp = getRealtimeEventCreatedAtTimestamp(firstEvent);
+    const secondTimestamp = getRealtimeEventCreatedAtTimestamp(secondEvent);
+
+    if (firstTimestamp !== secondTimestamp) {
+      return secondTimestamp - firstTimestamp;
+    }
+
+    const firstCombatIndex = toSafeNumber(
+      getRealtimeEventUnknownField(firstEvent, 'combatIndex'),
+      0,
+    );
+
+    const secondCombatIndex = toSafeNumber(
+      getRealtimeEventUnknownField(secondEvent, 'combatIndex'),
+      0,
+    );
+
+    if (firstCombatIndex !== secondCombatIndex) {
+      return secondCombatIndex - firstCombatIndex;
+    }
+
+    const firstRound = toSafeNumber(
+      getRealtimeEventUnknownField(firstEvent, 'round'),
+      0,
+    );
+
+    const secondRound = toSafeNumber(
+      getRealtimeEventUnknownField(secondEvent, 'round'),
+      0,
+    );
+
+    return secondRound - firstRound;
+  });
+}
+
 function appendBattleLogEvent(
   currentEvents: AutoCombatRealtimeEvent[],
   event: AutoCombatRealtimeEvent,
 ) {
   const alreadyExists = currentEvents.some((currentEvent) => {
-    return isSameRealtimeEvent(currentEvent, event);
+    return isSameBattleLogEvent(currentEvent, event);
   });
 
   if (alreadyExists) {
@@ -708,6 +895,36 @@ function appendBattleLogEvent(
    * O componente de log pode inverter somente para renderizar antigo -> recente.
    */
   return [event, ...currentEvents].slice(0, MAX_BATTLE_LOG_SIZE);
+}
+
+function mergeRecentEventsIntoBattleLog(
+  currentEvents: AutoCombatRealtimeEvent[],
+  recentEvents: AutoCombatRealtimeEvent[],
+) {
+  let hasNewEvent = false;
+  const nextEvents = [...currentEvents];
+
+  for (const recentEvent of recentEvents) {
+    const alreadyExists = nextEvents.some((currentEvent) => {
+      return isSameBattleLogEvent(currentEvent, recentEvent);
+    });
+
+    if (alreadyExists) {
+      continue;
+    }
+
+    nextEvents.push(recentEvent);
+    hasNewEvent = true;
+  }
+
+  if (!hasNewEvent) {
+    return currentEvents;
+  }
+
+  return sortBattleLogEventsNewestFirst(nextEvents).slice(
+    0,
+    MAX_BATTLE_LOG_SIZE,
+  );
 }
 
 function shouldDeferStatusProgress(state: AutoCombatRealtimeState) {
@@ -992,6 +1209,97 @@ function hydrateFromStatus(
   };
 }
 
+function hydrateRecentEvents(
+  state: AutoCombatRealtimeState,
+  characterId: string,
+  sessionId: string | null | undefined,
+  events: AutoCombatRealtimeEvent[],
+): AutoCombatRealtimeState {
+  if (state.characterId && state.characterId !== characterId) {
+    return state;
+  }
+
+  if (!Array.isArray(events) || events.length <= 0) {
+    return state;
+  }
+
+  const currentSessionId = state.session?.id ?? null;
+  const targetSessionId = sessionId ?? currentSessionId ?? null;
+
+  const validEvents = events.filter((event) => {
+    if (!event) {
+      return false;
+    }
+
+    if (!isEventForCharacter(characterId, event)) {
+      return false;
+    }
+
+    const eventSessionId = getEventSessionId(event);
+
+    if (targetSessionId && eventSessionId && eventSessionId !== targetSessionId) {
+      return false;
+    }
+
+    if (currentSessionId && eventSessionId && eventSessionId !== currentSessionId) {
+      return false;
+    }
+
+    return true;
+  });
+
+  if (validEvents.length <= 0) {
+    return state;
+  }
+
+  /**
+   * Importante:
+   * recentEvents são histórico/snapshot, não animação.
+   *
+   * Por isso:
+   * - não entram em eventQueue;
+   * - não viram activeEvent;
+   * - não disparam visual/hit novamente;
+   * - apenas completam o BattleLog.
+   */
+  const nextBattleLogEvents = mergeRecentEventsIntoBattleLog(
+    state.battleLogEvents,
+    validEvents,
+  );
+
+  /**
+   * Marca como processado para evitar que eventos antigos, caso cheguem atrasados
+   * pelo socket, sejam enfileirados e animados novamente.
+   */
+  const processedMarkers = markEventsAsProcessed(state, validEvents);
+
+  const didChange =
+    nextBattleLogEvents !== state.battleLogEvents ||
+    processedMarkers.processedEventKeys !== state.processedEventKeys ||
+    processedMarkers.processedGenericFingerprints !==
+      state.processedGenericFingerprints ||
+    processedMarkers.processedMobSpawnFingerprints !==
+      state.processedMobSpawnFingerprints ||
+    processedMarkers.processedPotionUsedFingerprints !==
+      state.processedPotionUsedFingerprints;
+
+  if (!didChange) {
+    return state;
+  }
+
+  return {
+    ...state,
+
+    characterId,
+    battleLogEvents: nextBattleLogEvents,
+
+    ...processedMarkers,
+
+    hasLoadedOnce: true,
+    updatedAt: now(),
+  };
+}
+
 function enqueueRealtimeEvent(
   state: AutoCombatRealtimeState,
   characterId: string,
@@ -1262,6 +1570,15 @@ export function autoCombatRealtimeReducer(
 
     case 'HYDRATE_STATUS': {
       return hydrateFromStatus(state, action.characterId, action.status);
+    }
+
+    case 'HYDRATE_RECENT_EVENTS': {
+      return hydrateRecentEvents(
+        state,
+        action.characterId,
+        action.sessionId,
+        action.events,
+      );
     }
 
     case 'ENQUEUE_EVENT': {
