@@ -1,0 +1,1030 @@
+================= backend\src\modules\auto-combat\auto-combat.gateway.ts ================
+import { Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import {
+    ConnectedSocket,
+    MessageBody,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    SubscribeMessage,
+    WebSocketGateway,
+    WebSocketServer,
+} from '@nestjs/websockets';
+import type { Server, Socket } from 'socket.io';
+import { PrismaService } from '../../prisma/prisma.service';
+
+type JwtSocketPayload = {
+  sub: string;
+  email?: string;
+  role?: string;
+  iat?: number;
+  exp?: number;
+};
+
+type AutoCombatJoinPayload = {
+  characterId?: string;
+};
+
+type AutoCombatLeavePayload = {
+  characterId?: string;
+};
+
+type AutoCombatSocketData = {
+  userId?: string;
+  email?: string | null;
+  joinedCharacterRooms?: Set<string>;
+};
+
+type AuthenticatedSocket = Socket & {
+  data: Socket['data'] & AutoCombatSocketData;
+};
+
+@WebSocketGateway({
+  namespace: '/auto-combat',
+  cors: {
+    origin: true,
+    credentials: true,
+  },
+})
+export class AutoCombatGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
+  @WebSocketServer()
+  server!: Server;
+
+  private readonly logger = new Logger(AutoCombatGateway.name);
+
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  async handleConnection(client: AuthenticatedSocket) {
+    try {
+      const token = this.extractToken(client);
+
+      if (!token) {
+        client.emit('auto-combat:error', {
+          message: 'Token de autenticação não enviado no WebSocket.',
+        });
+
+        client.disconnect(true);
+        return;
+      }
+
+      const payload = await this.jwtService.verifyAsync<JwtSocketPayload>(
+        token,
+      );
+
+      const user = await this.prisma.user.findUnique({
+        where: {
+          id: payload.sub,
+        },
+        select: {
+          id: true,
+          email: true,
+        },
+      });
+
+      if (!user) {
+        client.emit('auto-combat:error', {
+          message: 'Usuário do WebSocket não encontrado.',
+        });
+
+        client.disconnect(true);
+        return;
+      }
+
+      client.data.userId = user.id;
+      client.data.email = user.email;
+      client.data.joinedCharacterRooms = new Set<string>();
+
+      await client.join(this.getUserRoom(user.id));
+
+      client.emit('auto-combat:connected', {
+        socketId: client.id,
+        userId: user.id,
+      });
+
+      this.logger.log(`Socket conectado: ${client.id} | userId=${user.id}`);
+    } catch {
+      client.emit('auto-combat:error', {
+        message: 'Não foi possível autenticar o WebSocket.',
+      });
+
+      client.disconnect(true);
+    }
+  }
+
+  handleDisconnect(client: AuthenticatedSocket) {
+    this.logger.log(`Socket desconectado: ${client.id}`);
+  }
+
+  @SubscribeMessage('auto-combat:join')
+  async handleJoinAutoCombatRoom(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: AutoCombatJoinPayload,
+  ) {
+    const userId = client.data.userId;
+    const characterId = payload?.characterId;
+
+    if (!userId) {
+      client.emit('auto-combat:error', {
+        message: 'Socket não autenticado.',
+      });
+
+      return {
+        ok: false,
+      };
+    }
+
+    if (!characterId) {
+      client.emit('auto-combat:error', {
+        message: 'ID do personagem não enviado para entrar na sala.',
+      });
+
+      return {
+        ok: false,
+      };
+    }
+
+    const character = await this.prisma.character.findFirst({
+      where: {
+        id: characterId,
+        userId,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (!character) {
+      client.emit('auto-combat:error', {
+        message: 'Personagem não encontrado para este usuário.',
+      });
+
+      return {
+        ok: false,
+      };
+    }
+
+    const room = this.getCharacterRoom(character.id);
+
+    await client.join(room);
+
+    client.data.joinedCharacterRooms?.add(room);
+
+    client.emit('auto-combat:joined', {
+      characterId: character.id,
+      characterName: character.name,
+      room,
+    });
+
+    this.logger.log(
+      `Socket ${client.id} entrou na sala ${room} | personagem=${character.name}`,
+    );
+
+    return {
+      ok: true,
+      characterId: character.id,
+      room,
+    };
+  }
+
+  @SubscribeMessage('auto-combat:leave')
+  async handleLeaveAutoCombatRoom(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: AutoCombatLeavePayload,
+  ) {
+    const characterId = payload?.characterId;
+
+    if (!characterId) {
+      return {
+        ok: false,
+      };
+    }
+
+    const room = this.getCharacterRoom(characterId);
+
+    await client.leave(room);
+
+    client.data.joinedCharacterRooms?.delete(room);
+
+    client.emit('auto-combat:left', {
+      characterId,
+      room,
+    });
+
+    return {
+      ok: true,
+      characterId,
+      room,
+    };
+  }
+
+  emitStatus(characterId: string, payload: unknown) {
+    this.emitToCharacter(characterId, 'auto-combat:status', payload);
+  }
+
+  emitSessionUpdated(characterId: string, payload: unknown) {
+    this.emitToCharacter(characterId, 'auto-combat:session-updated', payload);
+  }
+
+  emitHit(characterId: string, payload: unknown) {
+    this.emitToCharacter(characterId, 'auto-combat:hit', payload);
+  }
+
+  emitMobSpawned(characterId: string, payload: unknown) {
+    this.emitToCharacter(characterId, 'auto-combat:mob-spawned', payload);
+  }
+
+  emitMobDefeated(characterId: string, payload: unknown) {
+    this.emitToCharacter(characterId, 'auto-combat:mob-defeated', payload);
+  }
+
+  emitPlayerDefeated(characterId: string, payload: unknown) {
+    this.emitToCharacter(characterId, 'auto-combat:player-defeated', payload);
+  }
+
+  emitPotionUsed(characterId: string, payload: unknown) {
+    this.emitToCharacter(characterId, 'auto-combat:potion-used', payload);
+  }
+
+  emitFinished(characterId: string, payload: unknown) {
+    this.emitToCharacter(characterId, 'auto-combat:finished', payload);
+  }
+
+  emitStopped(characterId: string, payload: unknown) {
+    this.emitToCharacter(characterId, 'auto-combat:stopped', payload);
+  }
+
+  private emitToCharacter(characterId: string, event: string, payload: unknown) {
+    if (!this.server) {
+      return;
+    }
+
+    this.server.to(this.getCharacterRoom(characterId)).emit(event, payload);
+  }
+
+  private extractToken(client: Socket) {
+    const authToken = client.handshake.auth?.token;
+
+    if (typeof authToken === 'string' && authToken.trim()) {
+      return authToken.trim();
+    }
+
+    const queryToken = client.handshake.query?.token;
+
+    if (typeof queryToken === 'string' && queryToken.trim()) {
+      return queryToken.trim();
+    }
+
+    const authorizationHeader = client.handshake.headers.authorization;
+
+    if (
+      typeof authorizationHeader === 'string' &&
+      authorizationHeader.startsWith('Bearer ')
+    ) {
+      return authorizationHeader.replace('Bearer ', '').trim();
+    }
+
+    return null;
+  }
+
+  private getUserRoom(userId: string) {
+    return `user:${userId}`;
+  }
+
+  private getCharacterRoom(characterId: string) {
+    return `auto-combat:character:${characterId}`;
+  }
+}
+
+================= backend\src\modules\auto-combat\auto-combat.controller.ts ================
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AutoCombatService } from './auto-combat.service';
+import { PreviewAutoCombatDto } from './dto/preview-auto-combat.dto';
+import { StartAutoCombatDto } from './dto/start-auto-combat.dto';
+
+@Controller('auto-combat')
+@UseGuards(JwtAuthGuard)
+export class AutoCombatController {
+  constructor(private readonly autoCombatService: AutoCombatService) {}
+
+  @Post('start')
+  start(@Req() request: any, @Body() startAutoCombatDto: StartAutoCombatDto) {
+    return this.autoCombatService.start(request.user.id, startAutoCombatDto);
+  }
+
+  @Post('preview')
+  preview(
+    @Req() request: any,
+    @Body() previewAutoCombatDto: PreviewAutoCombatDto,
+  ) {
+    return this.autoCombatService.preview(
+      request.user.id,
+      previewAutoCombatDto,
+    );
+  }
+
+  @Get(':characterId/status')
+  getStatus(@Req() request: any, @Param('characterId') characterId: string) {
+    return this.autoCombatService.getStatus(request.user.id, characterId);
+  }
+
+  @Post(':characterId/stop')
+  stop(@Req() request: any, @Param('characterId') characterId: string) {
+    return this.autoCombatService.stop(request.user.id, characterId);
+  }
+}
+
+================= backend\src\modules\auto-combat\auto-combat.module.ts ================
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+import { ActivityGuardModule } from '../../common/activity-guard/activity-guard.module';
+import { PrismaModule } from '../../prisma/prisma.module';
+import { AutoCombatController } from './auto-combat.controller';
+import { AutoCombatGateway } from './auto-combat.gateway';
+import { AutoCombatService } from './auto-combat.service';
+
+@Module({
+  imports: [
+    PrismaModule,
+    ActivityGuardModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.getOrThrow<string>('JWT_SECRET'),
+      }),
+    }),
+  ],
+  controllers: [AutoCombatController],
+  providers: [AutoCombatService, AutoCombatGateway],
+  exports: [AutoCombatService],
+})
+export class AutoCombatModule {}
+
+================= frontend\src\features\auto-combat\api\auto-combat.api.ts ================
+import { apiClient } from '../../../services/api/apiClient';
+import { API_ENDPOINTS } from '../../../services/api/endpoints';
+import type {
+    AutoCombatMapViewModel,
+    AutoCombatStatusResponse,
+    PreviewAutoCombatPayload,
+    PreviewAutoCombatResponse,
+    StartAutoCombatPayload,
+    StartAutoCombatResponse,
+    StopAutoCombatResponse,
+} from '../types/auto-combat.types';
+
+export async function getAutoCombatMaps(): Promise<AutoCombatMapViewModel[]> {
+  const response = await apiClient.get<AutoCombatMapViewModel[]>(
+    API_ENDPOINTS.maps.list,
+  );
+
+  return response.data;
+}
+
+export async function getAutoCombatMapById(
+  mapId: string,
+): Promise<AutoCombatMapViewModel> {
+  const response = await apiClient.get<AutoCombatMapViewModel>(
+    API_ENDPOINTS.maps.byId(mapId),
+  );
+
+  return response.data;
+}
+
+export async function getAutoCombatStatus(
+  characterId: string,
+): Promise<AutoCombatStatusResponse> {
+  const response = await apiClient.get<AutoCombatStatusResponse>(
+    API_ENDPOINTS.autoCombat.status(characterId),
+  );
+
+  return response.data;
+}
+
+export async function previewAutoCombat(
+  payload: PreviewAutoCombatPayload,
+): Promise<PreviewAutoCombatResponse> {
+  const response = await apiClient.post<PreviewAutoCombatResponse>(
+    API_ENDPOINTS.autoCombat.preview,
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function startAutoCombat(
+  payload: StartAutoCombatPayload,
+): Promise<StartAutoCombatResponse> {
+  const response = await apiClient.post<StartAutoCombatResponse>(
+    API_ENDPOINTS.autoCombat.start,
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function stopAutoCombat(
+  characterId: string,
+): Promise<StopAutoCombatResponse> {
+  const response = await apiClient.post<StopAutoCombatResponse>(
+    API_ENDPOINTS.autoCombat.stop(characterId),
+    {},
+  );
+
+  return response.data;
+}
+
+================= frontend\src\services\websocket\socketClient.ts ================
+import { io, type Socket } from 'socket.io-client';
+import type {
+    AutoCombatRealtimeActor,
+    AutoCombatRealtimeEvent,
+    AutoCombatRealtimeEventType,
+    AutoCombatRealtimeTarget,
+    AutoCombatStatusResponse,
+} from '../../features/auto-combat/types/auto-combat.types';
+import { getAuthToken } from '../api/authToken';
+
+export type {
+    AutoCombatRealtimeActor,
+    AutoCombatRealtimeEvent,
+    AutoCombatRealtimeEventType,
+    AutoCombatRealtimeTarget
+};
+
+export type AutoCombatSocketError = {
+  message: string;
+};
+
+export type AutoCombatConnectedPayload = {
+  socketId: string;
+  userId: string;
+};
+
+export type AutoCombatJoinedPayload = {
+  characterId: string;
+  characterName: string;
+  room: string;
+};
+
+export type AutoCombatLeftPayload = {
+  characterId: string;
+  room: string;
+};
+
+export type AutoCombatServerToClientEvents = {
+  connect: () => void;
+  disconnect: (reason: Socket.DisconnectReason) => void;
+  connect_error: (error: Error) => void;
+
+  'auto-combat:connected': (payload: AutoCombatConnectedPayload) => void;
+  'auto-combat:joined': (payload: AutoCombatJoinedPayload) => void;
+  'auto-combat:left': (payload: AutoCombatLeftPayload) => void;
+  'auto-combat:error': (payload: AutoCombatSocketError) => void;
+
+  'auto-combat:status': (payload: AutoCombatStatusResponse) => void;
+  'auto-combat:session-updated': (payload: AutoCombatStatusResponse) => void;
+
+  'auto-combat:mob-spawned': (payload: AutoCombatRealtimeEvent) => void;
+  'auto-combat:hit': (payload: AutoCombatRealtimeEvent) => void;
+  'auto-combat:mob-defeated': (payload: AutoCombatRealtimeEvent) => void;
+  'auto-combat:player-defeated': (payload: AutoCombatRealtimeEvent) => void;
+  'auto-combat:potion-used': (payload: AutoCombatRealtimeEvent) => void;
+
+  'auto-combat:finished': (payload: AutoCombatStatusResponse) => void;
+  'auto-combat:stopped': (payload: AutoCombatStatusResponse) => void;
+};
+
+export type AutoCombatClientToServerEvents = {
+  'auto-combat:join': (payload: { characterId: string }) => void;
+  'auto-combat:leave': (payload: { characterId: string }) => void;
+};
+
+export type AutoCombatSocket = Socket<
+  AutoCombatServerToClientEvents,
+  AutoCombatClientToServerEvents
+>;
+
+const apiBaseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+
+function normalizeSocketBaseUrl(url: string) {
+  return String(url)
+    .replace(/\/+$/, '')
+    .replace(/\/api$/i, '');
+}
+
+const socketBaseUrl = normalizeSocketBaseUrl(
+  import.meta.env.VITE_SOCKET_URL ?? apiBaseUrl,
+);
+
+let autoCombatSocket: AutoCombatSocket | null = null;
+
+function getSocketAuth() {
+  return {
+    token: getAuthToken(),
+  };
+}
+
+export function getAutoCombatSocket(): AutoCombatSocket {
+  if (autoCombatSocket) {
+    return autoCombatSocket;
+  }
+
+  autoCombatSocket = io(`${socketBaseUrl}/auto-combat`, {
+    autoConnect: false,
+    transports: ['websocket'],
+    withCredentials: true,
+
+    auth: getSocketAuth(),
+
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 800,
+    reconnectionDelayMax: 4000,
+
+    timeout: 10000,
+  });
+
+  return autoCombatSocket;
+}
+
+export function connectAutoCombatSocket(): AutoCombatSocket {
+  const socket = getAutoCombatSocket();
+
+  socket.auth = getSocketAuth();
+
+  if (!socket.connected) {
+    socket.connect();
+  }
+
+  return socket;
+}
+
+export function disconnectAutoCombatSocket() {
+  if (!autoCombatSocket) {
+    return;
+  }
+
+  autoCombatSocket.removeAllListeners();
+  autoCombatSocket.disconnect();
+  autoCombatSocket = null;
+}
+
+export function reconnectAutoCombatSocket(): AutoCombatSocket {
+  const socket = getAutoCombatSocket();
+
+  socket.auth = getSocketAuth();
+
+  if (socket.connected) {
+    socket.disconnect();
+  }
+
+  socket.connect();
+
+  return socket;
+}
+
+================= backend\src\common\utils\level.util.ts ================
+import {
+  EXPECTED_COMBATS_PER_DAY,
+  FUTURE_LEVEL_CAP,
+  LAUNCH_LEVEL_CAP,
+  LEVELS_PER_TIER,
+  TIER_AVERAGE_XP_PER_COMBAT,
+  TIER_TARGET_DAYS,
+} from '../config/progression.config';
+
+export type LevelProgressResult = {
+  oldLevel: number;
+  newLevel: number;
+
+  /**
+   * XP total antes do ganho.
+   */
+  currentXp: number;
+
+  /**
+   * XP recebido agora.
+   */
+  gainedXp: number;
+
+  /**
+   * XP total acumulado depois do cálculo.
+   */
+  totalXp: number;
+
+  leveledUp: boolean;
+  levelsGained: number;
+
+  levelCap: number;
+  isAtLevelCap: boolean;
+
+  /**
+   * XP total necessário para começar o nível atual.
+   * Exemplo:
+   * level 1 => 0
+   * level 2 => XP total necessário para ter chegado no level 2
+   */
+  currentLevelStartXp: number;
+
+  /**
+   * XP total necessário para alcançar o próximo nível.
+   * Null quando estiver no level cap.
+   */
+  nextLevelRequiredXp: number | null;
+
+  /**
+   * XP dentro do nível atual.
+   * Esse é o número da esquerda da barra.
+   */
+  xpIntoCurrentLevel: number;
+
+  /**
+   * XP restante para o próximo nível.
+   */
+  xpNeededForNextLevel: number | null;
+
+  /**
+   * XP total necessário dentro do nível atual.
+   * Esse é o número da direita da barra.
+   */
+  xpToNextLevel: number;
+
+  /**
+   * Aliases para compatibilidade com o frontend.
+   */
+  currentLevelXp: number;
+  nextLevelXp: number;
+  xpProgressPercent: number;
+
+  progressPercent: number;
+};
+
+function normalizeLevel(level: number, levelCap = LAUNCH_LEVEL_CAP) {
+  const parsedLevel = Math.floor(Number(level));
+
+  if (!Number.isFinite(parsedLevel)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.min(parsedLevel, levelCap));
+}
+
+function normalizeXp(xp: number) {
+  const parsedXp = Math.floor(Number(xp));
+
+  if (!Number.isFinite(parsedXp)) {
+    return 0;
+  }
+
+  return Math.max(0, parsedXp);
+}
+
+function normalizeGainedXp(gainedXp: number) {
+  const parsedGainedXp = Math.floor(Number(gainedXp));
+
+  if (!Number.isFinite(parsedGainedXp)) {
+    return 0;
+  }
+
+  return Math.max(0, parsedGainedXp);
+}
+
+export function getTierByLevel(level: number): number {
+  const safeLevel = Math.max(1, Math.floor(Number(level) || 1));
+
+  return Math.max(1, Math.ceil(safeLevel / LEVELS_PER_TIER));
+}
+
+export function getLevelWithinTier(level: number): number {
+  const safeLevel = Math.max(1, Math.floor(Number(level) || 1));
+  const position = safeLevel % LEVELS_PER_TIER;
+
+  if (position === 0) {
+    return LEVELS_PER_TIER;
+  }
+
+  return position;
+}
+
+/**
+ * Retorna quanto de XP é necessário para sair do nível atual
+ * e chegar ao próximo nível.
+ *
+ * Exemplo:
+ * currentLevel = 1 => XP necessário de 1 para 2.
+ */
+export function getXpRequiredForNextLevel(currentLevel: number): number {
+  const safeLevel = normalizeLevel(currentLevel, FUTURE_LEVEL_CAP);
+
+  if (safeLevel >= FUTURE_LEVEL_CAP) {
+    return 0;
+  }
+
+  const tier = getTierByLevel(safeLevel);
+  const levelWithinTier = getLevelWithinTier(safeLevel);
+
+  const targetDays = TIER_TARGET_DAYS[tier] ?? TIER_TARGET_DAYS[10];
+  const averageXpPerCombat =
+    TIER_AVERAGE_XP_PER_COMBAT[tier] ?? TIER_AVERAGE_XP_PER_COMBAT[10];
+
+  const expectedXpInTier =
+    targetDays * EXPECTED_COMBATS_PER_DAY * averageXpPerCombat;
+
+  /**
+   * Peso crescente dentro do tier.
+   * Como cada tier tem 10 níveis, a soma dos pesos é:
+   * 1 + 2 + 3 + ... + 10 = 55.
+   */
+  const totalTierWeight = 55;
+  const levelWeight = levelWithinTier;
+
+  const requiredXp = Math.round(
+    (expectedXpInTier * levelWeight) / totalTierWeight,
+  );
+
+  return Math.max(1, requiredXp);
+}
+
+/**
+ * Retorna o XP total acumulado necessário para estar em determinado nível.
+ *
+ * Exemplo:
+ * level 1 => 0
+ * level 2 => custo do nível 1 para 2
+ * level 3 => custo 1->2 + custo 2->3
+ */
+export function getTotalXpRequiredForLevel(level: number): number {
+  const safeLevel = normalizeLevel(level, FUTURE_LEVEL_CAP);
+
+  if (safeLevel <= 1) {
+    return 0;
+  }
+
+  let totalXp = 0;
+
+  for (let currentLevel = 1; currentLevel < safeLevel; currentLevel++) {
+    totalXp += getXpRequiredForNextLevel(currentLevel);
+  }
+
+  return totalXp;
+}
+
+/**
+ * Calcula qual nível o personagem teria considerando APENAS o XP total.
+ *
+ * Importante:
+ * Esta função é útil para descobrir se o personagem subiu de nível.
+ * Porém, no jogo, normalmente o nível salvo no banco não deve descer
+ * caso o XP seja alterado manualmente para baixo.
+ */
+export function calculateLevelFromTotalXp(
+  totalXp: number,
+  levelCap = LAUNCH_LEVEL_CAP,
+): number {
+  const safeTotalXp = normalizeXp(totalXp);
+  const safeLevelCap = normalizeLevel(levelCap, FUTURE_LEVEL_CAP);
+
+  let level = 1;
+
+  while (
+    level < safeLevelCap &&
+    safeTotalXp >= getTotalXpRequiredForLevel(level + 1)
+  ) {
+    level++;
+  }
+
+  return level;
+}
+
+function calculateProgressPercent(params: {
+  totalXp: number;
+  currentLevelStartXp: number;
+  nextLevelRequiredXp: number | null;
+}) {
+  const { totalXp, currentLevelStartXp, nextLevelRequiredXp } = params;
+
+  if (nextLevelRequiredXp === null) {
+    return 100;
+  }
+
+  const xpRequiredInsideLevel = nextLevelRequiredXp - currentLevelStartXp;
+
+  if (xpRequiredInsideLevel <= 0) {
+    return 100;
+  }
+
+  const xpInsideLevel = totalXp - currentLevelStartXp;
+  const percent = (xpInsideLevel / xpRequiredInsideLevel) * 100;
+
+  return Number(Math.max(0, Math.min(100, percent)).toFixed(2));
+}
+
+function buildLevelProgressResult(params: {
+  oldLevel: number;
+  currentXp: number;
+  gainedXp: number;
+  totalXp: number;
+  levelCap: number;
+}): LevelProgressResult {
+  const oldLevel = normalizeLevel(params.oldLevel, params.levelCap);
+  const currentXp = normalizeXp(params.currentXp);
+  const gainedXp = normalizeGainedXp(params.gainedXp);
+  const totalXp = normalizeXp(params.totalXp);
+  const levelCap = normalizeLevel(params.levelCap, FUTURE_LEVEL_CAP);
+
+  /**
+   * O nível calculado pelo XP pode subir.
+   * Mas não deve rebaixar o personagem caso o banco esteja com level maior.
+   */
+  const levelByXp = calculateLevelFromTotalXp(totalXp, levelCap);
+  const newLevel = Math.max(oldLevel, levelByXp);
+
+  const currentLevelStartXp = getTotalXpRequiredForLevel(newLevel);
+  const isAtLevelCap = newLevel >= levelCap;
+
+  const nextLevelRequiredXp = isAtLevelCap
+    ? null
+    : getTotalXpRequiredForLevel(newLevel + 1);
+
+  const xpIntoCurrentLevel = Math.max(0, totalXp - currentLevelStartXp);
+
+  const xpToNextLevel =
+    nextLevelRequiredXp === null
+      ? Math.max(1, xpIntoCurrentLevel)
+      : Math.max(1, nextLevelRequiredXp - currentLevelStartXp);
+
+  const safeXpIntoCurrentLevel = Math.min(xpIntoCurrentLevel, xpToNextLevel);
+
+  const xpNeededForNextLevel =
+    nextLevelRequiredXp === null
+      ? null
+      : Math.max(0, nextLevelRequiredXp - totalXp);
+
+  const progressPercent = calculateProgressPercent({
+    totalXp,
+    currentLevelStartXp,
+    nextLevelRequiredXp,
+  });
+
+  const levelsGained = Math.max(0, newLevel - oldLevel);
+
+  return {
+    oldLevel,
+    newLevel,
+
+    currentXp,
+    gainedXp,
+    totalXp,
+
+    leveledUp: levelsGained > 0,
+    levelsGained,
+
+    levelCap,
+    isAtLevelCap,
+
+    currentLevelStartXp,
+    nextLevelRequiredXp,
+
+    xpIntoCurrentLevel: safeXpIntoCurrentLevel,
+    xpNeededForNextLevel,
+
+    xpToNextLevel,
+
+    currentLevelXp: safeXpIntoCurrentLevel,
+    nextLevelXp: xpToNextLevel,
+    xpProgressPercent: progressPercent,
+
+    progressPercent,
+  };
+}
+
+/**
+ * Use quando você quer apenas montar a barra de progresso do personagem
+ * com base no nível e XP atuais salvos no banco.
+ *
+ * Exemplo:
+ * getLevelProgress(character.level, character.xp)
+ */
+export function getLevelProgress(
+  currentLevel: number,
+  currentXp: number,
+  levelCap = LAUNCH_LEVEL_CAP,
+): LevelProgressResult {
+  const safeCurrentLevel = normalizeLevel(currentLevel, levelCap);
+  const safeCurrentXp = normalizeXp(currentXp);
+
+  return buildLevelProgressResult({
+    oldLevel: safeCurrentLevel,
+    currentXp: safeCurrentXp,
+    gainedXp: 0,
+    totalXp: safeCurrentXp,
+    levelCap,
+  });
+}
+
+/**
+ * Use quando o personagem ganhou XP.
+ *
+ * Exemplo:
+ * calculateLevelProgress(character.level, character.xp, finalXpReward)
+ */
+export function calculateLevelProgress(
+  currentLevel: number,
+  currentXp: number,
+  gainedXp: number,
+  levelCap = LAUNCH_LEVEL_CAP,
+): LevelProgressResult {
+  const safeCurrentLevel = normalizeLevel(currentLevel, levelCap);
+  const safeCurrentXp = normalizeXp(currentXp);
+  const safeGainedXp = normalizeGainedXp(gainedXp);
+  const totalXp = safeCurrentXp + safeGainedXp;
+
+  return buildLevelProgressResult({
+    oldLevel: safeCurrentLevel,
+    currentXp: safeCurrentXp,
+    gainedXp: safeGainedXp,
+    totalXp,
+    levelCap,
+  });
+}
+
+/**
+ * Helper para montar resposta padronizada para controllers/services.
+ * Use isso no CharactersService e AutoCombatService para não repetir regra.
+ */
+export function buildLevelProgressViewModel(
+  currentLevel: number,
+  currentXp: number,
+  levelCap = LAUNCH_LEVEL_CAP,
+) {
+  const progress = getLevelProgress(currentLevel, currentXp, levelCap);
+
+  return {
+    level: progress.newLevel,
+
+    xp: progress.totalXp,
+    totalXp: progress.totalXp,
+    currentXp: progress.currentLevelXp,
+
+    currentLevelXp: progress.currentLevelXp,
+    xpToNextLevel: progress.xpToNextLevel,
+    nextLevelXp: progress.nextLevelXp,
+
+    currentLevelStartXp: progress.currentLevelStartXp,
+    nextLevelRequiredXp: progress.nextLevelRequiredXp,
+
+    xpIntoCurrentLevel: progress.xpIntoCurrentLevel,
+    xpNeededForNextLevel: progress.xpNeededForNextLevel,
+
+    progressPercent: progress.progressPercent,
+    xpProgressPercent: progress.xpProgressPercent,
+
+    levelCap: progress.levelCap,
+    isAtLevelCap: progress.isAtLevelCap,
+  };
+}
+
+================= backend\src\common\config\auto-combat.config.ts ================
+// Configurações centrais do combate automático idle.
+
+// Sessão máxima de combate automático.
+// 6 horas = 21.600 segundos.
+export const AUTO_COMBAT_SESSION_DURATION_SECONDS = 6 * 60 * 60;
+
+// Cada rodada simulada consome 1 segundo.
+// Ideal para o comportamento em tempo real:
+// - personagem ataca;
+// - monstro ataca;
+// - HP atualiza visualmente;
+// - ao derrotar o monstro, outro aparece em seguida.
+export const AUTO_COMBAT_ROUND_DURATION_SECONDS = 1;
+
+// Limite de segurança para evitar que uma única chamada processe combates demais.
+// Com rodada de 1 segundo, uma sessão de 6h pode ter muitos turnos.
+// 5000 ainda é um limite seguro para o MVP.
+export const AUTO_COMBAT_MAX_COMBATS_PER_PROCESS = 5000;
+
+// Se quiser futuramente limitar processamento por chamada, pode usar este valor.
+// Por enquanto, deixamos a sessão inteira ser processável sob demanda.
+export const AUTO_COMBAT_MAX_SECONDS_PER_PROCESS =
+  AUTO_COMBAT_SESSION_DURATION_SECONDS;
+
+// Define se o sistema deve finalizar automaticamente a sessão ao chegar no endsAt.
+export const AUTO_COMBAT_FINISH_SESSION_WHEN_TIME_ENDS = true;

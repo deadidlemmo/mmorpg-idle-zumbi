@@ -1,0 +1,1497 @@
+/* =========================================================
+   DEAD IDLE — CHARACTERS
+   Arquivo: src/features/characters/characters.css
+
+   Função:
+   - Tela de seleção de personagens
+   - Tela de criação de personagem
+   - Cards de personagens
+   - Seleção de classe
+   - Seleção de avatar inicial
+   - Modal de exclusão
+   - Responsividade mobile
+   ========================================================= */
+
+/* =========================================================
+   1. BASE DAS PÁGINAS
+   ========================================================= */
+
+.character-page {
+  min-height: 100vh;
+  padding: clamp(1rem, 2.6vw, 1.75rem);
+  background:
+    radial-gradient(
+      circle at top center,
+      rgba(110, 159, 67, 0.12),
+      transparent 30rem
+    ),
+    radial-gradient(
+      circle at bottom center,
+      rgba(199, 67, 60, 0.055),
+      transparent 28rem
+    ),
+    linear-gradient(180deg, #0b1110 0%, #07100d 58%, #050807 100%);
+}
+
+/* Página de criação centralizada */
+.character-page--create {
+  display: grid;
+  place-items: center;
+}
+
+/* Painel principal da seleção de personagens */
+.character-select-panel {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Painel principal da criação de personagem */
+.character-create-panel {
+  width: min(100%, 560px);
+  padding: clamp(1rem, 3vw, 1.5rem);
+}
+
+/* =========================================================
+   2. HEADER / TÍTULO DA PÁGINA
+   ========================================================= */
+
+.character-page__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.character-page__header--compact {
+  position: relative;
+  padding-bottom: 1rem;
+  margin-bottom: 0.15rem;
+}
+
+/* Linha divisória elegante abaixo do header */
+.character-page__header--compact::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(110, 159, 67, 0.12) 6%,
+    rgba(231, 227, 216, 0.14) 18%,
+    rgba(231, 227, 216, 0.14) 82%,
+    rgba(110, 159, 67, 0.12) 94%,
+    transparent 100%
+  );
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.02),
+    0 0 14px rgba(110, 159, 67, 0.1);
+  opacity: 0.96;
+}
+
+.character-page__title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.character-page__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  width: 100%;
+}
+
+.character-page__header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.45rem);
+  line-height: 1.02;
+}
+
+.character-page__header--center {
+  align-items: center;
+  text-align: center;
+  flex-direction: column;
+  margin-bottom: var(--space-5);
+}
+
+/* Contador 1/2, 2/2 etc. */
+.character-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  height: 30px;
+  padding: 0 0.8rem;
+  flex-shrink: 0;
+
+  font-family: var(--font-title);
+  font-size: 0.82rem;
+  font-weight: 700;
+
+  color: var(--action-primary-hover);
+  background: rgba(110, 159, 67, 0.12);
+  border: 1px solid rgba(110, 159, 67, 0.34);
+  border-radius: var(--radius-pill);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* =========================================================
+   3. GRID DA SELEÇÃO
+   ========================================================= */
+
+.character-select-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+  padding-top: 0.1rem;
+}
+
+/* =========================================================
+   4. CARD DE PERSONAGEM — LISTA
+   ========================================================= */
+
+.survivor-list-card {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: 1.05rem;
+
+  width: 100%;
+  min-height: 144px;
+  padding: 1rem 1.15rem 1rem 1.05rem;
+
+  color: var(--text-primary);
+  text-align: left;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(30, 37, 35, 0.92);
+
+  border: 1px solid rgba(76, 87, 82, 0.82);
+  border-radius: 1.2rem;
+
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+
+  cursor: pointer;
+  outline: none;
+
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.survivor-list-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(110, 159, 67, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(35, 43, 40, 0.95);
+}
+
+.survivor-list-card:focus-visible {
+  border-color: var(--action-primary);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.32),
+    0 0 0 3px rgba(110, 159, 67, 0.16);
+}
+
+/* Card selecionado */
+.survivor-list-card.is-selected {
+  border-color: color-mix(in srgb, var(--class-accent) 78%, #e8e3d5);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.32),
+    0 0 0 1px color-mix(in srgb, var(--class-accent) 30%, transparent),
+    0 0 22px color-mix(in srgb, var(--class-accent) 18%, transparent);
+}
+
+/* Estado durante exclusão */
+.survivor-list-card.is-disabled {
+  cursor: wait;
+  opacity: 0.78;
+}
+
+/* =========================================================
+   5. MENU DE TRÊS PONTOS DO CARD
+   ========================================================= */
+
+/* Botão discreto no canto superior direito */
+.survivor-list-card__menu-button {
+  position: absolute;
+  top: 0.62rem;
+  right: 0.7rem;
+  z-index: 8;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.16rem;
+
+  width: 28px;
+  height: 26px;
+  padding: 0;
+
+  color: rgba(231, 227, 216, 0.48);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+
+  cursor: pointer;
+  opacity: 0.55;
+
+  transition:
+    opacity var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.survivor-list-card:hover .survivor-list-card__menu-button,
+.survivor-list-card__menu-button.is-open {
+  opacity: 0.9;
+}
+
+.survivor-list-card__menu-button:hover:not(:disabled),
+.survivor-list-card__menu-button.is-open {
+  color: rgba(231, 227, 216, 0.92);
+  background: rgba(7, 13, 11, 0.46);
+  border-color: rgba(231, 227, 216, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 8px 18px rgba(0, 0, 0, 0.22);
+}
+
+.survivor-list-card__menu-button:disabled {
+  cursor: wait;
+  opacity: 0.35;
+}
+
+.survivor-list-card__menu-button span {
+  width: 3.5px;
+  height: 3.5px;
+  background: currentColor;
+  border-radius: 999px;
+}
+
+/* Menu suspenso com ações */
+.survivor-list-card__menu {
+  position: absolute;
+  top: 2.48rem;
+  right: 0.7rem;
+  z-index: 12;
+
+  width: 178px;
+  padding: 0.35rem;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(15, 21, 19, 0.98);
+
+  border: 1px solid rgba(231, 227, 216, 0.12);
+  border-radius: 0.85rem;
+
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  backdrop-filter: blur(10px);
+}
+
+.survivor-list-card__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+
+  width: 100%;
+  min-height: 36px;
+  padding: 0.55rem 0.62rem;
+
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.035em;
+
+  color: var(--text-secondary);
+  text-align: left;
+
+  background: transparent;
+  border: 0;
+  border-radius: 0.62rem;
+
+  cursor: pointer;
+
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.survivor-list-card__menu-item:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.survivor-list-card__menu-item:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.survivor-list-card__menu-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  fill: currentColor;
+}
+
+/* Ação destrutiva do menu */
+.survivor-list-card__menu-item--danger {
+  color: #e9b7b2;
+}
+
+.survivor-list-card__menu-item--danger:hover:not(:disabled) {
+  color: #fff2ef;
+  background:
+    linear-gradient(180deg, rgba(194, 74, 74, 0.14), rgba(118, 35, 35, 0.1)),
+    rgba(158, 47, 47, 0.08);
+}
+
+/* =========================================================
+   6. AVATAR DO CARD DE PERSONAGEM
+   ========================================================= */
+
+.survivor-list-card__avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+
+  width: 76px;
+  height: 92px;
+  overflow: hidden;
+
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.055), transparent 55%),
+    linear-gradient(180deg, rgba(20, 29, 25, 0.96), rgba(8, 13, 11, 0.9));
+
+  border: 1px solid rgba(231, 227, 216, 0.12);
+  border-radius: 1rem;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+    0 10px 20px rgba(0, 0, 0, 0.22);
+}
+
+.survivor-list-card.is-selected .survivor-list-card__avatar {
+  border-color: color-mix(
+    in srgb,
+    var(--class-accent) 45%,
+    rgba(231, 227, 216, 0.12)
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+    0 0 16px color-mix(in srgb, var(--class-accent) 16%, transparent);
+}
+
+/* Moldura interna pontilhada */
+.survivor-list-card__avatar::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  pointer-events: none;
+  border: 1px dashed rgba(231, 227, 216, 0.09);
+  border-radius: 0.72rem;
+}
+
+/* Avatar real escolhido pelo usuário */
+.survivor-list-card__avatar img {
+  position: relative;
+  z-index: 1;
+  width: auto;
+  height: 90%;
+  max-width: 95%;
+  object-fit: contain;
+  object-position: center bottom;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.34));
+}
+
+/* Fallback com iniciais, caso personagem antigo não tenha avatarKey */
+.survivor-list-card__avatar span {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-title);
+  font-size: 1.42rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+/* =========================================================
+   7. INFORMAÇÕES DO CARD
+   ========================================================= */
+
+.survivor-list-card__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.52rem;
+}
+
+.survivor-list-card__identity {
+  min-width: 0;
+  padding-right: 1.3rem;
+}
+
+.survivor-list-card__identity h3 {
+  max-width: 100%;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  line-height: 1.05;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Marcadores de level e classe */
+.survivor-list-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.38rem;
+  margin-top: 0.36rem;
+}
+
+.survivor-list-card__meta span,
+.survivor-list-card__meta strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 0.15rem 0.5rem;
+
+  font-family: var(--font-title);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+
+  border-radius: var(--radius-pill);
+}
+
+.survivor-list-card__meta span {
+  color: var(--action-primary-hover);
+  background: rgba(110, 159, 67, 0.11);
+  border: 1px solid rgba(110, 159, 67, 0.24);
+}
+
+.survivor-list-card__meta strong {
+  color: color-mix(in srgb, var(--class-accent) 78%, #e8e3d5);
+  background: color-mix(in srgb, var(--class-accent) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--class-accent) 34%, transparent);
+}
+
+.survivor-list-card__location {
+  max-width: 100%;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* HP do personagem */
+.survivor-list-card__hp {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.08rem;
+}
+
+.survivor-list-card__hp-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1;
+}
+
+.survivor-list-card__hp-label strong {
+  font-family: var(--font-number);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+.survivor-list-card__hp-bar {
+  height: 7px;
+  overflow: hidden;
+  background: rgba(var(--bg-primary-rgb), 0.72);
+  border: 1px solid rgba(231, 227, 216, 0.06);
+  border-radius: var(--radius-pill);
+}
+
+.survivor-list-card__hp-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #3f8548, var(--hp));
+  border-radius: inherit;
+  box-shadow: 0 0 10px rgba(79, 163, 107, 0.28);
+}
+
+/* =========================================================
+   8. EMBLEMA DA CLASSE NO CARD
+   ========================================================= */
+
+.survivor-list-card__side {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  min-width: 0;
+  padding-top: 0.72rem;
+}
+
+.survivor-list-card__emblem {
+  width: 82px;
+  height: 82px;
+  object-fit: contain;
+  flex-shrink: 0;
+
+  filter:
+    drop-shadow(0 10px 18px rgba(0, 0, 0, 0.54))
+    drop-shadow(0 0 16px color-mix(in srgb, var(--class-accent) 28%, transparent));
+}
+
+/* =========================================================
+   9. SLOT VAZIO — CRIAR PERSONAGEM
+   ========================================================= */
+
+.survivor-create-slot {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.9rem;
+
+  width: 100%;
+  min-height: 88px;
+  padding: 0.85rem 0.95rem;
+  margin: 0.75rem 0;
+
+  color: var(--text-primary);
+  text-align: left;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent),
+    rgba(16, 23, 20, 0.66);
+
+  border: 1px dashed rgba(76, 87, 82, 0.82);
+  border-radius: 1.15rem;
+
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+
+  cursor: pointer;
+
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+/* Divisória entre cards e slot de criar */
+.survivor-create-slot::before {
+  content: "";
+  position: absolute;
+  left: 0.4rem;
+  right: 0.4rem;
+  top: -0.82rem;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(110, 159, 67, 0.12) 8%,
+    rgba(231, 227, 216, 0.13) 24%,
+    rgba(231, 227, 216, 0.13) 76%,
+    rgba(110, 159, 67, 0.12) 92%,
+    transparent 100%
+  );
+  box-shadow: 0 0 14px rgba(110, 159, 67, 0.08);
+  opacity: 0.95;
+}
+
+/* Divisória entre criar personagem e rodapé */
+.survivor-create-slot::after {
+  content: "";
+  position: absolute;
+  left: 0.4rem;
+  right: 0.4rem;
+  bottom: -0.82rem;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(158, 47, 47, 0.1) 8%,
+    rgba(231, 227, 216, 0.12) 24%,
+    rgba(231, 227, 216, 0.12) 76%,
+    rgba(158, 47, 47, 0.1) 92%,
+    transparent 100%
+  );
+  box-shadow: 0 0 14px rgba(158, 47, 47, 0.06);
+  opacity: 0.9;
+}
+
+.survivor-create-slot:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(110, 159, 67, 0.36);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(24, 32, 28, 0.78);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.22),
+    0 0 18px rgba(110, 159, 67, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.survivor-create-slot:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.survivor-create-slot__icon {
+  display: grid;
+  place-items: center;
+
+  width: 58px;
+  height: 58px;
+
+  color: var(--action-primary-hover);
+  font-family: var(--font-title);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+
+  background:
+    radial-gradient(circle at center, rgba(110, 159, 67, 0.14), transparent 70%),
+    rgba(110, 159, 67, 0.08);
+
+  border: 1px solid rgba(110, 159, 67, 0.22);
+  border-radius: 0.9rem;
+}
+
+.survivor-create-slot__text {
+  min-width: 0;
+}
+
+.survivor-create-slot__text h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.03rem;
+  line-height: 1.05;
+}
+
+.survivor-create-slot__text p {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.3;
+}
+
+/* =========================================================
+   10. RODAPÉ DA SELEÇÃO
+   ========================================================= */
+
+.character-select-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding-top: 1rem;
+}
+
+.character-select-footer .btn {
+  min-width: 220px;
+}
+
+/* Botão sair da conta */
+.character-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 50px;
+  padding: 0 1.1rem;
+
+  font-family: var(--font-title);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+
+  color: #e9b7b2;
+
+  background:
+    linear-gradient(180deg, rgba(158, 47, 47, 0.13), rgba(83, 24, 24, 0.1)),
+    rgba(18, 12, 11, 0.42);
+
+  border: 1px solid rgba(158, 47, 47, 0.36);
+  border-radius: var(--radius-md);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 0 18px rgba(158, 47, 47, 0.08);
+
+  transition:
+    transform var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.character-logout::before {
+  content: "↩";
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.character-logout:hover {
+  transform: translateY(-1px);
+  color: #fff2ef;
+  background:
+    linear-gradient(180deg, rgba(194, 74, 74, 0.2), rgba(118, 35, 35, 0.16)),
+    rgba(22, 10, 10, 0.52);
+  border-color: rgba(194, 74, 74, 0.56);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 0 22px rgba(158, 47, 47, 0.14);
+}
+
+.character-logout:active {
+  transform: translateY(0);
+}
+
+/* =========================================================
+   11. FORMULÁRIO DE CRIAÇÃO
+   ========================================================= */
+
+.character-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Preview superior do personagem que está sendo criado */
+.character-create-form__preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: rgba(var(--bg-primary-rgb), 0.38);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+  border-radius: var(--radius-lg);
+}
+
+.character-create-form__preview span {
+  display: block;
+  margin-bottom: 0.1rem;
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--action-primary);
+  text-transform: uppercase;
+}
+
+.character-create-form__preview h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.character-create-form__preview p {
+  margin: 0.2rem 0 0;
+  color: var(--text-secondary);
+}
+
+/* Área do avatar no preview da criação */
+.character-create-form__avatar {
+  display: grid;
+  place-items: center;
+  width: 86px;
+  height: 86px;
+  flex-shrink: 0;
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at center,
+      color-mix(in srgb, var(--class-accent) 18%, transparent),
+      transparent 62%
+    ),
+    rgba(var(--bg-primary-rgb), 0.62);
+
+  border: 1px solid color-mix(in srgb, var(--class-accent) 36%, transparent);
+  border-radius: var(--radius-xl);
+}
+
+/* Emblema antigo ou avatar no preview */
+.character-create-form__avatar img {
+  width: auto;
+  height: 78px;
+  max-width: 95%;
+  object-fit: contain;
+  object-position: center bottom;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.36));
+}
+
+/* Classe extra usada quando o preview mostra personagem e não emblema */
+.character-create-form__avatar--portrait img {
+  height: 82px;
+}
+
+/* =========================================================
+   12. SELEÇÃO DE CLASSE
+   ========================================================= */
+
+.character-class-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.character-class-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+
+  min-height: 86px;
+  padding: var(--space-3);
+
+  text-align: left;
+  color: var(--text-primary);
+
+  background: rgba(var(--bg-primary-rgb), 0.42);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: var(--radius-lg);
+
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.character-class-button:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--class-accent) 48%, transparent);
+}
+
+.character-class-button.is-active {
+  background: color-mix(
+    in srgb,
+    var(--class-accent) 10%,
+    rgba(8, 13, 11, 0.48)
+  );
+  border-color: var(--class-accent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--class-accent) 18%, transparent);
+}
+
+.character-class-button img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.character-class-button div {
+  min-width: 0;
+}
+
+.character-class-button strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.character-class-button span {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.28;
+}
+
+/* =========================================================
+   13. SELEÇÃO DE AVATAR INICIAL
+   ========================================================= */
+
+.character-avatar-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Cabeçalho "Avatar inicial" */
+.character-avatar-picker__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.character-avatar-picker__header strong {
+  font-family: var(--font-title);
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+}
+
+.character-avatar-picker__header span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+/* Grid dos 8 avatares da classe selecionada */
+.character-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+/* Botão individual de avatar */
+.character-avatar-option {
+  position: relative;
+  display: grid;
+  place-items: center;
+
+  min-height: 104px;
+  padding: 0.45rem;
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at 50% 15%,
+      color-mix(in srgb, var(--class-accent) 12%, transparent),
+      transparent 62%
+    ),
+    rgba(var(--bg-primary-rgb), 0.52);
+
+  border: 1px solid rgba(231, 227, 216, 0.09);
+  border-radius: 0.95rem;
+
+  cursor: pointer;
+
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.character-avatar-option:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: color-mix(
+    in srgb,
+    var(--class-accent) 42%,
+    rgba(231, 227, 216, 0.12)
+  );
+}
+
+.character-avatar-option.is-active {
+  border-color: var(--class-accent);
+  background:
+    radial-gradient(
+      circle at 50% 12%,
+      color-mix(in srgb, var(--class-accent) 22%, transparent),
+      transparent 66%
+    ),
+    rgba(var(--bg-primary-rgb), 0.66);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--class-accent) 26%, transparent),
+    0 0 20px color-mix(in srgb, var(--class-accent) 16%, transparent);
+}
+
+.character-avatar-option:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+/* Imagem do avatar no seletor */
+.character-avatar-option img {
+  width: auto;
+  height: 92px;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.42));
+}
+
+/* =========================================================
+   14. ESTADOS DE CARREGAMENTO
+   ========================================================= */
+
+.character-loading {
+  width: min(100%, 360px);
+  margin: 20vh auto 0;
+  padding: var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  color: var(--text-secondary);
+}
+
+.loading-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(231, 227, 216, 0.12);
+  border-top-color: var(--action-primary);
+  border-radius: 999px;
+  animation: character-spin 0.8s linear infinite;
+}
+
+@keyframes character-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================================
+   15. MODAL DE EXCLUSÃO
+   ========================================================= */
+
+.character-delete-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(3, 6, 5, 0.74);
+  backdrop-filter: blur(8px);
+}
+
+.character-delete-modal {
+  width: min(100%, 420px);
+  padding: var(--space-5);
+  color: var(--text-primary);
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(30, 37, 35, 0.98);
+
+  border: 1px solid rgba(158, 47, 47, 0.34);
+  border-radius: var(--radius-xl);
+
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.48),
+    0 0 28px rgba(158, 47, 47, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.character-delete-modal h2 {
+  margin: 0.25rem 0 0.65rem;
+  font-size: 1.65rem;
+}
+
+.character-delete-modal p:not(.page-eyebrow) {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.character-delete-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.character-delete-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 42px;
+  padding: 0.68rem 1rem;
+
+  font-family: var(--font-title);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.045em;
+  color: #fff2ef;
+
+  background:
+    linear-gradient(180deg, rgba(194, 74, 74, 0.95), rgba(158, 47, 47, 0.88));
+
+  border: 1px solid rgba(194, 74, 74, 0.68);
+  border-radius: var(--radius-md);
+
+  box-shadow:
+    var(--shadow-sm),
+    0 0 18px rgba(158, 47, 47, 0.18);
+
+  cursor: pointer;
+
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.character-delete-confirm:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(194, 74, 74, 0.92);
+  box-shadow:
+    var(--shadow-sm),
+    0 0 24px rgba(158, 47, 47, 0.25);
+}
+
+.character-delete-confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* =========================================================
+   16. RESPONSIVO — TABLET / MOBILE
+   ========================================================= */
+
+@media (max-width: 620px) {
+  .character-page {
+    padding: var(--space-4);
+  }
+
+  .character-select-panel {
+    width: min(100%, 430px);
+    gap: 0.85rem;
+  }
+
+  .character-page__title-row {
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .character-page__header h1 {
+    font-size: 1.75rem;
+  }
+
+  .character-page__header--compact {
+    padding-bottom: 0.9rem;
+  }
+
+  .character-count {
+    align-self: auto;
+    min-width: 52px;
+    height: 28px;
+    padding: 0 0.72rem;
+    font-size: 0.78rem;
+  }
+
+  /* Card no mobile */
+  .survivor-list-card {
+    grid-template-columns: 66px minmax(0, 1fr) 72px;
+    min-height: 132px;
+    gap: 0.82rem;
+    padding: 0.88rem;
+  }
+
+  .survivor-list-card__menu-button {
+    top: 0.48rem;
+    right: 0.52rem;
+    width: 27px;
+    height: 25px;
+    border-radius: 0.62rem;
+  }
+
+  .survivor-list-card__menu-button span {
+    width: 3.4px;
+    height: 3.4px;
+  }
+
+  .survivor-list-card__menu {
+    top: 2.32rem;
+    right: 0.52rem;
+    width: 170px;
+  }
+
+  .survivor-list-card__avatar {
+    width: 66px;
+    height: 82px;
+    border-radius: 0.9rem;
+  }
+
+  .survivor-list-card__avatar img {
+    height: 90%;
+    max-width: 95%;
+  }
+
+  .survivor-list-card__avatar span {
+    font-size: 1.22rem;
+  }
+
+  .survivor-list-card__identity {
+    padding-right: 1.45rem;
+  }
+
+  .survivor-list-card__identity h3 {
+    font-size: 1.02rem;
+  }
+
+  .survivor-list-card__meta {
+    gap: 0.3rem;
+    margin-top: 0.28rem;
+  }
+
+  .survivor-list-card__meta span,
+  .survivor-list-card__meta strong {
+    min-height: 20px;
+    padding: 0.12rem 0.42rem;
+    font-size: 0.68rem;
+  }
+
+  .survivor-list-card__location {
+    font-size: 0.79rem;
+  }
+
+  .survivor-list-card__side {
+    padding-top: 0.82rem;
+  }
+
+  .survivor-list-card__emblem {
+    width: 66px;
+    height: 66px;
+  }
+
+  /* Slot criar personagem */
+  .survivor-create-slot {
+    grid-template-columns: 52px minmax(0, 1fr);
+    min-height: 84px;
+    gap: 0.78rem;
+    padding: 0.8rem;
+    margin: 0.72rem 0;
+  }
+
+  .survivor-create-slot::before {
+    top: -0.78rem;
+  }
+
+  .survivor-create-slot::after {
+    bottom: -0.78rem;
+  }
+
+  .survivor-create-slot__icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  /* Rodapé */
+  .character-select-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.72rem;
+    padding-top: 0.9rem;
+  }
+
+  .character-select-footer .btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+  }
+
+  .character-logout {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  /* Criação */
+  .character-class-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .character-avatar-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .character-avatar-option {
+    min-height: 92px;
+    padding: 0.35rem;
+  }
+
+  .character-avatar-option img {
+    height: 78px;
+  }
+
+  /* Modal */
+  .character-delete-modal__actions {
+    flex-direction: column;
+  }
+
+  .character-delete-modal__actions .btn,
+  .character-delete-confirm {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   17. RESPONSIVO — CELULARES PEQUENOS
+   ========================================================= */
+
+@media (max-width: 420px) {
+  .character-page {
+    padding: 0.85rem;
+  }
+
+  .character-page__header h1 {
+    font-size: 1.48rem;
+  }
+
+  .character-page__title-row {
+    gap: 0.6rem;
+  }
+
+  .character-page__header--compact {
+    padding-bottom: 0.82rem;
+  }
+
+  .character-count {
+    min-width: 48px;
+    height: 28px;
+    font-size: 0.76rem;
+  }
+
+  .character-select-panel {
+    gap: 0.78rem;
+  }
+
+  .character-select-grid {
+    gap: 0.78rem;
+  }
+
+  /* Card em celular pequeno */
+  .survivor-list-card {
+    grid-template-columns: 62px minmax(0, 1fr) 68px;
+    min-height: 130px;
+    gap: 0.68rem;
+    padding: 0.8rem;
+  }
+
+  .survivor-list-card__menu-button {
+    top: 0.42rem;
+    right: 0.44rem;
+    width: 26px;
+    height: 24px;
+  }
+
+  .survivor-list-card__menu-button span {
+    width: 3.2px;
+    height: 3.2px;
+  }
+
+  .survivor-list-card__menu {
+    top: 2.18rem;
+    right: 0.44rem;
+    width: 166px;
+  }
+
+  .survivor-list-card__avatar {
+    width: 62px;
+    height: 78px;
+  }
+
+  .survivor-list-card__avatar img {
+    height: 90%;
+    max-width: 95%;
+  }
+
+  .survivor-list-card__identity {
+    padding-right: 1.35rem;
+  }
+
+  .survivor-list-card__identity h3 {
+    font-size: 0.98rem;
+  }
+
+  .survivor-list-card__location {
+    font-size: 0.75rem;
+  }
+
+  .survivor-list-card__hp-label {
+    font-size: 0.7rem;
+  }
+
+  .survivor-list-card__side {
+    padding-top: 0.82rem;
+  }
+
+  .survivor-list-card__emblem {
+    width: 62px;
+    height: 62px;
+  }
+
+  /* Criar personagem */
+  .survivor-create-slot {
+    min-height: 82px;
+  }
+
+  .survivor-create-slot__text h3 {
+    font-size: 0.96rem;
+  }
+
+  .survivor-create-slot__text p {
+    font-size: 0.77rem;
+  }
+
+  /* Preview da criação */
+  .character-create-form__preview {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .character-create-form__avatar {
+    width: 82px;
+    height: 82px;
+  }
+
+  .character-create-form__avatar img {
+    height: 76px;
+  }
+
+  /* Avatares da criação */
+  .character-avatar-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .character-avatar-option {
+    min-height: 84px;
+    padding: 0.3rem;
+  }
+
+  .character-avatar-option img {
+    height: 72px;
+  }
+}

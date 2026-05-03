@@ -1,0 +1,5 @@
+﻿C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\frontend\src\features\auto-combat\realtime\autoCombatRealtime.reducer.ts
+C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\frontend\src\features\auto-combat\realtime\autoCombatRealtime.types.ts
+C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\frontend\src\features\auto-combat\realtime\autoCombatRealtime.utils.ts
+C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\frontend\src\features\auto-combat\realtime\AutoCombatRealtimeProvider.tsx
+C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\frontend\src\features\auto-combat\realtime\useAutoCombatRealtime.ts

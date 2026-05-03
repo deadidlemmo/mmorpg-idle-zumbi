@@ -1,0 +1,313 @@
+================= DASHBOARD STRUCTURE ================ 
+Listagem de caminhos de pasta
+O n˙mero de sÈrie do volume È CAC1-22D2
+C:\USERS\NETO\DESKTOP\PROJETOS\EM USO\MMORPG-IDLE-ZUMBI\FRONTEND\SRC\FEATURES\DASHBOARD
+|   dashboard.css
+|   
++---api
+|       dashboard.api.ts
+|       
++---components
+|       CharacterStatsPanel.tsx
+|       DashboardCard.tsx
+|       DashboardEquipmentBody.tsx
+|       DashboardEquipmentSlot.tsx
+|       DashboardLayout.tsx
+|       DashboardProgressBar.tsx
+|       DashboardStatCard.tsx
+|       GatheringSkillsPanel.tsx
+|       
++---constants
+|       equipment-rarity.ts
+|       gathering-skills-config.ts
+|       stats-config.ts
+|       
++---pages
+|       DashboardOverviewPage.tsx
+|       DashboardPlaceholderPage.tsx
+|       
+\---types
+        dashboard.types.ts
+        
+ 
+================= CHARACTERS STRUCTURE ================ 
+Listagem de caminhos de pasta
+O n˙mero de sÈrie do volume È CAC1-22D2
+C:\USERS\NETO\DESKTOP\PROJETOS\EM USO\MMORPG-IDLE-ZUMBI\FRONTEND\SRC\FEATURES\CHARACTERS
+|   characters.css
+|   
++---api
+|       characters.api.ts
+|       
++---components
+|       CharacterCard.tsx
+|       CharacterCreateCard.tsx
+|       CharacterCreateForm.tsx
+|       CharacterEmptyState.tsx
+|       CharacterLimitNotice.tsx
+|       CharacterSelectHeader.tsx
+|       
++---constants
+|       avatar-options.ts
+|       
++---hooks
++---pages
+|       CharacterCreatePage.tsx
+|       CharacterSelectPage.tsx
+|       
+\---types
+        character.types.ts
+        
+ 
+================= AUTO COMBAT STRUCTURE ================ 
+Listagem de caminhos de pasta
+O n˙mero de sÈrie do volume È CAC1-22D2
+C:\USERS\NETO\DESKTOP\PROJETOS\EM USO\MMORPG-IDLE-ZUMBI\FRONTEND\SRC\FEATURES\AUTO-COMBAT
+|   auto-combat.css
+|   
++---api
+|       auto-combat.api.ts
+|       
++---components
++---hooks
+|       useAutoCombatSocket.ts
+|       
++---pages
+|       AutoCombatPage.tsx
+|       
+\---types
+        auto-combat.types.ts
+        
+ 
+================= API SERVICES STRUCTURE ================ 
+Listagem de caminhos de pasta
+O n˙mero de sÈrie do volume È CAC1-22D2
+C:\USERS\NETO\DESKTOP\PROJETOS\EM USO\MMORPG-IDLE-ZUMBI\FRONTEND\SRC\SERVICES\API
+    apiClient.ts
+    authToken.ts
+    endpoints.ts
+    
+N„o existem subpastas 
+
+ 
+================= SEARCH DASHBOARD USAGES ================ 
+frontend\src\features\dashboard\api\dashboard.api.ts:4:export async function getCharacterOverview(
+frontend\src\features\dashboard\components\DashboardLayout.tsx:12:interface DashboardLayoutProps {
+frontend\src\features\dashboard\components\DashboardLayout.tsx:24:  currentLevelXp?: number | null;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:25:  xpToNextLevel?: number | null;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:27:  xpProgressPercent?: number | null;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:32:  currentLevelStartXp?: number | null;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:33:  nextLevelRequiredXp?: number | null;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:36:  levelProgress?: {
+frontend\src\features\dashboard\components\DashboardLayout.tsx:46:    currentLevelXp?: number | null;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:47:    xpToNextLevel?: number | null;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:49:    xpProgressPercent?: number | null;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:51:    currentLevelStartXp?: number | null;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:52:    nextLevelRequiredXp?: number | null;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:63:  xpToNextLevel: number;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:158:  const levelProgress = characterWithXp.levelProgress;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:165:      characterWithXp.totalXp ?? levelProgress?.totalXp ?? character.xp,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:171:    characterWithXp.xpProgressPercent,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:172:    levelProgress?.xpProgressPercent,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:173:    levelProgress?.progressPercent,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:176:  const currentLevelStartXp = getFirstValidNumber(
+frontend\src\features\dashboard\components\DashboardLayout.tsx:177:    characterWithXp.currentLevelStartXp,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:178:    levelProgress?.currentLevelStartXp,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:181:  const nextLevelRequiredXp = getFirstValidNumber(
+frontend\src\features\dashboard\components\DashboardLayout.tsx:182:    characterWithXp.nextLevelRequiredXp,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:183:    levelProgress?.nextLevelRequiredXp,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:188:    levelProgress?.xpIntoCurrentLevel,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:189:    characterWithXp.currentLevelXp,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:190:    levelProgress?.currentLevelXp,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:191:    levelProgress?.currentXp,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:196:    levelProgress?.xpNeededForNextLevel,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:199:  const directXpToNextLevel = getFirstValidNumber(
+frontend\src\features\dashboard\components\DashboardLayout.tsx:200:    characterWithXp.xpToNextLevel,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:202:    levelProgress?.xpToNextLevel,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:203:    levelProgress?.nextLevelXp,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:209:      levelProgress?.isAtLevelCap,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:213:  let xpToNextLevel: number;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:216:    isValidNumber(currentLevelStartXp) &&
+frontend\src\features\dashboard\components\DashboardLayout.tsx:217:    isValidNumber(nextLevelRequiredXp) &&
+frontend\src\features\dashboard\components\DashboardLayout.tsx:218:    nextLevelRequiredXp > currentLevelStartXp
+frontend\src\features\dashboard\components\DashboardLayout.tsx:220:    currentXp = totalXp - currentLevelStartXp;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:221:    xpToNextLevel = nextLevelRequiredXp - currentLevelStartXp;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:228:    xpToNextLevel = xpIntoCurrentLevel + xpNeededForNextLevel;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:231:    isValidNumber(directXpToNextLevel) &&
+frontend\src\features\dashboard\components\DashboardLayout.tsx:232:    directXpToNextLevel > 0
+frontend\src\features\dashboard\components\DashboardLayout.tsx:235:    xpToNextLevel = directXpToNextLevel;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:238:    isValidNumber(directXpToNextLevel) &&
+frontend\src\features\dashboard\components\DashboardLayout.tsx:239:    directXpToNextLevel > 0
+frontend\src\features\dashboard\components\DashboardLayout.tsx:241:    xpToNextLevel = directXpToNextLevel;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:242:    currentXp = Math.round((clampPercent(explicitPercent) / 100) * xpToNextLevel);
+frontend\src\features\dashboard\components\DashboardLayout.tsx:246:    xpToNextLevel = estimatedXpPerLevel;
+frontend\src\features\dashboard\components\DashboardLayout.tsx:251:    const cappedXp = Math.max(totalXp, currentXp, xpToNextLevel, 1);
+frontend\src\features\dashboard\components\DashboardLayout.tsx:255:      xpToNextLevel: cappedXp,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:260:  const safeXpToNextLevel = Math.max(1, Math.floor(xpToNextLevel));
+frontend\src\features\dashboard\components\DashboardLayout.tsx:264:    Math.min(Math.floor(currentXp), safeXpToNextLevel),
+frontend\src\features\dashboard\components\DashboardLayout.tsx:268:    (safeCurrentXp / safeXpToNextLevel) * 100,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:273:    xpToNextLevel: safeXpToNextLevel,
+frontend\src\features\dashboard\components\DashboardLayout.tsx:309:export function DashboardLayout({ character, children }: DashboardLayoutProps) {
+frontend\src\features\dashboard\components\DashboardLayout.tsx:480:                    {xpProgress.currentXp} / {xpProgress.xpToNextLevel} XP
+frontend\src\features\dashboard\components\GatheringSkillsPanel.tsx:115:                      {skill.currentXp}/{skill.xpToNextLevel}
+frontend\src\features\dashboard\constants\gathering-skills-config.ts:23:  defaultXpToNextLevel: number;
+frontend\src\features\dashboard\constants\gathering-skills-config.ts:29:  xpToNextLevel: number;
+frontend\src\features\dashboard\constants\gathering-skills-config.ts:41:    defaultXpToNextLevel: 100,
+frontend\src\features\dashboard\constants\gathering-skills-config.ts:50:    defaultXpToNextLevel: 100,
+frontend\src\features\dashboard\constants\gathering-skills-config.ts:59:    defaultXpToNextLevel: 100,
+frontend\src\features\dashboard\constants\gathering-skills-config.ts:68:    defaultXpToNextLevel: 100,
+frontend\src\features\dashboard\constants\gathering-skills-config.ts:77:    defaultXpToNextLevel: 100,
+frontend\src\features\dashboard\constants\gathering-skills-config.ts:86:    defaultXpToNextLevel: 100,
+frontend\src\features\dashboard\constants\gathering-skills-config.ts:127:    xpToNextLevel: skill.defaultXpToNextLevel,
+frontend\src\features\dashboard\constants\gathering-skills-config.ts:129:      skill.defaultXpToNextLevel > 0
+frontend\src\features\dashboard\constants\gathering-skills-config.ts:130:        ? Math.round((skill.defaultCurrentXp / skill.defaultXpToNextLevel) * 100)
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:5:import { getCharacterOverview } from '../api/dashboard.api';
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:9:import { DashboardLayout } from '../components/DashboardLayout';
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:83:    xp: character.xp ?? 0,
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:170:    const xpToNextLevel = Math.max(
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:173:        matchedSkill?.xpToNextLevel ??
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:183:      xpToNextLevel > 0 ? Math.round((currentXp / xpToNextLevel) * 100) : 0;
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:194:      xpToNextLevel,
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:219:        const data = await getCharacterOverview(characterId);
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:309:    <DashboardLayout character={character}>
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:475:    </DashboardLayout>
+frontend\src\features\dashboard\pages\DashboardPlaceholderPage.tsx:4:import { getCharacterOverview } from '../api/dashboard.api';
+frontend\src\features\dashboard\pages\DashboardPlaceholderPage.tsx:6:import { DashboardLayout } from '../components/DashboardLayout';
+frontend\src\features\dashboard\pages\DashboardPlaceholderPage.tsx:30:    xp: character.xp ?? 0,
+frontend\src\features\dashboard\pages\DashboardPlaceholderPage.tsx:59:        const data = await getCharacterOverview(characterId);
+frontend\src\features\dashboard\pages\DashboardPlaceholderPage.tsx:102:    <DashboardLayout character={character}>
+frontend\src\features\dashboard\pages\DashboardPlaceholderPage.tsx:112:    </DashboardLayout>
+frontend\src\features\dashboard\types\dashboard.types.ts:425:  xpToNextLevel: number;
+frontend\src\features\dashboard\types\dashboard.types.ts:433:export interface DashboardLevelProgressViewModel {
+frontend\src\features\dashboard\types\dashboard.types.ts:454:  currentLevelXp?: number | null;
+frontend\src\features\dashboard\types\dashboard.types.ts:460:  xpToNextLevel?: number | null;
+frontend\src\features\dashboard\types\dashboard.types.ts:471:  currentLevelStartXp?: number | null;
+frontend\src\features\dashboard\types\dashboard.types.ts:472:  nextLevelRequiredXp?: number | null;
+frontend\src\features\dashboard\types\dashboard.types.ts:478:  xpProgressPercent?: number | null;
+frontend\src\features\dashboard\types\dashboard.types.ts:506:   * Campos diretos de progress√£o usados pelo DashboardLayout.
+frontend\src\features\dashboard\types\dashboard.types.ts:508:  currentLevelXp?: number | null;
+frontend\src\features\dashboard\types\dashboard.types.ts:509:  xpToNextLevel?: number | null;
+frontend\src\features\dashboard\types\dashboard.types.ts:511:  xpProgressPercent?: number | null;
+frontend\src\features\dashboard\types\dashboard.types.ts:515:  currentLevelStartXp?: number | null;
+frontend\src\features\dashboard\types\dashboard.types.ts:516:  nextLevelRequiredXp?: number | null;
+frontend\src\features\dashboard\types\dashboard.types.ts:519:  levelProgress?: DashboardLevelProgressViewModel | null;
+ 
+================= SEARCH CHARACTERS USAGES ================ 
+ 
+================= SEARCH AUTO COMBAT USAGES ================ 
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:12:import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:50:  currentLevelXp?: number | null;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:51:  xpToNextLevel?: number | null;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:53:  xpProgressPercent?: number | null;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:73:type LooseLevelProgressSource = {
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:80:  currentLevelXp?: number | null;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:81:  xpToNextLevel?: number | null;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:90:  xpProgressPercent?: number | null;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:99:  currentLevelXp?: number | null;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:100:  xpToNextLevel?: number | null;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:102:  xpProgressPercent?: number | null;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:110:  levelProgress?: LooseLevelProgressSource | null;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:150:  currentLevelXp?: number;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:151:  xpToNextLevel?: number;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:153:  xpProgressPercent?: number;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:187:  currentLevelXp?: number;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:188:  xpToNextLevel?: number;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:190:  xpProgressPercent?: number;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:441:    xp: character.xp ?? 0,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:442:    totalXp: character.totalXp ?? character.xp ?? 0,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:698:  const levelProgress = source.levelProgress ?? null;
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:702:    getOptionalNumber(levelProgress?.totalXp) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:704:    getOptionalNumber(levelProgress?.xp);
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:707:    getOptionalNumber(source.level) ?? getOptionalNumber(levelProgress?.level);
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:720:    currentLevelXp:
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:721:      getOptionalNumber(source.currentLevelXp) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:723:      getOptionalNumber(levelProgress?.currentLevelXp) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:724:      getOptionalNumber(levelProgress?.xpIntoCurrentLevel),
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:726:    xpToNextLevel:
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:727:      getOptionalNumber(source.xpToNextLevel) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:729:      getOptionalNumber(levelProgress?.xpToNextLevel) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:730:      getOptionalNumber(levelProgress?.nextLevelXp),
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:734:      getOptionalNumber(source.xpToNextLevel) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:735:      getOptionalNumber(levelProgress?.nextLevelXp) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:736:      getOptionalNumber(levelProgress?.xpToNextLevel),
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:738:    xpProgressPercent:
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:739:      getOptionalNumber(source.xpProgressPercent) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:740:      getOptionalNumber(levelProgress?.xpProgressPercent) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:741:      getOptionalNumber(levelProgress?.progressPercent),
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:745:      getOptionalNumber(source.currentLevelXp) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:746:      getOptionalNumber(levelProgress?.xpIntoCurrentLevel) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:747:      getOptionalNumber(levelProgress?.currentLevelXp),
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:751:      getOptionalNumber(levelProgress?.xpNeededForNextLevel),
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:755:      getOptionalNumber(levelProgress?.currentLevelStartXp),
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:759:      getOptionalNumber(levelProgress?.nextLevelRequiredXp),
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:763:      getOptionalBoolean(levelProgress?.isAtLevelCap),
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:808:    currentLevelXp: incoming.currentLevelXp ?? current.currentLevelXp,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:809:    xpToNextLevel: incoming.xpToNextLevel ?? current.xpToNextLevel,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:811:    xpProgressPercent:
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:812:      incoming.xpProgressPercent ?? current.xpProgressPercent,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:948:        progressPayload.currentLevelXp !== undefined ||
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:949:        progressPayload.xpToNextLevel !== undefined ||
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:950:        progressPayload.xpProgressPercent !== undefined ||
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:980:            currentLevelXp:
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:981:              getOptionalNumber(progressPayload.currentLevelXp) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:983:              current?.currentLevelXp,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:985:            xpToNextLevel:
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:986:              getOptionalNumber(progressPayload.xpToNextLevel) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:988:              current?.xpToNextLevel,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:992:              getOptionalNumber(progressPayload.xpToNextLevel) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:995:            xpProgressPercent:
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:996:              getOptionalNumber(progressPayload.xpProgressPercent) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:997:              current?.xpProgressPercent,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1001:              getOptionalNumber(progressPayload.currentLevelXp) ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1522:    autoCombatStatus?.character?.levelProgress?.totalXp ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1525:    character.xp ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1528:  const currentLevelXp =
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1529:    visibleCharacterProgress?.currentLevelXp ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1531:    character.currentLevelXp ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1532:    character.levelProgress?.currentLevelXp ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1533:    character.levelProgress?.xpIntoCurrentLevel ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1536:  const xpToNextLevel =
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1537:    visibleCharacterProgress?.xpToNextLevel ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1539:    character.xpToNextLevel ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1541:    character.levelProgress?.xpToNextLevel ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1542:    character.levelProgress?.nextLevelXp ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1545:  const xpProgressPercent =
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1546:    visibleCharacterProgress?.xpProgressPercent ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1547:    character.xpProgressPercent ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1548:    character.levelProgress?.xpProgressPercent ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1549:    character.levelProgress?.progressPercent ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1554:    visibleCharacterProgress?.currentLevelXp ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1555:    character.xpIntoCurrentLevel ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1556:    character.currentLevelXp ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1557:    character.levelProgress?.xpIntoCurrentLevel ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1558:    character.levelProgress?.currentLevelXp ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1563:    character.xpNeededForNextLevel ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1564:    character.levelProgress?.xpNeededForNextLevel ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1570:    character.levelProgress?.currentLevelStartXp ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1576:    character.levelProgress?.nextLevelRequiredXp ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1582:    character.levelProgress?.isAtLevelCap ??
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1602:    currentLevelXp,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1603:    xpToNextLevel,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1604:    nextLevelXp: xpToNextLevel,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1605:    xpProgressPercent,
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1879:    <DashboardLayout character={layoutCharacter}>
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:2347:    </DashboardLayout>
+frontend\src\features\auto-combat\types\auto-combat.types.ts:24:export interface AutoCombatLevelProgressViewModel {
+frontend\src\features\auto-combat\types\auto-combat.types.ts:44:  currentLevelXp?: number | null;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:45:  xpToNextLevel?: number | null;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:64:  xpProgressPercent?: number | null;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:120:   * - currentLevelXp / xpIntoCurrentLevel: XP dentro do n√≠vel atual.
+frontend\src\features\auto-combat\types\auto-combat.types.ts:121:   * - xpToNextLevel / nextLevelXp: tamanho total da barra do n√≠vel atual.
+frontend\src\features\auto-combat\types\auto-combat.types.ts:124:   * - xpProgressPercent: porcentagem pronta para a barra.
+frontend\src\features\auto-combat\types\auto-combat.types.ts:132:  currentLevelXp?: number;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:133:  xpToNextLevel?: number;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:135:  xpProgressPercent?: number;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:143:  levelProgress?: AutoCombatLevelProgressViewModel | null;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:261:  currentLevelXp?: number | null;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:262:  xpToNextLevel?: number | null;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:264:  xpProgressPercent?: number | null;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:275:  levelProgress?: AutoCombatLevelProgressViewModel | null;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:448:  currentLevelXp?: number;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:449:  xpToNextLevel?: number;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:451:  xpProgressPercent?: number;
+frontend\src\features\auto-combat\types\auto-combat.types.ts:459:  levelProgress?: AutoCombatLevelProgressViewModel | null;

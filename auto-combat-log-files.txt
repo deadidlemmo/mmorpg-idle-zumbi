@@ -1,0 +1,5579 @@
+================ frontend/src/features/auto-combat/pages/AutoCombatPage.tsx ================
+import type { CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Navigate, useParams } from 'react-router-dom';
+import statAgilityIcon from '../../../assets/images/stats/attributes/stat-agility.png';
+import statPrecisionIcon from '../../../assets/images/stats/attributes/stat-precision.png';
+import statStrengthIcon from '../../../assets/images/stats/attributes/stat-strength.png';
+import statTechniqueIcon from '../../../assets/images/stats/attributes/stat-technique.png';
+import statVitalityIcon from '../../../assets/images/stats/attributes/stat-vitality.png';
+import statWillpowerIcon from '../../../assets/images/stats/attributes/stat-willpower.png';
+import { normalizeClassName } from '../../characters/api/characters.api';
+import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
+import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
+import '../../dashboard/dashboard.css';
+import type {
+    CharacterOverviewResponse,
+    DashboardCharacterViewModel,
+    DashboardEquipmentItem,
+    DashboardPotionConfigViewModel,
+    DashboardStats,
+} from '../../dashboard/types/dashboard.types';
+import {
+    getAutoCombatMaps,
+    getAutoCombatStatus,
+    previewAutoCombat,
+    startAutoCombat,
+    stopAutoCombat,
+} from '../api/auto-combat.api';
+import '../auto-combat.css';
+import { useAutoCombatSocket } from '../hooks/useAutoCombatSocket';
+import type {
+    AutoCombatEncounterViewModel,
+    AutoCombatMapViewModel,
+    AutoCombatProjectionPreview,
+    AutoCombatRealtimeEvent,
+    AutoCombatSessionApiViewModel,
+    AutoCombatStatusResponse,
+    AutoCombatSubMapViewModel,
+} from '../types/auto-combat.types';
+
+type AutoCombatTab = 'battle' | 'stats';
+
+type CharacterViewModelWithLayoutFields = DashboardCharacterViewModel & {
+  className: string;
+  classId: string;
+  avatarKey?: string | null;
+  avatarUrl?: string | null;
+  currentMapName: string;
+
+  totalXp?: number | null;
+  currentLevelXp?: number | null;
+  xpToNextLevel?: number | null;
+  nextLevelXp?: number | null;
+  xpProgressPercent?: number | null;
+  xpIntoCurrentLevel?: number | null;
+  xpNeededForNextLevel?: number | null;
+  currentLevelStartXp?: number | null;
+  nextLevelRequiredXp?: number | null;
+  isAtLevelCap?: boolean | null;
+};
+
+type CharacterPotionConfigWithItem = DashboardPotionConfigViewModel & {
+  potion?: DashboardEquipmentItem | null;
+  potionItem?: DashboardEquipmentItem | null;
+};
+
+type CharacterWithSinglePotionConfig = CharacterViewModelWithLayoutFields & {
+  potionConfig?: CharacterPotionConfigWithItem | null;
+  potionConfigs?: CharacterPotionConfigWithItem[];
+};
+
+type LooseStatsSource = Partial<DashboardStats> | null | undefined;
+
+type LooseLevelProgressSource = {
+  level?: number | null;
+  xp?: number | null;
+  totalXp?: number | null;
+  currentXp?: number | null;
+  gainedXp?: number | null;
+
+  currentLevelXp?: number | null;
+  xpToNextLevel?: number | null;
+  nextLevelXp?: number | null;
+
+  currentLevelStartXp?: number | null;
+  nextLevelRequiredXp?: number | null;
+  xpIntoCurrentLevel?: number | null;
+  xpNeededForNextLevel?: number | null;
+
+  progressPercent?: number | null;
+  xpProgressPercent?: number | null;
+  isAtLevelCap?: boolean | null;
+};
+
+type CharacterProgressSource = {
+  level?: number | null;
+  xp?: number | null;
+  totalXp?: number | null;
+
+  currentLevelXp?: number | null;
+  xpToNextLevel?: number | null;
+  nextLevelXp?: number | null;
+  xpProgressPercent?: number | null;
+
+  xpIntoCurrentLevel?: number | null;
+  xpNeededForNextLevel?: number | null;
+  currentLevelStartXp?: number | null;
+  nextLevelRequiredXp?: number | null;
+  isAtLevelCap?: boolean | null;
+
+  levelProgress?: LooseLevelProgressSource | null;
+};
+
+type RealtimeCombatState = {
+  mobId?: string;
+  mobName?: string;
+  mobCurrentHp?: number;
+  mobMaxHp?: number;
+  mobHpPercent?: number;
+
+  characterCurrentHp?: number;
+  characterMaxHp?: number;
+  characterHpPercent?: number;
+
+  lastMessage?: string;
+  lastDamage?: number;
+  lastEventType?: string;
+  isCritical?: boolean;
+  isDodged?: boolean;
+
+  actor?: 'PLAYER' | 'MOB' | 'SYSTEM';
+  target?: 'PLAYER' | 'MOB' | 'SYSTEM';
+
+  round?: number;
+  combatIndex?: number;
+
+  totalKills?: number;
+  totalXpGained?: number;
+  totalLoot?: number;
+  potionsUsed?: number;
+
+  updatedAt: number;
+};
+
+type RealtimeCharacterProgressState = {
+  sessionId?: string | null;
+
+  level?: number;
+  xp?: number;
+
+  currentLevelXp?: number;
+  xpToNextLevel?: number;
+  nextLevelXp?: number;
+  xpProgressPercent?: number;
+
+  xpIntoCurrentLevel?: number;
+  xpNeededForNextLevel?: number;
+  currentLevelStartXp?: number;
+  nextLevelRequiredXp?: number;
+  isAtLevelCap?: boolean;
+
+  xpGained?: number;
+  leveledUp?: boolean;
+  levelsGained?: number;
+
+  updatedAt: number;
+};
+
+type RealtimeSessionTotalsState = {
+  sessionId?: string | null;
+
+  totalCombats?: number;
+  totalRounds?: number;
+  totalKills?: number;
+  totalXpGained?: number;
+  totalLoot?: number;
+  potionsUsed?: number;
+
+  updatedAt: number;
+};
+
+type AutoCombatRealtimeEventWithProgress = AutoCombatRealtimeEvent & {
+  xpGained?: number;
+
+  characterXp?: number;
+  characterLevel?: number;
+
+  currentLevelXp?: number;
+  xpToNextLevel?: number;
+  nextLevelXp?: number;
+  xpProgressPercent?: number;
+
+  xpIntoCurrentLevel?: number;
+  xpNeededForNextLevel?: number;
+  currentLevelStartXp?: number;
+  nextLevelRequiredXp?: number;
+  isAtLevelCap?: boolean;
+
+  leveledUp?: boolean;
+  levelsGained?: number;
+};
+
+type AutoCombatRealtimeEventLoose = AutoCombatRealtimeEvent & {
+  createdAt?: string;
+  characterXp?: number;
+  characterLevel?: number;
+  totalXp?: number;
+  totalKills?: number;
+  totalXpGained?: number;
+};
+
+const EMPTY_STATS: DashboardStats = {
+  strength: 0,
+  vitality: 0,
+  agility: 0,
+  precision: 0,
+  technique: 0,
+  willpower: 0,
+};
+
+const STAT_CARDS = [
+  {
+    key: 'strength',
+    className: 'strength',
+    label: 'Força',
+    description: 'Impacto físico e dano com armas corpo a corpo.',
+    icon: statStrengthIcon,
+  },
+  {
+    key: 'vitality',
+    className: 'vitality',
+    label: 'Vitalidade',
+    description: 'Vigor físico, resistência e sobrevivência.',
+    icon: statVitalityIcon,
+  },
+  {
+    key: 'agility',
+    className: 'agility',
+    label: 'Agilidade',
+    description: 'Mobilidade, reação e ritmo de movimento.',
+    icon: statAgilityIcon,
+  },
+  {
+    key: 'precision',
+    className: 'precision',
+    label: 'Precisão',
+    description: 'Mira, controle e eficiência em ataques certeiros.',
+    icon: statPrecisionIcon,
+  },
+  {
+    key: 'technique',
+    className: 'technique',
+    label: 'Técnica',
+    description: 'Uso de equipamentos, ferramentas e recursos táticos.',
+    icon: statTechniqueIcon,
+  },
+  {
+    key: 'willpower',
+    className: 'willpower',
+    label: 'Vontade',
+    description: 'Foco, resistência mental e controle sob pressão.',
+    icon: statWillpowerIcon,
+  },
+] as const;
+
+function toSafeNumber(value: unknown, fallback = 0) {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function getOptionalNumber(value: unknown) {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function getOptionalBoolean(value: unknown) {
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+function clampPercent(value: unknown) {
+  const parsed = toSafeNumber(value, 0);
+
+  return Math.max(0, Math.min(100, parsed));
+}
+
+function clampNumber(value: unknown, min: number, max: number) {
+  const parsed = toSafeNumber(value, min);
+
+  return Math.max(min, Math.min(parsed, max));
+}
+
+function formatSeconds(seconds?: number | null) {
+  if (seconds === null || seconds === undefined) return '—';
+
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainingSeconds = safeSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}min`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}min ${remainingSeconds}s`;
+  }
+
+  return `${remainingSeconds}s`;
+}
+
+function formatSessionStatus(status?: string | null) {
+  const labels: Record<string, string> = {
+    ACTIVE: 'Sessão ativa',
+    STOPPED: 'Sessão interrompida manualmente',
+    FINISHED: 'Sessão finalizada',
+    DEFEATED: 'Sobrevivente derrotado',
+    FAILED: 'Sessão falhou',
+    CANCELLED: 'Sessão cancelada',
+  };
+
+  if (!status) return 'Sem sessão';
+
+  return labels[status] ?? status;
+}
+
+function formatRiskLabel(risk?: string | null) {
+  const labels: Record<string, string> = {
+    LOW: 'Baixo',
+    MEDIUM: 'Médio',
+    HIGH: 'Alto',
+    LETHAL: 'Letal',
+  };
+
+  if (!risk) return '—';
+
+  return labels[risk] ?? risk;
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  const apiError = error as {
+    response?: {
+      data?: {
+        message?: string | string[];
+      };
+    };
+  };
+
+  const message = apiError.response?.data?.message;
+
+  if (Array.isArray(message)) {
+    return message.join(' ');
+  }
+
+  return message ?? fallback;
+}
+
+function normalizeStats(value: unknown): DashboardStats | null {
+  if (!value || typeof value !== 'object') return null;
+
+  const stats = value as LooseStatsSource;
+
+  return {
+    strength: toSafeNumber(stats.strength, 0),
+    vitality: toSafeNumber(stats.vitality, 0),
+    agility: toSafeNumber(stats.agility, 0),
+    precision: toSafeNumber(stats.precision, 0),
+    technique: toSafeNumber(stats.technique, 0),
+    willpower: toSafeNumber(stats.willpower, 0),
+  };
+}
+
+function getStatsScore(stats: DashboardStats) {
+  return (
+    stats.strength +
+    stats.vitality +
+    stats.agility +
+    stats.precision +
+    stats.technique +
+    stats.willpower
+  );
+}
+
+function resolveCharacterStats(
+  overview: CharacterOverviewResponse | null,
+  character: CharacterViewModelWithLayoutFields | null,
+): DashboardStats {
+  type LooseOverview = CharacterOverviewResponse & {
+    totalStats?: DashboardStats;
+    stats?: DashboardStats;
+    characterStats?: DashboardStats;
+  };
+
+  type LooseCharacter = CharacterOverviewResponse['character'] & {
+    totalStats?: DashboardStats;
+    primaryStats?: DashboardStats;
+    stats?: DashboardStats;
+    baseStats?: DashboardStats;
+  };
+
+  const looseOverview = overview as LooseOverview | null;
+  const looseCharacter = overview?.character as LooseCharacter | undefined;
+
+  const candidates = [
+    character?.totalStats,
+    looseCharacter?.totalStats,
+    looseOverview?.totalStats,
+    looseOverview?.stats,
+    looseOverview?.characterStats,
+    looseCharacter?.primaryStats,
+    looseCharacter?.stats,
+    looseCharacter?.baseStats,
+    character?.baseStats,
+  ]
+    .map(normalizeStats)
+    .filter((stats): stats is DashboardStats => Boolean(stats));
+
+  if (candidates.length <= 0) return EMPTY_STATS;
+
+  return candidates.reduce((best, current) => {
+    return getStatsScore(current) > getStatsScore(best) ? current : best;
+  }, candidates[0]);
+}
+
+function buildCharacterViewModel(
+  overview: CharacterOverviewResponse,
+): CharacterViewModelWithLayoutFields {
+  const character = overview.character;
+
+  const className =
+    character.className ??
+    character.class?.name ??
+    character.gameClass?.name ??
+    'Lutador';
+
+  const currentMapName =
+    character.currentMapName ??
+    character.currentMap?.name ??
+    character.map?.name ??
+    overview.progression?.currentMap?.name ??
+    'Sem mapa';
+
+  return {
+    ...character,
+    id: character.id,
+    name: character.name,
+    className,
+    classId: character.classId ?? normalizeClassName(className),
+    level: character.level ?? 1,
+    xp: character.xp ?? 0,
+    totalXp: character.totalXp ?? character.xp ?? 0,
+    status: character.status ?? 'IDLE',
+    currentHp: character.currentHp ?? character.maxHp ?? 1,
+    maxHp: character.maxHp ?? 1,
+    avatarKey: character.avatarKey ?? null,
+    avatarUrl: character.avatarUrl ?? null,
+    currentMapName,
+    totalStats: character.totalStats ?? character.baseStats ?? EMPTY_STATS,
+    equipment: character.equipment ?? overview.equipment ?? {},
+  } as CharacterViewModelWithLayoutFields;
+}
+
+function getSessionFromStatus(
+  status: AutoCombatStatusResponse | null,
+): AutoCombatSessionApiViewModel | null {
+  if (!status) return null;
+
+  return (
+    status.session ??
+    status.activeSession ??
+    status.autoCombatSession ??
+    status.lastSession ??
+    null
+  );
+}
+
+function isTerminalSessionStatus(status?: string | null) {
+  return (
+    status === 'FINISHED' ||
+    status === 'STOPPED' ||
+    status === 'DEFEATED' ||
+    status === 'FAILED' ||
+    status === 'CANCELLED'
+  );
+}
+
+function isSessionActive(
+  status: AutoCombatStatusResponse | null,
+  session: AutoCombatSessionApiViewModel | null,
+) {
+  if (status?.active === true || status?.hasActiveAutoCombat === true) {
+    return true;
+  }
+
+  return session?.status === 'ACTIVE';
+}
+
+function getActiveEncounters(subMap?: AutoCombatSubMapViewModel | null) {
+  return (subMap?.encounters ?? []).filter((encounter) => {
+    return encounter.isActive !== false && Boolean(encounter.mob);
+  });
+}
+
+function flattenCombatSubMaps(
+  maps: AutoCombatMapViewModel[],
+  characterLevel: number,
+) {
+  return maps
+    .flatMap((gameMap) => {
+      return (gameMap.subMaps ?? []).map((subMap) => {
+        return {
+          ...subMap,
+          map: {
+            id: gameMap.id,
+            name: gameMap.name,
+            tier: gameMap.tier,
+          },
+          mapName: gameMap.name,
+        };
+      });
+    })
+    .filter((subMap) => {
+      const minLevel = subMap.minLevel ?? 1;
+
+      return characterLevel >= minLevel && getActiveEncounters(subMap).length > 0;
+    })
+    .sort((a, b) => {
+      return (
+        (a.tier ?? 0) - (b.tier ?? 0) ||
+        (a.minLevel ?? 0) - (b.minLevel ?? 0) ||
+        a.name.localeCompare(b.name)
+      );
+    });
+}
+
+function getSubMapLabel(subMap: AutoCombatSubMapViewModel) {
+  return subMap.name;
+}
+
+function getDefaultSubMapId(params: {
+  maps: AutoCombatMapViewModel[];
+  characterLevel: number;
+  status: AutoCombatStatusResponse | null;
+}) {
+  const subMaps = flattenCombatSubMaps(params.maps, params.characterLevel);
+  const sessionSubMapId = params.status?.subMap?.id;
+
+  if (
+    sessionSubMapId &&
+    subMaps.some((subMap) => subMap.id === sessionSubMapId)
+  ) {
+    return sessionSubMapId;
+  }
+
+  return subMaps[0]?.id ?? '';
+}
+
+function getPotionItem(potionConfig?: CharacterPotionConfigWithItem | null) {
+  return potionConfig?.potion ?? potionConfig?.potionItem ?? null;
+}
+
+function getPotionName(potionConfig?: CharacterPotionConfigWithItem | null) {
+  return getPotionItem(potionConfig)?.name ?? 'Slot vazio';
+}
+
+function getPotionDescription(
+  potionConfig?: CharacterPotionConfigWithItem | null,
+) {
+  const potionItem = getPotionItem(potionConfig);
+
+  if (!potionItem) {
+    return 'Nenhuma poção configurada para este slot.';
+  }
+
+  return potionConfig?.enabled
+    ? `Usa abaixo de ${potionConfig.hpThresholdPercent ?? 35}% de HP.`
+    : 'Poção configurada, mas desativada.';
+}
+
+function calculateRoundProgress(params: {
+  session: AutoCombatSessionApiViewModel | null;
+  isActive: boolean;
+  now: number;
+}) {
+  if (!params.isActive || !params.session?.lastProcessedAt) {
+    return 0;
+  }
+
+  const roundDuration = Math.max(1, params.session.roundDurationSeconds ?? 5);
+  const lastProcessedAt = new Date(params.session.lastProcessedAt).getTime();
+
+  if (!Number.isFinite(lastProcessedAt)) {
+    return 0;
+  }
+
+  const elapsedSeconds = Math.max(
+    0,
+    Math.floor((params.now - lastProcessedAt) / 1000),
+  );
+
+  return clampPercent(((elapsedSeconds % roundDuration) / roundDuration) * 100);
+}
+
+function getRemainingSeconds(status: AutoCombatStatusResponse | null) {
+  return (
+    status?.session?.remainingSeconds ??
+    status?.activeSession?.remainingSeconds ??
+    status?.autoCombatSession?.remainingSeconds ??
+    status?.sessionSummary?.duration?.remainingSeconds ??
+    0
+  );
+}
+
+function getLatestKilledMob(status: AutoCombatStatusResponse | null) {
+  const mobs = status?.rewards?.mobs ?? status?.sessionSummary?.mobs?.kills ?? [];
+
+  if (mobs.length <= 0) return null;
+
+  return mobs[mobs.length - 1];
+}
+
+function getThreatWeightPercent(
+  encounter: AutoCombatEncounterViewModel,
+  encounters: AutoCombatEncounterViewModel[],
+) {
+  const totalWeight = encounters.reduce((total, currentEncounter) => {
+    return total + Math.max(0, currentEncounter.weight ?? 0);
+  }, 0);
+
+  if (totalWeight <= 0) return 0;
+
+  return Math.round(((encounter.weight ?? 0) / totalWeight) * 100);
+}
+
+function getRealtimeEventDelay(event?: AutoCombatRealtimeEvent) {
+  if (!event?.type) return 160;
+
+  if (event.type === 'MOB_SPAWNED') return 180;
+
+  if (event.type === 'MOB_DEFEATED') {
+    return 320;
+  }
+
+  if (event.type === 'PLAYER_DEFEATED') {
+    return 420;
+  }
+
+  if (event.type === 'POTION_USED') return 220;
+
+  return 160;
+}
+
+function getRealtimeEventKey(payload: AutoCombatRealtimeEvent) {
+  const event = payload as AutoCombatRealtimeEventLoose;
+
+  return [
+    event.sessionId ?? 'no-session',
+    event.type ?? 'no-type',
+    event.createdAt ?? 'no-created-at',
+    event.mobId ?? 'no-mob',
+    event.round ?? 'no-round',
+    event.combatIndex ?? 'no-combat',
+    event.message ?? 'no-message',
+    event.damage ?? 'no-damage',
+    event.characterXp ?? event.totalXp ?? 'no-xp',
+    event.totalKills ?? 'no-kills',
+    event.totalXpGained ?? 'no-total-xp',
+  ].join('|');
+}
+
+function buildSessionTotalsFromStatus(
+  status: AutoCombatStatusResponse | null,
+  session: AutoCombatSessionApiViewModel | null,
+): RealtimeSessionTotalsState | null {
+  if (!status && !session) return null;
+
+  const totalKills =
+    status?.sessionSummary?.mobs?.totalKills ??
+    status?.rewards?.mobs?.reduce((total, mob) => {
+      return total + mob.kills;
+    }, 0) ??
+    0;
+
+  const totalLoot =
+    status?.sessionSummary?.loot?.totalQuantity ??
+    status?.rewards?.loots?.reduce((total, loot) => {
+      return total + loot.quantity;
+    }, 0) ??
+    0;
+
+  return {
+    sessionId: session?.id ?? null,
+
+    totalCombats:
+      status?.sessionSummary?.combat?.totalCombats ??
+      session?.totalCombatsResolved ??
+      status?.processing?.combatsResolved ??
+      totalKills ??
+      0,
+
+    totalRounds:
+      status?.sessionSummary?.combat?.totalRounds ??
+      session?.totalRoundsResolved ??
+      status?.processing?.roundsResolved ??
+      0,
+
+    totalKills,
+
+    totalXpGained:
+      status?.sessionSummary?.progression?.totalXpGained ??
+      session?.totalXpGained ??
+      status?.processing?.xpGained ??
+      0,
+
+    totalLoot,
+
+    potionsUsed: status?.processing?.potionsUsed ?? 0,
+
+    updatedAt: Date.now(),
+  };
+}
+
+function buildProgressFromSource(
+  source: CharacterProgressSource | null | undefined,
+  sessionId?: string | null,
+): RealtimeCharacterProgressState | null {
+  if (!source) return null;
+
+  const levelProgress = source.levelProgress ?? null;
+
+  const totalXp =
+    getOptionalNumber(source.totalXp) ??
+    getOptionalNumber(levelProgress?.totalXp) ??
+    getOptionalNumber(source.xp) ??
+    getOptionalNumber(levelProgress?.xp);
+
+  const level =
+    getOptionalNumber(source.level) ?? getOptionalNumber(levelProgress?.level);
+
+  if (totalXp === undefined && level === undefined) {
+    return null;
+  }
+
+  return {
+    sessionId: sessionId ?? null,
+
+    level: level !== undefined ? Math.max(1, Math.floor(level)) : undefined,
+
+    xp: totalXp !== undefined ? Math.max(0, Math.floor(totalXp)) : undefined,
+
+    currentLevelXp:
+      getOptionalNumber(source.currentLevelXp) ??
+      getOptionalNumber(source.xpIntoCurrentLevel) ??
+      getOptionalNumber(levelProgress?.currentLevelXp) ??
+      getOptionalNumber(levelProgress?.xpIntoCurrentLevel),
+
+    xpToNextLevel:
+      getOptionalNumber(source.xpToNextLevel) ??
+      getOptionalNumber(source.nextLevelXp) ??
+      getOptionalNumber(levelProgress?.xpToNextLevel) ??
+      getOptionalNumber(levelProgress?.nextLevelXp),
+
+    nextLevelXp:
+      getOptionalNumber(source.nextLevelXp) ??
+      getOptionalNumber(source.xpToNextLevel) ??
+      getOptionalNumber(levelProgress?.nextLevelXp) ??
+      getOptionalNumber(levelProgress?.xpToNextLevel),
+
+    xpProgressPercent:
+      getOptionalNumber(source.xpProgressPercent) ??
+      getOptionalNumber(levelProgress?.xpProgressPercent) ??
+      getOptionalNumber(levelProgress?.progressPercent),
+
+    xpIntoCurrentLevel:
+      getOptionalNumber(source.xpIntoCurrentLevel) ??
+      getOptionalNumber(source.currentLevelXp) ??
+      getOptionalNumber(levelProgress?.xpIntoCurrentLevel) ??
+      getOptionalNumber(levelProgress?.currentLevelXp),
+
+    xpNeededForNextLevel:
+      getOptionalNumber(source.xpNeededForNextLevel) ??
+      getOptionalNumber(levelProgress?.xpNeededForNextLevel),
+
+    currentLevelStartXp:
+      getOptionalNumber(source.currentLevelStartXp) ??
+      getOptionalNumber(levelProgress?.currentLevelStartXp),
+
+    nextLevelRequiredXp:
+      getOptionalNumber(source.nextLevelRequiredXp) ??
+      getOptionalNumber(levelProgress?.nextLevelRequiredXp),
+
+    isAtLevelCap:
+      getOptionalBoolean(source.isAtLevelCap) ??
+      getOptionalBoolean(levelProgress?.isAtLevelCap),
+
+    updatedAt: Date.now(),
+  };
+}
+
+function buildProgressFromStatus(
+  status: AutoCombatStatusResponse | null,
+  session: AutoCombatSessionApiViewModel | null,
+): RealtimeCharacterProgressState | null {
+  return buildProgressFromSource(
+    status?.character as CharacterProgressSource | null | undefined,
+    session?.id ?? null,
+  );
+}
+
+function mergeProgressKeepingHighestXp(
+  current: RealtimeCharacterProgressState | null,
+  incoming: RealtimeCharacterProgressState | null,
+): RealtimeCharacterProgressState | null {
+  if (!incoming) return current;
+  if (!current) return incoming;
+
+  const currentXp = current.xp;
+  const incomingXp = incoming.xp;
+
+  if (
+    currentXp !== undefined &&
+    incomingXp !== undefined &&
+    currentXp > incomingXp
+  ) {
+    return {
+      ...incoming,
+      ...current,
+      sessionId: incoming.sessionId ?? current.sessionId ?? null,
+      updatedAt: Date.now(),
+    };
+  }
+
+  return {
+    ...current,
+    ...incoming,
+    sessionId: incoming.sessionId ?? current.sessionId ?? null,
+    level: incoming.level ?? current.level,
+    xp: incoming.xp ?? current.xp,
+    currentLevelXp: incoming.currentLevelXp ?? current.currentLevelXp,
+    xpToNextLevel: incoming.xpToNextLevel ?? current.xpToNextLevel,
+    nextLevelXp: incoming.nextLevelXp ?? current.nextLevelXp,
+    xpProgressPercent:
+      incoming.xpProgressPercent ?? current.xpProgressPercent,
+    xpIntoCurrentLevel:
+      incoming.xpIntoCurrentLevel ?? current.xpIntoCurrentLevel,
+    xpNeededForNextLevel:
+      incoming.xpNeededForNextLevel ?? current.xpNeededForNextLevel,
+    currentLevelStartXp:
+      incoming.currentLevelStartXp ?? current.currentLevelStartXp,
+    nextLevelRequiredXp:
+      incoming.nextLevelRequiredXp ?? current.nextLevelRequiredXp,
+    isAtLevelCap: incoming.isAtLevelCap ?? current.isAtLevelCap,
+    xpGained: incoming.xpGained ?? current.xpGained,
+    leveledUp: incoming.leveledUp ?? current.leveledUp,
+    levelsGained: incoming.levelsGained ?? current.levelsGained,
+    updatedAt: Date.now(),
+  };
+}
+
+function pickHighestProgress(
+  ...progresses: Array<RealtimeCharacterProgressState | null>
+) {
+  return progresses.reduce<RealtimeCharacterProgressState | null>(
+    (best, current) => mergeProgressKeepingHighestXp(best, current),
+    null,
+  );
+}
+
+export function AutoCombatPage() {
+  const { characterId } = useParams();
+
+  const [activeTab, setActiveTab] = useState<AutoCombatTab>('battle');
+  const [hasStartedHunt, setHasStartedHunt] = useState(false);
+
+  const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
+    null,
+  );
+  const [maps, setMaps] = useState<AutoCombatMapViewModel[]>([]);
+  const [autoCombatStatus, setAutoCombatStatus] =
+    useState<AutoCombatStatusResponse | null>(null);
+  const [selectedSubMapId, setSelectedSubMapId] = useState('');
+  const [preparationPreview, setPreparationPreview] =
+    useState<AutoCombatProjectionPreview | null>(null);
+
+  const [realtimeCombat, setRealtimeCombat] =
+    useState<RealtimeCombatState | null>(null);
+  const [realtimeCharacterProgress, setRealtimeCharacterProgress] =
+    useState<RealtimeCharacterProgressState | null>(null);
+  const [realtimeSessionTotals, setRealtimeSessionTotals] =
+    useState<RealtimeSessionTotalsState | null>(null);
+  const [realtimeEventQueue, setRealtimeEventQueue] = useState<
+    AutoCombatRealtimeEvent[]
+  >([]);
+
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  const activeSessionIdRef = useRef<string | null>(null);
+  const realtimeEventQueueLengthRef = useRef(0);
+  const processedRealtimeEventKeysRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    realtimeEventQueueLengthRef.current = realtimeEventQueue.length;
+  }, [realtimeEventQueue.length]);
+
+  const loadAutoCombatData = useCallback(async () => {
+    if (!characterId) return;
+
+    try {
+      setErrorMessage('');
+
+      const [overviewData, statusData, mapsData] = await Promise.all([
+        getCharacterOverview(characterId),
+        getAutoCombatStatus(characterId).catch(() => null),
+        getAutoCombatMaps().catch(() => []),
+      ]);
+
+      const statusSession = getSessionFromStatus(statusData);
+      const statusIsActive = isSessionActive(statusData, statusSession);
+
+      const statusProgress = buildProgressFromStatus(statusData, statusSession);
+      const overviewProgress = buildProgressFromSource(
+        overviewData.character as CharacterProgressSource,
+        statusSession?.id ?? null,
+      );
+
+      const mergedProgress = pickHighestProgress(
+        overviewProgress,
+        statusProgress,
+      );
+
+      setOverview(overviewData);
+      setAutoCombatStatus(statusData);
+      setMaps(mapsData);
+
+      setRealtimeCharacterProgress((current) => {
+        if (!statusIsActive) {
+          return mergedProgress;
+        }
+
+        if (current && current.sessionId === statusSession?.id) {
+          return current;
+        }
+
+        return current ?? overviewProgress ?? statusProgress ?? mergedProgress;
+      });
+
+      setRealtimeSessionTotals((current) => {
+        if (!statusIsActive || !statusSession) {
+          return current;
+        }
+
+        if (current?.sessionId === statusSession.id) {
+          return current;
+        }
+
+        return buildSessionTotalsFromStatus(statusData, statusSession);
+      });
+
+      const characterLevel =
+        mergedProgress?.level ?? overviewData.character.level ?? 1;
+
+      setSelectedSubMapId((currentValue) => {
+        const availableSubMaps = flattenCombatSubMaps(mapsData, characterLevel);
+
+        if (
+          currentValue &&
+          availableSubMaps.some((subMap) => subMap.id === currentValue)
+        ) {
+          return currentValue;
+        }
+
+        return getDefaultSubMapId({
+          maps: mapsData,
+          characterLevel,
+          status: statusData,
+        });
+      });
+    } catch (error) {
+      setErrorMessage(
+        getApiErrorMessage(
+          error,
+          'Não foi possível carregar os dados do combate automático.',
+        ),
+      );
+    }
+  }, [characterId]);
+
+  const applyRealtimeEvent = useCallback((payload: AutoCombatRealtimeEvent) => {
+    const eventType = payload.type ?? '';
+    const progressPayload = payload as AutoCombatRealtimeEventWithProgress;
+
+    if (eventType === 'MOB_DEFEATED') {
+      const hasProgressPayload =
+        progressPayload.xpGained !== undefined ||
+        progressPayload.characterXp !== undefined ||
+        progressPayload.characterLevel !== undefined ||
+        progressPayload.currentLevelXp !== undefined ||
+        progressPayload.xpToNextLevel !== undefined ||
+        progressPayload.xpProgressPercent !== undefined ||
+        progressPayload.leveledUp !== undefined;
+
+      if (hasProgressPayload) {
+        setRealtimeCharacterProgress((current) => {
+          const xpGained = getOptionalNumber(progressPayload.xpGained);
+
+          const nextXp =
+            getOptionalNumber(progressPayload.characterXp) ??
+            (current?.xp !== undefined && xpGained !== undefined
+              ? current.xp + xpGained
+              : current?.xp);
+
+          const nextLevel =
+            getOptionalNumber(progressPayload.characterLevel) ??
+            current?.level;
+
+          const incoming: RealtimeCharacterProgressState = {
+            sessionId: progressPayload.sessionId ?? current?.sessionId ?? null,
+
+            level:
+              nextLevel !== undefined
+                ? Math.max(1, Math.floor(nextLevel))
+                : current?.level,
+
+            xp:
+              nextXp !== undefined
+                ? Math.max(0, Math.floor(nextXp))
+                : current?.xp,
+
+            currentLevelXp:
+              getOptionalNumber(progressPayload.currentLevelXp) ??
+              getOptionalNumber(progressPayload.xpIntoCurrentLevel) ??
+              current?.currentLevelXp,
+
+            xpToNextLevel:
+              getOptionalNumber(progressPayload.xpToNextLevel) ??
+              getOptionalNumber(progressPayload.nextLevelXp) ??
+              current?.xpToNextLevel,
+
+            nextLevelXp:
+              getOptionalNumber(progressPayload.nextLevelXp) ??
+              getOptionalNumber(progressPayload.xpToNextLevel) ??
+              current?.nextLevelXp,
+
+            xpProgressPercent:
+              getOptionalNumber(progressPayload.xpProgressPercent) ??
+              current?.xpProgressPercent,
+
+            xpIntoCurrentLevel:
+              getOptionalNumber(progressPayload.xpIntoCurrentLevel) ??
+              getOptionalNumber(progressPayload.currentLevelXp) ??
+              current?.xpIntoCurrentLevel,
+
+            xpNeededForNextLevel:
+              getOptionalNumber(progressPayload.xpNeededForNextLevel) ??
+              current?.xpNeededForNextLevel,
+
+            currentLevelStartXp:
+              getOptionalNumber(progressPayload.currentLevelStartXp) ??
+              current?.currentLevelStartXp,
+
+            nextLevelRequiredXp:
+              getOptionalNumber(progressPayload.nextLevelRequiredXp) ??
+              current?.nextLevelRequiredXp,
+
+            isAtLevelCap:
+              getOptionalBoolean(progressPayload.isAtLevelCap) ??
+              current?.isAtLevelCap,
+
+            xpGained,
+            leveledUp:
+              getOptionalBoolean(progressPayload.leveledUp) ??
+              current?.leveledUp,
+
+            levelsGained:
+              getOptionalNumber(progressPayload.levelsGained) ??
+              current?.levelsGained,
+
+            updatedAt: Date.now(),
+          };
+
+          return mergeProgressKeepingHighestXp(current, incoming);
+        });
+      }
+    }
+
+    const hasSessionTotalsPayload =
+      payload.totalKills !== undefined ||
+      payload.totalXpGained !== undefined ||
+      payload.totalLoot !== undefined ||
+      payload.potionsUsed !== undefined;
+
+    if (hasSessionTotalsPayload) {
+      setRealtimeSessionTotals((current) => {
+        const totalKills =
+          getOptionalNumber(payload.totalKills) ?? current?.totalKills;
+
+        return {
+          sessionId: payload.sessionId ?? current?.sessionId ?? null,
+
+          totalCombats:
+            totalKills ??
+            getOptionalNumber(payload.combatIndex) ??
+            current?.totalCombats,
+
+          totalRounds: current?.totalRounds,
+
+          totalKills,
+
+          totalXpGained:
+            getOptionalNumber(payload.totalXpGained) ?? current?.totalXpGained,
+
+          totalLoot:
+            getOptionalNumber(payload.totalLoot) ?? current?.totalLoot,
+
+          potionsUsed:
+            getOptionalNumber(payload.potionsUsed) ?? current?.potionsUsed,
+
+          updatedAt: Date.now(),
+        };
+      });
+    }
+
+    setRealtimeCombat((current) => {
+      const fallbackMobMaxHp =
+        current?.mobMaxHp ?? payload.mobCurrentHp ?? payload.mobMaxHp ?? 0;
+
+      const fallbackCharacterMaxHp =
+        current?.characterMaxHp ??
+        payload.characterCurrentHp ??
+        payload.characterMaxHp ??
+        0;
+
+      const mobMaxHp = Math.max(
+        0,
+        toSafeNumber(payload.mobMaxHp, fallbackMobMaxHp),
+      );
+
+      const characterMaxHp = Math.max(
+        0,
+        toSafeNumber(payload.characterMaxHp, fallbackCharacterMaxHp),
+      );
+
+      const receivedMobHp = toSafeNumber(
+        payload.mobCurrentHp,
+        current?.mobCurrentHp ?? mobMaxHp,
+      );
+
+      const receivedCharacterHp = toSafeNumber(
+        payload.characterCurrentHp,
+        current?.characterCurrentHp ?? characterMaxHp,
+      );
+
+      const mobCurrentHp =
+        eventType === 'MOB_DEFEATED'
+          ? 0
+          : clampNumber(receivedMobHp, 0, Math.max(0, mobMaxHp));
+
+      const characterCurrentHp =
+        eventType === 'PLAYER_DEFEATED'
+          ? 0
+          : clampNumber(receivedCharacterHp, 0, Math.max(0, characterMaxHp));
+
+      return {
+        ...current,
+
+        mobId: payload.mobId ?? current?.mobId,
+        mobName: payload.mobName ?? current?.mobName,
+        mobCurrentHp,
+        mobMaxHp,
+        mobHpPercent:
+          payload.mobHpPercent ?? clampPercent((mobCurrentHp / mobMaxHp) * 100),
+
+        characterCurrentHp,
+        characterMaxHp,
+        characterHpPercent:
+          payload.characterHpPercent ??
+          clampPercent((characterCurrentHp / characterMaxHp) * 100),
+
+        lastMessage: payload.message ?? current?.lastMessage,
+        lastDamage: payload.damage ?? current?.lastDamage,
+        lastEventType: payload.type ?? current?.lastEventType,
+        isCritical: payload.isCritical ?? false,
+        isDodged: payload.isDodged ?? false,
+
+        actor: payload.actor ?? current?.actor,
+        target: payload.target ?? current?.target,
+
+        round: payload.round ?? current?.round,
+        combatIndex: payload.combatIndex ?? current?.combatIndex,
+
+        totalKills: payload.totalKills ?? current?.totalKills,
+        totalXpGained: payload.totalXpGained ?? current?.totalXpGained,
+        totalLoot: payload.totalLoot ?? current?.totalLoot,
+        potionsUsed: payload.potionsUsed ?? current?.potionsUsed,
+
+        updatedAt: Date.now(),
+      };
+    });
+
+    setNowTick(Date.now());
+  }, []);
+
+  const enqueueRealtimeEvent = useCallback((payload: AutoCombatRealtimeEvent) => {
+    const activeSessionId = activeSessionIdRef.current;
+
+    if (
+      payload.sessionId &&
+      activeSessionId &&
+      payload.sessionId !== activeSessionId
+    ) {
+      return;
+    }
+
+    const eventKey = getRealtimeEventKey(payload);
+
+    if (processedRealtimeEventKeysRef.current.has(eventKey)) {
+      return;
+    }
+
+    setRealtimeEventQueue((currentQueue) => {
+      const alreadyQueued = currentQueue.some((queuedEvent) => {
+        return getRealtimeEventKey(queuedEvent) === eventKey;
+      });
+
+      if (alreadyQueued) {
+        return currentQueue;
+      }
+
+      const nextQueue = [...currentQueue, payload];
+
+      return nextQueue.slice(-60);
+    });
+  }, []);
+
+  const handleRealtimeStatusPayload = useCallback(
+    (payload: AutoCombatStatusResponse) => {
+      const payloadSession = getSessionFromStatus(payload);
+      const payloadIsActive = isSessionActive(payload, payloadSession);
+      const payloadIsTerminal = isTerminalSessionStatus(payloadSession?.status);
+      const statusProgress = buildProgressFromStatus(payload, payloadSession);
+
+      setAutoCombatStatus(payload);
+
+      setRealtimeCharacterProgress((current) => {
+        if (payloadIsActive) {
+          if (!statusProgress) {
+            return current;
+          }
+
+          if (!current || current.sessionId !== payloadSession?.id) {
+            return statusProgress;
+          }
+
+          return current;
+        }
+
+        if (payloadIsTerminal && realtimeEventQueueLengthRef.current > 0) {
+          return current;
+        }
+
+        return mergeProgressKeepingHighestXp(current, statusProgress);
+      });
+
+      setNowTick(Date.now());
+
+      if (payloadSession) {
+        setHasStartedHunt(true);
+      }
+
+      if (payloadIsActive && payloadSession) {
+        setRealtimeSessionTotals((current) => {
+          if (current?.sessionId === payloadSession.id) {
+            return current;
+          }
+
+          return buildSessionTotalsFromStatus(payload, payloadSession);
+        });
+
+        setHasStartedHunt(true);
+      }
+
+      if (payloadIsTerminal) {
+        setRealtimeSessionTotals((current) => {
+          if (realtimeEventQueueLengthRef.current > 0) {
+            return current ?? buildSessionTotalsFromStatus(payload, payloadSession);
+          }
+
+          return buildSessionTotalsFromStatus(payload, payloadSession) ?? current;
+        });
+      }
+    },
+    [],
+  );
+
+  const character = useMemo(() => {
+    if (!overview) return null;
+
+    return buildCharacterViewModel(overview);
+  }, [overview]);
+
+  const totalStats = useMemo(() => {
+    return resolveCharacterStats(overview, character);
+  }, [overview, character]);
+
+  const session = useMemo(() => {
+    return getSessionFromStatus(autoCombatStatus);
+  }, [autoCombatStatus]);
+
+  const hasActiveSession = isSessionActive(autoCombatStatus, session);
+  const hasPendingRealtimeEvents = realtimeEventQueue.length > 0;
+  const showActiveSession = hasActiveSession || hasPendingRealtimeEvents;
+
+  const overviewCharacterProgress = useMemo(() => {
+    return buildProgressFromSource(
+      character as CharacterProgressSource | null | undefined,
+      session?.id ?? null,
+    );
+  }, [character, session?.id]);
+
+  const statusCharacterProgress = useMemo(() => {
+    return buildProgressFromStatus(autoCombatStatus, session);
+  }, [autoCombatStatus, session]);
+
+  const visibleCharacterProgress = useMemo(() => {
+    if (showActiveSession) {
+      return (
+        realtimeCharacterProgress ??
+        statusCharacterProgress ??
+        overviewCharacterProgress
+      );
+    }
+
+    return pickHighestProgress(
+      overviewCharacterProgress,
+      statusCharacterProgress,
+      realtimeCharacterProgress,
+    );
+  }, [
+    overviewCharacterProgress,
+    realtimeCharacterProgress,
+    showActiveSession,
+    statusCharacterProgress,
+  ]);
+
+  const { isConnected: isSocketConnected } = useAutoCombatSocket({
+    characterId: characterId ?? null,
+    enabled: Boolean(characterId),
+
+    onStatus: handleRealtimeStatusPayload,
+    onSessionUpdated: handleRealtimeStatusPayload,
+
+    onFinished: (payload) => {
+      handleRealtimeStatusPayload(payload);
+    },
+
+    onStopped: (payload) => {
+      handleRealtimeStatusPayload(payload);
+      setRealtimeEventQueue([]);
+      setRealtimeCombat(null);
+      setRealtimeSessionTotals(null);
+      processedRealtimeEventKeysRef.current.clear();
+    },
+
+    onMobSpawned: (payload) => {
+      enqueueRealtimeEvent(payload);
+    },
+
+    onHit: (payload) => {
+      enqueueRealtimeEvent(payload);
+    },
+
+    onMobDefeated: (payload) => {
+      enqueueRealtimeEvent(payload);
+    },
+
+    onPlayerDefeated: (payload) => {
+      enqueueRealtimeEvent(payload);
+    },
+
+    onPotionUsed: (payload) => {
+      enqueueRealtimeEvent(payload);
+    },
+
+    onError: (message) => {
+      setErrorMessage(message);
+    },
+  });
+
+  const firstQueuedRealtimeEvent = realtimeEventQueue[0] ?? null;
+
+  useEffect(() => {
+    if (!firstQueuedRealtimeEvent) return;
+
+    const eventKey = getRealtimeEventKey(firstQueuedRealtimeEvent);
+
+    processedRealtimeEventKeysRef.current.add(eventKey);
+
+    if (processedRealtimeEventKeysRef.current.size > 500) {
+      processedRealtimeEventKeysRef.current = new Set(
+        Array.from(processedRealtimeEventKeysRef.current).slice(-250),
+      );
+    }
+
+    applyRealtimeEvent(firstQueuedRealtimeEvent);
+
+    const timeoutId = window.setTimeout(() => {
+      setRealtimeEventQueue((currentQueue) => currentQueue.slice(1));
+    }, getRealtimeEventDelay(firstQueuedRealtimeEvent));
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [firstQueuedRealtimeEvent, applyRealtimeEvent]);
+
+  useEffect(() => {
+    activeSessionIdRef.current = session?.id ?? null;
+  }, [session?.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function load() {
+      if (!characterId) return;
+
+      try {
+        setIsLoading(true);
+        await loadAutoCombatData();
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [characterId, loadAutoCombatData]);
+
+  useEffect(() => {
+    if (hasActiveSession) {
+      setHasStartedHunt(true);
+    }
+  }, [hasActiveSession]);
+
+  useEffect(() => {
+    if (!hasActiveSession && realtimeEventQueue.length <= 0) {
+      const timeoutId = window.setTimeout(() => {
+        setRealtimeCombat(null);
+      }, 500);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+
+    return undefined;
+  }, [hasActiveSession, realtimeEventQueue.length]);
+
+  useEffect(() => {
+    if (!showActiveSession) return;
+
+    const intervalId = window.setInterval(() => {
+      setNowTick(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [showActiveSession]);
+
+  useEffect(() => {
+    if (!hasActiveSession || isSocketConnected) return;
+
+    const intervalId = window.setInterval(() => {
+      loadAutoCombatData();
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [hasActiveSession, isSocketConnected, loadAutoCombatData]);
+
+  const availableSubMaps = useMemo(() => {
+    return flattenCombatSubMaps(
+      maps,
+      visibleCharacterProgress?.level ?? character?.level ?? 1,
+    );
+  }, [maps, visibleCharacterProgress?.level, character?.level]);
+
+  const selectedSubMap = useMemo(() => {
+    return availableSubMaps.find((subMap) => subMap.id === selectedSubMapId);
+  }, [availableSubMaps, selectedSubMapId]);
+
+  const selectedMap = useMemo(() => {
+    if (!selectedSubMap) return null;
+
+    return maps.find((gameMap) => {
+      return gameMap.subMaps?.some((subMap) => subMap.id === selectedSubMap.id);
+    });
+  }, [maps, selectedSubMap]);
+
+  const selectedSubMapThreats = useMemo(() => {
+    return getActiveEncounters(selectedSubMap).sort((a, b) => {
+      return (b.weight ?? 0) - (a.weight ?? 0);
+    });
+  }, [selectedSubMap]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPreview() {
+      if (!characterId || !selectedSubMapId || !hasStartedHunt) {
+        setPreparationPreview(null);
+        return;
+      }
+
+      if (showActiveSession) {
+        setPreparationPreview(null);
+        return;
+      }
+
+      try {
+        setIsPreviewLoading(true);
+
+        const data = await previewAutoCombat({
+          characterId,
+          subMapId: selectedSubMapId,
+          projectionSeconds: 1800,
+        });
+
+        if (isMounted) {
+          setPreparationPreview(data.combatPreview ?? null);
+        }
+      } catch {
+        if (isMounted) {
+          setPreparationPreview(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsPreviewLoading(false);
+        }
+      }
+    }
+
+    loadPreview();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [characterId, selectedSubMapId, hasStartedHunt, showActiveSession]);
+
+  if (!characterId) {
+    return <Navigate to="/characters" replace />;
+  }
+
+  if (isLoading) {
+    return (
+      <main className="dashboard-loading">
+        <div className="loading-spinner" />
+        <span>Carregando combate automático...</span>
+      </main>
+    );
+  }
+
+  if (!character) {
+    return <Navigate to="/characters" replace />;
+  }
+
+  const characterWithPotionConfig = character as CharacterWithSinglePotionConfig;
+
+  const potionConfigs =
+    characterWithPotionConfig.potionConfigs ??
+    (characterWithPotionConfig.potionConfig
+      ? [characterWithPotionConfig.potionConfig]
+      : []);
+
+  const potionSlots = Array.from({ length: 3 }, (_, index) => {
+    return potionConfigs[index] ?? null;
+  });
+
+  const latestKilledMob = getLatestKilledMob(autoCombatStatus);
+  const mainThreat = selectedSubMapThreats[0] ?? null;
+  const remainingSeconds = getRemainingSeconds(autoCombatStatus);
+
+  const rawCharacterMaxHp =
+    showActiveSession && realtimeCombat?.characterMaxHp !== undefined
+      ? realtimeCombat.characterMaxHp
+      : hasActiveSession
+        ? autoCombatStatus?.character?.maxHp ??
+          autoCombatStatus?.sessionSummary?.hp?.max ??
+          character.maxHp
+        : character.maxHp;
+
+  const currentCharacterMaxHp = Math.max(
+    1,
+    toSafeNumber(rawCharacterMaxHp, character.maxHp ?? 1),
+  );
+
+  const rawCharacterHp =
+    showActiveSession && realtimeCombat?.characterCurrentHp !== undefined
+      ? realtimeCombat.characterCurrentHp
+      : hasActiveSession
+        ? autoCombatStatus?.character?.currentHp ??
+          autoCombatStatus?.sessionSummary?.hp?.current ??
+          character.currentHp
+        : character.currentHp;
+
+  const currentCharacterHp = clampNumber(
+    rawCharacterHp,
+    0,
+    currentCharacterMaxHp,
+  );
+
+  const currentCharacterLevel =
+    visibleCharacterProgress?.level ??
+    autoCombatStatus?.character?.level ??
+    character.level ??
+    1;
+
+  const currentCharacterXp =
+    visibleCharacterProgress?.xp ??
+    (showActiveSession
+      ? character.totalXp ?? character.xp ?? 0
+      : autoCombatStatus?.character?.totalXp ??
+        autoCombatStatus?.character?.levelProgress?.totalXp ??
+        autoCombatStatus?.character?.xp ??
+        character.totalXp ??
+        character.xp ??
+        0);
+
+  const currentLevelXp =
+    visibleCharacterProgress?.currentLevelXp ??
+    visibleCharacterProgress?.xpIntoCurrentLevel ??
+    character.currentLevelXp ??
+    character.levelProgress?.currentLevelXp ??
+    character.levelProgress?.xpIntoCurrentLevel ??
+    undefined;
+
+  const xpToNextLevel =
+    visibleCharacterProgress?.xpToNextLevel ??
+    visibleCharacterProgress?.nextLevelXp ??
+    character.xpToNextLevel ??
+    character.nextLevelXp ??
+    character.levelProgress?.xpToNextLevel ??
+    character.levelProgress?.nextLevelXp ??
+    undefined;
+
+  const xpProgressPercent =
+    visibleCharacterProgress?.xpProgressPercent ??
+    character.xpProgressPercent ??
+    character.levelProgress?.xpProgressPercent ??
+    character.levelProgress?.progressPercent ??
+    undefined;
+
+  const xpIntoCurrentLevel =
+    visibleCharacterProgress?.xpIntoCurrentLevel ??
+    visibleCharacterProgress?.currentLevelXp ??
+    character.xpIntoCurrentLevel ??
+    character.currentLevelXp ??
+    character.levelProgress?.xpIntoCurrentLevel ??
+    character.levelProgress?.currentLevelXp ??
+    undefined;
+
+  const xpNeededForNextLevel =
+    visibleCharacterProgress?.xpNeededForNextLevel ??
+    character.xpNeededForNextLevel ??
+    character.levelProgress?.xpNeededForNextLevel ??
+    undefined;
+
+  const currentLevelStartXp =
+    visibleCharacterProgress?.currentLevelStartXp ??
+    character.currentLevelStartXp ??
+    character.levelProgress?.currentLevelStartXp ??
+    undefined;
+
+  const nextLevelRequiredXp =
+    visibleCharacterProgress?.nextLevelRequiredXp ??
+    character.nextLevelRequiredXp ??
+    character.levelProgress?.nextLevelRequiredXp ??
+    undefined;
+
+  const isAtLevelCap =
+    visibleCharacterProgress?.isAtLevelCap ??
+    character.isAtLevelCap ??
+    character.levelProgress?.isAtLevelCap ??
+    undefined;
+
+  const activeSessionMapName = showActiveSession
+    ? autoCombatStatus?.subMap?.map?.name
+    : undefined;
+
+  const currentLayoutMapName =
+    activeSessionMapName ??
+    selectedMap?.name ??
+    selectedSubMap?.map?.name ??
+    selectedSubMap?.mapName ??
+    character.currentMapName;
+
+  const layoutCharacter: CharacterViewModelWithLayoutFields = {
+    ...character,
+    level: currentCharacterLevel,
+    xp: currentCharacterXp,
+    totalXp: currentCharacterXp,
+
+    currentLevelXp,
+    xpToNextLevel,
+    nextLevelXp: xpToNextLevel,
+    xpProgressPercent,
+    xpIntoCurrentLevel,
+    xpNeededForNextLevel,
+    currentLevelStartXp,
+    nextLevelRequiredXp,
+    isAtLevelCap,
+
+    currentHp: currentCharacterHp,
+    maxHp: currentCharacterMaxHp,
+    currentMapName: currentLayoutMapName,
+  };
+
+  const characterHasHp = currentCharacterHp > 0;
+
+  const characterHpPercent =
+    currentCharacterMaxHp > 0
+      ? (currentCharacterHp / currentCharacterMaxHp) * 100
+      : 0;
+
+  const characterHpStyle = {
+    width: `${clampPercent(characterHpPercent)}%`,
+  } as CSSProperties;
+
+  const activeMobName =
+    realtimeCombat?.mobName ??
+    autoCombatStatus?.currentMob?.name ??
+    mainThreat?.mob?.name ??
+    latestKilledMob?.mobName ??
+    'Aguardando mob';
+
+  const rawActiveMobMaxHp =
+    realtimeCombat?.mobMaxHp ??
+    autoCombatStatus?.currentMob?.maxHp ??
+    autoCombatStatus?.currentMob?.hp ??
+    mainThreat?.mob?.hp ??
+    0;
+
+  const activeMobMaxHp = Math.max(0, toSafeNumber(rawActiveMobMaxHp, 0));
+
+  const rawActiveMobCurrentHp =
+    realtimeCombat?.mobCurrentHp ??
+    autoCombatStatus?.currentMob?.currentHp ??
+    (activeMobMaxHp > 0 ? activeMobMaxHp : 0);
+
+  const activeMobCurrentHp = clampNumber(
+    rawActiveMobCurrentHp,
+    0,
+    activeMobMaxHp,
+  );
+
+  const activeMobHpPercent =
+    activeMobMaxHp > 0 ? (activeMobCurrentHp / activeMobMaxHp) * 100 : 0;
+
+  const activeMobHpStyle = {
+    width: `${clampPercent(activeMobHpPercent)}%`,
+  } as CSSProperties;
+
+  const activeMobReference = realtimeCombat?.combatIndex
+    ? `Combate ${realtimeCombat.combatIndex}${
+        realtimeCombat.round ? ` · Rodada ${realtimeCombat.round}` : ''
+      }`
+    : autoCombatStatus?.session?.currentCombatIndex
+      ? `Combate ${autoCombatStatus.session.currentCombatIndex}${
+          autoCombatStatus.session.currentRound
+            ? ` · Rodada ${autoCombatStatus.session.currentRound}`
+            : ''
+        }`
+      : mainThreat?.mob
+        ? `Nv. ${mainThreat.mob.level}`
+        : latestKilledMob
+          ? `${latestKilledMob.kills} abate(s)`
+          : '—';
+
+  const roundProgressPercent = calculateRoundProgress({
+    session,
+    isActive: showActiveSession,
+    now: nowTick,
+  });
+
+  const roundProgressStyle = {
+    width: `${roundProgressPercent}%`,
+  } as CSSProperties;
+
+  const sessionStatusText =
+    autoCombatStatus?.sessionSummary?.statusText ??
+    formatSessionStatus(session?.status);
+
+  const statusSessionTotals = buildSessionTotalsFromStatus(
+    autoCombatStatus,
+    session,
+  );
+
+  const visibleRealtimeSessionTotals =
+    realtimeSessionTotals?.sessionId && session?.id
+      ? realtimeSessionTotals.sessionId === session.id
+        ? realtimeSessionTotals
+        : null
+      : realtimeSessionTotals;
+
+  const visibleSessionTotals =
+    showActiveSession && isSocketConnected
+      ? visibleRealtimeSessionTotals ?? statusSessionTotals
+      : statusSessionTotals ?? visibleRealtimeSessionTotals;
+
+  const totalKills =
+    visibleSessionTotals?.totalKills ??
+    realtimeCombat?.totalKills ??
+    autoCombatStatus?.sessionSummary?.mobs?.totalKills ??
+    autoCombatStatus?.rewards?.mobs?.reduce((total, mob) => {
+      return total + mob.kills;
+    }, 0) ??
+    0;
+
+  const totalCombats =
+    visibleSessionTotals?.totalCombats ??
+    autoCombatStatus?.sessionSummary?.combat?.totalCombats ??
+    session?.totalCombatsResolved ??
+    autoCombatStatus?.processing?.combatsResolved ??
+    totalKills ??
+    0;
+
+  const totalRounds =
+    visibleSessionTotals?.totalRounds ??
+    autoCombatStatus?.sessionSummary?.combat?.totalRounds ??
+    session?.totalRoundsResolved ??
+    autoCombatStatus?.processing?.roundsResolved ??
+    realtimeCombat?.round ??
+    0;
+
+  const totalXpGained =
+    visibleSessionTotals?.totalXpGained ??
+    realtimeCombat?.totalXpGained ??
+    autoCombatStatus?.sessionSummary?.progression?.totalXpGained ??
+    session?.totalXpGained ??
+    autoCombatStatus?.processing?.xpGained ??
+    0;
+
+  const totalLoot =
+    visibleSessionTotals?.totalLoot ??
+    realtimeCombat?.totalLoot ??
+    autoCombatStatus?.sessionSummary?.loot?.totalQuantity ??
+    autoCombatStatus?.rewards?.loots?.reduce((total, loot) => {
+      return total + loot.quantity;
+    }, 0) ??
+    0;
+
+  const potionsUsed =
+    visibleSessionTotals?.potionsUsed ??
+    realtimeCombat?.potionsUsed ??
+    autoCombatStatus?.processing?.potionsUsed ??
+    0;
+
+  const canStartHunt =
+    availableSubMaps.length > 0 && !showActiveSession && characterHasHp;
+
+  const canStartCombat =
+    Boolean(selectedSubMap) &&
+    hasStartedHunt &&
+    !showActiveSession &&
+    !isActionLoading &&
+    characterHasHp;
+
+  function handleStartHunt() {
+    if (!characterHasHp) {
+      setErrorMessage(
+        'Este personagem está sem HP. Use a enfermaria ou uma cura antes de iniciar uma nova caça.',
+      );
+      return;
+    }
+
+    if (!canStartHunt) {
+      setErrorMessage(
+        'Nenhum submapa com encontros ativos foi encontrado para o nível atual.',
+      );
+      return;
+    }
+
+    setErrorMessage('');
+
+    if (!selectedSubMapId && availableSubMaps[0]) {
+      setSelectedSubMapId(availableSubMaps[0].id);
+    }
+
+    setHasStartedHunt(true);
+    setActiveTab('battle');
+  }
+
+  function handleResetHunt() {
+    if (showActiveSession) return;
+
+    setHasStartedHunt(false);
+    setPreparationPreview(null);
+    setRealtimeEventQueue([]);
+    setRealtimeCombat(null);
+    setRealtimeSessionTotals(null);
+    processedRealtimeEventKeysRef.current.clear();
+  }
+
+  async function handleStartAutoCombat() {
+    if (!characterId || !selectedSubMapId || isActionLoading) return;
+
+    if (!characterHasHp) {
+      setErrorMessage(
+        'Este personagem está sem HP. Use a enfermaria ou uma cura antes de iniciar o combate.',
+      );
+      return;
+    }
+
+    try {
+      setIsActionLoading(true);
+      setErrorMessage('');
+      setRealtimeEventQueue([]);
+      setRealtimeCombat(null);
+      setRealtimeCharacterProgress(null);
+      setRealtimeSessionTotals(null);
+      processedRealtimeEventKeysRef.current.clear();
+
+      const response = await startAutoCombat({
+        characterId,
+        subMapId: selectedSubMapId,
+      });
+
+      const responseSession = getSessionFromStatus(response);
+      const responseProgress = buildProgressFromStatus(response, responseSession);
+
+      activeSessionIdRef.current = responseSession?.id ?? null;
+
+      setAutoCombatStatus(response);
+      setRealtimeCharacterProgress(responseProgress);
+      setRealtimeSessionTotals(
+        buildSessionTotalsFromStatus(response, responseSession),
+      );
+      setHasStartedHunt(true);
+      setActiveTab('battle');
+
+      await loadAutoCombatData();
+    } catch (error) {
+      setErrorMessage(
+        getApiErrorMessage(
+          error,
+          'Não foi possível iniciar o combate automático. Verifique o HP, o submapa e se já existe uma sessão ativa.',
+        ),
+      );
+    } finally {
+      setIsActionLoading(false);
+    }
+  }
+
+  async function handleStopAutoCombat() {
+    if (!characterId || isActionLoading) return;
+
+    try {
+      setIsActionLoading(true);
+      setErrorMessage('');
+
+      const response = await stopAutoCombat(characterId);
+      const responseSession = getSessionFromStatus(response);
+      const responseProgress = buildProgressFromStatus(response, responseSession);
+
+      setAutoCombatStatus(response);
+      setRealtimeCharacterProgress((current) =>
+        mergeProgressKeepingHighestXp(current, responseProgress),
+      );
+      setRealtimeEventQueue([]);
+      setRealtimeCombat(null);
+      setRealtimeSessionTotals(null);
+      processedRealtimeEventKeysRef.current.clear();
+
+      await loadAutoCombatData();
+    } catch (error) {
+      setErrorMessage(
+        getApiErrorMessage(
+          error,
+          'Não foi possível parar o combate automático.',
+        ),
+      );
+    } finally {
+      setIsActionLoading(false);
+    }
+  }
+
+  return (
+    <DashboardLayout character={layoutCharacter}>
+      <div className="auto-combat-page">
+        <header className="auto-combat-app-header">
+          <button
+            type="button"
+            className="auto-combat-back-button"
+            onClick={() => window.history.back()}
+          >
+            ‹ Voltar
+          </button>
+
+          <strong>Combate</strong>
+
+          <span />
+        </header>
+
+        {errorMessage ? (
+          <div className="auto-combat-alert" role="alert">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <section className="auto-combat-app-shell">
+          <div className="auto-combat-section-title">
+            <span>Combate Automático</span>
+          </div>
+
+          <div className="auto-combat-tabs" role="tablist">
+            <button
+              type="button"
+              className={activeTab === 'battle' ? 'is-active' : ''}
+              onClick={() => setActiveTab('battle')}
+            >
+              Combate
+            </button>
+
+            <button
+              type="button"
+              className={activeTab === 'stats' ? 'is-active' : ''}
+              onClick={() => setActiveTab('stats')}
+            >
+              Status
+            </button>
+          </div>
+
+          {activeTab === 'battle' ? (
+            <div className="auto-combat-tab-panel">
+              {!hasStartedHunt && !showActiveSession ? (
+                <article className="auto-combat-stage-card auto-combat-map-stage">
+                  <div className="auto-combat-map-preview">
+                    <div className="auto-combat-map-preview__visual">
+                      <span>Zona atual</span>
+
+                      <strong>
+                        {selectedMap?.name ??
+                          selectedSubMap?.map?.name ??
+                          selectedSubMap?.mapName ??
+                          layoutCharacter.currentMapName}
+                      </strong>
+
+                      {selectedSubMap?.name ? (
+                        <small>{selectedSubMap.name}</small>
+                      ) : null}
+                    </div>
+
+                    <div className="auto-combat-map-preview__content">
+                      <span>Preparação da incursão</span>
+
+                      <strong>
+                        {selectedMap?.name ??
+                          selectedSubMap?.map?.name ??
+                          selectedSubMap?.mapName ??
+                          layoutCharacter.currentMapName}
+                      </strong>
+
+                      <p>
+                        {selectedMap?.description ??
+                          selectedSubMap?.description ??
+                          'Escolha um submapa disponível e inicie a caça para revelar os infectados próximos.'}
+                      </p>
+
+                      <label className="auto-combat-field auto-combat-field--submap">
+                        <span>Submapa</span>
+
+                        <div className="auto-combat-select-shell">
+                          <select
+                            value={selectedSubMapId}
+                            onChange={(event) =>
+                              setSelectedSubMapId(event.target.value)
+                            }
+                            disabled={isActionLoading}
+                          >
+                            {availableSubMaps.length <= 0 ? (
+                              <option value="">Nenhum submapa disponível</option>
+                            ) : null}
+
+                            {availableSubMaps.map((subMap) => (
+                              <option key={subMap.id} value={subMap.id}>
+                                {getSubMapLabel(subMap)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </label>
+
+                      <div className="auto-combat-map-meta">
+                        <div>
+                          <span>Mapa</span>
+                          <strong>
+                            {selectedMap?.name ??
+                              selectedSubMap?.map?.name ??
+                              selectedSubMap?.mapName ??
+                              layoutCharacter.currentMapName}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Tier</span>
+                          <strong>{selectedSubMap?.tier ?? '—'}</strong>
+                        </div>
+
+                        <div>
+                          <span>Nível</span>
+                          <strong>
+                            {selectedSubMap?.minLevel && selectedSubMap.maxLevel
+                              ? `${selectedSubMap.minLevel}-${selectedSubMap.maxLevel}`
+                              : '—'}
+                          </strong>
+                        </div>
+                      </div>
+
+                      <div className="auto-combat-stage-actions">
+                        <button
+                          type="button"
+                          className="auto-combat-primary-button"
+                          disabled={!canStartHunt || isActionLoading}
+                          onClick={handleStartHunt}
+                        >
+                          Iniciar caça
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ) : null}
+
+              {hasStartedHunt && !showActiveSession ? (
+                <article className="auto-combat-stage-card auto-combat-hunt-stage">
+                  <div className="auto-combat-section-title auto-combat-section-title--small">
+                    <span>Inimigos Próximos</span>
+                  </div>
+
+                  {selectedSubMapThreats.length > 0 ? (
+                    <div className="auto-combat-enemy-grid">
+                      {selectedSubMapThreats.map((encounter) => {
+                        const mob = encounter.mob;
+                        const chance = getThreatWeightPercent(
+                          encounter,
+                          selectedSubMapThreats,
+                        );
+
+                        return (
+                          <article
+                            key={encounter.id}
+                            className="auto-combat-enemy-card"
+                          >
+                            <div className="auto-combat-enemy-card__level">
+                              Nv. {mob?.level ?? '—'}
+                            </div>
+
+                            <div className="auto-combat-enemy-card__xp">
+                              XP {mob?.xpReward ?? '—'}
+                            </div>
+
+                            <div className="auto-combat-enemy-card__portrait">
+                              ☣
+                            </div>
+
+                            <div className="auto-combat-enemy-card__content">
+                              <span>Ameaça próxima</span>
+
+                              <strong>{mob?.name ?? 'Infectado'}</strong>
+
+                              <div className="auto-combat-enemy-card__hp">
+                                <div className="auto-combat-enemy-card__hp-header">
+                                  <span>HP</span>
+                                  <strong>{mob?.hp ?? '—'}</strong>
+                                </div>
+
+                                <i className="auto-combat-enemy-card__hp-track">
+                                  <b
+                                    style={{
+                                      width: mob?.hp ? '100%' : '0%',
+                                    }}
+                                  />
+                                </i>
+                              </div>
+
+                              <div className="auto-combat-enemy-card__stats">
+                                <span>ATQ {mob?.attack ?? '—'}</span>
+                                <span>DEF {mob?.defense ?? '—'}</span>
+                                <span>VEL {mob?.speed ?? '—'}</span>
+                                <span>Chance {chance}%</span>
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="auto-combat-hunt-empty auto-combat-hunt-empty--compact">
+                      <div className="auto-combat-hunt-empty__icon">!</div>
+
+                      <strong>Nenhum inimigo encontrado</strong>
+
+                      <p>
+                        Este submapa não possui encontros ativos no momento.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="auto-combat-preview-grid">
+                    <div>
+                      <span>Risco</span>
+                      <strong>
+                        {isPreviewLoading
+                          ? 'Calculando...'
+                          : formatRiskLabel(preparationPreview?.risk?.level)}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>XP/min</span>
+                      <strong>
+                        {isPreviewLoading
+                          ? '...'
+                          : preparationPreview?.xpPerMinute ?? '—'}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>HP esperado</span>
+                      <strong>
+                        {isPreviewLoading
+                          ? '...'
+                          : preparationPreview?.hp?.expectedFinalPercent !==
+                              undefined
+                            ? `${Math.round(
+                                preparationPreview.hp.expectedFinalPercent,
+                              )}%`
+                            : '—'}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="auto-combat-stage-actions">
+                    <button
+                      type="button"
+                      className="auto-combat-primary-button"
+                      disabled={!canStartCombat}
+                      onClick={handleStartAutoCombat}
+                    >
+                      {isActionLoading ? 'Processando...' : 'Iniciar combate'}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="auto-combat-secondary-button auto-combat-secondary-button--danger"
+                      disabled={isActionLoading}
+                      onClick={handleResetHunt}
+                    >
+                      Cancelar caça
+                    </button>
+                  </div>
+                </article>
+              ) : null}
+
+              {showActiveSession ? (
+                <div className="auto-combat-session-stage">
+                  <article className="auto-combat-arena-card">
+                    <div className="auto-combat-arena-card__top">
+                      <span>{sessionStatusText}</span>
+
+                      <strong>{formatSeconds(remainingSeconds)}</strong>
+                    </div>
+
+                    <div className="auto-combat-duel-row">
+                      <div className="auto-combat-fighter-card auto-combat-fighter-card--player">
+                        <span>Sobrevivente</span>
+
+                        <strong>{layoutCharacter.name}</strong>
+
+                        <div className="auto-combat-resource">
+                          <div>
+                            <span>HP</span>
+                            <strong>
+                              {currentCharacterHp}/{currentCharacterMaxHp}
+                            </strong>
+                          </div>
+
+                          <i>
+                            <b style={characterHpStyle} />
+                          </i>
+                        </div>
+                      </div>
+
+                      <div className="auto-combat-vs">VS</div>
+
+                      <div className="auto-combat-fighter-card auto-combat-fighter-card--mob">
+                        <span>Ameaça atual</span>
+
+                        <strong>{activeMobName}</strong>
+
+                        <div className="auto-combat-resource">
+                          <div>
+                            <span>HP</span>
+                            <strong>
+                              {activeMobMaxHp > 0
+                                ? `${activeMobCurrentHp}/${activeMobMaxHp}`
+                                : activeMobReference}
+                            </strong>
+                          </div>
+
+                          <i>
+                            <b style={activeMobHpStyle} />
+                          </i>
+                        </div>
+                      </div>
+                    </div>
+
+                    {realtimeCombat?.lastMessage ? (
+                      <div className="auto-combat-realtime-event">
+                        <span>{activeMobReference}</span>
+                        <strong>
+                          {realtimeCombat.lastMessage}
+                          {realtimeCombat.lastDamage &&
+                          realtimeCombat.lastDamage > 0
+                            ? ` (${realtimeCombat.lastDamage})`
+                            : ''}
+                        </strong>
+                      </div>
+                    ) : null}
+
+                    <div className="auto-combat-round-progress">
+                      <div>
+                        <span>Rodada</span>
+                        <strong>{Math.round(roundProgressPercent)}%</strong>
+                      </div>
+
+                      <i>
+                        <b style={roundProgressStyle} />
+                      </i>
+                    </div>
+
+                    <div className="auto-combat-stage-actions auto-combat-stage-actions--session">
+                      <button
+                        type="button"
+                        className="auto-combat-secondary-button auto-combat-secondary-button--danger"
+                        disabled={isActionLoading || !hasActiveSession}
+                        onClick={handleStopAutoCombat}
+                      >
+                        {isActionLoading ? 'Processando...' : 'Parar sessão'}
+                      </button>
+                    </div>
+                  </article>
+
+                  <div className="auto-combat-consumables">
+                    {potionSlots.map((potionConfig, index) => (
+                      <article
+                        key={potionConfig?.id ?? `empty-potion-${index}`}
+                        className={[
+                          'auto-combat-consumable-slot',
+                          potionConfig?.enabled ? 'is-enabled' : 'is-empty',
+                        ].join(' ')}
+                      >
+                        <div className="auto-combat-consumable-slot__icon">
+                          ✚
+                        </div>
+
+                        <div>
+                          <strong>{getPotionName(potionConfig)}</strong>
+                          <span>{getPotionDescription(potionConfig)}</span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+
+                  <article className="auto-combat-session-panel">
+                    <div className="auto-combat-session-panel__header">
+                      <span>Estatísticas da sessão</span>
+                      <strong>{formatSessionStatus(session?.status)}</strong>
+                    </div>
+
+                    <div className="auto-combat-session-summary">
+                      <div>
+                        <span>Combates</span>
+                        <strong>{totalCombats}</strong>
+                      </div>
+
+                      <div>
+                        <span>Rodadas</span>
+                        <strong>{totalRounds}</strong>
+                      </div>
+
+                      <div>
+                        <span>Abates</span>
+                        <strong>{totalKills}</strong>
+                      </div>
+
+                      <div>
+                        <span>XP ganho</span>
+                        <strong>{totalXpGained}</strong>
+                      </div>
+
+                      <div>
+                        <span>Loot</span>
+                        <strong>{totalLoot}</strong>
+                      </div>
+
+                      <div>
+                        <span>Poções</span>
+                        <strong>{potionsUsed}</strong>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="auto-combat-tab-panel auto-combat-tab-panel--stats">
+              <div className="auto-combat-character-stats-panel character-stats-panel character-stats-panel--primary-only">
+                <section className="character-stats-group character-stats-group--primary">
+                  <header className="character-stats-group__header">
+                    <span>Base do personagem</span>
+                    <h3>Atributos primários</h3>
+                  </header>
+
+                  <div className="character-stats-grid character-stats-grid--primary">
+                    {STAT_CARDS.map((stat) => {
+                      const value = totalStats[stat.key] ?? 0;
+
+                      return (
+                        <article
+                          key={stat.key}
+                          className={`character-stat-card character-stat-card--${stat.className}`}
+                        >
+                          <div className="character-stat-card__icon">
+                            <img src={stat.icon} alt="" aria-hidden="true" />
+                          </div>
+
+                          <div className="character-stat-card__content">
+                            <strong>{stat.label}</strong>
+                            <p>{stat.description}</p>
+                          </div>
+
+                          <div className="character-stat-card__value">
+                            {value}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+    </DashboardLayout>
+  );
+}
+================ frontend/src/features/auto-combat/hooks/useAutoCombatSocket.ts ================
+import { useEffect, useRef, useState } from 'react';
+import { getAuthToken } from '../../../services/api/authToken';
+import {
+    connectAutoCombatSocket,
+    type AutoCombatConnectedPayload,
+    type AutoCombatJoinedPayload,
+    type AutoCombatLeftPayload,
+    type AutoCombatRealtimeEvent,
+    type AutoCombatSocket,
+    type AutoCombatSocketError,
+} from '../../../services/websocket/socketClient';
+import type { AutoCombatStatusResponse } from '../types/auto-combat.types';
+
+type UseAutoCombatSocketOptions = {
+  characterId?: string | null;
+  enabled?: boolean;
+
+  onStatus?: (payload: AutoCombatStatusResponse) => void;
+  onSessionUpdated?: (payload: AutoCombatStatusResponse) => void;
+  onFinished?: (payload: AutoCombatStatusResponse) => void;
+  onStopped?: (payload: AutoCombatStatusResponse) => void;
+
+  onMobSpawned?: (payload: AutoCombatRealtimeEvent) => void;
+  onHit?: (payload: AutoCombatRealtimeEvent) => void;
+  onMobDefeated?: (payload: AutoCombatRealtimeEvent) => void;
+  onPlayerDefeated?: (payload: AutoCombatRealtimeEvent) => void;
+  onPotionUsed?: (payload: AutoCombatRealtimeEvent) => void;
+
+  onError?: (message: string) => void;
+};
+
+export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
+  const {
+    characterId,
+    enabled = true,
+    onStatus,
+    onSessionUpdated,
+    onFinished,
+    onStopped,
+    onMobSpawned,
+    onHit,
+    onMobDefeated,
+    onPlayerDefeated,
+    onPotionUsed,
+    onError,
+  } = options;
+
+  const [socket, setSocket] = useState<AutoCombatSocket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isJoined, setIsJoined] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [lastEvent, setLastEvent] = useState<AutoCombatRealtimeEvent | null>(
+    null,
+  );
+
+  const handlersRef = useRef({
+    onStatus,
+    onSessionUpdated,
+    onFinished,
+    onStopped,
+    onMobSpawned,
+    onHit,
+    onMobDefeated,
+    onPlayerDefeated,
+    onPotionUsed,
+    onError,
+  });
+
+  handlersRef.current = {
+    onStatus,
+    onSessionUpdated,
+    onFinished,
+    onStopped,
+    onMobSpawned,
+    onHit,
+    onMobDefeated,
+    onPlayerDefeated,
+    onPotionUsed,
+    onError,
+  };
+
+  useEffect(() => {
+    if (!enabled || !characterId) {
+      setSocket(null);
+      setIsConnected(false);
+      setIsJoined(false);
+      setLastEvent(null);
+      return;
+    }
+
+    const token = getAuthToken();
+
+    if (!token) {
+      const message =
+        'Token de autenticação não encontrado. Faça login novamente.';
+
+      setSocket(null);
+      setIsConnected(false);
+      setIsJoined(false);
+      setErrorMessage(message);
+      handlersRef.current.onError?.(message);
+
+      return;
+    }
+
+    const currentSocket = connectAutoCombatSocket();
+
+    let isDisposed = false;
+    let hasJoinedCharacterRoom = false;
+    let isJoiningCharacterRoom = false;
+    let joinTimeoutId: number | undefined;
+
+    setSocket(currentSocket);
+    setLastEvent(null);
+
+    currentSocket.auth = {
+      token,
+    };
+
+    function safeSetError(message: string) {
+      if (isDisposed) return;
+
+      setErrorMessage(message);
+      handlersRef.current.onError?.(message);
+    }
+
+    function clearSocketError() {
+      if (isDisposed) return;
+
+      setErrorMessage('');
+    }
+
+    function joinCharacterRoom() {
+      if (
+        isDisposed ||
+        !characterId ||
+        !currentSocket.connected ||
+        hasJoinedCharacterRoom ||
+        isJoiningCharacterRoom
+      ) {
+        return;
+      }
+
+      isJoiningCharacterRoom = true;
+
+      currentSocket.emit('auto-combat:join', {
+        characterId,
+      });
+    }
+
+    function scheduleJoinCharacterRoom() {
+      if (joinTimeoutId !== undefined) {
+        window.clearTimeout(joinTimeoutId);
+      }
+
+      joinTimeoutId = window.setTimeout(() => {
+        joinCharacterRoom();
+      }, 50);
+    }
+
+    function handleConnect() {
+      if (isDisposed) return;
+
+      setIsConnected(true);
+      clearSocketError();
+
+      /*
+       * Não entramos imediatamente na sala aqui.
+       * O backend ainda pode estar validando o JWT no handleConnection.
+       * A entrada principal acontece no evento "auto-combat:connected".
+       */
+    }
+
+    function handleAuthenticatedConnection(
+      _payload: AutoCombatConnectedPayload,
+    ) {
+      if (isDisposed) return;
+
+      setIsConnected(true);
+      clearSocketError();
+      scheduleJoinCharacterRoom();
+    }
+
+    function handleJoined(payload: AutoCombatJoinedPayload) {
+      if (isDisposed) return;
+
+      if (payload.characterId !== characterId) {
+        return;
+      }
+
+      hasJoinedCharacterRoom = true;
+      isJoiningCharacterRoom = false;
+
+      setIsJoined(true);
+      clearSocketError();
+    }
+
+    function handleLeft(payload: AutoCombatLeftPayload) {
+      if (isDisposed) return;
+
+      if (payload.characterId !== characterId) {
+        return;
+      }
+
+      hasJoinedCharacterRoom = false;
+      isJoiningCharacterRoom = false;
+
+      setIsJoined(false);
+    }
+
+    function handleDisconnect() {
+      if (isDisposed) return;
+
+      hasJoinedCharacterRoom = false;
+      isJoiningCharacterRoom = false;
+
+      setIsConnected(false);
+      setIsJoined(false);
+    }
+
+    function handleConnectError(error: Error) {
+      if (isDisposed) return;
+
+      hasJoinedCharacterRoom = false;
+      isJoiningCharacterRoom = false;
+
+      const message =
+        error?.message ||
+        'Não foi possível conectar ao WebSocket do combate.';
+
+      setIsConnected(false);
+      setIsJoined(false);
+      safeSetError(message);
+    }
+
+    function handleSocketError(payload: AutoCombatSocketError) {
+      if (isDisposed) return;
+
+      hasJoinedCharacterRoom = false;
+      isJoiningCharacterRoom = false;
+
+      const message = payload.message || 'Erro no WebSocket do combate.';
+
+      setIsJoined(false);
+      safeSetError(message);
+    }
+
+    function handleStatus(payload: AutoCombatStatusResponse) {
+      if (isDisposed) return;
+
+      clearSocketError();
+      handlersRef.current.onStatus?.(payload);
+    }
+
+    function handleSessionUpdated(payload: AutoCombatStatusResponse) {
+      if (isDisposed) return;
+
+      clearSocketError();
+      handlersRef.current.onSessionUpdated?.(payload);
+    }
+
+    function handleFinished(payload: AutoCombatStatusResponse) {
+      if (isDisposed) return;
+
+      clearSocketError();
+      handlersRef.current.onFinished?.(payload);
+    }
+
+    function handleStopped(payload: AutoCombatStatusResponse) {
+      if (isDisposed) return;
+
+      clearSocketError();
+      handlersRef.current.onStopped?.(payload);
+    }
+
+    function handleRealtimeEvent(
+      payload: AutoCombatRealtimeEvent,
+      callback?: (payload: AutoCombatRealtimeEvent) => void,
+    ) {
+      if (isDisposed) return;
+
+      clearSocketError();
+      setLastEvent(payload);
+      callback?.(payload);
+    }
+
+    function handleMobSpawned(payload: AutoCombatRealtimeEvent) {
+      handleRealtimeEvent(payload, handlersRef.current.onMobSpawned);
+    }
+
+    function handleHit(payload: AutoCombatRealtimeEvent) {
+      handleRealtimeEvent(payload, handlersRef.current.onHit);
+    }
+
+    function handleMobDefeated(payload: AutoCombatRealtimeEvent) {
+      handleRealtimeEvent(payload, handlersRef.current.onMobDefeated);
+    }
+
+    function handlePlayerDefeated(payload: AutoCombatRealtimeEvent) {
+      handleRealtimeEvent(payload, handlersRef.current.onPlayerDefeated);
+    }
+
+    function handlePotionUsed(payload: AutoCombatRealtimeEvent) {
+      handleRealtimeEvent(payload, handlersRef.current.onPotionUsed);
+    }
+
+    currentSocket.on('connect', handleConnect);
+    currentSocket.on('disconnect', handleDisconnect);
+    currentSocket.on('connect_error', handleConnectError);
+
+    currentSocket.on('auto-combat:connected', handleAuthenticatedConnection);
+    currentSocket.on('auto-combat:joined', handleJoined);
+    currentSocket.on('auto-combat:left', handleLeft);
+    currentSocket.on('auto-combat:error', handleSocketError);
+
+    currentSocket.on('auto-combat:status', handleStatus);
+    currentSocket.on('auto-combat:session-updated', handleSessionUpdated);
+    currentSocket.on('auto-combat:finished', handleFinished);
+    currentSocket.on('auto-combat:stopped', handleStopped);
+
+    currentSocket.on('auto-combat:mob-spawned', handleMobSpawned);
+    currentSocket.on('auto-combat:hit', handleHit);
+    currentSocket.on('auto-combat:mob-defeated', handleMobDefeated);
+    currentSocket.on('auto-combat:player-defeated', handlePlayerDefeated);
+    currentSocket.on('auto-combat:potion-used', handlePotionUsed);
+
+    if (currentSocket.connected) {
+      setIsConnected(true);
+      scheduleJoinCharacterRoom();
+    }
+
+    return () => {
+      isDisposed = true;
+
+      if (joinTimeoutId !== undefined) {
+        window.clearTimeout(joinTimeoutId);
+      }
+
+      if (currentSocket.connected && characterId) {
+        currentSocket.emit('auto-combat:leave', {
+          characterId,
+        });
+      }
+
+      currentSocket.off('connect', handleConnect);
+      currentSocket.off('disconnect', handleDisconnect);
+      currentSocket.off('connect_error', handleConnectError);
+
+      currentSocket.off(
+        'auto-combat:connected',
+        handleAuthenticatedConnection,
+      );
+      currentSocket.off('auto-combat:joined', handleJoined);
+      currentSocket.off('auto-combat:left', handleLeft);
+      currentSocket.off('auto-combat:error', handleSocketError);
+
+      currentSocket.off('auto-combat:status', handleStatus);
+      currentSocket.off('auto-combat:session-updated', handleSessionUpdated);
+      currentSocket.off('auto-combat:finished', handleFinished);
+      currentSocket.off('auto-combat:stopped', handleStopped);
+
+      currentSocket.off('auto-combat:mob-spawned', handleMobSpawned);
+      currentSocket.off('auto-combat:hit', handleHit);
+      currentSocket.off('auto-combat:mob-defeated', handleMobDefeated);
+      currentSocket.off('auto-combat:player-defeated', handlePlayerDefeated);
+      currentSocket.off('auto-combat:potion-used', handlePotionUsed);
+    };
+  }, [characterId, enabled]);
+
+  return {
+    socket,
+    isConnected,
+    isJoined,
+    errorMessage,
+    lastEvent,
+  };
+}
+================ frontend/src/features/auto-combat/types/auto-combat.types.ts ================
+import type {
+    DashboardAutoCombatSessionStatus,
+    DashboardEquipmentItem,
+    DashboardItemRarity,
+    DashboardSubMapViewModel,
+} from '../../dashboard/types/dashboard.types';
+
+export interface StartAutoCombatPayload {
+  characterId: string;
+  subMapId: string;
+}
+
+export interface PreviewAutoCombatPayload {
+  characterId: string;
+  subMapId: string;
+  projectionSeconds?: number;
+  iterations?: number;
+}
+
+/* =========================================================
+   EXP / LEVEL
+   ========================================================= */
+
+export interface AutoCombatLevelProgressViewModel {
+  oldLevel?: number | null;
+  newLevel?: number | null;
+  level?: number | null;
+
+  /**
+   * XP total acumulado do personagem.
+   */
+  xp?: number | null;
+  totalXp?: number | null;
+
+  /**
+   * XP ganho no processamento/evento atual.
+   */
+  currentXp?: number | null;
+  gainedXp?: number | null;
+
+  /**
+   * Progresso dentro do nível atual.
+   */
+  currentLevelXp?: number | null;
+  xpToNextLevel?: number | null;
+  nextLevelXp?: number | null;
+
+  /**
+   * Nomes alternativos usados por alguns retornos do backend.
+   */
+  xpIntoCurrentLevel?: number | null;
+  xpNeededForNextLevel?: number | null;
+
+  /**
+   * Marcos absolutos da curva de XP.
+   */
+  currentLevelStartXp?: number | null;
+  nextLevelRequiredXp?: number | null;
+
+  /**
+   * Percentual da barra.
+   */
+  progressPercent?: number | null;
+  xpProgressPercent?: number | null;
+
+  leveledUp?: boolean | null;
+  levelsGained?: number | null;
+
+  levelCap?: number | null;
+  isAtLevelCap?: boolean | null;
+}
+
+/* =========================================================
+   TEMPO REAL / WEBSOCKET
+   ========================================================= */
+
+export type AutoCombatRealtimeEventType =
+  | 'MOB_SPAWNED'
+  | 'PLAYER_HIT'
+  | 'MOB_HIT'
+  | 'DODGE'
+  | 'POTION_USED'
+  | 'MOB_DEFEATED'
+  | 'PLAYER_DEFEATED'
+  | string;
+
+export type AutoCombatRealtimeActor = 'PLAYER' | 'MOB' | 'SYSTEM';
+
+export type AutoCombatRealtimeTarget = 'PLAYER' | 'MOB' | 'SYSTEM';
+
+export interface AutoCombatRealtimeEvent {
+  characterId?: string;
+  sessionId?: string;
+
+  type?: AutoCombatRealtimeEventType;
+  message?: string;
+
+  mobId?: string;
+  mobName?: string;
+  mobCurrentHp?: number;
+  mobMaxHp?: number;
+  mobHpPercent?: number;
+
+  characterCurrentHp?: number;
+  characterMaxHp?: number;
+  characterHpPercent?: number;
+
+  damage?: number;
+  healedAmount?: number;
+  isCritical?: boolean;
+  isDodged?: boolean;
+
+  /**
+   * EXP / LEVEL em tempo real.
+   *
+   * - xpGained: XP ganho no evento atual, normalmente MOB_DEFEATED.
+   * - characterXp: XP total atualizado do personagem.
+   * - characterLevel: nível atualizado do personagem.
+   * - totalXp: alias explícito para XP total.
+   * - currentLevelXp / xpIntoCurrentLevel: XP dentro do nível atual.
+   * - xpToNextLevel / nextLevelXp: tamanho total da barra do nível atual.
+   * - xpNeededForNextLevel: XP restante até o próximo nível.
+   * - currentLevelStartXp / nextLevelRequiredXp: marcos absolutos da curva.
+   * - xpProgressPercent: porcentagem pronta para a barra.
+   */
+  xpGained?: number;
+  characterXp?: number;
+  characterLevel?: number;
+
+  totalXp?: number;
+
+  currentLevelXp?: number;
+  xpToNextLevel?: number;
+  nextLevelXp?: number;
+  xpProgressPercent?: number;
+
+  xpIntoCurrentLevel?: number;
+  xpNeededForNextLevel?: number | null;
+  currentLevelStartXp?: number;
+  nextLevelRequiredXp?: number | null;
+  isAtLevelCap?: boolean;
+
+  levelProgress?: AutoCombatLevelProgressViewModel | null;
+
+  leveledUp?: boolean;
+  levelsGained?: number;
+
+  totalKills?: number;
+  totalXpGained?: number;
+  totalLoot?: number;
+  potionsUsed?: number;
+
+  round?: number;
+  combatIndex?: number;
+  actor?: AutoCombatRealtimeActor;
+  target?: AutoCombatRealtimeTarget;
+
+  createdAt?: string;
+}
+
+/* =========================================================
+   MAPAS / SUBMAPAS / MOBS
+   ========================================================= */
+
+export interface AutoCombatMapSummaryViewModel {
+  id: string;
+  name: string;
+  tier: number;
+  minLevel?: number;
+  maxLevel?: number;
+  description?: string | null;
+}
+
+export interface AutoCombatMobViewModel {
+  id: string;
+  name: string;
+  description?: string | null;
+
+  level: number;
+  tier: number;
+  hp: number;
+  attack: number;
+  defense: number;
+  speed: number;
+  xpReward: number;
+
+  mapId?: string;
+
+  currentHp?: number | null;
+  maxHp?: number | null;
+  hpPercent?: number | null;
+
+  iconUrl?: string | null;
+  imageUrl?: string | null;
+  assetKey?: string | null;
+}
+
+export interface AutoCombatCurrentMobViewModel extends AutoCombatMobViewModel {
+  currentHp: number | null;
+  maxHp: number | null;
+  hpPercent: number;
+}
+
+export interface AutoCombatEncounterViewModel {
+  id: string;
+  subMapId: string;
+  mobId: string;
+
+  weight: number;
+  isActive: boolean;
+
+  mob?: AutoCombatMobViewModel | null;
+}
+
+export interface AutoCombatSubMapViewModel extends DashboardSubMapViewModel {
+  map?: AutoCombatMapSummaryViewModel | null;
+  mapName?: string | null;
+
+  encounters?: AutoCombatEncounterViewModel[];
+}
+
+export interface AutoCombatMapViewModel {
+  id: string;
+  name: string;
+  tier: number;
+  minLevel: number;
+  maxLevel: number;
+  description?: string | null;
+
+  subMaps?: AutoCombatSubMapViewModel[];
+  mobs?: AutoCombatMobViewModel[];
+  items?: DashboardEquipmentItem[];
+
+  imageUrl?: string | null;
+  assetKey?: string | null;
+}
+
+/* =========================================================
+   PERSONAGEM / SESSÃO
+   ========================================================= */
+
+export interface AutoCombatStatusCharacterViewModel {
+  id: string;
+  name: string;
+  class?: string;
+
+  level: number;
+  xp: number;
+
+  currentHp: number;
+  maxHp: number;
+
+  /**
+   * Alias explícito para XP total.
+   */
+  totalXp?: number | null;
+
+  /**
+   * Campos diretos para barra de EXP.
+   */
+  currentLevelXp?: number | null;
+  xpToNextLevel?: number | null;
+  nextLevelXp?: number | null;
+  xpProgressPercent?: number | null;
+
+  xpIntoCurrentLevel?: number | null;
+  xpNeededForNextLevel?: number | null;
+  currentLevelStartXp?: number | null;
+  nextLevelRequiredXp?: number | null;
+  isAtLevelCap?: boolean | null;
+
+  /**
+   * Objeto consolidado de progresso.
+   */
+  levelProgress?: AutoCombatLevelProgressViewModel | null;
+}
+
+export interface AutoCombatSessionApiViewModel {
+  id: string;
+  characterId?: string;
+  subMapId?: string;
+
+  status:
+    | DashboardAutoCombatSessionStatus
+    | 'ACTIVE'
+    | 'STOPPED'
+    | 'FINISHED'
+    | 'DEFEATED'
+    | 'FAILED'
+    | 'CANCELLED'
+    | string;
+
+  startedAt: string;
+  endsAt?: string | null;
+  lastProcessedAt?: string | null;
+  finishedAt?: string | null;
+
+  durationSeconds?: number;
+  roundDurationSeconds?: number;
+  remainingSeconds?: number;
+
+  totalCombatsResolved?: number;
+  totalRoundsResolved?: number;
+  totalXpGained?: number;
+
+  currentMobId?: string | null;
+  currentMobHp?: number | null;
+  currentMobMaxHp?: number | null;
+  currentRound?: number;
+  currentCombatIndex?: number;
+}
+
+/* =========================================================
+   RECOMPENSAS
+   ========================================================= */
+
+export interface AutoCombatRewardLootViewModel {
+  itemId: string;
+  itemName: string;
+  quantity: number;
+  rarity: DashboardItemRarity | string;
+  slot: string;
+  tier: number;
+}
+
+export interface AutoCombatRewardMobViewModel {
+  mobId: string;
+  mobName: string;
+  mobLevel: number;
+  mobTier: number;
+  kills: number;
+  xpGained: number;
+}
+
+export interface AutoCombatRewardsViewModel {
+  loots: AutoCombatRewardLootViewModel[];
+  mobs: AutoCombatRewardMobViewModel[];
+}
+
+/* =========================================================
+   PROCESSAMENTO DA SESSÃO
+   ========================================================= */
+
+export interface AutoCombatProcessingSummary {
+  processedNow?: boolean;
+  processedSeconds?: number;
+  combatsResolved?: number;
+  roundsResolved?: number;
+  xpGained?: number;
+
+  initialHp?: number;
+  finalHp?: number;
+  hpLost?: number;
+
+  damageDealt?: number;
+  damageTaken?: number;
+  healingReceived?: number;
+  healingFromPotions?: number;
+  healingFromLevelUp?: number;
+  totalHealingReceived?: number;
+  hpChange?: number;
+  hpLostNet?: number;
+  hpRecoveredNet?: number;
+
+  tookDamage?: boolean;
+  wasHealed?: boolean;
+
+  hp?: {
+    initial?: number;
+    final?: number;
+    maxInitial?: number;
+    maxFinal?: number;
+    maxHpGained?: number;
+    change?: number;
+    lostNet?: number;
+    recoveredNet?: number;
+    damageTaken?: number;
+    healingReceived?: number;
+    healingFromPotions?: number;
+    healingFromLevelUp?: number;
+    totalHealingReceived?: number;
+    tookDamage?: boolean;
+    wasHealed?: boolean;
+    leveledUp?: boolean;
+  };
+
+  criticalHitsDealt?: number;
+  criticalHitsTaken?: number;
+  criticalBonusDamageDealt?: number;
+  criticalBonusDamageTaken?: number;
+  playerAttackAttempts?: number;
+  mobAttackAttempts?: number;
+  criticalRateDealt?: number;
+  criticalRateTaken?: number;
+  criticalDamageSharePercent?: number;
+  dealtCritical?: boolean;
+  tookCritical?: boolean;
+
+  critical?: {
+    hitsDealt?: number;
+    hitsTaken?: number;
+    bonusDamageDealt?: number;
+    bonusDamageTaken?: number;
+    playerAttackAttempts?: number;
+    mobAttackAttempts?: number;
+    rateDealt?: number;
+    rateTaken?: number;
+    damageSharePercent?: number;
+    dealtAny?: boolean;
+    tookAny?: boolean;
+  };
+
+  dodgesByPlayer?: number;
+  dodgesByMob?: number;
+  playerDodgeRate?: number;
+  mobDodgeRate?: number;
+  playerDodged?: boolean;
+  mobDodged?: boolean;
+
+  dodge?: {
+    dodgesByPlayer?: number;
+    dodgesByMob?: number;
+    playerAttackAttempts?: number;
+    mobAttackAttempts?: number;
+    playerDodgeRate?: number;
+    mobDodgeRate?: number;
+    playerDodgedAny?: boolean;
+    mobDodgedAny?: boolean;
+  };
+
+  initialMaxHp?: number;
+  finalMaxHp?: number;
+  maxHpGained?: number;
+  initialLevel?: number;
+  finalLevel?: number;
+  levelsGained?: number;
+  leveledUp?: boolean;
+
+  /**
+   * Campos de EXP úteis caso o frontend queira usar o processing
+   * como fallback após uma rodada ou encerramento da sessão.
+   */
+  finalXp?: number;
+  characterXp?: number;
+  characterLevel?: number;
+
+  totalXp?: number;
+  currentLevelXp?: number;
+  xpToNextLevel?: number;
+  nextLevelXp?: number;
+  xpProgressPercent?: number;
+
+  xpIntoCurrentLevel?: number;
+  xpNeededForNextLevel?: number | null;
+  currentLevelStartXp?: number;
+  nextLevelRequiredXp?: number | null;
+  isAtLevelCap?: boolean;
+
+  levelProgress?: AutoCombatLevelProgressViewModel | null;
+
+  potionsUsed?: number;
+  potionItemId?: string | null;
+  potionItemName?: string | null;
+  potionTriggerPercent?: number | null;
+}
+
+export interface AutoCombatSessionSummary {
+  status?: DashboardAutoCombatSessionStatus | 'DEFEATED' | string;
+  statusText?: string;
+
+  isActive?: boolean;
+  stoppedManually?: boolean;
+  completed?: boolean;
+  defeated?: boolean;
+  survived?: boolean;
+
+  duration?: {
+    plannedSeconds?: number;
+    elapsedSeconds?: number;
+    processedCombatSeconds?: number;
+    remainingSeconds?: number;
+    unusedSeconds?: number;
+    startedAt?: string;
+    endsAt?: string;
+    finishedAt?: string | null;
+  };
+
+  combat?: {
+    totalCombats?: number;
+    totalRounds?: number;
+    averageRoundsPerCombat?: number;
+  };
+
+  progression?: {
+    totalXpGained?: number;
+    xpPerMinute?: number;
+  };
+
+  hp?: {
+    current?: number;
+    max?: number;
+    percent?: number;
+  };
+
+  loot?: {
+    totalQuantity?: number;
+    uniqueItems?: number;
+    items?: AutoCombatRewardLootViewModel[];
+  };
+
+  mobs?: {
+    totalKills?: number;
+    uniqueMobs?: number;
+    kills?: AutoCombatRewardMobViewModel[];
+  };
+}
+
+/* =========================================================
+   PREVIEW / PROJEÇÃO DA CAÇA
+   ========================================================= */
+
+export type AutoCombatRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'LETHAL';
+
+export interface AutoCombatProjectionPreview {
+  averageCombatDurationSeconds?: number;
+  averageRoundsPerCombat?: number;
+  xpPerMinute?: number;
+
+  risk?: {
+    level?: AutoCombatRiskLevel | string;
+    score?: number;
+    defeatChancePercent?: number;
+    expectedHpPercentAtEnd?: number;
+    damageTakenPerMinute?: number;
+  };
+
+  critical?: {
+    playerCriticalChancePercent?: number;
+    mobCriticalChancePercent?: number;
+    criticalDamageSharePercent?: number;
+  };
+
+  dodge?: {
+    playerDodgeChancePercent?: number;
+    mobDodgeChancePercent?: number;
+  };
+
+  hp?: {
+    current?: number;
+    max?: number;
+    expectedFinal?: number;
+    expectedChange?: number;
+    expectedFinalPercent?: number;
+  };
+
+  sample?: {
+    iterations?: number;
+    projectionSeconds?: number;
+    totalCombatsSimulated?: number;
+    fullRemainingSessionProjected?: boolean;
+  };
+}
+
+export interface PreviewAutoCombatResponse {
+  message?: string;
+  character?: AutoCombatStatusCharacterViewModel;
+  subMap?: AutoCombatSubMapViewModel;
+  combatPreview?: AutoCombatProjectionPreview | null;
+}
+
+/* =========================================================
+   STATUS / START / STOP
+   ========================================================= */
+
+export interface AutoCombatStatusResponse {
+  active?: boolean;
+  hasActiveAutoCombat?: boolean;
+
+  message?: string;
+
+  character?: AutoCombatStatusCharacterViewModel;
+
+  session?: AutoCombatSessionApiViewModel | null;
+  activeSession?: AutoCombatSessionApiViewModel | null;
+  autoCombatSession?: AutoCombatSessionApiViewModel | null;
+  lastSession?: AutoCombatSessionApiViewModel | null;
+
+  currentMob?: AutoCombatCurrentMobViewModel | null;
+
+  subMap?: AutoCombatSubMapViewModel | null;
+
+  rewards?: AutoCombatRewardsViewModel;
+  sessionSummary?: AutoCombatSessionSummary;
+  processing?: AutoCombatProcessingSummary;
+
+  availableSubMaps?: AutoCombatSubMapViewModel[];
+}
+
+export type StartAutoCombatResponse = AutoCombatStatusResponse;
+
+export type StopAutoCombatResponse = AutoCombatStatusResponse;
+================ frontend/src/features/auto-combat/auto-combat.css ================
+html,
+body,
+.auto-combat-page,
+.auto-combat-page * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(110, 159, 67, 0.82) rgba(5, 9, 8, 0.72);
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.auto-combat-page *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+.auto-combat-page *::-webkit-scrollbar-track {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    rgba(5, 9, 8, 0.72);
+  border-radius: 999px;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+.auto-combat-page *::-webkit-scrollbar-thumb {
+  background:
+    linear-gradient(180deg, rgba(180, 214, 112, 0.92), rgba(82, 122, 56, 0.92));
+  border: 2px solid rgba(5, 9, 8, 0.82);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 14px rgba(110, 159, 67, 0.14);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+.auto-combat-page *::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(180deg, rgba(205, 233, 132, 0.98), rgba(101, 148, 68, 0.98));
+}
+
+/* =========================================================
+   BASE
+   ========================================================= */
+
+.auto-combat-page {
+  width: 100%;
+}
+
+.auto-combat-alert {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  color: #ffe5df;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(158, 47, 47, 0.14);
+  border: 1px solid rgba(194, 74, 74, 0.34);
+  border-radius: 0.9rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 0 18px rgba(158, 47, 47, 0.08);
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.auto-combat-app-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.auto-combat-app-header strong {
+  color: var(--text-primary);
+  font-family: var(--font-title);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.auto-combat-back-button {
+  justify-self: start;
+  min-height: 36px;
+  padding: 0 0.2rem;
+  color: #e5b63f;
+  font-family: var(--font-title);
+  font-size: 0.95rem;
+  font-weight: 900;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-shadow: 0 0 12px rgba(229, 182, 63, 0.18);
+}
+
+/* =========================================================
+   SHELL / ABAS
+   ========================================================= */
+
+.auto-combat-app-shell {
+  width: 100%;
+  min-height: 520px;
+  padding: 1.05rem;
+  background:
+    radial-gradient(circle at top, rgba(110, 159, 67, 0.06), transparent 20rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    rgba(15, 22, 28, 0.82);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 1.2rem;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.028);
+}
+
+.auto-combat-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.auto-combat-section-title::before,
+.auto-combat-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(231, 227, 216, 0.12),
+    transparent
+  );
+}
+
+.auto-combat-section-title span {
+  color: rgba(231, 227, 216, 0.48);
+  font-family: var(--font-title);
+  font-size: 0.96rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.auto-combat-section-title--small {
+  margin: 0 0 0.9rem;
+}
+
+.auto-combat-section-title--small span {
+  color: color-mix(in srgb, var(--action-primary-hover) 86%, #f4f8dc);
+  font-size: 0.9rem;
+  text-shadow:
+    0 0 8px rgba(110, 159, 67, 0.18),
+    0 1px 2px rgba(0, 0, 0, 0.68);
+}
+
+/* =========================================================
+   ABAS PREMIUM / SEGMENTED CONTROL
+   ========================================================= */
+
+.auto-combat-tabs {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(360px, 100%);
+  min-height: 62px;
+  margin: 0 auto 1.45rem;
+  padding: 0.36rem;
+  gap: 0.36rem;
+  background:
+    radial-gradient(circle at top, rgba(231, 227, 216, 0.052), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(5, 9, 8, 0.48);
+  border: 1px solid rgba(231, 227, 216, 0.085);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.026),
+    0 12px 26px rgba(0, 0, 0, 0.16);
+}
+
+.auto-combat-tabs::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 0.36rem;
+  left: 0.36rem;
+  width: calc((100% - 1.08rem) / 2);
+  height: calc(100% - 0.72rem);
+  background:
+    radial-gradient(circle at top, rgba(231, 227, 216, 0.095), transparent 78%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.018)),
+    rgba(42, 53, 66, 0.82);
+  border: 1px solid rgba(231, 227, 216, 0.12);
+  border-radius: 0.76rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 10px 22px rgba(0, 0, 0, 0.2),
+    0 0 18px rgba(110, 159, 67, 0.055);
+  transition:
+    transform 220ms ease,
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.auto-combat-tabs:has(button:nth-child(2).is-active)::before {
+  transform: translateX(calc(100% + 0.36rem));
+}
+
+.auto-combat-tabs::after {
+  content: '';
+  position: absolute;
+  inset: 0.36rem 50% 0.36rem auto;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(231, 227, 216, 0.1),
+    transparent
+  );
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.auto-combat-tabs button {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: 50px;
+  padding: 0 1rem;
+  color: rgba(231, 227, 216, 0.68);
+  font-family: var(--font-title);
+  font-size: 0.94rem;
+  font-weight: 900;
+  letter-spacing: 0.018em;
+  background: transparent;
+  border: 0;
+  border-radius: 0.74rem;
+  cursor: pointer;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  transition:
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    text-shadow var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.auto-combat-tabs button:hover {
+  color: rgba(245, 240, 223, 0.92);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.65),
+    0 0 12px rgba(231, 227, 216, 0.08);
+}
+
+.auto-combat-tabs button.is-active {
+  color: #fff8e8;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.72),
+    0 0 14px rgba(245, 240, 223, 0.08);
+}
+
+.auto-combat-tabs button:active {
+  transform: translateY(1px);
+}
+
+.auto-combat-tabs button:focus-visible {
+  outline: 2px solid rgba(180, 214, 112, 0.55);
+  outline-offset: 2px;
+}
+
+.auto-combat-tab-panel {
+  width: 100%;
+}
+
+/* =========================================================
+   ESTÁGIOS
+   ========================================================= */
+
+.auto-combat-stage-card {
+  min-width: 0;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(5, 9, 8, 0.34);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+  border-radius: 1rem;
+}
+
+.auto-combat-stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.auto-combat-stage-actions .auto-combat-primary-button,
+.auto-combat-stage-actions .auto-combat-secondary-button {
+  min-width: 180px;
+}
+
+.auto-combat-stage-actions--session {
+  margin-top: 0.15rem;
+}
+
+/* =========================================================
+   WEBSOCKET / TEMPO REAL
+   ========================================================= */
+
+.auto-combat-realtime-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 1rem;
+  padding: 0.48rem 0.8rem;
+  color: rgba(231, 227, 216, 0.76);
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent),
+    rgba(5, 9, 8, 0.42);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.auto-combat-realtime-status::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  background: #7d8792;
+  border-radius: 999px;
+  box-shadow: 0 0 12px rgba(125, 135, 146, 0.28);
+}
+
+.auto-combat-realtime-status.is-connected {
+  color: #ecffd5;
+  border-color: rgba(110, 159, 67, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(35, 64, 31, 0.24);
+}
+
+.auto-combat-realtime-status.is-connected::before {
+  background: #93d35f;
+  box-shadow:
+    0 0 0 4px rgba(147, 211, 95, 0.08),
+    0 0 16px rgba(147, 211, 95, 0.34);
+}
+
+.auto-combat-realtime-status.is-disconnected {
+  color: #ffe1dd;
+  border-color: rgba(205, 88, 88, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(151, 49, 49, 0.2);
+}
+
+.auto-combat-realtime-status.is-disconnected::before {
+  background: #d75b62;
+  box-shadow:
+    0 0 0 4px rgba(215, 91, 98, 0.08),
+    0 0 16px rgba(215, 91, 98, 0.3);
+}
+
+.auto-combat-live-event {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+  padding: 0.78rem 0.9rem;
+  background:
+    radial-gradient(circle at left, rgba(229, 182, 63, 0.08), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.38);
+  border: 1px solid rgba(229, 182, 63, 0.18);
+  border-radius: 0.9rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 10px 22px rgba(0, 0, 0, 0.12),
+    0 0 18px rgba(229, 182, 63, 0.055);
+}
+
+.auto-combat-live-event strong {
+  min-width: 0;
+  color: #fff4df;
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  line-height: 1.18;
+}
+
+.auto-combat-live-event span {
+  color: rgba(231, 227, 216, 0.62);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.auto-combat-live-event.is-player-hit {
+  border-color: rgba(110, 159, 67, 0.25);
+  background:
+    radial-gradient(circle at left, rgba(110, 159, 67, 0.1), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.38);
+}
+
+.auto-combat-live-event.is-mob-hit,
+.auto-combat-live-event.is-player-defeated {
+  border-color: rgba(215, 91, 98, 0.28);
+  background:
+    radial-gradient(circle at left, rgba(215, 91, 98, 0.12), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.38);
+}
+
+.auto-combat-live-event.is-critical {
+  border-color: rgba(229, 182, 63, 0.32);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 10px 22px rgba(0, 0, 0, 0.12),
+    0 0 22px rgba(229, 182, 63, 0.12);
+}
+
+.auto-combat-live-event.is-dodge {
+  border-color: rgba(150, 188, 226, 0.22);
+  background:
+    radial-gradient(circle at left, rgba(150, 188, 226, 0.09), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.38);
+}
+
+.auto-combat-battle-log {
+  min-width: 0;
+  padding: 0.95rem;
+  background:
+    radial-gradient(circle at top left, rgba(229, 182, 63, 0.055), transparent 14rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(5, 9, 8, 0.34);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.024),
+    0 10px 26px rgba(0, 0, 0, 0.12);
+}
+
+.auto-combat-battle-log__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.auto-combat-battle-log__header strong {
+  color: color-mix(in srgb, var(--action-primary-hover) 86%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.auto-combat-battle-log__header span {
+  color: rgba(231, 227, 216, 0.58);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.auto-combat-battle-log__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 0.18rem;
+}
+
+.auto-combat-battle-log__item {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.58rem 0.65rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent),
+    rgba(5, 9, 8, 0.38);
+  border: 1px solid rgba(231, 227, 216, 0.06);
+  border-radius: 0.72rem;
+}
+
+.auto-combat-battle-log__round {
+  color: rgba(231, 227, 216, 0.56);
+  font-family: var(--font-title);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.auto-combat-battle-log__message {
+  min-width: 0;
+  color: #f4f1e6;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.auto-combat-battle-log__damage {
+  color: #ffe7a7;
+  font-family: var(--font-number);
+  font-size: 0.78rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.auto-combat-battle-log__item.is-player-hit {
+  border-color: rgba(110, 159, 67, 0.16);
+}
+
+.auto-combat-battle-log__item.is-mob-hit,
+.auto-combat-battle-log__item.is-player-defeated {
+  border-color: rgba(215, 91, 98, 0.18);
+}
+
+.auto-combat-battle-log__item.is-critical {
+  border-color: rgba(229, 182, 63, 0.24);
+}
+
+.auto-combat-battle-log__item.is-dodge {
+  border-color: rgba(150, 188, 226, 0.16);
+}
+
+.auto-combat-battle-log__empty {
+  padding: 0.8rem;
+  color: rgba(231, 227, 216, 0.62);
+  text-align: center;
+  font-size: 0.82rem;
+  background: rgba(5, 9, 8, 0.26);
+  border: 1px dashed rgba(231, 227, 216, 0.08);
+  border-radius: 0.8rem;
+}
+
+/* =========================================================
+   ETAPA 1 — MAPA
+   ========================================================= */
+
+.auto-combat-map-stage {
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(110, 159, 67, 0.08),
+      transparent 14rem
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(5, 9, 8, 0.34);
+}
+
+.auto-combat-map-preview {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.95fr) minmax(0, 1.05fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.auto-combat-map-preview__visual,
+.auto-combat-map-preview__content {
+  min-width: 0;
+}
+
+.auto-combat-map-preview__visual {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1rem;
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(231, 227, 216, 0.06),
+      transparent 10rem
+    ),
+    linear-gradient(135deg, rgba(36, 52, 42, 0.65), rgba(10, 17, 23, 0.88));
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.auto-combat-map-preview__visual span {
+  display: block;
+  color: color-mix(in srgb, var(--action-primary-hover) 86%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 8px rgba(110, 159, 67, 0.16),
+    0 1px 2px rgba(0, 0, 0, 0.68);
+}
+
+.auto-combat-map-preview__visual strong {
+  display: block;
+  margin-top: 0.28rem;
+  color: var(--text-primary);
+  font-family: var(--font-title);
+  font-size: 1.3rem;
+  line-height: 1.08;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.76),
+    0 0 10px rgba(245, 240, 223, 0.05);
+}
+
+.auto-combat-map-preview__visual small {
+  display: block;
+  max-width: 100%;
+  margin-top: 0.36rem;
+  color: rgba(231, 227, 216, 0.72);
+  font-family: var(--font-title);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.72),
+    0 0 8px rgba(110, 159, 67, 0.08);
+}
+
+.auto-combat-map-preview__content > span {
+  display: block;
+  color: color-mix(in srgb, var(--action-primary-hover) 84%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.auto-combat-map-preview__content > strong {
+  display: block;
+  margin-top: 0.18rem;
+  color: #f5f0df;
+  font-family: var(--font-title);
+  font-size: 1.12rem;
+  line-height: 1.1;
+  text-shadow: 0 0 10px rgba(245, 240, 223, 0.05);
+}
+
+.auto-combat-map-preview__content > p {
+  margin: 0.75rem 0 0;
+  color: rgba(231, 227, 216, 0.82);
+  line-height: 1.5;
+}
+
+.auto-combat-map-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+}
+
+.auto-combat-map-meta div,
+.auto-combat-preview-grid div,
+.auto-combat-session-summary div {
+  min-width: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent),
+    rgba(5, 9, 8, 0.36);
+  border: 1px solid rgba(231, 227, 216, 0.065);
+}
+
+.auto-combat-map-meta div {
+  padding: 0.7rem;
+  border-radius: 0.8rem;
+}
+
+.auto-combat-map-meta span {
+  display: block;
+  color: #c8d37a;
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(200, 211, 122, 0.08);
+}
+
+.auto-combat-map-meta strong {
+  display: block;
+  margin-top: 0.26rem;
+  color: #f4f1e6;
+  font-family: var(--font-title);
+  font-size: 0.98rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+/* =========================================================
+   SELECT / PREVIEW
+   ========================================================= */
+
+.auto-combat-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+}
+
+.auto-combat-field span {
+  color: color-mix(in srgb, var(--action-primary-hover) 84%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.auto-combat-field--submap {
+  gap: 0.5rem;
+  margin-top: 0.95rem;
+}
+
+.auto-combat-select-shell {
+  position: relative;
+  width: 100%;
+}
+
+.auto-combat-select-shell::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 38%),
+    radial-gradient(circle at top left, rgba(110, 159, 67, 0.06), transparent 45%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auto-combat-select-shell::after {
+  content: '⌄';
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-52%);
+  color: #dce8b6;
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 0 12px rgba(110, 159, 67, 0.18);
+  z-index: 2;
+}
+
+.auto-combat-select-shell select {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 58px;
+  padding: 0 3.25rem 0 1rem;
+  color: #f5f0df;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(5, 9, 8, 0.62);
+  border: 1px solid rgba(231, 227, 216, 0.13);
+  border-radius: 1rem;
+  outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 8px 16px rgba(0, 0, 0, 0.12);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.auto-combat-select-shell select:hover:not(:disabled) {
+  border-color: rgba(175, 197, 109, 0.26);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgba(7, 13, 10, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 10px 20px rgba(0, 0, 0, 0.14),
+    0 0 0 1px rgba(110, 159, 67, 0.05);
+}
+
+.auto-combat-select-shell select:focus {
+  border-color: rgba(132, 182, 82, 0.42);
+  box-shadow:
+    0 0 0 3px rgba(110, 159, 67, 0.11),
+    0 10px 22px rgba(0, 0, 0, 0.16),
+    0 0 20px rgba(110, 159, 67, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+    rgba(7, 13, 10, 0.7);
+}
+
+.auto-combat-select-shell select:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.auto-combat-select-shell select::-ms-expand {
+  display: none;
+}
+
+.auto-combat-select-helper {
+  display: block;
+  margin-top: 0.08rem;
+  color: rgba(231, 227, 216, 0.62);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.auto-combat-select-helper strong {
+  color: #e9f3c5;
+  font-weight: 700;
+}
+
+.auto-combat-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.auto-combat-preview-grid div {
+  padding: 0.72rem;
+  border-radius: 0.8rem;
+}
+
+.auto-combat-preview-grid span {
+  display: block;
+  color: #b8c2cf;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.auto-combat-preview-grid strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: #f4f1e6;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+/* =========================================================
+   ETAPA 2 — CAÇA / INIMIGOS
+   ========================================================= */
+
+.auto-combat-hunt-stage {
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(158, 47, 47, 0.07),
+      transparent 14rem
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(5, 9, 8, 0.34);
+}
+
+.auto-combat-hunt-empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.65rem;
+  padding: 1.5rem;
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.016), transparent),
+    rgba(9, 15, 22, 0.36);
+  border: 2px dashed rgba(231, 227, 216, 0.08);
+  border-radius: 1rem;
+}
+
+.auto-combat-hunt-empty--compact {
+  min-height: 165px;
+}
+
+.auto-combat-hunt-empty__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: rgba(231, 227, 216, 0.72);
+  font-family: var(--font-title);
+  font-size: 1.28rem;
+  font-weight: 950;
+  border: 3px solid rgba(231, 227, 216, 0.45);
+  border-radius: 999px;
+}
+
+.auto-combat-hunt-empty strong {
+  color: var(--text-primary);
+  font-family: var(--font-title);
+  font-size: 1.18rem;
+  line-height: 1.1;
+}
+
+.auto-combat-hunt-empty p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+.auto-combat-enemy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.auto-combat-enemy-card {
+  position: relative;
+  min-width: 0;
+  padding: 0.95rem 0.9rem 0.85rem;
+  background:
+    radial-gradient(
+      circle at left,
+      rgba(158, 47, 47, 0.11),
+      transparent 9rem
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent),
+    rgba(7, 12, 18, 0.46);
+  border: 1px solid rgba(177, 63, 63, 0.26);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 10px 22px rgba(0, 0, 0, 0.14);
+}
+
+.auto-combat-enemy-card__level,
+.auto-combat-enemy-card__xp {
+  position: absolute;
+  top: 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0.14rem 0.52rem;
+  color: #f4f1e6;
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    rgba(40, 49, 65, 0.96);
+  border: 1px solid rgba(231, 227, 216, 0.1);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 0 12px rgba(0, 0, 0, 0.16);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.68);
+  white-space: nowrap;
+}
+
+.auto-combat-enemy-card__level {
+  left: 0.55rem;
+}
+
+.auto-combat-enemy-card__xp {
+  right: 0.55rem;
+  color: #ffe7a7;
+  border-color: rgba(224, 182, 91, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    rgba(91, 66, 23, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 0 12px rgba(224, 182, 91, 0.08);
+}
+
+.auto-combat-enemy-card__portrait {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  margin: 0.9rem auto 0.8rem;
+  color: #ffd0ca;
+  font-size: 1.5rem;
+  background:
+    radial-gradient(circle at center, rgba(186, 72, 72, 0.22), transparent 72%),
+    rgba(10, 12, 18, 0.66);
+  border: 1px solid rgba(186, 72, 72, 0.34);
+  border-radius: 0.95rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 22px rgba(158, 47, 47, 0.1);
+}
+
+.auto-combat-enemy-card__content {
+  min-width: 0;
+  text-align: center;
+}
+
+.auto-combat-enemy-card__content > span {
+  display: none !important;
+}
+
+.auto-combat-enemy-card__content > strong {
+  display: block;
+  margin-top: 0;
+  color: #f8f4ea;
+  font-family: var(--font-title);
+  font-size: 1.06rem;
+  font-weight: 900;
+  line-height: 1.2;
+  min-height: 2.2em;
+  text-shadow: 0 0 10px rgba(248, 244, 234, 0.04);
+}
+
+.auto-combat-enemy-card__hp {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  margin-top: 0.58rem;
+}
+
+.auto-combat-enemy-card__hp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  color: #b8c2cf;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.auto-combat-enemy-card__hp-header span {
+  color: #e1b0ad;
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 8px rgba(215, 91, 98, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.68);
+}
+
+.auto-combat-enemy-card__hp-header strong {
+  color: #fff4df;
+  font-family: var(--font-number);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.auto-combat-enemy-card__hp-track {
+  display: block;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  background: rgba(5, 9, 8, 0.82);
+  border: 1px solid rgba(231, 227, 216, 0.06);
+  border-radius: 999px;
+}
+
+.auto-combat-enemy-card__hp-track b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #803138, #d75b62);
+  border-radius: inherit;
+  box-shadow: 0 0 12px rgba(215, 91, 98, 0.24);
+}
+
+.auto-combat-enemy-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.42rem;
+  margin-top: 0.72rem;
+}
+
+.auto-combat-enemy-card__stats span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 25px;
+  padding: 0.16rem 0.5rem;
+  color: #edf0f4;
+  font-family: var(--font-title);
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+    rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(231, 227, 216, 0.1);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 0 10px rgba(0, 0, 0, 0.12);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.68);
+}
+
+/* =========================================================
+   BOTÕES
+   ========================================================= */
+
+.auto-combat-primary-button,
+.auto-combat-secondary-button {
+  min-height: 46px;
+  padding: 0 1.1rem;
+  font-family: var(--font-title);
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  border-radius: 0.9rem;
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.auto-combat-primary-button {
+  color: #f8ffe9;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(110, 159, 67, 0.3);
+  border: 1px solid rgba(110, 159, 67, 0.48);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 0 22px rgba(110, 159, 67, 0.12);
+}
+
+.auto-combat-secondary-button {
+  color: #d7dce3;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(5, 9, 8, 0.32);
+  border: 1px solid rgba(231, 227, 216, 0.1);
+}
+
+.auto-combat-secondary-button--danger {
+  color: #ffe9e7;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgba(151, 49, 49, 0.22);
+  border: 1px solid rgba(205, 88, 88, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 0 18px rgba(151, 49, 49, 0.08);
+}
+
+.auto-combat-primary-button:hover:not(:disabled),
+.auto-combat-secondary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.auto-combat-secondary-button--danger:hover:not(:disabled) {
+  border-color: rgba(220, 106, 106, 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 0 22px rgba(180, 58, 58, 0.14);
+}
+
+.auto-combat-primary-button:disabled,
+.auto-combat-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* =========================================================
+   ETAPA 3 — SESSÃO ATIVA
+   ========================================================= */
+
+.auto-combat-session-stage {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.95rem;
+}
+
+.auto-combat-arena-card,
+.auto-combat-session-panel {
+  min-width: 0;
+  padding: 0.95rem;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(110, 159, 67, 0.052),
+      transparent 14rem
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(5, 9, 8, 0.34);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.024),
+    0 10px 26px rgba(0, 0, 0, 0.12);
+}
+
+.auto-combat-arena-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.auto-combat-arena-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
+.auto-combat-arena-card__top span {
+  display: block;
+  color: color-mix(in srgb, var(--action-primary-hover) 88%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(110, 159, 67, 0.12);
+}
+
+.auto-combat-arena-card__top strong {
+  color: #f4f1e6;
+  font-family: var(--font-title);
+  font-size: 0.92rem;
+  line-height: 1.1;
+}
+
+.auto-combat-duel-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.auto-combat-fighter-card {
+  min-width: 0;
+  min-height: 148px;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.42);
+  border: 1px solid rgba(231, 227, 216, 0.075);
+  border-radius: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.auto-combat-fighter-card--player {
+  border-color: rgba(110, 159, 67, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.026),
+    0 0 24px rgba(110, 159, 67, 0.055);
+}
+
+.auto-combat-fighter-card--mob {
+  border-color: rgba(188, 68, 68, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.026),
+    0 0 24px rgba(158, 47, 47, 0.07);
+}
+
+.auto-combat-fighter-card.is-hit {
+  transform: translateY(-1px);
+  border-color: rgba(215, 91, 98, 0.52);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 28px rgba(215, 91, 98, 0.16);
+}
+
+.auto-combat-fighter-card.is-critical-hit {
+  border-color: rgba(229, 182, 63, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 30px rgba(229, 182, 63, 0.18);
+}
+
+.auto-combat-fighter-card.is-dodging {
+  border-color: rgba(150, 188, 226, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 28px rgba(150, 188, 226, 0.12);
+}
+
+.auto-combat-fighter-card > span {
+  display: block;
+  color: #b7c0cb;
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.auto-combat-fighter-card > strong {
+  display: block;
+  margin-top: 0.28rem;
+  margin-bottom: 0.95rem;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 1.18rem;
+  font-weight: 950;
+  line-height: 1.12;
+  text-shadow: 0 0 10px rgba(255, 248, 232, 0.05);
+}
+
+.auto-combat-vs {
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  width: 54px;
+  height: 54px;
+  color: #fff4df;
+  font-family: var(--font-title);
+  font-size: 0.88rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  background:
+    radial-gradient(circle at center, rgba(158, 47, 47, 0.3), transparent 72%),
+    rgba(5, 9, 8, 0.68);
+  border: 1px solid rgba(231, 227, 216, 0.14);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 24px rgba(158, 47, 47, 0.14);
+}
+
+.auto-combat-resource,
+.auto-combat-round-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.auto-combat-resource div,
+.auto-combat-round-progress div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.auto-combat-resource span,
+.auto-combat-round-progress span,
+.auto-combat-session-summary span {
+  color: #b8c2cf;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.auto-combat-resource strong,
+.auto-combat-round-progress strong,
+.auto-combat-session-summary strong {
+  color: #fff8e8;
+  font-family: var(--font-number);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.auto-combat-resource i,
+.auto-combat-round-progress i {
+  display: block;
+  height: 9px;
+  overflow: hidden;
+  background: rgba(5, 9, 8, 0.78);
+  border: 1px solid rgba(231, 227, 216, 0.06);
+  border-radius: 999px;
+}
+
+.auto-combat-resource i b,
+.auto-combat-round-progress i b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 260ms ease;
+}
+
+.auto-combat-fighter-card--player .auto-combat-resource i b {
+  background: linear-gradient(90deg, #3f8548, #65c271);
+  box-shadow: 0 0 12px rgba(101, 194, 113, 0.24);
+}
+
+.auto-combat-fighter-card--mob .auto-combat-resource i b {
+  background: linear-gradient(90deg, #803138, #d75b62);
+  box-shadow: 0 0 12px rgba(215, 91, 98, 0.22);
+}
+
+.auto-combat-round-progress {
+  padding: 0.8rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(5, 9, 8, 0.4);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+  border-radius: 0.82rem;
+}
+
+.auto-combat-round-progress i b {
+  background: linear-gradient(90deg, #b9832d, #e0b65b);
+  box-shadow: 0 0 12px rgba(224, 182, 91, 0.24);
+}
+
+.auto-combat-session-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.auto-combat-session-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.auto-combat-session-panel__header span {
+  color: color-mix(in srgb, var(--action-primary-hover) 86%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.auto-combat-session-panel__header strong {
+  color: #f4f1e6;
+  font-family: var(--font-title);
+  font-size: 0.76rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.auto-combat-session-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.68rem;
+}
+
+.auto-combat-session-summary div {
+  padding: 0.82rem;
+  border-radius: 0.84rem;
+}
+
+.auto-combat-session-summary span {
+  display: block;
+}
+
+.auto-combat-session-summary strong {
+  display: block;
+  margin-top: 0.24rem;
+  font-family: var(--font-title);
+  font-size: 1.1rem;
+  line-height: 1.1;
+}
+
+/* =========================================================
+   CONSUMÍVEIS
+   ========================================================= */
+
+.auto-combat-consumables {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.auto-combat-consumable-slot {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.75rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.4);
+  border: 1px solid rgba(231, 227, 216, 0.075);
+  border-radius: 0.9rem;
+}
+
+.auto-combat-consumable-slot.is-enabled {
+  border-color: rgba(110, 159, 67, 0.28);
+}
+
+.auto-combat-consumable-slot__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: color-mix(in srgb, var(--action-primary-hover) 84%, #f4f8dc);
+  font-family: var(--font-title);
+  font-weight: 900;
+  background:
+    radial-gradient(circle at center, rgba(110, 159, 67, 0.18), transparent 72%),
+    rgba(5, 9, 8, 0.55);
+  border: 1px solid rgba(110, 159, 67, 0.24);
+  border-radius: 0.76rem;
+}
+
+.auto-combat-consumable-slot strong {
+  display: block;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.88rem;
+  line-height: 1.08;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auto-combat-consumable-slot span {
+  display: -webkit-box;
+  margin-top: 0.22rem;
+  overflow: hidden;
+  color: #b8c2cf;
+  font-size: 0.73rem;
+  line-height: 1.3;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* =========================================================
+   ABA STATUS — ÍCONES
+   ========================================================= */
+
+.auto-combat-stats-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.auto-combat-stat-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.78rem;
+  background:
+    radial-gradient(
+      circle at left,
+      rgba(229, 182, 63, 0.07),
+      transparent 9rem
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.34);
+  border: 1px solid rgba(231, 227, 216, 0.075);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.026),
+    0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.auto-combat-stat-row__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  background:
+    radial-gradient(circle at center, rgba(229, 182, 63, 0.14), transparent 72%),
+    rgba(5, 9, 8, 0.52);
+  border: 1px solid rgba(229, 182, 63, 0.18);
+  border-radius: 0.9rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 0 20px rgba(229, 182, 63, 0.07);
+}
+
+.auto-combat-stat-row__icon img {
+  display: block;
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.28));
+}
+
+.auto-combat-stat-row__content {
+  min-width: 0;
+}
+
+.auto-combat-stat-row__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.auto-combat-stat-row__header strong {
+  min-width: 0;
+  color: var(--text-primary);
+  font-family: var(--font-title);
+  font-size: 0.92rem;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auto-combat-stat-row__header span {
+  flex: 0 0 auto;
+  min-width: 40px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f5f0df;
+  font-family: var(--font-number);
+  font-size: 0.82rem;
+  font-weight: 900;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), transparent),
+    rgba(42, 53, 66, 0.78);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 0.65rem;
+}
+
+.auto-combat-stat-row p {
+  margin: 0.28rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  line-height: 1.28;
+}
+
+.auto-combat-stat-row i {
+  display: block;
+  height: 7px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+  background: rgba(5, 9, 8, 0.78);
+  border: 1px solid rgba(231, 227, 216, 0.055);
+  border-radius: 999px;
+}
+
+.auto-combat-stat-row i b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #b9832d, #e0b65b);
+  border-radius: inherit;
+  box-shadow: 0 0 12px rgba(224, 182, 91, 0.24);
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .auto-combat-map-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .auto-combat-session-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .auto-combat-consumables {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .auto-combat-duel-row {
+    grid-template-columns: 1fr;
+  }
+
+  .auto-combat-vs {
+    width: 48px;
+    height: 48px;
+    margin: 0.15rem 0;
+  }
+
+  .auto-combat-fighter-card {
+    min-height: 132px;
+  }
+}
+
+@media (max-width: 620px) {
+  .auto-combat-app-header {
+    margin-top: 0.25rem;
+  }
+
+  .auto-combat-app-header strong {
+    font-size: 1.15rem;
+  }
+
+  .auto-combat-app-shell {
+    min-height: 560px;
+    padding: 0.85rem;
+    border-radius: 1rem;
+  }
+
+  .auto-combat-section-title {
+    gap: 0.55rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .auto-combat-section-title span {
+    font-size: 0.82rem;
+  }
+
+  .auto-combat-tabs {
+    width: min(292px, 100%);
+    min-height: 54px;
+    padding: 0.3rem;
+    gap: 0.3rem;
+    margin-bottom: 1.05rem;
+    border-radius: 0.92rem;
+  }
+
+  .auto-combat-tabs::before {
+    top: 0.3rem;
+    left: 0.3rem;
+    width: calc((100% - 0.9rem) / 2);
+    height: calc(100% - 0.6rem);
+    border-radius: 0.68rem;
+  }
+
+  .auto-combat-tabs:has(button:nth-child(2).is-active)::before {
+    transform: translateX(calc(100% + 0.3rem));
+  }
+
+  .auto-combat-tabs::after {
+    inset: 0.3rem 50% 0.3rem auto;
+  }
+
+  .auto-combat-tabs button {
+    min-height: 44px;
+    padding: 0 0.8rem;
+    font-size: 0.86rem;
+  }
+
+  .auto-combat-map-preview__visual {
+    min-height: 180px;
+  }
+
+  .auto-combat-map-preview__visual strong {
+    font-size: 1.16rem;
+  }
+
+  .auto-combat-map-preview__visual small {
+    margin-top: 0.28rem;
+    font-size: 0.78rem;
+  }
+
+  .auto-combat-select-shell select {
+    min-height: 54px;
+    font-size: 0.95rem;
+    padding: 0 3rem 0 0.92rem;
+    border-radius: 0.9rem;
+  }
+
+  .auto-combat-select-shell::after {
+    right: 0.92rem;
+    font-size: 1rem;
+  }
+
+  .auto-combat-map-meta,
+  .auto-combat-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auto-combat-enemy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .auto-combat-enemy-card {
+    padding: 0.72rem 0.58rem 0.68rem;
+    border-radius: 0.9rem;
+  }
+
+  .auto-combat-enemy-card__level,
+  .auto-combat-enemy-card__xp {
+    top: 0.45rem;
+    min-height: 23px;
+    padding: 0.12rem 0.46rem;
+    font-size: 0.62rem;
+  }
+
+  .auto-combat-enemy-card__level {
+    left: 0.45rem;
+  }
+
+  .auto-combat-enemy-card__xp {
+    right: 0.45rem;
+  }
+
+  .auto-combat-enemy-card__portrait {
+    width: 50px;
+    height: 50px;
+    margin-top: 0.85rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.15rem;
+    border-radius: 0.8rem;
+  }
+
+  .auto-combat-enemy-card__content > span {
+    display: none !important;
+  }
+
+  .auto-combat-enemy-card__content > strong {
+    margin-top: 0;
+    font-size: 0.86rem;
+    min-height: 2em;
+  }
+
+  .auto-combat-enemy-card__hp {
+    gap: 0.24rem;
+    margin-top: 0.48rem;
+  }
+
+  .auto-combat-enemy-card__hp-header span {
+    font-size: 0.62rem;
+  }
+
+  .auto-combat-enemy-card__hp-header strong {
+    font-size: 0.66rem;
+  }
+
+  .auto-combat-enemy-card__hp-track {
+    height: 8px;
+  }
+
+  .auto-combat-enemy-card__stats {
+    gap: 0.34rem;
+    margin-top: 0.55rem;
+  }
+
+  .auto-combat-enemy-card__stats span {
+    min-height: 24px;
+    padding: 0.14rem 0.42rem;
+    font-size: 0.65rem;
+    line-height: 1;
+    letter-spacing: 0.01em;
+  }
+
+  .auto-combat-stage-actions {
+    flex-direction: column;
+  }
+
+  .auto-combat-stage-actions .auto-combat-primary-button,
+  .auto-combat-stage-actions .auto-combat-secondary-button,
+  .auto-combat-primary-button,
+  .auto-combat-secondary-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .auto-combat-arena-card__top,
+  .auto-combat-session-panel__header {
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .auto-combat-fighter-card > strong {
+    font-size: 1rem;
+  }
+
+  .auto-combat-session-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.56rem;
+  }
+
+  .auto-combat-session-summary div {
+    padding: 0.62rem;
+  }
+
+  .auto-combat-session-summary span {
+    font-size: 0.64rem;
+  }
+
+  .auto-combat-session-summary strong {
+    font-size: 0.9rem;
+  }
+
+  .auto-combat-live-event {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+    text-align: center;
+  }
+
+  .auto-combat-live-event span {
+    white-space: normal;
+  }
+
+  .auto-combat-battle-log__item {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .auto-combat-battle-log__round,
+  .auto-combat-battle-log__damage {
+    white-space: normal;
+  }
+
+  .auto-combat-stats-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .auto-combat-stat-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 0.56rem;
+    padding: 0.65rem;
+    border-radius: 0.88rem;
+  }
+
+  .auto-combat-stat-row__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.78rem;
+  }
+
+  .auto-combat-stat-row__icon img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .auto-combat-stat-row__header strong {
+    font-size: 0.82rem;
+  }
+
+  .auto-combat-stat-row__header span {
+    min-width: 34px;
+    min-height: 24px;
+    font-size: 0.74rem;
+  }
+
+  .auto-combat-stat-row p {
+    font-size: 0.62rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .auto-combat-app-shell {
+    padding: 0.75rem;
+  }
+
+  .auto-combat-tabs {
+    width: min(250px, 100%);
+    min-height: 50px;
+  }
+
+  .auto-combat-tabs button {
+    min-height: 40px;
+    font-size: 0.82rem;
+  }
+
+  .auto-combat-hunt-empty__icon {
+    width: 42px;
+    height: 42px;
+    font-size: 1.08rem;
+  }
+
+  .auto-combat-hunt-empty strong {
+    font-size: 1.05rem;
+  }
+
+  .auto-combat-enemy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.52rem;
+  }
+
+  .auto-combat-enemy-card {
+    padding: 0.68rem 0.5rem 0.62rem;
+  }
+
+  .auto-combat-enemy-card__level,
+  .auto-combat-enemy-card__xp {
+    min-height: 22px;
+    padding: 0.11rem 0.38rem;
+    font-size: 0.58rem;
+  }
+
+  .auto-combat-enemy-card__content > strong {
+    font-size: 0.82rem;
+  }
+
+  .auto-combat-enemy-card__hp-header {
+    gap: 0.35rem;
+  }
+
+  .auto-combat-enemy-card__stats {
+    gap: 0.3rem;
+  }
+
+  .auto-combat-enemy-card__stats span {
+    min-height: 23px;
+    padding: 0.12rem 0.36rem;
+    font-size: 0.62rem;
+  }
+
+  .auto-combat-stats-list {
+    grid-template-columns: 1fr;
+  }
+
+  .auto-combat-stat-row__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .auto-combat-enemy-grid,
+  .auto-combat-session-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .auto-combat-enemy-card__stats span {
+    min-height: 24px;
+    padding: 0.14rem 0.42rem;
+    font-size: 0.65rem;
+  }
+}
+
+/* =========================================================
+   AJUSTE FINAL — STATUS DO AUTO COMBAT IGUAL AO DASHBOARD
+   ========================================================= */
+
+.auto-combat-tab-panel--stats {
+  width: 100%;
+}
+
+.auto-combat-character-stats-panel {
+  width: 100%;
+}
+
+.auto-combat-tab-panel--stats .character-stats-group {
+  width: 100%;
+}
+
+.auto-combat-tab-panel--stats .auto-combat-stats-dashboard,
+.auto-combat-tab-panel--stats .auto-combat-stats-grid,
+.auto-combat-tab-panel--stats .auto-combat-stats-panels,
+.auto-combat-tab-panel--stats .auto-combat-info-panel,
+.auto-combat-tab-panel--stats .auto-combat-equipment-panel {
+  display: none !important;
+}
+
+.auto-combat-tab-panel--stats .character-stat-card__value {
+  font-family: var(--font-title);
+}
+
+@media (max-width: 620px) {
+  .auto-combat-tab-panel--stats .character-stats-grid--primary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .auto-combat-tab-panel--stats .character-stats-grid--primary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   EVENTO EM TEMPO REAL
+   ========================================================= */
+
+.auto-combat-realtime-event {
+  display: grid;
+  gap: 0.32rem;
+  padding: 0.82rem 0.9rem;
+  background:
+    radial-gradient(circle at left, rgba(229, 182, 63, 0.08), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.42);
+  border: 1px solid rgba(229, 182, 63, 0.15);
+  border-radius: 0.85rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.026),
+    0 0 18px rgba(229, 182, 63, 0.06);
+}
+
+.auto-combat-realtime-event span {
+  color: color-mix(in srgb, var(--action-primary-hover) 86%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 8px rgba(110, 159, 67, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.68);
+}
+
+.auto-combat-realtime-event strong {
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1.28;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.72),
+    0 0 10px rgba(245, 240, 223, 0.06);
+}
+================ frontend/src/features/auto-combat/components/AutoCombatBattleLog.tsx ================

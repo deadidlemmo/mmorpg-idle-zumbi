@@ -1,0 +1,16 @@
+node_modules
+dist
+build
+.env
+.env.local
+.DS_Store
+
+# Banco / Docker
+postgres_data
+redis_data
+
+# Logs
+*.log
+
+# Prisma
+backend/prisma/migrations/dev.db

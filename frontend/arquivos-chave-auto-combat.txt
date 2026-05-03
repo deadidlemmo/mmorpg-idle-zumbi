@@ -1,0 +1,630 @@
+=========================================================
+ESTRUTURA DA FEATURE AUTO-COMBAT
+=========================================================
+C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\frontend\src\features\auto-combat\api
+C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\frontend\src\features\auto-combat\components
+C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\frontend\src\features\auto-combat\hooks
+C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\frontend\src\features\auto-combat\pages
+C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\frontend\src\features\auto-combat\types
+
+=========================================================
+ARQUIVO: src\app\routes.tsx
+=========================================================
+import type { ReactNode } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AuthPage } from '../features/auth/pages/AuthPage';
+import { CharacterSelectPage } from '../features/characters/pages/CharacterSelectPage';
+import { DashboardOverviewPage } from '../features/dashboard/pages/DashboardOverviewPage';
+import { DashboardPlaceholderPage } from '../features/dashboard/pages/DashboardPlaceholderPage';
+import { useAuthStore } from '../store/auth.store';
+
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
+
+function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
+function PublicOnlyRoute({ children }: ProtectedRouteProps) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  if (isAuthenticated) {
+    return <Navigate to="/characters" replace />;
+  }
+
+  return children;
+}
+
+export function AppRoutes() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <PublicOnlyRoute>
+              <AuthPage />
+            </PublicOnlyRoute>
+          }
+        />
+
+        <Route
+          path="/characters"
+          element={
+            <ProtectedRoute>
+              <CharacterSelectPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/:characterId"
+          element={
+            <ProtectedRoute>
+              <DashboardOverviewPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/:characterId/auto-combat"
+          element={
+            <ProtectedRoute>
+              <DashboardPlaceholderPage
+                title="Auto Combat"
+                description="Tela futura para iniciar, acompanhar e encerrar sessões de auto-combate idle."
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/:characterId/gathering"
+          element={
+            <ProtectedRoute>
+              <DashboardPlaceholderPage
+                title="Gathering"
+                description="Tela futura para iniciar coletas, acompanhar produção e escolher origem de materiais."
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/:characterId/crafting"
+          element={
+            <ProtectedRoute>
+              <DashboardPlaceholderPage
+                title="Crafting"
+                description="Tela futura para receitas, ingredientes, materiais e criação de equipamentos."
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/:characterId/inventory"
+          element={
+            <ProtectedRoute>
+              <DashboardPlaceholderPage
+                title="Inventário"
+                description="Tela futura para materiais, consumíveis e equipamentos guardados pelo personagem."
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/:characterId/equipment"
+          element={
+            <ProtectedRoute>
+              <DashboardPlaceholderPage
+                title="Equipamentos"
+                description="Tela futura para gerenciar slots, trocar itens e comparar atributos."
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/:characterId/consumables"
+          element={
+            <ProtectedRoute>
+              <DashboardPlaceholderPage
+                title="Consumíveis e Enfermaria"
+                description="Tela futura para poções, cura automática e recuperação de HP pela enfermaria."
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/:characterId/maps"
+          element={
+            <ProtectedRoute>
+              <DashboardPlaceholderPage
+                title="Mapas"
+                description="Tela futura para mapas, submapas disponíveis, recomendação de progressão e entrada em zonas."
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+=========================================================
+ARQUIVO: src\services\api\apiClient.ts
+=========================================================
+import axios from 'axios';
+import { getAuthToken, removeAuthToken } from './authToken';
+
+const apiBaseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+
+export const apiClient = axios.create({
+  baseURL: apiBaseUrl,
+  timeout: 15000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+apiClient.interceptors.request.use((config) => {
+  const token = getAuthToken();
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+
+    if (status === 401) {
+      removeAuthToken();
+    }
+
+    return Promise.reject(error);
+  },
+);
+=========================================================
+ARQUIVO: src\services\api\endpoints.ts
+=========================================================
+export const API_ENDPOINTS = {
+  auth: {
+    login: '/auth/login',
+    register: '/auth/register',
+    me: '/auth/me',
+  },
+
+  characters: {
+    me: '/characters/me',
+    create: '/characters',
+    byId: (characterId: string) => `/characters/${characterId}`,
+    status: (characterId: string) => `/characters/${characterId}/status`,
+    overview: (characterId: string) => `/characters/${characterId}/overview`,
+  },
+} as const;
+=========================================================
+ARQUIVO: src\features\dashboard\pages\DashboardPlaceholderPage.tsx
+=========================================================
+import { useEffect, useMemo, useState } from 'react';
+import { Navigate, useParams } from 'react-router-dom';
+import { normalizeClassName } from '../../characters/api/characters.api';
+import { getCharacterOverview } from '../api/dashboard.api';
+import { DashboardCard } from '../components/DashboardCard';
+import { DashboardLayout } from '../components/DashboardLayout';
+import '../dashboard.css';
+import type {
+    CharacterOverviewResponse,
+    DashboardCharacterViewModel,
+} from '../types/dashboard.types';
+
+interface DashboardPlaceholderPageProps {
+  title: string;
+  description: string;
+}
+
+function buildCharacterViewModel(
+  overview: CharacterOverviewResponse,
+): DashboardCharacterViewModel {
+  const character = overview.character;
+  const className = character.class?.name ?? 'Lutador';
+
+  return {
+    id: character.id,
+    name: character.name,
+    className,
+    classId: normalizeClassName(className),
+    level: character.level ?? 1,
+    xp: character.xp ?? 0,
+    status: character.status ?? 'ACTIVE',
+    currentHp: character.currentHp ?? character.maxHp ?? 1,
+    maxHp: character.maxHp ?? 1,
+    avatarKey: character.avatarKey ?? null,
+    avatarUrl: character.avatarUrl ?? null,
+    currentMapName:
+      character.currentMap?.name ??
+      overview.progression?.currentMap?.name ??
+      'Sem mapa',
+  };
+}
+
+export function DashboardPlaceholderPage({
+  title,
+  description,
+}: DashboardPlaceholderPageProps) {
+  const { characterId } = useParams();
+  const [overview, setOverview] = useState<CharacterOverviewResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function load() {
+      if (!characterId) return;
+
+      try {
+        setIsLoading(true);
+        const data = await getCharacterOverview(characterId);
+
+        if (isMounted) {
+          setOverview(data);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [characterId]);
+
+  const character = useMemo(() => {
+    if (!overview) return null;
+
+    return buildCharacterViewModel(overview);
+  }, [overview]);
+
+  if (!characterId) {
+    return <Navigate to="/characters" replace />;
+  }
+
+  if (isLoading) {
+    return (
+      <main className="dashboard-loading">
+        <div className="loading-spinner" />
+        <span>Carregando área...</span>
+      </main>
+    );
+  }
+
+  if (!character) {
+    return <Navigate to="/characters" replace />;
+  }
+
+  return (
+    <DashboardLayout character={character}>
+      <DashboardCard title={title} eyebrow="Área em preparação">
+        <div className="dashboard-placeholder">
+          <strong>{title}</strong>
+          <p>{description}</p>
+          <span>
+            Esta rota já está preparada para crescer sem refatorar o dashboard.
+          </span>
+        </div>
+      </DashboardCard>
+    </DashboardLayout>
+  );
+}
+=========================================================
+ARQUIVO: src\features\dashboard\api\dashboard.api.ts
+=========================================================
+import { apiClient } from '../../../services/api/apiClient';
+import type { CharacterOverviewResponse } from '../types/dashboard.types';
+
+export async function getCharacterOverview(
+  characterId: string,
+): Promise<CharacterOverviewResponse> {
+  const response = await apiClient.get<CharacterOverviewResponse>(
+    `/characters/${characterId}/overview`,
+  );
+
+  return response.data;
+}
+=========================================================
+ARQUIVO: src\features\dashboard\types\dashboard.types.ts
+=========================================================
+export type DashboardItemRarity =
+  | 'COMMON'
+  | 'UNCOMMON'
+  | 'RARE'
+  | 'EPIC'
+  | 'LEGENDARY';
+
+export type DashboardEquipmentSlotKey =
+  | 'mainHand'
+  | 'offHand'
+  | 'head'
+  | 'armor'
+  | 'pants'
+  | 'boots';
+
+export type DashboardItemSlot =
+  | 'MAIN_HAND'
+  | 'OFF_HAND'
+  | 'HEAD'
+  | 'ARMOR'
+  | 'PANTS'
+  | 'BOOTS'
+  | 'CONSUMABLE'
+  | 'MATERIAL';
+
+export type DashboardInventoryItemType =
+  | 'EQUIPMENT'
+  | 'CONSUMABLE'
+  | 'MATERIAL';
+
+export type DashboardCharacterStatus =
+  | 'IDLE'
+  | 'AUTO_COMBAT'
+  | 'DEAD'
+  | 'IN_TOWN'
+  | string;
+
+export type DashboardAutoCombatSessionStatus =
+  | 'ACTIVE'
+  | 'STOPPED'
+  | 'FINISHED'
+  | 'FAILED'
+  | string;
+
+export interface DashboardStats {
+  strength: number;
+  vitality: number;
+  agility: number;
+  precision: number;
+  technique: number;
+  willpower: number;
+}
+
+export interface DashboardDerivedStats {
+  maxHp: number;
+  attack: number;
+  defense: number;
+  speed: number;
+  critChance?: number;
+  critDamage?: number;
+  powerScore?: number;
+}
+
+export interface DashboardGameClassViewModel {
+  id: string;
+  name: string;
+  description?: string | null;
+
+  baseStrength?: number;
+  baseVitality?: number;
+  baseAgility?: number;
+  basePrecision?: number;
+  baseTechnique?: number;
+  baseWillpower?: number;
+}
+
+export interface DashboardMapViewModel {
+  id: string;
+  name: string;
+  tier: number;
+  minLevel?: number;
+  maxLevel?: number;
+  description?: string | null;
+}
+
+export interface DashboardSubMapViewModel {
+  id: string;
+  name: string;
+  tier: number;
+  minLevel?: number;
+  maxLevel?: number;
+  description?: string | null;
+  mapId?: string;
+}
+
+export interface DashboardEquipmentItem {
+  id: string;
+  name: string;
+  description?: string | null;
+
+  tier: number;
+  rarity?: DashboardItemRarity | string | null;
+
+  slot?: DashboardItemSlot | string | null;
+  family?: string | null;
+
+  iconUrl?: string | null;
+  imageUrl?: string | null;
+
+  classId?: string | null;
+  mapId?: string | null;
+
+  strengthBonus?: number;
+  vitalityBonus?: number;
+  agilityBonus?: number;
+  precisionBonus?: number;
+  techniqueBonus?: number;
+  willpowerBonus?: number;
+
+  isCraftable?: boolean;
+}
+
+export interface DashboardEquipmentViewModel {
+  mainHand?: DashboardEquipmentItem | null;
+  offHand?: DashboardEquipmentItem | null;
+  head?: DashboardEquipmentItem | null;
+  armor?: DashboardEquipmentItem | null;
+  pants?: DashboardEquipmentItem | null;
+  boots?: DashboardEquipmentItem | null;
+}
+
+export interface DashboardInventoryItemViewModel {
+  id: string;
+  characterId?: string;
+  itemId: string;
+
+  quantity: number;
+  type: DashboardInventoryItemType | string;
+
+  item: DashboardEquipmentItem;
+}
+
+export interface DashboardPotionConfigViewModel {
+  id?: string;
+  characterId?: string;
+  potionItemId?: string;
+
+  enabled: boolean;
+  useInAutoCombat: boolean;
+  hpThresholdPercent: number;
+
+  potion?: DashboardEquipmentItem | null;
+}
+
+export interface DashboardAutoCombatLootViewModel {
+  itemId: string;
+  quantity: number;
+  item?: DashboardEquipmentItem | null;
+}
+
+export interface DashboardAutoCombatMobSummaryViewModel {
+  mobId: string;
+  mobName?: string;
+  kills: number;
+  xpGained: number;
+}
+
+export interface DashboardAutoCombatSessionViewModel {
+  id: string;
+  characterId: string;
+  subMapId: string;
+
+  status: DashboardAutoCombatSessionStatus;
+
+  startedAt: string;
+  endsAt?: string | null;
+  lastProcessedAt?: string | null;
+
+  durationSeconds?: number;
+  roundDurationSeconds?: number;
+
+  totalRounds?: number;
+  totalCombats?: number;
+  totalKills?: number;
+  totalXpGained?: number;
+  totalDamageDealt?: number;
+  totalDamageTaken?: number;
+  totalPotionsUsed?: number;
+
+  loot?: DashboardAutoCombatLootViewModel[];
+  mobSummary?: DashboardAutoCombatMobSummaryViewModel[];
+
+  subMap?: DashboardSubMapViewModel | null;
+}
+
+export interface DashboardGatheringSkillViewModel {
+  key: string;
+  name: string;
+  description?: string;
+
+  level: number;
+  xp: number;
+  xpToNextLevel: number;
+
+  progressPercent?: number;
+
+  statBonusName?: keyof DashboardStats | string;
+  statBonusValue?: number;
+}
+
+export interface DashboardLevelProgressViewModel {
+  level: number;
+  xp: number;
+  xpToNextLevel: number;
+  currentLevelXp?: number;
+  nextLevelXp?: number;
+  progressPercent: number;
+}
+
+export interface DashboardCharacterViewModel {
+  id: string;
+  name: string;
+
+  level: number;
+  xp: number;
+
+  currentHp: number;
+  maxHp: number;
+
+  status?: DashboardCharacterStatus;
+
+  class?: DashboardGameClassViewModel | null;
+  gameClass?: DashboardGameClassViewModel | null;
+
+  map?: DashboardMapViewModel | null;
+  currentMap?: DashboardMapViewModel | null;
+
+  subMap?: DashboardSubMapViewModel | null;
+  currentSubMap?: DashboardSubMapViewModel | null;
+
+  baseStats?: DashboardStats;
+  equipmentStats?: DashboardStats;
+  totalStats: DashboardStats;
+
+  derivedStats?: DashboardDerivedStats;
+
+  equipment: DashboardEquipmentViewModel;
+
+  inventory?: DashboardInventoryItemViewModel[];
+
+  potionConfigs?: DashboardPotionConfigViewModel[];
+
+  levelProgress?: DashboardLevelProgressViewModel;
+
+  autoCombatSession?: DashboardAutoCombatSessionViewModel | null;
+
+  gatheringSkills?: DashboardGatheringSkillViewModel[];
+
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CharacterOverviewResponse {
+  character: DashboardCharacterViewModel;
+}
+
+export interface DashboardCharacterOverviewResponse {
+  character: DashboardCharacterViewModel;
+}
+
+export interface DashboardApiErrorResponse {
+  message: string | string[];
+  error?: string;
+  statusCode?: number;
+}
