@@ -1,14 +1,48 @@
 import { apiClient } from '../../../services/api/apiClient';
 import { API_ENDPOINTS } from '../../../services/api/endpoints';
 import type {
-    AutoCombatMapViewModel,
-    AutoCombatStatusResponse,
-    PreviewAutoCombatPayload,
-    PreviewAutoCombatResponse,
-    StartAutoCombatPayload,
-    StartAutoCombatResponse,
-    StopAutoCombatResponse,
+  AutoCombatMapViewModel,
+  AutoCombatRealtimeEvent,
+  AutoCombatStatusResponse,
+  PreviewAutoCombatPayload,
+  PreviewAutoCombatResponse,
+  StartAutoCombatPayload,
+  StartAutoCombatResponse,
+  StopAutoCombatResponse,
 } from '../types/auto-combat.types';
+
+export type AutoCombatRecentEvent = AutoCombatRealtimeEvent & {
+  id?: string;
+  eventId?: string;
+  sequence?: number;
+};
+
+export type AutoCombatRecentEventsResponse = {
+  active: boolean;
+  hasActiveAutoCombat: boolean;
+  message: string;
+
+  character: {
+    id: string;
+    name: string;
+  } | null;
+
+  session: {
+    id: string;
+    status: string;
+    startedAt?: string | null;
+    finishedAt?: string | null;
+    currentCombatIndex?: number | null;
+    currentRound?: number | null;
+  } | null;
+
+  events: AutoCombatRecentEvent[];
+  latestSequence: number | null;
+};
+
+function getAutoCombatRecentEventsEndpoint(characterId: string) {
+  return `/auto-combat/${characterId}/recent-events`;
+}
 
 export async function getAutoCombatMaps(): Promise<AutoCombatMapViewModel[]> {
   const response = await apiClient.get<AutoCombatMapViewModel[]>(
@@ -33,6 +67,16 @@ export async function getAutoCombatStatus(
 ): Promise<AutoCombatStatusResponse> {
   const response = await apiClient.get<AutoCombatStatusResponse>(
     API_ENDPOINTS.autoCombat.status(characterId),
+  );
+
+  return response.data;
+}
+
+export async function getAutoCombatRecentEvents(
+  characterId: string,
+): Promise<AutoCombatRecentEventsResponse> {
+  const response = await apiClient.get<AutoCombatRecentEventsResponse>(
+    getAutoCombatRecentEventsEndpoint(characterId),
   );
 
   return response.data;
