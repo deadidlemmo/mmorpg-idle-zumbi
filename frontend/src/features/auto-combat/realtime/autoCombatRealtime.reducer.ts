@@ -98,6 +98,14 @@ export type AutoCombatRealtimeState = {
   queuedMobSpawnFingerprints: string[];
   queuedPotionUsedFingerprints: string[];
 
+  /**
+   * Último evento realmente aplicado ao estado visual/realtime.
+   * Usado para impedir que eventos antigos ou snapshots atrasados causem rollback
+   * de HP/EXP depois de Alt+Tab, reconexão ou refetch.
+   */
+  lastAppliedEventSequence: number | null;
+  lastAppliedEventTimestamp: number | null;
+
   updatedAt: number;
 };
 
@@ -134,6 +142,15 @@ export type AutoCombatRealtimeAction =
       characterId: string;
       sessionId?: string | null;
       events: AutoCombatRealtimeEvent[];
+
+      /**
+       * Quando true, aplica o último snapshot dos eventos recentes no estado
+       * sem animar novamente. Ideal para retorno de Alt+Tab/reconexão.
+       */
+      applySnapshot?: boolean;
+    }
+  | {
+      type: 'FLUSH_EVENT_QUEUE';
     }
   | {
       type: 'ENQUEUE_EVENT';
@@ -197,6 +214,9 @@ export const initialAutoCombatRealtimeState: AutoCombatRealtimeState = {
   queuedGenericFingerprints: [],
   queuedMobSpawnFingerprints: [],
   queuedPotionUsedFingerprints: [],
+
+  lastAppliedEventSequence: null,
+  lastAppliedEventTimestamp: null,
 
   updatedAt: 0,
 };
@@ -362,6 +382,200 @@ function shouldPreservePreviousMobOnActiveStatus(params: {
   return !statusHasUsefulMobSnapshot(status);
 }
 
+
+function getStatusCombatIndex(status: AutoCombatStatusResponse | null) {
+  const session = getStatusSession(status) as
+    | { currentCombatIndex?: number | null }
+    | null;
+
+  const combatIndex = toSafeNumber(session?.currentCombatIndex, 0);
+
+  return combatIndex > 0 ? Math.floor(combatIndex) : null;
+}
+
+function getStateCombatIndex(state: AutoCombatRealtimeState) {
+  const combatIndex = toSafeNumber(state.session?.currentCombatIndex, 0);
+
+  return combatIndex > 0 ? Math.floor(combatIndex) : null;
+}
+
+function isSameCombatScope(
+  currentCombatIndex?: number | null,
+  nextCombatIndex?: number | null,
+) {
+  if (!currentCombatIndex || !nextCombatIndex) {
+    return true;
+  }
+
+  return currentCombatIndex === nextCombatIndex;
+}
+
+function isSameMobScope(
+  currentMobId?: string | null,
+  nextMobId?: string | null,
+  currentMobName?: string | null,
+  nextMobName?: string | null,
+) {
+  if (currentMobId && nextMobId) {
+    return currentMobId === nextMobId;
+  }
+
+  if (currentMobName && nextMobName) {
+    return currentMobName === nextMobName;
+  }
+
+  return true;
+}
+
+function getStatusMobCurrentHp(status: AutoCombatStatusResponse | null) {
+  const mob = getStatusMobSnapshot(status);
+
+  return getOptionalStatusNumber(mob?.currentHp ?? mob?.hp);
+}
+
+function getOptionalStatusNumber(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function shouldPreservePreviousMobAgainstOlderStatus(params: {
+  baseState: AutoCombatRealtimeState;
+  status: AutoCombatStatusResponse;
+  statusIsActive: boolean;
+  statusIsTerminal: boolean;
+  sessionChanged: boolean;
+}) {
+  const { baseState, status, statusIsActive, statusIsTerminal, sessionChanged } =
+    params;
+
+  if (sessionChanged || statusIsTerminal || !statusIsActive) {
+    return false;
+  }
+
+  const currentMob = baseState.mob;
+  const statusMob = getStatusMobSnapshot(status);
+
+  if (!hasUsefulRealtimeMobState(currentMob) || !hasUsefulMobIdentity(statusMob)) {
+    return false;
+  }
+
+  const currentCombatIndex = getStateCombatIndex(baseState);
+  const nextCombatIndex = getStatusCombatIndex(status);
+
+  if (!isSameCombatScope(currentCombatIndex, nextCombatIndex)) {
+    return false;
+  }
+
+  if (
+    !isSameMobScope(
+      currentMob?.id ?? null,
+      statusMob?.id ?? null,
+      currentMob?.name ?? null,
+      statusMob?.name ?? null,
+    )
+  ) {
+    return false;
+  }
+
+  const currentHp = getOptionalStatusNumber(currentMob?.currentHp);
+  const nextHp = getStatusMobCurrentHp(status);
+
+  /**
+   * Antirrollback do mob:
+   * - dentro do mesmo mob/combate, HP maior vindo de status geralmente é snapshot velho;
+   * - HP maior só deve ser aceito quando o combatIndex mudou, ou seja, novo spawn.
+   */
+  return currentHp !== undefined && nextHp !== undefined && nextHp > currentHp;
+}
+
+function getStatusCharacterHp(status: AutoCombatStatusResponse | null) {
+  return getOptionalStatusNumber(
+    status?.character?.currentHp ?? status?.sessionSummary?.hp?.current,
+  );
+}
+
+function getStatusPotionsUsed(status: AutoCombatStatusResponse | null) {
+  const totals = buildTotalsStateFromStatus(status, null);
+
+  return totals?.potionsUsed ?? 0;
+}
+
+function getStatePotionsUsed(state: AutoCombatRealtimeState) {
+  return Math.max(
+    state.displayTotals?.potionsUsed ?? 0,
+    state.totals?.potionsUsed ?? 0,
+  );
+}
+
+function shouldPreservePreviousCharacterHpAgainstOlderStatus(params: {
+  baseState: AutoCombatRealtimeState;
+  status: AutoCombatStatusResponse;
+  statusIsActive: boolean;
+  statusIsTerminal: boolean;
+  sessionChanged: boolean;
+}) {
+  const { baseState, status, statusIsActive, statusIsTerminal, sessionChanged } =
+    params;
+
+  if (sessionChanged || statusIsTerminal || !statusIsActive) {
+    return false;
+  }
+
+  const currentHp = getOptionalStatusNumber(baseState.character?.currentHp);
+  const nextHp = getStatusCharacterHp(status);
+
+  if (currentHp === undefined || nextHp === undefined) {
+    return false;
+  }
+
+  if (nextHp <= currentHp) {
+    return false;
+  }
+
+  /**
+   * HP maior no status durante sessão ativa só deve vencer se houver indício
+   * de cura/poção mais nova. Caso contrário, costuma ser refetch antigo
+   * sobrescrevendo um MOB_HIT já recebido pelo WebSocket.
+   */
+  return getStatusPotionsUsed(status) <= getStatePotionsUsed(baseState);
+}
+
+function preserveCharacterHpFromRealtimeState(
+  previous: AutoCombatRealtimeCharacterState | null,
+  incoming: AutoCombatRealtimeCharacterState | null,
+): AutoCombatRealtimeCharacterState | null {
+  if (!previous || !incoming) {
+    return incoming ?? previous;
+  }
+
+  return {
+    ...incoming,
+    currentHp: previous.currentHp,
+    maxHp: previous.maxHp ?? incoming.maxHp,
+    hpPercent: previous.hpPercent ?? incoming.hpPercent,
+    updatedAt: now(),
+  };
+}
+
+function isRealtimeSessionActiveState(state: AutoCombatRealtimeState) {
+  const sessionStatus = normalizeSessionStatus(state.session?.status);
+
+  if (isTerminalSessionStatus(sessionStatus)) {
+    return false;
+  }
+
+  if (sessionStatus === 'ACTIVE') {
+    return true;
+  }
+
+  return isStatusActive(state.status);
+}
+
 function getEventFingerprints(event: AutoCombatRealtimeEvent) {
   const eventKey = getRealtimeEventKey(event);
   const genericFingerprint = getGenericRealtimeFingerprint(event);
@@ -514,6 +728,13 @@ function clearRealtimeRuntimeState(
     queuedGenericFingerprints: [],
     queuedMobSpawnFingerprints: [],
     queuedPotionUsedFingerprints: [],
+
+    lastAppliedEventSequence: clearEventCaches
+      ? null
+      : state.lastAppliedEventSequence,
+    lastAppliedEventTimestamp: clearEventCaches
+      ? null
+      : state.lastAppliedEventTimestamp,
 
     updatedAt: now(),
   };
@@ -803,6 +1024,198 @@ function getRealtimeEventCreatedAtTimestamp(event: AutoCombatRealtimeEvent) {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
+function getRealtimeEventAppliedTimestamp(event: AutoCombatRealtimeEvent) {
+  const timestamp = getRealtimeEventCreatedAtTimestamp(event);
+
+  return timestamp > 0 ? timestamp : now();
+}
+
+function getEventCombatIndexNumber(event?: AutoCombatRealtimeEvent | null) {
+  if (!event) return null;
+
+  const value = getRealtimeEventUnknownField(event, 'combatIndex');
+
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getEventCurrentRoundNumber(event?: AutoCombatRealtimeEvent | null) {
+  if (!event) return null;
+
+  const value = getRealtimeEventUnknownField(event, 'round');
+
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function compareRealtimeEventsChronologically(
+  firstEvent: AutoCombatRealtimeEvent,
+  secondEvent: AutoCombatRealtimeEvent,
+) {
+  const firstSequence = getStoredRealtimeEventSequence(firstEvent);
+  const secondSequence = getStoredRealtimeEventSequence(secondEvent);
+
+  if (firstSequence !== null && secondSequence !== null) {
+    return firstSequence - secondSequence;
+  }
+
+  const firstTimestamp = getRealtimeEventCreatedAtTimestamp(firstEvent);
+  const secondTimestamp = getRealtimeEventCreatedAtTimestamp(secondEvent);
+
+  if (firstTimestamp !== secondTimestamp) {
+    return firstTimestamp - secondTimestamp;
+  }
+
+  const firstCombatIndex = getEventCombatIndexNumber(firstEvent) ?? 0;
+  const secondCombatIndex = getEventCombatIndexNumber(secondEvent) ?? 0;
+
+  if (firstCombatIndex !== secondCombatIndex) {
+    return firstCombatIndex - secondCombatIndex;
+  }
+
+  const firstRound = getEventCurrentRoundNumber(firstEvent) ?? 0;
+  const secondRound = getEventCurrentRoundNumber(secondEvent) ?? 0;
+
+  if (firstRound !== secondRound) {
+    return firstRound - secondRound;
+  }
+
+  return getBattleLogTypeOrderFromRealtimeEvent(firstEvent) -
+    getBattleLogTypeOrderFromRealtimeEvent(secondEvent);
+}
+
+function getBattleLogTypeOrderFromRealtimeEvent(event: AutoCombatRealtimeEvent) {
+  const eventType = normalizeRealtimeEventType(event);
+
+  switch (eventType) {
+    case 'MOB_SPAWNED':
+      return 10;
+    case 'PLAYER_HIT':
+      return 20;
+    case 'MOB_HIT':
+      return 30;
+    case 'DODGE':
+      return 35;
+    case 'POTION_USED':
+      return 40;
+    case 'MOB_DEFEATED':
+      return 50;
+    case 'PLAYER_DEFEATED':
+      return 60;
+    default:
+      return 90;
+  }
+}
+
+function sortRealtimeEventsChronologically(events: AutoCombatRealtimeEvent[]) {
+  return [...events].sort(compareRealtimeEventsChronologically);
+}
+
+function shouldRejectOutOfOrderEvent(
+  state: AutoCombatRealtimeState,
+  event: AutoCombatRealtimeEvent,
+) {
+  const eventSequence = getStoredRealtimeEventSequence(event);
+
+  if (
+    eventSequence !== null &&
+    state.lastAppliedEventSequence !== null &&
+    eventSequence <= state.lastAppliedEventSequence
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function getEventMobCurrentHp(event: AutoCombatRealtimeEvent) {
+  return getRealtimeEventNumberField(event, 'mobCurrentHp');
+}
+
+function getEventCharacterCurrentHp(event: AutoCombatRealtimeEvent) {
+  return getRealtimeEventNumberField(event, 'characterCurrentHp');
+}
+
+function shouldRejectRollbackRealtimeEvent(
+  state: AutoCombatRealtimeState,
+  event: AutoCombatRealtimeEvent,
+) {
+  const eventType = normalizeRealtimeEventType(event);
+
+  if (eventType === 'MOB_SPAWNED') {
+    return false;
+  }
+
+  const stateCombatIndex = getStateCombatIndex(state);
+  const eventCombatIndex = getEventCombatIndexNumber(event);
+
+  const sameCombat = isSameCombatScope(stateCombatIndex, eventCombatIndex);
+
+  const sameMob = isSameMobScope(
+    state.mob?.id ?? null,
+    event.mobId ?? null,
+    state.mob?.name ?? null,
+    event.mobName ?? null,
+  );
+
+  if (sameCombat && sameMob) {
+    const currentMobHp = getOptionalStatusNumber(state.mob?.currentHp);
+    const eventMobHp = getEventMobCurrentHp(event);
+
+    if (
+      currentMobHp !== undefined &&
+      eventMobHp !== null &&
+      eventMobHp > currentMobHp
+    ) {
+      return true;
+    }
+  }
+
+  if (eventType !== 'POTION_USED') {
+    const currentCharacterHp = getOptionalStatusNumber(state.character?.currentHp);
+    const eventCharacterHp = getEventCharacterCurrentHp(event);
+
+    if (
+      currentCharacterHp !== undefined &&
+      eventCharacterHp !== null &&
+      eventCharacterHp > currentCharacterHp
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function updateAppliedEventClock(
+  state: AutoCombatRealtimeState,
+  event: AutoCombatRealtimeEvent,
+) {
+  const eventSequence = getStoredRealtimeEventSequence(event);
+  const eventTimestamp = getRealtimeEventAppliedTimestamp(event);
+
+  return {
+    lastAppliedEventSequence:
+      eventSequence !== null
+        ? Math.max(state.lastAppliedEventSequence ?? 0, eventSequence)
+        : state.lastAppliedEventSequence,
+    lastAppliedEventTimestamp: Math.max(
+      state.lastAppliedEventTimestamp ?? 0,
+      eventTimestamp,
+    ),
+  };
+}
+
 function getStoredRealtimeEventStableKey(event: AutoCombatRealtimeEvent) {
   const eventId = getStoredRealtimeEventId(event);
 
@@ -1043,8 +1456,17 @@ function hydrateFromOverview(
   characterId: string,
   overview: CharacterOverviewResponse | null,
 ): AutoCombatRealtimeState {
-  const character = buildOverviewCharacterState(overview, state.character);
+  const overviewCharacter = buildOverviewCharacterState(overview, state.character);
   const location = buildOverviewLocationState(overview, state.location);
+
+  const shouldPreserveRealtimeHp =
+    isRealtimeSessionActiveState(state) &&
+    state.character?.currentHp !== undefined &&
+    overviewCharacter?.currentHp !== undefined;
+
+  const character = shouldPreserveRealtimeHp
+    ? preserveCharacterHpFromRealtimeState(state.character, overviewCharacter)
+    : overviewCharacter;
 
   return {
     ...state,
@@ -1109,12 +1531,27 @@ function hydrateFromStatus(
   const nextSession = buildSessionStateFromStatus(status, baseState.session);
   const nextLocation = buildLocationStateFromStatus(status, baseState.location);
 
-  const nextCharacter = deferCharacterProgress
+  const statusCharacterState = buildCharacterStateFromStatus(
+    status,
+    baseState.character,
+  );
+
+  const mergedCharacter = deferCharacterProgress
     ? baseState.character
-    : mergeCharacterKeepingHighestXp(
-        baseState.character,
-        buildCharacterStateFromStatus(status, baseState.character),
-      );
+    : mergeCharacterKeepingHighestXp(baseState.character, statusCharacterState);
+
+  const shouldPreservePreviousCharacterHp =
+    shouldPreservePreviousCharacterHpAgainstOlderStatus({
+      baseState,
+      status,
+      statusIsActive,
+      statusIsTerminal,
+      sessionChanged,
+    });
+
+  const nextCharacter = shouldPreservePreviousCharacterHp
+    ? preserveCharacterHpFromRealtimeState(baseState.character, mergedCharacter)
+    : mergedCharacter;
 
   const nextTotals = buildTotalsStateFromStatus(status, null);
 
@@ -1123,13 +1560,21 @@ function hydrateFromStatus(
     sessionChanged ? null : baseState.mob,
   );
 
-  const shouldPreservePreviousMob = shouldPreservePreviousMobOnActiveStatus({
-    baseState,
-    status,
-    statusIsActive,
-    statusIsTerminal,
-    sessionChanged,
-  });
+  const shouldPreservePreviousMob =
+    shouldPreservePreviousMobOnActiveStatus({
+      baseState,
+      status,
+      statusIsActive,
+      statusIsTerminal,
+      sessionChanged,
+    }) ||
+    shouldPreservePreviousMobAgainstOlderStatus({
+      baseState,
+      status,
+      statusIsActive,
+      statusIsTerminal,
+      sessionChanged,
+    });
 
   const nextMob = shouldPreservePreviousMob
     ? baseState.mob
@@ -1209,11 +1654,148 @@ function hydrateFromStatus(
   };
 }
 
+
+function applyRealtimeEventSnapshot(
+  state: AutoCombatRealtimeState,
+  event: AutoCombatRealtimeEvent,
+): AutoCombatRealtimeState {
+  if (shouldRejectOutOfOrderEvent(state, event)) {
+    return state;
+  }
+
+  if (shouldRejectRollbackRealtimeEvent(state, event)) {
+    return {
+      ...state,
+      battleLogEvents: appendBattleLogEvent(state.battleLogEvents, event),
+      ...markEventAsProcessed(state, event),
+      updatedAt: now(),
+    };
+  }
+
+  const eventType = normalizeRealtimeEventType(event);
+
+  const nextCharacter =
+    eventType === 'MOB_DEFEATED' ||
+    eventType === 'PLAYER_DEFEATED' ||
+    eventType === 'POTION_USED'
+      ? mergeCharacterKeepingHighestXp(
+          state.character,
+          buildCharacterStateFromRealtimeEvent(event, state.character),
+        )
+      : buildCharacterStateFromRealtimeEvent(event, state.character);
+
+  const nextMob = buildMobStateFromRealtimeEvent(event, state.mob);
+
+  const nextDisplayTotals = isDisplayTotalsReleaseEvent(event)
+    ? buildDisplayTotalsFromReleaseEvent(state, event)
+    : state.displayTotals;
+
+  const nextPotion = isPotionUsedEvent(event)
+    ? buildPotionStateFromRealtimeEvent(event, state.potion)
+    : state.potion;
+
+  const nextVisual = buildVisualStateFromRealtimeEvent(event, state.visual);
+
+  const nextSession: AutoCombatRealtimeSessionState | null = state.session
+    ? {
+        ...state.session,
+        id: event.sessionId ?? state.session.id ?? null,
+        currentRound:
+          event.round !== undefined && event.round !== null
+            ? Math.max(0, Math.floor(toSafeNumber(event.round, 0)))
+            : state.session.currentRound,
+        currentCombatIndex:
+          event.combatIndex !== undefined && event.combatIndex !== null
+            ? Math.max(1, Math.floor(toSafeNumber(event.combatIndex, 1)))
+            : state.session.currentCombatIndex,
+        updatedAt: now(),
+      }
+    : event.sessionId
+      ? {
+          id: event.sessionId,
+          characterId: event.characterId ?? state.characterId,
+          subMapId: null,
+          status: 'ACTIVE',
+          startedAt: null,
+          endsAt: null,
+          finishedAt: null,
+          remainingSeconds: null,
+          durationSeconds: null,
+          roundDurationSeconds: null,
+          currentRound:
+            event.round !== undefined && event.round !== null
+              ? Math.max(0, Math.floor(toSafeNumber(event.round, 0)))
+              : null,
+          currentCombatIndex:
+            event.combatIndex !== undefined && event.combatIndex !== null
+              ? Math.max(1, Math.floor(toSafeNumber(event.combatIndex, 1)))
+              : null,
+          updatedAt: now(),
+        }
+      : null;
+
+  return {
+    ...state,
+
+    session: nextSession,
+    character: nextCharacter,
+    mob: nextMob,
+    displayTotals: nextDisplayTotals,
+    visual: nextVisual,
+    potion: nextPotion,
+    battleLogEvents: appendBattleLogEvent(state.battleLogEvents, event),
+
+    ...markEventAsProcessed(state, event),
+    ...updateAppliedEventClock(state, event),
+
+    hasLoadedOnce: true,
+    updatedAt: now(),
+  };
+}
+
+function flushEventQueueWithoutAnimation(
+  state: AutoCombatRealtimeState,
+): AutoCombatRealtimeState {
+  if (state.eventQueue.length <= 0) {
+    return {
+      ...state,
+      activeEvent: null,
+      displayTotals: publishDisplayTotalsIfAllowed({
+        ...state,
+        activeEvent: null,
+      }),
+      updatedAt: now(),
+    };
+  }
+
+  let nextState: AutoCombatRealtimeState = {
+    ...state,
+    activeEvent: null,
+    eventQueue: [],
+    queuedEventKeys: [],
+    queuedGenericFingerprints: [],
+    queuedMobSpawnFingerprints: [],
+    queuedPotionUsedFingerprints: [],
+    updatedAt: now(),
+  };
+
+  for (const event of sortRealtimeEventsChronologically(state.eventQueue)) {
+    nextState = applyRealtimeEventSnapshot(nextState, event);
+  }
+
+  return {
+    ...nextState,
+    displayTotals: publishDisplayTotalsIfAllowed(nextState),
+    updatedAt: now(),
+  };
+}
+
 function hydrateRecentEvents(
   state: AutoCombatRealtimeState,
   characterId: string,
   sessionId: string | null | undefined,
   events: AutoCombatRealtimeEvent[],
+  applySnapshot = false,
 ): AutoCombatRealtimeState {
   if (state.characterId && state.characterId !== characterId) {
     return state;
@@ -1283,11 +1865,11 @@ function hydrateRecentEvents(
     processedMarkers.processedPotionUsedFingerprints !==
       state.processedPotionUsedFingerprints;
 
-  if (!didChange) {
+  if (!didChange && !applySnapshot) {
     return state;
   }
 
-  return {
+  let nextState: AutoCombatRealtimeState = {
     ...state,
 
     characterId,
@@ -1298,6 +1880,14 @@ function hydrateRecentEvents(
     hasLoadedOnce: true,
     updatedAt: now(),
   };
+
+  if (applySnapshot) {
+    for (const event of sortRealtimeEventsChronologically(validEvents)) {
+      nextState = applyRealtimeEventSnapshot(nextState, event);
+    }
+  }
+
+  return nextState;
 }
 
 function enqueueRealtimeEvent(
@@ -1394,6 +1984,13 @@ function processRealtimeEvent(
     return discardQueuedEvent(state, event);
   }
 
+  if (
+    shouldRejectOutOfOrderEvent(state, event) ||
+    shouldRejectRollbackRealtimeEvent(state, event)
+  ) {
+    return discardQueuedEvent(state, event);
+  }
+
   const eventType = normalizeRealtimeEventType(event);
 
   const processedMarkers = markEventAsProcessed(state, event);
@@ -1416,9 +2013,15 @@ function processRealtimeEvent(
   /**
    * Realtime é camada visual/animação/log.
    * Totais reais da sessão continuam vindo de HYDRATE_STATUS.
-   * Totais visuais são liberados em CLEAR_ACTIVE_EVENT.
+   * Totais visuais precisam avançar no mesmo instante em que o evento entra em cena.
+   *
+   * Isso evita o atraso visual onde o log mostra MOB_DEFEATED, mas abates/XP
+   * só sobem depois que a animação termina.
    */
   const nextTotals = state.totals;
+  const nextDisplayTotals = isDisplayTotalsReleaseEvent(event)
+    ? buildDisplayTotalsFromReleaseEvent(state, event)
+    : state.displayTotals;
 
   const nextPotion = isPotionUsedEvent(event)
     ? buildPotionStateFromRealtimeEvent(event, state.potion)
@@ -1478,7 +2081,7 @@ function processRealtimeEvent(
     mob: nextMob,
 
     totals: nextTotals,
-    displayTotals: state.displayTotals,
+    displayTotals: nextDisplayTotals,
 
     visual: nextVisual,
     potion: nextPotion,
@@ -1489,6 +2092,7 @@ function processRealtimeEvent(
 
     ...processedMarkers,
     ...queuedMarkers,
+    ...updateAppliedEventClock(state, event),
 
     hasLoadedOnce: true,
     updatedAt: now(),
@@ -1578,7 +2182,12 @@ export function autoCombatRealtimeReducer(
         action.characterId,
         action.sessionId,
         action.events,
+        action.applySnapshot ?? false,
       );
+    }
+
+    case 'FLUSH_EVENT_QUEUE': {
+      return flushEventQueueWithoutAnimation(state);
     }
 
     case 'ENQUEUE_EVENT': {
@@ -1594,8 +2203,6 @@ export function autoCombatRealtimeReducer(
         return state;
       }
 
-      const releaseEvent = state.activeEvent;
-
       const nextState: AutoCombatRealtimeState = {
         ...state,
         activeEvent: null,
@@ -1604,9 +2211,7 @@ export function autoCombatRealtimeReducer(
 
       return {
         ...nextState,
-        displayTotals: publishDisplayTotalsIfAllowed(nextState, {
-          releaseEvent,
-        }),
+        displayTotals: publishDisplayTotalsIfAllowed(nextState),
       };
     }
 

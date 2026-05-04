@@ -43,41 +43,16 @@ interface AutoCombatRealtimeProviderProps {
 }
 
 type ReloadOptions = {
-  /**
-   * Limpa apenas a timeline visual pendente.
-   *
-   * Importante:
-   * - preserva sessão;
-   * - preserva mob conhecido;
-   * - preserva status;
-   * - evita a ActivityBar cair em "Combate automático".
-   */
-  clearVisualTimeline?: boolean;
-
-  /**
-   * Mantido por compatibilidade interna.
-   * Neste Provider, resetVisualTimeline também é tratado como limpeza suave.
-   */
-  resetVisualTimeline?: boolean;
-};
-
-type LoadRecentEventsOptions = {
-  reason: string;
-
-  /**
-   * Quando true, os eventos recentes vão para o BattleLog via reducer,
-   * sem passar pela fila visual e sem animar de novo.
-   */
-  hydrateBattleLog?: boolean;
+  reason?: string;
 };
 
 const INITIAL_RELOAD_DELAY_MS = 300;
 const AFTER_START_RELOAD_DELAY_MS = 700;
 const AFTER_STOP_RELOAD_DELAY_MS = 400;
 const AFTER_TERMINAL_RELOAD_DELAY_MS = 400;
-const AFTER_VISIBILITY_RELOAD_DELAY_MS = 0;
+const AFTER_VISIBILITY_RELOAD_DELAY_MS = 120;
 
-const NEXT_EVENT_PROCESS_DELAY_MS = 40;
+const NEXT_EVENT_PROCESS_DELAY_MS = 120;
 
 export const AutoCombatRealtimeContext =
   createContext<AutoCombatRealtimeContextValue | null>(null);
@@ -166,13 +141,6 @@ function shouldPollCurrentState(state: AutoCombatRealtimeState) {
     return true;
   }
 
-  /**
-   * Mesmo com WebSocket conectado, mantemos polling leve para reconciliar
-   * o estado oficial do backend/banco.
-   *
-   * O socket é a camada visual.
-   * O status do backend é a fonte da verdade para totais, sessão e persistência.
-   */
   if (statusIsActive) {
     return true;
   }
@@ -230,6 +198,20 @@ function normalizeInitialMobSpawnedEvent(params: {
   };
 }
 
+function getLooseEventSequence(event?: AutoCombatRealtimeEvent | null) {
+  const value = (event as unknown as { sequence?: unknown } | null | undefined)
+    ?.sequence;
+
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+
 export function AutoCombatRealtimeProvider({
   characterId,
   children,
@@ -248,8 +230,9 @@ export function AutoCombatRealtimeProvider({
   const isLoadingRef = useRef(false);
   const activeEventTimeoutRef = useRef<number | null>(null);
   const reloadTimeoutRef = useRef<number | null>(null);
-  const wasBackgroundedRef = useRef(false);
+  const reloadRequestRef = useRef(0);
   const recentEventsRequestRef = useRef(0);
+  const wasBackgroundedRef = useRef(false);
 
   useEffect(() => {
     stateRef.current = state;
@@ -276,83 +259,7 @@ export function AutoCombatRealtimeProvider({
     }
   }, []);
 
-  /**
-   * Busca eventos recentes salvos no backend.
-   *
-   * Agora esta função pode fazer duas coisas:
-   * - logar o diagnóstico no console;
-   * - hidratar o BattleLog sem animar eventos antigos.
-   *
-   * Regra importante:
-   * recentEvents não entram em eventQueue.
-   * Eles só completam o histórico do BattleLog.
-   */
-  const loadRecentEvents = useCallback(
-    async (options: LoadRecentEventsOptions) => {
-      if (!normalizedCharacterId) return;
-
-      const { reason, hydrateBattleLog = false } = options;
-
-      const requestId = recentEventsRequestRef.current + 1;
-      recentEventsRequestRef.current = requestId;
-
-      try {
-        const response = await getAutoCombatRecentEvents(normalizedCharacterId);
-
-        if (recentEventsRequestRef.current !== requestId) {
-          return;
-        }
-
-        const events = Array.isArray(response.events) ? response.events : [];
-        const sessionId = response.session?.id ?? null;
-
-        if (hydrateBattleLog && events.length > 0) {
-          dispatch({
-            type: 'HYDRATE_RECENT_EVENTS',
-            characterId: normalizedCharacterId,
-            sessionId,
-            events,
-          });
-        }
-
-        if (import.meta.env.DEV) {
-          console.debug('[auto-combat:recent-events]', {
-            reason,
-            hydrateBattleLog,
-            active: response.active,
-            hasActiveAutoCombat: response.hasActiveAutoCombat,
-            sessionId,
-            sessionStatus: response.session?.status ?? null,
-            eventsCount: events.length,
-            latestSequence: response.latestSequence,
-            firstSequence: events[0]?.sequence ?? null,
-            lastSequence: events[events.length - 1]?.sequence ?? null,
-            lastEventType: events[events.length - 1]?.type ?? null,
-          });
-        }
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.debug('[auto-combat:recent-events:error]', {
-            reason,
-            hydrateBattleLog,
-            error,
-          });
-        }
-      }
-    },
-    [normalizedCharacterId],
-  );
-
-  /**
-   * Limpeza suave.
-   *
-   * Use ao voltar de Alt+Tab, blur/focus, visibilitychange ou quando o browser
-   * pode ter pausado animações/timers.
-   *
-   * Não limpa session/status/mob.
-   * Isso é o que evita a ActivityBar voltar para "Combate automático".
-   */
-  const clearVisualTimeline = useCallback(() => {
+  const flushVisualQueueWithoutAnimation = useCallback(() => {
     clearScheduledActiveEvent();
 
     dispatch({
@@ -360,23 +267,7 @@ export function AutoCombatRealtimeProvider({
     });
 
     dispatch({
-      type: 'CLEAR_QUEUE',
-    });
-  }, [clearScheduledActiveEvent]);
-
-  /**
-   * Limpeza forte.
-   *
-   * Use apenas quando a sessão visual realmente deve ser descartada:
-   * - troca de personagem;
-   * - início de uma nova sessão;
-   * - reset explícito de tela.
-   */
-  const resetFullSessionVisualState = useCallback(() => {
-    clearScheduledActiveEvent();
-
-    dispatch({
-      type: 'CLEAR_SESSION_VISUAL_STATE',
+      type: 'FLUSH_EVENT_QUEUE',
     });
   }, [clearScheduledActiveEvent]);
 
@@ -430,46 +321,6 @@ export function AutoCombatRealtimeProvider({
     [normalizedCharacterId],
   );
 
-  /**
-   * Processa evento imediatamente quando a UI está em segundo plano.
-   *
-   * Motivo:
-   * - em aba oculta/celular bloqueado o browser pode atrasar setTimeout;
-   * - se mantivermos activeEvent/queue congelados, ao voltar a tela mostra
-   *   estado antigo por alguns segundos;
-   * - aqui avançamos a fila sem animação enquanto o usuário não está vendo.
-   */
-  const fastForwardRealtimeEvent = useCallback(
-    (event: AutoCombatRealtimeEvent) => {
-      if (!normalizedCharacterId) return;
-
-      clearScheduledActiveEvent();
-
-      dispatch({
-        type: 'CLEAR_ACTIVE_EVENT',
-      });
-
-      dispatch({
-        type: 'CLEAR_QUEUE',
-      });
-
-      dispatch({
-        type: 'ENQUEUE_EVENT',
-        characterId: normalizedCharacterId,
-        event,
-      });
-
-      dispatch({
-        type: 'PROCESS_NEXT_EVENT',
-      });
-
-      dispatch({
-        type: 'CLEAR_ACTIVE_EVENT',
-      });
-    },
-    [clearScheduledActiveEvent, normalizedCharacterId],
-  );
-
   const clearRealtimeQueue = useCallback(() => {
     dispatch({
       type: 'CLEAR_QUEUE',
@@ -477,33 +328,30 @@ export function AutoCombatRealtimeProvider({
   }, []);
 
   const clearSessionVisualState = useCallback(() => {
-    resetFullSessionVisualState();
-  }, [resetFullSessionVisualState]);
+    clearScheduledActiveEvent();
+
+    dispatch({
+      type: 'CLEAR_SESSION_VISUAL_STATE',
+    });
+  }, [clearScheduledActiveEvent]);
 
   const reload = useCallback(
-    async (options?: ReloadOptions) => {
+    async (_options?: ReloadOptions) => {
       if (!normalizedCharacterId || isLoadingRef.current) return;
+
+      const requestId = reloadRequestRef.current + 1;
+      reloadRequestRef.current = requestId;
 
       try {
         isLoadingRef.current = true;
-
-        const shouldClearVisualTimeline =
-          Boolean(options?.clearVisualTimeline) ||
-          Boolean(options?.resetVisualTimeline);
 
         const [overviewData, statusData] = await Promise.all([
           getCharacterOverview(normalizedCharacterId).catch(() => null),
           getAutoCombatStatus(normalizedCharacterId).catch(() => null),
         ]);
 
-        if (shouldClearVisualTimeline) {
-          dispatch({
-            type: 'CLEAR_ACTIVE_EVENT',
-          });
-
-          dispatch({
-            type: 'CLEAR_QUEUE',
-          });
+        if (reloadRequestRef.current !== requestId) {
+          return;
         }
 
         if (overviewData) {
@@ -532,7 +380,9 @@ export function AutoCombatRealtimeProvider({
           ),
         });
       } finally {
-        isLoadingRef.current = false;
+        if (reloadRequestRef.current === requestId) {
+          isLoadingRef.current = false;
+        }
       }
     },
     [normalizedCharacterId],
@@ -552,25 +402,76 @@ export function AutoCombatRealtimeProvider({
     [clearScheduledReload, normalizedCharacterId, reload],
   );
 
-  const reconcileAfterReturningToPage = useCallback(() => {
-    if (!normalizedCharacterId) return;
+  const loadRecentEventsForReconciliation = useCallback(
+    async (reason: string) => {
+      if (!normalizedCharacterId) return;
 
-    clearVisualTimeline();
+      const requestId = recentEventsRequestRef.current + 1;
+      recentEventsRequestRef.current = requestId;
 
-    scheduleReload(AFTER_VISIBILITY_RELOAD_DELAY_MS, {
-      clearVisualTimeline: true,
-    });
+      try {
+        const response = await getAutoCombatRecentEvents(normalizedCharacterId);
 
-    void loadRecentEvents({
-      reason: 'return-to-page',
-      hydrateBattleLog: true,
-    });
-  }, [
-    clearVisualTimeline,
-    loadRecentEvents,
-    normalizedCharacterId,
-    scheduleReload,
-  ]);
+        if (recentEventsRequestRef.current !== requestId) {
+          return;
+        }
+
+        const events = Array.isArray(response.events) ? response.events : [];
+        const sessionId = response.session?.id ?? null;
+
+        dispatch({
+          type: 'HYDRATE_RECENT_EVENTS',
+          characterId: normalizedCharacterId,
+          sessionId,
+          events,
+          applySnapshot: true,
+        });
+
+        if (import.meta.env.DEV) {
+          console.debug('[auto-combat:reconcile-recent-events]', {
+            reason,
+            active: response.active,
+            hasActiveAutoCombat: response.hasActiveAutoCombat,
+            sessionId,
+            sessionStatus: response.session?.status ?? null,
+            eventsCount: events.length,
+            latestSequence: response.latestSequence,
+            firstSequence: getLooseEventSequence(events[0]),
+            lastSequence: getLooseEventSequence(events[events.length - 1]),
+            lastEventType: events[events.length - 1]?.type ?? null,
+          });
+        }
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.debug('[auto-combat:reconcile-recent-events:error]', {
+            reason,
+            error,
+          });
+        }
+      }
+    },
+    [normalizedCharacterId],
+  );
+
+  const reconcileAfterReturningToPage = useCallback(
+    (reason: string) => {
+      if (!normalizedCharacterId) return;
+
+      flushVisualQueueWithoutAnimation();
+
+      void loadRecentEventsForReconciliation(reason);
+
+      scheduleReload(AFTER_VISIBILITY_RELOAD_DELAY_MS, {
+        reason,
+      });
+    },
+    [
+      flushVisualQueueWithoutAnimation,
+      loadRecentEventsForReconciliation,
+      normalizedCharacterId,
+      scheduleReload,
+    ],
+  );
 
   const start = useCallback(
     async (payload: StartAutoCombatPayload) => {
@@ -579,7 +480,7 @@ export function AutoCombatRealtimeProvider({
       }
 
       try {
-        resetFullSessionVisualState();
+        clearSessionVisualState();
 
         const response = await startAutoCombat(payload);
         const session = getStatusSession(response);
@@ -591,14 +492,6 @@ export function AutoCombatRealtimeProvider({
           status: response,
         });
 
-        /**
-         * Evento visual inicial.
-         *
-         * Ele existe para dar feedback imediato:
-         * "um mob apareceu".
-         *
-         * Totais reais continuam vindo do backend/status.
-         */
         const initialMobSpawnedEvent = buildMobSpawnedEventFromStatus({
           status: response,
           session,
@@ -623,7 +516,7 @@ export function AutoCombatRealtimeProvider({
         });
 
         scheduleReload(AFTER_START_RELOAD_DELAY_MS, {
-          clearVisualTimeline: false,
+          reason: 'after-start',
         });
 
         return response;
@@ -641,7 +534,11 @@ export function AutoCombatRealtimeProvider({
         throw error;
       }
     },
-    [normalizedCharacterId, resetFullSessionVisualState, scheduleReload],
+    [
+      clearSessionVisualState,
+      normalizedCharacterId,
+      scheduleReload,
+    ],
   );
 
   const stop = useCallback(async () => {
@@ -650,7 +547,7 @@ export function AutoCombatRealtimeProvider({
     }
 
     try {
-      clearScheduledActiveEvent();
+      flushVisualQueueWithoutAnimation();
 
       const response = await stopAutoCombat(normalizedCharacterId);
 
@@ -669,7 +566,7 @@ export function AutoCombatRealtimeProvider({
       });
 
       scheduleReload(AFTER_STOP_RELOAD_DELAY_MS, {
-        clearVisualTimeline: true,
+        reason: 'after-stop',
       });
 
       return response;
@@ -686,14 +583,18 @@ export function AutoCombatRealtimeProvider({
 
       throw error;
     }
-  }, [clearScheduledActiveEvent, normalizedCharacterId, scheduleReload]);
+  }, [
+    flushVisualQueueWithoutAnimation,
+    normalizedCharacterId,
+    scheduleReload,
+  ]);
 
   const handleStatusPayload = useCallback(
     (payload: AutoCombatStatusResponse) => {
       if (!normalizedCharacterId) return;
 
       if (isUiBackgrounded()) {
-        clearVisualTimeline();
+        flushVisualQueueWithoutAnimation();
       }
 
       dispatch({
@@ -702,14 +603,14 @@ export function AutoCombatRealtimeProvider({
         status: payload,
       });
     },
-    [clearVisualTimeline, normalizedCharacterId],
+    [flushVisualQueueWithoutAnimation, normalizedCharacterId],
   );
 
   const handleFinishedPayload = useCallback(
     (payload: AutoCombatStatusResponse) => {
       if (!normalizedCharacterId) return;
 
-      clearVisualTimeline();
+      flushVisualQueueWithoutAnimation();
 
       dispatch({
         type: 'HYDRATE_STATUS',
@@ -722,17 +623,17 @@ export function AutoCombatRealtimeProvider({
       });
 
       scheduleReload(AFTER_TERMINAL_RELOAD_DELAY_MS, {
-        clearVisualTimeline: true,
+        reason: 'finished',
       });
     },
-    [clearVisualTimeline, normalizedCharacterId, scheduleReload],
+    [flushVisualQueueWithoutAnimation, normalizedCharacterId, scheduleReload],
   );
 
   const handleStoppedPayload = useCallback(
     (payload: AutoCombatStatusResponse) => {
       if (!normalizedCharacterId) return;
 
-      clearVisualTimeline();
+      flushVisualQueueWithoutAnimation();
 
       dispatch({
         type: 'HYDRATE_STATUS',
@@ -745,10 +646,10 @@ export function AutoCombatRealtimeProvider({
       });
 
       scheduleReload(AFTER_TERMINAL_RELOAD_DELAY_MS, {
-        clearVisualTimeline: true,
+        reason: 'stopped',
       });
     },
-    [clearVisualTimeline, normalizedCharacterId, scheduleReload],
+    [flushVisualQueueWithoutAnimation, normalizedCharacterId, scheduleReload],
   );
 
   const handleRealtimeEvent = useCallback(
@@ -766,18 +667,19 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
-      if (isUiBackgrounded()) {
-        fastForwardRealtimeEvent(payload);
-        return;
-      }
-
       dispatch({
         type: 'ENQUEUE_EVENT',
         characterId: normalizedCharacterId,
         event: payload,
       });
+
+      if (isUiBackgrounded()) {
+        dispatch({
+          type: 'FLUSH_EVENT_QUEUE',
+        });
+      }
     },
-    [fastForwardRealtimeEvent, normalizedCharacterId],
+    [normalizedCharacterId],
   );
 
   const socketState = useAutoCombatSocket({
@@ -812,27 +714,18 @@ export function AutoCombatRealtimeProvider({
       isJoined: socketState.isJoined,
       errorMessage: socketState.errorMessage,
     });
-  }, [socketState.isConnected, socketState.isJoined, socketState.errorMessage]);
-
-  useEffect(() => {
-    if (!normalizedCharacterId) return;
-
-    if (socketState.isConnected && socketState.isJoined) {
-      scheduleReload(150, {
-        clearVisualTimeline: false,
-      });
-    }
   }, [
-    normalizedCharacterId,
-    scheduleReload,
     socketState.isConnected,
     socketState.isJoined,
+    socketState.errorMessage,
   ]);
 
   useEffect(() => {
     if (!autoLoad || !normalizedCharacterId) return;
 
-    scheduleReload(INITIAL_RELOAD_DELAY_MS);
+    scheduleReload(INITIAL_RELOAD_DELAY_MS, {
+      reason: 'initial-load',
+    });
   }, [autoLoad, normalizedCharacterId, scheduleReload]);
 
   useEffect(() => {
@@ -845,7 +738,7 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
-      void reload();
+      void reload({ reason: 'polling' });
     }, refreshMs);
 
     return () => {
@@ -859,19 +752,19 @@ export function AutoCombatRealtimeProvider({
     function handleVisibilityChange() {
       if (!isDocumentVisible()) {
         wasBackgroundedRef.current = true;
-        clearVisualTimeline();
+        flushVisualQueueWithoutAnimation();
         return;
       }
 
       if (wasBackgroundedRef.current) {
         wasBackgroundedRef.current = false;
-        reconcileAfterReturningToPage();
+        reconcileAfterReturningToPage('visibility-return');
       }
     }
 
     function handleWindowBlur() {
       wasBackgroundedRef.current = true;
-      clearVisualTimeline();
+      flushVisualQueueWithoutAnimation();
     }
 
     function handleWindowFocus() {
@@ -881,25 +774,15 @@ export function AutoCombatRealtimeProvider({
 
       if (wasBackgroundedRef.current) {
         wasBackgroundedRef.current = false;
-        reconcileAfterReturningToPage();
+        reconcileAfterReturningToPage('window-focus-after-background');
         return;
       }
 
       const currentState = stateRef.current;
 
       if (currentState.activeEvent || currentState.eventQueue.length > 0) {
-        reconcileAfterReturningToPage();
-        return;
+        reconcileAfterReturningToPage('window-focus-with-pending-events');
       }
-
-      scheduleReload(AFTER_VISIBILITY_RELOAD_DELAY_MS, {
-        clearVisualTimeline: true,
-      });
-
-      void loadRecentEvents({
-        reason: 'window-focus',
-        hydrateBattleLog: true,
-      });
     }
 
     function handlePageShow() {
@@ -907,7 +790,7 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
-      reconcileAfterReturningToPage();
+      reconcileAfterReturningToPage('pageshow');
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -922,32 +805,29 @@ export function AutoCombatRealtimeProvider({
       window.removeEventListener('pageshow', handlePageShow);
     };
   }, [
-    clearVisualTimeline,
-    loadRecentEvents,
+    flushVisualQueueWithoutAnimation,
     normalizedCharacterId,
     reconcileAfterReturningToPage,
-    scheduleReload,
   ]);
 
   useEffect(() => {
     clearScheduledActiveEvent();
 
-    /**
-     * Caso 1:
-     * Existe evento ativo.
-     *
-     * Se a UI está em segundo plano, limpamos imediatamente para não congelar
-     * animação/timeline até o usuário voltar.
-     */
-    if (state.activeEvent) {
-      if (isUiBackgrounded()) {
+    if (isUiBackgrounded()) {
+      if (state.activeEvent || state.eventQueue.length > 0) {
         dispatch({
           type: 'CLEAR_ACTIVE_EVENT',
         });
 
-        return undefined;
+        dispatch({
+          type: 'FLUSH_EVENT_QUEUE',
+        });
       }
 
+      return undefined;
+    }
+
+    if (state.activeEvent) {
       activeEventTimeoutRef.current = window.setTimeout(() => {
         dispatch({
           type: 'CLEAR_ACTIVE_EVENT',
@@ -961,26 +841,7 @@ export function AutoCombatRealtimeProvider({
       };
     }
 
-    /**
-     * Caso 2:
-     * Não existe evento ativo e há fila pendente.
-     *
-     * Em primeiro plano: processa com delay visual.
-     * Em segundo plano: processa e limpa no mesmo ciclo.
-     */
     if (state.eventQueue.length > 0) {
-      if (isUiBackgrounded()) {
-        dispatch({
-          type: 'PROCESS_NEXT_EVENT',
-        });
-
-        dispatch({
-          type: 'CLEAR_ACTIVE_EVENT',
-        });
-
-        return undefined;
-      }
-
       activeEventTimeoutRef.current = window.setTimeout(() => {
         dispatch({
           type: 'PROCESS_NEXT_EVENT',
@@ -995,7 +856,11 @@ export function AutoCombatRealtimeProvider({
     }
 
     return undefined;
-  }, [clearScheduledActiveEvent, state.activeEvent, state.eventQueue.length]);
+  }, [
+    clearScheduledActiveEvent,
+    state.activeEvent,
+    state.eventQueue.length,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -1020,14 +885,6 @@ export function AutoCombatRealtimeProvider({
       character: state.character,
       mob: state.mob,
 
-      /**
-       * Mantém compatibilidade:
-       * - state.totals = canônico/backend;
-       * - state.displayTotals = visual/liberado.
-       *
-       * Quem precisar dos totais visuais deve ler:
-       * useAutoCombatRealtimeState().displayTotals
-       */
       totals: state.totals,
       displayTotals: state.displayTotals,
 
