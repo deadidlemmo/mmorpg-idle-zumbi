@@ -1,21 +1,39 @@
 import {
-    ATTRIBUTE_STATS_CONFIG,
-    getStatValue,
+  ATTRIBUTE_STATS_CONFIG,
+  getStatValue,
 } from '../constants/stats-config';
-import type { DashboardPrimaryStats } from '../types/dashboard.types';
+
+type CharacterStatsSource = {
+  strength?: number | null;
+  vitality?: number | null;
+  agility?: number | null;
+  precision?: number | null;
+  technique?: number | null;
+  willpower?: number | null;
+};
 
 interface CharacterStatsPanelProps {
-  stats?: DashboardPrimaryStats;
+  stats?: CharacterStatsSource | null;
+  currentHp?: number | null;
+  maxHp?: number | null;
+}
+
+function normalizeStatValue(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+
+  return Number.isFinite(value) ? value : undefined;
 }
 
 export function CharacterStatsPanel({ stats }: CharacterStatsPanelProps) {
   const attributeValues: Record<string, number | undefined> = {
-    strength: stats?.strength,
-    vitality: stats?.vitality,
-    agility: stats?.agility,
-    precision: stats?.precision,
-    technique: stats?.technique,
-    willpower: stats?.willpower,
+    strength: normalizeStatValue(stats?.strength),
+    vitality: normalizeStatValue(stats?.vitality),
+    agility: normalizeStatValue(stats?.agility),
+    precision: normalizeStatValue(stats?.precision),
+    technique: normalizeStatValue(stats?.technique),
+    willpower: normalizeStatValue(stats?.willpower),
   };
 
   return (

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createCharacter } from '../api/characters.api';
 import '../characters.css';
 import { CharacterCreateForm } from '../components/CharacterCreateForm';
+import type { CreateCharacterPayload } from '../types/character.types';
 
 export default function CharacterCreatePage() {
   const navigate = useNavigate();
@@ -10,7 +11,7 @@ export default function CharacterCreatePage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleCreate(payload: { name: string; className: string }) {
+  async function handleCreate(payload: CreateCharacterPayload) {
     try {
       setError('');
       setIsSubmitting(true);
@@ -20,7 +21,9 @@ export default function CharacterCreatePage() {
       navigate('/characters', { replace: true });
     } catch (err) {
       console.error(err);
-      setError('Não foi possível criar o personagem. Verifique os dados e tente novamente.');
+      setError(
+        'Não foi possível criar o personagem. Verifique os dados e tente novamente.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -37,7 +40,10 @@ export default function CharacterCreatePage() {
 
         {error ? <div className="form-error-box">{error}</div> : null}
 
-        <CharacterCreateForm isSubmitting={isSubmitting} onCreate={handleCreate} />
+        <CharacterCreateForm
+          isSubmitting={isSubmitting}
+          onCreate={handleCreate}
+        />
       </section>
     </main>
   );

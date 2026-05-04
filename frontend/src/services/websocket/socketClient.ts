@@ -121,10 +121,12 @@ export function getAutoCombatSocket(): AutoCombatSocket {
     return autoCombatSocket;
   }
 
-  autoCombatSocket = io<
-    AutoCombatServerToClientEvents,
-    AutoCombatClientToServerEvents
-  >(autoCombatSocketUrl, {
+  /**
+   * Importante:
+   * Algumas versões do socket.io-client não aceitam generics diretamente no io().
+   * Por isso tipamos o retorno via cast seguro.
+   */
+  autoCombatSocket = io(autoCombatSocketUrl, {
     autoConnect: false,
     transports: ['websocket', 'polling'],
     withCredentials: true,
@@ -139,7 +141,7 @@ export function getAutoCombatSocket(): AutoCombatSocket {
 
     forceNew: false,
     multiplex: true,
-  });
+  }) as unknown as AutoCombatSocket;
 
   return autoCombatSocket;
 }

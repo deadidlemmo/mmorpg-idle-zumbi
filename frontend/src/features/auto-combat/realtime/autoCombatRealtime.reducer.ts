@@ -939,7 +939,7 @@ function buildOverviewCharacterState(
     return fallback;
   }
 
-  const character = overview.character as Record<string, unknown>;
+  const character = overview.character as unknown as Record<string, unknown>;
 
   const characterState = buildCharacterStateFromProgressSource(
     overview.character as Parameters<
@@ -981,7 +981,7 @@ function buildOverviewLocationState(
     return fallback;
   }
 
-  const character = overview.character as Record<string, unknown>;
+  const character = overview.character as unknown as Record<string, unknown>;
   const progression = overview.progression as
     | Record<string, unknown>
     | undefined;

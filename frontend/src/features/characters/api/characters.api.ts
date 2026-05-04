@@ -1,9 +1,9 @@
 import { apiClient } from '../../../services/api/apiClient';
 import type {
-    CharacterClassId,
-    CharacterSummary,
-    CreateCharacterPayload,
-    RawCharacterResponse,
+  CharacterClassId,
+  CharacterSummary,
+  CreateCharacterPayload,
+  RawCharacterResponse,
 } from '../types/character.types';
 
 interface DeleteCharacterResponse {
@@ -28,6 +28,12 @@ export function normalizeClassName(value?: string | null): CharacterClassId {
   if (normalized.includes('medico')) return 'medico';
 
   return 'lutador';
+}
+
+function buildDefaultAvatarKey(className: string): string {
+  const classId = normalizeClassName(className);
+
+  return `${classId}-01`;
 }
 
 function normalizeCharacter(character: RawCharacterResponse): CharacterSummary {
@@ -66,17 +72,32 @@ export async function getMyCharacters(): Promise<CharacterSummary[]> {
   return response.data.map(normalizeCharacter);
 }
 
+/**
+ * Compatibilidade com store antigo.
+ */
+export const getMyCharactersRequest = getMyCharacters;
+
 export async function createCharacter(
   payload: CreateCharacterPayload,
 ): Promise<CharacterSummary> {
+  const avatarKey =
+    payload.avatarKey && payload.avatarKey.trim()
+      ? payload.avatarKey.trim()
+      : buildDefaultAvatarKey(payload.className);
+
   const response = await apiClient.post<RawCharacterResponse>('/characters', {
     name: payload.name,
     className: payload.className,
-    avatarKey: payload.avatarKey,
+    avatarKey,
   });
 
   return normalizeCharacter(response.data);
 }
+
+/**
+ * Compatibilidade com store antigo.
+ */
+export const createCharacterRequest = createCharacter;
 
 export async function deleteCharacter(
   characterId: string,

@@ -337,13 +337,20 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       return;
     }
 
+    /**
+     * A partir daqui o TypeScript sabe que temos um characterId válido.
+     * Usamos esta constante dentro dos handlers internos para evitar o erro:
+     * string | null | undefined não atribuível a string.
+     */
+    const activeCharacterId = characterId;
+
     const token = getAuthToken();
 
     if (!token) {
       const message =
         'Token de autenticação não encontrado. Faça login novamente.';
 
-      activeCharacterIdRef.current = characterId;
+      activeCharacterIdRef.current = activeCharacterId;
       lastEventKeyRef.current = '';
       lastErrorMessageRef.current = message;
       processedRealtimeEventKeysRef.current.clear();
@@ -375,7 +382,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     let isJoiningCharacterRoom = false;
     let joinTimeoutId: number | undefined;
 
-    activeCharacterIdRef.current = characterId;
+    activeCharacterIdRef.current = activeCharacterId;
 
     currentSocket.auth = {
       token,
@@ -411,8 +418,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
 
       setState((current) => {
         const next: UseAutoCombatSocketState = {
-          socket:
-            params.socket !== undefined ? params.socket : current.socket,
+          socket: params.socket !== undefined ? params.socket : current.socket,
           isConnected:
             params.isConnected !== undefined
               ? params.isConnected
@@ -579,7 +585,6 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     function joinCharacterRoom() {
       if (
         isDisposed ||
-        !characterId ||
         !currentSocket.connected ||
         hasJoinedCharacterRoom ||
         isJoiningCharacterRoom
@@ -590,7 +595,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       isJoiningCharacterRoom = true;
 
       currentSocket.emit('auto-combat:join', {
-        characterId,
+        characterId: activeCharacterId,
       });
     }
 
@@ -633,7 +638,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     function handleJoined(payload: AutoCombatJoinedPayload) {
       if (isDisposed) return;
 
-      if (payload.characterId !== characterId) {
+      if (payload.characterId !== activeCharacterId) {
         return;
       }
 
@@ -650,7 +655,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     function handleLeft(payload: AutoCombatLeftPayload) {
       if (isDisposed) return;
 
-      if (payload.characterId !== characterId) {
+      if (payload.characterId !== activeCharacterId) {
         return;
       }
 
@@ -714,7 +719,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     }
 
     function handleStatus(payload: AutoCombatStatusResponse) {
-      if (isDisposed || !isStatusForCharacter(characterId, payload)) {
+      if (isDisposed || !isStatusForCharacter(activeCharacterId, payload)) {
         return;
       }
 
@@ -743,7 +748,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     }
 
     function handleSessionUpdated(payload: AutoCombatStatusResponse) {
-      if (isDisposed || !isStatusForCharacter(characterId, payload)) {
+      if (isDisposed || !isStatusForCharacter(activeCharacterId, payload)) {
         return;
       }
 
@@ -772,7 +777,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     }
 
     function handleFinished(payload: AutoCombatStatusResponse) {
-      if (isDisposed || !isStatusForCharacter(characterId, payload)) {
+      if (isDisposed || !isStatusForCharacter(activeCharacterId, payload)) {
         return;
       }
 
@@ -783,7 +788,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     }
 
     function handleStopped(payload: AutoCombatStatusResponse) {
-      if (isDisposed || !isStatusForCharacter(characterId, payload)) {
+      if (isDisposed || !isStatusForCharacter(activeCharacterId, payload)) {
         return;
       }
 
@@ -797,7 +802,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       payload: AutoCombatRealtimeEvent,
       callback?: (payload: AutoCombatRealtimeEvent) => void,
     ) {
-      if (isDisposed || !isEventForCharacter(characterId, payload)) {
+      if (isDisposed || !isEventForCharacter(activeCharacterId, payload)) {
         return;
       }
 
@@ -948,9 +953,9 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
 
       clearJoinTimeout();
 
-      if (currentSocket.connected && characterId) {
+      if (currentSocket.connected) {
         currentSocket.emit('auto-combat:leave', {
-          characterId,
+          characterId: activeCharacterId,
         });
       }
 

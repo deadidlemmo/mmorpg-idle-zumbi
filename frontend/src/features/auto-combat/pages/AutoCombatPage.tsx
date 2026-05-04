@@ -1,35 +1,35 @@
-import type { CSSProperties } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
-import statAgilityIcon from "../../../assets/images/stats/attributes/stat-agility.png";
-import statPrecisionIcon from "../../../assets/images/stats/attributes/stat-precision.png";
-import statStrengthIcon from "../../../assets/images/stats/attributes/stat-strength.png";
-import statTechniqueIcon from "../../../assets/images/stats/attributes/stat-technique.png";
-import statVitalityIcon from "../../../assets/images/stats/attributes/stat-vitality.png";
-import statWillpowerIcon from "../../../assets/images/stats/attributes/stat-willpower.png";
-import { apiClient } from "../../../services/api/apiClient";
-import { normalizeClassName } from "../../characters/api/characters.api";
-import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
-import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
-import "../../dashboard/dashboard.css";
+import type { CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Navigate, useParams } from 'react-router-dom';
+import statAgilityIcon from '../../../assets/images/stats/attributes/stat-agility.png';
+import statPrecisionIcon from '../../../assets/images/stats/attributes/stat-precision.png';
+import statStrengthIcon from '../../../assets/images/stats/attributes/stat-strength.png';
+import statTechniqueIcon from '../../../assets/images/stats/attributes/stat-technique.png';
+import statVitalityIcon from '../../../assets/images/stats/attributes/stat-vitality.png';
+import statWillpowerIcon from '../../../assets/images/stats/attributes/stat-willpower.png';
+import { apiClient } from '../../../services/api/apiClient';
+import { normalizeClassName } from '../../characters/api/characters.api';
+import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
+import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
+import '../../dashboard/dashboard.css';
 import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
   DashboardEquipmentItem,
   DashboardPotionConfigViewModel,
   DashboardStats,
-} from "../../dashboard/types/dashboard.types";
+} from '../../dashboard/types/dashboard.types';
 import {
   getAutoCombatMaps,
   getAutoCombatStatus,
   previewAutoCombat,
-} from "../api/auto-combat.api";
-import "../auto-combat.css";
-import { AutoCombatBattleLog } from "../components/AutoCombatBattleLog";
+} from '../api/auto-combat.api';
+import '../auto-combat.css';
+import { AutoCombatBattleLog } from '../components/AutoCombatBattleLog';
 import {
   useAutoCombatRealtime,
   useAutoCombatRealtimeState,
-} from "../realtime/useAutoCombatRealtime";
+} from '../realtime/useAutoCombatRealtime';
 import type {
   AutoCombatEncounterViewModel,
   AutoCombatMapViewModel,
@@ -38,12 +38,12 @@ import type {
   AutoCombatSessionApiViewModel,
   AutoCombatStatusResponse,
   AutoCombatSubMapViewModel,
-} from "../types/auto-combat.types";
+} from '../types/auto-combat.types';
 
-type AutoCombatTab = "battle" | "stats";
+type AutoCombatTab = 'battle' | 'stats';
 
-type RealtimeActor = "PLAYER" | "MOB" | "SYSTEM";
-type RealtimeTarget = "PLAYER" | "MOB" | "SYSTEM";
+type RealtimeActor = 'PLAYER' | 'MOB' | 'SYSTEM';
+type RealtimeTarget = 'PLAYER' | 'MOB' | 'SYSTEM';
 
 type LooseLevelProgressSource = {
   level?: number | null;
@@ -97,7 +97,7 @@ type PotionEquipmentItem = DashboardEquipmentItem & {
 
 type CharacterPotionConfigWithItem = Omit<
   DashboardPotionConfigViewModel,
-  "potion" | "potionItem"
+  'potion' | 'potionItem'
 > & {
   potion?: PotionEquipmentItem | null;
   potionItem?: PotionEquipmentItem | null;
@@ -105,7 +105,7 @@ type CharacterPotionConfigWithItem = Omit<
 
 type CharacterWithSinglePotionConfig = Omit<
   CharacterViewModelWithLayoutFields,
-  "potionConfig" | "potionConfigs" | "autoPotionConfig"
+  'potionConfig' | 'potionConfigs' | 'autoPotionConfig'
 > & {
   potionConfig?: CharacterPotionConfigWithItem | null;
   potionConfigs?: CharacterPotionConfigWithItem[];
@@ -151,8 +151,6 @@ type UpdatePotionConfigPayload = {
   useInManualCombat?: boolean;
   useInAutoCombat?: boolean;
 };
-
-type LooseStatsSource = Partial<DashboardStats> | null | undefined;
 
 type CharacterProgressSource = {
   level?: number | null;
@@ -319,7 +317,6 @@ type AutoCombatRealtimeStateLoose = {
   progress?: RealtimeCharacterProgressState | null;
   realtimeCharacterProgress?: RealtimeCharacterProgressState | null;
 
-  displayTotals?: RealtimeSessionTotalsState | null;
   sessionTotals?: RealtimeSessionTotalsState | null;
   totals?: RealtimeSessionTotalsState | null;
   realtimeSessionTotals?: RealtimeSessionTotalsState | null;
@@ -346,8 +343,6 @@ type AutoCombatRealtimeStateLoose = {
 };
 
 type AutoCombatRealtimeActions = {
-  reload?: () => Promise<void> | void;
-
   start?: (payload: {
     characterId: string;
     subMapId: string;
@@ -360,7 +355,9 @@ type AutoCombatRealtimeActions = {
 
   stop?: () => Promise<AutoCombatStatusResponse>;
 
-  stopAutoCombat?: (characterId?: string) => Promise<AutoCombatStatusResponse>;
+  stopAutoCombat?: (
+    characterId?: string,
+  ) => Promise<AutoCombatStatusResponse>;
 };
 
 type AutoCombatRealtimeEventLoose = AutoCombatRealtimeEvent & {
@@ -402,55 +399,55 @@ const EMPTY_STATS: DashboardStats = {
 
 const STAT_CARDS = [
   {
-    key: "strength",
-    className: "strength",
-    label: "Força",
-    description: "Impacto físico e dano com armas corpo a corpo.",
+    key: 'strength',
+    className: 'strength',
+    label: 'Força',
+    description: 'Impacto físico e dano com armas corpo a corpo.',
     icon: statStrengthIcon,
   },
   {
-    key: "vitality",
-    className: "vitality",
-    label: "Vitalidade",
-    description: "Vigor físico, resistência e sobrevivência.",
+    key: 'vitality',
+    className: 'vitality',
+    label: 'Vitalidade',
+    description: 'Vigor físico, resistência e sobrevivência.',
     icon: statVitalityIcon,
   },
   {
-    key: "agility",
-    className: "agility",
-    label: "Agilidade",
-    description: "Mobilidade, reação e ritmo de movimento.",
+    key: 'agility',
+    className: 'agility',
+    label: 'Agilidade',
+    description: 'Mobilidade, reação e ritmo de movimento.',
     icon: statAgilityIcon,
   },
   {
-    key: "precision",
-    className: "precision",
-    label: "Precisão",
-    description: "Mira, controle e eficiência em ataques certeiros.",
+    key: 'precision',
+    className: 'precision',
+    label: 'Precisão',
+    description: 'Mira, controle e eficiência em ataques certeiros.',
     icon: statPrecisionIcon,
   },
   {
-    key: "technique",
-    className: "technique",
-    label: "Técnica",
-    description: "Uso de equipamentos, ferramentas e recursos táticos.",
+    key: 'technique',
+    className: 'technique',
+    label: 'Técnica',
+    description: 'Uso de equipamentos, ferramentas e recursos táticos.',
     icon: statTechniqueIcon,
   },
   {
-    key: "willpower",
-    className: "willpower",
-    label: "Vontade",
-    description: "Foco, resistência mental e controle sob pressão.",
+    key: 'willpower',
+    className: 'willpower',
+    label: 'Vontade',
+    description: 'Foco, resistência mental e controle sob pressão.',
     icon: statWillpowerIcon,
   },
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function toSafeNumber(value: unknown, fallback = 0) {
-  if (value === null || value === undefined || value === "") {
+  if (value === null || value === undefined || value === '') {
     return fallback;
   }
 
@@ -460,7 +457,7 @@ function toSafeNumber(value: unknown, fallback = 0) {
 }
 
 function getOptionalNumber(value: unknown) {
-  if (value === null || value === undefined || value === "") {
+  if (value === null || value === undefined || value === '') {
     return undefined;
   }
 
@@ -482,8 +479,9 @@ function getFirstOptionalNumber(...values: unknown[]) {
 }
 
 function getOptionalBoolean(value: unknown) {
-  return typeof value === "boolean" ? value : undefined;
+  return typeof value === 'boolean' ? value : undefined;
 }
+
 
 function clampPercent(value: unknown) {
   const parsed = toSafeNumber(value, 0);
@@ -498,7 +496,7 @@ function clampNumber(value: unknown, min: number, max: number) {
 }
 
 function formatSeconds(seconds?: number | null) {
-  if (seconds === null || seconds === undefined) return "—";
+  if (seconds === null || seconds === undefined) return '—';
 
   const safeSeconds = Math.max(0, Math.floor(seconds));
   const hours = Math.floor(safeSeconds / 3600);
@@ -518,28 +516,28 @@ function formatSeconds(seconds?: number | null) {
 
 function formatSessionStatus(status?: string | null) {
   const labels: Record<string, string> = {
-    ACTIVE: "Sessão ativa",
-    STOPPED: "Sessão interrompida manualmente",
-    FINISHED: "Sessão finalizada",
-    DEFEATED: "Sobrevivente derrotado",
-    FAILED: "Sessão falhou",
-    CANCELLED: "Sessão cancelada",
+    ACTIVE: 'Sessão ativa',
+    STOPPED: 'Sessão interrompida manualmente',
+    FINISHED: 'Sessão finalizada',
+    DEFEATED: 'Sobrevivente derrotado',
+    FAILED: 'Sessão falhou',
+    CANCELLED: 'Sessão cancelada',
   };
 
-  if (!status) return "Sem sessão";
+  if (!status) return 'Sem sessão';
 
   return labels[status] ?? status;
 }
 
 function formatRiskLabel(risk?: string | null) {
   const labels: Record<string, string> = {
-    LOW: "Baixo",
-    MEDIUM: "Médio",
-    HIGH: "Alto",
-    LETHAL: "Letal",
+    LOW: 'Baixo',
+    MEDIUM: 'Médio',
+    HIGH: 'Alto',
+    LETHAL: 'Letal',
   };
 
-  if (!risk) return "—";
+  if (!risk) return '—';
 
   return labels[risk] ?? risk;
 }
@@ -556,10 +554,10 @@ function getApiErrorMessage(error: unknown, fallback: string) {
   const message = apiError.response?.data?.message;
 
   if (Array.isArray(message)) {
-    return message.join(" ");
+    return message.join(' ');
   }
 
-  if (typeof message === "string" && message.trim()) {
+  if (typeof message === 'string' && message.trim()) {
     return message;
   }
 
@@ -571,9 +569,9 @@ function getApiErrorMessage(error: unknown, fallback: string) {
 }
 
 function normalizeStats(value: unknown): DashboardStats | null {
-  if (!value || typeof value !== "object") return null;
+  if (!value || typeof value !== 'object') return null;
 
-  const stats = value as LooseStatsSource;
+  const stats = value as Partial<DashboardStats>;
 
   return {
     strength: toSafeNumber(stats.strength, 0),
@@ -602,21 +600,21 @@ function normalizePotionInventoryEntry(
   if (!isRecord(value)) return null;
 
   const rawItem = isRecord(value.item) ? value.item : value;
-  const item = rawItem as PotionEquipmentItem;
+  const item = rawItem as unknown as PotionEquipmentItem;
 
   const id =
-    typeof item.id === "string"
+    typeof item.id === 'string'
       ? item.id
-      : typeof value.itemId === "string"
+      : typeof value.itemId === 'string'
         ? value.itemId
-        : "";
+        : '';
 
   if (!id) return null;
 
   const slot = item.slot ?? value.slot;
   const type = value.type ?? item.slot;
 
-  if (slot !== "CONSUMABLE" && type !== "CONSUMABLE") {
+  if (slot !== 'CONSUMABLE' && type !== 'CONSUMABLE') {
     return null;
   }
 
@@ -630,7 +628,10 @@ function normalizePotionInventoryEntry(
   const quantity = Math.max(
     0,
     Math.floor(
-      toSafeNumber(value.quantity ?? item.quantity ?? item.availableQuantity, 0),
+      toSafeNumber(
+        value.quantity ?? item.quantity ?? item.availableQuantity,
+        0,
+      ),
     ),
   );
 
@@ -638,7 +639,7 @@ function normalizePotionInventoryEntry(
     ...item,
     id,
     itemId: id,
-    inventoryItemId: typeof value.id === "string" ? value.id : null,
+    inventoryItemId: typeof value.id === 'string' ? value.id : null,
     quantity,
     healFlat,
     healPercent,
@@ -694,7 +695,7 @@ function normalizePotionInventoryResponse(data: unknown) {
   return Array.from(byItemId.values()).sort((a, b) => {
     return (
       (a.tier ?? 0) - (b.tier ?? 0) ||
-      String(a.name ?? "").localeCompare(String(b.name ?? ""))
+      String(a.name ?? '').localeCompare(String(b.name ?? ''))
     );
   });
 }
@@ -714,21 +715,25 @@ function normalizePotionConfigResponse(
         ? response.potionConfig
         : response;
 
+  const rawConfigRecord = rawConfig as Record<string, unknown>;
+
   const rawPotion =
     response.potion ??
-    (isRecord(rawConfig.potion) ? rawConfig.potion : null) ??
-    (isRecord(rawConfig.potionItem) ? rawConfig.potionItem : null);
+    (isRecord(rawConfigRecord.potion) ? rawConfigRecord.potion : null) ??
+    (isRecord(rawConfigRecord.potionItem) ? rawConfigRecord.potionItem : null);
 
-  const potion = isRecord(rawPotion) ? (rawPotion as PotionEquipmentItem) : null;
+  const potion = isRecord(rawPotion)
+    ? (rawPotion as unknown as PotionEquipmentItem)
+    : null;
 
   const potionItemId =
-    typeof rawConfig.potionItemId === "string"
-      ? rawConfig.potionItemId
-      : (potion?.id ?? null);
+    typeof rawConfigRecord.potionItemId === 'string'
+      ? rawConfigRecord.potionItemId
+      : potion?.id ?? null;
 
   const hasAnyConfigValue =
-    Boolean(rawConfig.id) ||
-    typeof rawConfig.enabled === "boolean" ||
+    Boolean(rawConfigRecord.id) ||
+    typeof rawConfigRecord.enabled === 'boolean' ||
     Boolean(potionItemId) ||
     potion !== null;
 
@@ -737,21 +742,21 @@ function normalizePotionConfigResponse(
   }
 
   return {
-    id: typeof rawConfig.id === "string" ? rawConfig.id : undefined,
+    id: typeof rawConfigRecord.id === 'string' ? rawConfigRecord.id : undefined,
     characterId:
-      typeof rawConfig.characterId === "string"
-        ? rawConfig.characterId
+      typeof rawConfigRecord.characterId === 'string'
+        ? rawConfigRecord.characterId
         : undefined,
-    enabled: Boolean(rawConfig.enabled),
+    enabled: Boolean(rawConfigRecord.enabled),
     potionItemId,
-    hpThresholdPercent: clampNumber(rawConfig.hpThresholdPercent, 1, 100) || 35,
+    hpThresholdPercent: clampNumber(rawConfigRecord.hpThresholdPercent, 1, 100) || 35,
     useInManualCombat:
-      typeof rawConfig.useInManualCombat === "boolean"
-        ? rawConfig.useInManualCombat
+      typeof rawConfigRecord.useInManualCombat === 'boolean'
+        ? rawConfigRecord.useInManualCombat
         : true,
     useInAutoCombat:
-      typeof rawConfig.useInAutoCombat === "boolean"
-        ? rawConfig.useInAutoCombat
+      typeof rawConfigRecord.useInAutoCombat === 'boolean'
+        ? rawConfigRecord.useInAutoCombat
         : true,
     potion,
     potionItem: potion,
@@ -763,7 +768,7 @@ function getPotionItem(potionConfig?: CharacterPotionConfigWithItem | null) {
 }
 
 function getPotionName(potionConfig?: CharacterPotionConfigWithItem | null) {
-  return getPotionItem(potionConfig)?.name ?? "Configurar poção";
+  return getPotionItem(potionConfig)?.name ?? 'Configurar poção';
 }
 
 function getPotionDescription(
@@ -772,12 +777,12 @@ function getPotionDescription(
   const potionItem = getPotionItem(potionConfig);
 
   if (!potionItem) {
-    return "Escolha uma poção e defina o gatilho de uso automático.";
+    return 'Clique para escolher uma poção e definir quando ela será usada.';
   }
 
   return potionConfig?.enabled
-    ? `Usa com ${potionConfig.hpThresholdPercent ?? 35}% de HP ou menos.`
-    : "Poção selecionada, mas uso automático desativado.";
+    ? `Usa automaticamente com ${potionConfig.hpThresholdPercent ?? 35}% de HP ou menos.`
+    : 'Poção selecionada, mas uso automático desativado.';
 }
 
 function getPotionQuantity(
@@ -819,15 +824,18 @@ function resolvePotionEventItemId(
 ) {
   const event = payload as AutoCombatRealtimePotionEvent;
 
-  if (typeof event.potionItemId === "string" && event.potionItemId.trim()) {
+  if (typeof event.potionItemId === 'string' && event.potionItemId.trim()) {
     return event.potionItemId.trim();
   }
 
-  if (typeof fallbackPotionItemId === "string" && fallbackPotionItemId.trim()) {
+  if (
+    typeof fallbackPotionItemId === 'string' &&
+    fallbackPotionItemId.trim()
+  ) {
     return fallbackPotionItemId.trim();
   }
 
-  return "";
+  return '';
 }
 
 function resolvePotionQuantityAfter(
@@ -855,7 +863,7 @@ function resolvePotionQuantityAfter(
 }
 
 function formatPotionHeal(potion?: PotionEquipmentItem | null) {
-  if (!potion) return "Sem cura";
+  if (!potion) return 'Sem cura';
 
   const healFlat = toSafeNumber(potion.healFlat, 0);
   const healPercent = toSafeNumber(potion.healPercent, 0);
@@ -872,7 +880,7 @@ function formatPotionHeal(potion?: PotionEquipmentItem | null) {
     return `Cura ${healFlat} HP`;
   }
 
-  return "Sem cura";
+  return 'Sem cura';
 }
 
 async function getCharacterInventoryRaw(characterId: string) {
@@ -911,7 +919,7 @@ function resolveCharacterStats(
     characterStats?: DashboardStats;
   };
 
-  type LooseCharacter = CharacterOverviewResponse["character"] & {
+  type LooseCharacter = CharacterOverviewResponse['character'] & {
     totalStats?: DashboardStats;
     primaryStats?: DashboardStats;
     stats?: DashboardStats;
@@ -951,14 +959,14 @@ function buildCharacterViewModel(
     character.className ??
     character.class?.name ??
     character.gameClass?.name ??
-    "Lutador";
+    'Lutador';
 
   const currentMapName =
     character.currentMapName ??
     character.currentMap?.name ??
     character.map?.name ??
     overview.progression?.currentMap?.name ??
-    "Sem mapa";
+    'Sem mapa';
 
   return {
     ...character,
@@ -969,7 +977,7 @@ function buildCharacterViewModel(
     level: character.level ?? 1,
     xp: character.xp ?? 0,
     totalXp: character.totalXp ?? character.xp ?? 0,
-    status: character.status ?? "IDLE",
+    status: character.status ?? 'IDLE',
     currentHp: character.currentHp ?? character.maxHp ?? 1,
     maxHp: character.maxHp ?? 1,
     avatarKey: character.avatarKey ?? null,
@@ -995,20 +1003,18 @@ function getSessionFromStatus(
 }
 
 function normalizeSessionStatus(status?: string | null) {
-  return String(status ?? "")
-    .trim()
-    .toUpperCase();
+  return String(status ?? '').trim().toUpperCase();
 }
 
 function isTerminalSessionStatus(status?: string | null) {
   const normalizedStatus = normalizeSessionStatus(status);
 
   return (
-    normalizedStatus === "STOPPED" ||
-    normalizedStatus === "FINISHED" ||
-    normalizedStatus === "DEFEATED" ||
-    normalizedStatus === "FAILED" ||
-    normalizedStatus === "CANCELLED"
+    normalizedStatus === 'STOPPED' ||
+    normalizedStatus === 'FINISHED' ||
+    normalizedStatus === 'DEFEATED' ||
+    normalizedStatus === 'FAILED' ||
+    normalizedStatus === 'CANCELLED'
   );
 }
 
@@ -1022,7 +1028,7 @@ function isSessionActive(
     return false;
   }
 
-  if (normalizedStatus === "ACTIVE") {
+  if (normalizedStatus === 'ACTIVE') {
     return true;
   }
 
@@ -1086,7 +1092,7 @@ function getDefaultSubMapId(params: {
     return sessionSubMapId;
   }
 
-  return subMaps[0]?.id ?? "";
+  return subMaps[0]?.id ?? '';
 }
 
 function getRemainingSeconds(status: AutoCombatStatusResponse | null) {
@@ -1100,8 +1106,7 @@ function getRemainingSeconds(status: AutoCombatStatusResponse | null) {
 }
 
 function getLatestKilledMob(status: AutoCombatStatusResponse | null) {
-  const mobs =
-    status?.rewards?.mobs ?? status?.sessionSummary?.mobs?.kills ?? [];
+  const mobs = status?.rewards?.mobs ?? status?.sessionSummary?.mobs?.kills ?? [];
 
   if (mobs.length <= 0) return null;
 
@@ -1122,15 +1127,13 @@ function getThreatWeightPercent(
 }
 
 function normalizeRealtimeEventType(type?: string | null) {
-  return String(type ?? "")
-    .trim()
-    .toUpperCase();
+  return String(type ?? '').trim().toUpperCase();
 }
 
 function isDamageRealtimeEvent(eventType?: string | null) {
   const normalizedType = normalizeRealtimeEventType(eventType);
 
-  return normalizedType === "PLAYER_HIT" || normalizedType === "MOB_HIT";
+  return normalizedType === 'PLAYER_HIT' || normalizedType === 'MOB_HIT';
 }
 
 function buildSessionTotalsFromStatus(
@@ -1147,6 +1150,14 @@ function buildSessionTotalsFromStatus(
     return total + toSafeNumber(loot.quantity, 0);
   }, 0);
 
+  /*
+   * Fonte da verdade:
+   * - Para totais de sessão ativa, o backend deve mandar o valor final consolidado.
+   * - Não use "maior valor" aqui, porque cache visual/realtime pode contaminar sessão nova
+   *   ou manter número antigo depois de troca/stop/start.
+   * - processing.* representa apenas o processamento da requisição atual em alguns endpoints,
+   *   portanto não deve ser usado como total consolidado quando session/sessionSummary existem.
+   */
   const totalKills =
     getFirstOptionalNumber(
       status?.sessionSummary?.mobs?.totalKills,
@@ -1199,7 +1210,8 @@ function buildSessionTotalsFromStatus(
   const currentCombatIndex = Math.max(
     1,
     Math.floor(
-      getFirstOptionalNumber(session?.currentCombatIndex, totalKills + 1, 1) ?? 1,
+      getFirstOptionalNumber(session?.currentCombatIndex, totalKills + 1, 1) ??
+        1,
     ),
   );
 
@@ -1214,42 +1226,6 @@ function buildSessionTotalsFromStatus(
     potionsUsed: Math.max(0, Math.floor(potionsUsed)),
     updatedAt: Date.now(),
   };
-}
-
-function buildZeroSessionTotals(
-  sessionId?: string | null,
-): RealtimeSessionTotalsState {
-  return {
-    sessionId: sessionId ?? null,
-    currentCombatIndex: 1,
-    totalCombats: 0,
-    totalRounds: 0,
-    totalKills: 0,
-    totalXpGained: 0,
-    totalLoot: 0,
-    potionsUsed: 0,
-    updatedAt: Date.now(),
-  };
-}
-
-function isSameSessionTotalsScope(
-  totals: RealtimeSessionTotalsState | null | undefined,
-  sessionId?: string | null,
-) {
-  if (!totals) return false;
-
-  if (!sessionId || !totals.sessionId) {
-    return true;
-  }
-
-  return totals.sessionId === sessionId;
-}
-
-function getScopedSessionTotals(
-  totals: RealtimeSessionTotalsState | null | undefined,
-  sessionId?: string | null,
-) {
-  return isSameSessionTotalsScope(totals, sessionId) ? totals ?? null : null;
 }
 
 function buildProgressFromSource(
@@ -1371,7 +1347,8 @@ function mergeProgressKeepingHighestXp(
     currentLevelXp: incoming.currentLevelXp ?? current.currentLevelXp,
     xpToNextLevel: incoming.xpToNextLevel ?? current.xpToNextLevel,
     nextLevelXp: incoming.nextLevelXp ?? current.nextLevelXp,
-    xpProgressPercent: incoming.xpProgressPercent ?? current.xpProgressPercent,
+    xpProgressPercent:
+      incoming.xpProgressPercent ?? current.xpProgressPercent,
     xpIntoCurrentLevel:
       incoming.xpIntoCurrentLevel ?? current.xpIntoCurrentLevel,
     xpNeededForNextLevel:
@@ -1417,14 +1394,9 @@ function getRealtimeCombat(state: AutoCombatRealtimeStateLoose) {
   const character = state.character ?? null;
   const visual = state.visual ?? null;
   const totals =
-    state.displayTotals ??
-    state.sessionTotals ??
-    state.realtimeSessionTotals ??
-    state.totals ??
-    null;
+    state.totals ?? state.sessionTotals ?? state.realtimeSessionTotals ?? null;
   const status = getRealtimeStatus(state);
-  const session =
-    state.session ?? state.activeSession ?? getSessionFromStatus(status);
+  const session = state.session ?? state.activeSession ?? getSessionFromStatus(status);
 
   if (!mob && !character && !visual && !totals && !session) {
     return null;
@@ -1489,8 +1461,7 @@ function getRealtimeProgress(state: AutoCombatRealtimeStateLoose) {
 
   const character = state.character ?? null;
   const status = getRealtimeStatus(state);
-  const session =
-    state.session ?? state.activeSession ?? getSessionFromStatus(status);
+  const session = state.session ?? state.activeSession ?? getSessionFromStatus(status);
 
   if (!character) {
     return null;
@@ -1513,8 +1484,7 @@ function getRealtimeProgress(state: AutoCombatRealtimeStateLoose) {
 
     currentLevelXp:
       character.currentLevelXp ?? character.xpIntoCurrentLevel ?? undefined,
-    xpToNextLevel:
-      character.xpToNextLevel ?? character.nextLevelXp ?? undefined,
+    xpToNextLevel: character.xpToNextLevel ?? character.nextLevelXp ?? undefined,
     nextLevelXp: character.nextLevelXp ?? character.xpToNextLevel ?? undefined,
     xpProgressPercent: character.xpProgressPercent ?? undefined,
 
@@ -1535,7 +1505,6 @@ function getRealtimeProgress(state: AutoCombatRealtimeStateLoose) {
 
 function getRealtimeTotals(state: AutoCombatRealtimeStateLoose) {
   return (
-    state.displayTotals ??
     state.sessionTotals ??
     state.realtimeSessionTotals ??
     state.totals ??
@@ -1571,17 +1540,17 @@ function getPotionEventKey(payload: AutoCombatRealtimeEvent) {
   const event = payload as AutoCombatRealtimePotionEvent;
 
   return [
-    event.sessionId ?? "no-session",
-    event.characterId ?? "no-character",
-    event.potionItemId ?? "no-potion",
-    event.potionQuantityBefore ?? "no-before",
-    event.potionQuantityAfter ?? "no-after",
-    event.potionQuantityRemaining ?? "no-remaining",
-    event.potionUsedQuantity ?? "no-used",
-    event.characterCurrentHp ?? "no-hp",
-    event.round ?? "no-round",
-    event.combatIndex ?? "no-combat",
-  ].join("|");
+    event.sessionId ?? 'no-session',
+    event.characterId ?? 'no-character',
+    event.potionItemId ?? 'no-potion',
+    event.potionQuantityBefore ?? 'no-before',
+    event.potionQuantityAfter ?? 'no-after',
+    event.potionQuantityRemaining ?? 'no-remaining',
+    event.potionUsedQuantity ?? 'no-used',
+    event.characterCurrentHp ?? 'no-hp',
+    event.round ?? 'no-round',
+    event.combatIndex ?? 'no-combat',
+  ].join('|');
 }
 
 function getRealtimeActions(context: unknown): AutoCombatRealtimeActions {
@@ -1592,11 +1561,10 @@ export function AutoCombatPage() {
   const { characterId } = useParams();
   const realtimeContext = useAutoCombatRealtime();
   const realtimeActions = getRealtimeActions(realtimeContext);
-  const realtimeReload = realtimeActions.reload;
   const realtimeState =
     useAutoCombatRealtimeState() as AutoCombatRealtimeStateLoose;
 
-  const [activeTab, setActiveTab] = useState<AutoCombatTab>("battle");
+  const [activeTab, setActiveTab] = useState<AutoCombatTab>('battle');
   const [hasStartedHunt, setHasStartedHunt] = useState(false);
 
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
@@ -1605,7 +1573,7 @@ export function AutoCombatPage() {
   const [maps, setMaps] = useState<AutoCombatMapViewModel[]>([]);
   const [autoCombatStatus, setAutoCombatStatus] =
     useState<AutoCombatStatusResponse | null>(null);
-  const [selectedSubMapId, setSelectedSubMapId] = useState("");
+  const [selectedSubMapId, setSelectedSubMapId] = useState('');
   const [preparationPreview, setPreparationPreview] =
     useState<AutoCombatProjectionPreview | null>(null);
 
@@ -1616,19 +1584,17 @@ export function AutoCombatPage() {
     useState<CharacterPotionConfigWithItem | null>(null);
   const [isPotionConfigPanelOpen, setIsPotionConfigPanelOpen] = useState(false);
   const [selectedPotionSlotIndex, setSelectedPotionSlotIndex] = useState(0);
-  const [selectedPotionItemId, setSelectedPotionItemId] = useState("");
+  const [selectedPotionItemId, setSelectedPotionItemId] = useState('');
   const [potionThresholdPercent, setPotionThresholdPercent] = useState(35);
   const [isPotionEnabled, setIsPotionEnabled] = useState(true);
   const [isPotionConfigLoading, setIsPotionConfigLoading] = useState(false);
-  const [potionConfigMessage, setPotionConfigMessage] = useState("");
+  const [potionConfigMessage, setPotionConfigMessage] = useState('');
 
   const [localRealtimeCombat, setLocalRealtimeCombat] =
     useState<RealtimeCombatState | null>(null);
   const [localCharacterProgress, setLocalCharacterProgress] =
     useState<RealtimeCharacterProgressState | null>(null);
   const [localSessionTotals, setLocalSessionTotals] =
-    useState<RealtimeSessionTotalsState | null>(null);
-  const [displaySessionTotals, setDisplaySessionTotals] =
     useState<RealtimeSessionTotalsState | null>(null);
   const [localBattleLogEvents, setLocalBattleLogEvents] = useState<
     AutoCombatRealtimeEvent[]
@@ -1639,10 +1605,11 @@ export function AutoCombatPage() {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const autoPotionConfigRef = useRef<CharacterPotionConfigWithItem | null>(null);
-  const selectedPotionItemIdRef = useRef("");
+  const autoPotionConfigRef =
+    useRef<CharacterPotionConfigWithItem | null>(null);
+  const selectedPotionItemIdRef = useRef('');
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -1657,11 +1624,10 @@ export function AutoCombatPage() {
     setLocalRealtimeCombat(null);
     setLocalCharacterProgress(null);
     setLocalSessionTotals(null);
-    setDisplaySessionTotals(null);
     setLocalBattleLogEvents([]);
     setLocalActiveEvent(null);
     setIsPotionConfigPanelOpen(false);
-    setPotionConfigMessage("");
+    setPotionConfigMessage('');
     processedPotionEventKeysRef.current.clear();
   }, [characterId]);
 
@@ -1671,7 +1637,6 @@ export function AutoCombatPage() {
   const providerRealtimeCombat = getRealtimeCombat(realtimeState);
   const providerProgress = getRealtimeProgress(realtimeState);
   const providerSessionTotals = getRealtimeTotals(realtimeState);
-  const providerDisplayTotals = realtimeState.displayTotals ?? null;
   const providerBattleLogEvents = getRealtimeBattleLogEvents(realtimeState);
   const providerActiveEvent = getRealtimeActiveEvent(realtimeState);
   const providerQueueLength = getRealtimeQueueLength(realtimeState);
@@ -1695,29 +1660,8 @@ export function AutoCombatPage() {
     (providerQueueLength > 0 || Boolean(providerActiveEvent));
 
   const showActiveSession = hasActiveSession || hasPendingRealtimeVisual;
+
   const isSocketConnected = Boolean(realtimeState.isConnected);
-
-  const activeSessionId =
-    effectiveSession?.id ??
-    providerDisplayTotals?.sessionId ??
-    providerSessionTotals?.sessionId ??
-    localSessionTotals?.sessionId ??
-    null;
-
-  const scopedProviderDisplayTotals = getScopedSessionTotals(
-    providerDisplayTotals,
-    activeSessionId,
-  );
-
-  const scopedProviderSessionTotals = getScopedSessionTotals(
-    providerSessionTotals,
-    activeSessionId,
-  );
-
-  const scopedLocalSessionTotals = getScopedSessionTotals(
-    localSessionTotals,
-    activeSessionId,
-  );
 
   const applyPotionRealtimeQuantityUpdate = useCallback(
     (payload: AutoCombatRealtimeEvent) => {
@@ -1770,7 +1714,7 @@ export function AutoCombatPage() {
 
         const currentPotion = getPotionItem(currentConfig);
         const currentPotionId =
-          currentPotion?.id ?? currentConfig.potionItemId ?? "";
+          currentPotion?.id ?? currentConfig.potionItemId ?? '';
 
         if (!currentPotion || currentPotionId !== potionItemId) {
           return currentConfig;
@@ -1781,7 +1725,10 @@ export function AutoCombatPage() {
           0,
         );
 
-        const nextQuantity = resolvePotionQuantityAfter(payload, currentQuantity);
+        const nextQuantity = resolvePotionQuantityAfter(
+          payload,
+          currentQuantity,
+        );
 
         const nextPotion: PotionEquipmentItem = {
           ...currentPotion,
@@ -1802,7 +1749,7 @@ export function AutoCombatPage() {
   useEffect(() => {
     const event = providerActiveEvent;
 
-    if (!event || normalizeRealtimeEventType(event.type) !== "POTION_USED") {
+    if (!event || normalizeRealtimeEventType(event.type) !== 'POTION_USED') {
       return;
     }
 
@@ -1827,7 +1774,7 @@ export function AutoCombatPage() {
     if (!characterId) return;
 
     try {
-      setErrorMessage("");
+      setErrorMessage('');
 
       const [
         overviewData,
@@ -1872,7 +1819,7 @@ export function AutoCombatPage() {
       setAvailablePotions(normalizedPotions);
       setAutoPotionConfig(normalizedPotionConfig);
 
-      setSelectedPotionItemId(normalizedPotionConfig?.potionItemId ?? "");
+      setSelectedPotionItemId(normalizedPotionConfig?.potionItemId ?? '');
       setPotionThresholdPercent(
         clampNumber(normalizedPotionConfig?.hpThresholdPercent ?? 35, 1, 100),
       );
@@ -1916,7 +1863,7 @@ export function AutoCombatPage() {
       setErrorMessage(
         getApiErrorMessage(
           error,
-          "Não foi possível carregar os dados do combate automático.",
+          'Não foi possível carregar os dados do combate automático.',
         ),
       );
     }
@@ -1957,35 +1904,26 @@ export function AutoCombatPage() {
     providerProgress,
   ]);
 
-  const canonicalSessionTotals = useMemo(() => {
-    if (!hasActiveSession) {
-      return null;
-    }
+  const visibleRealtimeSessionTotals =
+    providerSessionTotals?.sessionId && effectiveSession?.id
+      ? providerSessionTotals.sessionId === effectiveSession.id
+        ? providerSessionTotals
+        : null
+      : providerSessionTotals;
 
-    return (
-      buildSessionTotalsFromStatus(effectiveStatus, effectiveSession) ??
-      scopedProviderSessionTotals ??
-      scopedLocalSessionTotals
-    );
-  }, [
-    effectiveSession,
-    effectiveStatus,
-    hasActiveSession,
-    scopedLocalSessionTotals,
-    scopedProviderSessionTotals,
-  ]);
+  const visibleLocalSessionTotals =
+    localSessionTotals?.sessionId && effectiveSession?.id
+      ? localSessionTotals.sessionId === effectiveSession.id
+        ? localSessionTotals
+        : null
+      : localSessionTotals;
 
-  const shouldProtectVisualTotals =
-    isSocketConnected &&
-    showActiveSession &&
-    (providerQueueLength > 0 || Boolean(providerActiveEvent));
+  const statusSessionTotals = hasActiveSession
+    ? buildSessionTotalsFromStatus(effectiveStatus, effectiveSession)
+    : null;
 
   const visibleSessionTotals = hasActiveSession
-    ? (scopedProviderDisplayTotals ??
-      displaySessionTotals ??
-      (shouldProtectVisualTotals
-        ? buildZeroSessionTotals(activeSessionId)
-        : canonicalSessionTotals))
+    ? statusSessionTotals ?? visibleRealtimeSessionTotals ?? visibleLocalSessionTotals
     : null;
 
   const battleLogEvents =
@@ -1996,75 +1934,8 @@ export function AutoCombatPage() {
         : [];
 
   const activeBattleLogEvent = showActiveSession
-    ? (providerActiveEvent ?? localActiveEvent)
+    ? providerActiveEvent ?? localActiveEvent
     : null;
-
-  useEffect(() => {
-    if (!showActiveSession || !canonicalSessionTotals) {
-      setDisplaySessionTotals(null);
-      return;
-    }
-
-    if (scopedProviderDisplayTotals) {
-      setDisplaySessionTotals(scopedProviderDisplayTotals);
-      return;
-    }
-
-    setDisplaySessionTotals((currentTotals) => {
-      const activeEventType = normalizeRealtimeEventType(
-        activeBattleLogEvent?.type,
-      );
-
-      const shouldReleaseVisualTotals =
-        !isSocketConnected ||
-        activeEventType === "MOB_DEFEATED" ||
-        activeEventType === "PLAYER_DEFEATED" ||
-        activeEventType === "POTION_USED";
-
-      const visualAnimationInProgress =
-        providerQueueLength > 0 || Boolean(activeBattleLogEvent);
-
-      if (
-        !currentTotals ||
-        (currentTotals.sessionId &&
-          activeSessionId &&
-          currentTotals.sessionId !== activeSessionId)
-      ) {
-        if (
-          visualAnimationInProgress &&
-          !shouldReleaseVisualTotals &&
-          isSocketConnected
-        ) {
-          return buildZeroSessionTotals(activeSessionId);
-        }
-
-        return canonicalSessionTotals;
-      }
-
-      const currentKills = Math.max(0, currentTotals.totalKills ?? 0);
-      const nextKills = Math.max(0, canonicalSessionTotals.totalKills ?? 0);
-      const hasUnreleasedKill = nextKills > currentKills;
-
-      if (
-        hasUnreleasedKill &&
-        visualAnimationInProgress &&
-        !shouldReleaseVisualTotals &&
-        isSocketConnected
-      ) {
-        return currentTotals;
-      }
-
-      return canonicalSessionTotals;
-    });
-  }, [
-    activeBattleLogEvent,
-    activeSessionId,
-    canonicalSessionTotals,
-    isSocketConnected,
-    providerQueueLength,
-    scopedProviderDisplayTotals,
-    showActiveSession,
-  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -2090,27 +1961,6 @@ export function AutoCombatPage() {
   }, [characterId, loadAutoCombatData]);
 
   useEffect(() => {
-    if (!characterId) return;
-
-    function refreshWhenVisible() {
-      if (document.visibilityState !== "visible") {
-        return;
-      }
-
-      void realtimeReload?.();
-      void loadAutoCombatData();
-    }
-
-    window.addEventListener("focus", refreshWhenVisible);
-    document.addEventListener("visibilitychange", refreshWhenVisible);
-
-    return () => {
-      window.removeEventListener("focus", refreshWhenVisible);
-      document.removeEventListener("visibilitychange", refreshWhenVisible);
-    };
-  }, [characterId, loadAutoCombatData, realtimeReload]);
-
-  useEffect(() => {
     if (hasActiveSession) {
       setHasStartedHunt(true);
     }
@@ -2121,7 +1971,6 @@ export function AutoCombatPage() {
       const timeoutId = window.setTimeout(() => {
         setLocalRealtimeCombat(null);
         setLocalSessionTotals(null);
-        setDisplaySessionTotals(null);
         setLocalBattleLogEvents([]);
         setLocalActiveEvent(null);
       }, 300);
@@ -2230,8 +2079,7 @@ export function AutoCombatPage() {
     return <Navigate to="/characters" replace />;
   }
 
-  const characterWithPotionConfig =
-    character as CharacterWithSinglePotionConfig;
+  const characterWithPotionConfig = character as CharacterWithSinglePotionConfig;
 
   const fallbackPotionConfig =
     characterWithPotionConfig.autoPotionConfig ??
@@ -2272,9 +2120,7 @@ export function AutoCombatPage() {
     return index === 0 ? currentPotionConfig : null;
   });
 
-  const latestKilledMob = showActiveSession
-    ? getLatestKilledMob(effectiveStatus)
-    : null;
+  const latestKilledMob = showActiveSession ? getLatestKilledMob(effectiveStatus) : null;
   const mainThreat = selectedSubMapThreats[0] ?? null;
   const remainingSeconds = showActiveSession
     ? getRemainingSeconds(effectiveStatus)
@@ -2284,9 +2130,9 @@ export function AutoCombatPage() {
     showActiveSession && visualRealtimeCombat?.characterMaxHp !== undefined
       ? visualRealtimeCombat.characterMaxHp
       : hasActiveSession
-        ? (effectiveStatus?.character?.maxHp ??
+        ? effectiveStatus?.character?.maxHp ??
           effectiveStatus?.sessionSummary?.hp?.max ??
-          character.maxHp)
+          character.maxHp
         : character.maxHp;
 
   const currentCharacterMaxHp = Math.max(
@@ -2298,9 +2144,9 @@ export function AutoCombatPage() {
     showActiveSession && visualRealtimeCombat?.characterCurrentHp !== undefined
       ? visualRealtimeCombat.characterCurrentHp
       : hasActiveSession
-        ? (effectiveStatus?.character?.currentHp ??
+        ? effectiveStatus?.character?.currentHp ??
           effectiveStatus?.sessionSummary?.hp?.current ??
-          character.currentHp)
+          character.currentHp
         : character.currentHp;
 
   const currentCharacterHp = clampNumber(
@@ -2318,13 +2164,13 @@ export function AutoCombatPage() {
   const currentCharacterXp =
     visibleCharacterProgress?.xp ??
     (showActiveSession
-      ? (character.totalXp ?? character.xp ?? 0)
-      : (effectiveStatus?.character?.totalXp ??
+      ? character.totalXp ?? character.xp ?? 0
+      : effectiveStatus?.character?.totalXp ??
         effectiveStatus?.character?.levelProgress?.totalXp ??
         effectiveStatus?.character?.xp ??
         character.totalXp ??
         character.xp ??
-        0));
+        0);
 
   const currentLevelXp =
     visibleCharacterProgress?.currentLevelXp ??
@@ -2427,20 +2273,20 @@ export function AutoCombatPage() {
   } as CSSProperties;
 
   const activeMobName = showActiveSession
-    ? (visualRealtimeCombat?.mobName ??
+    ? visualRealtimeCombat?.mobName ??
       effectiveStatus?.currentMob?.name ??
       mainThreat?.mob?.name ??
       latestKilledMob?.mobName ??
-      "Aguardando ameaça")
-    : (mainThreat?.mob?.name ?? "Aguardando ameaça");
+      'Aguardando ameaça'
+    : mainThreat?.mob?.name ?? 'Aguardando ameaça';
 
   const rawActiveMobMaxHp = showActiveSession
-    ? (visualRealtimeCombat?.mobMaxHp ??
+    ? visualRealtimeCombat?.mobMaxHp ??
       effectiveStatus?.currentMob?.maxHp ??
       effectiveStatus?.currentMob?.hp ??
       mainThreat?.mob?.hp ??
-      0)
-    : (mainThreat?.mob?.hp ?? 0);
+      0
+    : mainThreat?.mob?.hp ?? 0;
 
   const activeMobMaxHp = Math.max(0, toSafeNumber(rawActiveMobMaxHp, 0));
 
@@ -2448,8 +2294,8 @@ export function AutoCombatPage() {
     showActiveSession && visualRealtimeCombat?.mobCurrentHp !== undefined
       ? visualRealtimeCombat.mobCurrentHp
       : showActiveSession
-        ? (effectiveStatus?.currentMob?.currentHp ??
-          (activeMobMaxHp > 0 ? activeMobMaxHp : 0))
+        ? effectiveStatus?.currentMob?.currentHp ??
+          (activeMobMaxHp > 0 ? activeMobMaxHp : 0)
         : activeMobMaxHp;
 
   const activeMobCurrentHp = clampNumber(
@@ -2466,42 +2312,103 @@ export function AutoCombatPage() {
   } as CSSProperties;
 
   const activeMobReference = showActiveSession
-    ? visualRealtimeCombat?.round
-      ? `Rodada ${visualRealtimeCombat.round}`
-      : effectiveStatus?.session?.currentRound
-        ? `Rodada ${effectiveStatus.session.currentRound}`
-        : latestKilledMob
-          ? `${latestKilledMob.kills} abate(s)`
-          : "Tempo real"
+    ? visualRealtimeCombat?.combatIndex
+      ? `Combate ${visualRealtimeCombat.combatIndex}${
+          visualRealtimeCombat.round ? ` · Rodada ${visualRealtimeCombat.round}` : ''
+        }`
+      : effectiveStatus?.session?.currentCombatIndex
+        ? `Combate ${effectiveStatus.session.currentCombatIndex}${
+            effectiveStatus.session.currentRound
+              ? ` · Rodada ${effectiveStatus.session.currentRound}`
+              : ''
+          }`
+        : mainThreat?.mob
+          ? `Nv. ${mainThreat.mob.level}`
+          : latestKilledMob
+            ? `${latestKilledMob.kills} abate(s)`
+            : '—'
     : mainThreat?.mob
       ? `Nv. ${mainThreat.mob.level}`
-      : "—";
+      : '—';
 
   const sessionStatusText = showActiveSession
-    ? (effectiveStatus?.sessionSummary?.statusText ??
-      formatSessionStatus(effectiveSession?.status))
-    : "Sem sessão ativa";
+    ? effectiveStatus?.sessionSummary?.statusText ??
+      formatSessionStatus(effectiveSession?.status)
+    : 'Sem sessão ativa';
 
   const totalKills = Math.max(
     0,
-    Math.floor(showActiveSession ? (visibleSessionTotals?.totalKills ?? 0) : 0),
+    Math.floor(
+      visibleSessionTotals?.totalKills ??
+        effectiveStatus?.sessionSummary?.mobs?.totalKills ??
+        effectiveSession?.totalCombatsResolved ??
+        effectiveSession?.totalKills ??
+        effectiveStatus?.rewards?.mobs?.reduce((total, mob) => {
+          return total + mob.kills;
+        }, 0) ??
+        visualRealtimeCombat?.totalKills ??
+        0,
+    ),
+  );
+
+  const currentCombatIndex = Math.max(
+    1,
+    Math.floor(
+      visibleSessionTotals?.currentCombatIndex ??
+        effectiveSession?.currentCombatIndex ??
+        visualRealtimeCombat?.combatIndex ??
+        totalKills + 1,
+    ),
+  );
+
+  const totalCombats = Math.max(
+    0,
+    Math.floor(
+      visibleSessionTotals?.totalCombats ??
+        effectiveStatus?.sessionSummary?.combat?.totalCombats ??
+        effectiveSession?.totalCombatsResolved ??
+        effectiveSession?.totalCombats ??
+        totalKills ??
+        visualRealtimeCombat?.totalCombats ??
+        0,
+    ),
   );
 
   const totalXpGained = Math.max(
     0,
     Math.floor(
-      showActiveSession ? (visibleSessionTotals?.totalXpGained ?? 0) : 0,
+      visibleSessionTotals?.totalXpGained ??
+        effectiveStatus?.sessionSummary?.progression?.totalXpGained ??
+        effectiveSession?.totalXpGained ??
+        visualRealtimeCombat?.totalXpGained ??
+        0,
     ),
   );
 
   const totalLoot = Math.max(
     0,
-    Math.floor(showActiveSession ? (visibleSessionTotals?.totalLoot ?? 0) : 0),
+    Math.floor(
+      visibleSessionTotals?.totalLoot ??
+        effectiveStatus?.sessionSummary?.loot?.totalQuantity ??
+        effectiveSession?.totalLoot ??
+        effectiveStatus?.rewards?.loots?.reduce((total, loot) => {
+          return total + loot.quantity;
+        }, 0) ??
+        visualRealtimeCombat?.totalLoot ??
+        0,
+    ),
   );
 
   const potionsUsed = Math.max(
     0,
-    Math.floor(showActiveSession ? (visibleSessionTotals?.potionsUsed ?? 0) : 0),
+    Math.floor(
+      visibleSessionTotals?.potionsUsed ??
+        effectiveStatus?.sessionSummary?.potions?.used ??
+        effectiveSession?.totalPotionsUsed ??
+        effectiveSession?.potionsUsed ??
+        visualRealtimeCombat?.potionsUsed ??
+        0,
+    ),
   );
 
   const canStartHunt =
@@ -2526,52 +2433,52 @@ export function AutoCombatPage() {
     latestDamageAmount > 0;
 
   const shouldShowPlayerDamage =
-    canShowFloatingDamage && visualRealtimeCombat?.target === "PLAYER";
+    canShowFloatingDamage && visualRealtimeCombat?.target === 'PLAYER';
 
   const shouldShowMobDamage =
-    canShowFloatingDamage && visualRealtimeCombat?.target === "MOB";
+    canShowFloatingDamage && visualRealtimeCombat?.target === 'MOB';
 
   const shouldShowPlayerDodge =
     showActiveSession &&
-    visualRealtimeCombat?.target === "PLAYER" &&
+    visualRealtimeCombat?.target === 'PLAYER' &&
     visualRealtimeCombat?.isDodged;
 
   const shouldShowMobDodge =
     showActiveSession &&
-    visualRealtimeCombat?.target === "MOB" &&
+    visualRealtimeCombat?.target === 'MOB' &&
     visualRealtimeCombat?.isDodged;
 
   const playerDamageKey = shouldShowPlayerDamage
     ? `player-damage-${visualRealtimeCombat?.updatedAt ?? Date.now()}`
-    : "";
+    : '';
 
   const mobDamageKey = shouldShowMobDamage
     ? `mob-damage-${visualRealtimeCombat?.updatedAt ?? Date.now()}`
-    : "";
+    : '';
 
   const playerFighterClassName = [
-    "auto-combat-fighter-card",
-    "auto-combat-fighter-card--player",
-    shouldShowPlayerDamage ? "is-hit" : "",
+    'auto-combat-fighter-card',
+    'auto-combat-fighter-card--player',
+    shouldShowPlayerDamage ? 'is-hit' : '',
     shouldShowPlayerDamage && visualRealtimeCombat?.isCritical
-      ? "is-critical-hit"
-      : "",
-    shouldShowPlayerDodge ? "is-dodging" : "",
+      ? 'is-critical-hit'
+      : '',
+    shouldShowPlayerDodge ? 'is-dodging' : '',
   ]
     .filter(Boolean)
-    .join(" ");
+    .join(' ');
 
   const mobFighterClassName = [
-    "auto-combat-fighter-card",
-    "auto-combat-fighter-card--mob",
-    shouldShowMobDamage ? "is-hit" : "",
+    'auto-combat-fighter-card',
+    'auto-combat-fighter-card--mob',
+    shouldShowMobDamage ? 'is-hit' : '',
     shouldShowMobDamage && visualRealtimeCombat?.isCritical
-      ? "is-critical-hit"
-      : "",
-    shouldShowMobDodge ? "is-dodging" : "",
+      ? 'is-critical-hit'
+      : '',
+    shouldShowMobDodge ? 'is-dodging' : '',
   ]
     .filter(Boolean)
-    .join(" ");
+    .join(' ');
 
   const configuredPotionQuantity = getPotionQuantity(
     currentPotionConfig,
@@ -2581,26 +2488,26 @@ export function AutoCombatPage() {
   function handleStartHunt() {
     if (!characterHasHp) {
       setErrorMessage(
-        "Este personagem está sem HP. Use a enfermaria ou uma cura antes de iniciar uma nova caça.",
+        'Este personagem está sem HP. Use a enfermaria ou uma cura antes de iniciar uma nova caça.',
       );
       return;
     }
 
     if (!canStartHunt) {
       setErrorMessage(
-        "Nenhum submapa com encontros ativos foi encontrado para o nível atual.",
+        'Nenhum submapa com encontros ativos foi encontrado para o nível atual.',
       );
       return;
     }
 
-    setErrorMessage("");
+    setErrorMessage('');
 
     if (!selectedSubMapId && availableSubMaps[0]) {
       setSelectedSubMapId(availableSubMaps[0].id);
     }
 
     setHasStartedHunt(true);
-    setActiveTab("battle");
+    setActiveTab('battle');
   }
 
   function handleResetHunt() {
@@ -2610,29 +2517,27 @@ export function AutoCombatPage() {
     setPreparationPreview(null);
     setLocalRealtimeCombat(null);
     setLocalSessionTotals(null);
-    setDisplaySessionTotals(null);
     setLocalBattleLogEvents([]);
     setLocalActiveEvent(null);
   }
 
   function handleOpenPotionConfig(slotIndex: number) {
     setSelectedPotionSlotIndex(slotIndex);
-    setPotionConfigMessage("");
+    setPotionConfigMessage('');
 
     if (slotIndex > 0) {
       setPotionConfigMessage(
-        "No backend atual existe 1 configuração de poção automática por personagem. Este slot reserva usa a configuração principal.",
+        'No backend atual existe 1 configuração de poção automática por personagem. Este slot reserva já abre a mesma configuração principal.',
       );
     }
 
-    setSelectedPotionItemId(currentPotionConfig?.potionItemId ?? "");
+    setSelectedPotionItemId(currentPotionConfig?.potionItemId ?? '');
     setPotionThresholdPercent(
       clampNumber(currentPotionConfig?.hpThresholdPercent ?? 35, 1, 100),
     );
     setIsPotionEnabled(Boolean(currentPotionConfig?.enabled));
     setIsPotionConfigPanelOpen(true);
   }
-
   async function handleSavePotionConfig() {
     if (!characterId || isPotionConfigLoading) return;
 
@@ -2644,14 +2549,14 @@ export function AutoCombatPage() {
 
     if (isPotionEnabled && !selectedPotionItemId) {
       setPotionConfigMessage(
-        "Selecione uma poção antes de ativar o uso automático.",
+        'Selecione uma poção antes de ativar o uso automático.',
       );
       return;
     }
 
     try {
       setIsPotionConfigLoading(true);
-      setPotionConfigMessage("");
+      setPotionConfigMessage('');
 
       const response = await updateCharacterPotionConfigRaw(characterId, {
         enabled: shouldEnable,
@@ -2670,7 +2575,7 @@ export function AutoCombatPage() {
       );
       setIsPotionEnabled(Boolean(normalized?.enabled));
       setPotionConfigMessage(
-        response.message ?? "Configuração de poção atualizada com sucesso.",
+        response.message ?? 'Configuração de poção atualizada com sucesso.',
       );
 
       await loadAutoCombatData();
@@ -2678,7 +2583,7 @@ export function AutoCombatPage() {
       setPotionConfigMessage(
         getApiErrorMessage(
           error,
-          "Não foi possível salvar a configuração de poção.",
+          'Não foi possível salvar a configuração de poção.',
         ),
       );
     } finally {
@@ -2691,7 +2596,7 @@ export function AutoCombatPage() {
 
     try {
       setIsPotionConfigLoading(true);
-      setPotionConfigMessage("");
+      setPotionConfigMessage('');
 
       const response = await updateCharacterPotionConfigRaw(characterId, {
         enabled: false,
@@ -2708,14 +2613,14 @@ export function AutoCombatPage() {
 
       setAutoPotionConfig(normalized);
       setIsPotionEnabled(false);
-      setPotionConfigMessage("Uso automático de poção desativado.");
+      setPotionConfigMessage('Uso automático de poção desativado.');
 
       await loadAutoCombatData();
     } catch (error) {
       setPotionConfigMessage(
         getApiErrorMessage(
           error,
-          "Não foi possível desativar a configuração de poção.",
+          'Não foi possível desativar a configuração de poção.',
         ),
       );
     } finally {
@@ -2728,7 +2633,7 @@ export function AutoCombatPage() {
 
     try {
       setIsPotionConfigLoading(true);
-      setPotionConfigMessage("");
+      setPotionConfigMessage('');
 
       const response = await updateCharacterPotionConfigRaw(characterId, {
         enabled: false,
@@ -2743,16 +2648,16 @@ export function AutoCombatPage() {
       const normalized = normalizePotionConfigResponse(response);
 
       setAutoPotionConfig(normalized);
-      setSelectedPotionItemId("");
+      setSelectedPotionItemId('');
       setIsPotionEnabled(false);
-      setPotionConfigMessage("Poção removida da configuração automática.");
+      setPotionConfigMessage('Poção removida da configuração automática.');
 
       await loadAutoCombatData();
     } catch (error) {
       setPotionConfigMessage(
         getApiErrorMessage(
           error,
-          "Não foi possível remover a poção configurada.",
+          'Não foi possível remover a poção configurada.',
         ),
       );
     } finally {
@@ -2765,19 +2670,18 @@ export function AutoCombatPage() {
 
     if (!characterHasHp) {
       setErrorMessage(
-        "Este personagem está sem HP. Use a enfermaria ou uma cura antes de iniciar o combate.",
+        'Este personagem está sem HP. Use a enfermaria ou uma cura antes de iniciar o combate.',
       );
       return;
     }
 
     try {
       setIsActionLoading(true);
-      setErrorMessage("");
+      setErrorMessage('');
 
       setLocalRealtimeCombat(null);
       setLocalCharacterProgress(null);
       setLocalSessionTotals(null);
-      setDisplaySessionTotals(null);
       setLocalBattleLogEvents([]);
       setLocalActiveEvent(null);
 
@@ -2795,15 +2699,12 @@ export function AutoCombatPage() {
 
       if (!response) {
         throw new Error(
-          "O AutoCombatRealtimeProvider não expôs uma função start/startAutoCombat.",
+          'O AutoCombatRealtimeProvider não expôs uma função start/startAutoCombat.',
         );
       }
 
       const responseSession = getSessionFromStatus(response);
-      const responseProgress = buildProgressFromStatus(
-        response,
-        responseSession,
-      );
+      const responseProgress = buildProgressFromStatus(response, responseSession);
       const responseTotals = buildSessionTotalsFromStatus(
         response,
         responseSession,
@@ -2812,18 +2713,15 @@ export function AutoCombatPage() {
       setAutoCombatStatus(response);
       setLocalCharacterProgress(responseProgress);
       setLocalSessionTotals(responseTotals);
-      setDisplaySessionTotals(
-        buildZeroSessionTotals(responseSession?.id ?? null),
-      );
       setHasStartedHunt(true);
-      setActiveTab("battle");
+      setActiveTab('battle');
 
       await loadAutoCombatData();
     } catch (error) {
       setErrorMessage(
         getApiErrorMessage(
           error,
-          "Não foi possível iniciar o combate automático. Verifique o HP, o submapa e se já existe uma sessão ativa.",
+          'Não foi possível iniciar o combate automático. Verifique o HP, o submapa e se já existe uma sessão ativa.',
         ),
       );
     } finally {
@@ -2836,7 +2734,7 @@ export function AutoCombatPage() {
 
     try {
       setIsActionLoading(true);
-      setErrorMessage("");
+      setErrorMessage('');
 
       const response = realtimeActions.stop
         ? await realtimeActions.stop()
@@ -2846,15 +2744,12 @@ export function AutoCombatPage() {
 
       if (!response) {
         throw new Error(
-          "O AutoCombatRealtimeProvider não expôs uma função stop/stopAutoCombat.",
+          'O AutoCombatRealtimeProvider não expôs uma função stop/stopAutoCombat.',
         );
       }
 
       const responseSession = getSessionFromStatus(response);
-      const responseProgress = buildProgressFromStatus(
-        response,
-        responseSession,
-      );
+      const responseProgress = buildProgressFromStatus(response, responseSession);
 
       setAutoCombatStatus(response);
       setLocalCharacterProgress((current) =>
@@ -2862,7 +2757,6 @@ export function AutoCombatPage() {
       );
 
       setLocalSessionTotals(null);
-      setDisplaySessionTotals(null);
       setLocalRealtimeCombat(null);
       setLocalBattleLogEvents([]);
       setLocalActiveEvent(null);
@@ -2872,7 +2766,7 @@ export function AutoCombatPage() {
       setErrorMessage(
         getApiErrorMessage(
           error,
-          "Não foi possível parar o combate automático.",
+          'Não foi possível parar o combate automático.',
         ),
       );
     } finally {
@@ -2911,22 +2805,22 @@ export function AutoCombatPage() {
           <div className="auto-combat-tabs" role="tablist">
             <button
               type="button"
-              className={activeTab === "battle" ? "is-active" : ""}
-              onClick={() => setActiveTab("battle")}
+              className={activeTab === 'battle' ? 'is-active' : ''}
+              onClick={() => setActiveTab('battle')}
             >
               Combate
             </button>
 
             <button
               type="button"
-              className={activeTab === "stats" ? "is-active" : ""}
-              onClick={() => setActiveTab("stats")}
+              className={activeTab === 'stats' ? 'is-active' : ''}
+              onClick={() => setActiveTab('stats')}
             >
               Status
             </button>
           </div>
 
-          {activeTab === "battle" ? (
+          {activeTab === 'battle' ? (
             <div className="auto-combat-tab-panel">
               {!hasStartedHunt && !showActiveSession ? (
                 <article className="auto-combat-stage-card auto-combat-map-stage">
@@ -2959,7 +2853,7 @@ export function AutoCombatPage() {
                       <p>
                         {selectedMap?.description ??
                           selectedSubMap?.description ??
-                          "Escolha um submapa disponível e inicie a caça para revelar os infectados próximos."}
+                          'Escolha um submapa disponível e inicie a caça para revelar os infectados próximos.'}
                       </p>
 
                       <label className="auto-combat-field auto-combat-field--submap">
@@ -2999,7 +2893,7 @@ export function AutoCombatPage() {
 
                         <div>
                           <span>Tier</span>
-                          <strong>{selectedSubMap?.tier ?? "—"}</strong>
+                          <strong>{selectedSubMap?.tier ?? '—'}</strong>
                         </div>
 
                         <div>
@@ -3007,7 +2901,7 @@ export function AutoCombatPage() {
                           <strong>
                             {selectedSubMap?.minLevel && selectedSubMap.maxLevel
                               ? `${selectedSubMap.minLevel}-${selectedSubMap.maxLevel}`
-                              : "—"}
+                              : '—'}
                           </strong>
                         </div>
                       </div>
@@ -3048,11 +2942,11 @@ export function AutoCombatPage() {
                             className="auto-combat-enemy-card"
                           >
                             <div className="auto-combat-enemy-card__level">
-                              Nv. {mob?.level ?? "—"}
+                              Nv. {mob?.level ?? '—'}
                             </div>
 
                             <div className="auto-combat-enemy-card__xp">
-                              XP {mob?.xpReward ?? "—"}
+                              XP {mob?.xpReward ?? '—'}
                             </div>
 
                             <div className="auto-combat-enemy-card__portrait">
@@ -3062,27 +2956,27 @@ export function AutoCombatPage() {
                             <div className="auto-combat-enemy-card__content">
                               <span>Ameaça próxima</span>
 
-                              <strong>{mob?.name ?? "Infectado"}</strong>
+                              <strong>{mob?.name ?? 'Infectado'}</strong>
 
                               <div className="auto-combat-enemy-card__hp">
                                 <div className="auto-combat-enemy-card__hp-header">
                                   <span>HP</span>
-                                  <strong>{mob?.hp ?? "—"}</strong>
+                                  <strong>{mob?.hp ?? '—'}</strong>
                                 </div>
 
                                 <i className="auto-combat-enemy-card__hp-track">
                                   <b
                                     style={{
-                                      width: mob?.hp ? "100%" : "0%",
+                                      width: mob?.hp ? '100%' : '0%',
                                     }}
                                   />
                                 </i>
                               </div>
 
                               <div className="auto-combat-enemy-card__stats">
-                                <span>ATQ {mob?.attack ?? "—"}</span>
-                                <span>DEF {mob?.defense ?? "—"}</span>
-                                <span>VEL {mob?.speed ?? "—"}</span>
+                                <span>ATQ {mob?.attack ?? '—'}</span>
+                                <span>DEF {mob?.defense ?? '—'}</span>
+                                <span>VEL {mob?.speed ?? '—'}</span>
                                 <span>Chance {chance}%</span>
                               </div>
                             </div>
@@ -3096,7 +2990,9 @@ export function AutoCombatPage() {
 
                       <strong>Nenhum inimigo encontrado</strong>
 
-                      <p>Este submapa não possui encontros ativos no momento.</p>
+                      <p>
+                        Este submapa não possui encontros ativos no momento.
+                      </p>
                     </div>
                   )}
 
@@ -3105,7 +3001,7 @@ export function AutoCombatPage() {
                       <span>Risco</span>
                       <strong>
                         {isPreviewLoading
-                          ? "Calculando..."
+                          ? 'Calculando...'
                           : formatRiskLabel(preparationPreview?.risk?.level)}
                       </strong>
                     </div>
@@ -3114,8 +3010,8 @@ export function AutoCombatPage() {
                       <span>XP/min</span>
                       <strong>
                         {isPreviewLoading
-                          ? "..."
-                          : (preparationPreview?.xpPerMinute ?? "—")}
+                          ? '...'
+                          : preparationPreview?.xpPerMinute ?? '—'}
                       </strong>
                     </div>
 
@@ -3123,13 +3019,13 @@ export function AutoCombatPage() {
                       <span>HP esperado</span>
                       <strong>
                         {isPreviewLoading
-                          ? "..."
+                          ? '...'
                           : preparationPreview?.hp?.expectedFinalPercent !==
                               undefined
                             ? `${Math.round(
                                 preparationPreview.hp.expectedFinalPercent,
                               )}%`
-                            : "—"}
+                            : '—'}
                       </strong>
                     </div>
                   </div>
@@ -3141,7 +3037,7 @@ export function AutoCombatPage() {
                       disabled={!canStartCombat}
                       onClick={handleStartAutoCombat}
                     >
-                      {isActionLoading ? "Processando..." : "Iniciar combate"}
+                      {isActionLoading ? 'Processando...' : 'Iniciar combate'}
                     </button>
 
                     <button
@@ -3171,13 +3067,13 @@ export function AutoCombatPage() {
                           <span
                             key={playerDamageKey}
                             className={[
-                              "auto-combat-floating-damage",
+                              'auto-combat-floating-damage',
                               visualRealtimeCombat?.isCritical
-                                ? "is-critical"
-                                : "",
+                                ? 'is-critical'
+                                : '',
                             ]
                               .filter(Boolean)
-                              .join(" ")}
+                              .join(' ')}
                           >
                             -{latestDamageAmount} HP
                           </span>
@@ -3208,13 +3104,13 @@ export function AutoCombatPage() {
                           <span
                             key={mobDamageKey}
                             className={[
-                              "auto-combat-floating-damage",
+                              'auto-combat-floating-damage',
                               visualRealtimeCombat?.isCritical
-                                ? "is-critical"
-                                : "",
+                                ? 'is-critical'
+                                : '',
                             ]
                               .filter(Boolean)
-                              .join(" ")}
+                              .join(' ')}
                           >
                             -{latestDamageAmount} HP
                           </span>
@@ -3248,7 +3144,7 @@ export function AutoCombatPage() {
                         disabled={isActionLoading || !hasActiveSession}
                         onClick={handleStopAutoCombat}
                       >
-                        {isActionLoading ? "Processando..." : "Parar sessão"}
+                        {isActionLoading ? 'Processando...' : 'Parar sessão'}
                       </button>
                     </div>
                   </article>
@@ -3260,88 +3156,59 @@ export function AutoCombatPage() {
                     maxItems={20}
                   />
 
-                  <section className="auto-combat-consumables-panel">
-                    <div className="auto-combat-consumables-panel__header">
-                      <div>
-                        <span>Suporte automático</span>
-                        <strong>Poções</strong>
-                      </div>
+                  <div className="auto-combat-consumables">
+                    {potionSlots.map((potionConfig, index) => {
+                      const potionItem = getPotionItem(potionConfig);
+                      const potionQuantity =
+                        index === 0 ? configuredPotionQuantity : 0;
 
-                      <small>
-                        {configuredPotionItem
-                          ? `${configuredPotionQuantity} disponível(is)`
-                          : "Nenhuma poção ativa"}
-                      </small>
-                    </div>
+                      return (
+                        <button
+                          key={potionConfig?.id ?? `empty-potion-${index}`}
+                          type="button"
+                          className={[
+                            'auto-combat-consumable-slot',
+                            potionConfig?.enabled ? 'is-enabled' : 'is-empty',
+                            index === selectedPotionSlotIndex &&
+                            isPotionConfigPanelOpen
+                              ? 'is-selected'
+                              : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          onClick={() => handleOpenPotionConfig(index)}
+                        >
+                          <div className="auto-combat-consumable-slot__icon">
+                            ✚
+                          </div>
 
-                    <div className="auto-combat-consumables">
-                      {potionSlots.map((potionConfig, index) => {
-                        const potionItem = getPotionItem(potionConfig);
-                        const potionQuantity =
-                          index === 0 ? configuredPotionQuantity : 0;
-                        const isPrimarySlot = index === 0;
-                        const hasPotion = Boolean(isPrimarySlot && potionItem);
+                          <div>
+                            <strong>
+                              {index === 0
+                                ? getPotionName(potionConfig)
+                                : 'Slot reserva'}
+                            </strong>
 
-                        const slotTitle = isPrimarySlot
-                          ? getPotionName(potionConfig)
-                          : "Slot reserva";
+                            <span>
+                              {index === 0
+                                ? getPotionDescription(potionConfig)
+                                : 'Clique para configurar. O backend atual usa 1 poção automática.'}
+                            </span>
 
-                        const slotDescription = isPrimarySlot
-                          ? getPotionDescription(potionConfig)
-                          : "Reservado para expansão futura.";
+                            <small className="auto-combat-consumable-slot__meta">
+                              {potionItem
+                                ? `${formatPotionHeal(potionItem)} · Qtd. ${potionQuantity}`
+                                : 'Defina poção e gatilho de HP'}
+                            </small>
+                          </div>
 
-                        const slotMeta = hasPotion
-                          ? `${formatPotionHeal(potionItem)} · Qtd. ${potionQuantity}`
-                          : isPrimarySlot
-                            ? "Defina poção e gatilho de HP"
-                            : "Backend atual usa 1 poção";
-
-                        return (
-                          <button
-                            key={potionConfig?.id ?? `empty-potion-${index}`}
-                            type="button"
-                            className={[
-                              "auto-combat-consumable-slot",
-                              isPrimarySlot
-                                ? "auto-combat-consumable-slot--primary"
-                                : "auto-combat-consumable-slot--reserve",
-                              potionConfig?.enabled ? "is-enabled" : "is-empty",
-                              hasPotion ? "has-potion" : "",
-                              index === selectedPotionSlotIndex &&
-                              isPotionConfigPanelOpen
-                                ? "is-selected"
-                                : "",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                            onClick={() => handleOpenPotionConfig(index)}
-                          >
-                            <div className="auto-combat-consumable-slot__icon">
-                              ✚
-                            </div>
-
-                            <div className="auto-combat-consumable-slot__body">
-                              <strong className="auto-combat-consumable-slot__name">
-                                {slotTitle}
-                              </strong>
-
-                              <span className="auto-combat-consumable-slot__description">
-                                {slotDescription}
-                              </span>
-
-                              <small className="auto-combat-consumable-slot__meta">
-                                {slotMeta}
-                              </small>
-                            </div>
-
-                            <em className="auto-combat-consumable-slot__action">
-                              Configurar
-                            </em>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
+                          <em className="auto-combat-consumable-slot__action">
+                            Configurar
+                          </em>
+                        </button>
+                      );
+                    })}
+                  </div>
 
                   {isPotionConfigPanelOpen ? (
                     <article className="auto-combat-potion-config-panel">
@@ -3350,7 +3217,7 @@ export function AutoCombatPage() {
                           <span>Poção automática</span>
                           <strong>
                             {selectedPotionSlotIndex === 0
-                              ? "Configurar slot principal"
+                              ? 'Configurar slot principal'
                               : `Configurar slot reserva ${
                                   selectedPotionSlotIndex + 1
                                 }`}
@@ -3381,11 +3248,8 @@ export function AutoCombatPage() {
                               <option value="">Nenhuma poção selecionada</option>
 
                               {potionOptions.map((potion) => (
-                                <option
-                                  key={potion.itemId}
-                                  value={potion.itemId}
-                                >
-                                  {potion.name} · Qtd. {potion.quantity} ·{" "}
+                                <option key={potion.itemId} value={potion.itemId}>
+                                  {potion.name} · Qtd. {potion.quantity} ·{' '}
                                   {formatPotionHeal(potion)}
                                 </option>
                               ))}
@@ -3461,8 +3325,8 @@ export function AutoCombatPage() {
                           onClick={handleSavePotionConfig}
                         >
                           {isPotionConfigLoading
-                            ? "Salvando..."
-                            : "Salvar configuração"}
+                            ? 'Salvando...'
+                            : 'Salvar configuração'}
                         </button>
 
                         <button
@@ -3489,35 +3353,39 @@ export function AutoCombatPage() {
                   <article className="auto-combat-session-panel">
                     <div className="auto-combat-session-panel__header">
                       <span>Estatísticas da sessão</span>
-                      <strong>
-                        {formatSessionStatus(effectiveSession?.status)}
-                      </strong>
+                      <strong>{formatSessionStatus(effectiveSession?.status)}</strong>
                     </div>
 
                     <div className="auto-combat-session-summary">
-                      <article className="auto-combat-session-summary__card auto-combat-session-summary__card--kills">
+                      <div>
+                        <span>Combate atual</span>
+                        <strong>{currentCombatIndex}</strong>
+                        <small>{totalCombats} luta(s) resolvida(s)</small>
+                      </div>
+
+                      <div>
                         <span>Abates</span>
                         <strong>{totalKills}</strong>
                         <small>infectados derrotados</small>
-                      </article>
+                      </div>
 
-                      <article className="auto-combat-session-summary__card auto-combat-session-summary__card--xp">
+                      <div>
                         <span>XP ganho</span>
                         <strong>{totalXpGained}</strong>
                         <small>progressão obtida</small>
-                      </article>
+                      </div>
 
-                      <article className="auto-combat-session-summary__card auto-combat-session-summary__card--loot">
+                      <div>
                         <span>Loot</span>
                         <strong>{totalLoot}</strong>
                         <small>itens coletados</small>
-                      </article>
+                      </div>
 
-                      <article className="auto-combat-session-summary__card auto-combat-session-summary__card--potions">
+                      <div>
                         <span>Poções</span>
                         <strong>{potionsUsed}</strong>
-                        <small>uso automático</small>
-                      </article>
+                        <small>usadas automaticamente</small>
+                      </div>
                     </div>
                   </article>
                 </div>

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { removeAuthToken } from '../../../services/api/authToken';
 import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
+import { normalizeClassName } from '../../characters/api/characters.api';
 import { getAvatarImage } from '../../characters/constants/avatar-options';
 import {
   getCharacterClass,
@@ -745,7 +746,9 @@ function DashboardLayoutContent({
     });
   }, [character, realtimeState]);
 
-  const classKey = getDashboardCharacterClassKey(heroCharacter);
+  const classKey = normalizeClassName(
+    getDashboardCharacterClassKey(heroCharacter),
+  );
   const classData = getCharacterClass(classKey);
 
   const avatarImage =

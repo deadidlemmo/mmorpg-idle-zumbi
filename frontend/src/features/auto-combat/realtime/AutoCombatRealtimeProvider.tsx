@@ -315,25 +315,29 @@ export function AutoCombatRealtimeProvider({
           });
         }
 
-        console.debug('[auto-combat:recent-events]', {
-          reason,
-          hydrateBattleLog,
-          active: response.active,
-          hasActiveAutoCombat: response.hasActiveAutoCombat,
-          sessionId,
-          sessionStatus: response.session?.status ?? null,
-          eventsCount: events.length,
-          latestSequence: response.latestSequence,
-          firstSequence: events[0]?.sequence ?? null,
-          lastSequence: events[events.length - 1]?.sequence ?? null,
-          lastEventType: events[events.length - 1]?.type ?? null,
-        });
+        if (import.meta.env.DEV) {
+          console.debug('[auto-combat:recent-events]', {
+            reason,
+            hydrateBattleLog,
+            active: response.active,
+            hasActiveAutoCombat: response.hasActiveAutoCombat,
+            sessionId,
+            sessionStatus: response.session?.status ?? null,
+            eventsCount: events.length,
+            latestSequence: response.latestSequence,
+            firstSequence: events[0]?.sequence ?? null,
+            lastSequence: events[events.length - 1]?.sequence ?? null,
+            lastEventType: events[events.length - 1]?.type ?? null,
+          });
+        }
       } catch (error) {
-        console.debug('[auto-combat:recent-events:error]', {
-          reason,
-          hydrateBattleLog,
-          error,
-        });
+        if (import.meta.env.DEV) {
+          console.debug('[auto-combat:recent-events:error]', {
+            reason,
+            hydrateBattleLog,
+            error,
+          });
+        }
       }
     },
     [normalizedCharacterId],
@@ -1025,6 +1029,7 @@ export function AutoCombatRealtimeProvider({
        * useAutoCombatRealtimeState().displayTotals
        */
       totals: state.totals,
+      displayTotals: state.displayTotals,
 
       visual: state.visual,
       location: state.location,

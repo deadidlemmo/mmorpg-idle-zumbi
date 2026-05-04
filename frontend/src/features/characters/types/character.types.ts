@@ -5,6 +5,12 @@ import medicoEmblem from '../../../assets/images/classes/class-medico.png';
 
 export type CharacterClassId = 'lutador' | 'atirador' | 'assassino' | 'medico';
 
+/**
+ * Compatibilidade com arquivos antigos que ainda importam CharacterClassName.
+ * O projeto hoje usa CharacterClassId como tipo principal.
+ */
+export type CharacterClassName = CharacterClassId;
+
 export interface CharacterClassOption {
   id: CharacterClassId;
   label: string;
@@ -39,7 +45,12 @@ export interface CharacterSummary {
 export interface CreateCharacterPayload {
   name: string;
   className: string;
-  avatarKey: string;
+
+  /**
+   * Opcional para manter compatibilidade com formulários antigos.
+   * Se não vier, o characters.api.ts define um avatar inicial padrão pela classe.
+   */
+  avatarKey?: string | null;
 }
 
 export interface RawCharacterResponse {
