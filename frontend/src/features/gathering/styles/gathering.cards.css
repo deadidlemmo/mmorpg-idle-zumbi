@@ -1,0 +1,285 @@
+/* =========================================================
+   CARDS GERAIS
+   ========================================================= */
+
+.gathering-card {
+  --equipment-rarity-rgb: 232, 184, 78;
+
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent),
+    rgba(7, 12, 11, 0.62);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+  border-radius: 1.05rem;
+  box-shadow:
+    0 12px 26px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.032);
+}
+
+.gathering-card.equipment-rarity-common,
+.gathering-card.equipment-rarity-uncommon,
+.gathering-card.equipment-rarity-rare,
+.gathering-card.equipment-rarity-epic,
+.gathering-card.equipment-rarity-legendary {
+  border-color: rgba(var(--equipment-rarity-rgb), 0.16);
+  box-shadow:
+    0 12px 26px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.032),
+    0 0 18px rgba(var(--equipment-rarity-rgb), 0.04);
+}
+
+.gathering-card--compact {
+  padding: 0.92rem;
+  border-radius: 1rem;
+}
+
+.gathering-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(var(--equipment-rarity-rgb), 0.055), transparent 12rem),
+    radial-gradient(circle at 100% 100%, rgba(110, 159, 67, 0.045), transparent 11rem);
+  opacity: 0.88;
+}
+
+.gathering-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.gathering-card--active {
+  border-color: rgba(110, 159, 67, 0.24);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(110, 159, 67, 0.13), transparent 13rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), transparent),
+    rgba(8, 16, 12, 0.76);
+  box-shadow:
+    0 15px 32px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 28px rgba(110, 159, 67, 0.06);
+}
+
+.gathering-card--danger,
+.gathering-card--muted {
+  border-color: rgba(231, 227, 216, 0.07);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    rgba(6, 11, 10, 0.54);
+}
+
+.gathering-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.72rem;
+}
+
+.gathering-card__title-group {
+  min-width: 0;
+}
+
+.gathering-card__eyebrow {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: color-mix(in srgb, var(--action-primary-hover) 78%, #fff2c2);
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.gathering-card.equipment-rarity-common .gathering-card__eyebrow,
+.gathering-card.equipment-rarity-uncommon .gathering-card__eyebrow,
+.gathering-card.equipment-rarity-rare .gathering-card__eyebrow,
+.gathering-card.equipment-rarity-epic .gathering-card__eyebrow,
+.gathering-card.equipment-rarity-legendary .gathering-card__eyebrow {
+  color: color-mix(in srgb, rgb(var(--equipment-rarity-rgb)) 80%, #fff8e8);
+}
+
+.gathering-card h2,
+.gathering-card h3 {
+  margin: 0;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  line-height: 1.07;
+}
+
+.gathering-card h2 {
+  font-size: 1.08rem;
+}
+
+.gathering-card h3 {
+  font-size: 0.96rem;
+}
+
+.gathering-card__description {
+  margin: 0.32rem 0 0;
+  color: rgba(231, 227, 216, 0.64);
+  font-size: 0.8rem;
+  line-height: 1.38;
+}
+
+.gathering-card__badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0.18rem 0.55rem;
+  color: rgba(255, 248, 232, 0.84);
+  font-family: var(--font-title);
+  font-size: 0.61rem;
+  font-weight: 950;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(5, 9, 8, 0.52);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 999px;
+}
+
+.gathering-card__badge.is-live {
+  color: #edffe5;
+  background: rgba(110, 159, 67, 0.12);
+  border-color: rgba(110, 159, 67, 0.27);
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.gathering-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.58rem;
+  align-items: center;
+}
+
+.gathering-actions--footer {
+  margin-top: 0.86rem;
+}
+
+.gathering-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.5rem 0.92rem;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.055em;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.018)),
+    rgba(10, 15, 13, 0.96);
+  border: 1px solid rgba(232, 184, 78, 0.26);
+  border-radius: 0.78rem;
+  box-shadow:
+    0 9px 17px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.065);
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.gathering-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(232, 184, 78, 0.44);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.022)),
+    rgba(13, 18, 16, 0.98);
+  box-shadow:
+    0 11px 20px rgba(0, 0, 0, 0.26),
+    0 0 16px rgba(232, 184, 78, 0.075),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.gathering-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+}
+
+.gathering-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.gathering-button--primary {
+  color: #11140e;
+  background:
+    linear-gradient(180deg, #f2cf77, #dca43d),
+    #dca43d;
+  border-color: rgba(255, 222, 139, 0.4);
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.24),
+    0 0 16px rgba(232, 184, 78, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.gathering-button--primary:hover:not(:disabled) {
+  background:
+    linear-gradient(180deg, #ffe08e, #e5af44),
+    #e5af44;
+  border-color: rgba(255, 232, 167, 0.52);
+}
+
+.gathering-button--success {
+  color: #f6ffe6;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(65, 112, 55, 0.74);
+  border-color: rgba(110, 159, 67, 0.38);
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.22),
+    0 0 16px rgba(110, 159, 67, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.gathering-button--success:hover:not(:disabled) {
+  border-color: rgba(143, 197, 91, 0.48);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent),
+    rgba(76, 128, 62, 0.82);
+}
+
+.gathering-button--danger {
+  color: #ffe5df;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.078), transparent),
+    rgba(112, 38, 38, 0.76);
+  border-color: rgba(194, 74, 74, 0.38);
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.22),
+    0 0 16px rgba(194, 74, 74, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.gathering-button--danger:hover:not(:disabled) {
+  border-color: rgba(225, 92, 82, 0.48);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent),
+    rgba(132, 46, 46, 0.84);
+}
+
+.gathering-button--ghost {
+  color: rgba(255, 248, 232, 0.84);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgba(5, 9, 8, 0.46);
+  border-color: rgba(231, 227, 216, 0.1);
+}

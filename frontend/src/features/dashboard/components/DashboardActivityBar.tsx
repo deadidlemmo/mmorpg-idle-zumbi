@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import type {
   AutoCombatRealtimeEvent,
   AutoCombatStatusResponse,
 } from '../../auto-combat/types/auto-combat.types';
+import { getMobPortraitImage } from '../../auto-combat/utils/mobAssets';
+import type { GatheringRealtimeState } from '../../gathering/realtime/GatheringRealtimeProvider';
+import { useGatheringRealtimeState } from '../../gathering/realtime/useGatheringRealtime';
 import { getCharacterOverview } from '../api/dashboard.api';
 import type {
   CharacterOverviewResponse,
@@ -28,6 +31,21 @@ type ActivityBarItem = {
   primaryMetric: string;
   secondaryMetric: string;
   href: string;
+
+  imageUrl?: string | null;
+  imageAlt?: string | null;
+
+  characterName?: string | null;
+  characterLevelLabel?: string | null;
+  characterHpLabel?: string | null;
+  characterHpPercent?: number | null;
+  characterXpLabel?: string | null;
+  characterXpPercent?: number | null;
+
+  monsterMetaLabel?: string | null;
+  combatMetric?: string | null;
+  killsMetric?: string | null;
+  xpMetric?: string | null;
 };
 
 type MobHpSnapshot = {
@@ -58,18 +76,9 @@ type AutoCombatStatusCurrentMobLike = {
   hpPercent?: number | null;
 };
 
-type AutoCombatStatusWithMobSnapshots = AutoCombatStatusResponse & {
-  currentMob?: AutoCombatStatusCurrentMobLike | null;
-  mob?: AutoCombatStatusCurrentMobLike | null;
-  lastKnownMob?: AutoCombatStatusCurrentMobLike | null;
-  sessionSummary?: AutoCombatStatusResponse['sessionSummary'] & {
-    currentMob?: AutoCombatStatusCurrentMobLike | null;
-    lastKnownMob?: AutoCombatStatusCurrentMobLike | null;
-  };
-};
-
 type AutoCombatSessionLike = {
   id?: string | null;
+  characterId?: string | null;
   status?: string | null;
 
   currentMobHp?: number | null;
@@ -119,7 +128,101 @@ type AutoCombatRealtimeCombatLike = {
   message?: string | null;
 };
 
+type AutoCombatRealtimeCharacterLike = {
+  id?: string | null;
+  name?: string | null;
+
+  level?: number | null;
+  xp?: number | null;
+  totalXp?: number | null;
+
+  currentHp?: number | null;
+  maxHp?: number | null;
+  hp?: number | null;
+  hpPercent?: number | null;
+
+  currentLevelXp?: number | null;
+  xpToNextLevel?: number | null;
+  nextLevelXp?: number | null;
+  xpProgressPercent?: number | null;
+
+  xpIntoCurrentLevel?: number | null;
+  xpNeededForNextLevel?: number | null;
+  currentLevelStartXp?: number | null;
+  nextLevelRequiredXp?: number | null;
+  isAtLevelCap?: boolean | null;
+
+  levelProgress?: {
+    currentLevelXp?: number | null;
+    xpToNextLevel?: number | null;
+    nextLevelXp?: number | null;
+    xpProgressPercent?: number | null;
+    progressPercent?: number | null;
+    xpIntoCurrentLevel?: number | null;
+    xpNeededForNextLevel?: number | null;
+    currentLevelStartXp?: number | null;
+    nextLevelRequiredXp?: number | null;
+    isAtLevelCap?: boolean | null;
+    totalXp?: number | null;
+    xp?: number | null;
+  } | null;
+};
+
+type AutoCombatStatusLoose = AutoCombatStatusResponse & {
+  active?: boolean | null;
+  hasActiveAutoCombat?: boolean | null;
+  message?: string | null;
+
+  currentMob?: AutoCombatStatusCurrentMobLike | null;
+  mob?: AutoCombatStatusCurrentMobLike | null;
+
+  character?: AutoCombatRealtimeCharacterLike | null;
+
+  session?: AutoCombatSessionLike | null;
+  activeSession?: AutoCombatSessionLike | null;
+  autoCombatSession?: AutoCombatSessionLike | null;
+  lastSession?: AutoCombatSessionLike | null;
+
+  subMap?: {
+    name?: string | null;
+    map?: {
+      name?: string | null;
+    } | null;
+    mapName?: string | null;
+  } | null;
+
+  sessionSummary?: {
+    hp?: {
+      current?: number | null;
+      max?: number | null;
+    } | null;
+    mobs?: {
+      totalKills?: number | null;
+    } | null;
+    combat?: {
+      totalCombats?: number | null;
+      totalRounds?: number | null;
+    } | null;
+    progression?: {
+      totalXpGained?: number | null;
+    } | null;
+    loot?: {
+      totalQuantity?: number | null;
+    } | null;
+    potions?: {
+      used?: number | null;
+    } | null;
+  };
+
+  rewards?: {
+    mobs?: Array<{ kills?: number | null }> | null;
+    loots?: Array<{ quantity?: number | null }> | null;
+  } | null;
+};
+
 type AutoCombatRealtimeStateLoose = {
+  characterId?: string | null;
+
   status?: AutoCombatStatusResponse | null;
   autoCombatStatus?: AutoCombatStatusResponse | null;
 
@@ -127,18 +230,12 @@ type AutoCombatRealtimeStateLoose = {
   session?: AutoCombatSessionLike | null;
 
   mob?: AutoCombatStatusCurrentMobLike | null;
+  character?: AutoCombatRealtimeCharacterLike | null;
   visual?: AutoCombatRealtimeVisualLike | null;
 
   combat?: AutoCombatRealtimeCombatLike | null;
   realtimeCombat?: AutoCombatRealtimeCombatLike | null;
 
-  /**
-   * totals = estado real/canônico vindo do backend.
-   * displayTotals = estado visual liberado para o jogador.
-   *
-   * A ActivityBar deve preferir displayTotals para não mostrar abate/XP antes
-   * da animação/log terminar.
-   */
   displayTotals?: AutoCombatTotalsSnapshot | null;
   sessionTotals?: AutoCombatTotalsSnapshot | null;
   totals?: AutoCombatTotalsSnapshot | null;
@@ -164,7 +261,63 @@ type AutoCombatRealtimeStateLoose = {
   isJoined?: boolean;
 };
 
-const SYNCING_AUTO_COMBAT_TITLE = 'Sincronizando combate...';
+type GatheringMaterialLike = {
+  id?: string | null;
+  name?: string | null;
+  tier?: number | null;
+  materialOrigin?: string | null;
+  requiredGatheringLevel?: number | null;
+  gatheringXpPerUnit?: number | null;
+  baseGatheringRatePerHour?: number | null;
+  icon?: string | null;
+  iconUrl?: string | null;
+  imageUrl?: string | null;
+  iconPath?: string | null;
+};
+
+type GatheringMapLike = {
+  id?: string | null;
+  name?: string | null;
+  tier?: number | null;
+};
+
+type GatheringProductionPreviewLike = {
+  label?: string | null;
+
+  elapsedSeconds?: number | null;
+  elapsedMinutes?: number | null;
+  elapsedHours?: number | null;
+
+  ratePerHour?: number | null;
+  baseRatePerHour?: number | null;
+  defaultRatePerHour?: number | null;
+
+  estimatedQuantityToCollect?: number | null;
+  readyQuantity?: number | null;
+
+  currentProgressRemainder?: number | null;
+  estimatedNewProgressRemainder?: number | null;
+  progressRemainder?: number | null;
+
+  nextUnitProgressPercent?: number | null;
+  progressPercent?: number | null;
+
+  material?: GatheringMaterialLike | null;
+  targetMaterial?: GatheringMaterialLike | null;
+  map?: GatheringMapLike | null;
+};
+
+type DashboardGatheringSessionLoose = DashboardGatheringSessionViewModel & {
+  id?: string | null;
+  status?: string | null;
+  origin?: string | null;
+  startedAt?: string | null;
+  lastResolvedAt?: string | null;
+  progressRemainder?: number | null;
+  map?: GatheringMapLike | null;
+  targetMaterial?: GatheringMaterialLike | null;
+  productionPreview?: GatheringProductionPreviewLike | null;
+};
 
 function toSafeNumber(value: unknown, fallback = 0) {
   if (value === null || value === undefined || value === '') {
@@ -176,21 +329,15 @@ function toSafeNumber(value: unknown, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function getOptionalNumber(value: unknown) {
-  if (value === null || value === undefined || value === '') {
-    return undefined;
-  }
-
-  const parsed = Number(value);
-
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
 function getFirstValidNumber(...values: unknown[]) {
   for (const value of values) {
-    const parsed = getOptionalNumber(value);
+    if (value === null || value === undefined || value === '') {
+      continue;
+    }
 
-    if (parsed !== undefined) {
+    const parsed = Number(value);
+
+    if (Number.isFinite(parsed)) {
       return parsed;
     }
   }
@@ -202,6 +349,10 @@ function clampPercent(value: unknown) {
   const parsed = toSafeNumber(value, 0);
 
   return Math.max(0, Math.min(100, parsed));
+}
+
+function floorPercent(value: unknown) {
+  return Math.floor(clampPercent(value));
 }
 
 function calculateHpPercent(currentHp?: number | null, maxHp?: number | null) {
@@ -247,43 +398,6 @@ function isMobDefeatedEvent(event?: AutoCombatRealtimeEvent | null) {
   return normalizeRealtimeEventType(event) === 'MOB_DEFEATED';
 }
 
-function isSyncingAutoCombatTitle(title: string) {
-  return title === SYNCING_AUTO_COMBAT_TITLE || title === 'Combate automático';
-}
-
-function getReadableMobName(...names: Array<string | null | undefined>) {
-  for (const name of names) {
-    const normalizedName = String(name ?? '').trim();
-
-    if (
-      normalizedName &&
-      normalizedName !== 'Combate automático' &&
-      normalizedName !== SYNCING_AUTO_COMBAT_TITLE
-    ) {
-      return normalizedName;
-    }
-  }
-
-  return '';
-}
-
-function getStatusCurrentMobSnapshot(
-  status: AutoCombatStatusResponse | null,
-): AutoCombatStatusCurrentMobLike | null {
-  if (!status) return null;
-
-  const looseStatus = status as AutoCombatStatusWithMobSnapshots;
-
-  return (
-    looseStatus.currentMob ??
-    looseStatus.mob ??
-    looseStatus.sessionSummary?.currentMob ??
-    looseStatus.lastKnownMob ??
-    looseStatus.sessionSummary?.lastKnownMob ??
-    null
-  );
-}
-
 function formatOrigin(origin?: string | null) {
   if (!origin) return 'Expedição';
 
@@ -301,6 +415,28 @@ function formatOrigin(origin?: string | null) {
   return labels[origin] ?? origin;
 }
 
+function getGatheringOriginSlug(origin?: string | null) {
+  const normalizedOrigin = normalizeStatus(origin);
+
+  const slugs: Record<string, string> = {
+    DESMANCHE: 'desmanche',
+    COLETA: 'coleta',
+    PATRULHA: 'patrulha',
+    ARSENAL: 'arsenal',
+    TECNOVARREDURA: 'tecnovarredura',
+    CONTENCAO: 'contencao',
+    CONTENÇÃO: 'contencao',
+  };
+
+  return slugs[normalizedOrigin] ?? 'gathering';
+}
+
+function formatCurrentCombatLabel(value: unknown) {
+  const amount = Math.max(1, Math.floor(toSafeNumber(value, 1)));
+
+  return `Combate ${amount}`;
+}
+
 function formatKillCount(value: unknown) {
   const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
 
@@ -311,6 +447,106 @@ function formatXp(value: unknown) {
   const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
 
   return `${amount} XP`;
+}
+
+function formatCompactNumber(value: unknown) {
+  const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
+
+  if (amount >= 1000000) {
+    return `${(amount / 1000000).toFixed(amount >= 10000000 ? 0 : 1)}M`;
+  }
+
+  if (amount >= 1000) {
+    return `${(amount / 1000).toFixed(amount >= 10000 ? 0 : 1)}k`;
+  }
+
+  return String(amount);
+}
+
+function formatPercentLabel(value: unknown) {
+  return `${Math.round(clampPercent(value))}%`;
+}
+
+function formatGatheringReadyQuantity(value: unknown) {
+  const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
+
+  if (amount === 1) {
+    return '1 pronto';
+  }
+
+  return `${amount} prontos`;
+}
+
+function formatGatheringRate(value: unknown) {
+  const rate = getFirstValidNumber(value);
+
+  if (rate === undefined || rate <= 0) {
+    return '—/h';
+  }
+
+  const roundedRate = Number.isInteger(rate) ? rate : Number(rate.toFixed(1));
+
+  return `${roundedRate}/h`;
+}
+
+function formatGatheringSecondaryMetric(params: {
+  readyQuantity: number;
+  ratePerHour?: number | null;
+}) {
+  return `${formatGatheringReadyQuantity(params.readyQuantity)} • ${formatGatheringRate(
+    params.ratePerHour,
+  )}`;
+}
+
+function getParsedDateMs(value?: string | null) {
+  if (!value) return null;
+
+  const parsed = Date.parse(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function clampFraction(value: unknown) {
+  const parsed = toSafeNumber(value, 0);
+
+  return Math.max(0, Math.min(0.9999, parsed));
+}
+
+function getActivityMobPortraitUrl(mobName?: string | null) {
+  if (!mobName || mobName === 'Combate automático') {
+    return null;
+  }
+
+  return getMobPortraitImage(mobName) ?? null;
+}
+
+function getGatheringMaterialIconUrl(material?: GatheringMaterialLike | null) {
+  if (!material) return null;
+
+  const possibleIcon =
+    material.iconUrl ?? material.imageUrl ?? material.iconPath ?? material.icon;
+
+  if (typeof possibleIcon !== 'string') {
+    return null;
+  }
+
+  const trimmedIcon = possibleIcon.trim();
+
+  return trimmedIcon.length > 0 ? trimmedIcon : null;
+}
+
+function formatCharacterHpLabel(currentHp?: number | null, maxHp?: number | null) {
+  const safeCurrentHp = getFirstValidNumber(currentHp);
+  const safeMaxHp = getFirstValidNumber(maxHp);
+
+  if (safeCurrentHp === undefined || safeMaxHp === undefined || safeMaxHp <= 0) {
+    return 'HP —';
+  }
+
+  return `HP ${Math.max(0, Math.floor(safeCurrentHp))}/${Math.max(
+    1,
+    Math.floor(safeMaxHp),
+  )}`;
 }
 
 function formatHpLabel(currentHp?: number | null, maxHp?: number | null) {
@@ -327,14 +563,46 @@ function formatHpLabel(currentHp?: number | null, maxHp?: number | null) {
   )}`;
 }
 
+function getLooseStatus(status: AutoCombatStatusResponse | null) {
+  return status as AutoCombatStatusLoose | null;
+}
+
+function getStatusCharacter(status: AutoCombatStatusResponse | null) {
+  return getLooseStatus(status)?.character ?? null;
+}
+
+function getOverviewCharacter(overview: CharacterOverviewResponse | null) {
+  return (overview?.character ?? null) as AutoCombatRealtimeCharacterLike | null;
+}
+
 function getAutoCombatSessionFromStatus(status: AutoCombatStatusResponse | null) {
+  const looseStatus = getLooseStatus(status);
+
   return (
-    status?.session ??
-    status?.activeSession ??
-    status?.autoCombatSession ??
-    status?.lastSession ??
+    looseStatus?.session ??
+    looseStatus?.activeSession ??
+    looseStatus?.autoCombatSession ??
+    looseStatus?.lastSession ??
     null
   );
+}
+
+function getStatusCurrentMob(status: AutoCombatStatusResponse | null) {
+  const looseStatus = getLooseStatus(status);
+
+  return looseStatus?.currentMob ?? looseStatus?.mob ?? null;
+}
+
+function getStatusLocationLabel(status: AutoCombatStatusResponse | null) {
+  const subMap = getLooseStatus(status)?.subMap ?? null;
+  const subMapName = subMap?.name;
+  const mapName = subMap?.map?.name ?? subMap?.mapName;
+
+  if (mapName && subMapName) {
+    return `${mapName} • ${subMapName}`;
+  }
+
+  return subMapName ?? mapName ?? 'Combate em andamento';
 }
 
 function isSameSessionScope(
@@ -386,173 +654,177 @@ function shouldUseRealtimeEvent(
   return !event.characterId || event.characterId === characterId;
 }
 
-function hasPendingVisualEvents(realtimeState: AutoCombatRealtimeStateLoose) {
-  return Boolean(
-    realtimeState.activeEvent ||
-      realtimeState.displayedEvent ||
-      realtimeState.displayedAutoCombatEvent ||
-      realtimeState.currentEvent ||
-      (realtimeState.eventQueue?.length ?? 0) > 0 ||
-      (realtimeState.queue?.length ?? 0) > 0 ||
-      (realtimeState.realtimeEventQueue?.length ?? 0) > 0,
-  );
-}
-
-function hasStartedVisualTimeline(realtimeState: AutoCombatRealtimeStateLoose) {
-  return Boolean(
-    realtimeState.activeEvent ||
-      realtimeState.displayedEvent ||
-      realtimeState.displayedAutoCombatEvent ||
-      realtimeState.currentEvent ||
-      realtimeState.lastProcessedEvent ||
-      realtimeState.lastEvent ||
-      (realtimeState.battleLogEvents?.length ?? 0) > 0 ||
-      (realtimeState.eventQueue?.length ?? 0) > 0 ||
-      (realtimeState.queue?.length ?? 0) > 0 ||
-      (realtimeState.realtimeEventQueue?.length ?? 0) > 0,
-  );
-}
-
-function hasReleasedTotals(totals?: AutoCombatTotalsSnapshot | null) {
-  if (!totals) return false;
-
-  return (
-    toSafeNumber(totals.totalKills, 0) > 0 ||
-    toSafeNumber(totals.totalXpGained, 0) > 0 ||
-    toSafeNumber(totals.totalLoot, 0) > 0 ||
-    toSafeNumber(totals.potionsUsed, 0) > 0 ||
-    toSafeNumber(totals.totalCombats, 0) > 0 ||
-    toSafeNumber(totals.totalRounds, 0) > 0
-  );
-}
-
-function normalizeTotalsForSession(
-  totals: AutoCombatTotalsSnapshot | null,
-  session?: AutoCombatSessionLike | null,
-): AutoCombatTotalsSnapshot | null {
-  if (!totals && !session) return null;
-
-  const sessionId = session?.id ?? totals?.sessionId ?? null;
-  const resolvedCombats = getOptionalNumber(session?.totalCombatsResolved);
-
-  /**
-   * Blindagem:
-   * Se o backend ainda diz 0 combates resolvidos, mas o reducer já liberou
-   * displayTotals por evento visual, a ActivityBar deve respeitar o displayTotals.
-   */
-  if (
-    resolvedCombats !== undefined &&
-    resolvedCombats <= 0 &&
-    !hasReleasedTotals(totals)
-  ) {
+function buildCharacterXpSnapshot(character: AutoCombatRealtimeCharacterLike | null) {
+  if (!character) {
     return {
-      sessionId,
-      currentCombatIndex: 1,
-      totalCombats: 0,
-      totalRounds: 0,
-      totalKills: 0,
-      totalXpGained: 0,
-      totalLoot: 0,
-      potionsUsed: 0,
+      label: 'EXP —',
+      percent: 0,
     };
   }
 
-  const totalCombats = Math.max(
-    0,
-    Math.floor(
-      getFirstValidNumber(
-        totals?.totalCombats,
-        totals?.totalKills,
-        session?.totalCombatsResolved,
-        session?.totalCombats,
-        0,
-      ) ?? 0,
-    ),
+  const levelProgress = character.levelProgress ?? null;
+
+  const currentLevelStartXp = getFirstValidNumber(
+    character.currentLevelStartXp,
+    levelProgress?.currentLevelStartXp,
   );
 
-  const totalKills = Math.max(
-    0,
-    Math.floor(
-      getFirstValidNumber(
-        totals?.totalKills,
-        totals?.totalCombats,
-        session?.totalCombatsResolved,
-        session?.totalKills,
-        totalCombats,
-        0,
-      ) ?? 0,
-    ),
+  const nextLevelRequiredXp = getFirstValidNumber(
+    character.nextLevelRequiredXp,
+    levelProgress?.nextLevelRequiredXp,
   );
 
-  const currentCombatIndex = Math.max(
-    1,
-    Math.floor(
-      getFirstValidNumber(
-        totals?.currentCombatIndex,
-        session?.currentCombatIndex,
-        totalKills + 1,
-        1,
-      ) ?? 1,
-    ),
+  const totalXp = getFirstValidNumber(
+    character.totalXp,
+    levelProgress?.totalXp,
+    levelProgress?.xp,
+    character.xp,
   );
+
+  const explicitCurrentXp = getFirstValidNumber(
+    character.currentLevelXp,
+    character.xpIntoCurrentLevel,
+    levelProgress?.currentLevelXp,
+    levelProgress?.xpIntoCurrentLevel,
+  );
+
+  const explicitNextXp = getFirstValidNumber(
+    character.xpToNextLevel,
+    character.nextLevelXp,
+    levelProgress?.xpToNextLevel,
+    levelProgress?.nextLevelXp,
+  );
+
+  const explicitPercent = getFirstValidNumber(
+    character.xpProgressPercent,
+    levelProgress?.xpProgressPercent,
+    levelProgress?.progressPercent,
+  );
+
+  const isAtLevelCap = Boolean(character.isAtLevelCap ?? levelProgress?.isAtLevelCap);
+
+  if (isAtLevelCap) {
+    return {
+      label: 'EXP máx.',
+      percent: 100,
+    };
+  }
+
+  if (
+    totalXp !== undefined &&
+    currentLevelStartXp !== undefined &&
+    nextLevelRequiredXp !== undefined &&
+    nextLevelRequiredXp > currentLevelStartXp
+  ) {
+    const currentXp = Math.max(0, Math.floor(totalXp - currentLevelStartXp));
+    const xpToNextLevel = Math.max(
+      1,
+      Math.floor(nextLevelRequiredXp - currentLevelStartXp),
+    );
+
+    return {
+      label: `EXP ${formatCompactNumber(currentXp)}/${formatCompactNumber(xpToNextLevel)}`,
+      percent: calculateHpPercent(currentXp, xpToNextLevel),
+    };
+  }
+
+  if (explicitCurrentXp !== undefined && explicitNextXp !== undefined && explicitNextXp > 0) {
+    return {
+      label: `EXP ${formatCompactNumber(explicitCurrentXp)}/${formatCompactNumber(explicitNextXp)}`,
+      percent: calculateHpPercent(explicitCurrentXp, explicitNextXp),
+    };
+  }
+
+  if (explicitPercent !== undefined) {
+    return {
+      label: totalXp !== undefined ? `EXP ${formatCompactNumber(totalXp)}` : 'EXP',
+      percent: clampPercent(explicitPercent),
+    };
+  }
+
+  if (totalXp !== undefined) {
+    return {
+      label: `EXP ${formatCompactNumber(totalXp)}`,
+      percent: 0,
+    };
+  }
 
   return {
-    sessionId,
-    currentCombatIndex,
-    totalCombats,
-    totalRounds: Math.max(
-      0,
-      Math.floor(
-        getFirstValidNumber(
-          totals?.totalRounds,
-          session?.totalRoundsResolved,
-          session?.totalRounds,
-          0,
-        ) ?? 0,
-      ),
-    ),
-    totalKills,
-    totalXpGained: Math.max(
-      0,
-      Math.floor(
-        getFirstValidNumber(totals?.totalXpGained, session?.totalXpGained, 0) ??
-          0,
-      ),
-    ),
-    totalLoot: Math.max(
-      0,
-      Math.floor(
-        getFirstValidNumber(totals?.totalLoot, session?.totalLoot, 0) ?? 0,
-      ),
-    ),
-    potionsUsed: Math.max(
-      0,
-      Math.floor(
-        getFirstValidNumber(
-          totals?.potionsUsed,
-          session?.totalPotionsUsed,
-          session?.potionsUsed,
-          0,
-        ) ?? 0,
-      ),
-    ),
+    label: 'EXP —',
+    percent: 0,
   };
 }
 
-function buildZeroStartTotals(session?: AutoCombatSessionLike | null) {
-  return normalizeTotalsForSession(
-    {
-      sessionId: session?.id ?? null,
-      currentCombatIndex: 1,
-      totalCombats: 0,
-      totalRounds: 0,
-      totalKills: 0,
-      totalXpGained: 0,
-      totalLoot: 0,
-      potionsUsed: 0,
-    },
-    session,
+function buildCharacterActivitySnapshot(params: {
+  realtimeState: AutoCombatRealtimeStateLoose;
+  status: AutoCombatStatusResponse | null;
+  overview: CharacterOverviewResponse | null;
+}) {
+  const { realtimeState, status, overview } = params;
+
+  const looseStatus = getLooseStatus(status);
+  const realtimeCharacter = realtimeState.character ?? null;
+  const statusCharacter = getStatusCharacter(status);
+  const overviewCharacter = getOverviewCharacter(overview);
+  const statusHp = looseStatus?.sessionSummary?.hp ?? null;
+
+  const name =
+    realtimeCharacter?.name ??
+    statusCharacter?.name ??
+    overviewCharacter?.name ??
+    'Personagem';
+
+  const level = getFirstValidNumber(
+    realtimeCharacter?.level,
+    statusCharacter?.level,
+    overviewCharacter?.level,
+    1,
   );
+
+  const currentHp = getFirstValidNumber(
+    realtimeCharacter?.currentHp,
+    statusCharacter?.currentHp,
+    statusHp?.current,
+    overviewCharacter?.currentHp,
+    overviewCharacter?.hp,
+  );
+
+  const maxHp = getFirstValidNumber(
+    realtimeCharacter?.maxHp,
+    statusCharacter?.maxHp,
+    statusHp?.max,
+    overviewCharacter?.maxHp,
+  );
+
+  const hpPercent =
+    currentHp !== undefined && maxHp !== undefined && maxHp > 0
+      ? calculateHpPercent(currentHp, maxHp)
+      : clampPercent(
+          getFirstValidNumber(
+            realtimeCharacter?.hpPercent,
+            statusCharacter?.hpPercent,
+            overviewCharacter?.hpPercent,
+            0,
+          ),
+        );
+
+  const xpSource: AutoCombatRealtimeCharacterLike = {
+    ...(overviewCharacter ?? {}),
+    ...(statusCharacter ?? {}),
+    ...(realtimeCharacter ?? {}),
+  };
+
+  const xpSnapshot = buildCharacterXpSnapshot(xpSource);
+
+  return {
+    name,
+    levelLabel: `Nv. ${Math.max(1, Math.floor(level ?? 1))}`,
+    hpLabel: formatCharacterHpLabel(currentHp, maxHp),
+    hpPercent,
+    hpPercentLabel: formatPercentLabel(hpPercent),
+    xpLabel: xpSnapshot.label,
+    xpPercent: xpSnapshot.percent,
+  };
 }
 
 function buildMobHpSnapshot(params: {
@@ -633,6 +905,28 @@ function buildMobHpSnapshot(params: {
     percent: 100,
     hasHpData: false,
   };
+}
+
+function resolveCurrentCombatIndex(params: {
+  visualTotals?: AutoCombatTotalsSnapshot | null;
+  session?: AutoCombatSessionLike | null;
+  totalKills?: number | null;
+}) {
+  const { visualTotals, session, totalKills } = params;
+
+  const fallbackFromKills =
+    totalKills !== null && totalKills !== undefined
+      ? Math.max(1, totalKills + 1)
+      : undefined;
+
+  const currentCombatIndex = getFirstValidNumber(
+    visualTotals?.currentCombatIndex,
+    fallbackFromKills,
+    session?.currentCombatIndex,
+    1,
+  );
+
+  return Math.max(1, Math.floor(currentCombatIndex ?? 1));
 }
 
 function getRealtimeStatus(state: AutoCombatRealtimeStateLoose) {
@@ -728,30 +1022,24 @@ function buildTotalsFromStatusFallback(params: {
   session: AutoCombatSessionLike | null;
 }): AutoCombatTotalsSnapshot | null {
   const { status, session } = params;
+  const looseStatus = getLooseStatus(status);
 
-  if (!status && !session) {
+  if (!looseStatus && !session) {
     return null;
   }
 
-  const sessionId = session?.id ?? null;
-  const resolvedCombats = getOptionalNumber(session?.totalCombatsResolved);
-
-  if (resolvedCombats !== undefined && resolvedCombats <= 0) {
-    return buildZeroStartTotals(session);
-  }
-
-  const rewardsKillsTotal = status?.rewards?.mobs?.reduce((total, mob) => {
+  const rewardsKillsTotal = looseStatus?.rewards?.mobs?.reduce((total, mob) => {
     return total + toSafeNumber(mob.kills, 0);
   }, 0);
 
-  const rewardsLootTotal = status?.rewards?.loots?.reduce((total, loot) => {
+  const rewardsLootTotal = looseStatus?.rewards?.loots?.reduce((total, loot) => {
     return total + toSafeNumber(loot.quantity, 0);
   }, 0);
 
   const totalKills =
     getFirstValidNumber(
+      looseStatus?.sessionSummary?.mobs?.totalKills,
       session?.totalCombatsResolved,
-      status?.sessionSummary?.mobs?.totalKills,
       session?.totalKills,
       rewardsKillsTotal,
       0,
@@ -759,8 +1047,8 @@ function buildTotalsFromStatusFallback(params: {
 
   const totalCombats =
     getFirstValidNumber(
+      looseStatus?.sessionSummary?.combat?.totalCombats,
       session?.totalCombatsResolved,
-      status?.sessionSummary?.combat?.totalCombats,
       session?.totalCombats,
       totalKills,
       0,
@@ -768,22 +1056,22 @@ function buildTotalsFromStatusFallback(params: {
 
   const totalRounds =
     getFirstValidNumber(
+      looseStatus?.sessionSummary?.combat?.totalRounds,
       session?.totalRoundsResolved,
-      status?.sessionSummary?.combat?.totalRounds,
       session?.totalRounds,
       0,
     ) ?? 0;
 
   const totalXpGained =
     getFirstValidNumber(
+      looseStatus?.sessionSummary?.progression?.totalXpGained,
       session?.totalXpGained,
-      status?.sessionSummary?.progression?.totalXpGained,
       0,
     ) ?? 0;
 
   const totalLoot =
     getFirstValidNumber(
-      status?.sessionSummary?.loot?.totalQuantity,
+      looseStatus?.sessionSummary?.loot?.totalQuantity,
       session?.totalLoot,
       rewardsLootTotal,
       0,
@@ -791,26 +1079,25 @@ function buildTotalsFromStatusFallback(params: {
 
   const potionsUsed =
     getFirstValidNumber(
+      looseStatus?.sessionSummary?.potions?.used,
       session?.totalPotionsUsed,
-      status?.sessionSummary?.potions?.used,
       session?.potionsUsed,
       0,
     ) ?? 0;
 
-  return normalizeTotalsForSession(
-    {
-      sessionId,
-      currentCombatIndex:
-        getFirstValidNumber(session?.currentCombatIndex, totalKills + 1, 1) ?? 1,
-      totalCombats,
-      totalRounds,
-      totalKills,
-      totalXpGained,
-      totalLoot,
-      potionsUsed,
-    },
-    session,
-  );
+  const currentCombatIndex =
+    getFirstValidNumber(session?.currentCombatIndex, totalKills + 1, 1) ?? 1;
+
+  return {
+    sessionId: session?.id ?? null,
+    currentCombatIndex: Math.max(1, Math.floor(currentCombatIndex)),
+    totalCombats: Math.max(0, Math.floor(totalCombats)),
+    totalRounds: Math.max(0, Math.floor(totalRounds)),
+    totalKills: Math.max(0, Math.floor(totalKills)),
+    totalXpGained: Math.max(0, Math.floor(totalXpGained)),
+    totalLoot: Math.max(0, Math.floor(totalLoot)),
+    potionsUsed: Math.max(0, Math.floor(potionsUsed)),
+  };
 }
 
 function getVisualTotalsForRealtime(params: {
@@ -821,48 +1108,22 @@ function getVisualTotalsForRealtime(params: {
   const { realtimeState, status, session } = params;
   const sessionId = session?.id ?? null;
 
-  const displayTotals = normalizeTotalsForSession(
-    filterTotalsBySession(realtimeState.displayTotals ?? null, sessionId),
-    session,
+  const displayTotals = filterTotalsBySession(
+    realtimeState.displayTotals ?? null,
+    sessionId,
   );
 
   if (displayTotals) {
     return displayTotals;
   }
 
-  /**
-   * Se a timeline visual já começou, mas ainda não houve um evento liberador
-   * de totais, mantemos 0 visualmente.
-   *
-   * Depois que o reducer liberar displayTotals via MOB_DEFEATED/POTION_USED,
-   * a ActivityBar passa a mostrar os números imediatamente.
-   */
-  if (
-    hasPendingVisualEvents(realtimeState) ||
-    hasStartedVisualTimeline(realtimeState)
-  ) {
-    return buildZeroStartTotals(session);
-  }
-
-  const legacyVisualTotals = normalizeTotalsForSession(
-    filterTotalsBySession(
-      realtimeState.sessionTotals ?? realtimeState.realtimeSessionTotals ?? null,
-      sessionId,
-    ),
-    session,
+  const legacyVisualTotals = filterTotalsBySession(
+    realtimeState.sessionTotals ?? realtimeState.realtimeSessionTotals ?? null,
+    sessionId,
   );
 
   if (legacyVisualTotals) {
     return legacyVisualTotals;
-  }
-
-  const canonicalRealtimeTotals = normalizeTotalsForSession(
-    filterTotalsBySession(realtimeState.totals ?? null, sessionId),
-    session,
-  );
-
-  if (canonicalRealtimeTotals) {
-    return canonicalRealtimeTotals;
   }
 
   return buildTotalsFromStatusFallback({ status, session });
@@ -888,12 +1149,6 @@ function buildAutoCombatTotalsFromOverview(
         } | null;
       } | null;
     };
-
-  const resolvedCombats = getOptionalNumber(looseSession.totalCombatsResolved);
-
-  if (resolvedCombats !== undefined && resolvedCombats <= 0) {
-    return buildZeroStartTotals(looseSession);
-  }
 
   const totalKills =
     getFirstValidNumber(
@@ -936,33 +1191,35 @@ function buildAutoCombatTotalsFromOverview(
       0,
     ) ?? 0;
 
-  return normalizeTotalsForSession(
-    {
-      sessionId: looseSession.id ?? null,
-      currentCombatIndex:
-        getFirstValidNumber(
-          looseSession.currentCombatIndex,
-          Math.max(0, Math.floor(totalKills)) + 1,
-          1,
-        ) ?? 1,
-      totalCombats,
-      totalRounds,
+  const totals: AutoCombatTotalsSnapshot = {
+    sessionId: looseSession.id ?? null,
+    totalCombats: Math.max(0, Math.floor(totalCombats)),
+    totalRounds: Math.max(0, Math.floor(totalRounds)),
+    totalKills: Math.max(0, Math.floor(totalKills)),
+    totalXpGained: Math.max(0, Math.floor(totalXpGained)),
+    totalLoot: Math.max(0, Math.floor(totalLoot)),
+    potionsUsed: Math.max(0, Math.floor(potionsUsed)),
+  };
+
+  return {
+    ...totals,
+    currentCombatIndex: resolveCurrentCombatIndex({
+      visualTotals: totals,
+      session: looseSession,
       totalKills,
-      totalXpGained,
-      totalLoot,
-      potionsUsed,
-    },
-    looseSession,
-  );
+    }),
+  };
 }
 
 function buildAutoCombatItemFromRealtime(params: {
   characterId: string;
+  overview: CharacterOverviewResponse | null;
   realtimeState: AutoCombatRealtimeStateLoose;
 }): ActivityBarItem | null {
-  const { characterId, realtimeState } = params;
+  const { characterId, overview, realtimeState } = params;
 
   const status = getRealtimeStatus(realtimeState);
+  const looseStatus = getLooseStatus(status);
   const session = getRealtimeSession(realtimeState, status);
 
   if (!session) {
@@ -978,8 +1235,8 @@ function buildAutoCombatItemFromRealtime(params: {
       (Boolean(realtimeState.isActive) ||
         Boolean(realtimeState.hasActiveAutoCombat) ||
         Boolean(realtimeState.hasActiveSession) ||
-        Boolean(status?.active) ||
-        Boolean(status?.hasActiveAutoCombat)));
+        Boolean(looseStatus?.active) ||
+        Boolean(looseStatus?.hasActiveAutoCombat)));
 
   if (!hasActiveAutoCombat || sessionIsTerminal) {
     return null;
@@ -1011,18 +1268,9 @@ function buildAutoCombatItemFromRealtime(params: {
   );
 
   const statusCurrentMob =
-    getStatusCurrentMobSnapshot(status) ??
-    realtimeCombat?.currentMob ??
-    realtimeState.mob ??
-    null;
+    getStatusCurrentMob(status) ?? realtimeCombat?.currentMob ?? realtimeState.mob ?? null;
 
-  const subMapName = status?.subMap?.name;
-  const mapName = status?.subMap?.map?.name ?? status?.subMap?.mapName;
-
-  const locationLabel =
-    mapName && subMapName
-      ? `${mapName} • ${subMapName}`
-      : subMapName ?? mapName ?? 'Combate em andamento';
+  const locationLabel = getStatusLocationLabel(status);
 
   const mobHp = buildMobHpSnapshot({
     displayedEvent,
@@ -1032,29 +1280,32 @@ function buildAutoCombatItemFromRealtime(params: {
   });
 
   const mobName =
-    getReadableMobName(
-      displayedEvent?.mobName,
-      realtimeCombat?.mobName,
-      statusCurrentMob?.name,
-      realtimeState.mob?.name,
-    ) || SYNCING_AUTO_COMBAT_TITLE;
+    displayedEvent?.mobName ??
+    realtimeCombat?.mobName ??
+    statusCurrentMob?.name ??
+    'Combate automático';
 
-  const totalKills = Math.max(
-    0,
-    Math.floor(toSafeNumber(visualTotals?.totalKills, 0)),
-  );
+  const totalKills = visualTotals?.totalKills ?? 0;
+  const totalXpGained = visualTotals?.totalXpGained ?? 0;
 
-  const totalXpGained = Math.max(
-    0,
-    Math.floor(toSafeNumber(visualTotals?.totalXpGained, 0)),
-  );
+  const currentCombatIndex = resolveCurrentCombatIndex({
+    visualTotals,
+    session,
+    totalKills,
+  });
 
   const description =
     displayedEvent?.message ??
     realtimeCombat?.lastMessage ??
     realtimeCombat?.message ??
-    status?.message ??
+    looseStatus?.message ??
     locationLabel;
+
+  const playerSnapshot = buildCharacterActivitySnapshot({
+    realtimeState,
+    status,
+    overview,
+  });
 
   return {
     key: `auto-combat-${session.id ?? 'active'}`,
@@ -1064,17 +1315,33 @@ function buildAutoCombatItemFromRealtime(params: {
     description,
     progressLabel: formatHpLabel(mobHp.currentHp, mobHp.maxHp),
     progressPercent: mobHp.percent,
-    primaryMetric: formatKillCount(totalKills),
-    secondaryMetric: formatXp(totalXpGained),
+    primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
+    secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
     href: `/dashboard/${characterId}/auto-combat`,
+
+    imageUrl: getActivityMobPortraitUrl(mobName),
+    imageAlt: mobName,
+
+    characterName: playerSnapshot.name,
+    characterLevelLabel: playerSnapshot.levelLabel,
+    characterHpLabel: playerSnapshot.hpLabel,
+    characterHpPercent: playerSnapshot.hpPercent,
+    characterXpLabel: playerSnapshot.xpLabel,
+    characterXpPercent: playerSnapshot.xpPercent,
+
+    monsterMetaLabel: locationLabel,
+    combatMetric: formatCurrentCombatLabel(currentCombatIndex),
+    killsMetric: formatKillCount(totalKills),
+    xpMetric: formatXp(totalXpGained),
   };
 }
 
 function buildAutoCombatItemFromOverview(params: {
   characterId: string;
+  overview: CharacterOverviewResponse | null;
   session: DashboardAutoCombatSessionViewModel;
 }): ActivityBarItem {
-  const { characterId } = params;
+  const { characterId, overview } = params;
 
   const session = params.session as DashboardAutoCombatSessionViewModel &
     AutoCombatSessionLike & {
@@ -1082,7 +1349,6 @@ function buildAutoCombatItemFromOverview(params: {
       status?: string | null;
 
       currentMob?: AutoCombatStatusCurrentMobLike | null;
-      lastKnownMob?: AutoCombatStatusCurrentMobLike | null;
 
       subMap?: {
         name?: string | null;
@@ -1095,7 +1361,6 @@ function buildAutoCombatItemFromOverview(params: {
       combatPreview?: {
         label?: string | null;
         currentMob?: AutoCombatStatusCurrentMobLike | null;
-        lastKnownMob?: AutoCombatStatusCurrentMobLike | null;
         currentMobHp?: number | null;
         currentMobMaxHp?: number | null;
         totals?: {
@@ -1108,12 +1373,7 @@ function buildAutoCombatItemFromOverview(params: {
 
   const visualTotals = buildAutoCombatTotalsFromOverview(session);
   const previewCurrentMob = session.combatPreview?.currentMob;
-  const currentMob =
-    session.currentMob ??
-    previewCurrentMob ??
-    session.lastKnownMob ??
-    session.combatPreview?.lastKnownMob ??
-    null;
+  const currentMob = session.currentMob ?? previewCurrentMob ?? null;
 
   const mobHp = buildMobHpSnapshot({
     statusCurrentMob: currentMob,
@@ -1138,71 +1398,256 @@ function buildAutoCombatItemFromOverview(params: {
       ? `${mapName} • ${subMapName}`
       : subMapName ?? mapName ?? 'Combate em andamento';
 
-  const totalKills = Math.max(
-    0,
-    Math.floor(toSafeNumber(visualTotals?.totalKills, 0)),
-  );
+  const totalKills = visualTotals?.totalKills ?? 0;
+  const totalXpGained = visualTotals?.totalXpGained ?? 0;
 
-  const totalXpGained = Math.max(
-    0,
-    Math.floor(toSafeNumber(visualTotals?.totalXpGained, 0)),
-  );
+  const currentCombatIndex = resolveCurrentCombatIndex({
+    visualTotals,
+    session,
+    totalKills,
+  });
+
+  const playerSnapshot = buildCharacterActivitySnapshot({
+    realtimeState: {},
+    status: null,
+    overview,
+  });
 
   return {
     key: `auto-combat-${session.id ?? 'active'}`,
     type: 'auto-combat',
     icon: '⚔',
-    title: getReadableMobName(currentMob?.name) || SYNCING_AUTO_COMBAT_TITLE,
+    title: currentMob?.name ?? 'Combate automático',
     description: session.combatPreview?.label ?? locationLabel,
     progressLabel: formatHpLabel(mobHp.currentHp, mobHp.maxHp),
     progressPercent: mobHp.percent,
-    primaryMetric: formatKillCount(totalKills),
-    secondaryMetric: formatXp(totalXpGained),
+    primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
+    secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
     href: `/dashboard/${characterId}/auto-combat`,
+
+    imageUrl: getActivityMobPortraitUrl(currentMob?.name),
+    imageAlt: currentMob?.name ?? 'Combate automático',
+
+    characterName: playerSnapshot.name,
+    characterLevelLabel: playerSnapshot.levelLabel,
+    characterHpLabel: playerSnapshot.hpLabel,
+    characterHpPercent: playerSnapshot.hpPercent,
+    characterXpLabel: playerSnapshot.xpLabel,
+    characterXpPercent: playerSnapshot.xpPercent,
+
+    monsterMetaLabel: locationLabel,
+    combatMetric: formatCurrentCombatLabel(currentCombatIndex),
+    killsMetric: formatKillCount(totalKills),
+    xpMetric: formatXp(totalXpGained),
   };
 }
 
-function buildGatheringItem(params: {
-  characterId: string;
-  session: DashboardGatheringSessionViewModel;
-}): ActivityBarItem {
-  const { characterId, session } = params;
+function buildGatheringProductionSnapshot(params: {
+  session: DashboardGatheringSessionLoose;
+  nowMs: number;
+}) {
+  const { session, nowMs } = params;
+  const preview = session.productionPreview ?? null;
+  const material = session.targetMaterial ?? preview?.targetMaterial ?? preview?.material ?? null;
 
-  const productionPreview = session.productionPreview;
+  const ratePerHour =
+    getFirstValidNumber(
+      preview?.ratePerHour,
+      preview?.baseRatePerHour,
+      preview?.defaultRatePerHour,
+      material?.baseGatheringRatePerHour,
+      0,
+    ) ?? 0;
 
-  const progressPercent = clampPercent(
-    productionPreview?.nextUnitProgressPercent ?? 0,
+  const lastResolvedAtMs = getParsedDateMs(session.lastResolvedAt);
+
+  if (lastResolvedAtMs !== null && ratePerHour > 0) {
+    const baseRemainder = clampFraction(
+      getFirstValidNumber(
+        preview?.currentProgressRemainder,
+        session.progressRemainder,
+        0,
+      ),
+    );
+
+    const elapsedSeconds = Math.max(0, (nowMs - lastResolvedAtMs) / 1000);
+    const producedSinceLastResolve = (elapsedSeconds * ratePerHour) / 3600;
+    const totalProgress = Math.max(0, baseRemainder + producedSinceLastResolve);
+
+    const readyQuantity = Math.max(0, Math.floor(totalProgress));
+    const progressRemainder = clampFraction(totalProgress - readyQuantity);
+
+    return {
+      readyQuantity,
+      progressPercent: clampPercent(progressRemainder * 100),
+      ratePerHour,
+    };
+  }
+
+  const readyQuantity =
+    getFirstValidNumber(
+      preview?.estimatedQuantityToCollect,
+      preview?.readyQuantity,
+      0,
+    ) ?? 0;
+
+  const progressRemainder = getFirstValidNumber(
+    preview?.estimatedNewProgressRemainder,
+    preview?.currentProgressRemainder,
+    preview?.progressRemainder,
+    session.progressRemainder,
   );
 
-  const originLabel = formatOrigin(session.origin);
+  const progressPercent =
+    getFirstValidNumber(
+      preview?.nextUnitProgressPercent,
+      preview?.progressPercent,
+      progressRemainder !== undefined ? progressRemainder * 100 : undefined,
+      0,
+    ) ?? 0;
 
-  const materialName =
-    session.targetMaterial?.name ??
-    productionPreview?.material?.name ??
-    'material';
+  return {
+    readyQuantity: Math.max(0, Math.floor(readyQuantity)),
+    progressPercent: clampPercent(progressPercent),
+    ratePerHour,
+  };
+}
+
+function buildGatheringItemFromRealtime(params: {
+  characterId: string;
+  gatheringState: GatheringRealtimeState;
+}): ActivityBarItem | null {
+  const { characterId, gatheringState } = params;
+
+  if (!gatheringState.isActive || !gatheringState.session) {
+    return null;
+  }
+
+  const session = gatheringState.session as DashboardGatheringSessionLoose;
+  const preview =
+    (gatheringState.productionPreview as GatheringProductionPreviewLike | null) ??
+    session.productionPreview ??
+    null;
+
+  const material =
+    (gatheringState.targetMaterial as GatheringMaterialLike | null) ??
+    session.targetMaterial ??
+    preview?.targetMaterial ??
+    preview?.material ??
+    null;
+
+  const originLabel = formatOrigin(session.origin);
+  const originSlug = getGatheringOriginSlug(session.origin);
+
+  const materialName = material?.name ?? 'Material em coleta';
+  const mapName = session.map?.name ?? preview?.map?.name ?? 'Mapa atual';
+
+  const progressPercent = clampPercent(
+    gatheringState.liveProduction.progressPercent,
+  );
+
+  const progressPercentLabel = floorPercent(progressPercent);
+
+  const readyQuantity = Math.max(
+    0,
+    Math.floor(toSafeNumber(gatheringState.liveProduction.readyQuantity, 0)),
+  );
+
+  const ratePerHour = gatheringState.liveProduction.ratePerHour ?? null;
+
+  const href =
+    originSlug === 'gathering'
+      ? `/dashboard/${characterId}/gathering`
+      : `/dashboard/${characterId}/gathering/${originSlug}`;
+
+  return {
+    key: `gathering-${session.id ?? 'active'}`,
+    type: 'gathering',
+    icon: '⛏',
+    title: materialName,
+    description:
+      preview?.label ?? `${originLabel} em ${mapName}. Produzindo ${materialName}.`,
+    progressLabel: 'Próxima unidade',
+    progressPercent,
+    primaryMetric: `${progressPercentLabel}%`,
+    secondaryMetric: formatGatheringSecondaryMetric({
+      readyQuantity,
+      ratePerHour,
+    }),
+    href,
+
+    imageUrl: getGatheringMaterialIconUrl(material),
+    imageAlt: materialName,
+
+    monsterMetaLabel: `${originLabel} • ${mapName}`,
+    combatMetric: `${progressPercentLabel}%`,
+    killsMetric: formatGatheringReadyQuantity(readyQuantity),
+    xpMetric: formatGatheringRate(ratePerHour),
+  };
+}
+
+function buildGatheringItemFromOverview(params: {
+  characterId: string;
+  session: DashboardGatheringSessionViewModel;
+  nowMs: number;
+}): ActivityBarItem {
+  const { characterId, nowMs } = params;
+  const session = params.session as DashboardGatheringSessionLoose;
+
+  const productionPreview = session.productionPreview ?? null;
+  const material =
+    session.targetMaterial ??
+    productionPreview?.targetMaterial ??
+    productionPreview?.material ??
+    null;
+
+  const originLabel = formatOrigin(session.origin);
+  const originSlug = getGatheringOriginSlug(session.origin);
+
+  const materialName = material?.name ?? 'Material em coleta';
 
   const mapName =
     session.map?.name ?? productionPreview?.map?.name ?? 'Mapa atual';
 
-  const estimatedQuantity = productionPreview?.estimatedQuantityToCollect ?? 0;
-  const ratePerHour = productionPreview?.ratePerHour;
+  const productionSnapshot = buildGatheringProductionSnapshot({
+    session,
+    nowMs,
+  });
+
+  const progressPercent = productionSnapshot.progressPercent;
+  const progressPercentLabel = floorPercent(progressPercent);
+  const readyQuantity = productionSnapshot.readyQuantity;
+  const ratePerHour = productionSnapshot.ratePerHour;
+
+  const href =
+    originSlug === 'gathering'
+      ? `/dashboard/${characterId}/gathering`
+      : `/dashboard/${characterId}/gathering/${originSlug}`;
 
   return {
-    key: `gathering-${session.id}`,
+    key: `gathering-${session.id ?? 'active'}`,
     type: 'gathering',
     icon: '⛏',
-    title: originLabel,
+    title: materialName,
     description:
       productionPreview?.label ??
-      `${originLabel} em ${mapName} coletando ${materialName}.`,
-    progressLabel: 'Próximo material',
+      `${originLabel} em ${mapName}. Produzindo ${materialName}.`,
+    progressLabel: 'Próxima unidade',
     progressPercent,
-    primaryMetric: `${Math.round(progressPercent)}%`,
-    secondaryMetric:
-      ratePerHour !== undefined
-        ? `${estimatedQuantity} item(ns) • ${ratePerHour}/h`
-        : `${estimatedQuantity} item(ns)`,
-    href: `/dashboard/${characterId}/gathering`,
+    primaryMetric: `${progressPercentLabel}%`,
+    secondaryMetric: formatGatheringSecondaryMetric({
+      readyQuantity,
+      ratePerHour,
+    }),
+    href,
+
+    imageUrl: getGatheringMaterialIconUrl(material),
+    imageAlt: materialName,
+
+    monsterMetaLabel: `${originLabel} • ${mapName}`,
+    combatMetric: `${progressPercentLabel}%`,
+    killsMetric: formatGatheringReadyQuantity(readyQuantity),
+    xpMetric: formatGatheringRate(ratePerHour),
   };
 }
 
@@ -1210,13 +1655,16 @@ function buildActivityItems(params: {
   characterId: string;
   overview: CharacterOverviewResponse | null;
   realtimeState: AutoCombatRealtimeStateLoose;
+  gatheringState: GatheringRealtimeState;
+  nowMs: number;
 }) {
-  const { characterId, overview, realtimeState } = params;
+  const { characterId, overview, realtimeState, gatheringState, nowMs } = params;
 
   const items: ActivityBarItem[] = [];
 
   const realtimeAutoCombatItem = buildAutoCombatItemFromRealtime({
     characterId,
+    overview,
     realtimeState,
   });
 
@@ -1224,11 +1672,12 @@ function buildActivityItems(params: {
     items.push(realtimeAutoCombatItem);
   } else if (overview?.activity) {
     const activeAutoCombat = overview.activity.activeAutoCombatSession ?? null;
+    const activeAutoCombatSession = activeAutoCombat as
+      | (DashboardAutoCombatSessionViewModel & AutoCombatSessionLike)
+      | null;
 
-    const activeAutoCombatIsActive = isActiveStatus(activeAutoCombat?.status);
-    const activeAutoCombatIsTerminal = isTerminalStatus(
-      activeAutoCombat?.status,
-    );
+    const activeAutoCombatIsActive = isActiveStatus(activeAutoCombatSession?.status);
+    const activeAutoCombatIsTerminal = isTerminalStatus(activeAutoCombatSession?.status);
 
     const hasActiveAutoCombat =
       activeAutoCombatIsActive ||
@@ -1239,27 +1688,39 @@ function buildActivityItems(params: {
       items.push(
         buildAutoCombatItemFromOverview({
           characterId,
+          overview,
           session: activeAutoCombat,
         }),
       );
     }
   }
 
-  if (overview?.activity) {
-    const activeGathering = overview.activity.activeGatheringSession ?? null;
+  const realtimeGatheringItem = buildGatheringItemFromRealtime({
+    characterId,
+    gatheringState,
+  });
 
-    const activeGatheringIsTerminal = isTerminalStatus(activeGathering?.status);
+  if (realtimeGatheringItem) {
+    items.push(realtimeGatheringItem);
+  } else if (overview?.activity) {
+    const activeGathering = overview.activity.activeGatheringSession ?? null;
+    const activeGatheringSession = activeGathering as
+      | (DashboardGatheringSessionViewModel & { status?: string | null })
+      | null;
+
+    const activeGatheringIsTerminal = isTerminalStatus(activeGatheringSession?.status);
 
     const hasActiveGathering =
       !activeGatheringIsTerminal &&
       (Boolean(overview.activity.hasActiveGathering) ||
-        isActiveStatus(activeGathering?.status));
+        isActiveStatus(activeGatheringSession?.status));
 
     if (hasActiveGathering && activeGathering) {
       items.push(
-        buildGatheringItem({
+        buildGatheringItemFromOverview({
           characterId,
           session: activeGathering,
+          nowMs,
         }),
       );
     }
@@ -1268,29 +1729,42 @@ function buildActivityItems(params: {
   return items;
 }
 
+function getInitialMinimizedState() {
+  return true;
+}
+
 export function DashboardActivityBar({
   characterId,
-  refreshMs = 10000,
+  refreshMs = 5000,
 }: DashboardActivityBarProps) {
   const realtimeState =
     useAutoCombatRealtimeState() as AutoCombatRealtimeStateLoose;
+
+  const gatheringState = useGatheringRealtimeState();
 
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
 
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(getInitialMinimizedState);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const lastKnownAutoCombatTitleByKeyRef = useRef<Record<string, string>>({});
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   useEffect(() => {
     if (!characterId) return;
 
     let isDisposed = false;
     let intervalId: number | undefined;
-
-    setOverview(null);
-    setHasLoadedOnce(false);
 
     async function loadActivity() {
       try {
@@ -1299,6 +1773,7 @@ export function DashboardActivityBar({
         if (isDisposed) return;
 
         setOverview(data);
+        setNowMs(Date.now());
         setHasLoadedOnce(true);
       } catch {
         if (isDisposed) return;
@@ -1307,22 +1782,11 @@ export function DashboardActivityBar({
       }
     }
 
-    function refreshWhenVisible() {
-      if (document.visibilityState === 'visible') {
-        void loadActivity();
-      }
-    }
+    loadActivity();
 
-    void loadActivity();
-
-    if (refreshMs > 0) {
-      intervalId = window.setInterval(() => {
-        void loadActivity();
-      }, refreshMs);
-    }
-
-    window.addEventListener('focus', refreshWhenVisible);
-    document.addEventListener('visibilitychange', refreshWhenVisible);
+    intervalId = window.setInterval(() => {
+      loadActivity();
+    }, refreshMs);
 
     return () => {
       isDisposed = true;
@@ -1330,56 +1794,18 @@ export function DashboardActivityBar({
       if (intervalId !== undefined) {
         window.clearInterval(intervalId);
       }
-
-      window.removeEventListener('focus', refreshWhenVisible);
-      document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, [characterId, refreshMs]);
 
   const activityItems = useMemo(() => {
-    const items = buildActivityItems({
+    return buildActivityItems({
       characterId,
       overview,
       realtimeState,
+      gatheringState,
+      nowMs,
     });
-
-    /**
-     * Polimento visual:
-     * se o navegador ficou em segundo plano e voltou antes do primeiro snapshot
-     * trazer o mob atual, mantemos o último nome conhecido da sessão.
-     *
-     * Assim a UI evita piscar "Combate automático" / "Sincronizando combate..."
-     * quando já havia um mob conhecido anteriormente.
-     */
-    return items.map((item) => {
-      if (item.type !== 'auto-combat') {
-        return item;
-      }
-
-      const lastKnownTitle = lastKnownAutoCombatTitleByKeyRef.current[item.key];
-
-      if (isSyncingAutoCombatTitle(item.title) && lastKnownTitle) {
-        return {
-          ...item,
-          title: lastKnownTitle,
-        };
-      }
-
-      return item;
-    });
-  }, [characterId, overview, realtimeState]);
-
-  useEffect(() => {
-    for (const item of activityItems) {
-      if (item.type !== 'auto-combat') {
-        continue;
-      }
-
-      if (!isSyncingAutoCombatTitle(item.title)) {
-        lastKnownAutoCombatTitleByKeyRef.current[item.key] = item.title;
-      }
-    }
-  }, [activityItems]);
+  }, [characterId, gatheringState, nowMs, overview, realtimeState]);
 
   if (!hasLoadedOnce || activityItems.length <= 0) {
     return null;
@@ -1389,50 +1815,261 @@ export function DashboardActivityBar({
     <section
       className={[
         'dashboard-activity-bar',
+        isMinimized
+          ? 'dashboard-activity-bar--minimized'
+          : 'dashboard-activity-bar--expanded',
         activityItems.length > 1 ? 'dashboard-activity-bar--multiple' : '',
       ]
         .filter(Boolean)
         .join(' ')}
       aria-label="Atividades em andamento"
     >
-      {activityItems.map((item) => {
+      {activityItems.map((item, index) => {
+        const progressPercent = clampPercent(item.progressPercent);
+        const progressPercentLabel = floorPercent(progressPercent);
         const progressStyle = {
-          width: `${item.progressPercent}%`,
+          width: `${progressPercent}%`,
         };
+        const isFirstItem = index === 0;
 
         return (
-          <Link
+          <article
             key={item.key}
-            to={item.href}
-            title={item.description}
             className={[
               'dashboard-activity-bar__item',
               `dashboard-activity-bar__item--${item.type}`,
-            ].join(' ')}
+              isFirstItem ? 'dashboard-activity-bar__item--has-toggle' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
           >
-            <span className="dashboard-activity-bar__icon" aria-hidden="true">
-              {item.icon}
-            </span>
+            {isFirstItem ? (
+              <button
+                type="button"
+                className="dashboard-activity-bar__toggle"
+                aria-pressed={isMinimized}
+                onClick={() => setIsMinimized((current) => !current)}
+              >
+                <strong>{isMinimized ? '+' : '−'}</strong>
+                <span>{isMinimized ? 'Expandir' : 'Minimizar'}</span>
+              </button>
+            ) : null}
 
-            <div className="dashboard-activity-bar__body">
-              <div className="dashboard-activity-bar__top">
-                <strong>{item.title}</strong>
+            <Link
+              to={item.href}
+              title={item.description}
+              className="dashboard-activity-bar__link"
+            >
+              <span
+                className={[
+                  'dashboard-activity-bar__icon',
+                  item.imageUrl ? 'dashboard-activity-bar__icon--portrait' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-hidden="true"
+              >
+                {item.imageUrl ? (
+                  <img
+                    src={item.imageUrl}
+                    alt=""
+                    className="dashboard-activity-bar__icon-portrait"
+                    loading="lazy"
+                    style={{
+                      position: 'relative',
+                      zIndex: 1,
+                      display: 'block',
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      objectPosition: 'center',
+                      borderRadius: 'inherit',
+                      filter:
+                        'brightness(1.08) contrast(1.06) saturate(1.04) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.36))',
+                    }}
+                  />
+                ) : (
+                  <span className="dashboard-activity-bar__icon-core">
+                    {item.icon}
+                  </span>
+                )}
+              </span>
 
-                <span>
-                  {item.progressLabel} • {Math.round(item.progressPercent)}%
-                </span>
+              <div className="dashboard-activity-bar__body">
+                <div className="dashboard-activity-bar__top">
+                  <div className="dashboard-activity-bar__title-block">
+                    <span className="dashboard-activity-bar__eyebrow">
+                      {item.type === 'auto-combat'
+                        ? 'Sessão ativa'
+                        : 'Expedição ativa'}
+                    </span>
+
+                    <strong>{item.title}</strong>
+
+                    {item.monsterMetaLabel ? (
+                      <span className="dashboard-activity-bar__monster-meta">
+                        {item.monsterMetaLabel}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {item.type === 'gathering' ? (
+                    <span className="dashboard-activity-bar__percent-pill">
+                      {progressPercentLabel}%
+                    </span>
+                  ) : null}
+                </div>
+
+                {item.type === 'auto-combat' && item.characterName ? (
+                  <div className="dashboard-activity-bar__character-strip">
+                    <div className="dashboard-activity-bar__character-main">
+                      <strong>{item.characterName}</strong>
+                      <span>{item.characterLevelLabel}</span>
+                    </div>
+
+                    <div className="dashboard-activity-bar__mini-resource dashboard-activity-bar__mini-resource--hp">
+                      <div className="dashboard-activity-bar__mini-resource-header">
+                        <span>{item.characterHpLabel}</span>
+                        <strong>
+                          {formatPercentLabel(item.characterHpPercent ?? 0)}
+                        </strong>
+                      </div>
+
+                      <div className="dashboard-activity-bar__mini-track">
+                        <i
+                          style={{
+                            width: `${clampPercent(item.characterHpPercent ?? 0)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="dashboard-activity-bar__mini-resource dashboard-activity-bar__mini-resource--xp">
+                      <div className="dashboard-activity-bar__mini-resource-header">
+                        <span>{item.characterXpLabel}</span>
+                        <strong>
+                          {formatPercentLabel(item.characterXpPercent ?? 0)}
+                        </strong>
+                      </div>
+
+                      <div className="dashboard-activity-bar__mini-track">
+                        <i
+                          style={{
+                            width: `${clampPercent(item.characterXpPercent ?? 0)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="dashboard-activity-bar__description">
+                    {item.description}
+                  </p>
+                )}
+
+                <div className="dashboard-activity-bar__progress-block">
+                  <div className="dashboard-activity-bar__progress-header">
+                    <span>{item.progressLabel}</span>
+                    <strong>{progressPercentLabel}%</strong>
+                  </div>
+
+                  <div className="dashboard-activity-bar__track">
+                    <i style={progressStyle}>
+                      <em aria-hidden="true" />
+                    </i>
+                  </div>
+                </div>
               </div>
 
-              <div className="dashboard-activity-bar__track">
-                <i style={progressStyle} />
-              </div>
-            </div>
+              <div className="dashboard-activity-bar__metrics">
+                {item.type === 'auto-combat' ? (
+                  <>
+                    <span className="dashboard-activity-bar__metric dashboard-activity-bar__metric--xp">
+                      <small>EXP</small>
+                      <strong>{item.xpMetric ?? formatXp(0)}</strong>
+                    </span>
 
-            <div className="dashboard-activity-bar__metrics">
-              <strong>{item.primaryMetric}</strong>
-              <span>{item.secondaryMetric}</span>
-            </div>
-          </Link>
+                    <span className="dashboard-activity-bar__metric dashboard-activity-bar__metric--kills">
+                      <small>Abates</small>
+                      <strong>{item.killsMetric ?? formatKillCount(0)}</strong>
+                    </span>
+
+                    <span className="dashboard-activity-bar__metric dashboard-activity-bar__metric--combat">
+                      <small>Combate</small>
+                      <strong>{item.combatMetric ?? item.primaryMetric}</strong>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="dashboard-activity-bar__metric dashboard-activity-bar__metric--xp">
+                      <small>{item.progressLabel}</small>
+                      <strong>{item.primaryMetric}</strong>
+                    </span>
+
+                    <span className="dashboard-activity-bar__metric dashboard-activity-bar__metric--combat">
+                      <small>Produção</small>
+                      <strong>{item.secondaryMetric}</strong>
+                    </span>
+                  </>
+                )}
+              </div>
+
+              <div className="dashboard-activity-bar__compact">
+                <div className="dashboard-activity-bar__compact-main">
+                  <span>
+                    {item.type === 'auto-combat'
+                      ? 'Sessão ativa'
+                      : 'Expedição ativa'}
+                  </span>
+                  <strong>{item.title}</strong>
+                </div>
+
+                <div className="dashboard-activity-bar__compact-track-block">
+                  <div className="dashboard-activity-bar__compact-track-header">
+                    <span>{item.progressLabel}</span>
+                    <strong>{progressPercentLabel}%</strong>
+                  </div>
+
+                  <div className="dashboard-activity-bar__compact-track">
+                    <i style={progressStyle} />
+                  </div>
+                </div>
+
+                <div className="dashboard-activity-bar__compact-stats">
+                  {item.type === 'auto-combat' ? (
+                    <>
+                      <span className="dashboard-activity-bar__compact-stat dashboard-activity-bar__compact-stat--xp">
+                        <small>EXP</small>
+                        <strong>{item.xpMetric ?? formatXp(0)}</strong>
+                      </span>
+
+                      <span className="dashboard-activity-bar__compact-stat dashboard-activity-bar__compact-stat--kills">
+                        <small>Abates</small>
+                        <strong>{item.killsMetric ?? formatKillCount(0)}</strong>
+                      </span>
+
+                      <span className="dashboard-activity-bar__compact-stat dashboard-activity-bar__compact-stat--combat dashboard-activity-bar__compact-stat--optional">
+                        <small>Combate</small>
+                        <strong>{item.combatMetric ?? item.primaryMetric}</strong>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="dashboard-activity-bar__compact-stat dashboard-activity-bar__compact-stat--xp">
+                        <small>{item.progressLabel}</small>
+                        <strong>{item.primaryMetric}</strong>
+                      </span>
+
+                      <span className="dashboard-activity-bar__compact-stat dashboard-activity-bar__compact-stat--combat">
+                        <small>Produção</small>
+                        <strong>{item.secondaryMetric}</strong>
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </Link>
+          </article>
         );
       })}
     </section>

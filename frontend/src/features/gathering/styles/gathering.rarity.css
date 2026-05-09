@@ -1,0 +1,28 @@
+/* =========================================================
+   RARIDADE VISUAL / TIER
+   ========================================================= */
+
+.equipment-rarity-common {
+  --equipment-rarity-rgb: 231, 227, 216;
+  --equipment-rarity-hex: #e7e3d8;
+}
+
+.equipment-rarity-uncommon {
+  --equipment-rarity-rgb: 224, 182, 91;
+  --equipment-rarity-hex: #e0b65b;
+}
+
+.equipment-rarity-rare {
+  --equipment-rarity-rgb: 101, 194, 113;
+  --equipment-rarity-hex: #65c271;
+}
+
+.equipment-rarity-epic {
+  --equipment-rarity-rgb: 167, 111, 224;
+  --equipment-rarity-hex: #a76fe0;
+}
+
+.equipment-rarity-legendary {
+  --equipment-rarity-rgb: 218, 83, 73;
+  --equipment-rarity-hex: #da5349;
+}

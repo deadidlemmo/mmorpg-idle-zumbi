@@ -1,0 +1,702 @@
+/* =========================================================
+   GATHERING — RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 1180px) {
+  .gathering-page__grid,
+  .gathering-page__grid--clean {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gathering-page__side-column,
+  .gathering-page__side-column--clean {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .gathering-card--active {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 980px) {
+  .gathering-page {
+    gap: 0.82rem;
+  }
+
+  .gathering-page__header,
+  .gathering-page__header--compact {
+    grid-template-columns: 1fr;
+    align-items: start;
+    padding: 0.9rem;
+  }
+
+  .gathering-page__header-actions {
+    justify-content: flex-start;
+  }
+
+  .gathering-origins,
+  .gathering-origins--compact,
+  .gathering-origins--icons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gathering-material-grid,
+  .gathering-material-grid--compact,
+  .gathering-material-grid--visual {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .gathering-page {
+    gap: 0.72rem;
+  }
+
+  .gathering-page__header,
+  .gathering-page__header--compact {
+    padding: 0.8rem;
+    border-radius: 0.95rem;
+  }
+
+  .gathering-page__eyebrow {
+    font-size: 0.6rem;
+  }
+
+  .gathering-page__header h1 {
+    font-size: 1.32rem;
+  }
+
+  .gathering-page__subtitle {
+    font-size: 0.8rem;
+    line-height: 1.34;
+  }
+
+  .gathering-card,
+  .gathering-card--compact {
+    padding: 0.78rem;
+    border-radius: 0.92rem;
+  }
+
+  .gathering-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.48rem;
+    margin-bottom: 0.62rem;
+  }
+
+  .gathering-card h2 {
+    font-size: 1rem;
+  }
+
+  .gathering-card h3 {
+    font-size: 0.9rem;
+  }
+
+  .gathering-card__description {
+    font-size: 0.76rem;
+  }
+
+  .gathering-select {
+    min-height: 40px;
+    font-size: 0.84rem;
+  }
+
+  .gathering-origins,
+  .gathering-origins--compact,
+  .gathering-origins--icons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .gathering-origin-option,
+  .gathering-origin-option--compact {
+    min-height: 68px;
+    padding: 0.52rem;
+  }
+
+  .gathering-origin-option__content {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .gathering-origin-option__visual {
+    width: 42px;
+    height: 42px;
+    border-radius: 0.78rem;
+  }
+
+  .gathering-origin-option__icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .gathering-origin-option__text strong,
+  .gathering-origin-option strong {
+    font-size: 0.78rem;
+  }
+
+  .gathering-origin-option__stat {
+    min-height: 20px;
+    padding: 0.08rem 0.38rem;
+    font-size: 0.5rem;
+  }
+
+  .gathering-origin-summary,
+  .gathering-origin-summary--icon {
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.56rem;
+    padding: 0.58rem;
+  }
+
+  .gathering-origin-summary__visual {
+    width: 40px;
+    height: 40px;
+  }
+
+  .gathering-origin-summary__icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .gathering-origin-summary__top {
+    flex-wrap: wrap;
+    gap: 0.34rem;
+  }
+
+  .gathering-origin-summary span {
+    width: fit-content;
+  }
+
+  .gathering-origin-summary p {
+    white-space: normal;
+  }
+
+  .gathering-material-group__header {
+    grid-template-columns: minmax(24px, 1fr) auto minmax(24px, 1fr);
+    gap: 0.58rem;
+    padding: 0.12rem 0;
+  }
+
+  .gathering-material-group__header h3 {
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+  }
+
+  /* =========================================================
+     MATERIAL CARD — MOBILE
+     Divisões:
+     1. Nome + badges
+     2. Classe / tipo do item
+     3. Dados Req. / XP / Tempo
+
+     Ajuste atual:
+     - Ícone do material maior.
+     - Card continua compacto.
+     - Nome completo preservado.
+     ========================================================= */
+
+  .gathering-material-card {
+    border-radius: 0.92rem;
+  }
+
+  .gathering-material-card__select {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.78rem;
+    min-height: 0;
+    padding: 0.74rem 0.72rem 0.56rem;
+  }
+
+  .gathering-material-card__icon-frame {
+    width: 76px;
+    height: 76px;
+    border-radius: 1.06rem;
+  }
+
+  .gathering-material-card__icon {
+    width: 66px;
+    height: 66px;
+  }
+
+  .gathering-material-card__icon-fallback {
+    width: 56px;
+    height: 56px;
+    font-size: 0.92rem;
+    border-radius: 0.86rem;
+  }
+
+  .gathering-material-card__body {
+    gap: 0.42rem;
+  }
+
+  .gathering-material-card__header-line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.52rem;
+    padding-bottom: 0.48rem;
+    border-bottom: 1px solid rgba(231, 227, 216, 0.08);
+  }
+
+  .gathering-material-card__header-line strong,
+  .gathering-material-card strong {
+    width: 100%;
+    max-width: 100%;
+    color: #fff8e8;
+    font-size: 0.98rem;
+    line-height: 1.14;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  .gathering-material-card__status-area {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.32rem;
+  }
+
+  .gathering-material-card__rarity-badge,
+  .gathering-material-card__tier {
+    min-height: 23px;
+    padding: 0.12rem 0.46rem;
+    font-size: 0.54rem;
+  }
+
+  .gathering-material-card__craft-summary {
+    padding: 0 0 0.48rem;
+    color: rgba(255, 248, 232, 0.82);
+    font-size: 0.76rem;
+    line-height: 1.22;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    border-top: 0;
+    border-bottom: 1px solid rgba(231, 227, 216, 0.07);
+  }
+
+  .gathering-material-card__meta {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.32rem;
+    padding-top: 0;
+    margin-top: 0;
+    border-top: 0;
+  }
+
+  .gathering-material-card__pill {
+    width: 100%;
+    min-height: 32px;
+    padding: 0.2rem 0.34rem;
+    font-size: 0.63rem;
+    line-height: 1;
+    letter-spacing: 0.035em;
+    border-radius: 0.64rem;
+  }
+
+  .gathering-material-card__pill--rate {
+    color: #f6ffe6;
+    background:
+      linear-gradient(180deg, rgba(110, 159, 67, 0.2), rgba(110, 159, 67, 0.08)),
+      rgba(7, 16, 10, 0.7);
+    border-color: rgba(110, 159, 67, 0.34);
+  }
+
+  .gathering-material-card__pill--time {
+    color: rgba(255, 248, 232, 0.88);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+      rgba(8, 12, 11, 0.72);
+    border-color: rgba(231, 227, 216, 0.14);
+  }
+
+  .gathering-material-card__pill--locked {
+    color: #c8ced8;
+    background: rgba(160, 166, 175, 0.12);
+    border-color: rgba(160, 166, 175, 0.25);
+  }
+
+  .gathering-material-card__footer-actions,
+  .gathering-material-card__footer-actions--split {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 0.48rem;
+    padding: 0.58rem 0.72rem 0.72rem;
+    margin-top: 0;
+    border-top: 1px solid rgba(231, 227, 216, 0.08);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+      rgba(0, 0, 0, 0.08);
+  }
+
+  .gathering-material-card__start-button,
+  .gathering-material-card__recipes-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    padding: 0.32rem 0.55rem;
+    font-size: 0.62rem;
+    border-radius: 0.74rem;
+  }
+
+  .gathering-material-card__start-button {
+    color: #10140f;
+    background:
+      linear-gradient(180deg, #fffaf0, #ded9c9),
+      #e7e3d8;
+    border-color: rgba(255, 255, 255, 0.42);
+    box-shadow:
+      0 8px 14px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  .gathering-material-card__recipes-button {
+    color: rgba(255, 248, 232, 0.9);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+      rgba(5, 9, 8, 0.68);
+    border-color: rgba(231, 227, 216, 0.13);
+  }
+
+  .gathering-material-card__recipes-button:hover {
+    color: #fff8e8;
+    border-color: rgba(var(--equipment-rarity-rgb), 0.36);
+    background:
+      linear-gradient(180deg, rgba(var(--equipment-rarity-rgb), 0.12), transparent),
+      rgba(5, 9, 8, 0.78);
+  }
+
+  .gathering-material-card__locked-layer {
+    bottom: 3.75rem;
+  }
+
+  .gathering-material-card.is-hard-locked .gathering-material-card__footer-actions {
+    padding-top: 0.58rem;
+  }
+
+  /* Sessão ativa */
+
+  .gathering-session__identity {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 0.62rem;
+    padding: 0.64rem;
+  }
+
+  .gathering-session__origin-icon {
+    width: 46px;
+    height: 46px;
+  }
+
+  .gathering-session__origin-icon .gathering-material-card__icon-fallback {
+    width: 34px;
+    height: 34px;
+    font-size: 0.68rem;
+  }
+
+  .gathering-session h2 {
+    font-size: 1.06rem;
+  }
+
+  .gathering-session__description {
+    font-size: 0.74rem;
+  }
+
+  .gathering-session__meta,
+  .gathering-session__meta--compact {
+    grid-template-columns: 1fr;
+    gap: 0.46rem;
+  }
+
+  .gathering-session__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .gathering-button {
+    width: 100%;
+    min-height: 40px;
+    font-size: 0.68rem;
+  }
+
+  .gathering-session__live-hero {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 0.68rem;
+    padding: 0.66rem;
+  }
+
+  .gathering-session__item-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 0.9rem;
+  }
+
+  .gathering-session__item-image {
+    width: 50px;
+    height: 50px;
+  }
+
+  .gathering-session__item-icon .gathering-material-card__icon-fallback {
+    width: 42px;
+    height: 42px;
+    font-size: 0.72rem;
+  }
+
+  .gathering-session__origin-mini {
+    right: -5px;
+    bottom: -5px;
+    width: 26px;
+    height: 26px;
+  }
+
+  .gathering-session__origin-mini img {
+    width: 19px;
+    height: 19px;
+  }
+
+  .gathering-session__rate-strip {
+    grid-template-columns: 1fr;
+    gap: 0.32rem;
+  }
+
+  .gathering-session__activity-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.24rem;
+  }
+
+  .gathering-usage-modal {
+    padding: 0.75rem;
+  }
+
+  .gathering-usage-modal__header,
+  .gathering-usage-modal__content {
+    padding: 0.8rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-page__header,
+  .gathering-page__header--compact {
+    padding: 0.72rem;
+  }
+
+  .gathering-page__header h1 {
+    font-size: 1.24rem;
+  }
+
+  .gathering-page__status-pill {
+    width: 100%;
+    min-height: 31px;
+    font-size: 0.62rem;
+  }
+
+  .gathering-card,
+  .gathering-card--compact {
+    padding: 0.68rem;
+  }
+
+  .gathering-origins,
+  .gathering-origins--compact,
+  .gathering-origins--icons {
+    grid-template-columns: 1fr;
+  }
+
+  .gathering-origin-option,
+  .gathering-origin-option--compact {
+    min-height: 64px;
+  }
+
+  .gathering-origin-option__content {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .gathering-origin-option__visual {
+    width: 40px;
+    height: 40px;
+  }
+
+  .gathering-origin-option__icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .gathering-material-card__select {
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 0.66rem;
+    padding: 0.66rem 0.64rem 0.5rem;
+  }
+
+  .gathering-material-card__icon-frame {
+    width: 70px;
+    height: 70px;
+    border-radius: 1rem;
+  }
+
+  .gathering-material-card__icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .gathering-material-card__icon-fallback {
+    width: 52px;
+    height: 52px;
+    font-size: 0.86rem;
+  }
+
+  .gathering-material-card__header-line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.4rem;
+    padding-bottom: 0.44rem;
+    border-bottom: 1px solid rgba(231, 227, 216, 0.08);
+  }
+
+  .gathering-material-card__header-line strong,
+  .gathering-material-card strong {
+    font-size: 0.92rem;
+    line-height: 1.12;
+  }
+
+  .gathering-material-card__status-area {
+    align-self: flex-start;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .gathering-material-card__craft-summary {
+    padding: 0 0 0.44rem;
+    font-size: 0.72rem;
+    border-top: 0;
+    border-bottom: 1px solid rgba(231, 227, 216, 0.07);
+  }
+
+  .gathering-material-card__meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.28rem;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .gathering-material-card__pill {
+    min-height: 30px;
+    padding: 0.18rem 0.24rem;
+    font-size: 0.58rem;
+    letter-spacing: 0.02em;
+  }
+
+  .gathering-material-card__tier,
+  .gathering-material-card__rarity-badge {
+    font-size: 0.51rem;
+  }
+
+  .gathering-material-card__footer-actions,
+  .gathering-material-card__footer-actions--split {
+    grid-template-columns: 1fr 1fr !important;
+    flex-direction: unset !important;
+    gap: 0.42rem;
+    padding: 0.52rem 0.64rem 0.66rem;
+  }
+
+  .gathering-material-card__start-button,
+  .gathering-material-card__recipes-button {
+    width: 100%;
+    min-height: 36px;
+    font-size: 0.57rem;
+    padding-inline: 0.38rem;
+  }
+
+  .gathering-material-card__locked-layer {
+    bottom: 3.65rem;
+  }
+
+  .gathering-material-card__locked-layer-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .gathering-material-card__locked-layer-text {
+    font-size: 0.64rem;
+  }
+
+  .gathering-usage-modal__header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .gathering-usage-modal__header h2 {
+    font-size: 1.05rem;
+  }
+
+  .gathering-usage-modal__recipe {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 0.56rem;
+    padding: 0.62rem;
+  }
+
+  .gathering-usage-modal__recipe-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .gathering-session__metric {
+    padding: 0.62rem;
+  }
+
+  .gathering-session__metric strong {
+    font-size: 0.8rem;
+  }
+
+  .gathering-feedback {
+    font-size: 0.74rem;
+  }
+
+  .gathering-session__live-hero {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .gathering-session__live-body {
+    width: 100%;
+  }
+
+  .gathering-session__live-body h2 {
+    text-align: center;
+  }
+
+  .gathering-session__description {
+    text-align: center;
+  }
+
+  .gathering-session__label {
+    margin-inline: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gathering-loading__spinner,
+  .gathering-session__label::before,
+  .gathering-session__track i,
+  .gathering-session__activity-track i,
+  .gathering-session__activity-track i::after,
+  .gathering-page__status-pill.is-active::before,
+  .gathering-button,
+  .gathering-card,
+  .gathering-origin-option,
+  .gathering-material-card,
+  .gathering-material-card__recipes-button,
+  .gathering-material-card__start-button,
+  .gathering-usage-modal,
+  .gathering-usage-modal__panel {
+    animation: none !important;
+    transition: none !important;
+  }
+}

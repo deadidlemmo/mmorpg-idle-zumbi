@@ -1,0 +1,1207 @@
+/* =========================================================
+   MATERIALS — GROUPS / DIVIDERS
+   ========================================================= */
+
+.gathering-materials-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.72rem;
+  margin-bottom: 0.74rem;
+}
+
+.gathering-materials-toolbar--compact {
+  margin-bottom: 0.74rem;
+}
+
+.gathering-materials-toolbar__summary {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.gathering-materials-toolbar__summary strong {
+  color: #fff8e8;
+  font-family: var(--font-title);
+}
+
+.gathering-material-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.22rem;
+}
+
+.gathering-material-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.76rem;
+  min-width: 0;
+}
+
+.gathering-material-group + .gathering-material-group {
+  padding-top: 0.16rem;
+}
+
+.gathering-material-group__header {
+  display: grid;
+  grid-template-columns: minmax(34px, 1fr) auto minmax(34px, 1fr);
+  align-items: center;
+  gap: 0.82rem;
+  padding: 0.16rem 0.1rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.gathering-material-group__header::before,
+.gathering-material-group__header::after {
+  content: '';
+  height: 1px;
+  min-width: 0;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(232, 184, 78, 0.18),
+      rgba(231, 227, 216, 0.1)
+    );
+  box-shadow: 0 0 12px rgba(232, 184, 78, 0.06);
+}
+
+.gathering-material-group__header::after {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(231, 227, 216, 0.1),
+      rgba(232, 184, 78, 0.18),
+      transparent
+    );
+}
+
+.gathering-material-group__header > div {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.gathering-material-group__header h3 {
+  margin: 0;
+  color: rgba(255, 248, 232, 0.78);
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 11px rgba(232, 184, 78, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.68);
+  white-space: nowrap;
+}
+
+.gathering-material-group__header p,
+.gathering-material-group__header > span {
+  display: none;
+}
+
+.gathering-material-grid,
+.gathering-material-grid--compact,
+.gathering-material-grid--visual {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.72rem;
+}
+
+/* =========================================================
+   MATERIAL CARD
+   ========================================================= */
+
+.gathering-material-card {
+  --equipment-rarity-rgb: 232, 184, 78;
+
+  position: relative;
+  min-width: 0;
+  padding: 0;
+  color: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.48);
+  border: 1px solid rgba(var(--equipment-rarity-rgb), 0.18);
+  border-radius: 0.98rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 9px 16px rgba(0, 0, 0, 0.12),
+    0 0 16px rgba(var(--equipment-rarity-rgb), 0.035);
+  overflow: hidden;
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    opacity var(--transition-fast),
+    filter var(--transition-fast);
+}
+
+.gathering-material-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 11% 22%, rgba(var(--equipment-rarity-rgb), 0.11), transparent 7rem),
+    linear-gradient(90deg, rgba(var(--equipment-rarity-rgb), 0.035), transparent 58%);
+  opacity: 0.9;
+}
+
+.gathering-material-card::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.03), transparent 42%),
+    radial-gradient(circle at 94% 8%, rgba(var(--equipment-rarity-rgb), 0.05), transparent 5.2rem);
+  opacity: 0.86;
+}
+
+.gathering-material-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(var(--equipment-rarity-rgb), 0.36);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.038), transparent),
+    rgba(8, 14, 12, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.038),
+    0 12px 20px rgba(0, 0, 0, 0.16),
+    0 0 20px rgba(var(--equipment-rarity-rgb), 0.075);
+}
+
+.gathering-material-card--compact,
+.gathering-material-card--visual {
+  min-height: 0;
+}
+
+.gathering-material-card.is-selected {
+  border-color: rgba(var(--equipment-rarity-rgb), 0.62);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.056), transparent),
+    rgba(var(--equipment-rarity-rgb), 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 12px 22px rgba(0, 0, 0, 0.17),
+    0 0 24px rgba(var(--equipment-rarity-rgb), 0.13);
+}
+
+.gathering-material-card__select {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.92rem;
+  width: 100%;
+  min-height: 144px;
+  padding: 0.92rem 0.96rem 0.78rem;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.gathering-material-card__select:disabled {
+  cursor: default;
+}
+
+.gathering-material-card__visual,
+.gathering-material-card__body {
+  position: relative;
+  z-index: 2;
+}
+
+.gathering-material-card__visual {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+}
+
+.gathering-material-card__icon-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  overflow: hidden;
+  border-radius: 1.06rem;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(var(--equipment-rarity-rgb), 0.22), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(var(--equipment-rarity-rgb), 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 11px 18px rgba(0, 0, 0, 0.22),
+    0 0 12px rgba(var(--equipment-rarity-rgb), 0.07);
+}
+
+.gathering-material-card__icon-frame::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(var(--equipment-rarity-rgb), 0.16), transparent 72%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.035) 0 1px,
+      transparent 1px 6px
+    );
+  opacity: 0.9;
+}
+
+.gathering-material-card__icon {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  object-position: center;
+  filter:
+    drop-shadow(0 5px 8px rgba(0, 0, 0, 0.5))
+    drop-shadow(0 0 8px rgba(var(--equipment-rarity-rgb), 0.18));
+}
+
+.gathering-material-card__icon-fallback {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  color: color-mix(in srgb, rgb(var(--equipment-rarity-rgb)) 76%, #fff8e8);
+  font-family: var(--font-title);
+  font-size: 0.92rem;
+  font-weight: 950;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-radius: 0.88rem;
+  background:
+    linear-gradient(180deg, rgba(var(--equipment-rarity-rgb), 0.2), rgba(var(--equipment-rarity-rgb), 0.06)),
+    rgba(5, 9, 8, 0.66);
+  border: 1px solid rgba(var(--equipment-rarity-rgb), 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 14px rgba(var(--equipment-rarity-rgb), 0.1);
+}
+
+.gathering-material-card__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gathering-material-card__header-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.gathering-material-card__header-line strong,
+.gathering-material-card strong {
+  display: block;
+  min-width: 0;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1.14;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gathering-material-card__status-area {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  flex-shrink: 0;
+}
+
+.gathering-material-card__lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  color: #c6ccd4;
+  font-size: 0.78rem;
+  line-height: 1;
+  background:
+    linear-gradient(180deg, rgba(190, 197, 207, 0.16), rgba(105, 112, 124, 0.09)),
+    rgba(5, 9, 8, 0.5);
+  border: 1px solid rgba(190, 197, 207, 0.28);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 10px rgba(160, 166, 175, 0.06);
+}
+
+.gathering-material-card__rarity-badge,
+.gathering-material-card__tier {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 25px;
+  padding: 0.1rem 0.5rem;
+  color: color-mix(in srgb, rgb(var(--equipment-rarity-rgb)) 82%, #fff8e8);
+  font-family: var(--font-title);
+  font-size: 0.56rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), transparent),
+    rgba(var(--equipment-rarity-rgb), 0.11);
+  border: 1px solid rgba(var(--equipment-rarity-rgb), 0.26);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 0 9px rgba(var(--equipment-rarity-rgb), 0.05);
+}
+
+.gathering-material-card__tier {
+  min-width: 28px;
+}
+
+.gathering-material-card__craft-summary {
+  display: block;
+  min-width: 0;
+  color: rgba(255, 248, 232, 0.78);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.24;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gathering-material-card__meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.34rem;
+  min-width: 0;
+  margin-top: 0.02rem;
+}
+
+.gathering-material-card__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  width: 100%;
+  padding: 0.12rem 0.48rem;
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-radius: 999px;
+}
+
+.gathering-material-card__pill--rate {
+  color: #f6ffe6;
+  background: rgba(110, 159, 67, 0.12);
+  border: 1px solid rgba(110, 159, 67, 0.24);
+}
+
+.gathering-material-card__pill--time {
+  color: rgba(255, 248, 232, 0.82);
+  background: rgba(255, 255, 255, 0.052);
+  border: 1px solid rgba(231, 227, 216, 0.105);
+}
+
+.gathering-material-card__pill--locked {
+  color: #c8ced8;
+  background: rgba(160, 166, 175, 0.12);
+  border: 1px solid rgba(160, 166, 175, 0.25);
+  box-shadow: 0 0 10px rgba(160, 166, 175, 0.045);
+}
+
+.gathering-material-card__selected-badge {
+  display: none !important;
+}
+
+.gathering-material-card__footer-actions {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.48rem;
+  padding: 0 0.92rem 0.82rem;
+  margin-top: -0.08rem;
+}
+
+.gathering-material-card__footer-actions--split {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.gathering-material-card__start-button,
+.gathering-material-card__recipes-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 31px;
+  min-width: 96px;
+  padding: 0.22rem 0.72rem;
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast),
+    opacity var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.gathering-material-card__start-button {
+  color: #11140e;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, rgb(var(--equipment-rarity-rgb)) 72%, #ffffff),
+      color-mix(in srgb, rgb(var(--equipment-rarity-rgb)) 88%, #17140d)
+    );
+  border: 1px solid rgba(var(--equipment-rarity-rgb), 0.42);
+  box-shadow:
+    0 8px 14px rgba(0, 0, 0, 0.18),
+    0 0 12px rgba(var(--equipment-rarity-rgb), 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.gathering-material-card__start-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(var(--equipment-rarity-rgb), 0.62);
+  box-shadow:
+    0 10px 17px rgba(0, 0, 0, 0.22),
+    0 0 16px rgba(var(--equipment-rarity-rgb), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.gathering-material-card__start-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  color: rgba(231, 227, 216, 0.62);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(5, 9, 8, 0.54);
+  border-color: rgba(231, 227, 216, 0.09);
+  box-shadow: none;
+}
+
+.gathering-material-card__recipes-button {
+  color: rgba(255, 248, 232, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    rgba(5, 9, 8, 0.56);
+  border: 1px solid rgba(231, 227, 216, 0.1);
+}
+
+.gathering-material-card__recipes-button:hover {
+  transform: translateY(-1px);
+  color: color-mix(in srgb, rgb(var(--equipment-rarity-rgb)) 80%, #fff8e8);
+  border-color: rgba(var(--equipment-rarity-rgb), 0.3);
+  background:
+    linear-gradient(180deg, rgba(var(--equipment-rarity-rgb), 0.13), transparent),
+    rgba(5, 9, 8, 0.62);
+}
+
+/* =========================================================
+   MATERIAL CARD — BLOQUEADO
+   ========================================================= */
+
+.gathering-material-card.is-locked {
+  filter: saturate(0.62);
+  border-color: rgba(148, 156, 166, 0.17);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    rgba(9, 10, 11, 0.6);
+}
+
+.gathering-material-card.is-locked::before {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(160, 166, 175, 0.09), transparent 6.5rem),
+    linear-gradient(90deg, rgba(160, 166, 175, 0.035), transparent 58%);
+  opacity: 0.88;
+}
+
+.gathering-material-card.is-locked::after {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.022), transparent 42%),
+    radial-gradient(circle at 94% 8%, rgba(160, 166, 175, 0.038), transparent 5.2rem);
+}
+
+.gathering-material-card.is-locked:hover {
+  border-color: rgba(160, 166, 175, 0.27);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(13, 14, 16, 0.64);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.028),
+    0 11px 18px rgba(0, 0, 0, 0.14),
+    0 0 16px rgba(160, 166, 175, 0.035);
+}
+
+.gathering-material-card.is-locked.is-selected {
+  border-color: rgba(160, 166, 175, 0.4);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.036), transparent),
+    rgba(24, 25, 28, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 11px 20px rgba(0, 0, 0, 0.16),
+    0 0 20px rgba(160, 166, 175, 0.055);
+}
+
+.gathering-material-card.is-locked .gathering-material-card__header-line strong {
+  color: rgba(221, 225, 230, 0.82);
+}
+
+.gathering-material-card.is-locked .gathering-material-card__craft-summary {
+  color: rgba(198, 204, 211, 0.58);
+}
+
+.gathering-material-card.is-locked .gathering-material-card__icon-frame {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(160, 166, 175, 0.14), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(0, 0, 0, 0.32);
+  border-color: rgba(160, 166, 175, 0.2);
+}
+
+.gathering-material-card.is-locked .gathering-material-card__icon-frame::before {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(160, 166, 175, 0.12), transparent 72%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.024) 0 1px,
+      transparent 1px 6px
+    );
+}
+
+.gathering-material-card.is-locked .gathering-material-card__icon-fallback {
+  color: #bdc4ce;
+  background:
+    linear-gradient(180deg, rgba(160, 166, 175, 0.15), rgba(160, 166, 175, 0.045)),
+    rgba(5, 9, 8, 0.68);
+  border-color: rgba(160, 166, 175, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 12px rgba(160, 166, 175, 0.045);
+}
+
+.gathering-material-card.is-locked .gathering-material-card__rarity-badge,
+.gathering-material-card.is-locked .gathering-material-card__pill--time,
+.gathering-material-card.is-locked .gathering-material-card__tier {
+  color: rgba(221, 225, 230, 0.7);
+  background: rgba(255, 255, 255, 0.036);
+  border-color: rgba(198, 204, 211, 0.08);
+}
+
+/* =========================================================
+   CORREÇÃO — BLOQUEIO FORTE DOS MATERIAIS
+   ========================================================= */
+
+.gathering-material-card.is-hard-locked {
+  --locked-rgb: 148, 156, 166;
+
+  position: relative;
+  filter: saturate(0.32) brightness(0.72);
+  border-color: rgba(var(--locked-rgb), 0.38) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    radial-gradient(circle at 18% 18%, rgba(var(--locked-rgb), 0.1), transparent 8rem),
+    rgba(7, 9, 10, 0.82) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035),
+    inset 0 0 36px rgba(0, 0, 0, 0.52),
+    0 10px 20px rgba(0, 0, 0, 0.18) !important;
+  transform: none !important;
+}
+
+.gathering-material-card.is-hard-locked:hover {
+  transform: none !important;
+  border-color: rgba(var(--locked-rgb), 0.46) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    radial-gradient(circle at 18% 18%, rgba(var(--locked-rgb), 0.12), transparent 8rem),
+    rgba(8, 10, 12, 0.88) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 0 40px rgba(0, 0, 0, 0.58),
+    0 10px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+.gathering-material-card.is-hard-locked::before {
+  z-index: 1;
+  background:
+    linear-gradient(135deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.16)),
+    repeating-linear-gradient(
+      135deg,
+      rgba(190, 197, 207, 0.055) 0 1px,
+      transparent 1px 9px
+    ),
+    radial-gradient(circle at 0% 0%, rgba(var(--locked-rgb), 0.1), transparent 9rem) !important;
+  opacity: 1 !important;
+}
+
+.gathering-material-card.is-hard-locked::after {
+  z-index: 1;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.48), transparent 34%, rgba(0, 0, 0, 0.5)),
+    linear-gradient(180deg, rgba(190, 197, 207, 0.035), rgba(0, 0, 0, 0.34)) !important;
+  opacity: 1 !important;
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__select {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__select:disabled {
+  cursor: not-allowed;
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__visual,
+.gathering-material-card.is-hard-locked .gathering-material-card__body {
+  filter: grayscale(1);
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__header-line strong {
+  color: rgba(225, 229, 235, 0.72) !important;
+  text-shadow: none;
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__craft-summary {
+  color: rgba(198, 204, 211, 0.42) !important;
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__icon-frame {
+  border-color: rgba(190, 197, 207, 0.22) !important;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(160, 166, 175, 0.12), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    rgba(0, 0, 0, 0.38) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 8px 14px rgba(0, 0, 0, 0.2) !important;
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__lock {
+  color: #f0f3f7;
+  background:
+    linear-gradient(180deg, rgba(233, 238, 246, 0.18), rgba(118, 126, 140, 0.14)),
+    rgba(5, 9, 8, 0.72);
+  border-color: rgba(220, 226, 236, 0.44);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 0 12px rgba(190, 197, 207, 0.12);
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__rarity-badge,
+.gathering-material-card.is-hard-locked .gathering-material-card__tier,
+.gathering-material-card.is-hard-locked .gathering-material-card__pill {
+  color: rgba(224, 229, 236, 0.72) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  border-color: rgba(198, 204, 211, 0.1) !important;
+  box-shadow: none !important;
+}
+
+.gathering-material-card__locked-layer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 3.55rem;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.34rem;
+  padding: 0.9rem;
+  text-align: center;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(185, 194, 207, 0.15), transparent 6.8rem),
+    linear-gradient(180deg, rgba(7, 9, 10, 0.5), rgba(7, 9, 10, 0.78)),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06) 0 1px,
+      transparent 1px 10px
+    );
+  border-bottom: 1px solid rgba(190, 197, 207, 0.13);
+  backdrop-filter: blur(1.5px) grayscale(1);
+}
+
+.gathering-material-card__locked-layer-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: #f0f3f7;
+  font-size: 1.18rem;
+  line-height: 1;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.035)),
+    rgba(10, 13, 15, 0.86);
+  border: 1px solid rgba(220, 226, 236, 0.28);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 18px rgba(190, 197, 207, 0.12),
+    0 8px 14px rgba(0, 0, 0, 0.24);
+}
+
+.gathering-material-card__locked-layer-text {
+  color: #f3f5f8;
+  font-family: var(--font-title);
+  font-size: 0.74rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.72);
+}
+
+.gathering-material-card__locked-layer small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 0.18rem 0.54rem;
+  color: rgba(234, 238, 244, 0.82);
+  font-family: var(--font-title);
+  font-size: 0.54rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.36);
+  border: 1px solid rgba(220, 226, 236, 0.14);
+  border-radius: 999px;
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__footer-actions {
+  z-index: 6;
+  padding-top: 0.68rem;
+  border-top: 1px solid rgba(190, 197, 207, 0.09);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.22));
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__start-button:disabled {
+  opacity: 1;
+  color: rgba(232, 236, 242, 0.62);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.038), transparent),
+    rgba(7, 9, 10, 0.72);
+  border-color: rgba(190, 197, 207, 0.12);
+  box-shadow: none;
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__recipes-button {
+  position: relative;
+  z-index: 7;
+  color: rgba(255, 248, 232, 0.84);
+  border-color: rgba(232, 184, 78, 0.16);
+  background:
+    linear-gradient(180deg, rgba(232, 184, 78, 0.08), transparent),
+    rgba(5, 9, 8, 0.72);
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__recipes-button:hover {
+  color: #fff8e8;
+  border-color: rgba(232, 184, 78, 0.34);
+  background:
+    linear-gradient(180deg, rgba(232, 184, 78, 0.15), transparent),
+    rgba(5, 9, 8, 0.84);
+}
+
+/* =========================================================
+   CORREÇÃO FINAL — CARD DE MATERIAL MAIS LEGÍVEL
+   ========================================================= */
+
+.gathering-material-card {
+  min-height: 190px;
+}
+
+.gathering-material-card__select {
+  grid-template-columns: 86px minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 144px;
+  padding: 0.94rem 0.98rem 0.82rem;
+}
+
+.gathering-material-card__visual {
+  align-self: center;
+}
+
+.gathering-material-card__icon-frame {
+  width: 78px;
+  height: 78px;
+  border-radius: 1.08rem;
+}
+
+.gathering-material-card__icon-frame::before {
+  inset: 7px;
+}
+
+.gathering-material-card__icon {
+  width: 66px;
+  height: 66px;
+}
+
+.gathering-material-card__icon-fallback {
+  width: 58px;
+  height: 58px;
+  font-size: 0.94rem;
+  border-radius: 0.9rem;
+}
+
+.gathering-material-card__body {
+  justify-content: center;
+  gap: 0.56rem;
+}
+
+.gathering-material-card__header-line {
+  align-items: start;
+  padding-bottom: 0.52rem;
+  border-bottom: 1px solid rgba(var(--equipment-rarity-rgb), 0.11);
+}
+
+.gathering-material-card__header-line strong,
+.gathering-material-card .gathering-material-card__header-line strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  color: #fff8e8;
+  font-size: 1rem;
+  line-height: 1.16;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.gathering-material-card__status-area {
+  padding-top: 0.02rem;
+}
+
+.gathering-material-card__craft-summary {
+  display: block;
+  min-width: 0;
+  padding-bottom: 0.48rem;
+  color: rgba(255, 248, 232, 0.78);
+  font-size: 0.8rem;
+  font-weight: 950;
+  line-height: 1.22;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid rgba(231, 227, 216, 0.065);
+}
+
+.gathering-material-card__meta {
+  gap: 0.42rem;
+  margin-top: 0;
+  padding-top: 0.02rem;
+}
+
+.gathering-material-card__pill {
+  min-height: 28px;
+  padding: 0.14rem 0.52rem;
+  font-size: 0.58rem;
+}
+
+.gathering-material-card__footer-actions,
+.gathering-material-card__footer-actions--split {
+  display: grid;
+  grid-template-columns: minmax(112px, 0.9fr) minmax(112px, 0.9fr);
+  gap: 0.58rem;
+  align-items: stretch;
+  justify-content: stretch;
+  margin-top: 0;
+  padding: 0.74rem 0.98rem 0.9rem;
+  border-top: 1px solid rgba(var(--equipment-rarity-rgb), 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    rgba(0, 0, 0, 0.08);
+}
+
+.gathering-material-card__start-button,
+.gathering-material-card__recipes-button {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0.35rem 0.86rem;
+  border-radius: 0.78rem;
+  font-size: 0.64rem;
+  letter-spacing: 0.075em;
+}
+
+.gathering-material-card__start-button {
+  color: #12130e;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.06)),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, rgb(var(--equipment-rarity-rgb)) 72%, #fff8e8),
+      color-mix(in srgb, rgb(var(--equipment-rarity-rgb)) 84%, #2a2111)
+    );
+  border-color: rgba(var(--equipment-rarity-rgb), 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 9px 16px rgba(0, 0, 0, 0.2),
+    0 0 14px rgba(var(--equipment-rarity-rgb), 0.12);
+}
+
+.gathering-material-card__start-button:hover:not(:disabled) {
+  color: #0b0d08;
+  transform: translateY(-1px);
+  border-color: rgba(var(--equipment-rarity-rgb), 0.66);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 12px 20px rgba(0, 0, 0, 0.24),
+    0 0 18px rgba(var(--equipment-rarity-rgb), 0.18);
+}
+
+.gathering-material-card__recipes-button {
+  color: rgba(255, 248, 232, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    rgba(5, 9, 8, 0.72);
+  border-color: rgba(231, 227, 216, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 14px rgba(0, 0, 0, 0.14);
+}
+
+.gathering-material-card__recipes-button:hover {
+  color: color-mix(in srgb, rgb(var(--equipment-rarity-rgb)) 74%, #fff8e8);
+  transform: translateY(-1px);
+  border-color: rgba(var(--equipment-rarity-rgb), 0.38);
+  background:
+    linear-gradient(180deg, rgba(var(--equipment-rarity-rgb), 0.13), transparent),
+    rgba(5, 9, 8, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 17px rgba(0, 0, 0, 0.18),
+    0 0 14px rgba(var(--equipment-rarity-rgb), 0.08);
+}
+
+.gathering-material-card__start-button:disabled {
+  opacity: 0.55;
+  color: rgba(231, 227, 216, 0.58);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.038), transparent),
+    rgba(7, 9, 10, 0.68);
+  border-color: rgba(190, 197, 207, 0.12);
+  box-shadow: none;
+}
+
+.gathering-material-card.is-hard-locked {
+  min-height: 190px;
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__header-line {
+  border-bottom-color: rgba(190, 197, 207, 0.09);
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__craft-summary {
+  border-bottom-color: rgba(190, 197, 207, 0.07);
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__footer-actions,
+.gathering-material-card.is-hard-locked .gathering-material-card__footer-actions--split {
+  z-index: 7;
+  padding: 0.74rem 0.98rem 0.9rem;
+  border-top: 1px solid rgba(190, 197, 207, 0.11);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.24));
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__start-button:disabled {
+  opacity: 1;
+  color: rgba(232, 236, 242, 0.62);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(7, 9, 10, 0.74);
+  border-color: rgba(190, 197, 207, 0.14);
+  box-shadow: none;
+}
+
+.gathering-material-card.is-hard-locked .gathering-material-card__recipes-button {
+  color: rgba(255, 248, 232, 0.86);
+  border-color: rgba(232, 184, 78, 0.2);
+  background:
+    linear-gradient(180deg, rgba(232, 184, 78, 0.09), transparent),
+    rgba(5, 9, 8, 0.78);
+}
+
+.gathering-material-card__locked-layer {
+  bottom: 4.36rem;
+}
+
+@media (max-width: 720px) {
+  .gathering-material-card {
+    min-height: 176px;
+  }
+
+  .gathering-material-card__select {
+    grid-template-columns: 58px minmax(0, 1fr);
+    min-height: 128px;
+    padding: 0.76rem;
+  }
+
+  .gathering-material-card__icon-frame {
+    width: 54px;
+    height: 54px;
+    border-radius: 0.88rem;
+  }
+
+  .gathering-material-card__icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .gathering-material-card__icon-fallback {
+    width: 39px;
+    height: 39px;
+    font-size: 0.74rem;
+    border-radius: 0.7rem;
+  }
+
+  .gathering-material-card__header-line {
+    gap: 0.5rem;
+  }
+
+  .gathering-material-card__header-line strong,
+  .gathering-material-card .gathering-material-card__header-line strong {
+    font-size: 0.9rem;
+    line-height: 1.15;
+  }
+
+  .gathering-material-card__craft-summary {
+    font-size: 0.72rem;
+  }
+
+  .gathering-material-card__meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .gathering-material-card__pill {
+    min-height: 25px;
+    font-size: 0.52rem;
+  }
+
+  .gathering-material-card__footer-actions,
+  .gathering-material-card__footer-actions--split {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.46rem;
+    padding: 0.66rem 0.76rem 0.74rem;
+  }
+
+  .gathering-material-card__start-button,
+  .gathering-material-card__recipes-button {
+    min-height: 35px;
+    font-size: 0.58rem;
+  }
+
+  .gathering-material-card__locked-layer {
+    bottom: 4.05rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-material-card {
+    min-height: 204px;
+  }
+
+  .gathering-material-card__select {
+    grid-template-columns: 52px minmax(0, 1fr);
+    min-height: 132px;
+  }
+
+  .gathering-material-card__icon-frame {
+    width: 48px;
+    height: 48px;
+  }
+
+  .gathering-material-card__icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .gathering-material-card__icon-fallback {
+    width: 34px;
+    height: 34px;
+    font-size: 0.68rem;
+  }
+
+  .gathering-material-card__header-line {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.34rem;
+  }
+
+  .gathering-material-card__status-area {
+    width: 100%;
+  }
+
+  .gathering-material-card__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .gathering-material-card__pill {
+    width: 100%;
+  }
+
+  .gathering-material-card__footer-actions,
+  .gathering-material-card__footer-actions--split {
+    grid-template-columns: 1fr;
+    gap: 0.44rem;
+  }
+
+  .gathering-material-card__locked-layer {
+    bottom: 6.42rem;
+  }
+}

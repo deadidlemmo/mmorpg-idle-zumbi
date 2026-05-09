@@ -1,0 +1,20 @@
+/* =========================================================
+   DEAD IDLE — GATHERING
+   Arquivo central de estilos
+   Local: src/features/gathering/styles/gathering.css
+
+   Importado nas páginas com:
+   import '../styles/gathering.css';
+   ========================================================= */
+
+@import './gathering.rarity.css';
+@import './gathering.layout.css';
+@import './gathering.cards.css';
+@import './gathering.hub.css';
+@import './gathering.origin-page.css';
+@import './gathering.origins.css';
+@import './gathering.materials.css';
+@import './gathering.session.css';
+@import './gathering.modal.css';
+@import './gathering.states.css';
+@import './gathering.responsive.css';

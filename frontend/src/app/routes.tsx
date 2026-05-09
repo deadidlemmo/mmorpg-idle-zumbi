@@ -13,6 +13,9 @@ import { AutoCombatRealtimeProvider } from '../features/auto-combat/realtime/Aut
 import { CharacterSelectPage } from '../features/characters/pages/CharacterSelectPage';
 import { DashboardOverviewPage } from '../features/dashboard/pages/DashboardOverviewPage';
 import { DashboardPlaceholderPage } from '../features/dashboard/pages/DashboardPlaceholderPage';
+import { GatheringHubPage } from '../features/gathering/pages/GatheringHubPage';
+import { GatheringOriginPage } from '../features/gathering/pages/GatheringOriginPage';
+import { GatheringRealtimeProvider } from '../features/gathering/realtime/GatheringRealtimeProvider';
 import { useAuthStore } from '../store/auth.store';
 
 interface RouteGuardProps {
@@ -48,12 +51,20 @@ function DashboardRealtimeRoute() {
 
   return (
     <AutoCombatRealtimeProvider
-      key={characterId}
+      key={`auto-combat-${characterId}`}
       characterId={characterId}
       autoLoad
       refreshMs={3000}
     >
-      <Outlet />
+      <GatheringRealtimeProvider
+        key={`gathering-${characterId}`}
+        characterId={characterId}
+        autoLoad
+        refreshMs={5000}
+        tickMs={1000}
+      >
+        <Outlet />
+      </GatheringRealtimeProvider>
     </AutoCombatRealtimeProvider>
   );
 }
@@ -92,15 +103,9 @@ export function AppRoutes() {
 
           <Route path="auto-combat" element={<AutoCombatPage />} />
 
-          <Route
-            path="gathering"
-            element={
-              <DashboardPlaceholderPage
-                title="Expedições"
-                description="Tela futura para iniciar expedições, acompanhar produção e escolher origem de materiais."
-              />
-            }
-          />
+          <Route path="gathering" element={<GatheringHubPage />} />
+
+          <Route path="gathering/:origin" element={<GatheringOriginPage />} />
 
           <Route
             path="crafting"
@@ -152,7 +157,7 @@ export function AppRoutes() {
             }
           />
 
-          <Route index={false} path="*" element={<Navigate to="" replace />} />
+          <Route path="*" element={<Navigate to="" replace />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
