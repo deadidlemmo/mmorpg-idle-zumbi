@@ -1,5 +1,9 @@
 import { useContext, useMemo } from 'react';
 import {
+    getGatheringSessionCollectedQuantity,
+    getGatheringSessionCollectedXp,
+} from '../types/gathering.types';
+import {
     GatheringRealtimeContext,
     type GatheringRealtimeContextValue,
     type GatheringRealtimeLiveProduction,
@@ -40,24 +44,30 @@ export function useGatheringRealtimeActions() {
 export function useGatheringRealtimeSession() {
   const state = useGatheringRealtimeState();
 
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const collectedQuantity = getGatheringSessionCollectedQuantity(
+      state.session,
+    );
+    const collectedXp = getGatheringSessionCollectedXp(state.session);
+
+    return {
       session: state.session,
       status: state.status,
       productionPreview: state.productionPreview,
       gatheringSkill: state.gatheringSkill,
       targetMaterial: state.targetMaterial,
       isActive: state.isActive,
-    }),
-    [
-      state.gatheringSkill,
-      state.isActive,
-      state.productionPreview,
-      state.session,
-      state.status,
-      state.targetMaterial,
-    ],
-  );
+      collectedQuantity,
+      collectedXp,
+    };
+  }, [
+    state.gatheringSkill,
+    state.isActive,
+    state.productionPreview,
+    state.session,
+    state.status,
+    state.targetMaterial,
+  ]);
 }
 
 export function useGatheringLiveProduction(): GatheringRealtimeLiveProduction {
@@ -116,4 +126,21 @@ export function useGatheringRealtimeMaterial() {
     }),
     [state.targetMaterial],
   );
+}
+
+export function useGatheringRealtimeCollected() {
+  const state = useGatheringRealtimeState();
+
+  return useMemo(() => {
+    const collectedQuantity = getGatheringSessionCollectedQuantity(
+      state.session,
+    );
+    const collectedXp = getGatheringSessionCollectedXp(state.session);
+
+    return {
+      collectedQuantity,
+      collectedXp,
+      hasCollected: collectedQuantity > 0 || collectedXp > 0,
+    };
+  }, [state.session]);
 }

@@ -1,0 +1,4 @@
+frontend\src\app\routes.tsx:16:import { GatheringPage } from '../features/gathering/pages/GatheringPage';
+frontend\src\app\routes.tsx:96:          <Route path="gathering" element={<GatheringPage />} />
+frontend\src\features\gathering\pages\GatheringPage.tsx:31:import '../gathering.css';
+frontend\src\features\gathering\pages\GatheringPage.tsx:584:export function GatheringPage() {

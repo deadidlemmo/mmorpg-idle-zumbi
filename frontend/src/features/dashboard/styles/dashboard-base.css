@@ -1,0 +1,180 @@
+/* =========================================================
+   DEAD IDLE — DASHBOARD
+   Arquivo: src/features/dashboard/dashboard.css
+
+   Correção desta versão:
+   - Mantém a ActivityBar minimizável/expandível apenas como UI.
+   - Corrige a quebra visual do Hero do personagem:
+     "ExperiênciaProgresso do nível", "VidaIntegridade atual",
+     valores colados e porcentagens sem espaçamento.
+   - Remove conflitos visuais antigos da ActivityBar.
+   - Não altera lógica, WebSocket, reducer, provider ou estado realtime.
+   ========================================================= */
+
+/* =========================================================
+   BASE / ESTADOS GERAIS
+   - Status, mapas, placeholders, loading, erro e modal.
+   ========================================================= */
+
+/* =========================================================
+   11. STATUS, MAPAS E PLACEHOLDERS
+   ========================================================= */
+
+.dashboard-status-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.dashboard-status-callout,
+.dashboard-empty-state,
+.dashboard-placeholder {
+  padding: 0.9rem;
+  background: rgba(5, 9, 8, 0.34);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+  border-radius: 0.85rem;
+}
+
+.dashboard-status-callout strong,
+.dashboard-empty-state strong,
+.dashboard-placeholder strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.dashboard-status-callout span,
+.dashboard-empty-state p,
+.dashboard-placeholder p,
+.dashboard-placeholder span {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.dashboard-map-summary {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.dashboard-map-summary div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: rgba(5, 9, 8, 0.32);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+  border-radius: 0.8rem;
+}
+
+.dashboard-map-summary span {
+  color: var(--text-muted);
+}
+
+.dashboard-map-summary strong {
+  text-align: right;
+}
+
+/* =========================================================
+   12. LOADING E ERRO
+   ========================================================= */
+
+.dashboard-loading,
+.dashboard-error {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  color: var(--text-primary);
+  background: #07100d;
+}
+
+.dashboard-error {
+  text-align: center;
+}
+
+.dashboard-error h1 {
+  margin: 0;
+}
+
+.dashboard-error p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   13. MODAL
+   ========================================================= */
+
+.dashboard-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(3, 6, 5, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.dashboard-modal {
+  width: min(100%, 440px);
+  padding: 1.25rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(30, 37, 35, 0.98);
+  border: 1px solid rgba(158, 47, 47, 0.32);
+  border-radius: 1.2rem;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.5),
+    0 0 28px rgba(158, 47, 47, 0.1);
+}
+
+.dashboard-modal__eyebrow {
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: #e9b7b2;
+}
+
+.dashboard-modal h2 {
+  margin: 0.35rem 0 0.6rem;
+}
+
+.dashboard-modal p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.dashboard-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.2rem;
+}
+
+.dashboard-modal__cancel,
+.dashboard-modal__delete {
+  min-height: 42px;
+  padding: 0 1rem;
+  font-family: var(--font-title);
+  font-weight: 700;
+  border-radius: 0.8rem;
+  cursor: pointer;
+}
+
+.dashboard-modal__cancel {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(231, 227, 216, 0.1);
+}
+
+.dashboard-modal__delete {
+  color: #fff2ef;
+  background: linear-gradient(180deg, rgba(194, 74, 74, 0.94), rgba(158, 47, 47, 0.88));
+  border: 1px solid rgba(194, 74, 74, 0.62);
+}

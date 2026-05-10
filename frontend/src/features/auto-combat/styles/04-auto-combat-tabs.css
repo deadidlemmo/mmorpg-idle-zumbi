@@ -1,0 +1,118 @@
+/* =========================================================
+   ABAS PREMIUM / SEGMENTED CONTROL
+   ========================================================= */
+
+.auto-combat-tabs {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(360px, 100%);
+  min-height: 62px;
+  margin: 0 auto 1.45rem;
+  padding: 0.36rem;
+  gap: 0.36rem;
+  background:
+    radial-gradient(circle at top, rgba(231, 227, 216, 0.052), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(5, 9, 8, 0.48);
+  border: 1px solid rgba(231, 227, 216, 0.085);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.026),
+    0 12px 26px rgba(0, 0, 0, 0.16);
+}
+
+.auto-combat-tabs::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 0.36rem;
+  left: 0.36rem;
+  width: calc((100% - 1.08rem) / 2);
+  height: calc(100% - 0.72rem);
+  background:
+    radial-gradient(circle at top, rgba(231, 227, 216, 0.095), transparent 78%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.018)),
+    rgba(42, 53, 66, 0.82);
+  border: 1px solid rgba(231, 227, 216, 0.12);
+  border-radius: 0.76rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 10px 22px rgba(0, 0, 0, 0.2),
+    0 0 18px rgba(110, 159, 67, 0.055);
+  transition:
+    transform 220ms ease,
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.auto-combat-tabs:has(button:nth-child(2).is-active)::before {
+  transform: translateX(calc(100% + 0.36rem));
+}
+
+.auto-combat-tabs::after {
+  content: '';
+  position: absolute;
+  inset: 0.36rem 50% 0.36rem auto;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(231, 227, 216, 0.1),
+    transparent
+  );
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.auto-combat-tabs button {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: 50px;
+  padding: 0 1rem;
+  color: rgba(231, 227, 216, 0.68);
+  font-family: var(--font-title);
+  font-size: 0.94rem;
+  font-weight: 900;
+  letter-spacing: 0.018em;
+  background: transparent;
+  border: 0;
+  border-radius: 0.74rem;
+  cursor: pointer;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  transition:
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    text-shadow var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.auto-combat-tabs button:hover {
+  color: rgba(245, 240, 223, 0.92);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.65),
+    0 0 12px rgba(231, 227, 216, 0.08);
+}
+
+.auto-combat-tabs button.is-active {
+  color: #fff8e8;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.72),
+    0 0 14px rgba(245, 240, 223, 0.08);
+}
+
+.auto-combat-tabs button:active {
+  transform: translateY(1px);
+}
+
+.auto-combat-tabs button:focus-visible {
+  outline: 2px solid rgba(180, 214, 112, 0.55);
+  outline-offset: 2px;
+}
+
+.auto-combat-tab-panel {
+  width: 100%;
+}

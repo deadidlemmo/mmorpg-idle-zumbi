@@ -1,0 +1,39 @@
+/* =========================================================
+   AJUSTE FINAL — STATUS DO AUTO COMBAT IGUAL AO DASHBOARD
+   ========================================================= */
+
+.auto-combat-tab-panel--stats {
+  width: 100%;
+}
+
+.auto-combat-character-stats-panel {
+  width: 100%;
+}
+
+.auto-combat-tab-panel--stats .character-stats-group {
+  width: 100%;
+}
+
+.auto-combat-tab-panel--stats .auto-combat-stats-dashboard,
+.auto-combat-tab-panel--stats .auto-combat-stats-grid,
+.auto-combat-tab-panel--stats .auto-combat-stats-panels,
+.auto-combat-tab-panel--stats .auto-combat-info-panel,
+.auto-combat-tab-panel--stats .auto-combat-equipment-panel {
+  display: none !important;
+}
+
+.auto-combat-tab-panel--stats .character-stat-card__value {
+  font-family: var(--font-title);
+}
+
+@media (max-width: 620px) {
+  .auto-combat-tab-panel--stats .character-stats-grid--primary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .auto-combat-tab-panel--stats .character-stats-grid--primary {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,359 @@
+/* =========================================================
+   REFINO FINAL — PREPARAÇÃO / SELEÇÃO DE MAPA
+   - Deixa o card visual do mapa mais premium.
+   - Integra Tier/Nível dentro do mapa com melhor alinhamento.
+   - Dá mais presença ao painel direito sem mudar lógica/estrutura TSX.
+   ========================================================= */
+
+.auto-combat-map-stage {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(110, 159, 67, 0.12), transparent 18rem),
+    radial-gradient(circle at 86% 12%, rgba(229, 182, 63, 0.045), transparent 16rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent),
+    rgba(5, 9, 8, 0.38);
+  border-color: rgba(180, 214, 112, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 12px 30px rgba(0, 0, 0, 0.16),
+    0 0 26px rgba(110, 159, 67, 0.035);
+}
+
+.auto-combat-map-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(110, 159, 67, 0.055), transparent 28%, transparent 72%, rgba(229, 182, 63, 0.035)),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 9px);
+  opacity: 0.7;
+}
+
+.auto-combat-map-stage > * {
+  position: relative;
+  z-index: 1;
+}
+
+.auto-combat-map-preview {
+  grid-template-columns: minmax(330px, 0.92fr) minmax(0, 1.08fr);
+  gap: 1.05rem;
+  align-items: stretch;
+}
+
+.auto-combat-map-preview__visual {
+  position: relative;
+  isolation: isolate;
+  min-height: 354px;
+  padding: 1.15rem;
+  overflow: hidden;
+  justify-content: flex-end;
+  background:
+    radial-gradient(circle at 22% 14%, rgba(180, 214, 112, 0.12), transparent 13rem),
+    radial-gradient(circle at 86% 10%, rgba(245, 240, 223, 0.045), transparent 12rem),
+    linear-gradient(145deg, rgba(31, 53, 42, 0.78), rgba(9, 17, 22, 0.94) 58%, rgba(5, 9, 8, 0.96));
+  border: 1px solid rgba(180, 214, 112, 0.14);
+  border-radius: 1.08rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.042),
+    inset 0 -42px 70px rgba(0, 0, 0, 0.18),
+    0 16px 34px rgba(0, 0, 0, 0.2),
+    0 0 26px rgba(110, 159, 67, 0.052);
+}
+
+.auto-combat-map-preview__visual::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 0 48%, rgba(0, 0, 0, 0.16) 100%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 10px);
+  opacity: 0.72;
+}
+
+.auto-combat-map-preview__visual::after {
+  content: '';
+  position: absolute;
+  inset: auto 1rem 1rem;
+  z-index: -1;
+  height: 38%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(3, 7, 7, 0.42));
+  border-radius: 1rem;
+  opacity: 0.86;
+}
+
+.auto-combat-map-preview__visual > span {
+  width: fit-content;
+  padding: 0.18rem 0.02rem;
+  color: color-mix(in srgb, var(--action-primary-hover) 92%, #f4f8dc);
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-shadow:
+    0 0 10px rgba(110, 159, 67, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.76);
+}
+
+.auto-combat-map-preview__visual > strong {
+  max-width: 100%;
+  margin-top: 0.32rem;
+  color: #fff8e8;
+  font-size: clamp(1.36rem, 2vw, 1.72rem);
+  line-height: 1.04;
+  letter-spacing: 0.005em;
+  text-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.82),
+    0 0 16px rgba(245, 240, 223, 0.07);
+}
+
+.auto-combat-map-preview__visual > small {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.42rem;
+  padding: 0.28rem 0;
+  color: rgba(231, 227, 216, 0.78);
+  font-size: 0.88rem;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.78),
+    0 0 8px rgba(110, 159, 67, 0.09);
+}
+
+.auto-combat-map-preview__visual .auto-combat-map-meta--visual {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(118px, 1fr));
+  justify-content: center;
+  align-self: stretch;
+  width: min(100%, 340px);
+  max-width: 100%;
+  gap: 0.72rem;
+  margin: 1rem auto 0;
+  padding-top: 0.92rem;
+  border-top: 1px solid rgba(231, 227, 216, 0.075);
+}
+
+.auto-combat-map-preview__visual .auto-combat-map-meta--visual div {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 72px;
+  padding: 0.72rem 0.76rem;
+  overflow: hidden;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(200, 211, 122, 0.12), transparent 76%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.044), rgba(255, 255, 255, 0.008)),
+    rgba(4, 9, 8, 0.56);
+  border: 1px solid rgba(200, 211, 122, 0.14);
+  border-radius: 0.88rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 -18px 26px rgba(0, 0, 0, 0.14),
+    0 8px 18px rgba(0, 0, 0, 0.17),
+    0 0 18px rgba(110, 159, 67, 0.045);
+}
+
+.auto-combat-map-preview__visual .auto-combat-map-meta--visual div::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(200, 211, 122, 0.7), transparent);
+  opacity: 0.8;
+}
+
+.auto-combat-map-preview__visual .auto-combat-map-meta--visual div::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(200, 211, 122, 0.05), transparent 44%, rgba(255, 255, 255, 0.018));
+}
+
+.auto-combat-map-preview__visual .auto-combat-map-meta--visual span,
+.auto-combat-map-preview__visual .auto-combat-map-meta--visual strong {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.auto-combat-map-preview__visual .auto-combat-map-meta--visual span {
+  color: color-mix(in srgb, var(--action-primary-hover) 90%, #f4f8dc);
+  font-size: 0.64rem;
+  letter-spacing: 0.1em;
+  text-shadow:
+    0 0 8px rgba(110, 159, 67, 0.18),
+    0 1px 2px rgba(0, 0, 0, 0.72);
+}
+
+.auto-combat-map-preview__visual .auto-combat-map-meta--visual strong {
+  margin-top: 0.24rem;
+  color: #fff8e8;
+  font-size: 1.1rem;
+  line-height: 1;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.86),
+    0 0 10px rgba(245, 240, 223, 0.07);
+}
+
+.auto-combat-map-preview__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.05rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(110, 159, 67, 0.055), transparent 14rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(5, 9, 8, 0.2);
+  border: 1px solid rgba(231, 227, 216, 0.055);
+  border-radius: 1rem;
+}
+
+.auto-combat-map-preview__content > span {
+  color: color-mix(in srgb, var(--action-primary-hover) 92%, #f4f8dc);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-shadow:
+    0 0 8px rgba(110, 159, 67, 0.15),
+    0 1px 2px rgba(0, 0, 0, 0.68);
+}
+
+.auto-combat-map-preview__content > strong {
+  margin-top: 0.22rem;
+  color: #fff8e8;
+  font-size: 1.18rem;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.78),
+    0 0 12px rgba(245, 240, 223, 0.06);
+}
+
+.auto-combat-map-preview__content > p {
+  margin-top: 0.86rem;
+  color: rgba(245, 240, 223, 0.86);
+  font-size: 1.02rem;
+  line-height: 1.48;
+}
+
+.auto-combat-map-preview__content .auto-combat-field {
+  margin-top: 0.92rem;
+}
+
+.auto-combat-map-preview__content .auto-combat-field--submap {
+  margin-top: 0.82rem;
+}
+
+.auto-combat-map-preview__content .auto-combat-stage-actions {
+  margin-top: 1rem;
+}
+
+.auto-combat-map-preview__content .auto-combat-primary-button {
+  min-width: min(180px, 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 22px rgba(110, 159, 67, 0.14),
+    0 10px 22px rgba(0, 0, 0, 0.14);
+}
+
+@media (max-width: 1100px) {
+  .auto-combat-map-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .auto-combat-map-preview__visual {
+    min-height: 300px;
+  }
+
+  .auto-combat-map-preview__content {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .auto-combat-map-stage {
+    padding: 0.82rem;
+  }
+
+  .auto-combat-map-preview {
+    gap: 0.82rem;
+  }
+
+  .auto-combat-map-preview__visual {
+    min-height: 246px;
+    padding: 0.88rem;
+    border-radius: 0.96rem;
+  }
+
+  .auto-combat-map-preview__visual > span {
+    font-size: 0.64rem;
+    letter-spacing: 0.12em;
+  }
+
+  .auto-combat-map-preview__visual > strong {
+    font-size: 1.18rem;
+  }
+
+  .auto-combat-map-preview__visual > small {
+    margin-top: 0.34rem;
+    font-size: 0.76rem;
+  }
+
+  .auto-combat-map-preview__visual .auto-combat-map-meta--visual {
+    width: 100%;
+    max-width: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.56rem;
+    margin-top: 0.82rem;
+    padding-top: 0.72rem;
+  }
+
+  .auto-combat-map-preview__visual .auto-combat-map-meta--visual div {
+    min-height: 62px;
+    padding: 0.58rem 0.5rem;
+    border-radius: 0.76rem;
+  }
+
+  .auto-combat-map-preview__visual .auto-combat-map-meta--visual span {
+    font-size: 0.56rem;
+  }
+
+  .auto-combat-map-preview__visual .auto-combat-map-meta--visual strong {
+    font-size: 0.92rem;
+  }
+
+  .auto-combat-map-preview__content {
+    padding: 0.9rem;
+    border-radius: 0.92rem;
+  }
+
+  .auto-combat-map-preview__content > p {
+    font-size: 0.92rem;
+    line-height: 1.42;
+  }
+}
+
+@media (max-width: 390px) {
+  .auto-combat-map-preview__visual {
+    min-height: 228px;
+    padding: 0.8rem;
+  }
+
+  .auto-combat-map-preview__visual .auto-combat-map-meta--visual {
+    gap: 0.44rem;
+  }
+
+  .auto-combat-map-preview__visual .auto-combat-map-meta--visual div {
+    min-height: 58px;
+    padding: 0.52rem 0.42rem;
+  }
+
+  .auto-combat-map-preview__visual .auto-combat-map-meta--visual span {
+    font-size: 0.52rem;
+  }
+
+  .auto-combat-map-preview__visual .auto-combat-map-meta--visual strong {
+    font-size: 0.86rem;
+  }
+}

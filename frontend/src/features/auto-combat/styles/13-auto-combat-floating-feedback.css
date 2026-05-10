@@ -1,0 +1,125 @@
+/* =========================================================
+   DANO / CURA FLUTUANTE NOS CARDS
+   ========================================================= */
+
+.auto-combat-floating-hp,
+.auto-combat-floating-damage,
+.auto-combat-damage-pop,
+.auto-combat-hit-value {
+  position: absolute;
+  z-index: 6;
+  top: 48%;
+  right: 1rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  max-width: calc(100% - 2rem);
+  min-height: 30px;
+  padding: 0.22rem 0.56rem;
+  color: #ffd1cc;
+  font-family: var(--font-title);
+  font-size: 0.88rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(83, 20, 24, 0.82);
+  border: 1px solid rgba(215, 91, 98, 0.46);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.24),
+    0 0 18px rgba(215, 91, 98, 0.16);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.82),
+    0 0 10px rgba(215, 91, 98, 0.2);
+  animation: autoCombatFloatingDamage 960ms ease-out both;
+}
+
+.auto-combat-floating-hp--player,
+.auto-combat-damage-pop--player,
+.auto-combat-hit-value--player {
+  right: auto;
+  left: 1rem;
+}
+
+.auto-combat-floating-hp--mob,
+.auto-combat-damage-pop--mob,
+.auto-combat-hit-value--mob {
+  right: 1rem;
+  left: auto;
+}
+
+.auto-combat-floating-hp--damage,
+.auto-combat-damage-pop--damage,
+.auto-combat-hit-value--damage {
+  color: #ffd1cc;
+  border-color: rgba(215, 91, 98, 0.48);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(83, 20, 24, 0.84);
+}
+
+.auto-combat-floating-hp--critical,
+.auto-combat-floating-damage.is-critical,
+.auto-combat-damage-pop--critical,
+.auto-combat-hit-value--critical {
+  color: #ffe7a7;
+  border-color: rgba(229, 182, 63, 0.58);
+  background:
+    radial-gradient(circle at center, rgba(229, 182, 63, 0.16), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent),
+    rgba(84, 56, 13, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 18px rgba(0, 0, 0, 0.24),
+    0 0 24px rgba(229, 182, 63, 0.22);
+  animation: autoCombatFloatingCritical 1100ms ease-out both;
+}
+
+.auto-combat-floating-hp--heal,
+.auto-combat-damage-pop--heal,
+.auto-combat-hit-value--heal {
+  color: #d9ffd2;
+  border-color: rgba(110, 159, 67, 0.52);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(26, 70, 32, 0.84);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.24),
+    0 0 20px rgba(110, 159, 67, 0.18);
+}
+
+.auto-combat-floating-hp--dodge,
+.auto-combat-damage-pop--dodge,
+.auto-combat-hit-value--dodge {
+  color: #d9ecff;
+  border-color: rgba(150, 188, 226, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(26, 47, 72, 0.84);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.24),
+    0 0 20px rgba(150, 188, 226, 0.16);
+}
+
+.auto-combat-round-progress {
+  padding: 0.8rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(5, 9, 8, 0.4);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+  border-radius: 0.82rem;
+}
+
+.auto-combat-round-progress i b {
+  background: linear-gradient(90deg, #b9832d, #e0b65b);
+  box-shadow: 0 0 12px rgba(224, 182, 91, 0.24);
+}

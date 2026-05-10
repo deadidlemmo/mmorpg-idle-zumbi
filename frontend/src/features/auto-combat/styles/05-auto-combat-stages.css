@@ -1,0 +1,31 @@
+/* =========================================================
+   ESTÁGIOS
+   ========================================================= */
+
+.auto-combat-stage-card {
+  min-width: 0;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(5, 9, 8, 0.34);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+  border-radius: 1rem;
+}
+
+.auto-combat-stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.auto-combat-stage-actions .auto-combat-primary-button,
+.auto-combat-stage-actions .auto-combat-secondary-button {
+  min-width: 180px;
+}
+
+.auto-combat-stage-actions--session {
+  margin-top: 0.15rem;
+}

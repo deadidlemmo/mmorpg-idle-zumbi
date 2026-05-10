@@ -1,0 +1,13 @@
+/* =========================================================
+   GATHERING ORIGIN — ENTRYPOINT
+   Substitui o antigo gathering.origin-page.css monolítico.
+   Mantenha este arquivo no mesmo local e deixe os imports abaixo na ordem.
+   ========================================================= */
+
+@import './gathering.origin-base.css';
+@import './gathering.origin-layout.css';
+@import './gathering.origin-intro.css';
+@import './gathering.origin-side.css';
+@import './gathering.origin-skill.css';
+@import './gathering.origin-shared.css';
+@import './gathering.origin-responsive.css';

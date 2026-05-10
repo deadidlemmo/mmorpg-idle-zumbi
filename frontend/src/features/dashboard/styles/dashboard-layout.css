@@ -1,0 +1,268 @@
+/* =========================================================
+   1. SHELL PRINCIPAL
+   ========================================================= */
+
+.dashboard-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at top left, rgba(110, 159, 67, 0.11), transparent 32rem),
+    radial-gradient(circle at bottom right, rgba(158, 47, 47, 0.08), transparent 30rem),
+    linear-gradient(180deg, #0b1110 0%, #07100d 58%, #050807 100%);
+}
+
+/* =========================================================
+   2. SIDEBAR
+   ========================================================= */
+
+.dashboard-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 1rem;
+  overflow-y: auto;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    rgba(10, 15, 14, 0.96);
+  border-right: 1px solid rgba(231, 227, 216, 0.08);
+  box-shadow: 16px 0 42px rgba(0, 0, 0, 0.22);
+}
+
+.dashboard-sidebar__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.35rem 0.4rem 1rem;
+  border-bottom: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+.dashboard-sidebar__brand span {
+  font-family: var(--font-title);
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.dashboard-sidebar__brand strong {
+  font-family: var(--font-title);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--action-primary-hover) 82%, #f4f8dc);
+  text-shadow:
+    0 0 8px rgba(110, 159, 67, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+.dashboard-sidebar__character {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(30, 37, 35, 0.84);
+  border: 1px solid
+    color-mix(in srgb, var(--class-accent, #7f68d8) 38%, rgba(231, 227, 216, 0.08));
+  border-radius: 1rem;
+}
+
+.dashboard-sidebar__avatar {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 66px;
+  overflow: hidden;
+  background: rgba(5, 9, 8, 0.72);
+  border: 1px solid rgba(231, 227, 216, 0.1);
+  border-radius: 0.78rem;
+}
+
+.dashboard-sidebar__avatar img {
+  width: auto;
+  height: 92%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.34));
+}
+
+.dashboard-sidebar__avatar span {
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+}
+
+.dashboard-sidebar__character strong {
+  display: block;
+  max-width: 100%;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-sidebar__character span {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.dashboard-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.dashboard-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 42px;
+  padding: 0 0.85rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.dashboard-sidebar__link span {
+  width: 20px;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.dashboard-sidebar__link strong {
+  font-size: 0.9rem;
+}
+
+.dashboard-sidebar__link:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.dashboard-sidebar__link.is-active {
+  color: var(--text-primary);
+  background: rgba(110, 159, 67, 0.13);
+  border-color: rgba(110, 159, 67, 0.28);
+}
+
+.dashboard-sidebar__bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+.dashboard-sidebar__secondary,
+.dashboard-sidebar__danger,
+.dashboard-sidebar__logout {
+  min-height: 40px;
+  padding: 0 0.9rem;
+  font-family: var(--font-title);
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  border-radius: 0.8rem;
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.dashboard-sidebar__secondary {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+.dashboard-sidebar__danger {
+  display: none !important;
+  color: #e9b7b2;
+  background: rgba(158, 47, 47, 0.08);
+  border: 1px solid rgba(158, 47, 47, 0.28);
+}
+
+.dashboard-sidebar__logout {
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+.dashboard-sidebar__secondary:hover,
+.dashboard-sidebar__logout:hover {
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   3. CONTEÚDO PRINCIPAL
+   ========================================================= */
+
+.dashboard-main {
+  width: min(100%, 1240px);
+  margin: 0 auto;
+  padding: clamp(1rem, 2.4vw, 2rem);
+}
+
+.dashboard-topbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+.dashboard-topbar--clean {
+  align-items: flex-start;
+}
+
+.dashboard-topbar--clean .dashboard-topbar__status {
+  display: none !important;
+}
+
+.dashboard-topbar__eyebrow {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-family: var(--font-title);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--action-primary-hover) 82%, #f4f8dc);
+  text-shadow:
+    0 0 8px rgba(110, 159, 67, 0.18),
+    0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+.dashboard-topbar h1 {
+  margin: 0;
+  font-size: clamp(1.9rem, 3vw, 2.65rem);
+  line-height: 1;
+}
+
+.dashboard-topbar__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.dashboard-topbar__status strong {
+  color: var(--text-primary);
+}

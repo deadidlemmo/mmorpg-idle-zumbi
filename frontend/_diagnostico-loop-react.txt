@@ -1,0 +1,154 @@
+===== src\features\gathering\pages\GatheringOriginPage.tsx | linhas 515-565 =====
+  515:       originKey &&
+  516:       gatheringRealtimeState.gatheringSkill?.origin === originKey
+  517:     ) {
+  518:       return normalizeGatheringSkillViewModel(
+  519:         gatheringRealtimeState.gatheringSkill,
+  520:         originKey,
+  521:       );
+  522:     }
+  523: 
+  524:     if (overviewGatheringSkill?.origin === originKey) {
+  525:       return overviewGatheringSkill;
+  526:     }
+  527: 
+  528:     if (lastKnownGatheringSkill?.origin === originKey) {
+  529:       return lastKnownGatheringSkill;
+  530:     }
+  531: 
+  532:     return null;
+  533:   }, [
+  534:     gatheringRealtimeState.gatheringSkill,
+  535:     lastKnownGatheringSkill,
+  536:     originKey,
+  537:     overviewGatheringSkill,
+  538:     status,
+  539:   ]);
+  540: 
+  541:   useEffect(() => {
+  542:     if (gatheringSkill) {
+  543:       setLastKnownGatheringSkill(gatheringSkill);
+  544:     }
+  545:   }, [gatheringSkill]);
+  546: 
+  547:   const selectedMaterial = useMemo(
+  548:     () =>
+  549:       materials.find((material) => material.id === selectedMaterialId) ??
+  550:       materials[0] ??
+  551:       null,
+  552:     [materials, selectedMaterialId],
+  553:   );
+  554: 
+  555:   const skillProgressPercent = getSkillProgressPercent(gatheringSkill);
+  556: 
+  557:   const loadGatheringData = useCallback(async () => {
+  558:     if (!safeCharacterId || !originKey) return;
+  559: 
+  560:     setIsLoading(true);
+  561:     setPageErrorMessage(null);
+  562: 
+  563:     try {
+  564:       const [overviewResponse, statusResponse] = await Promise.all([
+  565:         getCharacterOverview(safeCharacterId),
+
+===== src\features\gathering\realtime\GatheringRealtimeProvider.tsx | linhas 640-690 =====
+  640:     } catch (error) {
+  641:       if (isMountedRef.current) {
+  642:         setErrorMessage(extractGatheringApiError(error));
+  643:       }
+  644: 
+  645:       return null;
+  646:     } finally {
+  647:       if (isMountedRef.current) {
+  648:         setIsBusy(false);
+  649:       }
+  650:     }
+  651:   }, [characterId, enabled, refresh]);
+  652: 
+  653:   const clearError = useCallback(() => {
+  654:     setErrorMessage(null);
+  655:   }, []);
+  656: 
+  657:   useEffect(() => {
+  658:     isMountedRef.current = true;
+  659: 
+  660:     return () => {
+  661:       isMountedRef.current = false;
+  662:     };
+  663:   }, []);
+  664: 
+  665:   useEffect(() => {
+  666:     if (!enabled) return undefined;
+  667: 
+  668:     const intervalId = window.setInterval(() => {
+  669:       setNowMs(Date.now());
+  670:     }, tickMs);
+  671: 
+  672:     return () => {
+  673:       window.clearInterval(intervalId);
+  674:     };
+  675:   }, [enabled, tickMs]);
+  676: 
+  677:   useEffect(() => {
+  678:     if (!enabled || !characterId || !autoLoad) {
+  679:       setIsLoading(false);
+  680:       return;
+  681:     }
+  682: 
+  683:     setIsLoading(true);
+  684:     void refresh();
+  685:   }, [autoLoad, characterId, enabled, refresh]);
+  686: 
+  687:   useEffect(() => {
+  688:     if (!enabled || !characterId || refreshMs <= 0) {
+  689:       return undefined;
+  690:     }
+
+===== src\features\auto-combat\realtime\AutoCombatRealtimeProvider.tsx | linhas 405-450 =====
+  405:   const loadRecentEventsForReconciliation = useCallback(
+  406:     async (reason: string) => {
+  407:       if (!normalizedCharacterId) return;
+  408: 
+  409:       const requestId = recentEventsRequestRef.current + 1;
+  410:       recentEventsRequestRef.current = requestId;
+  411: 
+  412:       try {
+  413:         const response = await getAutoCombatRecentEvents(normalizedCharacterId);
+  414: 
+  415:         if (recentEventsRequestRef.current !== requestId) {
+  416:           return;
+  417:         }
+  418: 
+  419:         const events = Array.isArray(response.events) ? response.events : [];
+  420:         const sessionId = response.session?.id ?? null;
+  421: 
+  422:         dispatch({
+  423:           type: 'HYDRATE_RECENT_EVENTS',
+  424:           characterId: normalizedCharacterId,
+  425:           sessionId,
+  426:           events,
+  427:           applySnapshot: true,
+  428:         });
+  429: 
+  430:         if (import.meta.env.DEV) {
+  431:           console.debug('[auto-combat:reconcile-recent-events]', {
+  432:             reason,
+  433:             active: response.active,
+  434:             hasActiveAutoCombat: response.hasActiveAutoCombat,
+  435:             sessionId,
+  436:             sessionStatus: response.session?.status ?? null,
+  437:             eventsCount: events.length,
+  438:             latestSequence: response.latestSequence,
+  439:             firstSequence: getLooseEventSequence(events[0]),
+  440:             lastSequence: getLooseEventSequence(events[events.length - 1]),
+  441:             lastEventType: events[events.length - 1]?.type ?? null,
+  442:           });
+  443:         }
+  444:       } catch (error) {
+  445:         if (import.meta.env.DEV) {
+  446:           console.debug('[auto-combat:reconcile-recent-events:error]', {
+  447:             reason,
+  448:             error,
+  449:           });
+  450:         }
+

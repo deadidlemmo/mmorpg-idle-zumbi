@@ -1,0 +1,1776 @@
+/* =========================================================
+   ETAPA 3 — SESSÃO ATIVA / ARENA
+   Arquivo: src/features/auto-combat/styles/12-auto-combat-session-arena.css
+
+   Escopo:
+   - Card da sessão ativa
+   - Arena Sobrevivente VS Mob
+   - Imagem full-body do mob ativo
+   - Área visual do personagem
+   - Badges de nível
+   - Barras de HP
+   - Botão de parar sessão
+
+   Ajustes:
+   - Badge de nível mais nítido, centralizado e menos opaco.
+   - Badge protegido contra regra genérica de span do fighter-card.
+   - Remove o "N" visual do player caso ainda exista fallback.
+   - Nome do personagem fica na mesma lógica visual do nome do mob.
+   - Player e mob usam estrutura visual equivalente.
+   - Mob maior no desktop.
+   - Fundo quadrado do container da imagem removido.
+   - HP com visual premium e consistente.
+   - Badge "Derrotado" com texto centralizado e protegido.
+   - Feedback de hit mais perceptível, com flash e rachaduras.
+   - Floating damage/XP compatível com a arena ativa.
+   ========================================================= */
+
+.auto-combat-session-stage {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.95rem;
+}
+
+.auto-combat-arena-card,
+.auto-combat-session-panel {
+  min-width: 0;
+  padding: 1.05rem;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(110, 159, 67, 0.075),
+      transparent 15rem
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(158, 47, 47, 0.065),
+      transparent 14rem
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    rgba(5, 9, 8, 0.4);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.028),
+    0 12px 28px rgba(0, 0, 0, 0.16);
+}
+
+.auto-combat-arena-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auto-combat-arena-card__top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  min-width: 0;
+  padding-bottom: 0.82rem;
+}
+
+.auto-combat-arena-card__top::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(231, 227, 216, 0.1),
+      rgba(110, 159, 67, 0.16),
+      rgba(231, 227, 216, 0.1),
+      transparent
+    );
+}
+
+.auto-combat-arena-card__top span {
+  display: block;
+  min-width: 0;
+  color: color-mix(in srgb, var(--action-primary-hover) 90%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.76rem;
+  font-weight: 950;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(110, 159, 67, 0.16);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.auto-combat-arena-card__top strong {
+  flex: 0 0 auto;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1.1;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.82),
+    0 0 10px rgba(255, 248, 232, 0.06);
+}
+
+/* =========================================================
+   DUEL ROW — DESKTOP
+   ========================================================= */
+
+.auto-combat-duel-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 62px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.auto-combat-fighter-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-width: 0;
+  min-height: 356px;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.95rem;
+  padding: 1.05rem;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), transparent),
+    rgba(5, 9, 8, 0.46);
+  border: 1px solid rgba(231, 227, 216, 0.085);
+  border-radius: 1rem;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.auto-combat-fighter-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+.auto-combat-fighter-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.76;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 9px
+    ),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022), transparent 48%);
+}
+
+.auto-combat-fighter-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.12), transparent 58%),
+    linear-gradient(90deg, rgba(215, 91, 98, 0.11), transparent 42%);
+  mix-blend-mode: screen;
+  transition: opacity 180ms ease;
+}
+
+.auto-combat-fighter-card--player {
+  border-color: rgba(110, 159, 67, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 0 28px rgba(110, 159, 67, 0.07);
+}
+
+.auto-combat-fighter-card--player::before {
+  background:
+    radial-gradient(circle at 50% 28%, rgba(110, 159, 67, 0.12), transparent 10rem),
+    radial-gradient(circle at 18% 22%, rgba(110, 159, 67, 0.09), transparent 8rem),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 9px
+    ),
+    linear-gradient(90deg, rgba(110, 159, 67, 0.048), transparent 52%);
+}
+
+.auto-combat-fighter-card--mob {
+  border-color: rgba(188, 68, 68, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 0 28px rgba(158, 47, 47, 0.1);
+}
+
+.auto-combat-fighter-card--mob::before {
+  background:
+    radial-gradient(circle at 50% 28%, rgba(188, 68, 68, 0.13), transparent 10rem),
+    radial-gradient(circle at 72% 18%, rgba(255, 255, 255, 0.035), transparent 8rem),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 9px
+    ),
+    linear-gradient(90deg, rgba(188, 68, 68, 0.05), transparent 52%);
+}
+
+/* =========================================================
+   FEEDBACK DE HIT / CRÍTICO / ESQUIVA
+   ========================================================= */
+
+.auto-combat-fighter-card.is-hit {
+  border-color: rgba(255, 99, 91, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    inset 0 0 0 1px rgba(255, 99, 91, 0.1),
+    0 0 34px rgba(215, 91, 98, 0.26),
+    0 0 8px rgba(255, 99, 91, 0.16);
+  animation: autoCombatFighterShake 520ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.auto-combat-fighter-card.is-hit::after {
+  opacity: 1;
+  background:
+    linear-gradient(118deg, transparent 0 22%, rgba(255, 230, 214, 0.34) 22.8% 23.5%, transparent 24.3% 100%),
+    linear-gradient(54deg, transparent 0 48%, rgba(255, 112, 103, 0.28) 48.7% 49.4%, transparent 50.2% 100%),
+    linear-gradient(148deg, transparent 0 57%, rgba(255, 255, 255, 0.2) 57.5% 58.1%, transparent 58.9% 100%),
+    radial-gradient(circle at 58% 38%, rgba(255, 255, 255, 0.22), transparent 16%),
+    radial-gradient(circle at center, rgba(255, 88, 82, 0.22), transparent 62%),
+    linear-gradient(90deg, rgba(215, 91, 98, 0.23), transparent 48%);
+  animation: autoCombatHitFlash 520ms ease-out both;
+}
+
+.auto-combat-fighter-card.is-critical-hit {
+  border-color: rgba(255, 210, 87, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 0 1px rgba(255, 210, 87, 0.12),
+    0 0 38px rgba(229, 182, 63, 0.3),
+    0 0 12px rgba(255, 210, 87, 0.18);
+  animation: autoCombatCriticalShake 640ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.auto-combat-fighter-card.is-critical-hit::after {
+  opacity: 1;
+  background:
+    linear-gradient(124deg, transparent 0 18%, rgba(255, 244, 202, 0.42) 18.8% 19.6%, transparent 20.6% 100%),
+    linear-gradient(44deg, transparent 0 52%, rgba(255, 208, 82, 0.36) 52.7% 53.6%, transparent 54.5% 100%),
+    linear-gradient(151deg, transparent 0 62%, rgba(255, 255, 255, 0.28) 62.5% 63.1%, transparent 64% 100%),
+    radial-gradient(circle at 56% 36%, rgba(255, 246, 193, 0.28), transparent 20%),
+    radial-gradient(circle at center, rgba(255, 231, 167, 0.26), transparent 62%),
+    linear-gradient(90deg, rgba(229, 182, 63, 0.24), transparent 48%);
+  animation: autoCombatCriticalFlash 640ms ease-out both;
+}
+
+.auto-combat-fighter-card.is-dodging {
+  border-color: rgba(150, 188, 226, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 28px rgba(150, 188, 226, 0.12);
+  animation: autoCombatDodgeSlide 460ms ease-out;
+}
+
+.auto-combat-fighter-card.is-defeated {
+  border-color: rgba(231, 227, 216, 0.13);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.026),
+    0 0 24px rgba(0, 0, 0, 0.1);
+}
+
+.auto-combat-fighter-card.is-defeated::before {
+  opacity: 0.52;
+}
+
+/* =========================================================
+   IDENTIDADE PADRÃO
+   ========================================================= */
+
+.auto-combat-fighter-card > span {
+  display: block;
+  color: rgba(231, 227, 216, 0.68);
+  font-family: var(--font-title);
+  font-size: 0.68rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
+}
+
+.auto-combat-fighter-card > strong {
+  display: block;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-weight: 950;
+}
+
+/* =========================================================
+   BADGE DE NÍVEL
+   Colocado depois do span genérico para não perder estilo.
+   ========================================================= */
+
+.auto-combat-fighter-card > .auto-combat-fighter-card__level-badge,
+.auto-combat-fighter-card__level-badge {
+  position: absolute;
+  top: 0.82rem;
+  right: 0.82rem;
+  z-index: 9;
+  display: inline-grid;
+  place-items: center;
+  min-width: 62px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 0.82rem;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.76rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: visible;
+  opacity: 1;
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.82),
+    0 0 8px rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 8px 16px rgba(0, 0, 0, 0.22);
+}
+
+.auto-combat-fighter-card__level-badge::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 62%);
+  opacity: 1;
+}
+
+.auto-combat-fighter-card__level-badge--player {
+  color: #f1ffe2;
+  background:
+    radial-gradient(circle at center, rgba(146, 201, 97, 0.24), transparent 74%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(48, 83, 43, 0.92);
+  border: 1px solid rgba(156, 209, 105, 0.48);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 8px 16px rgba(0, 0, 0, 0.24),
+    0 0 18px rgba(110, 159, 67, 0.18);
+}
+
+.auto-combat-fighter-card__level-badge--mob {
+  color: #ffedb6;
+  background:
+    radial-gradient(circle at center, rgba(236, 188, 78, 0.22), transparent 74%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(105, 74, 25, 0.94);
+  border: 1px solid rgba(236, 188, 78, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 8px 16px rgba(0, 0, 0, 0.24),
+    0 0 18px rgba(224, 182, 91, 0.16);
+}
+
+/* =========================================================
+   IDENTIDADE DO PLAYER
+   ========================================================= */
+
+.auto-combat-fighter-card__identity {
+  min-width: 0;
+}
+
+.auto-combat-fighter-card__identity--player,
+.auto-combat-fighter-card__identity--mob {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.68rem;
+  text-align: center;
+}
+
+.auto-combat-fighter-card__identity--player {
+  gap: 0.58rem;
+  padding-top: 0.42rem;
+  padding-bottom: 0.82rem;
+}
+
+.auto-combat-fighter-card__identity--player::after {
+  content: '';
+  position: absolute;
+  right: 0.35rem;
+  bottom: 0;
+  left: 0.35rem;
+  height: 1px;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(231, 227, 216, 0.1),
+      rgba(110, 159, 67, 0.18),
+      rgba(231, 227, 216, 0.1),
+      transparent
+    );
+}
+
+.auto-combat-fighter-card__character-image {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: min(100%, 270px);
+  height: 186px;
+  overflow: visible;
+  color: #d6f0c9;
+  background: transparent !important;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.auto-combat-fighter-card__character-image::before {
+  content: '';
+  position: absolute;
+  inset: auto 16% 4px;
+  z-index: 0;
+  height: 38px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.34),
+    transparent 72%
+  );
+  border-radius: 999px;
+  filter: blur(1px);
+}
+
+.auto-combat-fighter-card__character-image::after {
+  content: '';
+  position: absolute;
+  inset: 10% 7% 8%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(110, 159, 67, 0.1),
+      rgba(110, 159, 67, 0.04) 38%,
+      transparent 70%
+    );
+  border-radius: 999px;
+  filter: blur(4px);
+}
+
+.auto-combat-fighter-card__character-image img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: auto;
+  height: 202px;
+  max-width: 260px;
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: 1;
+  filter:
+    brightness(1.1)
+    contrast(1.06)
+    saturate(1.04)
+    drop-shadow(0 16px 20px rgba(0, 0, 0, 0.48))
+    drop-shadow(0 0 12px rgba(110, 159, 67, 0.12));
+  transform: translateY(2px);
+}
+
+.auto-combat-fighter-card__character-image--empty {
+  opacity: 1;
+}
+
+.auto-combat-fighter-card__character-image--empty::before {
+  opacity: 0.42;
+}
+
+.auto-combat-fighter-card__character-image--empty::after {
+  opacity: 0.48;
+}
+
+.auto-combat-fighter-card__character-placeholder,
+.auto-combat-fighter-card__character-image--empty span {
+  display: none !important;
+}
+
+/* Compatibilidade caso ainda exista JSX antigo direto no player.
+   Importante: não esconde o novo badge de nível. */
+.auto-combat-fighter-card--player > span:not(.auto-combat-fighter-card__level-badge),
+.auto-combat-fighter-card--player > strong {
+  display: none;
+}
+
+/* =========================================================
+   IDENTIDADE DO MOB COM IMAGEM FULL BODY
+   ========================================================= */
+
+.auto-combat-fighter-card__identity--mob {
+  gap: 0.58rem;
+  padding-top: 0.42rem;
+  padding-bottom: 0.82rem;
+}
+
+.auto-combat-fighter-card__identity--mob::after {
+  content: '';
+  position: absolute;
+  right: 0.35rem;
+  bottom: 0;
+  left: 0.35rem;
+  height: 1px;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(231, 227, 216, 0.1),
+      rgba(215, 91, 98, 0.18),
+      rgba(231, 227, 216, 0.1),
+      transparent
+    );
+}
+
+.auto-combat-fighter-card__mob-image {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: min(100%, 270px);
+  height: 186px;
+  overflow: visible;
+  color: #ffd0ca;
+  background: transparent !important;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.auto-combat-fighter-card__mob-image::before {
+  content: '';
+  position: absolute;
+  inset: auto 16% 4px;
+  z-index: 0;
+  height: 38px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.42),
+    transparent 72%
+  );
+  border-radius: 999px;
+  filter: blur(1px);
+}
+
+.auto-combat-fighter-card__mob-image::after {
+  content: '';
+  position: absolute;
+  inset: 10% 7% 8%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(188, 68, 68, 0.12),
+      rgba(188, 68, 68, 0.045) 38%,
+      transparent 70%
+    );
+  border-radius: 999px;
+  filter: blur(4px);
+}
+
+.auto-combat-fighter-card__mob-image img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: auto;
+  height: 202px;
+  max-width: 260px;
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: 1;
+  filter:
+    brightness(1.1)
+    contrast(1.06)
+    saturate(1.04)
+    drop-shadow(0 16px 20px rgba(0, 0, 0, 0.48))
+    drop-shadow(0 0 12px rgba(188, 68, 68, 0.12));
+  transform: translateY(2px);
+}
+
+.auto-combat-fighter-card.is-defeated .auto-combat-fighter-card__character-image img,
+.auto-combat-fighter-card.is-defeated .auto-combat-fighter-card__mob-image img {
+  opacity: 0.72;
+  filter:
+    grayscale(0.82)
+    brightness(0.78)
+    contrast(1.06)
+    saturate(0.62)
+    drop-shadow(0 14px 18px rgba(0, 0, 0, 0.44));
+}
+
+.auto-combat-fighter-card__mob-image--loaded {
+  background: transparent !important;
+}
+
+.auto-combat-fighter-card__mob-image span {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 3.35rem;
+  height: 3.35rem;
+  color: rgba(255, 226, 226, 0.9);
+  font-size: 1.35rem;
+  background:
+    radial-gradient(circle at center, rgba(188, 68, 68, 0.18), transparent 72%),
+    rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(188, 68, 68, 0.22);
+  border-radius: 0.9rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 16px rgba(188, 68, 68, 0.12);
+}
+
+/* =========================================================
+   HEADING PLAYER / MOB
+   ========================================================= */
+
+.auto-combat-fighter-card__heading {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  text-align: center;
+}
+
+.auto-combat-fighter-card__heading span {
+  display: block;
+  max-width: 100%;
+  color: rgba(231, 227, 216, 0.6);
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.105em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.auto-combat-fighter-card__heading strong {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: clamp(1.2rem, 1.6vw, 1.5rem);
+  font-weight: 950;
+  line-height: 1.08;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: none;
+  text-wrap: balance;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.84),
+    0 0 14px rgba(255, 248, 232, 0.06);
+}
+
+.auto-combat-fighter-card__heading--player span {
+  color: rgba(211, 230, 196, 0.76);
+}
+
+.auto-combat-fighter-card__heading--player strong {
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.84),
+    0 0 14px rgba(180, 214, 112, 0.08);
+}
+
+/* =========================================================
+   BADGE DERROTADO
+   ========================================================= */
+
+.auto-combat-defeated-badge {
+  position: absolute;
+  top: 0.78rem;
+  left: 0.78rem;
+  z-index: 10;
+  box-sizing: border-box;
+  display: inline-grid !important;
+  place-items: center;
+  min-width: 86px;
+  min-height: 30px;
+  height: 30px;
+  padding: 0 0.74rem;
+  color: rgba(245, 238, 224, 0.9);
+  font-family: var(--font-title);
+  font-size: 0.64rem;
+  font-weight: 950;
+  line-height: 1 !important;
+  letter-spacing: 0.075em;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent),
+    rgba(32, 28, 28, 0.86);
+  border: 1px solid rgba(231, 227, 216, 0.16);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 8px 16px rgba(0, 0, 0, 0.24),
+    0 0 14px rgba(180, 62, 58, 0.12);
+  backdrop-filter: blur(5px);
+  pointer-events: none;
+  animation: autoCombatDefeatedBadge 560ms ease-out both;
+}
+
+.auto-combat-defeated-badge--player {
+  border-color: rgba(255, 125, 104, 0.32);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
+    rgba(46, 22, 20, 0.86);
+}
+
+/* =========================================================
+   VS
+   ========================================================= */
+
+.auto-combat-vs {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  justify-self: center;
+  width: 56px;
+  height: 56px;
+  color: #fff4df;
+  font-family: var(--font-title);
+  font-size: 0.86rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  background:
+    radial-gradient(circle at center, rgba(158, 47, 47, 0.38), transparent 72%),
+    rgba(5, 9, 8, 0.76);
+  border: 1px solid rgba(231, 227, 216, 0.15);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 26px rgba(158, 47, 47, 0.18);
+}
+
+/* =========================================================
+   RECURSOS / HP
+   ========================================================= */
+
+.auto-combat-resource,
+.auto-combat-round-progress {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.46rem;
+}
+
+.auto-combat-resource {
+  margin-top: auto;
+  padding: 0.74rem 0.72rem 0.78rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(231, 227, 216, 0.06);
+  border-radius: 0.82rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.026),
+    0 8px 18px rgba(0, 0, 0, 0.09);
+}
+
+.auto-combat-resource div,
+.auto-combat-round-progress div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.auto-combat-resource span,
+.auto-combat-round-progress span {
+  color: rgba(218, 226, 234, 0.86);
+  font-family: var(--font-title);
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+}
+
+.auto-combat-resource strong,
+.auto-combat-round-progress strong {
+  color: #fff8e8;
+  font-family: var(--font-number);
+  font-size: 0.88rem;
+  font-weight: 950;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.74);
+}
+
+.auto-combat-resource i,
+.auto-combat-round-progress i {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 11px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(5, 9, 8, 0.86);
+  border: 1px solid rgba(231, 227, 216, 0.065);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.36),
+    0 0 0 1px rgba(255, 255, 255, 0.012);
+}
+
+.auto-combat-resource i b,
+.auto-combat-round-progress i b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 260ms ease;
+}
+
+.auto-combat-fighter-card--player .auto-combat-resource {
+  border-color: rgba(110, 159, 67, 0.1);
+}
+
+.auto-combat-fighter-card--player .auto-combat-resource i b {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent 48%),
+    linear-gradient(90deg, #3f8548, #65c271);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 12px rgba(101, 194, 113, 0.27);
+}
+
+.auto-combat-fighter-card--mob .auto-combat-resource {
+  border-color: rgba(188, 68, 68, 0.11);
+}
+
+.auto-combat-fighter-card--mob .auto-combat-resource i b {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent 48%),
+    linear-gradient(90deg, #803138, #d75b62 58%, #f0717a);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 12px rgba(215, 91, 98, 0.25);
+}
+
+/* =========================================================
+   DANO / XP FLUTUANTE NOS CARDS
+   Compatível com o JSX atual: .auto-combat-floating-damage
+   ========================================================= */
+
+.auto-combat-floating-hp,
+.auto-combat-floating-damage,
+.auto-combat-damage-pop,
+.auto-combat-hit-value,
+.auto-combat-floating-xp,
+.auto-combat-xp-pop {
+  position: absolute;
+  top: 44%;
+  right: 1rem;
+  z-index: 11;
+  box-sizing: border-box;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 68px;
+  max-width: calc(100% - 2rem);
+  min-height: 34px;
+  padding: 0.26rem 0.68rem;
+  overflow: visible;
+  color: #ffd1cc;
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: none;
+  white-space: nowrap;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 116, 104, 0.18), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent),
+    rgba(83, 20, 24, 0.9);
+  border: 1px solid rgba(255, 112, 103, 0.54);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 10px 20px rgba(0, 0, 0, 0.3),
+    0 0 22px rgba(215, 91, 98, 0.22);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.86),
+    0 0 10px rgba(215, 91, 98, 0.24);
+  pointer-events: none;
+  animation: autoCombatFloatingDamage 960ms ease-out both;
+}
+
+.auto-combat-fighter-card--player .auto-combat-floating-hp,
+.auto-combat-fighter-card--player .auto-combat-floating-damage,
+.auto-combat-fighter-card--player .auto-combat-damage-pop,
+.auto-combat-fighter-card--player .auto-combat-hit-value {
+  right: auto;
+  left: 1rem;
+}
+
+.auto-combat-floating-damage.is-critical,
+.auto-combat-floating-hp--critical,
+.auto-combat-damage-pop--critical,
+.auto-combat-hit-value--critical {
+  color: #ffe7a7;
+  background:
+    radial-gradient(circle at center, rgba(229, 182, 63, 0.18), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent),
+    rgba(84, 56, 13, 0.92);
+  border-color: rgba(255, 217, 98, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 10px 22px rgba(0, 0, 0, 0.32),
+    0 0 28px rgba(229, 182, 63, 0.28);
+  animation: autoCombatFloatingCritical 1100ms ease-out both;
+}
+
+.auto-combat-floating-hp--heal,
+.auto-combat-damage-pop--heal,
+.auto-combat-hit-value--heal {
+  color: #d9ffd2;
+  background:
+    radial-gradient(circle at center, rgba(110, 159, 67, 0.16), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), transparent),
+    rgba(26, 70, 32, 0.9);
+  border-color: rgba(110, 159, 67, 0.56);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 10px 20px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(110, 159, 67, 0.22);
+}
+
+.auto-combat-floating-hp--dodge,
+.auto-combat-damage-pop--dodge,
+.auto-combat-hit-value--dodge {
+  color: #d9ecff;
+  background:
+    radial-gradient(circle at center, rgba(150, 188, 226, 0.16), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), transparent),
+    rgba(26, 47, 72, 0.9);
+  border-color: rgba(150, 188, 226, 0.54);
+}
+
+.auto-combat-floating-xp,
+.auto-combat-xp-pop {
+  color: #e9f3c5;
+  background:
+    radial-gradient(circle at center, rgba(180, 214, 112, 0.18), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent),
+    rgba(45, 82, 40, 0.92);
+  border-color: rgba(180, 214, 112, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 10px 20px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(110, 159, 67, 0.24);
+  animation: autoCombatFloatingXp 1050ms ease-out both;
+}
+
+/* =========================================================
+   BOTÃO DA SESSÃO
+   ========================================================= */
+
+.auto-combat-stage-actions--session {
+  display: flex;
+  justify-content: center;
+  margin-top: -0.04rem;
+}
+
+.auto-combat-stage-actions--session .auto-combat-secondary-button {
+  width: min(100%, 250px);
+  min-height: 52px;
+  padding-inline: 1.25rem;
+  font-size: 0.88rem;
+}
+
+
+/* =========================================================
+   ANIMAÇÕES DA ARENA
+   ========================================================= */
+
+@keyframes autoCombatFighterShake {
+  0% { transform: translate3d(0, 0, 0); }
+  12% { transform: translate3d(-7px, 0, 0) rotate(-0.65deg); }
+  24% { transform: translate3d(7px, 0, 0) rotate(0.65deg); }
+  38% { transform: translate3d(-6px, 0, 0) rotate(-0.5deg); }
+  52% { transform: translate3d(6px, 0, 0) rotate(0.5deg); }
+  70% { transform: translate3d(-3px, 0, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes autoCombatCriticalShake {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  10% { transform: translate3d(-9px, -1px, 0) rotate(-0.85deg) scale(1.012); }
+  22% { transform: translate3d(9px, 1px, 0) rotate(0.85deg) scale(1.014); }
+  36% { transform: translate3d(-7px, 0, 0) rotate(-0.62deg); }
+  52% { transform: translate3d(7px, 0, 0) rotate(0.62deg); }
+  72% { transform: translate3d(-4px, 0, 0) scale(1.004); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes autoCombatDodgeSlide {
+  0% { transform: translate3d(0, 0, 0); }
+  34% { transform: translate3d(10px, -2px, 0); }
+  68% { transform: translate3d(-4px, 1px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes autoCombatHitFlash {
+  0% { opacity: 0; transform: scale(0.985); }
+  12% { opacity: 1; transform: scale(1.01); }
+  42% { opacity: 0.64; transform: scale(1.004); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+@keyframes autoCombatCriticalFlash {
+  0% { opacity: 0; transform: scale(0.982); }
+  10% { opacity: 1; transform: scale(1.014); }
+  36% { opacity: 0.82; transform: scale(1.008); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+@keyframes autoCombatFloatingDamage {
+  0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.84); }
+  18% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.08); }
+  58% { opacity: 1; transform: translate3d(0, -18px, 0) scale(1); }
+  100% { opacity: 0; transform: translate3d(0, -42px, 0) scale(0.96); }
+}
+
+@keyframes autoCombatFloatingCritical {
+  0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.82) rotate(-2deg); }
+  16% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.18) rotate(1deg); }
+  56% { opacity: 1; transform: translate3d(0, -21px, 0) scale(1.04) rotate(0deg); }
+  100% { opacity: 0; transform: translate3d(0, -48px, 0) scale(0.98) rotate(0deg); }
+}
+
+@keyframes autoCombatFloatingXp {
+  0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.86); }
+  18% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.08); }
+  58% { opacity: 1; transform: translate3d(0, -18px, 0) scale(1); }
+  100% { opacity: 0; transform: translate3d(0, -44px, 0) scale(0.98); }
+}
+
+@keyframes autoCombatDefeatedBadge {
+  0% { opacity: 0; transform: translate3d(0, -8px, 0) scale(0.92); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auto-combat-fighter-card.is-hit,
+  .auto-combat-fighter-card.is-critical-hit,
+  .auto-combat-fighter-card.is-dodging,
+  .auto-combat-floating-hp,
+  .auto-combat-floating-damage,
+  .auto-combat-damage-pop,
+  .auto-combat-hit-value,
+  .auto-combat-floating-xp,
+  .auto-combat-xp-pop,
+  .auto-combat-defeated-badge {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* =========================================================
+   RESPONSIVO — MOBILE REVISTO
+   Desktop permanece pelo layout base acima.
+
+   Objetivo:
+   - No mobile, arena em coluna: Player / VS / Mob.
+   - Player e mob com a mesma estrutura visual.
+   - Nome do personagem sempre abaixo da área visual, igual ao mob.
+   - Área visual do player permanece reservada mesmo sem avatar.
+   - Imagens dos mobs/personagem maiores e legíveis.
+   - 18-auto-combat-responsive.css não deve reduzir estes tamanhos.
+   ========================================================= */
+
+@media (max-width: 920px) {
+  .auto-combat-duel-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.9rem;
+    align-items: stretch;
+  }
+
+  .auto-combat-vs {
+    width: 50px;
+    height: 50px;
+    margin: -0.08rem auto;
+    align-self: center;
+    justify-self: center;
+    font-size: 0.78rem;
+  }
+
+  .auto-combat-fighter-card,
+  .auto-combat-fighter-card--player,
+  .auto-combat-fighter-card--mob {
+    min-height: 420px;
+    padding: 0.96rem;
+    gap: 0.78rem;
+    border-radius: 1rem;
+  }
+
+  .auto-combat-fighter-card > .auto-combat-fighter-card__level-badge,
+  .auto-combat-fighter-card__level-badge {
+    top: 0.76rem;
+    right: 0.76rem;
+    min-width: 60px;
+    height: 33px;
+    min-height: 33px;
+    padding: 0 0.76rem;
+    font-size: 0.72rem;
+  }
+
+  .auto-combat-fighter-card__identity--player,
+  .auto-combat-fighter-card__identity--mob {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(238px, auto) auto;
+    justify-items: center;
+    align-items: start;
+    gap: 0.58rem;
+    width: 100%;
+    min-width: 0;
+    margin-top: 0.52rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.78rem;
+    text-align: center;
+  }
+
+  .auto-combat-fighter-card__character-image,
+  .auto-combat-fighter-card__mob-image,
+  .auto-combat-fighter-card__character-image--empty {
+    display: flex !important;
+    width: min(100%, 304px);
+    height: 238px;
+  }
+
+  .auto-combat-fighter-card__character-image--empty {
+    opacity: 1;
+  }
+
+  .auto-combat-fighter-card__character-image--empty::before {
+    opacity: 0.42;
+  }
+
+  .auto-combat-fighter-card__character-image--empty::after {
+    opacity: 0.34;
+  }
+
+  .auto-combat-fighter-card__character-placeholder,
+  .auto-combat-fighter-card__character-image--empty span {
+    display: none !important;
+  }
+
+  .auto-combat-fighter-card__character-image::before,
+  .auto-combat-fighter-card__mob-image::before {
+    height: 40px;
+  }
+
+  .auto-combat-fighter-card__character-image img,
+  .auto-combat-fighter-card__mob-image img {
+    height: 258px;
+    max-width: 296px;
+    object-fit: contain;
+    object-position: center bottom;
+    transform: translateY(2px);
+  }
+
+  .auto-combat-fighter-card__heading {
+    display: flex;
+    width: 100%;
+    min-height: 54px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.24rem;
+    text-align: center;
+  }
+
+  .auto-combat-fighter-card__heading span {
+    display: block;
+    font-size: 0.66rem;
+    letter-spacing: 0.105em;
+  }
+
+  .auto-combat-fighter-card__heading strong {
+    font-size: 1.34rem;
+    line-height: 1.06;
+  }
+
+  .auto-combat-resource {
+    gap: 0.42rem;
+    padding: 0.7rem 0.72rem 0.76rem;
+    border-radius: 0.78rem;
+  }
+
+  .auto-combat-resource span,
+  .auto-combat-round-progress span {
+    font-size: 0.68rem;
+  }
+
+  .auto-combat-resource strong,
+  .auto-combat-round-progress strong {
+    font-size: 0.8rem;
+  }
+
+  .auto-combat-resource i,
+  .auto-combat-round-progress i {
+    height: 9px;
+  }
+}
+
+@media (max-width: 560px) {
+  .auto-combat-arena-card {
+    padding: 0.82rem;
+    border-radius: 0.92rem;
+  }
+
+  .auto-combat-arena-card__top {
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding-bottom: 0.68rem;
+  }
+
+  .auto-combat-arena-card__top span {
+    font-size: 0.66rem;
+  }
+
+  .auto-combat-arena-card__top strong {
+    font-size: 0.84rem;
+  }
+
+  .auto-combat-duel-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.76rem;
+  }
+
+  .auto-combat-vs {
+    width: 46px;
+    height: 46px;
+    margin: -0.02rem auto;
+    font-size: 0.7rem;
+  }
+
+  .auto-combat-fighter-card,
+  .auto-combat-fighter-card--player,
+  .auto-combat-fighter-card--mob {
+    min-height: 410px;
+    padding: 0.84rem;
+    gap: 0.68rem;
+    border-radius: 0.94rem;
+  }
+
+  .auto-combat-fighter-card > .auto-combat-fighter-card__level-badge,
+  .auto-combat-fighter-card__level-badge {
+    top: 0.6rem;
+    right: 0.6rem;
+    min-width: 56px;
+    height: 31px;
+    min-height: 31px;
+    padding: 0 0.66rem;
+    font-size: 0.66rem;
+  }
+
+  .auto-combat-fighter-card__identity--player,
+  .auto-combat-fighter-card__identity--mob {
+    grid-template-rows: minmax(228px, auto) auto;
+    gap: 0.5rem;
+    margin-top: 0.42rem;
+    padding-top: 0.4rem;
+    padding-bottom: 0.66rem;
+  }
+
+  .auto-combat-fighter-card__character-image,
+  .auto-combat-fighter-card__mob-image,
+  .auto-combat-fighter-card__character-image--empty {
+    display: flex !important;
+    width: min(100%, 284px);
+    height: 228px;
+  }
+
+  .auto-combat-fighter-card__character-image::before,
+  .auto-combat-fighter-card__mob-image::before {
+    height: 38px;
+  }
+
+  .auto-combat-fighter-card__character-image img,
+  .auto-combat-fighter-card__mob-image img {
+    height: 250px;
+    max-width: 276px;
+    transform: translateY(1px);
+  }
+
+  .auto-combat-fighter-card__heading {
+    min-height: 54px;
+    gap: 0.2rem;
+  }
+
+  .auto-combat-fighter-card__heading span {
+    display: block;
+    font-size: 0.6rem;
+  }
+
+  .auto-combat-fighter-card__heading strong {
+    font-size: 1.22rem;
+    line-height: 1.06;
+  }
+
+  .auto-combat-defeated-badge {
+    top: 0.58rem;
+    left: 0.58rem;
+    min-width: 78px;
+    min-height: 28px;
+    height: 28px;
+    padding: 0 0.56rem;
+    font-size: 0.56rem;
+  }
+
+  .auto-combat-floating-hp,
+  .auto-combat-floating-damage,
+  .auto-combat-damage-pop,
+  .auto-combat-hit-value,
+  .auto-combat-floating-xp,
+  .auto-combat-xp-pop {
+    top: 42%;
+    right: 0.72rem;
+    min-width: 62px;
+    min-height: 31px;
+    padding: 0.22rem 0.56rem;
+    font-size: 0.78rem;
+  }
+
+  .auto-combat-fighter-card--player .auto-combat-floating-hp,
+  .auto-combat-fighter-card--player .auto-combat-floating-damage,
+  .auto-combat-fighter-card--player .auto-combat-damage-pop,
+  .auto-combat-fighter-card--player .auto-combat-hit-value {
+    right: auto;
+    left: 0.72rem;
+  }
+
+  .auto-combat-resource {
+    gap: 0.38rem;
+    padding: 0.62rem 0.6rem 0.66rem;
+    border-radius: 0.72rem;
+  }
+
+  .auto-combat-resource span,
+  .auto-combat-round-progress span {
+    font-size: 0.64rem;
+  }
+
+  .auto-combat-resource strong,
+  .auto-combat-round-progress strong {
+    font-size: 0.74rem;
+  }
+
+  .auto-combat-resource i,
+  .auto-combat-round-progress i {
+    height: 8px;
+  }
+
+  .auto-combat-stage-actions--session .auto-combat-secondary-button {
+    width: 100%;
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 390px) {
+  .auto-combat-duel-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.7rem;
+  }
+
+  .auto-combat-vs {
+    width: 42px;
+    height: 42px;
+    font-size: 0.66rem;
+  }
+
+  .auto-combat-fighter-card,
+  .auto-combat-fighter-card--player,
+  .auto-combat-fighter-card--mob {
+    min-height: 392px;
+    padding: 0.74rem;
+  }
+
+  .auto-combat-fighter-card > .auto-combat-fighter-card__level-badge,
+  .auto-combat-fighter-card__level-badge {
+    top: 0.52rem;
+    right: 0.52rem;
+    min-width: 52px;
+    height: 29px;
+    min-height: 29px;
+    padding: 0 0.58rem;
+    font-size: 0.62rem;
+  }
+
+  .auto-combat-fighter-card__identity--player,
+  .auto-combat-fighter-card__identity--mob {
+    grid-template-rows: minmax(216px, auto) auto;
+    gap: 0.46rem;
+    margin-top: 0.34rem;
+    padding-top: 0.34rem;
+    padding-bottom: 0.6rem;
+  }
+
+  .auto-combat-fighter-card__character-image,
+  .auto-combat-fighter-card__mob-image,
+  .auto-combat-fighter-card__character-image--empty {
+    display: flex !important;
+    width: min(100%, 260px);
+    height: 216px;
+  }
+
+  .auto-combat-fighter-card__character-image img,
+  .auto-combat-fighter-card__mob-image img {
+    height: 236px;
+    max-width: 252px;
+  }
+
+  .auto-combat-fighter-card__heading {
+    min-height: 50px;
+  }
+
+  .auto-combat-fighter-card__heading span {
+    display: block;
+    font-size: 0.56rem;
+  }
+
+  .auto-combat-fighter-card__heading strong {
+    font-size: 1.1rem;
+  }
+
+  .auto-combat-resource {
+    padding: 0.56rem 0.54rem 0.6rem;
+  }
+
+  .auto-combat-resource span,
+  .auto-combat-round-progress span {
+    font-size: 0.6rem;
+  }
+
+  .auto-combat-resource strong,
+  .auto-combat-round-progress strong {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .auto-combat-fighter-card,
+  .auto-combat-fighter-card--player,
+  .auto-combat-fighter-card--mob {
+    min-height: 354px;
+  }
+
+  .auto-combat-fighter-card__identity--player,
+  .auto-combat-fighter-card__identity--mob {
+    grid-template-rows: minmax(186px, auto) auto;
+  }
+
+  .auto-combat-fighter-card__character-image,
+  .auto-combat-fighter-card__mob-image,
+  .auto-combat-fighter-card__character-image--empty {
+    display: flex !important;
+    width: min(100%, 222px);
+    height: 186px;
+  }
+
+  .auto-combat-fighter-card__character-image img,
+  .auto-combat-fighter-card__mob-image img {
+    height: 204px;
+    max-width: 216px;
+  }
+
+  .auto-combat-fighter-card__heading strong {
+    font-size: 1rem;
+  }
+
+  .auto-combat-floating-hp,
+  .auto-combat-floating-damage,
+  .auto-combat-damage-pop,
+  .auto-combat-hit-value,
+  .auto-combat-floating-xp,
+  .auto-combat-xp-pop {
+    top: 40%;
+    min-width: 58px;
+    min-height: 29px;
+    padding: 0.18rem 0.5rem;
+    font-size: 0.7rem;
+  }
+}
+
+/* =========================================================
+   DANO / HP TIRADO DO MONSTRO — LEGÍVEL E EM LOCAL LÓGICO
+
+   Objetivo:
+   - O dano causado no mob aparece no próprio card do mob.
+   - Local: centro inferior do card, acima da barra de HP do inimigo.
+   - Mais tempo em tela, maior contraste e leitura melhor.
+   - Crítico fica maior e com tom dourado.
+   - Mantém compatibilidade com as classes já usadas no JSX.
+   ========================================================= */
+
+.auto-combat-fighter-card--mob .auto-combat-floating-hp,
+.auto-combat-fighter-card--mob .auto-combat-floating-damage,
+.auto-combat-fighter-card--mob .auto-combat-damage-pop,
+.auto-combat-fighter-card--mob .auto-combat-hit-value {
+  top: auto;
+  right: auto;
+  bottom: 5.28rem;
+  left: 50%;
+  z-index: 24;
+  box-sizing: border-box;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  min-height: 42px;
+  max-width: calc(100% - 2rem);
+  padding: 0.34rem 0.92rem;
+  overflow: visible;
+  color: #fff2df;
+  font-family: var(--font-title);
+  font-size: 1.08rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.025em;
+  text-align: center;
+  white-space: nowrap;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 184, 120, 0.26), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent),
+    rgba(92, 18, 22, 0.96);
+  border: 1px solid rgba(255, 126, 96, 0.72);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 12px 24px rgba(0, 0, 0, 0.42),
+    0 0 28px rgba(215, 91, 98, 0.36);
+  text-shadow:
+    0 2px 2px rgba(0, 0, 0, 0.9),
+    0 0 12px rgba(255, 126, 96, 0.34);
+  pointer-events: none;
+  animation: autoCombatMobDamageReadable 1700ms ease-out both;
+}
+
+.auto-combat-fighter-card--mob .auto-combat-floating-hp::before,
+.auto-combat-fighter-card--mob .auto-combat-floating-damage::before,
+.auto-combat-fighter-card--mob .auto-combat-damage-pop::before,
+.auto-combat-fighter-card--mob .auto-combat-hit-value::before {
+  content: '';
+  position: absolute;
+  inset: -7px -12px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(118deg, transparent 0 35%, rgba(255, 217, 197, 0.38) 35.5% 36.2%, transparent 36.8% 100%),
+    linear-gradient(52deg, transparent 0 52%, rgba(255, 112, 103, 0.34) 52.6% 53.2%, transparent 54% 100%),
+    radial-gradient(circle at center, rgba(255, 96, 86, 0.24), transparent 68%);
+  border-radius: 999px;
+  opacity: 0.9;
+  filter: blur(0.1px);
+}
+
+.auto-combat-fighter-card--mob .auto-combat-floating-damage.is-critical,
+.auto-combat-fighter-card--mob .auto-combat-floating-hp--critical,
+.auto-combat-fighter-card--mob .auto-combat-damage-pop--critical,
+.auto-combat-fighter-card--mob .auto-combat-hit-value--critical {
+  min-width: 114px;
+  min-height: 46px;
+  padding: 0.38rem 1rem;
+  color: #fff3bc;
+  font-size: 1.18rem;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 226, 122, 0.34), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent),
+    rgba(93, 57, 10, 0.97);
+  border-color: rgba(255, 221, 96, 0.8);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.17),
+    0 14px 28px rgba(0, 0, 0, 0.44),
+    0 0 36px rgba(229, 182, 63, 0.44);
+  animation: autoCombatMobCriticalReadable 1850ms ease-out both;
+}
+
+.auto-combat-fighter-card--mob .auto-combat-floating-damage.is-critical::before,
+.auto-combat-fighter-card--mob .auto-combat-floating-hp--critical::before,
+.auto-combat-fighter-card--mob .auto-combat-damage-pop--critical::before,
+.auto-combat-fighter-card--mob .auto-combat-hit-value--critical::before {
+  background:
+    linear-gradient(118deg, transparent 0 34%, rgba(255, 244, 202, 0.52) 34.6% 35.3%, transparent 36% 100%),
+    linear-gradient(52deg, transparent 0 53%, rgba(255, 210, 87, 0.44) 53.5% 54.2%, transparent 55% 100%),
+    radial-gradient(circle at center, rgba(255, 217, 96, 0.28), transparent 68%);
+}
+
+/* Dano recebido pelo personagem: também fica perto do HP do player. */
+.auto-combat-fighter-card--player .auto-combat-floating-hp,
+.auto-combat-fighter-card--player .auto-combat-floating-damage,
+.auto-combat-fighter-card--player .auto-combat-damage-pop,
+.auto-combat-fighter-card--player .auto-combat-hit-value {
+  top: auto;
+  right: auto;
+  bottom: 5.28rem;
+  left: 50%;
+  z-index: 24;
+  min-width: 86px;
+  min-height: 38px;
+  padding: 0.3rem 0.82rem;
+  color: #ffe6df;
+  font-size: 0.98rem;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 126, 96, 0.22), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent),
+    rgba(84, 26, 28, 0.94);
+  border-color: rgba(255, 126, 96, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    0 12px 24px rgba(0, 0, 0, 0.38),
+    0 0 22px rgba(215, 91, 98, 0.28);
+  animation: autoCombatMobDamageReadable 1600ms ease-out both;
+}
+
+@keyframes autoCombatMobDamageReadable {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, 14px, 0) scale(0.78);
+  }
+
+  14% {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1.16);
+  }
+
+  42% {
+    opacity: 1;
+    transform: translate3d(-50%, -8px, 0) scale(1.04);
+  }
+
+  76% {
+    opacity: 1;
+    transform: translate3d(-50%, -18px, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(-50%, -34px, 0) scale(0.96);
+  }
+}
+
+@keyframes autoCombatMobCriticalReadable {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, 16px, 0) scale(0.76) rotate(-2deg);
+  }
+
+  14% {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1.24) rotate(1deg);
+  }
+
+  44% {
+    opacity: 1;
+    transform: translate3d(-50%, -10px, 0) scale(1.08) rotate(0deg);
+  }
+
+  78% {
+    opacity: 1;
+    transform: translate3d(-50%, -22px, 0) scale(1.02);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(-50%, -40px, 0) scale(0.98);
+  }
+}
+
+@media (max-width: 760px) {
+  .auto-combat-fighter-card--mob .auto-combat-floating-hp,
+  .auto-combat-fighter-card--mob .auto-combat-floating-damage,
+  .auto-combat-fighter-card--mob .auto-combat-damage-pop,
+  .auto-combat-fighter-card--mob .auto-combat-hit-value,
+  .auto-combat-fighter-card--player .auto-combat-floating-hp,
+  .auto-combat-fighter-card--player .auto-combat-floating-damage,
+  .auto-combat-fighter-card--player .auto-combat-damage-pop,
+  .auto-combat-fighter-card--player .auto-combat-hit-value {
+    bottom: 5rem;
+    min-width: 82px;
+    min-height: 38px;
+    padding: 0.3rem 0.78rem;
+    font-size: 0.96rem;
+  }
+
+  .auto-combat-fighter-card--mob .auto-combat-floating-damage.is-critical,
+  .auto-combat-fighter-card--mob .auto-combat-floating-hp--critical,
+  .auto-combat-fighter-card--mob .auto-combat-damage-pop--critical,
+  .auto-combat-fighter-card--mob .auto-combat-hit-value--critical {
+    min-width: 96px;
+    min-height: 42px;
+    font-size: 1.05rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .auto-combat-fighter-card--mob .auto-combat-floating-hp,
+  .auto-combat-fighter-card--mob .auto-combat-floating-damage,
+  .auto-combat-fighter-card--mob .auto-combat-damage-pop,
+  .auto-combat-fighter-card--mob .auto-combat-hit-value,
+  .auto-combat-fighter-card--player .auto-combat-floating-hp,
+  .auto-combat-fighter-card--player .auto-combat-floating-damage,
+  .auto-combat-fighter-card--player .auto-combat-damage-pop,
+  .auto-combat-fighter-card--player .auto-combat-hit-value {
+    bottom: 4.85rem;
+    min-width: 76px;
+    min-height: 36px;
+    padding: 0.28rem 0.68rem;
+    font-size: 0.88rem;
+  }
+}
+

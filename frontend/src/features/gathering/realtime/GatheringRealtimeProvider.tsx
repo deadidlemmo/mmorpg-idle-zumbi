@@ -1,26 +1,28 @@
 import type { ReactNode } from 'react';
 import {
-    createContext,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from 'react';
+import type { Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 import {
-    collectGatheringRequest,
-    extractGatheringApiError,
-    getGatheringStatusRequest,
-    startGatheringRequest,
-    stopGatheringRequest,
+  collectGatheringRequest,
+  extractGatheringApiError,
+  getGatheringStatusRequest,
+  startGatheringRequest,
+  stopGatheringRequest,
 } from '../api/gathering.api';
 import type {
-    GatheringAllowedOrigin,
-    GatheringMaterialViewModel,
-    GatheringProductionPreviewViewModel,
-    GatheringSessionViewModel,
-    GatheringSkillViewModel,
-    GatheringStatusResponse,
+  GatheringAllowedOrigin,
+  GatheringMaterialViewModel,
+  GatheringProductionPreviewViewModel,
+  GatheringSessionViewModel,
+  GatheringSkillViewModel,
+  GatheringStatusResponse,
 } from '../types/gathering.types';
 
 interface GatheringRealtimeProviderProps {
@@ -28,7 +30,16 @@ interface GatheringRealtimeProviderProps {
   children: ReactNode;
   autoLoad?: boolean;
   enabled?: boolean;
+
+  /**
+   * Fallback por API quando o WebSocket estiver desconectado.
+   * Com socket conectado, o provider usa eventos em tempo real.
+   */
   refreshMs?: number;
+
+  /**
+   * Tick local para suavizar a barra entre eventos do servidor.
+   */
   tickMs?: number;
 }
 
@@ -55,6 +66,9 @@ export interface GatheringRealtimeState {
   gatheringSkill: GatheringSkillViewModel | null;
   targetMaterial: GatheringMaterialViewModel | null;
 
+  collectedQuantity: number;
+  collectedXp: number;
+
   isActive: boolean;
   isLoading: boolean;
   isRefreshing: boolean;
@@ -80,6 +94,8 @@ export interface GatheringRealtimeContextValue {
   clearError: () => void;
 }
 
+type LooseRecord = Record<string, unknown>;
+
 type GatheringStatusLoose = GatheringStatusResponse & {
   active?: boolean | null;
   session?: GatheringSessionViewModel | null;
@@ -91,6 +107,8 @@ type GatheringSessionLoose = GatheringSessionViewModel & {
   status?: string | null;
   lastResolvedAt?: string | null;
   progressRemainder?: number | null;
+  collectedQuantity?: number | null;
+  collectedXp?: number | null;
   productionPreview?: GatheringProductionPreviewViewModel | null;
   gatheringSkill?: GatheringSkillViewModel | null;
   targetMaterial?: GatheringMaterialViewModel | null;
@@ -121,8 +139,25 @@ type GatheringMaterialLoose = GatheringMaterialViewModel & {
   baseGatheringRatePerHour?: number | null;
 };
 
+const GATHERING_SOCKET_NAMESPACE = '/gathering';
+
+const GATHERING_STATUS_EVENTS = [
+  'gathering:status',
+  'gathering:snapshot',
+  'gathering:session',
+  'gathering:session:update',
+  'gathering:started',
+  'gathering:progress',
+  'gathering:collected',
+  'gathering:stopped',
+] as const;
+
 export const GatheringRealtimeContext =
   createContext<GatheringRealtimeContextValue | null>(null);
+
+function isRecord(value: unknown): value is LooseRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 function toSafeNumber(value: unknown, fallback = 0): number {
   if (value === null || value === undefined || value === '') {
@@ -209,11 +244,7 @@ function getProductionPreview(params: {
   const looseStatus = params.status as GatheringStatusLoose | null;
   const looseSession = params.session as GatheringSessionLoose | null;
 
-  return (
-    looseStatus?.productionPreview ??
-    looseSession?.productionPreview ??
-    null
-  );
+  return looseStatus?.productionPreview ?? looseSession?.productionPreview ?? null;
 }
 
 function getGatheringSkill(params: {
@@ -240,6 +271,32 @@ function getTargetMaterial(params: {
     loosePreview?.material ??
     null
   );
+}
+
+function getSessionCollectedQuantity(
+  session?: GatheringSessionViewModel | null,
+): number {
+  const looseSession = session as GatheringSessionLoose | null;
+  const collectedQuantity = Number(looseSession?.collectedQuantity ?? 0);
+
+  if (!Number.isFinite(collectedQuantity)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor(collectedQuantity));
+}
+
+function getSessionCollectedXp(
+  session?: GatheringSessionViewModel | null,
+): number {
+  const looseSession = session as GatheringSessionLoose | null;
+  const collectedXp = Number(looseSession?.collectedXp ?? 0);
+
+  if (!Number.isFinite(collectedXp)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor(collectedXp));
 }
 
 function getRatePerHour(params: {
@@ -287,15 +344,27 @@ function getBaseProgressRemainder(params: {
   const loosePreview =
     params.productionPreview as GatheringProductionPreviewLoose | null;
 
-  return clampFraction(
-    getFirstValidNumber(
-      loosePreview?.estimatedNewProgressRemainder,
-      loosePreview?.currentProgressRemainder,
-      loosePreview?.progressRemainder,
-      looseSession?.progressRemainder,
-      0,
-    ),
+  const directRemainder = getFirstValidNumber(
+    loosePreview?.estimatedNewProgressRemainder,
+    loosePreview?.currentProgressRemainder,
+    loosePreview?.progressRemainder,
+    looseSession?.progressRemainder,
   );
+
+  if (directRemainder !== undefined) {
+    return clampFraction(directRemainder);
+  }
+
+  const progressPercent = getFirstValidNumber(
+    loosePreview?.nextUnitProgressPercent,
+    loosePreview?.progressPercent,
+  );
+
+  if (progressPercent !== undefined) {
+    return clampFraction(progressPercent / 100);
+  }
+
+  return 0;
 }
 
 function hasFreshProductionPreview(
@@ -325,19 +394,15 @@ function getBaseTimestampMs(params: {
 }): number | null {
   const looseSession = params.session as GatheringSessionLoose | null;
 
-  /*
-   * Quando existe productionPreview, o backend já calculou a produção
-   * até o momento em que a resposta chegou.
-   *
-   * Então o front deve continuar a contagem a partir de lastUpdatedAt,
-   * não de lastResolvedAt. Usar lastResolvedAt aqui soma novamente o tempo
-   * que o backend já considerou e faz a Activity Bar correr mais rápido.
-   */
   if (hasFreshProductionPreview(params.productionPreview)) {
     return params.lastUpdatedAt ?? Date.now();
   }
 
-  return getParsedDateMs(looseSession?.lastResolvedAt) ?? params.lastUpdatedAt ?? null;
+  return (
+    getParsedDateMs(looseSession?.lastResolvedAt) ??
+    params.lastUpdatedAt ??
+    null
+  );
 }
 
 function buildLiveProduction(params: {
@@ -447,6 +512,9 @@ function buildState(params: {
     lastUpdatedAt: params.lastUpdatedAt,
   });
 
+  const collectedQuantity = getSessionCollectedQuantity(session);
+  const collectedXp = getSessionCollectedXp(session);
+
   return {
     characterId: params.characterId,
 
@@ -455,6 +523,9 @@ function buildState(params: {
     productionPreview,
     gatheringSkill,
     targetMaterial,
+
+    collectedQuantity,
+    collectedXp,
 
     isActive,
     isLoading: params.isLoading,
@@ -467,6 +538,277 @@ function buildState(params: {
 
     liveProduction,
   };
+}
+
+function getStoredAuthToken(): string | null {
+  const keys = [
+    'authToken',
+    'accessToken',
+    'token',
+    'jwt',
+    'deadIdle.authToken',
+    'zumbi.authToken',
+  ];
+
+  for (const key of keys) {
+    const value = window.localStorage.getItem(key);
+
+    if (value && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  const objectKeys = ['auth', 'user', 'session', 'deadIdle.auth'];
+
+  for (const key of objectKeys) {
+    const raw = window.localStorage.getItem(key);
+
+    if (!raw) continue;
+
+    try {
+      const parsed = JSON.parse(raw) as LooseRecord;
+
+      const token =
+        parsed.authToken ??
+        parsed.accessToken ??
+        parsed.token ??
+        parsed.jwt;
+
+      if (typeof token === 'string' && token.trim().length > 0) {
+        return token.trim();
+      }
+    } catch {
+      // Ignora valores que não são JSON.
+    }
+  }
+
+  return null;
+}
+
+function normalizeSocketBaseUrl(rawUrl: string): string {
+  return rawUrl
+    .trim()
+    .replace(/\/api\/?$/i, '')
+    .replace(/\/$/, '');
+}
+
+function getGatheringSocketUrl(): string {
+  const env = import.meta.env as Record<string, string | undefined>;
+
+  const rawUrl =
+    env.VITE_SOCKET_URL ??
+    env.VITE_API_URL ??
+    env.VITE_BACKEND_URL ??
+    'http://localhost:3000';
+
+  const baseUrl = normalizeSocketBaseUrl(rawUrl);
+
+  if (baseUrl.endsWith(GATHERING_SOCKET_NAMESPACE)) {
+    return baseUrl;
+  }
+
+  return `${baseUrl}${GATHERING_SOCKET_NAMESPACE}`;
+}
+
+function safeStatusSignature(status: GatheringStatusResponse | null): string {
+  if (!status) return 'null';
+
+  try {
+    return JSON.stringify(status);
+  } catch {
+    return `invalid:${Date.now()}`;
+  }
+}
+
+function looksLikeGatheringStatus(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+
+  return (
+    'active' in value ||
+    'session' in value ||
+    'productionPreview' in value ||
+    'gatheringSkill' in value
+  );
+}
+
+function unwrapSocketPayload(payload: unknown): unknown {
+  if (!isRecord(payload)) {
+    return payload;
+  }
+
+  if (looksLikeGatheringStatus(payload)) {
+    return payload;
+  }
+
+  const candidates = [
+    payload.status,
+    payload.state,
+    payload.snapshot,
+    payload.data,
+    payload.result,
+    payload.payload,
+  ];
+
+  for (const candidate of candidates) {
+    if (looksLikeGatheringStatus(candidate)) {
+      return candidate;
+    }
+  }
+
+  for (const candidate of candidates) {
+    if (isRecord(candidate)) {
+      const nested = unwrapSocketPayload(candidate);
+
+      if (looksLikeGatheringStatus(nested)) {
+        return nested;
+      }
+    }
+  }
+
+  return payload;
+}
+
+function extractSocketStatusPayload(
+  payload: unknown,
+): GatheringStatusResponse | null {
+  const unwrapped = unwrapSocketPayload(payload);
+
+  if (!looksLikeGatheringStatus(unwrapped)) {
+    return null;
+  }
+
+  return unwrapped as GatheringStatusResponse;
+}
+
+function extractPartialPreviewFromRecord(
+  record: LooseRecord,
+): GatheringProductionPreviewViewModel | null {
+  if (isRecord(record.productionPreview)) {
+    return record.productionPreview as GatheringProductionPreviewViewModel;
+  }
+
+  const previewFields: GatheringProductionPreviewLoose =
+    {} as GatheringProductionPreviewLoose;
+  let hasPreviewField = false;
+
+  const fields: Array<keyof GatheringProductionPreviewLoose> = [
+    'elapsedSeconds',
+    'ratePerHour',
+    'baseRatePerHour',
+    'defaultRatePerHour',
+    'estimatedQuantityToCollect',
+    'readyQuantity',
+    'currentProgressRemainder',
+    'estimatedNewProgressRemainder',
+    'progressRemainder',
+    'nextUnitProgressPercent',
+    'progressPercent',
+  ];
+
+  for (const field of fields) {
+    if (field in record) {
+      (previewFields as LooseRecord)[field] = record[field];
+      hasPreviewField = true;
+    }
+  }
+
+  if (isRecord(record.material)) {
+    previewFields.material = record.material as GatheringMaterialViewModel;
+    hasPreviewField = true;
+  }
+
+  if (isRecord(record.targetMaterial)) {
+    previewFields.targetMaterial = record.targetMaterial as GatheringMaterialViewModel;
+    hasPreviewField = true;
+  }
+
+  return hasPreviewField
+    ? (previewFields as GatheringProductionPreviewViewModel)
+    : null;
+}
+
+function mergeSocketPartialStatus(params: {
+  previous: GatheringStatusResponse | null;
+  payload: unknown;
+}): GatheringStatusResponse | null {
+  const unwrapped = unwrapSocketPayload(params.payload);
+
+  if (!isRecord(unwrapped)) {
+    return null;
+  }
+
+  const previousLoose = params.previous as GatheringStatusLoose | null;
+
+  const incomingSession = isRecord(unwrapped.session)
+    ? (unwrapped.session as GatheringSessionViewModel)
+    : null;
+
+  const session = incomingSession ?? previousLoose?.session ?? null;
+
+  const incomingPreview = extractPartialPreviewFromRecord(unwrapped);
+  const previousPreview =
+    previousLoose?.productionPreview ??
+    ((session as GatheringSessionLoose | null)?.productionPreview ?? null);
+
+  const productionPreview =
+    incomingPreview || previousPreview
+      ? ({
+          ...((previousPreview as LooseRecord | null) ?? {}),
+          ...((incomingPreview as LooseRecord | null) ?? {}),
+        } as GatheringProductionPreviewViewModel)
+      : null;
+
+  const incomingGatheringSkill = isRecord(unwrapped.gatheringSkill)
+    ? (unwrapped.gatheringSkill as GatheringSkillViewModel)
+    : null;
+
+  const gatheringSkill =
+    incomingGatheringSkill ?? previousLoose?.gatheringSkill ?? null;
+
+  const hasUsefulPatch =
+    session !== null ||
+    productionPreview !== null ||
+    gatheringSkill !== null ||
+    'active' in unwrapped;
+
+  if (!hasUsefulPatch && !params.previous) {
+    return null;
+  }
+
+  const active =
+    typeof unwrapped.active === 'boolean'
+      ? unwrapped.active
+      : session
+        ? isSessionActive(session)
+        : Boolean(previousLoose?.active);
+
+  return {
+    ...((previousLoose as LooseRecord | null) ?? {}),
+    active,
+    session,
+    productionPreview,
+    gatheringSkill,
+  } as GatheringStatusResponse;
+}
+
+function extractSocketError(payload: unknown): string | null {
+  if (typeof payload === 'string') {
+    return payload;
+  }
+
+  if (!isRecord(payload)) {
+    return null;
+  }
+
+  const possibleMessage =
+    payload.message ??
+    payload.error ??
+    payload.reason ??
+    (isRecord(payload.data) ? payload.data.message : null);
+
+  return typeof possibleMessage === 'string' && possibleMessage.trim().length > 0
+    ? possibleMessage.trim()
+    : null;
 }
 
 export function GatheringRealtimeProvider({
@@ -484,14 +826,53 @@ export function GatheringRealtimeProvider({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
 
+  const socketRef = useRef<Socket | null>(null);
   const isMountedRef = useRef(false);
   const isRefreshingRef = useRef(false);
   const statusRef = useRef<GatheringStatusResponse | null>(null);
+  const statusSignatureRef = useRef<string>('null');
+  const socketConnectedRef = useRef(false);
 
-  useEffect(() => {
-    statusRef.current = status;
-  }, [status]);
+  const applyStatus = useCallback((nextStatus: GatheringStatusResponse | null) => {
+    if (!isMountedRef.current) return;
+
+    const nextSignature = safeStatusSignature(nextStatus);
+
+    if (statusSignatureRef.current === nextSignature) {
+      statusRef.current = nextStatus;
+      return;
+    }
+
+    statusSignatureRef.current = nextSignature;
+    statusRef.current = nextStatus;
+
+    setStatus(nextStatus);
+    setLastUpdatedAt(Date.now());
+    setErrorMessage(null);
+  }, []);
+
+  const applySocketPayload = useCallback(
+    (payload: unknown) => {
+      const fullStatus = extractSocketStatusPayload(payload);
+
+      if (fullStatus) {
+        applyStatus(fullStatus);
+        return;
+      }
+
+      const mergedStatus = mergeSocketPartialStatus({
+        previous: statusRef.current,
+        payload,
+      });
+
+      if (mergedStatus) {
+        applyStatus(mergedStatus);
+      }
+    },
+    [applyStatus],
+  );
 
   const refresh = useCallback(async () => {
     if (!enabled || !characterId) {
@@ -503,19 +884,15 @@ export function GatheringRealtimeProvider({
     }
 
     isRefreshingRef.current = true;
-    setIsRefreshing(true);
+
+    if (isMountedRef.current) {
+      setIsRefreshing((previous) => (previous ? previous : true));
+    }
 
     try {
       const response = await getGatheringStatusRequest(characterId);
 
-      if (!isMountedRef.current) {
-        return response;
-      }
-
-      statusRef.current = response;
-      setStatus(response);
-      setLastUpdatedAt(Date.now());
-      setErrorMessage(null);
+      applyStatus(response);
 
       return response;
     } catch (error) {
@@ -526,13 +903,25 @@ export function GatheringRealtimeProvider({
       return null;
     } finally {
       if (isMountedRef.current) {
-        setIsLoading(false);
-        setIsRefreshing(false);
+        setIsLoading((previous) => (previous ? false : previous));
+        setIsRefreshing((previous) => (previous ? false : previous));
       }
 
       isRefreshingRef.current = false;
     }
-  }, [characterId, enabled]);
+  }, [applyStatus, characterId, enabled]);
+
+  const requestSocketSnapshot = useCallback(() => {
+    const socket = socketRef.current;
+
+    if (!socket || !socket.connected || !characterId) {
+      return;
+    }
+
+    socket.emit('gathering:join', { characterId });
+    socket.emit('gathering:status:request', { characterId });
+    socket.emit('gathering:refresh', { characterId });
+  }, [characterId]);
 
   const start = useCallback(
     async (payload: GatheringRealtimeStartPayload) => {
@@ -540,7 +929,7 @@ export function GatheringRealtimeProvider({
         return null;
       }
 
-      setIsBusy(true);
+      setIsBusy((previous) => (previous ? previous : true));
       setErrorMessage(null);
 
       try {
@@ -551,6 +940,12 @@ export function GatheringRealtimeProvider({
           targetMaterialId: payload.targetMaterialId,
         });
 
+        requestSocketSnapshot();
+
+        if (socketConnectedRef.current) {
+          return statusRef.current;
+        }
+
         return await refresh();
       } catch (error) {
         if (isMountedRef.current) {
@@ -560,11 +955,11 @@ export function GatheringRealtimeProvider({
         return null;
       } finally {
         if (isMountedRef.current) {
-          setIsBusy(false);
+          setIsBusy((previous) => (previous ? false : previous));
         }
       }
     },
-    [characterId, enabled, refresh],
+    [characterId, enabled, refresh, requestSocketSnapshot],
   );
 
   const collect = useCallback(async () => {
@@ -572,13 +967,17 @@ export function GatheringRealtimeProvider({
       return null;
     }
 
-    setIsBusy(true);
+    setIsBusy((previous) => (previous ? previous : true));
     setErrorMessage(null);
 
     try {
       const response = await collectGatheringRequest(characterId);
 
-      await refresh();
+      requestSocketSnapshot();
+
+      if (!socketConnectedRef.current) {
+        await refresh();
+      }
 
       return response;
     } catch (error) {
@@ -589,23 +988,27 @@ export function GatheringRealtimeProvider({
       return null;
     } finally {
       if (isMountedRef.current) {
-        setIsBusy(false);
+        setIsBusy((previous) => (previous ? false : previous));
       }
     }
-  }, [characterId, enabled, refresh]);
+  }, [characterId, enabled, refresh, requestSocketSnapshot]);
 
   const stop = useCallback(async () => {
     if (!enabled || !characterId) {
       return null;
     }
 
-    setIsBusy(true);
+    setIsBusy((previous) => (previous ? previous : true));
     setErrorMessage(null);
 
     try {
       const response = await stopGatheringRequest(characterId);
 
-      await refresh();
+      requestSocketSnapshot();
+
+      if (!socketConnectedRef.current) {
+        await refresh();
+      }
 
       return response;
     } catch (error) {
@@ -616,13 +1019,13 @@ export function GatheringRealtimeProvider({
       return null;
     } finally {
       if (isMountedRef.current) {
-        setIsBusy(false);
+        setIsBusy((previous) => (previous ? false : previous));
       }
     }
-  }, [characterId, enabled, refresh]);
+  }, [characterId, enabled, refresh, requestSocketSnapshot]);
 
   const clearError = useCallback(() => {
-    setErrorMessage(null);
+    setErrorMessage((previous) => (previous === null ? previous : null));
   }, []);
 
   useEffect(() => {
@@ -634,11 +1037,135 @@ export function GatheringRealtimeProvider({
   }, []);
 
   useEffect(() => {
+    statusRef.current = null;
+    statusSignatureRef.current = 'null';
+
+    setStatus((previous) => (previous === null ? previous : null));
+    setLastUpdatedAt((previous) => (previous === null ? previous : null));
+    setErrorMessage((previous) => (previous === null ? previous : null));
+    setIsLoading((previous) => (previous === autoLoad ? previous : autoLoad));
+    setIsRefreshing((previous) => (previous ? false : previous));
+    setIsBusy((previous) => (previous ? false : previous));
+  }, [autoLoad, characterId]);
+
+  useEffect(() => {
+    if (!enabled || !characterId) {
+      socketConnectedRef.current = false;
+      setIsSocketConnected((previous) => (previous ? false : previous));
+      return undefined;
+    }
+
+    const token = getStoredAuthToken();
+    const socketUrl = getGatheringSocketUrl();
+
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      auth: {
+        token,
+        characterId,
+      },
+      query: {
+        characterId,
+      },
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 800,
+      reconnectionDelayMax: 4500,
+    });
+
+    socketRef.current = socket;
+
+    const handleConnect = () => {
+      socketConnectedRef.current = true;
+
+      if (isMountedRef.current) {
+        setIsSocketConnected((previous) => (previous ? previous : true));
+        setErrorMessage(null);
+      }
+
+      socket.emit('gathering:join', { characterId });
+      socket.emit('gathering:status:request', { characterId });
+      socket.emit('gathering:refresh', { characterId });
+    };
+
+    const handleDisconnect = () => {
+      socketConnectedRef.current = false;
+
+      if (isMountedRef.current) {
+        setIsSocketConnected((previous) => (previous ? false : previous));
+      }
+    };
+
+    const handleConnectError = (error: Error) => {
+      socketConnectedRef.current = false;
+
+      if (isMountedRef.current) {
+        setIsSocketConnected((previous) => (previous ? false : previous));
+
+        if (!statusRef.current) {
+          setErrorMessage(
+            error.message || 'Falha ao conectar ao gathering em tempo real.',
+          );
+        }
+      }
+    };
+
+    const handleStatusEvent = (payload: unknown) => {
+      applySocketPayload(payload);
+    };
+
+    const handleErrorEvent = (payload: unknown) => {
+      const message =
+        extractSocketError(payload) ??
+        'Erro recebido do gathering em tempo real.';
+
+      if (isMountedRef.current) {
+        setErrorMessage(message);
+      }
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('connect_error', handleConnectError);
+    socket.on('gathering:error', handleErrorEvent);
+
+    for (const eventName of GATHERING_STATUS_EVENTS) {
+      socket.on(eventName, handleStatusEvent);
+    }
+
+    return () => {
+      socket.emit('gathering:leave', { characterId });
+
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('connect_error', handleConnectError);
+      socket.off('gathering:error', handleErrorEvent);
+
+      for (const eventName of GATHERING_STATUS_EVENTS) {
+        socket.off(eventName, handleStatusEvent);
+      }
+
+      socket.disconnect();
+
+      if (socketRef.current === socket) {
+        socketRef.current = null;
+      }
+
+      socketConnectedRef.current = false;
+
+      if (isMountedRef.current) {
+        setIsSocketConnected((previous) => (previous ? false : previous));
+      }
+    };
+  }, [applySocketPayload, characterId, enabled]);
+
+  useEffect(() => {
     if (!enabled) return undefined;
 
     const intervalId = window.setInterval(() => {
       setNowMs(Date.now());
-    }, tickMs);
+    }, Math.max(250, tickMs));
 
     return () => {
       window.clearInterval(intervalId);
@@ -647,16 +1174,16 @@ export function GatheringRealtimeProvider({
 
   useEffect(() => {
     if (!enabled || !characterId || !autoLoad) {
-      setIsLoading(false);
+      setIsLoading((previous) => (previous ? false : previous));
       return;
     }
 
-    setIsLoading(true);
+    setIsLoading((previous) => (previous ? previous : true));
     void refresh();
   }, [autoLoad, characterId, enabled, refresh]);
 
   useEffect(() => {
-    if (!enabled || !characterId || refreshMs <= 0) {
+    if (!enabled || !characterId || refreshMs <= 0 || isSocketConnected) {
       return undefined;
     }
 
@@ -667,7 +1194,7 @@ export function GatheringRealtimeProvider({
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [characterId, enabled, refresh, refreshMs]);
+  }, [characterId, enabled, isSocketConnected, refresh, refreshMs]);
 
   const state = useMemo(
     () =>

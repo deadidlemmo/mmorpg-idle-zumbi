@@ -1,0 +1,5 @@
+﻿DIAGNOSTICO GATHERING - MMORPG IDLE ZUMBI
+Raiz: C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi
+Gerado em: 09/05/2026 22:27:57
+Excluidos: node_modules, dist, build, .git, caches, .env, lockfiles e arquivos de instalacao
+

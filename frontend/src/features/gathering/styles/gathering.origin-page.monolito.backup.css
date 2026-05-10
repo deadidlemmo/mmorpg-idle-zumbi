@@ -1,0 +1,3978 @@
+/* =========================================================
+   GATHERING — PÁGINA DE ORIGEM / EXPEDIÇÃO
+   Arquivo: src/features/gathering/styles/gathering.origin-page.css
+
+   Objetivo:
+   - Aproximar a tela de origem da inspiração desktop.
+   - Remover visualmente o header grande da origem.
+   - Deixar lore em linha inteira.
+   - Deixar premium abaixo, alinhado com o card de materiais.
+   - Separar lista de materiais e painel lateral.
+   - Criar divisão intuitiva na lateral: atividade atual + proficiência.
+   ========================================================= */
+
+/* =========================================================
+   BASE DA PÁGINA
+   ========================================================= */
+
+.gathering-page--origin {
+  width: min(100%, 1220px);
+  margin: 0 auto;
+  padding: 0.72rem 1rem 3.2rem;
+  color: rgba(255, 248, 232, 0.92);
+}
+
+.gathering-page--origin::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 72% 14%, rgba(104, 155, 89, 0.08), transparent 30rem),
+    radial-gradient(circle at 24% 10%, rgba(232, 184, 78, 0.055), transparent 24rem),
+    linear-gradient(180deg, rgba(5, 12, 9, 0.22), rgba(0, 0, 0, 0.12));
+}
+
+.gathering-origin-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.72rem;
+  width: 100%;
+  min-width: 0;
+}
+
+/* =========================================================
+   HEADER GRANDE DA ORIGEM
+   Mantido no TSX, mas removido visualmente para aproximar da inspiração.
+   ========================================================= */
+
+.gathering-origin-topbar {
+  display: none !important;
+}
+
+/* =========================================================
+   FEEDBACK
+   ========================================================= */
+
+.gathering-origin-shell > .gathering-feedback {
+  margin: 0;
+  border-radius: 0.9rem;
+}
+
+.gathering-page--origin .gathering-feedback--success {
+  color: #f6ffe6;
+  background:
+    linear-gradient(90deg, rgba(110, 159, 67, 0.16), rgba(110, 159, 67, 0.055)),
+    rgba(5, 14, 8, 0.78);
+  border-color: rgba(110, 159, 67, 0.28);
+}
+
+.gathering-page--origin .gathering-feedback--error {
+  color: #ffd7cf;
+  background:
+    linear-gradient(90deg, rgba(144, 54, 50, 0.18), rgba(144, 54, 50, 0.055)),
+    rgba(14, 7, 6, 0.78);
+  border-color: rgba(170, 70, 62, 0.3);
+}
+
+/* =========================================================
+   INTRO — LORE + PREMIUM
+   ========================================================= */
+
+.gathering-origin-intro-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 0.38fr);
+  align-items: start;
+  gap: 0.56rem 0.95rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.gathering-origin-lore-card,
+.gathering-origin-premium-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.86rem;
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Lore fina, horizontal e ocupando a linha inteira */
+
+.gathering-origin-lore-card {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.66rem;
+  width: 100%;
+  min-height: 72px;
+  max-height: 84px;
+  padding: 0.46rem 0.68rem;
+  background:
+    radial-gradient(circle at 11% 50%, rgba(232, 184, 78, 0.13), transparent 9rem),
+    radial-gradient(circle at 86% 0%, rgba(110, 159, 67, 0.08), transparent 18rem),
+    linear-gradient(135deg, rgba(16, 24, 21, 0.94), rgba(7, 12, 11, 0.88)),
+    rgba(5, 9, 8, 0.84);
+}
+
+.gathering-origin-lore-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(232, 184, 78, 0.05), transparent 58%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 8px
+    );
+  opacity: 0.84;
+}
+
+.gathering-origin-lore-card__portrait {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 0.78rem;
+  border: 1px solid rgba(232, 184, 78, 0.2);
+  background:
+    radial-gradient(circle at 48% 34%, rgba(232, 184, 78, 0.22), transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+    rgba(28, 23, 12, 0.78);
+  box-shadow:
+    inset 0 0 0 4px rgba(232, 184, 78, 0.032),
+    0 7px 12px rgba(0, 0, 0, 0.22),
+    0 0 12px rgba(232, 184, 78, 0.06);
+}
+
+.gathering-origin-lore-card__portrait span {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: #ffe59b;
+  font-family: var(--font-title);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.05em;
+  border-radius: 0.62rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+    rgba(5, 9, 8, 0.42);
+  border: 1px solid rgba(232, 184, 78, 0.13);
+}
+
+.gathering-origin-lore-card__content {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  align-self: center;
+}
+
+.gathering-origin-lore-card__npc {
+  display: inline-flex;
+  margin-bottom: 0.12rem;
+  color: rgba(174, 218, 120, 0.88);
+  font-family: var(--font-title);
+  font-size: 0.44rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.gathering-origin-lore-card h2 {
+  margin: 0;
+  overflow: hidden;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: clamp(0.88rem, 1.05vw, 1.02rem);
+  font-weight: 950;
+  line-height: 1.02;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gathering-origin-lore-card blockquote {
+  display: -webkit-box;
+  max-width: 100%;
+  margin: 0.22rem 0 0;
+  overflow: hidden;
+  color: rgba(255, 248, 232, 0.88);
+  font-size: 0.72rem;
+  font-weight: 760;
+  font-style: italic;
+  line-height: 1.18;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.gathering-origin-lore-card p {
+  display: none;
+}
+
+/* Premium abaixo, alinhado com o card de materiais */
+
+.gathering-origin-premium-card {
+  grid-column: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.62rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  max-height: none;
+  padding: 0.52rem 0.68rem;
+  background:
+    radial-gradient(circle at 0% 50%, rgba(28, 153, 210, 0.12), transparent 9rem),
+    linear-gradient(135deg, rgba(18, 28, 43, 0.94), rgba(10, 17, 28, 0.92)),
+    rgba(10, 17, 26, 0.92);
+  border-color: rgba(104, 144, 190, 0.2);
+}
+
+.gathering-origin-premium-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(65, 167, 232, 0.06), transparent 64%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 8px
+    );
+}
+
+.gathering-origin-premium-card__badge {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0;
+  color: rgba(230, 241, 255, 0.84);
+  font-family: var(--font-title);
+  font-size: 0;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  border-radius: 999px;
+  border: 1px solid rgba(158, 223, 255, 0.18);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(158, 223, 255, 0.16), transparent 58%),
+    rgba(25, 55, 80, 0.42);
+}
+
+.gathering-origin-premium-card__badge::before {
+  content: 'i';
+  color: rgba(230, 241, 255, 0.82);
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.gathering-origin-premium-card div:not(.gathering-origin-premium-card__badge) {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.gathering-origin-premium-card h2 {
+  margin: 0;
+  color: #effbff;
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1.14;
+  white-space: normal;
+}
+
+.gathering-origin-premium-card p {
+  display: block;
+  margin: 0.16rem 0 0;
+  overflow: visible;
+  color: rgba(228, 245, 255, 0.76);
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+.gathering-origin-premium-card__button {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  min-width: max-content;
+  min-height: 30px;
+  padding: 0.26rem 0.58rem;
+  color: #f4fbff;
+  font-family: var(--font-title);
+  font-size: 0.48rem;
+  font-weight: 950;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  border: 1px solid rgba(158, 223, 255, 0.18);
+  border-radius: 0.52rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(26, 129, 180, 0.3);
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 6px 12px rgba(0, 0, 0, 0.14);
+}
+
+.gathering-origin-premium-card__button:hover {
+  border-color: rgba(158, 223, 255, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), transparent),
+    rgba(35, 150, 210, 0.4);
+}
+
+/* =========================================================
+   GRID PRINCIPAL — MATERIAIS + LATERAL
+   ========================================================= */
+
+.gathering-origin-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 0.38fr);
+  align-items: start;
+  gap: 0.95rem;
+}
+
+.gathering-origin-main,
+.gathering-origin-side {
+  min-width: 0;
+}
+
+.gathering-origin-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.gathering-origin-side {
+  position: sticky;
+  top: 0.95rem;
+  display: flex;
+  max-height: calc(100vh - 1.9rem);
+  flex-direction: column;
+  gap: 0.82rem;
+  overflow: auto;
+  padding-right: 0.1rem;
+  scrollbar-width: thin;
+}
+
+.gathering-origin-side--stacked {
+  gap: 0.78rem;
+}
+
+.gathering-origin-side-section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.52rem;
+}
+
+/* =========================================================
+   DIVISÓRIAS DA LATERAL — PALETA DO SISTEMA
+   ========================================================= */
+
+.gathering-origin-section-divider {
+  display: grid;
+  grid-template-columns: minmax(18px, 1fr) auto minmax(18px, 1fr);
+  align-items: center;
+  gap: 0.56rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0.04rem 0 0;
+  color: rgba(139, 157, 203, 0.82);
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.gathering-origin-section-divider::before,
+.gathering-origin-section-divider::after {
+  content: '';
+  display: block;
+  height: 1px;
+  min-width: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(139, 157, 203, 0.22),
+    rgba(139, 157, 203, 0.12)
+  );
+}
+
+.gathering-origin-section-divider::after {
+  background: linear-gradient(
+    90deg,
+    rgba(139, 157, 203, 0.12),
+    rgba(139, 157, 203, 0.22),
+    transparent
+  );
+}
+
+.gathering-origin-section-divider span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max-content;
+  color: rgba(139, 157, 203, 0.86);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.gathering-origin-side-section--current .gathering-origin-section-divider span {
+  color: rgba(139, 157, 203, 0.9);
+}
+
+.gathering-origin-side-section--progress .gathering-origin-section-divider span {
+  color: rgba(139, 157, 203, 0.84);
+}
+
+/* =========================================================
+   CARDS DA ORIGIN PAGE
+   ========================================================= */
+
+.gathering-page--origin .gathering-card {
+  border-radius: 1.05rem;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(110, 159, 67, 0.055), transparent 17rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.008)),
+    rgba(5, 10, 8, 0.82);
+  border: 1px solid rgba(231, 227, 216, 0.075);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 14px 30px rgba(0, 0, 0, 0.18);
+}
+
+.gathering-page--origin .gathering-card--compact {
+  padding: 0.92rem;
+}
+
+.gathering-origin-materials-panel {
+  min-height: 560px;
+}
+
+.gathering-origin-current-card {
+  padding: 0.86rem;
+  border-color: rgba(110, 159, 67, 0.24);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(110, 159, 67, 0.1), transparent 17rem),
+    linear-gradient(180deg, rgba(110, 159, 67, 0.045), rgba(255, 255, 255, 0.01)),
+    rgba(5, 15, 9, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 12px 25px rgba(0, 0, 0, 0.2),
+    0 0 22px rgba(110, 159, 67, 0.045);
+}
+
+/* =========================================================
+   CABEÇALHO DA LISTA DE MATERIAIS
+   ========================================================= */
+
+.gathering-origin-materials-panel .gathering-card__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 0.88rem;
+}
+
+.gathering-origin-materials-panel .gathering-card__title-group {
+  min-width: 0;
+}
+
+.gathering-origin-materials-panel .gathering-card__eyebrow {
+  color: #aeda78;
+  font-size: 0.57rem;
+  letter-spacing: 0.18em;
+}
+
+.gathering-origin-materials-panel .gathering-card h2 {
+  margin-top: 0.24rem;
+  color: #fff8e8;
+  font-size: clamp(1.08rem, 1.4vw, 1.28rem);
+  line-height: 1.08;
+}
+
+.gathering-origin-materials-panel .gathering-card__description {
+  max-width: 720px;
+  margin-top: 0.38rem;
+  color: rgba(231, 227, 216, 0.64);
+  font-size: 0.84rem;
+  line-height: 1.38;
+}
+
+.gathering-origin-materials-panel__summary {
+  display: grid;
+  justify-items: end;
+  gap: 0.3rem;
+  min-width: 130px;
+  padding-top: 0.16rem;
+}
+
+.gathering-origin-materials-panel__summary span,
+.gathering-origin-materials-panel__summary strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0.22rem 0.55rem;
+  font-family: var(--font-title);
+  font-size: 0.6rem;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+  border-radius: 999px;
+}
+
+.gathering-origin-materials-panel__summary span {
+  color: rgba(255, 248, 232, 0.78);
+  border: 1px solid rgba(231, 227, 216, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.gathering-origin-materials-panel__summary strong {
+  color: #f6ffe6;
+  border: 1px solid rgba(110, 159, 67, 0.22);
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.16), transparent),
+    rgba(110, 159, 67, 0.08);
+}
+
+/* =========================================================
+   CARD DE PROFICIÊNCIA NA LATERAL — PALETA DO SISTEMA / TOGGLE
+   ========================================================= */
+
+.gathering-origin-skill-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.66rem;
+  padding: 0.72rem !important;
+  overflow: hidden;
+  border-color: rgba(139, 157, 203, 0.16) !important;
+  border-radius: 0.86rem !important;
+  background:
+    linear-gradient(180deg, rgba(139, 157, 203, 0.06), rgba(255, 255, 255, 0.012)),
+    rgba(15, 22, 34, 0.86) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 12px 25px rgba(0, 0, 0, 0.18) !important;
+}
+
+.gathering-origin-skill-card--collapsed {
+  gap: 0.58rem;
+}
+
+.gathering-origin-skill-card__toggle {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.58rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.gathering-origin-skill-card__toggle:focus-visible {
+  outline: 2px solid rgba(159, 211, 106, 0.66);
+  outline-offset: 4px;
+  border-radius: 0.72rem;
+}
+
+.gathering-origin-skill-card__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: rgba(255, 229, 155, 0.94);
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.035em;
+  border: 1px solid rgba(232, 184, 78, 0.22);
+  border-radius: 0.66rem;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(232, 184, 78, 0.2), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.048), transparent),
+    rgba(28, 22, 11, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 7px 12px rgba(0, 0, 0, 0.18),
+    0 0 12px rgba(232, 184, 78, 0.08);
+}
+
+.gathering-origin-skill-card__heading {
+  display: grid;
+  min-width: 0;
+  gap: 0.18rem;
+}
+
+.gathering-origin-skill-card__heading > span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.gathering-origin-skill-card__heading strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  font-weight: 950;
+  line-height: 1.08;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gathering-origin-skill-card__heading em {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max-content;
+  min-height: 20px;
+  padding: 0.12rem 0.42rem;
+  color: rgba(255, 248, 232, 0.9);
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-style: normal;
+  font-weight: 950;
+  line-height: 1;
+  border: 1px solid rgba(139, 157, 203, 0.14);
+  border-radius: 0.42rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+    rgba(54, 67, 91, 0.34);
+}
+
+.gathering-origin-skill-card__heading small {
+  overflow: hidden;
+  color: rgba(139, 157, 203, 0.82);
+  font-size: 0.68rem;
+  font-weight: 760;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gathering-origin-skill-card__chevron {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: rgba(231, 227, 216, 0.72);
+  font-family: var(--font-title);
+  font-size: 0.8rem;
+  font-weight: 950;
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: 0.46rem;
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease;
+}
+
+.gathering-origin-skill-card__toggle:hover .gathering-origin-skill-card__chevron {
+  color: #fff8e8;
+  border-color: rgba(139, 157, 203, 0.14);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.gathering-origin-skill-card__track {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    rgba(0, 0, 0, 0.46);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.72),
+    0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.gathering-origin-skill-card__track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 3px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #e8b84e, #ffd229);
+  box-shadow:
+    0 0 12px rgba(255, 210, 41, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.gathering-origin-skill-card__details {
+  display: grid;
+  gap: 0.56rem;
+  min-width: 0;
+  padding-top: 0.1rem;
+  border-top: 1px solid rgba(139, 157, 203, 0.1);
+}
+
+.gathering-origin-skill-card__meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.gathering-origin-skill-card__meta span,
+.gathering-origin-skill-card__meta strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gathering-origin-skill-card__meta span {
+  color: rgba(231, 227, 216, 0.68);
+  font-size: 0.72rem;
+  font-weight: 780;
+}
+
+.gathering-origin-skill-card__meta strong {
+  color: rgba(255, 248, 232, 0.92);
+  font-family: var(--font-title);
+  font-size: 0.76rem;
+  font-weight: 950;
+}
+
+.gathering-origin-skill-card__meta--secondary {
+  color: rgba(231, 227, 216, 0.54);
+  font-size: 0.68rem;
+}
+
+.gathering-origin-skill-card__meta--secondary span:last-child {
+  color: rgba(174, 218, 120, 0.78);
+  text-align: right;
+}
+
+.gathering-origin-skill-card__perk-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: fit-content;
+  min-height: 30px;
+  padding: 0.28rem 0.62rem;
+  color: rgba(231, 227, 216, 0.48);
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  border: 1px solid rgba(139, 157, 203, 0.1);
+  border-radius: 0.5rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), transparent),
+    rgba(255, 255, 255, 0.025);
+}
+
+.gathering-origin-skill-card__perk-button::before {
+  content: '🔒';
+  margin-right: 0.34rem;
+  opacity: 0.55;
+  font-size: 0.7rem;
+}
+
+.gathering-origin-skill-card__perk-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+/* =========================================================
+   INTEGRAÇÃO COM LISTA DE MATERIAIS
+   ========================================================= */
+
+.gathering-origin-main .gathering-material-grid,
+.gathering-origin-main .gathering-material-grid--compact,
+.gathering-origin-main .gathering-material-grid--visual {
+  gap: 0.72rem;
+}
+
+.gathering-origin-main .gathering-material-group {
+  margin-top: 0.98rem;
+}
+
+.gathering-origin-main .gathering-material-group:first-of-type {
+  margin-top: 0.45rem;
+}
+
+.gathering-origin-main .gathering-material-group__header {
+  margin: 0.2rem 0 0.72rem;
+  opacity: 0.95;
+}
+
+.gathering-origin-main .gathering-material-group__header h3 {
+  color: rgba(255, 248, 232, 0.72);
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+}
+
+.gathering-origin-main .gathering-material-group__header::before,
+.gathering-origin-main .gathering-material-group__header::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(231, 227, 216, 0.12),
+    rgba(232, 184, 78, 0.14),
+    transparent
+  );
+}
+
+/* =========================================================
+   REFINO DO PAINEL DE SESSÃO
+   ========================================================= */
+
+.gathering-origin-current-card .gathering-session {
+  min-width: 0;
+}
+
+.gathering-origin-current-card .gathering-session .gathering-card__header {
+  margin-bottom: 0.72rem;
+}
+
+.gathering-origin-current-card .gathering-session .gathering-card__eyebrow {
+  color: #aeda78;
+  font-size: 0.56rem;
+  letter-spacing: 0.17em;
+}
+
+.gathering-origin-current-card .gathering-session h2 {
+  color: #fff8e8;
+  font-size: 1.24rem;
+  line-height: 1.05;
+}
+
+.gathering-origin-current-card .gathering-session__live-hero {
+  border-radius: 0.9rem;
+  border-color: rgba(232, 184, 78, 0.18);
+  background:
+    radial-gradient(circle at 0% 50%, rgba(232, 184, 78, 0.11), transparent 10rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    rgba(5, 9, 8, 0.62);
+}
+
+.gathering-origin-current-card .gathering-session__activity {
+  margin-top: 0.82rem;
+}
+
+.gathering-origin-current-card .gathering-session__rate-strip {
+  margin-top: 0.82rem;
+}
+
+.gathering-origin-current-card .gathering-session__skill-line {
+  margin-top: 0.82rem;
+}
+
+.gathering-origin-current-card .gathering-session__actions {
+  margin-top: 0.9rem;
+}
+
+.gathering-origin-current-card .gathering-session--empty {
+  min-height: 230px;
+}
+
+.gathering-origin-current-card .gathering-session__empty-state {
+  border-radius: 0.92rem;
+  background:
+    radial-gradient(circle at 10% 50%, rgba(232, 184, 78, 0.08), transparent 9rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.54);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+/* =========================================================
+   COMPATIBILIDADE COM ESTRUTURA ANTIGA DA ORIGIN PAGE
+   ========================================================= */
+
+.gathering-page__grid--clean {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 0.38fr);
+  align-items: start;
+  gap: 0.95rem;
+}
+
+.gathering-page__main-column,
+.gathering-page__side-column--clean {
+  min-width: 0;
+}
+
+.gathering-page__main-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.gathering-page__side-column--clean {
+  position: sticky;
+  top: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.82rem;
+  max-height: calc(100vh - 1.9rem);
+  overflow: auto;
+  padding-right: 0.1rem;
+  scrollbar-width: thin;
+}
+
+/* =========================================================
+   RESPONSIVO LOCAL DA PÁGINA DE ORIGEM
+   ========================================================= */
+
+@media (max-width: 1280px) {
+  .gathering-page--origin {
+    width: min(100%, 1160px);
+  }
+
+  .gathering-origin-intro-grid,
+  .gathering-origin-content-grid,
+  .gathering-page__grid--clean {
+    grid-template-columns: minmax(0, 1fr) minmax(310px, 0.38fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .gathering-page--origin {
+    padding-inline: 0.85rem;
+  }
+
+  .gathering-origin-intro-grid,
+  .gathering-origin-content-grid,
+  .gathering-page__grid--clean {
+    grid-template-columns: 1fr;
+  }
+
+  .gathering-origin-premium-card {
+    grid-column: 1;
+    width: 100%;
+  }
+
+  .gathering-origin-side,
+  .gathering-page__side-column--clean {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.2fr);
+    align-items: start;
+  }
+
+  .gathering-origin-side--stacked {
+    gap: 0.78rem;
+  }
+
+  .gathering-origin-materials-panel {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .gathering-page--origin {
+    padding: 0.72rem 0.68rem 2.4rem;
+  }
+
+  .gathering-origin-topbar {
+    display: none !important;
+  }
+
+  .gathering-origin-lore-card {
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 0.62rem;
+    min-height: 72px;
+    max-height: 84px;
+    padding: 0.46rem 0.62rem;
+  }
+
+  .gathering-origin-lore-card__portrait {
+    width: 50px;
+    height: 50px;
+    border-radius: 0.74rem;
+  }
+
+  .gathering-origin-lore-card__portrait span {
+    width: 38px;
+    height: 38px;
+    font-size: 0.66rem;
+  }
+
+  .gathering-origin-lore-card h2 {
+    font-size: 0.9rem;
+  }
+
+  .gathering-origin-lore-card blockquote {
+    font-size: 0.7rem;
+  }
+
+  .gathering-origin-premium-card {
+    width: 100%;
+    min-height: 58px;
+    max-height: none;
+    padding: 0.5rem 0.62rem;
+  }
+
+  .gathering-origin-side,
+  .gathering-page__side-column--clean {
+    grid-template-columns: 1fr;
+  }
+
+  .gathering-page--origin .gathering-card--compact,
+  .gathering-origin-current-card {
+    padding: 0.76rem;
+    border-radius: 0.94rem;
+  }
+
+  .gathering-origin-materials-panel .gathering-card__header {
+    grid-template-columns: 1fr;
+  }
+
+  .gathering-origin-materials-panel__summary {
+    justify-items: start;
+    grid-template-columns: auto auto;
+    min-width: 0;
+  }
+
+  .gathering-origin-section-divider {
+    font-size: 0.56rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .gathering-page--origin {
+    padding-inline: 0.55rem;
+  }
+
+  .gathering-origin-lore-card {
+    grid-template-columns: 50px minmax(0, 1fr);
+    gap: 0.52rem;
+    min-height: 64px;
+    max-height: 76px;
+    padding: 0.42rem 0.52rem;
+    text-align: left;
+  }
+
+  .gathering-origin-lore-card__portrait {
+    width: 44px;
+    height: 44px;
+    border-radius: 0.68rem;
+  }
+
+  .gathering-origin-lore-card__portrait span {
+    width: 34px;
+    height: 34px;
+    font-size: 0.58rem;
+    border-radius: 0.54rem;
+  }
+
+  .gathering-origin-lore-card__npc {
+    font-size: 0.4rem;
+  }
+
+  .gathering-origin-lore-card h2 {
+    font-size: 0.82rem;
+  }
+
+  .gathering-origin-lore-card blockquote {
+    margin-top: 0.18rem;
+    font-size: 0.64rem;
+    line-height: 1.15;
+  }
+
+  .gathering-origin-premium-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    width: 100%;
+    min-height: 62px;
+    max-height: none;
+    padding: 0.46rem 0.52rem;
+  }
+
+  .gathering-origin-premium-card__button {
+    display: none;
+  }
+
+  .gathering-origin-premium-card h2 {
+    font-size: 0.7rem;
+  }
+
+  .gathering-origin-premium-card p {
+    font-size: 0.58rem;
+  }
+
+  .gathering-origin-materials-panel .gathering-card h2 {
+    font-size: 1rem;
+  }
+
+  .gathering-origin-materials-panel .gathering-card__description {
+    font-size: 0.76rem;
+  }
+
+  .gathering-origin-skill-card .gathering-origin-summary--icon {
+    grid-template-columns: 50px minmax(0, 1fr);
+    gap: 0.62rem;
+  }
+
+  .gathering-origin-skill-card .gathering-origin-summary__visual {
+    width: 48px;
+    height: 48px;
+  }
+
+  .gathering-origin-skill-card .gathering-origin-summary__icon {
+    width: 38px;
+    height: 38px;
+    font-size: 0.58rem;
+  }
+
+  .gathering-origin-skill-card .gathering-origin-summary p {
+    font-size: 0.74rem;
+  }
+
+  .gathering-origin-section-divider {
+    gap: 0.46rem;
+    font-size: 0.52rem;
+  }
+}
+
+/* =========================================================
+   AJUSTE FINAL — PROFICIÊNCIA RESPONSIVA
+   ========================================================= */
+
+@media (max-width: 560px) {
+  .gathering-origin-skill-card {
+    padding: 0.66rem !important;
+    gap: 0.58rem;
+  }
+
+  .gathering-origin-skill-card__toggle {
+    grid-template-columns: 34px minmax(0, 1fr) 24px;
+    gap: 0.5rem;
+  }
+
+  .gathering-origin-skill-card__icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.52rem;
+    border-radius: 0.6rem;
+  }
+
+  .gathering-origin-skill-card__heading strong {
+    font-size: 0.82rem;
+  }
+
+  .gathering-origin-skill-card__heading em {
+    min-height: 19px;
+    padding-inline: 0.36rem;
+    font-size: 0.54rem;
+  }
+
+  .gathering-origin-skill-card__heading small {
+    font-size: 0.62rem;
+  }
+
+  .gathering-origin-skill-card__chevron {
+    width: 24px;
+    height: 24px;
+    font-size: 0.74rem;
+  }
+
+  .gathering-origin-skill-card__meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.24rem;
+  }
+
+  .gathering-origin-skill-card__meta--secondary span:last-child {
+    text-align: left;
+  }
+}
+
+
+/* =========================================================
+   AJUSTE FINAL — FONTES E PALETA DO DEAD IDLE
+   Mantém a estrutura do card compacto, mas remove o visual azul/
+   externo da referência. Usa as variáveis e cores já presentes no sistema:
+   verde do abrigo, dourado de progresso, creme de texto e fundos escuros.
+   ========================================================= */
+
+.gathering-page--origin,
+.gathering-origin-shell,
+.gathering-origin-lore-card,
+.gathering-origin-premium-card,
+.gathering-origin-materials-panel,
+.gathering-origin-current-card,
+.gathering-origin-skill-card {
+  font-family: var(--font-body);
+}
+
+.gathering-origin-lore-card__npc,
+.gathering-origin-lore-card h2,
+.gathering-origin-premium-card h2,
+.gathering-origin-premium-card__button,
+.gathering-origin-section-divider,
+.gathering-origin-skill-card__icon,
+.gathering-origin-skill-card__heading strong,
+.gathering-origin-skill-card__heading em,
+.gathering-origin-skill-card__chevron,
+.gathering-origin-skill-card__meta strong,
+.gathering-origin-skill-card__perk-button {
+  font-family: var(--font-title);
+}
+
+/* Premium: sai do azul da referência e volta para verde/dourado do projeto. */
+.gathering-origin-premium-card {
+  background:
+    radial-gradient(circle at 0% 50%, rgba(110, 159, 67, 0.14), transparent 10rem),
+    radial-gradient(circle at 92% 0%, rgba(232, 184, 78, 0.08), transparent 14rem),
+    linear-gradient(135deg, rgba(9, 18, 12, 0.94), rgba(5, 11, 8, 0.92)),
+    rgba(5, 9, 8, 0.92) !important;
+  border-color: rgba(110, 159, 67, 0.22) !important;
+}
+
+.gathering-origin-premium-card::before {
+  background:
+    linear-gradient(90deg, rgba(110, 159, 67, 0.07), transparent 64%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 8px
+    ) !important;
+}
+
+.gathering-origin-premium-card__badge {
+  border-color: rgba(174, 218, 120, 0.22) !important;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(174, 218, 120, 0.16), transparent 58%),
+    rgba(27, 52, 31, 0.44) !important;
+}
+
+.gathering-origin-premium-card__badge::before {
+  color: rgba(246, 255, 230, 0.84) !important;
+  font-family: var(--font-title) !important;
+}
+
+.gathering-origin-premium-card h2 {
+  color: #f6ffe6 !important;
+}
+
+.gathering-origin-premium-card p {
+  color: rgba(231, 227, 216, 0.72) !important;
+}
+
+.gathering-origin-premium-card__button {
+  color: #f6ffe6 !important;
+  border-color: rgba(110, 159, 67, 0.28) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent),
+    rgba(38, 75, 36, 0.42) !important;
+}
+
+.gathering-origin-premium-card__button:hover {
+  border-color: rgba(174, 218, 120, 0.38) !important;
+  background:
+    linear-gradient(180deg, rgba(174, 218, 120, 0.12), transparent),
+    rgba(44, 86, 40, 0.52) !important;
+}
+
+/* Divisórias laterais dentro da mesma paleta do dashboard. */
+.gathering-origin-section-divider {
+  color: rgba(174, 218, 120, 0.72) !important;
+}
+
+.gathering-origin-section-divider::before,
+.gathering-origin-section-divider::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(110, 159, 67, 0.24),
+    rgba(232, 184, 78, 0.12),
+    transparent
+  ) !important;
+}
+
+.gathering-origin-section-divider span,
+.gathering-origin-side-section--current .gathering-origin-section-divider span,
+.gathering-origin-side-section--progress .gathering-origin-section-divider span {
+  color: rgba(174, 218, 120, 0.78) !important;
+}
+
+/* Proficiência: mesmo layout, mas com fundo verde escuro/dourado do jogo. */
+.gathering-origin-skill-card {
+  border-color: rgba(110, 159, 67, 0.2) !important;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(110, 159, 67, 0.1), transparent 13rem),
+    linear-gradient(180deg, rgba(110, 159, 67, 0.045), rgba(255, 255, 255, 0.01)),
+    rgba(5, 14, 9, 0.86) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 12px 25px rgba(0, 0, 0, 0.18),
+    0 0 18px rgba(110, 159, 67, 0.04) !important;
+}
+
+.gathering-origin-skill-card__icon {
+  color: #ffe59b !important;
+  border-color: rgba(232, 184, 78, 0.24) !important;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(232, 184, 78, 0.22), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.048), transparent),
+    rgba(28, 22, 11, 0.68) !important;
+}
+
+.gathering-origin-skill-card__heading strong {
+  color: #fff8e8 !important;
+}
+
+.gathering-origin-skill-card__heading em {
+  color: rgba(246, 255, 230, 0.94) !important;
+  border-color: rgba(110, 159, 67, 0.24) !important;
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.14), transparent),
+    rgba(28, 52, 29, 0.52) !important;
+}
+
+.gathering-origin-skill-card__heading small {
+  color: rgba(231, 227, 216, 0.64) !important;
+  font-family: var(--font-body) !important;
+}
+
+.gathering-origin-skill-card__chevron {
+  color: rgba(231, 227, 216, 0.7) !important;
+}
+
+.gathering-origin-skill-card__toggle:hover .gathering-origin-skill-card__chevron {
+  color: #fff8e8 !important;
+  border-color: rgba(110, 159, 67, 0.22) !important;
+  background: rgba(110, 159, 67, 0.065) !important;
+}
+
+.gathering-origin-skill-card__track {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    rgba(0, 0, 0, 0.52) !important;
+}
+
+.gathering-origin-skill-card__track i {
+  background: linear-gradient(90deg, #e8b84e, #ffd229) !important;
+  box-shadow:
+    0 0 12px rgba(255, 210, 41, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+.gathering-origin-skill-card__details {
+  border-top-color: rgba(110, 159, 67, 0.12) !important;
+}
+
+.gathering-origin-skill-card__meta span {
+  color: rgba(231, 227, 216, 0.68) !important;
+  font-family: var(--font-body) !important;
+}
+
+.gathering-origin-skill-card__meta strong {
+  color: #fff8e8 !important;
+}
+
+.gathering-origin-skill-card__meta--secondary span:last-child {
+  color: rgba(174, 218, 120, 0.8) !important;
+}
+
+.gathering-origin-skill-card__perk-button {
+  color: rgba(231, 227, 216, 0.48) !important;
+  border-color: rgba(110, 159, 67, 0.12) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), transparent),
+    rgba(110, 159, 67, 0.035) !important;
+}
+
+/* =========================================================
+   AJUSTE FINAL — PROFICIÊNCIA COM FONTES DO SISTEMA
+   Remove o botão de benefícios futuros e evita aparência de fonte externa
+   nos números/metadados do card de proficiência.
+   ========================================================= */
+
+.gathering-origin-skill-card__heading em,
+.gathering-origin-skill-card__meta span,
+.gathering-origin-skill-card__meta strong,
+.gathering-origin-skill-card__meta--secondary span,
+.gathering-origin-skill-card__meta--secondary span:last-child {
+  font-family: var(--font-body) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.gathering-origin-skill-card__heading em {
+  min-height: 20px !important;
+  padding: 0.1rem 0.38rem !important;
+  color: rgba(246, 255, 230, 0.9) !important;
+  font-size: 0.68rem !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+  border-color: rgba(110, 159, 67, 0.2) !important;
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.1), transparent),
+    rgba(28, 52, 29, 0.38) !important;
+}
+
+.gathering-origin-skill-card__meta span {
+  color: rgba(231, 227, 216, 0.72) !important;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+}
+
+.gathering-origin-skill-card__meta strong {
+  color: #fff8e8 !important;
+  font-size: 0.74rem !important;
+  font-weight: 850 !important;
+}
+
+.gathering-origin-skill-card__meta--secondary {
+  gap: 0.58rem !important;
+}
+
+.gathering-origin-skill-card__meta--secondary span:last-child {
+  color: rgba(174, 218, 120, 0.78) !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  text-align: right !important;
+}
+
+.gathering-origin-skill-card__perk-button {
+  display: none !important;
+}
+
+/* =========================================================
+   AJUSTE FINAL — PROFICIÊNCIA RECOLHIDA/EXPANDIDA
+   - Recolhida: ícone, nome, nível e barra.
+   - Expandida: nível, XP necessário e porcentagem.
+   - Mantém fontes e paleta do Dead Idle.
+   ========================================================= */
+
+.gathering-origin-skill-card {
+  gap: 0.52rem !important;
+  padding: 0.66rem !important;
+}
+
+.gathering-origin-skill-card--collapsed {
+  gap: 0.48rem !important;
+}
+
+.gathering-origin-skill-card__toggle {
+  grid-template-columns: 40px minmax(0, 1fr) 22px !important;
+  gap: 0.56rem !important;
+}
+
+.gathering-origin-skill-card__icon {
+  width: 38px !important;
+  height: 38px !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.56rem !important;
+}
+
+.gathering-origin-skill-card__heading {
+  gap: 0 !important;
+}
+
+.gathering-origin-skill-card__heading > span {
+  gap: 0.42rem !important;
+}
+
+.gathering-origin-skill-card__heading strong {
+  font-family: var(--font-title) !important;
+  font-size: 0.88rem !important;
+  font-weight: 950 !important;
+  color: #fff8e8 !important;
+}
+
+.gathering-origin-skill-card__heading em {
+  min-height: 20px !important;
+  padding: 0.11rem 0.42rem !important;
+  color: rgba(246, 255, 230, 0.92) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.66rem !important;
+  font-style: normal !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  border-color: rgba(110, 159, 67, 0.22) !important;
+  border-radius: 0.42rem !important;
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.12), transparent),
+    rgba(28, 52, 29, 0.42) !important;
+}
+
+/* O texto de atributo (+ Força, + Técnica etc.) não aparece no card recolhido. */
+.gathering-origin-skill-card__heading small {
+  display: none !important;
+}
+
+.gathering-origin-skill-card__chevron {
+  width: 22px !important;
+  height: 22px !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.72rem !important;
+  color: rgba(231, 227, 216, 0.62) !important;
+}
+
+.gathering-origin-skill-card__track {
+  height: 8px !important;
+  margin-top: 0 !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    rgba(0, 0, 0, 0.54) !important;
+}
+
+.gathering-origin-skill-card__track i {
+  background: linear-gradient(90deg, #e8b84e, #ffd229) !important;
+  box-shadow:
+    0 0 12px rgba(255, 210, 41, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+.gathering-origin-skill-card__details {
+  gap: 0.42rem !important;
+  padding-top: 0 !important;
+  border-top: 0 !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.34rem;
+  min-width: 0;
+}
+
+.gathering-origin-skill-card__expanded-metrics span {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 0.16rem 0.42rem;
+  overflow: hidden;
+  color: rgba(231, 227, 216, 0.78);
+  font-family: var(--font-body) !important;
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1;
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 0.42rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(15, 22, 19, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.gathering-origin-skill-card__expanded-metrics span:nth-child(2) {
+  justify-content: center;
+}
+
+.gathering-origin-skill-card__expanded-metrics small {
+  display: none !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics strong {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 248, 232, 0.9) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.68rem !important;
+  font-weight: 850 !important;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics span:nth-child(2) strong {
+  color: rgba(231, 227, 216, 0.82) !important;
+  font-weight: 780 !important;
+}
+
+.gathering-origin-skill-card__meta,
+.gathering-origin-skill-card__meta--secondary,
+.gathering-origin-skill-card__perk-button {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-skill-card {
+    padding: 0.62rem !important;
+  }
+
+  .gathering-origin-skill-card__toggle {
+    grid-template-columns: 38px minmax(0, 1fr) 22px !important;
+    gap: 0.48rem !important;
+  }
+
+  .gathering-origin-skill-card__icon {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.28rem;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics span {
+    min-height: 23px;
+    padding-inline: 0.34rem;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics strong {
+    font-size: 0.63rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-skill-card__expanded-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics span {
+    justify-content: center;
+  }
+}
+
+/* =========================================================
+   AJUSTE FINAL — PADRONIZAÇÃO DOS CARDS DA DIREITA
+   - Proficiência com mesma linguagem visual do card de atividade.
+   - Toggle com chevron desenhado em CSS, sem caractere desalinhado.
+   - Expandido: Lv. + XP necessário e % agrupados no mesmo bloco.
+   - Mantém fontes e cores do Dead Idle.
+   ========================================================= */
+
+.gathering-origin-side-section--current,
+.gathering-origin-side-section--progress {
+  min-width: 0;
+}
+
+.gathering-origin-side-section--current .gathering-origin-section-divider,
+.gathering-origin-side-section--progress .gathering-origin-section-divider {
+  margin-bottom: 0.42rem !important;
+}
+
+.gathering-origin-side-section--current .gathering-origin-section-divider span,
+.gathering-origin-side-section--progress .gathering-origin-section-divider span {
+  font-family: var(--font-title) !important;
+  font-size: 0.52rem !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.12em !important;
+  color: rgba(174, 218, 120, 0.76) !important;
+}
+
+.gathering-origin-skill-card {
+  gap: 0.52rem !important;
+  padding: 0.64rem !important;
+  border: 1px solid rgba(110, 159, 67, 0.22) !important;
+  border-radius: 0.86rem !important;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(110, 159, 67, 0.105), transparent 12rem),
+    linear-gradient(180deg, rgba(110, 159, 67, 0.045), rgba(255, 255, 255, 0.008)),
+    rgba(5, 14, 9, 0.88) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 12px 25px rgba(0, 0, 0, 0.18),
+    0 0 18px rgba(110, 159, 67, 0.04) !important;
+}
+
+.gathering-origin-skill-card--collapsed {
+  gap: 0.48rem !important;
+}
+
+.gathering-origin-skill-card__toggle {
+  grid-template-columns: 40px minmax(0, 1fr) 22px !important;
+  gap: 0.56rem !important;
+  min-height: 42px !important;
+}
+
+.gathering-origin-skill-card__icon {
+  width: 38px !important;
+  height: 38px !important;
+  color: #ffe59b !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.56rem !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.035em !important;
+  border-color: rgba(232, 184, 78, 0.24) !important;
+  border-radius: 0.66rem !important;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(232, 184, 78, 0.22), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.048), transparent),
+    rgba(28, 22, 11, 0.68) !important;
+}
+
+.gathering-origin-skill-card__heading {
+  min-width: 0 !important;
+  gap: 0 !important;
+}
+
+.gathering-origin-skill-card__heading > span {
+  gap: 0.42rem !important;
+}
+
+.gathering-origin-skill-card__heading strong {
+  color: #fff8e8 !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.88rem !important;
+  font-weight: 950 !important;
+  line-height: 1.08 !important;
+  letter-spacing: 0 !important;
+}
+
+.gathering-origin-skill-card__heading em {
+  min-height: 20px !important;
+  padding: 0.11rem 0.42rem !important;
+  color: rgba(246, 255, 230, 0.92) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.66rem !important;
+  font-style: normal !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  border: 1px solid rgba(110, 159, 67, 0.22) !important;
+  border-radius: 0.42rem !important;
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.12), transparent),
+    rgba(28, 52, 29, 0.42) !important;
+}
+
+.gathering-origin-skill-card__heading small {
+  display: none !important;
+}
+
+.gathering-origin-skill-card__chevron {
+  position: relative !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  border: 0 !important;
+  border-radius: 0.44rem !important;
+  background: transparent !important;
+  color: transparent !important;
+}
+
+.gathering-origin-skill-card__chevron::before {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid rgba(231, 227, 216, 0.7);
+  border-bottom: 2px solid rgba(231, 227, 216, 0.7);
+  transform: rotate(45deg) translateY(-1px);
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease;
+}
+
+.gathering-origin-skill-card__chevron--expanded::before {
+  transform: rotate(225deg) translate(-1px, -1px);
+}
+
+.gathering-origin-skill-card__toggle:hover .gathering-origin-skill-card__chevron {
+  background: rgba(110, 159, 67, 0.055) !important;
+}
+
+.gathering-origin-skill-card__toggle:hover .gathering-origin-skill-card__chevron::before {
+  border-color: #fff8e8;
+}
+
+.gathering-origin-skill-card__track {
+  height: 8px !important;
+  margin-top: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    rgba(0, 0, 0, 0.54) !important;
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.72),
+    0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+.gathering-origin-skill-card__track i {
+  background: linear-gradient(90deg, #e8b84e, #ffd229) !important;
+  box-shadow:
+    0 0 12px rgba(255, 210, 41, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+.gathering-origin-skill-card__details {
+  gap: 0.42rem !important;
+  padding-top: 0 !important;
+  border-top: 0 !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0.34rem !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics span {
+  display: inline-flex !important;
+  min-width: 0 !important;
+  min-height: 24px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0.16rem 0.42rem !important;
+  overflow: hidden !important;
+  color: rgba(231, 227, 216, 0.78) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.68rem !important;
+  font-weight: 750 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  border: 1px solid rgba(231, 227, 216, 0.08) !important;
+  border-radius: 0.42rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(15, 22, 19, 0.7) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics small {
+  display: none !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics strong {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: rgba(255, 248, 232, 0.9) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.68rem !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.gathering-origin-skill-card__metric-level {
+  flex: 0 0 auto !important;
+}
+
+.gathering-origin-skill-card__metric-progress {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  justify-content: stretch !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong {
+  display: inline-flex !important;
+  min-height: 24px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0.16rem 0.46rem !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong:first-child {
+  justify-content: center !important;
+  color: rgba(231, 227, 216, 0.88) !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong:last-child {
+  min-width: 44px !important;
+  border-left: 1px solid rgba(231, 227, 216, 0.08) !important;
+  color: rgba(231, 227, 216, 0.74) !important;
+  background: rgba(255, 255, 255, 0.018) !important;
+}
+
+.gathering-origin-skill-card__meta,
+.gathering-origin-skill-card__meta--secondary,
+.gathering-origin-skill-card__perk-button {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-skill-card {
+    padding: 0.62rem !important;
+  }
+
+  .gathering-origin-skill-card__toggle {
+    grid-template-columns: 38px minmax(0, 1fr) 22px !important;
+    gap: 0.48rem !important;
+  }
+
+  .gathering-origin-skill-card__icon {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics {
+    gap: 0.28rem !important;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics strong,
+  .gathering-origin-skill-card__expanded-metrics span {
+    font-size: 0.63rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-skill-card__expanded-metrics {
+    grid-template-columns: 1fr !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+}
+
+
+/* =========================================================
+   AJUSTE FINAL — ATIVIDADE ATUAL + PROFICIÊNCIA PADRONIZADAS
+   Somente layout/aparência. Não altera cálculo, API ou estado.
+   ========================================================= */
+
+.gathering-origin-side-section--activity,
+.gathering-origin-side-section--progress {
+  min-width: 0;
+}
+
+.gathering-origin-side-section--activity .gathering-origin-section-divider,
+.gathering-origin-side-section--progress .gathering-origin-section-divider {
+  margin-bottom: 0.52rem;
+}
+
+.gathering-origin-side-section--activity .gathering-origin-section-divider span,
+.gathering-origin-side-section--progress .gathering-origin-section-divider span {
+  color: #aeda78;
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.gathering-origin-current-card,
+.gathering-origin-skill-card {
+  width: 100%;
+  border: 1px solid rgba(110, 159, 67, 0.22) !important;
+  border-radius: 0.92rem !important;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(110, 159, 67, 0.105), transparent 14rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), rgba(255, 255, 255, 0.008)),
+    rgba(5, 15, 9, 0.88) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 12px 25px rgba(0, 0, 0, 0.2),
+    0 0 20px rgba(110, 159, 67, 0.04) !important;
+}
+
+.gathering-origin-current-card {
+  padding: 0.72rem !important;
+  overflow: hidden;
+}
+
+.gathering-origin-current-card::before,
+.gathering-origin-current-card::after,
+.gathering-origin-skill-card::before,
+.gathering-origin-skill-card::after {
+  display: none !important;
+}
+
+.gathering-origin-current-card .gathering-session {
+  gap: 0.52rem !important;
+  font-family: var(--font-body);
+}
+
+.gathering-origin-current-card .gathering-session__current-action,
+.gathering-origin-current-card .gathering-session__current-action--horizontal {
+  grid-template-columns: 46px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  min-height: 52px !important;
+  gap: 0.58rem !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-current-card .gathering-session__current-action::before,
+.gathering-origin-current-card .gathering-session__current-action::after {
+  display: none !important;
+}
+
+.gathering-origin-current-card .gathering-session__item-icon {
+  width: 44px !important;
+  height: 44px !important;
+  border-color: rgba(232, 184, 78, 0.2) !important;
+  border-radius: 0.68rem !important;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(232, 184, 78, 0.16), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(0, 0, 0, 0.28) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 6px 11px rgba(0, 0, 0, 0.16) !important;
+}
+
+.gathering-origin-current-card .gathering-session__item-icon::before {
+  inset: 5px !important;
+  opacity: 0.8 !important;
+}
+
+.gathering-origin-current-card .gathering-session__item-image {
+  width: 40px !important;
+  height: 40px !important;
+}
+
+.gathering-origin-current-card .gathering-session__item-icon .gathering-material-card__icon-fallback {
+  width: 32px !important;
+  height: 32px !important;
+  font-size: 0.58rem !important;
+}
+
+.gathering-origin-current-card .gathering-session__current-body {
+  gap: 0.14rem !important;
+}
+
+.gathering-origin-current-card .gathering-session__current-body h2,
+.gathering-origin-current-card .gathering-session .gathering-session__current-body h2 {
+  margin: 0 !important;
+  color: #fff8e8 !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.94rem !important;
+  font-weight: 950 !important;
+  line-height: 1.08 !important;
+  letter-spacing: 0 !important;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.58) !important;
+}
+
+.gathering-origin-current-card .gathering-session__current-body p {
+  margin: 0 !important;
+  color: rgba(231, 227, 216, 0.58) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.68rem !important;
+  font-weight: 760 !important;
+  line-height: 1.18 !important;
+}
+
+.gathering-origin-current-card .gathering-session__header-actions {
+  gap: 0.28rem !important;
+}
+
+.gathering-origin-current-card .gathering-session__icon-button {
+  width: 28px !important;
+  min-width: 28px !important;
+  height: 28px !important;
+  color: rgba(231, 227, 216, 0.72) !important;
+  border-color: rgba(231, 227, 216, 0.1) !important;
+  border-radius: 0.52rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(8, 13, 17, 0.54) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
+}
+
+.gathering-origin-current-card .gathering-session__icon-button:hover:not(:disabled) {
+  color: #fff8e8 !important;
+  border-color: rgba(110, 159, 67, 0.28) !important;
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.13), transparent),
+    rgba(7, 16, 10, 0.74) !important;
+}
+
+.gathering-origin-current-card .gathering-session__icon-button--danger:hover:not(:disabled) {
+  color: #ffe1dc !important;
+  border-color: rgba(144, 54, 50, 0.42) !important;
+  background:
+    linear-gradient(180deg, rgba(144, 54, 50, 0.25), transparent),
+    rgba(52, 16, 14, 0.72) !important;
+}
+
+.gathering-origin-current-card .gathering-session__inline-stats,
+.gathering-origin-current-card .gathering-session__inline-stats--auto {
+  grid-template-columns: minmax(48px, 0.5fr) minmax(116px, 1fr) minmax(74px, 0.72fr) !important;
+  gap: 0.34rem !important;
+  padding-top: 0.54rem !important;
+  border-top: 1px solid rgba(110, 159, 67, 0.12) !important;
+}
+
+.gathering-origin-current-card .gathering-session__inline-stats span,
+.gathering-origin-current-card .gathering-session__inline-stats span:first-child,
+.gathering-origin-current-card .gathering-session__inline-stats span:nth-child(2),
+.gathering-origin-current-card .gathering-session__inline-stats span:nth-child(3) {
+  justify-content: center !important;
+  min-height: 28px !important;
+  padding: 0.14rem 0.44rem !important;
+  color: rgba(213, 225, 243, 0.84) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.54rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  border: 1px solid rgba(139, 157, 188, 0.15) !important;
+  border-radius: 0.46rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgba(50, 64, 88, 0.28) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.022),
+    0 4px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.gathering-origin-current-card .gathering-session__inline-stats span strong {
+  color: rgba(255, 248, 232, 0.94) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.56rem !important;
+  font-weight: 950 !important;
+}
+
+.gathering-origin-skill-card {
+  gap: 0.62rem !important;
+  padding: 0.72rem !important;
+  overflow: hidden;
+}
+
+.gathering-origin-skill-card--collapsed {
+  gap: 0.56rem !important;
+}
+
+.gathering-origin-skill-card__toggle {
+  grid-template-columns: 38px minmax(0, 1fr) 24px !important;
+  gap: 0.58rem !important;
+  align-items: center !important;
+}
+
+.gathering-origin-skill-card__icon {
+  width: 36px !important;
+  height: 36px !important;
+  color: rgba(255, 229, 155, 0.94) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.58rem !important;
+  border-color: rgba(232, 184, 78, 0.22) !important;
+  border-radius: 0.66rem !important;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(232, 184, 78, 0.2), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.048), transparent),
+    rgba(28, 22, 11, 0.68) !important;
+}
+
+.gathering-origin-skill-card__heading strong {
+  color: #fff8e8 !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.9rem !important;
+  font-weight: 950 !important;
+  line-height: 1.08 !important;
+}
+
+.gathering-origin-skill-card__heading em,
+.gathering-origin-skill-card__metric-level strong {
+  min-height: 21px !important;
+  padding: 0.13rem 0.44rem !important;
+  color: rgba(255, 248, 232, 0.92) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.58rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  border: 1px solid rgba(110, 159, 67, 0.22) !important;
+  border-radius: 0.44rem !important;
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.16), transparent),
+    rgba(110, 159, 67, 0.08) !important;
+}
+
+.gathering-origin-skill-card__chevron {
+  position: relative !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  color: rgba(231, 227, 216, 0.64) !important;
+  border: 0 !important;
+  border-radius: 0.42rem !important;
+  background: transparent !important;
+}
+
+.gathering-origin-skill-card__chevron::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transform-origin: center;
+  transition: transform 150ms ease, color 150ms ease;
+}
+
+.gathering-origin-skill-card__chevron--expanded::before {
+  transform: rotate(225deg);
+}
+
+.gathering-origin-skill-card__chevron--collapsed::before {
+  transform: rotate(45deg);
+}
+
+.gathering-origin-skill-card__toggle:hover .gathering-origin-skill-card__chevron {
+  color: #fff8e8 !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+
+.gathering-origin-skill-card__track {
+  height: 8px !important;
+  border-radius: 999px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    rgba(0, 0, 0, 0.48) !important;
+}
+
+.gathering-origin-skill-card__track i {
+  width: 64% !important;
+  min-width: 34px !important;
+  max-width: 78% !important;
+  background: linear-gradient(90deg, #e8b84e, #ffd229) !important;
+}
+
+.gathering-origin-skill-card__details {
+  padding-top: 0.56rem !important;
+  border-top: 1px solid rgba(110, 159, 67, 0.12) !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0.44rem !important;
+}
+
+.gathering-origin-skill-card__metric-level,
+.gathering-origin-skill-card__metric-progress {
+  min-width: 0 !important;
+}
+
+.gathering-origin-skill-card__metric-level strong {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+}
+
+.gathering-origin-skill-card__metric-progress {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  min-height: 28px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(231, 227, 216, 0.1) !important;
+  border-radius: 0.48rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.034), transparent),
+    rgba(5, 9, 8, 0.38) !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong {
+  min-width: 0 !important;
+  padding: 0.2rem 0.48rem !important;
+  overflow: hidden !important;
+  color: rgba(255, 248, 232, 0.86) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.58rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong + strong {
+  min-width: 46px !important;
+  text-align: center !important;
+  color: rgba(231, 227, 216, 0.74) !important;
+  border-left: 1px solid rgba(231, 227, 216, 0.09) !important;
+  background: rgba(255, 255, 255, 0.025) !important;
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-current-card,
+  .gathering-origin-skill-card {
+    border-radius: 0.86rem !important;
+    padding: 0.64rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-action,
+  .gathering-origin-current-card .gathering-session__current-action--horizontal {
+    grid-template-columns: 42px minmax(0, 1fr) auto !important;
+    gap: 0.5rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-icon {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-image {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body h2,
+  .gathering-origin-current-card .gathering-session .gathering-session__current-body h2 {
+    font-size: 0.86rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-stats,
+  .gathering-origin-current-card .gathering-session__inline-stats--auto {
+    grid-template-columns: minmax(42px, 0.52fr) minmax(96px, 1fr) minmax(66px, 0.72fr) !important;
+    gap: 0.24rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-stats span {
+    min-height: 25px !important;
+    padding-inline: 0.28rem !important;
+    font-size: 0.48rem !important;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics {
+    gap: 0.36rem !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress strong {
+    font-size: 0.54rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-current-card .gathering-session__current-action,
+  .gathering-origin-current-card .gathering-session__current-action--horizontal {
+    grid-template-columns: 38px minmax(0, 1fr) auto !important;
+    gap: 0.42rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-icon {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-image {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body p {
+    display: none !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-stats,
+  .gathering-origin-current-card .gathering-session__inline-stats--auto {
+    grid-template-columns: 1fr !important;
+  }
+
+  .gathering-origin-skill-card__toggle {
+    grid-template-columns: 36px minmax(0, 1fr) 22px !important;
+    gap: 0.44rem !important;
+  }
+
+  .gathering-origin-skill-card__icon {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress strong:first-child {
+    min-width: 0 !important;
+  }
+}
+
+/* =========================================================
+   AJUSTE FINAL — LORE NPC / PREMIUM / PROFICIÊNCIA
+   - Mantém fontes, cores e identidade do sistema.
+   - Sem alteração de lógica.
+   ========================================================= */
+
+.gathering-origin-intro-grid {
+  align-items: stretch !important;
+  gap: 0.62rem !important;
+}
+
+.gathering-origin-lore-card,
+.gathering-origin-premium-card {
+  width: 100% !important;
+  border-radius: 1rem !important;
+  border: 1px solid rgba(110, 159, 67, 0.22) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 14px 28px rgba(0, 0, 0, 0.18) !important;
+}
+
+.gathering-origin-lore-card {
+  grid-column: 1 / -1 !important;
+  display: grid !important;
+  grid-template-columns: 76px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0.86rem !important;
+  min-height: 98px !important;
+  max-height: none !important;
+  padding: 0.82rem 1rem !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 8% 50%, rgba(232, 184, 78, 0.16), transparent 10rem),
+    radial-gradient(circle at 72% 12%, rgba(110, 159, 67, 0.13), transparent 18rem),
+    linear-gradient(90deg, rgba(34, 31, 17, 0.84), rgba(7, 16, 11, 0.94) 48%, rgba(4, 10, 8, 0.96)),
+    rgba(5, 9, 8, 0.92) !important;
+}
+
+.gathering-origin-lore-card::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  background:
+    linear-gradient(90deg, rgba(232, 184, 78, 0.08), transparent 50%),
+    radial-gradient(ellipse at 92% 44%, rgba(110, 159, 67, 0.11), transparent 18rem),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.014) 0 1px,
+      transparent 1px 9px
+    ) !important;
+  opacity: 0.9 !important;
+}
+
+.gathering-origin-lore-card::after {
+  content: '' !important;
+  position: absolute !important;
+  right: 1.2rem !important;
+  top: 0.55rem !important;
+  bottom: 0.55rem !important;
+  width: min(34%, 320px) !important;
+  pointer-events: none !important;
+  opacity: 0.16 !important;
+  background:
+    linear-gradient(90deg, transparent, rgba(174, 218, 120, 0.08)),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 22px,
+      rgba(232, 184, 78, 0.32) 22px 24px,
+      transparent 24px 42px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 18px,
+      rgba(110, 159, 67, 0.26) 18px 20px,
+      transparent 20px 38px
+    ) !important;
+  border-radius: 0.9rem !important;
+  transform: skewX(-7deg) !important;
+}
+
+.gathering-origin-lore-card__portrait {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 66px !important;
+  height: 66px !important;
+  border-radius: 0.9rem !important;
+  border: 1px solid rgba(232, 184, 78, 0.3) !important;
+  background:
+    radial-gradient(circle at 50% 36%, rgba(232, 184, 78, 0.28), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    rgba(28, 23, 12, 0.78) !important;
+  box-shadow:
+    inset 0 0 0 5px rgba(232, 184, 78, 0.04),
+    0 9px 16px rgba(0, 0, 0, 0.28),
+    0 0 18px rgba(232, 184, 78, 0.09) !important;
+}
+
+.gathering-origin-lore-card__portrait span {
+  width: 48px !important;
+  height: 48px !important;
+  color: #ffe59b !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.72rem !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.045em !important;
+  border-radius: 0.72rem !important;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(232, 184, 78, 0.16), transparent 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), transparent),
+    rgba(5, 9, 8, 0.55) !important;
+  border: 1px solid rgba(232, 184, 78, 0.16) !important;
+}
+
+.gathering-origin-lore-card__content {
+  position: relative !important;
+  z-index: 1 !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-lore-card__meta {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.48rem !important;
+  min-width: 0 !important;
+  margin-bottom: 0.26rem !important;
+}
+
+.gathering-origin-lore-card__npc {
+  margin: 0 !important;
+  color: rgba(174, 218, 120, 0.92) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.54rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.gathering-origin-lore-card__role {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 20px !important;
+  padding: 0.08rem 0.42rem !important;
+  color: rgba(255, 229, 155, 0.9) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.5rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.075em !important;
+  text-transform: uppercase !important;
+  border: 1px solid rgba(232, 184, 78, 0.16) !important;
+  border-radius: 999px !important;
+  background: rgba(232, 184, 78, 0.055) !important;
+  white-space: nowrap !important;
+}
+
+.gathering-origin-lore-card h2 {
+  margin: 0 !important;
+  color: #fff8e8 !important;
+  font-family: var(--font-title) !important;
+  font-size: clamp(1.04rem, 1.42vw, 1.36rem) !important;
+  font-weight: 950 !important;
+  line-height: 1.04 !important;
+  letter-spacing: -0.012em !important;
+  text-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.58),
+    0 0 16px rgba(232, 184, 78, 0.08) !important;
+}
+
+.gathering-origin-lore-card blockquote {
+  display: block !important;
+  max-width: min(860px, 100%) !important;
+  margin: 0.36rem 0 0 !important;
+  overflow: hidden !important;
+  color: rgba(255, 248, 232, 0.86) !important;
+  font-family: var(--font-body, inherit) !important;
+  font-size: 0.82rem !important;
+  font-weight: 750 !important;
+  font-style: italic !important;
+  line-height: 1.28 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.gathering-origin-lore-card p {
+  display: block !important;
+  max-width: min(920px, 100%) !important;
+  margin: 0.28rem 0 0 !important;
+  overflow: hidden !important;
+  color: rgba(231, 227, 216, 0.58) !important;
+  font-family: var(--font-body, inherit) !important;
+  font-size: 0.72rem !important;
+  font-weight: 650 !important;
+  line-height: 1.26 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.gathering-origin-premium-card {
+  grid-column: 1 / -1 !important;
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 0.68rem !important;
+  min-height: 58px !important;
+  padding: 0.58rem 0.72rem !important;
+  border-color: rgba(110, 159, 67, 0.24) !important;
+  background:
+    radial-gradient(circle at 0% 50%, rgba(110, 159, 67, 0.16), transparent 12rem),
+    linear-gradient(90deg, rgba(17, 35, 18, 0.9), rgba(6, 16, 11, 0.94)),
+    rgba(5, 12, 9, 0.9) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 10px 20px rgba(0, 0, 0, 0.16) !important;
+}
+
+.gathering-origin-premium-card::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  background:
+    linear-gradient(90deg, rgba(174, 218, 120, 0.07), transparent 62%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 8px
+    ) !important;
+  opacity: 0.82 !important;
+}
+
+.gathering-origin-premium-card__badge {
+  position: relative !important;
+  z-index: 1 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  padding: 0 !important;
+  color: rgba(246, 255, 230, 0.92) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.78rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  border: 1px solid rgba(174, 218, 120, 0.26) !important;
+  border-radius: 999px !important;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(174, 218, 120, 0.18), transparent 68%),
+    rgba(7, 16, 10, 0.72) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 14px rgba(110, 159, 67, 0.1) !important;
+}
+
+.gathering-origin-premium-card__badge::before {
+  display: none !important;
+}
+
+.gathering-origin-premium-card div:not(.gathering-origin-premium-card__badge) {
+  position: relative !important;
+  z-index: 1 !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-premium-card h2 {
+  margin: 0 !important;
+  color: #fff8e8 !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.82rem !important;
+  font-weight: 950 !important;
+  line-height: 1.1 !important;
+  letter-spacing: 0 !important;
+}
+
+.gathering-origin-premium-card p {
+  margin: 0.16rem 0 0 !important;
+  color: rgba(231, 227, 216, 0.68) !important;
+  font-family: var(--font-body, inherit) !important;
+  font-size: 0.74rem !important;
+  font-weight: 650 !important;
+  line-height: 1.24 !important;
+}
+
+.gathering-origin-premium-card__button {
+  position: relative !important;
+  z-index: 1 !important;
+  min-width: 112px !important;
+  min-height: 34px !important;
+  padding: 0.38rem 0.66rem !important;
+  color: #f6ffe6 !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.54rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.055em !important;
+  text-transform: uppercase !important;
+  border: 1px solid rgba(174, 218, 120, 0.26) !important;
+  border-radius: 0.62rem !important;
+  background:
+    linear-gradient(180deg, rgba(174, 218, 120, 0.13), transparent),
+    rgba(7, 16, 10, 0.72) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 6px 12px rgba(0, 0, 0, 0.13) !important;
+}
+
+.gathering-origin-premium-card__button:hover {
+  color: #fff8e8 !important;
+  border-color: rgba(232, 184, 78, 0.32) !important;
+  background:
+    linear-gradient(180deg, rgba(232, 184, 78, 0.14), transparent),
+    rgba(20, 25, 13, 0.78) !important;
+}
+
+/* Proficiência: recolhido mantém nível no topo; expandido move o nível para baixo. */
+
+.gathering-origin-skill-card__heading em {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 24px !important;
+  padding: 0.18rem 0.5rem !important;
+  color: #f6ffe6 !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.62rem !important;
+  font-weight: 950 !important;
+  font-style: normal !important;
+  line-height: 1 !important;
+  border: 1px solid rgba(110, 159, 67, 0.26) !important;
+  border-radius: 0.5rem !important;
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.2), rgba(110, 159, 67, 0.08)),
+    rgba(7, 16, 10, 0.78) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 0 12px rgba(110, 159, 67, 0.08) !important;
+}
+
+.gathering-origin-skill-card__chevron {
+  display: grid !important;
+  place-items: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  border: 0 !important;
+  background: transparent !important;
+  opacity: 0.78 !important;
+}
+
+.gathering-origin-skill-card__chevron::before {
+  content: '' !important;
+  display: block !important;
+  width: 7px !important;
+  height: 7px !important;
+  border-right: 2px solid rgba(231, 227, 216, 0.72) !important;
+  border-bottom: 2px solid rgba(231, 227, 216, 0.72) !important;
+  transform-origin: center !important;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    opacity 150ms ease !important;
+}
+
+.gathering-origin-skill-card__chevron--collapsed::before {
+  transform: translateY(-2px) rotate(45deg) !important;
+}
+
+.gathering-origin-skill-card__chevron--expanded::before {
+  transform: translateY(2px) rotate(-135deg) !important;
+}
+
+.gathering-origin-skill-card__toggle:hover .gathering-origin-skill-card__chevron::before {
+  border-color: #fff8e8 !important;
+}
+
+.gathering-origin-skill-card__track i {
+  width: 42% !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+}
+
+.gathering-origin-skill-card__metric-level,
+.gathering-origin-skill-card__metric-progress {
+  min-height: 28px !important;
+}
+
+.gathering-origin-skill-card__metric-level strong {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 26px !important;
+  padding: 0.18rem 0.52rem !important;
+  color: #f6ffe6 !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.64rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  border: 1px solid rgba(110, 159, 67, 0.26) !important;
+  border-radius: 0.5rem !important;
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.2), rgba(110, 159, 67, 0.08)),
+    rgba(7, 16, 10, 0.78) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 0 12px rgba(110, 159, 67, 0.08) !important;
+}
+
+.gathering-origin-skill-card__metric-progress {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  border: 1px solid rgba(231, 227, 216, 0.08) !important;
+  border-radius: 0.58rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(5, 9, 8, 0.5) !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 28px !important;
+  padding: 0.14rem 0.52rem !important;
+  color: rgba(255, 248, 232, 0.86) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.62rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong + strong {
+  min-width: 48px !important;
+  color: rgba(231, 227, 216, 0.72) !important;
+  border-left: 1px solid rgba(231, 227, 216, 0.08) !important;
+  background: rgba(255, 255, 255, 0.025) !important;
+}
+
+@media (max-width: 860px) {
+  .gathering-origin-lore-card {
+    grid-template-columns: 64px minmax(0, 1fr) !important;
+    min-height: 90px !important;
+    padding: 0.72rem 0.78rem !important;
+  }
+
+  .gathering-origin-lore-card__portrait {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .gathering-origin-lore-card__portrait span {
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 0.66rem !important;
+  }
+
+  .gathering-origin-lore-card p {
+    display: none !important;
+  }
+
+  .gathering-origin-premium-card {
+    grid-template-columns: 30px minmax(0, 1fr) auto !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .gathering-origin-intro-grid {
+    gap: 0.5rem !important;
+  }
+
+  .gathering-origin-lore-card {
+    grid-template-columns: 48px minmax(0, 1fr) !important;
+    min-height: 82px !important;
+    padding: 0.62rem !important;
+    border-radius: 0.86rem !important;
+  }
+
+  .gathering-origin-lore-card__portrait {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 0.72rem !important;
+  }
+
+  .gathering-origin-lore-card__portrait span {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 0.56rem !important;
+  }
+
+  .gathering-origin-lore-card__meta {
+    gap: 0.34rem !important;
+  }
+
+  .gathering-origin-lore-card__role {
+    display: none !important;
+  }
+
+  .gathering-origin-lore-card__npc {
+    font-size: 0.46rem !important;
+  }
+
+  .gathering-origin-lore-card h2 {
+    font-size: 0.94rem !important;
+  }
+
+  .gathering-origin-lore-card blockquote {
+    font-size: 0.68rem !important;
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  .gathering-origin-premium-card {
+    grid-template-columns: 28px minmax(0, 1fr) !important;
+    gap: 0.54rem !important;
+    padding: 0.58rem !important;
+    border-radius: 0.86rem !important;
+  }
+
+  .gathering-origin-premium-card__button {
+    grid-column: 2 !important;
+    justify-self: start !important;
+    min-width: 104px !important;
+    min-height: 32px !important;
+    margin-top: 0.22rem !important;
+  }
+
+  .gathering-origin-premium-card h2 {
+    font-size: 0.76rem !important;
+  }
+
+  .gathering-origin-premium-card p {
+    font-size: 0.68rem !important;
+    line-height: 1.26 !important;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics {
+    grid-template-columns: 1fr !important;
+  }
+
+  .gathering-origin-skill-card__metric-level {
+    justify-self: start !important;
+  }
+}
+
+
+/* =========================================================
+   REFINO FINAL — PREMIUM / BADGE / PROFICIÊNCIA / EMPTY
+   ========================================================= */
+
+.gathering-origin-premium-card {
+  border-color: rgba(93, 178, 198, 0.28) !important;
+  background:
+    radial-gradient(circle at 3% 50%, rgba(70, 180, 196, 0.16), transparent 12rem),
+    radial-gradient(circle at 92% 0%, rgba(110, 159, 67, 0.07), transparent 16rem),
+    linear-gradient(135deg, rgba(10, 34, 39, 0.94), rgba(7, 18, 25, 0.92)),
+    rgba(7, 18, 25, 0.92) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 10px 22px rgba(0, 0, 0, 0.16),
+    0 0 20px rgba(70, 180, 196, 0.04) !important;
+}
+
+.gathering-origin-premium-card::before {
+  background:
+    linear-gradient(90deg, rgba(92, 198, 214, 0.08), transparent 66%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.014) 0 1px,
+      transparent 1px 8px
+    ) !important;
+}
+
+.gathering-origin-premium-card__badge {
+  color: rgba(233, 253, 255, 0.9) !important;
+  border-color: rgba(122, 219, 230, 0.28) !important;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(122, 219, 230, 0.22), transparent 58%),
+    rgba(19, 70, 80, 0.52) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 12px rgba(88, 190, 204, 0.08) !important;
+}
+
+.gathering-origin-premium-card h2 {
+  color: rgba(239, 255, 255, 0.95) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.78rem !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.005em !important;
+}
+
+.gathering-origin-premium-card p {
+  color: rgba(220, 245, 245, 0.78) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.72rem !important;
+  font-weight: 680 !important;
+  line-height: 1.28 !important;
+}
+
+.gathering-origin-premium-card__button {
+  min-height: 34px !important;
+  padding-inline: 0.76rem !important;
+  color: rgba(239, 255, 255, 0.94) !important;
+  border-color: rgba(122, 219, 230, 0.26) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent),
+    rgba(12, 58, 68, 0.58) !important;
+}
+
+.gathering-origin-current-card {
+  min-height: 0 !important;
+  padding: 0.7rem !important;
+  border-radius: 1.05rem !important;
+}
+
+.gathering-origin-current-card:has(.gathering-session--empty) {
+  padding: 0.64rem !important;
+}
+
+.gathering-origin-skill-card__heading em,
+.gathering-origin-skill-card__metric-level strong {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 46px !important;
+  min-height: 25px !important;
+  padding: 0.18rem 0.48rem !important;
+  color: #f5ffe6 !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.62rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.005em !important;
+  white-space: nowrap !important;
+  border: 1px solid rgba(110, 159, 67, 0.28) !important;
+  border-radius: 0.52rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
+    rgba(32, 78, 34, 0.42) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 0 12px rgba(110, 159, 67, 0.08) !important;
+  font-style: normal !important;
+  text-transform: none !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0.44rem !important;
+}
+
+.gathering-origin-skill-card__metric-progress {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 0.36rem !important;
+  min-height: 25px !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 25px !important;
+  padding: 0.18rem 0.54rem !important;
+  color: rgba(255, 248, 232, 0.88) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.62rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  border: 1px solid rgba(231, 227, 216, 0.09) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(5, 10, 8, 0.5) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong:first-child {
+  justify-content: center !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  border-radius: 0.52rem 0 0 0.52rem !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong:last-child {
+  min-width: 48px !important;
+  border-left: 0 !important;
+  border-radius: 0 0.52rem 0.52rem 0 !important;
+  color: rgba(255, 248, 232, 0.78) !important;
+}
+
+.gathering-origin-skill-card__track i {
+  width: 64% !important;
+  min-width: 28px !important;
+}
+
+.gathering-origin-skill-card__chevron {
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 999px !important;
+  opacity: 0.88 !important;
+}
+
+.gathering-origin-skill-card__chevron::before {
+  content: '' !important;
+  display: block !important;
+  width: 6px !important;
+  height: 6px !important;
+  margin: 4px auto 0 !important;
+  border-right: 2px solid rgba(231, 227, 216, 0.72) !important;
+  border-bottom: 2px solid rgba(231, 227, 216, 0.72) !important;
+  transform: rotate(45deg) !important;
+}
+
+.gathering-origin-skill-card__chevron--expanded::before {
+  margin-top: 6px !important;
+  transform: rotate(225deg) !important;
+}
+
+.gathering-origin-skill-card__chevron--collapsed::before {
+  margin-top: 4px !important;
+  transform: rotate(45deg) !important;
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-premium-card {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+  }
+
+  .gathering-origin-premium-card__button {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+  }
+}
+
+/* =========================================================
+   REFINO FINAL — BANNER DE LORE COMO NPC GUIDE
+   Objetivo:
+   - Estrutura mais próxima de banner narrativo: retrato + nome + fala.
+   - Remove protagonismo do título e da descrição longa.
+   - Ignora qualquer ação tipo "Talk".
+   - Mantém fontes, cores e acabamento do sistema.
+   ========================================================= */
+
+.gathering-origin-lore-card.gathering-origin-lore-card--npc,
+.gathering-origin-lore-card--npc {
+  grid-column: 1 / -1 !important;
+  display: grid !important;
+  grid-template-columns: 72px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0.9rem !important;
+  width: 100% !important;
+  min-height: 82px !important;
+  max-height: 96px !important;
+  padding: 0.72rem 0.95rem !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(110, 159, 67, 0.22) !important;
+  border-radius: 1rem !important;
+  background:
+    radial-gradient(circle at 8% 50%, rgba(232, 184, 78, 0.15), transparent 9.5rem),
+    radial-gradient(circle at 75% 20%, rgba(110, 159, 67, 0.11), transparent 18rem),
+    linear-gradient(90deg, rgba(31, 27, 14, 0.82), rgba(7, 16, 11, 0.94) 48%, rgba(4, 10, 8, 0.96)),
+    rgba(5, 9, 8, 0.92) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 14px 28px rgba(0, 0, 0, 0.18) !important;
+}
+
+.gathering-origin-lore-card--npc::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  background:
+    linear-gradient(90deg, rgba(232, 184, 78, 0.075), transparent 48%),
+    radial-gradient(ellipse at 92% 48%, rgba(110, 159, 67, 0.11), transparent 18rem),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 9px
+    ) !important;
+  opacity: 0.88 !important;
+}
+
+.gathering-origin-lore-card--npc::after {
+  content: '' !important;
+  position: absolute !important;
+  right: 1.2rem !important;
+  top: 0.55rem !important;
+  bottom: 0.55rem !important;
+  width: min(32%, 300px) !important;
+  pointer-events: none !important;
+  opacity: 0.12 !important;
+  border-radius: 0.9rem !important;
+  transform: skewX(-7deg) !important;
+  background:
+    linear-gradient(90deg, transparent, rgba(174, 218, 120, 0.07)),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 22px,
+      rgba(232, 184, 78, 0.28) 22px 24px,
+      transparent 24px 42px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 18px,
+      rgba(110, 159, 67, 0.22) 18px 20px,
+      transparent 20px 38px
+    ) !important;
+}
+
+.gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait {
+  position: relative !important;
+  z-index: 1 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 60px !important;
+  height: 60px !important;
+  border: 1px solid rgba(232, 184, 78, 0.28) !important;
+  border-radius: 0.9rem !important;
+  background:
+    radial-gradient(circle at 50% 36%, rgba(232, 184, 78, 0.26), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.058), transparent),
+    rgba(28, 23, 12, 0.78) !important;
+  box-shadow:
+    inset 0 0 0 5px rgba(232, 184, 78, 0.038),
+    0 9px 16px rgba(0, 0, 0, 0.26),
+    0 0 16px rgba(232, 184, 78, 0.08) !important;
+}
+
+.gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait span {
+  display: grid !important;
+  place-items: center !important;
+  width: 44px !important;
+  height: 44px !important;
+  color: #ffe59b !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.68rem !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.045em !important;
+  border: 1px solid rgba(232, 184, 78, 0.15) !important;
+  border-radius: 0.7rem !important;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(232, 184, 78, 0.15), transparent 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), transparent),
+    rgba(5, 9, 8, 0.55) !important;
+}
+
+.gathering-origin-lore-card--npc .gathering-origin-lore-card__content {
+  position: relative !important;
+  z-index: 1 !important;
+  display: flex !important;
+  min-width: 0 !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 0.28rem !important;
+}
+
+.gathering-origin-lore-card--npc .gathering-origin-lore-card__meta {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.42rem !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+.gathering-origin-lore-card--npc .gathering-origin-lore-card__npc {
+  display: inline-flex !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  color: rgba(174, 218, 120, 0.92) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.55rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.gathering-origin-lore-card--npc .gathering-origin-lore-card__role {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 18px !important;
+  padding: 0.06rem 0.36rem !important;
+  color: rgba(255, 229, 155, 0.8) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.46rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+  border: 1px solid rgba(232, 184, 78, 0.12) !important;
+  border-radius: 999px !important;
+  background: rgba(232, 184, 78, 0.04) !important;
+}
+
+.gathering-origin-lore-card--npc h2,
+.gathering-origin-lore-card--npc p {
+  display: none !important;
+}
+
+.gathering-origin-lore-card--npc blockquote {
+  display: block !important;
+  max-width: min(880px, 100%) !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  color: rgba(255, 248, 232, 0.9) !important;
+  font-family: var(--font-body, inherit) !important;
+  font-size: clamp(0.84rem, 1vw, 0.98rem) !important;
+  font-style: italic !important;
+  font-weight: 780 !important;
+  line-height: 1.28 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.58) !important;
+}
+
+@media (max-width: 860px) {
+  .gathering-origin-lore-card.gathering-origin-lore-card--npc,
+  .gathering-origin-lore-card--npc {
+    grid-template-columns: 62px minmax(0, 1fr) !important;
+    gap: 0.72rem !important;
+    min-height: 78px !important;
+    max-height: none !important;
+    padding: 0.68rem 0.74rem !important;
+  }
+
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait {
+    width: 54px !important;
+    height: 54px !important;
+  }
+
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait span {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 0.62rem !important;
+  }
+
+  .gathering-origin-lore-card--npc blockquote {
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    font-size: 0.82rem !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .gathering-origin-lore-card.gathering-origin-lore-card--npc,
+  .gathering-origin-lore-card--npc {
+    grid-template-columns: 48px minmax(0, 1fr) !important;
+    gap: 0.56rem !important;
+    min-height: 74px !important;
+    padding: 0.58rem !important;
+    border-radius: 0.86rem !important;
+  }
+
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 0.72rem !important;
+  }
+
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait span {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 0.56rem !important;
+    border-radius: 0.56rem !important;
+  }
+
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__meta {
+    gap: 0.3rem !important;
+  }
+
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__npc {
+    font-size: 0.46rem !important;
+    letter-spacing: 0.12em !important;
+  }
+
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__role {
+    display: none !important;
+  }
+
+  .gathering-origin-lore-card--npc blockquote {
+    font-size: 0.68rem !important;
+    line-height: 1.22 !important;
+    -webkit-line-clamp: 2 !important;
+  }
+}
+
+/* =========================================================
+   AJUSTE FINAL — SUA PROFICIÊNCIA / BADGE E MÉTRICAS
+   Objetivo:
+   - Padronizar o badge "Nv." do expandido com o badge do recolhido.
+   - Transformar XP necessário + porcentagem em uma única faixa limpa.
+   - Remover sensação de container dentro de container.
+   - Somente visual: não altera lógica, cálculo, API ou estado.
+   ========================================================= */
+
+.gathering-origin-skill-card {
+  --skill-level-bg: rgba(32, 78, 34, 0.42);
+  --skill-level-border: rgba(110, 159, 67, 0.28);
+  --skill-level-text: #f5ffe6;
+  --skill-info-bg: rgba(5, 10, 8, 0.5);
+  --skill-info-border: rgba(231, 227, 216, 0.09);
+  --skill-info-text: rgba(255, 248, 232, 0.88);
+  --skill-info-muted: rgba(231, 227, 216, 0.74);
+}
+
+.gathering-origin-skill-card__heading em,
+.gathering-origin-skill-card__metric-level strong {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 46px !important;
+  min-height: 25px !important;
+  padding: 0.18rem 0.48rem !important;
+  color: var(--skill-level-text) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.62rem !important;
+  font-style: normal !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.005em !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
+  border: 1px solid var(--skill-level-border) !important;
+  border-radius: 0.52rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
+    var(--skill-level-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 0 12px rgba(110, 159, 67, 0.08) !important;
+}
+
+.gathering-origin-skill-card__details {
+  display: grid !important;
+  gap: 0.42rem !important;
+  min-width: 0 !important;
+  padding-top: 0.54rem !important;
+  border-top: 1px solid rgba(110, 159, 67, 0.12) !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0.44rem !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics > span {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-skill-card__metric-level {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex: 0 0 auto !important;
+}
+
+.gathering-origin-skill-card__metric-progress {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 0 !important;
+  min-width: 0 !important;
+  min-height: 30px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--skill-info-border) !important;
+  border-radius: 0.58rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    var(--skill-info-bg) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  min-height: 30px !important;
+  padding: 0.2rem 0.58rem !important;
+  overflow: hidden !important;
+  color: var(--skill-info-text) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.66rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong:first-child {
+  justify-content: center !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong:last-child {
+  min-width: 50px !important;
+  color: var(--skill-info-muted) !important;
+  border-left: 1px solid rgba(231, 227, 216, 0.08) !important;
+  background: rgba(255, 255, 255, 0.018) !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics small,
+.gathering-origin-skill-card__meta,
+.gathering-origin-skill-card__meta--secondary,
+.gathering-origin-skill-card__perk-button {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-skill-card__expanded-metrics {
+    gap: 0.36rem !important;
+  }
+
+  .gathering-origin-skill-card__heading em,
+  .gathering-origin-skill-card__metric-level strong {
+    min-width: 44px !important;
+    min-height: 24px !important;
+    padding: 0.16rem 0.44rem !important;
+    font-size: 0.59rem !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress {
+    min-height: 28px !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress strong {
+    min-height: 28px !important;
+    padding: 0.18rem 0.48rem !important;
+    font-size: 0.6rem !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress strong:last-child {
+    min-width: 46px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-skill-card__expanded-metrics {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    gap: 0.3rem !important;
+  }
+
+  .gathering-origin-skill-card__heading em,
+  .gathering-origin-skill-card__metric-level strong {
+    min-width: 42px !important;
+    padding-inline: 0.4rem !important;
+    font-size: 0.56rem !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress strong {
+    font-size: 0.56rem !important;
+    padding-inline: 0.38rem !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress strong:last-child {
+    min-width: 42px !important;
+  }
+}
+
+/* =========================================================
+   REFINO FINAL — CÁPSULA DE XP / PORCENTAGEM DA PROFICIÊNCIA
+   Objetivo:
+   - Transformar "XP necessários + %" em uma única cápsula horizontal.
+   - Melhorar legibilidade sem alterar lógica, cálculo ou JSX.
+   - Manter linguagem visual do card e do badge "Nv.".
+   ========================================================= */
+
+.gathering-origin-skill-card {
+  --skill-capsule-bg: rgba(5, 12, 9, 0.66);
+  --skill-capsule-border: rgba(110, 159, 67, 0.2);
+  --skill-capsule-divider: rgba(174, 218, 120, 0.13);
+  --skill-capsule-text: rgba(255, 248, 232, 0.9);
+  --skill-capsule-muted: rgba(231, 227, 216, 0.78);
+}
+
+.gathering-origin-skill-card__expanded-metrics {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0.42rem !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-skill-card__metric-level {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-skill-card__metric-level strong {
+  min-width: 48px !important;
+  min-height: 30px !important;
+  padding: 0.2rem 0.5rem !important;
+  border-radius: 0.52rem !important;
+}
+
+.gathering-origin-skill-card__metric-progress {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(54px, auto) !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  min-width: 0 !important;
+  min-height: 30px !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  border: 1px solid var(--skill-capsule-border) !important;
+  border-radius: 0.56rem !important;
+  background:
+    radial-gradient(circle at 0% 50%, rgba(110, 159, 67, 0.08), transparent 7rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.01)),
+    var(--skill-capsule-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.032),
+    0 4px 9px rgba(0, 0, 0, 0.1) !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong {
+  position: relative !important;
+  display: inline-flex !important;
+  min-width: 0 !important;
+  min-height: 30px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0.22rem 0.68rem !important;
+  overflow: hidden !important;
+  color: var(--skill-capsule-text) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.68rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.002em !important;
+  text-transform: none !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong:first-child {
+  justify-content: center !important;
+  color: var(--skill-capsule-text) !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong:last-child {
+  min-width: 56px !important;
+  padding-inline: 0.62rem !important;
+  color: var(--skill-capsule-muted) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent),
+    rgba(255, 255, 255, 0.018) !important;
+}
+
+.gathering-origin-skill-card__metric-progress strong:last-child::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 22% !important;
+  bottom: 22% !important;
+  width: 1px !important;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    var(--skill-capsule-divider),
+    transparent
+  ) !important;
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-skill-card__expanded-metrics {
+    gap: 0.36rem !important;
+  }
+
+  .gathering-origin-skill-card__metric-level strong,
+  .gathering-origin-skill-card__metric-progress,
+  .gathering-origin-skill-card__metric-progress strong {
+    min-height: 28px !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress strong {
+    padding: 0.2rem 0.5rem !important;
+    font-size: 0.62rem !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress strong:last-child {
+    min-width: 50px !important;
+    padding-inline: 0.5rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-skill-card__expanded-metrics {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    gap: 0.3rem !important;
+  }
+
+  .gathering-origin-skill-card__metric-level strong {
+    min-width: 44px !important;
+    padding-inline: 0.42rem !important;
+    font-size: 0.56rem !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress {
+    grid-template-columns: minmax(0, 1fr) minmax(44px, auto) !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress strong {
+    padding-inline: 0.38rem !important;
+    font-size: 0.56rem !important;
+  }
+
+  .gathering-origin-skill-card__metric-progress strong:last-child {
+    min-width: 44px !important;
+    padding-inline: 0.4rem !important;
+  }
+}
+
+
+/* =========================================================
+   REFINO FINAL — PROFICIÊNCIA / BADGE E CÁPSULA ALINHADOS
+   Objetivo:
+   - Badge Nv. igual no cabeçalho e na área expandida.
+   - XP necessário + porcentagem em uma cápsula única, legível e à direita.
+   - Apenas visual; não altera lógica.
+   ========================================================= */
+
+.gathering-origin-skill-card__level-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 58px !important;
+  min-height: 31px !important;
+  padding: 0.24rem 0.62rem !important;
+  color: #f6ffe6 !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.72rem !important;
+  font-style: normal !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.01em !important;
+  white-space: nowrap !important;
+  border: 1px solid rgba(110, 159, 67, 0.34) !important;
+  border-radius: 0.58rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(40, 82, 35, 0.52) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.12),
+    0 6px 12px rgba(0, 0, 0, 0.13),
+    0 0 14px rgba(110, 159, 67, 0.08) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72) !important;
+}
+
+.gathering-origin-skill-card__expanded-metrics {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0.62rem !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-skill-card__metric-level {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-skill-card__metric-level strong {
+  all: unset;
+}
+
+.gathering-origin-skill-card__xp-capsule,
+.gathering-origin-skill-card__metric-progress.gathering-origin-skill-card__xp-capsule {
+  justify-self: end !important;
+  display: grid !important;
+  grid-template-columns: minmax(132px, 1fr) minmax(52px, auto) !important;
+  align-items: center !important;
+  width: min(100%, 238px) !important;
+  min-width: 0 !important;
+  min-height: 31px !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  color: rgba(255, 248, 232, 0.92) !important;
+  border: 1px solid rgba(110, 159, 67, 0.2) !important;
+  border-radius: 0.58rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.042), transparent),
+    rgba(5, 13, 9, 0.58) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    0 6px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.gathering-origin-skill-card__xp-capsule-value,
+.gathering-origin-skill-card__xp-capsule-percent,
+.gathering-origin-skill-card__metric-progress .gathering-origin-skill-card__xp-capsule-value,
+.gathering-origin-skill-card__metric-progress .gathering-origin-skill-card__xp-capsule-percent {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  min-height: 31px !important;
+  margin: 0 !important;
+  padding: 0.22rem 0.62rem !important;
+  color: rgba(255, 248, 232, 0.9) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.72rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.005em !important;
+  white-space: nowrap !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72) !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-skill-card__xp-capsule-value {
+  justify-content: center !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.gathering-origin-skill-card__xp-capsule-percent {
+  position: relative !important;
+  min-width: 54px !important;
+  color: #f6ffe6 !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), transparent),
+    rgba(110, 159, 67, 0.065) !important;
+}
+
+.gathering-origin-skill-card__xp-capsule-percent::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 7px !important;
+  bottom: 7px !important;
+  left: 0 !important;
+  width: 1px !important;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(231, 227, 216, 0.12),
+    transparent
+  ) !important;
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-skill-card__level-badge {
+    min-width: 54px !important;
+    min-height: 29px !important;
+    padding: 0.22rem 0.54rem !important;
+    font-size: 0.68rem !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule,
+  .gathering-origin-skill-card__metric-progress.gathering-origin-skill-card__xp-capsule {
+    width: min(100%, 218px) !important;
+    min-height: 29px !important;
+    grid-template-columns: minmax(116px, 1fr) minmax(48px, auto) !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule-value,
+  .gathering-origin-skill-card__xp-capsule-percent {
+    min-height: 29px !important;
+    padding-inline: 0.52rem !important;
+    font-size: 0.68rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-skill-card__expanded-metrics {
+    gap: 0.46rem !important;
+  }
+
+  .gathering-origin-skill-card__level-badge {
+    min-width: 50px !important;
+    min-height: 28px !important;
+    font-size: 0.64rem !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule,
+  .gathering-origin-skill-card__metric-progress.gathering-origin-skill-card__xp-capsule {
+    width: min(100%, 190px) !important;
+    min-height: 28px !important;
+    grid-template-columns: minmax(104px, 1fr) minmax(46px, auto) !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule-value,
+  .gathering-origin-skill-card__xp-capsule-percent {
+    min-height: 28px !important;
+    padding-inline: 0.42rem !important;
+    font-size: 0.62rem !important;
+  }
+}

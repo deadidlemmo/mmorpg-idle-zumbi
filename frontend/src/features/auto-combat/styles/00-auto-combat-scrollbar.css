@@ -1,0 +1,42 @@
+html,
+body,
+.auto-combat-page,
+.auto-combat-page * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(110, 159, 67, 0.82) rgba(5, 9, 8, 0.72);
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.auto-combat-page *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+.auto-combat-page *::-webkit-scrollbar-track {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    rgba(5, 9, 8, 0.72);
+  border-radius: 999px;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+.auto-combat-page *::-webkit-scrollbar-thumb {
+  background:
+    linear-gradient(180deg, rgba(180, 214, 112, 0.92), rgba(82, 122, 56, 0.92));
+  border: 2px solid rgba(5, 9, 8, 0.82);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 14px rgba(110, 159, 67, 0.14);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+.auto-combat-page *::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(180deg, rgba(205, 233, 132, 0.98), rgba(101, 148, 68, 0.98));
+}

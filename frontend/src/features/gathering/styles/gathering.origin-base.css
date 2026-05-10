@@ -1,0 +1,56 @@
+/* =========================================================
+   GATHERING ORIGIN — BASE
+   Base da página, shell, topbar oculta e feedback.
+   ========================================================= */
+
+.gathering-page--origin {
+width: min(100%, 1220px);
+  margin: 0 auto;
+  padding: 0.72rem 1rem 3.2rem;
+  color: rgba(255, 248, 232, 0.92);
+}
+
+.gathering-page--origin::before {
+content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 72% 14%, rgba(104, 155, 89, 0.08), transparent 30rem),
+    radial-gradient(circle at 24% 10%, rgba(232, 184, 78, 0.055), transparent 24rem),
+    linear-gradient(180deg, rgba(5, 12, 9, 0.22), rgba(0, 0, 0, 0.12));
+}
+
+.gathering-origin-shell {
+display: flex;
+  flex-direction: column;
+  gap: 0.72rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.gathering-origin-topbar {
+display: none !important;
+}
+
+.gathering-origin-shell > .gathering-feedback {
+margin: 0;
+  border-radius: 0.9rem;
+}
+
+.gathering-page--origin .gathering-feedback--success {
+color: #f6ffe6;
+  background:
+    linear-gradient(90deg, rgba(110, 159, 67, 0.16), rgba(110, 159, 67, 0.055)),
+    rgba(5, 14, 8, 0.78);
+  border-color: rgba(110, 159, 67, 0.28);
+}
+
+.gathering-page--origin .gathering-feedback--error {
+color: #ffd7cf;
+  background:
+    linear-gradient(90deg, rgba(144, 54, 50, 0.18), rgba(144, 54, 50, 0.055)),
+    rgba(14, 7, 6, 0.78);
+  border-color: rgba(170, 70, 62, 0.3);
+}

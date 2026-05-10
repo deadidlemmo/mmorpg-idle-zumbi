@@ -1,0 +1,712 @@
+/* =========================================================
+   LOG DE BATALHA
+   ========================================================= */
+
+.auto-combat-battle-log {
+  position: relative;
+  min-width: 0;
+  padding: 0.95rem;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(110, 159, 67, 0.065), transparent 13rem),
+    radial-gradient(circle at bottom right, rgba(158, 47, 47, 0.07), transparent 14rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.42);
+  border: 1px solid rgba(231, 227, 216, 0.085);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.026),
+    0 10px 26px rgba(0, 0, 0, 0.14),
+    0 0 20px rgba(110, 159, 67, 0.035);
+}
+
+.auto-combat-battle-log::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(110, 159, 67, 0.07), transparent 18%, transparent 82%, rgba(158, 47, 47, 0.08)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 38%);
+  opacity: 0.72;
+}
+
+.auto-combat-battle-log__header,
+.auto-combat-battle-log__list,
+.auto-combat-battle-log__empty {
+  position: relative;
+  z-index: 1;
+}
+
+.auto-combat-battle-log__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.72rem;
+  padding-bottom: 0.62rem;
+  border-bottom: 1px solid rgba(231, 227, 216, 0.07);
+}
+
+.auto-combat-battle-log__header strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  color: color-mix(in srgb, var(--action-primary-hover) 88%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.11em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 10px rgba(110, 159, 67, 0.14),
+    0 1px 2px rgba(0, 0, 0, 0.72);
+}
+
+.auto-combat-battle-log__header strong::before {
+  content: '▣';
+  color: #e5b63f;
+  font-size: 0.82rem;
+  text-shadow: 0 0 12px rgba(229, 182, 63, 0.22);
+}
+
+.auto-combat-battle-log__header span {
+  flex: 0 0 auto;
+  color: rgba(231, 227, 216, 0.6);
+  font-size: 0.7rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.auto-combat-battle-log__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 410px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 0.22rem 0.08rem 0;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+
+.auto-combat-battle-log__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  min-width: 0;
+}
+
+.auto-combat-battle-log__separator {
+  position: relative;
+  height: 1px;
+  margin: 0.5rem 0.16rem 0.58rem;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(231, 227, 216, 0.075),
+    rgba(231, 227, 216, 0.13),
+    rgba(231, 227, 216, 0.075),
+    transparent
+  );
+}
+
+.auto-combat-battle-log__separator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 42px;
+  height: 1px;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(180, 214, 112, 0.5),
+    transparent
+  );
+  box-shadow: 0 0 10px rgba(110, 159, 67, 0.12);
+}
+
+.auto-combat-battle-log__item {
+  --log-rgb: 126, 139, 151;
+
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'meta result'
+    'message result';
+  gap: 0.36rem 0.72rem;
+  align-items: center;
+  min-width: 0;
+  min-height: 66px;
+  padding: 0.68rem 0.74rem 0.68rem 0.86rem;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.5);
+  border: 1px solid rgba(var(--log-rgb), 0.17);
+  border-radius: 0.82rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.024),
+    0 5px 14px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.auto-combat-battle-log__item::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: rgba(var(--log-rgb), 0.84);
+  box-shadow: 0 0 14px rgba(var(--log-rgb), 0.3);
+}
+
+.auto-combat-battle-log__item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at left, rgba(var(--log-rgb), 0.13), transparent 8.5rem),
+    linear-gradient(90deg, rgba(var(--log-rgb), 0.045), transparent 46%);
+  opacity: 0.88;
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='player'] .auto-combat-battle-log__item {
+  justify-self: start;
+  width: min(84%, 420px);
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='mob'] .auto-combat-battle-log__item {
+  justify-self: end;
+  width: min(84%, 420px);
+  padding: 0.68rem 0.86rem 0.68rem 0.74rem;
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='system'] .auto-combat-battle-log__item {
+  justify-self: center;
+  width: min(76%, 360px);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'meta'
+    'message'
+    'result';
+  text-align: center;
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='mob'] .auto-combat-battle-log__item::before {
+  inset: 0 0 0 auto;
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='mob'] .auto-combat-battle-log__item::after {
+  background:
+    radial-gradient(circle at right, rgba(var(--log-rgb), 0.13), transparent 8.5rem),
+    linear-gradient(270deg, rgba(var(--log-rgb), 0.045), transparent 46%);
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='mob'] .auto-combat-battle-log__meta {
+  justify-content: flex-end;
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='mob'] .auto-combat-battle-log__message {
+  text-align: right;
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='system'] .auto-combat-battle-log__meta {
+  justify-content: center;
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='system'] .auto-combat-battle-log__result {
+  justify-self: center;
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='system'] .auto-combat-battle-log__item::before {
+  inset: 0 18% auto;
+  width: auto;
+  height: 3px;
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='system'] .auto-combat-battle-log__item::after {
+  background:
+    radial-gradient(circle at top, rgba(var(--log-rgb), 0.13), transparent 8.5rem),
+    linear-gradient(180deg, rgba(var(--log-rgb), 0.045), transparent 48%);
+}
+
+.auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-type='mob-defeated'] .auto-combat-battle-log__item {
+  border-color: rgba(180, 214, 112, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 5px 14px rgba(0, 0, 0, 0.1),
+    0 0 18px rgba(180, 214, 112, 0.07);
+}
+
+.auto-combat-battle-log__meta,
+.auto-combat-battle-log__message,
+.auto-combat-battle-log__damage,
+.auto-combat-battle-log__result {
+  position: relative;
+  z-index: 1;
+}
+
+.auto-combat-battle-log__meta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.34rem;
+  min-width: 0;
+}
+
+.auto-combat-battle-log__round,
+.auto-combat-battle-log__actor,
+.auto-combat-battle-log__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 21px;
+  padding: 0.14rem 0.42rem;
+  font-family: var(--font-title);
+  font-size: 0.6rem;
+  font-weight: 950;
+  letter-spacing: 0.065em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-radius: 999px;
+}
+
+.auto-combat-battle-log__round {
+  color: rgba(231, 227, 216, 0.62);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+.auto-combat-battle-log__actor {
+  color: #f7f4e9;
+  background: rgba(var(--log-rgb), 0.18);
+  border: 1px solid rgba(var(--log-rgb), 0.26);
+  box-shadow: 0 0 12px rgba(var(--log-rgb), 0.06);
+}
+
+.auto-combat-battle-log__action {
+  color: rgba(231, 227, 216, 0.74);
+  background: rgba(5, 9, 8, 0.34);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+}
+
+.auto-combat-battle-log__message {
+  grid-area: message;
+  min-width: 0;
+  color: #f4f1e6;
+  font-size: 0.8rem;
+  font-weight: 750;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.auto-combat-battle-log__message span {
+  display: block;
+}
+
+.auto-combat-battle-log__damage,
+.auto-combat-battle-log__result {
+  grid-area: result;
+  justify-self: end;
+  align-self: center;
+  min-width: 52px;
+  padding: 0.34rem 0.5rem;
+  color: #ffe7a7;
+  font-family: var(--font-number);
+  font-size: 0.76rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), transparent),
+    rgba(5, 9, 8, 0.38);
+  border: 1px solid rgba(229, 182, 63, 0.16);
+  border-radius: 0.7rem;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.72),
+    0 0 10px rgba(229, 182, 63, 0.1);
+}
+
+.auto-combat-battle-log__item.is-current-event,
+.auto-combat-battle-log__item.is-active-event {
+  transform: translateY(-1px);
+  border-color: rgba(var(--log-rgb), 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 8px 18px rgba(0, 0, 0, 0.16),
+    0 0 22px rgba(var(--log-rgb), 0.12);
+  animation: autoCombatLogPulse 900ms ease-out;
+}
+
+.auto-combat-battle-log__item--player,
+.auto-combat-battle-log__item.is-player-action {
+  --log-rgb: 110, 159, 67;
+}
+
+.auto-combat-battle-log__item--mob,
+.auto-combat-battle-log__item.is-mob-action {
+  --log-rgb: 215, 91, 98;
+}
+
+.auto-combat-battle-log__item--system,
+.auto-combat-battle-log__item.is-system-action {
+  --log-rgb: 190, 156, 86;
+}
+
+.auto-combat-battle-log__item.is-player-hit,
+.auto-combat-battle-log__item--player-hit {
+  --log-rgb: 110, 159, 67;
+}
+
+.auto-combat-battle-log__item.is-mob-hit,
+.auto-combat-battle-log__item--mob-hit {
+  --log-rgb: 215, 91, 98;
+}
+
+.auto-combat-battle-log__item.is-critical,
+.auto-combat-battle-log__item--result-critical {
+  --log-rgb: 229, 182, 63;
+}
+
+.auto-combat-battle-log__item.is-dodge,
+.auto-combat-battle-log__item--dodge,
+.auto-combat-battle-log__item--result-dodge {
+  --log-rgb: 150, 188, 226;
+}
+
+.auto-combat-battle-log__item.is-mob-spawned,
+.auto-combat-battle-log__item--spawn {
+  --log-rgb: 190, 156, 86;
+}
+
+.auto-combat-battle-log__item.is-mob-defeated,
+.auto-combat-battle-log__item--mob-defeated,
+.auto-combat-battle-log__item--result-xp {
+  --log-rgb: 180, 214, 112;
+  background:
+    radial-gradient(circle at left, rgba(180, 214, 112, 0.08), transparent 9rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    rgba(5, 9, 8, 0.5);
+}
+
+.auto-combat-battle-log__item.is-player-defeated,
+.auto-combat-battle-log__item--player-defeated,
+.auto-combat-battle-log__item--result-danger {
+  --log-rgb: 215, 91, 98;
+  background:
+    radial-gradient(circle at left, rgba(215, 91, 98, 0.12), transparent 9rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    rgba(30, 8, 10, 0.44);
+}
+
+.auto-combat-battle-log__item.is-potion-used,
+.auto-combat-battle-log__item--potion,
+.auto-combat-battle-log__item--result-heal {
+  --log-rgb: 110, 159, 67;
+  background:
+    radial-gradient(circle at left, rgba(110, 159, 67, 0.1), transparent 9rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    rgba(5, 9, 8, 0.5);
+}
+
+.auto-combat-battle-log__result--damage {
+  color: #ffd1cc;
+  border-color: rgba(215, 91, 98, 0.18);
+}
+
+.auto-combat-battle-log__result--critical {
+  color: #ffe7a7;
+  border-color: rgba(229, 182, 63, 0.26);
+  box-shadow: 0 0 14px rgba(229, 182, 63, 0.08);
+}
+
+.auto-combat-battle-log__result--xp {
+  color: #e9ffd1;
+  border-color: rgba(180, 214, 112, 0.24);
+}
+
+.auto-combat-battle-log__result--heal {
+  color: #d9ffd2;
+  border-color: rgba(110, 159, 67, 0.24);
+}
+
+.auto-combat-battle-log__result--dodge {
+  color: #d9ecff;
+  border-color: rgba(150, 188, 226, 0.24);
+}
+
+.auto-combat-battle-log__result--danger {
+  color: #ffd1cc;
+  border-color: rgba(215, 91, 98, 0.26);
+}
+
+.auto-combat-battle-log__result--info {
+  color: #ffe7a7;
+  border-color: rgba(190, 156, 86, 0.22);
+}
+
+.auto-combat-battle-log__result--empty {
+  color: rgba(231, 227, 216, 0.5);
+  border-color: rgba(231, 227, 216, 0.08);
+}
+
+.auto-combat-battle-log__empty {
+  padding: 0.95rem;
+  color: rgba(231, 227, 216, 0.66);
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.35;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    rgba(5, 9, 8, 0.3);
+  border: 1px dashed rgba(231, 227, 216, 0.1);
+  border-radius: 0.82rem;
+}
+
+/* =========================================================
+   MOBILE — LOG COMPACTO
+   Corrige cards altos demais no celular.
+   ========================================================= */
+
+@media (max-width: 620px) {
+  .auto-combat-battle-log {
+    padding: 0.78rem;
+    border-radius: 0.92rem;
+  }
+
+  .auto-combat-battle-log__header {
+    align-items: center;
+    flex-direction: row;
+    gap: 0.5rem;
+    margin-bottom: 0.56rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .auto-combat-battle-log__header strong {
+    min-width: 0;
+    font-size: 0.68rem;
+    letter-spacing: 0.09em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .auto-combat-battle-log__header span {
+    font-size: 0.62rem;
+  }
+
+  .auto-combat-battle-log__list {
+    gap: 0.42rem;
+    max-height: 360px;
+    padding: 0 0.18rem 0.08rem 0;
+  }
+
+  .auto-combat-battle-log__separator {
+    display: none;
+  }
+
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='player'] .auto-combat-battle-log__item,
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='mob'] .auto-combat-battle-log__item,
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='system'] .auto-combat-battle-log__item,
+  .auto-combat-battle-log__item {
+    width: 100% !important;
+    min-height: 48px !important;
+    padding: 0.48rem 0.58rem 0.48rem 0.68rem !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    grid-template-areas: 'meta message result' !important;
+    gap: 0.46rem !important;
+    align-items: center !important;
+    text-align: left !important;
+    border-radius: 0.74rem;
+  }
+
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='mob'] .auto-combat-battle-log__item {
+    padding: 0.48rem 0.68rem 0.48rem 0.58rem !important;
+  }
+
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='system'] .auto-combat-battle-log__item::before {
+    inset: 0 auto 0 0;
+    width: 4px;
+    height: auto;
+  }
+
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='mob'] .auto-combat-battle-log__item::before {
+    inset: 0 0 0 auto;
+  }
+
+  .auto-combat-battle-log__item::after {
+    background:
+      radial-gradient(circle at left, rgba(var(--log-rgb), 0.1), transparent 7.5rem),
+      linear-gradient(90deg, rgba(var(--log-rgb), 0.04), transparent 52%);
+  }
+
+  .auto-combat-battle-log__meta {
+    grid-area: meta;
+    display: flex !important;
+    flex: 0 0 auto;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.22rem !important;
+    min-width: 0;
+  }
+
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='mob'] .auto-combat-battle-log__meta,
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='system'] .auto-combat-battle-log__meta {
+    align-items: center !important;
+    justify-content: flex-start !important;
+  }
+
+  .auto-combat-battle-log__round,
+  .auto-combat-battle-log__actor,
+  .auto-combat-battle-log__action {
+    min-height: 20px;
+    padding: 0.12rem 0.34rem;
+    font-size: 0.52rem;
+    letter-spacing: 0.035em;
+    white-space: nowrap;
+  }
+
+  .auto-combat-battle-log__round {
+    display: none;
+  }
+
+  .auto-combat-battle-log__actor {
+    max-width: 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .auto-combat-battle-log__action {
+    max-width: 58px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .auto-combat-battle-log__message {
+    grid-area: message;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    color: #f7f3e8;
+    font-size: 0.76rem;
+    font-weight: 850;
+    line-height: 1.15;
+    text-align: left !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+
+  .auto-combat-battle-log__message span {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .auto-combat-battle-log__damage,
+  .auto-combat-battle-log__result {
+    grid-area: result;
+    justify-self: end !important;
+    align-self: center;
+    min-width: auto;
+    max-width: 72px;
+    padding: 0.25rem 0.42rem;
+    font-size: 0.66rem;
+    border-radius: 999px;
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='player'] .auto-combat-battle-log__result,
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='mob'] .auto-combat-battle-log__result,
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='system'] .auto-combat-battle-log__result {
+    justify-self: end !important;
+    text-align: center !important;
+  }
+
+  .auto-combat-battle-log__empty {
+    padding: 0.74rem;
+    font-size: 0.76rem;
+    border-radius: 0.74rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .auto-combat-battle-log {
+    padding: 0.68rem;
+  }
+
+  .auto-combat-battle-log__list {
+    gap: 0.38rem;
+    max-height: 340px;
+  }
+
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='player'] .auto-combat-battle-log__item,
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='mob'] .auto-combat-battle-log__item,
+  .auto-combat-battle-log--side-layout .auto-combat-battle-log__row[data-log-role='system'] .auto-combat-battle-log__item,
+  .auto-combat-battle-log__item {
+    min-height: 44px !important;
+    padding: 0.42rem 0.5rem 0.42rem 0.62rem !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    gap: 0.36rem !important;
+  }
+
+  .auto-combat-battle-log__actor {
+    display: none;
+  }
+
+  .auto-combat-battle-log__action {
+    max-width: 54px;
+    padding: 0.1rem 0.3rem;
+    font-size: 0.48rem;
+  }
+
+  .auto-combat-battle-log__message {
+    font-size: 0.72rem;
+  }
+
+  .auto-combat-battle-log__damage,
+  .auto-combat-battle-log__result {
+    max-width: 64px;
+    padding: 0.22rem 0.36rem;
+    font-size: 0.62rem;
+  }
+}
+
+@keyframes autoCombatLogPulse {
+  0% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 0 0 0 rgba(var(--log-rgb), 0.24),
+      0 0 24px rgba(var(--log-rgb), 0.14);
+  }
+
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 0 0 10px rgba(var(--log-rgb), 0),
+      0 8px 18px rgba(0, 0, 0, 0.16);
+  }
+}

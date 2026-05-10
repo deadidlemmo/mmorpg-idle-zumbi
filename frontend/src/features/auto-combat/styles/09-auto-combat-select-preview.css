@@ -1,0 +1,160 @@
+/* =========================================================
+   SELECT / PREVIEW
+   ========================================================= */
+
+.auto-combat-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+}
+
+.auto-combat-field span {
+  color: color-mix(in srgb, var(--action-primary-hover) 84%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.auto-combat-field--submap {
+  gap: 0.5rem;
+  margin-top: 0.95rem;
+}
+
+.auto-combat-select-shell {
+  position: relative;
+  width: 100%;
+}
+
+.auto-combat-select-shell::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 38%),
+    radial-gradient(circle at top left, rgba(110, 159, 67, 0.06), transparent 45%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auto-combat-select-shell::after {
+  content: '⌄';
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-52%);
+  color: #dce8b6;
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 0 12px rgba(110, 159, 67, 0.18);
+  z-index: 2;
+}
+
+.auto-combat-select-shell select {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 58px;
+  padding: 0 3.25rem 0 1rem;
+  color: #f5f0df;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(5, 9, 8, 0.62);
+  border: 1px solid rgba(231, 227, 216, 0.13);
+  border-radius: 1rem;
+  outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 8px 16px rgba(0, 0, 0, 0.12);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.auto-combat-select-shell select:hover:not(:disabled) {
+  border-color: rgba(175, 197, 109, 0.26);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgba(7, 13, 10, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 10px 20px rgba(0, 0, 0, 0.14),
+    0 0 0 1px rgba(110, 159, 67, 0.05);
+}
+
+.auto-combat-select-shell select:focus {
+  border-color: rgba(132, 182, 82, 0.42);
+  box-shadow:
+    0 0 0 3px rgba(110, 159, 67, 0.11),
+    0 10px 22px rgba(0, 0, 0, 0.16),
+    0 0 20px rgba(110, 159, 67, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+    rgba(7, 13, 10, 0.7);
+}
+
+.auto-combat-select-shell select:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.auto-combat-select-shell select::-ms-expand {
+  display: none;
+}
+
+.auto-combat-select-helper {
+  display: block;
+  margin-top: 0.08rem;
+  color: rgba(231, 227, 216, 0.62);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.auto-combat-select-helper strong {
+  color: #e9f3c5;
+  font-weight: 700;
+}
+
+.auto-combat-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.auto-combat-preview-grid div {
+  padding: 0.72rem;
+  border-radius: 0.8rem;
+}
+
+.auto-combat-preview-grid span {
+  display: block;
+  color: #b8c2cf;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.auto-combat-preview-grid strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: #f4f1e6;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.1;
+}

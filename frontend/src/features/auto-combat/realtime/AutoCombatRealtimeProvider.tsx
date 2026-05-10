@@ -1,38 +1,38 @@
 import {
-    createContext,
-    useCallback,
-    useEffect,
-    useMemo,
-    useReducer,
-    useRef,
-    type ReactNode,
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  type ReactNode,
 } from 'react';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import type { CharacterOverviewResponse } from '../../dashboard/types/dashboard.types';
 import {
-    getAutoCombatRecentEvents,
-    getAutoCombatStatus,
-    startAutoCombat,
-    stopAutoCombat,
+  getAutoCombatRecentEvents,
+  getAutoCombatStatus,
+  startAutoCombat,
+  stopAutoCombat,
 } from '../api/auto-combat.api';
 import { useAutoCombatSocket } from '../hooks/useAutoCombatSocket';
 import type {
-    AutoCombatRealtimeEvent,
-    AutoCombatStatusResponse,
-    StartAutoCombatPayload,
+  AutoCombatRealtimeEvent,
+  AutoCombatStatusResponse,
+  StartAutoCombatPayload,
 } from '../types/auto-combat.types';
 import {
-    autoCombatRealtimeReducer,
-    initialAutoCombatRealtimeState,
-    type AutoCombatRealtimeState,
+  autoCombatRealtimeReducer,
+  initialAutoCombatRealtimeState,
+  type AutoCombatRealtimeState,
 } from './autoCombatRealtime.reducer';
 import type { AutoCombatRealtimeContextValue } from './autoCombatRealtime.types';
 import {
-    buildMobSpawnedEventFromStatus,
-    getRealtimeEventDelay,
-    getStatusSession,
-    isStatusActive,
-    isTerminalSessionStatus,
+  buildMobSpawnedEventFromStatus,
+  getRealtimeEventDelay,
+  getStatusSession,
+  isStatusActive,
+  isTerminalSessionStatus,
 } from './autoCombatRealtime.utils';
 
 interface AutoCombatRealtimeProviderProps {
@@ -44,6 +44,11 @@ interface AutoCombatRealtimeProviderProps {
 
 type ReloadOptions = {
   reason?: string;
+};
+
+type LooseAutoCombatStatus = AutoCombatStatusResponse & {
+  active?: boolean | null;
+  hasActiveAutoCombat?: boolean | null;
 };
 
 const INITIAL_RELOAD_DELAY_MS = 300;
@@ -88,6 +93,26 @@ function isStatusTerminal(status: AutoCombatStatusResponse | null) {
   const session = getStatusSession(status);
 
   return isTerminalSessionStatus(session?.status);
+}
+
+function isStatusInactiveOrTerminal(status: AutoCombatStatusResponse | null) {
+  if (!status) return false;
+
+  const looseStatus = status as LooseAutoCombatStatus;
+
+  if (isStatusActive(status)) {
+    return false;
+  }
+
+  if (looseStatus.active === false) {
+    return true;
+  }
+
+  if (looseStatus.hasActiveAutoCombat === false) {
+    return true;
+  }
+
+  return isStatusTerminal(status);
 }
 
 function isSameSession(
@@ -137,7 +162,7 @@ function shouldPollCurrentState(state: AutoCombatRealtimeState) {
     return true;
   }
 
-  if (!state.isConnected || !state.isJoined) {
+  if (!status && !session) {
     return true;
   }
 
@@ -146,6 +171,55 @@ function shouldPollCurrentState(state: AutoCombatRealtimeState) {
   }
 
   if (session && !sessionIsTerminal && !statusIsTerminal) {
+    return true;
+  }
+
+  return false;
+}
+
+function shouldKeepAutoCombatSocketEnabled(params: {
+  characterId?: string | null;
+  state: AutoCombatRealtimeState;
+}) {
+  const { characterId, state } = params;
+
+  if (!characterId) {
+    return false;
+  }
+
+  if (!state.hasLoadedOnce) {
+    return true;
+  }
+
+  if (isStatusActive(state.status)) {
+    return true;
+  }
+
+  if (state.session && !isTerminalSessionStatus(state.session.status)) {
+    return true;
+  }
+
+  if (state.activeEvent || state.eventQueue.length > 0) {
+    return true;
+  }
+
+  return false;
+}
+
+function shouldReconcileCurrentState(state: AutoCombatRealtimeState) {
+  const statusIsActive = isStatusActive(state.status);
+  const statusIsTerminal = isStatusTerminal(state.status);
+  const sessionIsTerminal = isTerminalSessionStatus(state.session?.status);
+
+  if (statusIsActive) {
+    return true;
+  }
+
+  if (state.session && !sessionIsTerminal && !statusIsTerminal) {
+    return true;
+  }
+
+  if (state.activeEvent || state.eventQueue.length > 0) {
     return true;
   }
 
@@ -211,6 +285,15 @@ function getLooseEventSequence(event?: AutoCombatRealtimeEvent | null) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function getStableStatusSignature(status: AutoCombatStatusResponse | null) {
+  if (!status) return 'null';
+
+  try {
+    return JSON.stringify(status);
+  } catch {
+    return String(Date.now());
+  }
+}
 
 export function AutoCombatRealtimeProvider({
   characterId,
@@ -233,6 +316,7 @@ export function AutoCombatRealtimeProvider({
   const reloadRequestRef = useRef(0);
   const recentEventsRequestRef = useRef(0);
   const wasBackgroundedRef = useRef(false);
+  const lastInactiveStatusSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
     stateRef.current = state;
@@ -243,6 +327,8 @@ export function AutoCombatRealtimeProvider({
       type: 'SET_CHARACTER_ID',
       characterId: normalizedCharacterId,
     });
+
+    lastInactiveStatusSignatureRef.current = null;
   }, [normalizedCharacterId]);
 
   const clearScheduledReload = useCallback(() => {
@@ -312,6 +398,8 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
+      lastInactiveStatusSignatureRef.current = null;
+
       dispatch({
         type: 'ENQUEUE_EVENT',
         characterId: normalizedCharacterId,
@@ -338,6 +426,16 @@ export function AutoCombatRealtimeProvider({
   const reload = useCallback(
     async (_options?: ReloadOptions) => {
       if (!normalizedCharacterId || isLoadingRef.current) return;
+
+      const currentState = stateRef.current;
+
+      if (
+        currentState.hasLoadedOnce &&
+        isStatusInactiveOrTerminal(currentState.status) &&
+        isTerminalSessionStatus(currentState.session?.status)
+      ) {
+        return;
+      }
 
       const requestId = reloadRequestRef.current + 1;
       reloadRequestRef.current = requestId;
@@ -392,6 +490,17 @@ export function AutoCombatRealtimeProvider({
     (delayMs = INITIAL_RELOAD_DELAY_MS, options?: ReloadOptions) => {
       if (!normalizedCharacterId) return;
 
+      const currentState = stateRef.current;
+
+      if (
+        currentState.hasLoadedOnce &&
+        isStatusInactiveOrTerminal(currentState.status) &&
+        isTerminalSessionStatus(currentState.session?.status)
+      ) {
+        clearScheduledReload();
+        return;
+      }
+
       clearScheduledReload();
 
       reloadTimeoutRef.current = window.setTimeout(() => {
@@ -405,6 +514,12 @@ export function AutoCombatRealtimeProvider({
   const loadRecentEventsForReconciliation = useCallback(
     async (reason: string) => {
       if (!normalizedCharacterId) return;
+
+      const currentState = stateRef.current;
+
+      if (!shouldReconcileCurrentState(currentState)) {
+        return;
+      }
 
       const requestId = recentEventsRequestRef.current + 1;
       recentEventsRequestRef.current = requestId;
@@ -457,6 +572,12 @@ export function AutoCombatRealtimeProvider({
     (reason: string) => {
       if (!normalizedCharacterId) return;
 
+      const currentState = stateRef.current;
+
+      if (!shouldReconcileCurrentState(currentState)) {
+        return;
+      }
+
       flushVisualQueueWithoutAnimation();
 
       void loadRecentEventsForReconciliation(reason);
@@ -480,6 +601,8 @@ export function AutoCombatRealtimeProvider({
       }
 
       try {
+        lastInactiveStatusSignatureRef.current = null;
+        clearScheduledReload();
         clearSessionVisualState();
 
         const response = await startAutoCombat(payload);
@@ -535,6 +658,7 @@ export function AutoCombatRealtimeProvider({
       }
     },
     [
+      clearScheduledReload,
       clearSessionVisualState,
       normalizedCharacterId,
       scheduleReload,
@@ -551,6 +675,8 @@ export function AutoCombatRealtimeProvider({
 
       const response = await stopAutoCombat(normalizedCharacterId);
 
+      lastInactiveStatusSignatureRef.current = getStableStatusSignature(response);
+
       dispatch({
         type: 'HYDRATE_STATUS',
         characterId: normalizedCharacterId,
@@ -565,9 +691,7 @@ export function AutoCombatRealtimeProvider({
         type: 'CLEAR_ERROR',
       });
 
-      scheduleReload(AFTER_STOP_RELOAD_DELAY_MS, {
-        reason: 'after-stop',
-      });
+      clearScheduledReload();
 
       return response;
     } catch (error) {
@@ -584,14 +708,28 @@ export function AutoCombatRealtimeProvider({
       throw error;
     }
   }, [
+    clearScheduledReload,
     flushVisualQueueWithoutAnimation,
     normalizedCharacterId,
-    scheduleReload,
   ]);
 
   const handleStatusPayload = useCallback(
     (payload: AutoCombatStatusResponse) => {
       if (!normalizedCharacterId) return;
+
+      const isInactivePayload = isStatusInactiveOrTerminal(payload);
+
+      if (isInactivePayload) {
+        const signature = getStableStatusSignature(payload);
+
+        if (lastInactiveStatusSignatureRef.current === signature) {
+          return;
+        }
+
+        lastInactiveStatusSignatureRef.current = signature;
+      } else {
+        lastInactiveStatusSignatureRef.current = null;
+      }
 
       if (isUiBackgrounded()) {
         flushVisualQueueWithoutAnimation();
@@ -612,6 +750,8 @@ export function AutoCombatRealtimeProvider({
 
       flushVisualQueueWithoutAnimation();
 
+      lastInactiveStatusSignatureRef.current = getStableStatusSignature(payload);
+
       dispatch({
         type: 'HYDRATE_STATUS',
         characterId: normalizedCharacterId,
@@ -622,11 +762,13 @@ export function AutoCombatRealtimeProvider({
         type: 'CLEAR_QUEUE',
       });
 
-      scheduleReload(AFTER_TERMINAL_RELOAD_DELAY_MS, {
-        reason: 'finished',
-      });
+      clearScheduledReload();
     },
-    [flushVisualQueueWithoutAnimation, normalizedCharacterId, scheduleReload],
+    [
+      clearScheduledReload,
+      flushVisualQueueWithoutAnimation,
+      normalizedCharacterId,
+    ],
   );
 
   const handleStoppedPayload = useCallback(
@@ -635,6 +777,8 @@ export function AutoCombatRealtimeProvider({
 
       flushVisualQueueWithoutAnimation();
 
+      lastInactiveStatusSignatureRef.current = getStableStatusSignature(payload);
+
       dispatch({
         type: 'HYDRATE_STATUS',
         characterId: normalizedCharacterId,
@@ -645,11 +789,13 @@ export function AutoCombatRealtimeProvider({
         type: 'CLEAR_QUEUE',
       });
 
-      scheduleReload(AFTER_TERMINAL_RELOAD_DELAY_MS, {
-        reason: 'stopped',
-      });
+      clearScheduledReload();
     },
-    [flushVisualQueueWithoutAnimation, normalizedCharacterId, scheduleReload],
+    [
+      clearScheduledReload,
+      flushVisualQueueWithoutAnimation,
+      normalizedCharacterId,
+    ],
   );
 
   const handleRealtimeEvent = useCallback(
@@ -667,6 +813,8 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
+      lastInactiveStatusSignatureRef.current = null;
+
       dispatch({
         type: 'ENQUEUE_EVENT',
         characterId: normalizedCharacterId,
@@ -682,9 +830,14 @@ export function AutoCombatRealtimeProvider({
     [normalizedCharacterId],
   );
 
+  const shouldEnableSocket = shouldKeepAutoCombatSocketEnabled({
+    characterId: normalizedCharacterId,
+    state,
+  });
+
   const socketState = useAutoCombatSocket({
     characterId: normalizedCharacterId,
-    enabled: Boolean(normalizedCharacterId),
+    enabled: shouldEnableSocket,
 
     onStatus: handleStatusPayload,
     onSessionUpdated: handleStatusPayload,

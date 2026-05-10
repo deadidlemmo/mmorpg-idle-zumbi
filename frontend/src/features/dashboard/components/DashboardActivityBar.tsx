@@ -314,6 +314,8 @@ type DashboardGatheringSessionLoose = DashboardGatheringSessionViewModel & {
   startedAt?: string | null;
   lastResolvedAt?: string | null;
   progressRemainder?: number | null;
+  collectedQuantity?: number | null;
+  collectedXp?: number | null;
   map?: GatheringMapLike | null;
   targetMaterial?: GatheringMaterialLike | null;
   productionPreview?: GatheringProductionPreviewLike | null;
@@ -477,6 +479,16 @@ function formatGatheringReadyQuantity(value: unknown) {
   return `${amount} prontos`;
 }
 
+function formatGatheringCollectedQuantity(value: unknown) {
+  const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
+
+  if (amount === 1) {
+    return '1 coletado';
+  }
+
+  return `${formatCompactNumber(amount)} coletados`;
+}
+
 function formatGatheringRate(value: unknown) {
   const rate = getFirstValidNumber(value);
 
@@ -490,12 +502,24 @@ function formatGatheringRate(value: unknown) {
 }
 
 function formatGatheringSecondaryMetric(params: {
-  readyQuantity: number;
+  collectedQuantity: number;
+  collectedXp?: number | null;
   ratePerHour?: number | null;
 }) {
-  return `${formatGatheringReadyQuantity(params.readyQuantity)} • ${formatGatheringRate(
-    params.ratePerHour,
-  )}`;
+  const collectedLabel = formatGatheringCollectedQuantity(
+    params.collectedQuantity,
+  );
+
+  const collectedXp = Math.max(
+    0,
+    Math.floor(toSafeNumber(params.collectedXp, 0)),
+  );
+
+  if (collectedXp > 0) {
+    return `${collectedLabel} • ${formatXp(collectedXp)}`;
+  }
+
+  return `${collectedLabel} • ${formatGatheringRate(params.ratePerHour)}`;
 }
 
 function getParsedDateMs(value?: string | null) {
@@ -1548,9 +1572,31 @@ function buildGatheringItemFromRealtime(params: {
 
   const progressPercentLabel = floorPercent(progressPercent);
 
-  const readyQuantity = Math.max(
+  const gatheringStateWithTotals = gatheringState as GatheringRealtimeState & {
+    collectedQuantity?: number | null;
+    collectedXp?: number | null;
+  };
+
+  const collectedQuantity = Math.max(
     0,
-    Math.floor(toSafeNumber(gatheringState.liveProduction.readyQuantity, 0)),
+    Math.floor(
+      getFirstValidNumber(
+        gatheringStateWithTotals.collectedQuantity,
+        session.collectedQuantity,
+        0,
+      ) ?? 0,
+    ),
+  );
+
+  const collectedXp = Math.max(
+    0,
+    Math.floor(
+      getFirstValidNumber(
+        gatheringStateWithTotals.collectedXp,
+        session.collectedXp,
+        0,
+      ) ?? 0,
+    ),
   );
 
   const ratePerHour = gatheringState.liveProduction.ratePerHour ?? null;
@@ -1571,7 +1617,8 @@ function buildGatheringItemFromRealtime(params: {
     progressPercent,
     primaryMetric: `${progressPercentLabel}%`,
     secondaryMetric: formatGatheringSecondaryMetric({
-      readyQuantity,
+      collectedQuantity,
+      collectedXp,
       ratePerHour,
     }),
     href,
@@ -1581,8 +1628,8 @@ function buildGatheringItemFromRealtime(params: {
 
     monsterMetaLabel: `${originLabel} • ${mapName}`,
     combatMetric: `${progressPercentLabel}%`,
-    killsMetric: formatGatheringReadyQuantity(readyQuantity),
-    xpMetric: formatGatheringRate(ratePerHour),
+    killsMetric: formatGatheringCollectedQuantity(collectedQuantity),
+    xpMetric: collectedXp > 0 ? formatXp(collectedXp) : formatGatheringRate(ratePerHour),
   };
 }
 
@@ -1616,7 +1663,16 @@ function buildGatheringItemFromOverview(params: {
 
   const progressPercent = productionSnapshot.progressPercent;
   const progressPercentLabel = floorPercent(progressPercent);
-  const readyQuantity = productionSnapshot.readyQuantity;
+  const collectedQuantity = Math.max(
+    0,
+    Math.floor(getFirstValidNumber(session.collectedQuantity, 0) ?? 0),
+  );
+
+  const collectedXp = Math.max(
+    0,
+    Math.floor(getFirstValidNumber(session.collectedXp, 0) ?? 0),
+  );
+
   const ratePerHour = productionSnapshot.ratePerHour;
 
   const href =
@@ -1636,7 +1692,8 @@ function buildGatheringItemFromOverview(params: {
     progressPercent,
     primaryMetric: `${progressPercentLabel}%`,
     secondaryMetric: formatGatheringSecondaryMetric({
-      readyQuantity,
+      collectedQuantity,
+      collectedXp,
       ratePerHour,
     }),
     href,
@@ -1646,8 +1703,8 @@ function buildGatheringItemFromOverview(params: {
 
     monsterMetaLabel: `${originLabel} • ${mapName}`,
     combatMetric: `${progressPercentLabel}%`,
-    killsMetric: formatGatheringReadyQuantity(readyQuantity),
-    xpMetric: formatGatheringRate(ratePerHour),
+    killsMetric: formatGatheringCollectedQuantity(collectedQuantity),
+    xpMetric: collectedXp > 0 ? formatXp(collectedXp) : formatGatheringRate(ratePerHour),
   };
 }
 

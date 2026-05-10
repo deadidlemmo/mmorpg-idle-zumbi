@@ -1,0 +1,171 @@
+/* =========================================================
+   GATHERING ORIGIN — LAYOUT
+   Grid principal, cards, painel de materiais e compatibilidade estrutural.
+   ========================================================= */
+
+.gathering-origin-intro-grid {
+display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 0.38fr);
+  align-items: start;
+  gap: 0.56rem 0.95rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.gathering-origin-content-grid {
+display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 0.38fr);
+  align-items: start;
+  gap: 0.95rem;
+}
+
+.gathering-origin-main {
+display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.gathering-origin-materials-panel {
+min-height: 560px;
+}
+
+.gathering-origin-materials-panel .gathering-card__header {
+display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 0.88rem;
+}
+
+.gathering-origin-materials-panel .gathering-card__title-group {
+min-width: 0;
+}
+
+.gathering-origin-materials-panel .gathering-card__eyebrow {
+color: #aeda78;
+  font-size: 0.57rem;
+  letter-spacing: 0.18em;
+}
+
+.gathering-origin-materials-panel .gathering-card h2 {
+margin-top: 0.24rem;
+  color: #fff8e8;
+  font-size: clamp(1.08rem, 1.4vw, 1.28rem);
+  line-height: 1.08;
+}
+
+.gathering-origin-materials-panel .gathering-card__description {
+max-width: 720px;
+  margin-top: 0.38rem;
+  color: rgba(231, 227, 216, 0.64);
+  font-size: 0.84rem;
+  line-height: 1.38;
+}
+
+.gathering-origin-materials-panel__summary {
+display: grid;
+  justify-items: end;
+  gap: 0.3rem;
+  min-width: 130px;
+  padding-top: 0.16rem;
+}
+
+.gathering-origin-materials-panel__summary span,
+.gathering-origin-materials-panel__summary strong {
+display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0.22rem 0.55rem;
+  font-family: var(--font-title);
+  font-size: 0.6rem;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+  border-radius: 999px;
+}
+
+.gathering-origin-materials-panel__summary span {
+color: rgba(255, 248, 232, 0.78);
+  border: 1px solid rgba(231, 227, 216, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.gathering-origin-materials-panel__summary strong {
+color: #f6ffe6;
+  border: 1px solid rgba(110, 159, 67, 0.22);
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.16), transparent),
+    rgba(110, 159, 67, 0.08);
+}
+
+.gathering-origin-main .gathering-material-grid,
+.gathering-origin-main .gathering-material-grid--compact,
+.gathering-origin-main .gathering-material-grid--visual {
+gap: 0.72rem;
+}
+
+.gathering-origin-main .gathering-material-group {
+margin-top: 0.98rem;
+}
+
+.gathering-origin-main .gathering-material-group:first-of-type {
+margin-top: 0.45rem;
+}
+
+.gathering-origin-main .gathering-material-group__header {
+margin: 0.2rem 0 0.72rem;
+  opacity: 0.95;
+}
+
+.gathering-origin-main .gathering-material-group__header h3 {
+color: rgba(255, 248, 232, 0.72);
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+}
+
+.gathering-origin-main .gathering-material-group__header::before,
+.gathering-origin-main .gathering-material-group__header::after {
+background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(231, 227, 216, 0.12),
+    rgba(232, 184, 78, 0.14),
+    transparent
+  );
+}
+
+.gathering-page__grid--clean {
+display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 0.38fr);
+  align-items: start;
+  gap: 0.95rem;
+}
+
+.gathering-page__main-column,
+.gathering-page__side-column--clean {
+min-width: 0;
+}
+
+.gathering-page__main-column {
+display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.gathering-page__side-column--clean {
+position: sticky;
+  top: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.82rem;
+  max-height: calc(100vh - 1.9rem);
+  overflow: auto;
+  padding-right: 0.1rem;
+  scrollbar-width: thin;
+}
+
+.gathering-origin-intro-grid {
+align-items: stretch !important;
+  gap: 0.62rem !important;
+}

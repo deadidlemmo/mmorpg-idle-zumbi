@@ -11,13 +11,13 @@ import { DashboardProgressBar } from '../components/DashboardProgressBar';
 import { DashboardStatCard } from '../components/DashboardStatCard';
 import { GatheringSkillsPanel } from '../components/GatheringSkillsPanel';
 import {
-    GATHERING_SKILLS_CONFIG,
-    type GatheringSkillViewModel,
+  GATHERING_SKILLS_CONFIG,
+  type GatheringSkillViewModel,
 } from '../constants/gathering-skills-config';
 import '../dashboard.css';
 import type {
-    CharacterOverviewResponse,
-    DashboardCharacterViewModel,
+  CharacterOverviewResponse,
+  DashboardCharacterViewModel,
 } from '../types/dashboard.types';
 
 function formatSeconds(seconds?: number | null) {
@@ -154,9 +154,7 @@ function buildCharacterViewModel(
       null,
 
     isAtLevelCap:
-      character.isAtLevelCap ??
-      character.levelProgress?.isAtLevelCap ??
-      false,
+      character.isAtLevelCap ?? character.levelProgress?.isAtLevelCap ?? false,
 
     levelProgress: character.levelProgress ?? null,
 
@@ -391,6 +389,28 @@ export function DashboardOverviewPage() {
   const activeGathering = activity?.activeGatheringSession;
   const gatheringPreview = activeGathering?.productionPreview;
 
+  /**
+   * Preparação visual temporária para moedas.
+   * Não depende do backend, não altera API, não altera types e não salva nada.
+   * O DashboardLayout poderá usar estes campos depois para exibir Gold/Cash no hero.
+   */
+  const displayGold = 0;
+  const displayCash = 0;
+
+  const characterWithVisualWallet = {
+    ...character,
+    gold: displayGold,
+    cash: displayCash,
+    wallet: {
+      gold: displayGold,
+      cash: displayCash,
+    },
+    currencies: {
+      gold: displayGold,
+      cash: displayCash,
+    },
+  };
+
   const activeGatheringSummary = {
     isActive: Boolean(activity?.hasActiveGathering),
     title: activity?.hasActiveGathering
@@ -406,7 +426,7 @@ export function DashboardOverviewPage() {
   };
 
   return (
-    <DashboardLayout character={character}>
+    <DashboardLayout character={characterWithVisualWallet}>
       <div className="dashboard-section-divider">
         <span>Combate</span>
       </div>

@@ -1,0 +1,454 @@
+/* =========================================================
+   10. EQUIPAMENTOS / BODY SLOTS
+   ========================================================= */
+
+.dashboard-equipment-slot {
+  min-height: 88px;
+  padding: 0.75rem;
+  background: rgba(5, 9, 8, 0.32);
+  border: 1px solid rgba(231, 227, 216, 0.07);
+  border-radius: 0.8rem;
+}
+
+.dashboard-equipment-slot.has-item {
+  border-color: rgba(110, 159, 67, 0.18);
+}
+
+.dashboard-equipment-slot__label {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: color-mix(in srgb, var(--action-primary-hover) 84%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 8px rgba(110, 159, 67, 0.16),
+    0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+.dashboard-equipment-slot strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
+.dashboard-equipment-slot small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.equipment-loadout {
+  width: 100%;
+}
+
+.equipment-loadout__stage {
+  position: relative;
+  width: 100%;
+  min-height: 455px;
+  margin: 0 auto;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 50% 23%, rgba(110, 159, 67, 0.075), transparent 13rem),
+    radial-gradient(circle at 50% 58%, rgba(231, 227, 216, 0.026), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    rgba(8, 13, 14, 0.42);
+  border: 1px solid rgba(231, 227, 216, 0.06);
+  border-radius: 0.95rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.024),
+    0 10px 22px rgba(0, 0, 0, 0.1);
+}
+
+.equipment-loadout__stage::before {
+  content: '';
+  position: absolute;
+  inset: 0.9rem;
+  z-index: 0;
+  pointer-events: none;
+  border: 1px solid rgba(231, 227, 216, 0.032);
+  border-radius: 0.78rem;
+  background:
+    linear-gradient(90deg, transparent, rgba(231, 227, 216, 0.014), transparent),
+    linear-gradient(180deg, transparent, rgba(231, 227, 216, 0.012), transparent);
+}
+
+.equipment-loadout__ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(231, 227, 216, 0.022), transparent 10rem),
+    radial-gradient(ellipse at 50% 56%, rgba(110, 159, 67, 0.03), transparent 11rem);
+  opacity: 0.86;
+}
+
+.equipment-loadout__aura {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(231, 227, 216, 0.038), transparent 8rem),
+    radial-gradient(ellipse at 50% 58%, rgba(110, 159, 67, 0.038), transparent 10rem);
+  opacity: 0.88;
+}
+
+.equipment-loadout__silhouette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 1;
+}
+
+.equipment-loadout__silhouette::before {
+  content: '';
+  position: absolute;
+  top: 4.8rem;
+  left: 50%;
+  width: 166px;
+  height: 320px;
+  transform: translateX(-50%);
+  opacity: 0.18;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(231, 227, 216, 0.2), rgba(231, 227, 216, 0.07) 34%, rgba(231, 227, 216, 0.025) 70%, transparent 100%),
+    linear-gradient(180deg, rgba(110, 159, 67, 0.08), rgba(231, 227, 216, 0.032) 48%, rgba(231, 227, 216, 0.014));
+  clip-path: polygon(50% 0%, 63% 4%, 73% 12%, 78% 25%, 89% 50%, 80% 54%, 68% 31%, 65% 45%, 61% 60%, 66% 95%, 55% 100%, 50% 70%, 45% 100%, 34% 95%, 39% 60%, 35% 45%, 32% 31%, 20% 54%, 11% 50%, 22% 25%, 27% 12%, 37% 4%);
+  filter:
+    drop-shadow(0 0 16px rgba(231, 227, 216, 0.05))
+    drop-shadow(0 0 24px rgba(110, 159, 67, 0.035));
+}
+
+.equipment-loadout__silhouette::after {
+  content: '';
+  position: absolute;
+  top: 4.1rem;
+  left: 50%;
+  width: 160px;
+  height: 340px;
+  transform: translateX(-50%);
+  opacity: 0.1;
+  background: radial-gradient(ellipse at 50% 38%, rgba(231, 227, 216, 0.18), rgba(110, 159, 67, 0.08) 36%, transparent 72%);
+}
+
+.equipment-loadout__shape {
+  position: absolute;
+  background:
+    linear-gradient(180deg, rgba(231, 227, 216, 0.09), rgba(231, 227, 216, 0.026)),
+    rgba(13, 20, 19, 0.8);
+  border: 1px solid rgba(231, 227, 216, 0.065);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 7px 12px rgba(0, 0, 0, 0.12);
+  opacity: 0.42;
+}
+
+.equipment-loadout__shape--head {
+  top: 4.2rem;
+  left: 50%;
+  width: 38px;
+  height: 43px;
+  transform: translateX(-50%);
+  border-radius: 48% 48% 42% 42%;
+}
+
+.equipment-loadout__shape--neck {
+  top: 6.8rem;
+  left: 50%;
+  width: 24px;
+  height: 16px;
+  transform: translateX(-50%);
+  border-radius: 0.75rem 0.75rem 0.35rem 0.35rem;
+}
+
+.equipment-loadout__shape--torso {
+  top: 7.7rem;
+  left: 50%;
+  width: 76px;
+  height: 112px;
+  transform: translateX(-50%);
+  border-radius: 1.7rem 1.7rem 0.95rem 0.95rem;
+}
+
+.equipment-loadout__shape--left-arm,
+.equipment-loadout__shape--right-arm {
+  top: 8.3rem;
+  width: 20px;
+  height: 100px;
+  border-radius: 999px;
+}
+
+.equipment-loadout__shape--left-arm {
+  left: calc(50% - 71px);
+  transform: rotate(8deg);
+}
+
+.equipment-loadout__shape--right-arm {
+  right: calc(50% - 71px);
+  transform: rotate(-8deg);
+}
+
+.equipment-loadout__shape--hips {
+  top: 14.45rem;
+  left: 50%;
+  width: 62px;
+  height: 31px;
+  transform: translateX(-50%);
+  border-radius: 0.8rem 0.8rem 1rem 1rem;
+}
+
+.equipment-loadout__shape--left-leg,
+.equipment-loadout__shape--right-leg {
+  top: 16.35rem;
+  width: 24px;
+  height: 88px;
+  border-radius: 999px 999px 0.8rem 0.8rem;
+}
+
+.equipment-loadout__shape--left-leg {
+  left: calc(50% - 30px);
+}
+
+.equipment-loadout__shape--right-leg {
+  right: calc(50% - 30px);
+}
+
+.equipment-loadout__shape--left-foot,
+.equipment-loadout__shape--right-foot {
+  top: 21.6rem;
+  width: 38px;
+  height: 16px;
+  border-radius: 999px 999px 0.7rem 0.7rem;
+}
+
+.equipment-loadout__shape--left-foot {
+  left: calc(50% - 45px);
+  transform: rotate(-5deg);
+}
+
+.equipment-loadout__shape--right-foot {
+  right: calc(50% - 45px);
+  transform: rotate(5deg);
+}
+
+.equipment-loadout__slots {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+.equipment-loadout__slot {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  width: 132px;
+}
+
+.equipment-loadout__slot--head {
+  top: 1.95rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.equipment-loadout__slot--main-hand {
+  top: 11.15rem;
+  left: clamp(1.6rem, 6.2vw, 3.8rem);
+}
+
+.equipment-loadout__slot--off-hand {
+  top: 11.15rem;
+  right: clamp(1.6rem, 6.2vw, 3.8rem);
+}
+
+.equipment-loadout__slot--armor {
+  top: 8rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.equipment-loadout__slot--pants {
+  top: 14.7rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.equipment-loadout__slot--boots {
+  top: 21rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.equipment-node {
+  --equipment-rgb: 230, 224, 210;
+
+  position: relative;
+  width: 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.34rem;
+  text-align: center;
+}
+
+.equipment-node__slot {
+  position: relative !important;
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 auto;
+  width: 66px !important;
+  height: 66px !important;
+  min-width: 66px !important;
+  min-height: 66px !important;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at center, rgba(var(--equipment-rgb), 0.18), transparent 68%),
+    radial-gradient(circle at 50% 56%, rgba(255, 255, 255, 0.08), transparent 54%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgba(3, 7, 6, 0.72) !important;
+  border: 1.6px solid rgba(var(--equipment-rgb), 0.74) !important;
+  border-radius: 0.86rem !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -18px 28px rgba(0, 0, 0, 0.22),
+    0 0 15px rgba(var(--equipment-rgb), 0.13),
+    0 9px 18px rgba(0, 0, 0, 0.28) !important;
+  opacity: 1 !important;
+}
+
+.equipment-node__slot::before {
+  content: '';
+  position: absolute;
+  inset: 0.3rem;
+  z-index: 1;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 0.64rem;
+}
+
+.equipment-node__slot::after {
+  content: '';
+  position: absolute;
+  inset: -0.22rem;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 1rem;
+  background: radial-gradient(circle at center, rgba(var(--equipment-rgb), 0.16), transparent 68%);
+}
+
+.equipment-node.is-empty .equipment-node__slot {
+  border-style: dashed !important;
+  border-color: rgba(231, 227, 216, 0.2) !important;
+  opacity: 0.75 !important;
+}
+
+.equipment-node__tier {
+  position: absolute !important;
+  top: 0.34rem !important;
+  left: 0.36rem !important;
+  z-index: 3;
+  color: color-mix(in srgb, rgb(var(--equipment-rgb)) 76%, #fff7df);
+  font-family: var(--font-number);
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow:
+    0 0 7px rgba(0, 0, 0, 0.75),
+    0 0 7px rgba(var(--equipment-rgb), 0.16);
+}
+
+.equipment-node__icon {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+}
+
+.equipment-node__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  user-select: none;
+  pointer-events: none;
+  filter:
+    drop-shadow(0 6px 8px rgba(0, 0, 0, 0.5))
+    drop-shadow(0 0 7px rgba(var(--equipment-rgb), 0.18));
+}
+
+.equipment-node__icon span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, rgb(var(--equipment-rgb)) 78%, #f5f0df);
+  font-family: var(--font-title);
+  font-size: 1.16rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 0 12px rgba(var(--equipment-rgb), 0.3);
+}
+
+.equipment-node__name {
+  display: -webkit-box;
+  width: 132px;
+  min-height: 2.25em;
+  margin-top: 0.12rem;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-family: var(--font-title);
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.12;
+  text-align: center;
+  text-shadow:
+    0 2px 7px rgba(0, 0, 0, 0.82),
+    0 0 8px rgba(0, 0, 0, 0.46);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: normal;
+}
+
+.equipment-node__label {
+  display: none !important;
+}
+
+.equipment-node--rarity-common {
+  --equipment-rgb: 230, 224, 210;
+}
+
+.equipment-node--rarity-uncommon {
+  --equipment-rgb: 224, 182, 91;
+}
+
+.equipment-node--rarity-rare {
+  --equipment-rgb: 101, 194, 113;
+}
+
+.equipment-node--rarity-epic {
+  --equipment-rgb: 168, 112, 224;
+}
+
+.equipment-node--rarity-legendary {
+  --equipment-rgb: 210, 77, 70;
+}
+
+.equipment-body-summary {
+  display: none !important;
+}
+
+.equipment-body-panel {
+  display: contents;
+}
+
+.equipment-body-figure,
+.equipment-body-slots {
+  all: unset;
+}

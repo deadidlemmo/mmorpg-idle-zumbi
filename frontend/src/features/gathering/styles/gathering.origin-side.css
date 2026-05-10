@@ -1,0 +1,376 @@
+/* =========================================================
+   GATHERING ORIGIN — SIDE
+   Arquivo: src/features/gathering/styles/gathering.origin-side.css
+
+   Objetivo:
+   - Controlar somente a coluna lateral da página de origem.
+   - Manter divisórias, espaçamento e container externo.
+   - Não sobrescrever métricas, pills, barra ou estado interno.
+   - Evitar conflito com gathering.session.css.
+   ========================================================= */
+
+/* =========================================================
+   COLUNA LATERAL
+   ========================================================= */
+
+.gathering-origin-side {
+  position: sticky;
+  top: 0.95rem;
+  display: flex;
+  max-height: calc(100vh - 1.9rem);
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.82rem;
+  overflow: auto;
+  padding-right: 0.1rem;
+  scrollbar-width: thin;
+}
+
+.gathering-origin-side--stacked {
+  gap: 0.78rem;
+}
+
+.gathering-origin-side-section,
+.gathering-origin-side-section--current,
+.gathering-origin-side-section--activity,
+.gathering-origin-side-section--progress {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.52rem;
+}
+
+.gathering-origin-side-section--current .gathering-origin-section-divider,
+.gathering-origin-side-section--activity .gathering-origin-section-divider,
+.gathering-origin-side-section--progress .gathering-origin-section-divider {
+  margin-bottom: 0.42rem;
+}
+
+/* =========================================================
+   DIVISÓRIAS DA COLUNA
+   ========================================================= */
+
+.gathering-origin-section-divider {
+  display: grid;
+  grid-template-columns: minmax(18px, 1fr) auto minmax(18px, 1fr);
+  align-items: center;
+  gap: 0.56rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0.04rem 0 0;
+  color: rgba(174, 218, 120, 0.82);
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.gathering-origin-section-divider::before,
+.gathering-origin-section-divider::after {
+  content: '';
+  display: block;
+  height: 1px;
+  min-width: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(110, 159, 67, 0.24),
+    rgba(232, 184, 78, 0.12),
+    transparent
+  );
+}
+
+.gathering-origin-section-divider span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max-content;
+  color: rgba(174, 218, 120, 0.88);
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.62),
+    0 0 8px rgba(110, 159, 67, 0.16);
+  text-transform: uppercase;
+}
+
+.gathering-origin-side-section--activity .gathering-origin-section-divider span,
+.gathering-origin-side-section--current .gathering-origin-section-divider span,
+.gathering-origin-side-section--progress .gathering-origin-section-divider span {
+  color: rgba(174, 218, 120, 0.9);
+}
+
+/* =========================================================
+   CARD EXTERNO — ATIVIDADE ATUAL
+   ========================================================= */
+
+.gathering-origin-current-card {
+  min-height: 0;
+  padding: 0.72rem;
+  overflow: hidden;
+  border-color: rgba(110, 159, 67, 0.26);
+  border-radius: 1.05rem;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(110, 159, 67, 0.1), transparent 17rem),
+    linear-gradient(180deg, rgba(110, 159, 67, 0.045), rgba(255, 255, 255, 0.01)),
+    rgba(5, 15, 9, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 12px 25px rgba(0, 0, 0, 0.2),
+    0 0 22px rgba(110, 159, 67, 0.045);
+}
+
+.gathering-origin-current-card:has(.gathering-session--empty) {
+  padding: 0.64rem;
+}
+
+/* O card de Atividade Atual deve ser visualmente um único bloco.
+   As estruturas internas ficam sob responsabilidade do gathering.session.css. */
+.gathering-origin-current-card .gathering-session {
+  min-width: 0;
+  gap: 0.66rem;
+  font-family: var(--font-body);
+}
+
+/* =========================================================
+   INTEGRAÇÃO COM A SESSÃO ATIVA
+   Mantém apenas remoção de "card dentro de card".
+   Não estiliza pills, métricas, barra de progresso ou nível.
+   ========================================================= */
+
+.gathering-origin-current-card .gathering-session__current-action,
+.gathering-origin-current-card .gathering-session__current-action--horizontal,
+.gathering-origin-current-card .gathering-session__live-hero {
+  grid-template-columns: 50px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  min-height: 54px !important;
+  gap: 0.68rem !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-current-card .gathering-session__current-action::before,
+.gathering-origin-current-card .gathering-session__current-action::after,
+.gathering-origin-current-card .gathering-session__live-hero::before,
+.gathering-origin-current-card .gathering-session__live-hero::after {
+  display: none !important;
+}
+
+/* =========================================================
+   ÍCONE / TÍTULO / AÇÕES
+   Ajustes leves apenas para a integração lateral.
+   O visual principal continua no gathering.session.css.
+   ========================================================= */
+
+.gathering-origin-current-card .gathering-session__item-icon {
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+}
+
+.gathering-origin-current-card .gathering-session__item-image {
+  width: 42px;
+  height: 42px;
+}
+
+.gathering-origin-current-card .gathering-session__item-icon .gathering-material-card__icon-fallback {
+  width: 34px;
+  height: 34px;
+  font-size: 0.62rem;
+}
+
+.gathering-origin-current-card .gathering-session__current-body {
+  min-width: 0;
+  gap: 0.14rem;
+}
+
+.gathering-origin-current-card .gathering-session__current-body h2,
+.gathering-origin-current-card .gathering-session .gathering-session__current-body h2 {
+  margin: 0;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.96rem;
+  font-weight: 950;
+  line-height: 1.1;
+  letter-spacing: 0;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.58);
+}
+
+.gathering-origin-current-card .gathering-session__current-body p {
+  margin: 0;
+  color: rgba(231, 227, 216, 0.58);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 760;
+  line-height: 1.18;
+}
+
+.gathering-origin-current-card .gathering-session__current-body--title-only p {
+  display: none;
+}
+
+.gathering-origin-current-card .gathering-session__header-actions {
+  gap: 0.28rem;
+}
+
+/* =========================================================
+   ESTADO VAZIO
+   Importante:
+   - Não aplicar fundo, borda ou radius interno aqui.
+   - Isso evita card dentro de card e conflito com gathering.session.css.
+   ========================================================= */
+
+.gathering-origin-current-card .gathering-session--empty {
+  min-height: 0;
+}
+
+.gathering-origin-current-card .gathering-session__empty-card,
+.gathering-origin-current-card .gathering-session__empty-state {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-current-card .gathering-session__empty-card::before,
+.gathering-origin-current-card .gathering-session__empty-card::after,
+.gathering-origin-current-card .gathering-session__empty-state::before,
+.gathering-origin-current-card .gathering-session__empty-state::after {
+  display: none !important;
+}
+
+/* =========================================================
+   LEGACY — COMPATIBILIDADE COM ESTRUTURAS ANTIGAS
+   Não aplicar estilo em inline-stats aqui.
+   ========================================================= */
+
+.gathering-origin-current-card .gathering-session__activity,
+.gathering-origin-current-card .gathering-session__rate-strip,
+.gathering-origin-current-card .gathering-session__skill-line,
+.gathering-origin-current-card .gathering-session__actions {
+  margin-top: 0.82rem;
+}
+
+/* =========================================================
+   PROTEÇÃO CONTRA CONFLITO
+   Este arquivo não deve alterar:
+   - .gathering-session__inline-stats
+   - .gathering-session__inline-badge
+   - .gathering-session__inline-capsule
+   - .gathering-session__progress-track
+   - .gathering-origin-skill-card__level-badge
+   - .gathering-origin-skill-card__metric-level
+   ========================================================= */
+
+/* =========================================================
+   RESPONSIVO LOCAL DA COLUNA
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .gathering-origin-side {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-side {
+    gap: 0.72rem;
+  }
+
+  .gathering-origin-section-divider {
+    font-size: 0.64rem;
+    letter-spacing: 0.13em;
+  }
+
+  .gathering-origin-section-divider span {
+    font-size: 0.64rem;
+    letter-spacing: 0.13em;
+  }
+
+  .gathering-origin-current-card {
+    padding: 0.66rem;
+    border-radius: 0.96rem;
+  }
+
+  .gathering-origin-current-card:has(.gathering-session--empty) {
+    padding: 0.62rem;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-action,
+  .gathering-origin-current-card .gathering-session__current-action--horizontal,
+  .gathering-origin-current-card .gathering-session__live-hero {
+    grid-template-columns: 44px minmax(0, 1fr) auto !important;
+    gap: 0.56rem !important;
+    min-height: 50px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-icon {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-image {
+    width: 38px;
+    height: 38px;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body h2,
+  .gathering-origin-current-card .gathering-session .gathering-session__current-body h2 {
+    font-size: 0.88rem;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body p {
+    font-size: 0.64rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-current-card {
+    padding: 0.6rem;
+  }
+
+  .gathering-origin-current-card:has(.gathering-session--empty) {
+    padding: 0.58rem;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-action,
+  .gathering-origin-current-card .gathering-session__current-action--horizontal,
+  .gathering-origin-current-card .gathering-session__live-hero {
+    grid-template-columns: 40px minmax(0, 1fr) auto !important;
+    gap: 0.42rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-icon {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-image {
+    width: 34px;
+    height: 34px;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body h2,
+  .gathering-origin-current-card .gathering-session .gathering-session__current-body h2 {
+    font-size: 0.8rem;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body p {
+    display: none;
+  }
+}

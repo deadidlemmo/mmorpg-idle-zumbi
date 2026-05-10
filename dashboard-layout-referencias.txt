@@ -1,0 +1,18 @@
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:5:import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:1661:    <DashboardLayout character={layoutCharacter}>
+frontend\src\features\auto-combat\pages\AutoCombatPage.tsx:2418:    </DashboardLayout>
+frontend\src\features\dashboard\components\DashboardLayout.tsx:15:interface DashboardLayoutProps {
+frontend\src\features\dashboard\components\DashboardLayout.tsx:20:interface DashboardLayoutContentProps {
+frontend\src\features\dashboard\components\DashboardLayout.tsx:781:function DashboardLayoutContent({
+frontend\src\features\dashboard\components\DashboardLayout.tsx:784:}: DashboardLayoutContentProps) {
+frontend\src\features\dashboard\components\DashboardLayout.tsx:1043:export function DashboardLayout({ character, children }: DashboardLayoutProps) {
+frontend\src\features\dashboard\components\DashboardLayout.tsx:1045:    <DashboardLayoutContent character={character}>
+frontend\src\features\dashboard\components\DashboardLayout.tsx:1047:    </DashboardLayoutContent>
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:9:import { DashboardLayout } from '../components/DashboardLayout';
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:395:   * O DashboardLayout poderá usar estes campos depois para exibir Gold/Cash no hero.
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:429:    <DashboardLayout character={characterWithVisualWallet}>
+frontend\src\features\dashboard\pages\DashboardOverviewPage.tsx:595:    </DashboardLayout>
+frontend\src\features\dashboard\pages\DashboardPlaceholderPage.tsx:6:import { DashboardLayout } from '../components/DashboardLayout';
+frontend\src\features\dashboard\pages\DashboardPlaceholderPage.tsx:196:    <DashboardLayout character={character}>
+frontend\src\features\dashboard\pages\DashboardPlaceholderPage.tsx:206:    </DashboardLayout>
+frontend\src\features\dashboard\types\dashboard.types.ts:563:   * Campos diretos de progressão usados pelo DashboardLayout.

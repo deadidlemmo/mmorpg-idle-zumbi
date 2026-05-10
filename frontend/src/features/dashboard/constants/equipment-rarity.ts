@@ -13,6 +13,7 @@ export interface EquipmentRarityMeta {
   rgb: string;
   hex: string;
   cssClass: string;
+  tierRangeLabel: string;
 }
 
 interface EquipmentRaritySource {
@@ -21,20 +22,33 @@ interface EquipmentRaritySource {
 }
 
 /**
- * Regra visual atual:
+ * Regra visual oficial por tier:
+ *
  * T0, T1, T2 => Comum / Branco
  * T3, T4     => Incomum / Amarelo
  * T5, T6     => Raro / Verde
  * T7, T8     => Épico / Roxo
  * T9, T10+   => Lendário / Vermelho
  *
- * Se o backend mandar rarity válida, ela tem prioridade.
- * Se não mandar, o front calcula pela tier.
+ * Regra importante:
+ * A tier tem prioridade visual.
+ * O rarity vindo do backend fica apenas como fallback caso o item venha sem tier.
  */
 export function normalizeEquipmentRarity(
   rarity?: string | null,
   tier?: number | null,
 ): EquipmentVisualRarity {
+  const safeTier = Number(tier);
+
+  if (Number.isFinite(safeTier)) {
+    if (safeTier >= 9) return 'legendary';
+    if (safeTier >= 7) return 'epic';
+    if (safeTier >= 5) return 'rare';
+    if (safeTier >= 3) return 'uncommon';
+
+    return 'common';
+  }
+
   const normalizedRarity = rarity?.trim().toUpperCase();
 
   if (normalizedRarity === 'COMMON') return 'common';
@@ -42,15 +56,6 @@ export function normalizeEquipmentRarity(
   if (normalizedRarity === 'RARE') return 'rare';
   if (normalizedRarity === 'EPIC') return 'epic';
   if (normalizedRarity === 'LEGENDARY') return 'legendary';
-
-  const safeTier = Number(tier);
-
-  if (!Number.isFinite(safeTier)) return 'common';
-
-  if (safeTier >= 9) return 'legendary';
-  if (safeTier >= 7) return 'epic';
-  if (safeTier >= 5) return 'rare';
-  if (safeTier >= 3) return 'uncommon';
 
   return 'common';
 }
@@ -62,6 +67,20 @@ export function getEquipmentRarityLabel(rarity: EquipmentVisualRarity) {
     rare: 'Raro',
     epic: 'Épico',
     legendary: 'Lendário',
+  };
+
+  return labels[rarity];
+}
+
+export function getEquipmentRarityTierRangeLabel(
+  rarity: EquipmentVisualRarity,
+) {
+  const labels: Record<EquipmentVisualRarity, string> = {
+    common: 'T0-T2',
+    uncommon: 'T3-T4',
+    rare: 'T5-T6',
+    epic: 'T7-T8',
+    legendary: 'T9-T10+',
   };
 
   return labels[rarity];
@@ -105,6 +124,7 @@ export function getEquipmentRarityMeta(
     rgb: color.rgb,
     hex: color.hex,
     cssClass: `equipment-rarity-${rarity}`,
+    tierRangeLabel: getEquipmentRarityTierRangeLabel(rarity),
   };
 }
 
@@ -120,4 +140,23 @@ export function getEquipmentRarityClassName(
   item?: EquipmentRaritySource | null,
 ) {
   return getEquipmentRarityFromItem(item).cssClass;
+}
+
+export function getEquipmentRarityCssVariables(
+  item?: EquipmentRaritySource | null,
+): Record<string, string> {
+  const rarity = getEquipmentRarityFromItem(item);
+
+  return {
+    '--equipment-rarity-rgb': rarity.rgb,
+    '--equipment-rarity-hex': rarity.hex,
+  };
+}
+
+export function formatEquipmentRarityLabel(
+  item?: EquipmentRaritySource | null,
+) {
+  const rarity = getEquipmentRarityFromItem(item);
+
+  return `${rarity.label} · ${rarity.tierRangeLabel}`;
 }

@@ -1,0 +1,468 @@
+/* =========================================================
+   GATHERING ORIGIN — RESPONSIVE
+   Arquivo: src/features/gathering/styles/gathering.origin-responsive.css
+
+   Objetivo:
+   - Centralizar somente ajustes responsivos da página de origem.
+   - Não sobrescrever métricas internas da Atividade Atual.
+   - Evitar conflito com gathering.session.css.
+   ========================================================= */
+
+/* =========================================================
+   ATÉ 1280px — AJUSTE DE LARGURA / GRID
+   ========================================================= */
+
+@media (max-width: 1280px) {
+  .gathering-page--origin {
+    width: min(100%, 1160px);
+  }
+
+  .gathering-origin-intro-grid,
+  .gathering-origin-content-grid,
+  .gathering-page__grid--clean {
+    grid-template-columns: minmax(0, 1fr) minmax(310px, 0.38fr);
+  }
+}
+
+/* =========================================================
+   ATÉ 1100px — COLUNAS EMPILHADAS
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .gathering-page--origin {
+    padding-inline: 0.85rem;
+  }
+
+  .gathering-origin-intro-grid,
+  .gathering-origin-content-grid,
+  .gathering-page__grid--clean {
+    grid-template-columns: 1fr;
+  }
+
+  .gathering-origin-materials-panel {
+    min-height: 0;
+  }
+
+  .gathering-origin-premium-card {
+    grid-column: 1;
+    width: 100%;
+  }
+
+  .gathering-origin-side,
+  .gathering-page__side-column--clean {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.2fr);
+    align-items: start;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .gathering-origin-side--stacked {
+    gap: 0.78rem;
+  }
+}
+
+/* =========================================================
+   ATÉ 860px — TABLET / MOBILE AMPLO
+   ========================================================= */
+
+@media (max-width: 860px) {
+  .gathering-page--origin {
+    padding: 0.72rem 0.68rem 2.4rem;
+  }
+
+  .gathering-origin-topbar {
+    display: none !important;
+  }
+
+  .gathering-origin-side,
+  .gathering-page__side-column--clean {
+    grid-template-columns: 1fr;
+  }
+
+  .gathering-page--origin .gathering-card--compact,
+  .gathering-origin-current-card {
+    padding: 0.76rem;
+    border-radius: 0.94rem;
+  }
+
+  .gathering-origin-materials-panel .gathering-card__header {
+    grid-template-columns: 1fr;
+  }
+
+  .gathering-origin-materials-panel__summary {
+    grid-template-columns: auto auto;
+    justify-items: start;
+    min-width: 0;
+  }
+
+  .gathering-origin-section-divider {
+    font-size: 0.56rem;
+  }
+
+  .gathering-origin-lore-card,
+  .gathering-origin-lore-card.gathering-origin-lore-card--npc,
+  .gathering-origin-lore-card--npc {
+    grid-template-columns: 62px minmax(0, 1fr) !important;
+    gap: 0.72rem !important;
+    min-height: 78px !important;
+    max-height: none !important;
+    padding: 0.68rem 0.74rem !important;
+  }
+
+  .gathering-origin-lore-card__portrait,
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait {
+    width: 54px !important;
+    height: 54px !important;
+    border-radius: 0.74rem;
+  }
+
+  .gathering-origin-lore-card__portrait span,
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait span {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 0.62rem !important;
+  }
+
+  .gathering-origin-lore-card h2 {
+    font-size: 0.9rem;
+  }
+
+  .gathering-origin-lore-card p {
+    display: none !important;
+  }
+
+  .gathering-origin-lore-card blockquote,
+  .gathering-origin-lore-card--npc blockquote {
+    display: -webkit-box !important;
+    font-size: 0.82rem !important;
+    white-space: normal !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  .gathering-origin-premium-card {
+    grid-template-columns: 30px minmax(0, 1fr) auto !important;
+    width: 100%;
+    min-height: 58px;
+    max-height: none;
+    padding: 0.5rem 0.62rem;
+  }
+}
+
+/* =========================================================
+   ATÉ 720px — MOBILE
+   ========================================================= */
+
+@media (max-width: 720px) {
+  .gathering-origin-current-card,
+  .gathering-origin-skill-card {
+    padding: 0.64rem !important;
+    border-radius: 0.86rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-action,
+  .gathering-origin-current-card .gathering-session__current-action--horizontal,
+  .gathering-origin-current-card .gathering-session__live-hero {
+    grid-template-columns: 44px minmax(0, 1fr) auto !important;
+    gap: 0.56rem !important;
+    min-height: 50px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-icon {
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-image {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body h2,
+  .gathering-origin-current-card .gathering-session .gathering-session__current-body h2 {
+    font-size: 0.88rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body p {
+    font-size: 0.64rem !important;
+  }
+
+  .gathering-origin-premium-card {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+  }
+
+  .gathering-origin-premium-card__button {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+  }
+
+  .gathering-origin-skill-card {
+    padding: 0.62rem !important;
+  }
+
+  .gathering-origin-skill-card__toggle {
+    grid-template-columns: 38px minmax(0, 1fr) 22px !important;
+    gap: 0.48rem !important;
+  }
+
+  .gathering-origin-skill-card__icon {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    gap: 0.46rem !important;
+  }
+
+  .gathering-origin-skill-card__level-badge {
+    min-width: 54px !important;
+    min-height: 29px !important;
+    padding: 0.22rem 0.54rem !important;
+    font-size: 0.68rem !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule,
+  .gathering-origin-skill-card__metric-progress.gathering-origin-skill-card__xp-capsule {
+    width: min(100%, 218px) !important;
+    min-height: 29px !important;
+    grid-template-columns: minmax(116px, 1fr) minmax(48px, auto) !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule-value,
+  .gathering-origin-skill-card__xp-capsule-percent {
+    min-height: 29px !important;
+    padding-inline: 0.52rem !important;
+    font-size: 0.68rem !important;
+  }
+}
+
+/* =========================================================
+   ATÉ 560px — MOBILE COMPACTO
+   ========================================================= */
+
+@media (max-width: 560px) {
+  .gathering-page--origin {
+    padding-inline: 0.55rem;
+  }
+
+  .gathering-origin-intro-grid {
+    gap: 0.5rem !important;
+  }
+
+  .gathering-origin-materials-panel .gathering-card h2 {
+    font-size: 1rem;
+  }
+
+  .gathering-origin-materials-panel .gathering-card__description {
+    font-size: 0.76rem;
+  }
+
+  .gathering-origin-section-divider {
+    gap: 0.46rem;
+    font-size: 0.52rem;
+  }
+
+  .gathering-origin-lore-card,
+  .gathering-origin-lore-card.gathering-origin-lore-card--npc,
+  .gathering-origin-lore-card--npc {
+    grid-template-columns: 48px minmax(0, 1fr) !important;
+    gap: 0.56rem !important;
+    min-height: 74px !important;
+    padding: 0.58rem !important;
+    border-radius: 0.86rem !important;
+    text-align: left;
+  }
+
+  .gathering-origin-lore-card__portrait,
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 0.72rem !important;
+  }
+
+  .gathering-origin-lore-card__portrait span,
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait span {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 0.56rem !important;
+    border-radius: 0.56rem !important;
+  }
+
+  .gathering-origin-lore-card__meta,
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__meta {
+    gap: 0.3rem !important;
+  }
+
+  .gathering-origin-lore-card__npc,
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__npc {
+    font-size: 0.46rem !important;
+    letter-spacing: 0.12em !important;
+  }
+
+  .gathering-origin-lore-card__role,
+  .gathering-origin-lore-card--npc .gathering-origin-lore-card__role {
+    display: none !important;
+  }
+
+  .gathering-origin-lore-card h2 {
+    font-size: 0.94rem !important;
+  }
+
+  .gathering-origin-lore-card blockquote,
+  .gathering-origin-lore-card--npc blockquote {
+    font-size: 0.68rem !important;
+    line-height: 1.22 !important;
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  .gathering-origin-premium-card {
+    grid-template-columns: 28px minmax(0, 1fr) !important;
+    gap: 0.54rem !important;
+    padding: 0.58rem !important;
+    border-radius: 0.86rem !important;
+  }
+
+  .gathering-origin-premium-card__button {
+    grid-column: 2 !important;
+    justify-self: start !important;
+    width: auto !important;
+    min-width: 104px !important;
+    min-height: 32px !important;
+    margin-top: 0.22rem !important;
+  }
+
+  .gathering-origin-premium-card h2 {
+    font-size: 0.76rem !important;
+  }
+
+  .gathering-origin-premium-card p {
+    font-size: 0.68rem !important;
+    line-height: 1.26 !important;
+  }
+
+  .gathering-origin-skill-card {
+    padding: 0.66rem !important;
+    gap: 0.58rem;
+  }
+
+  .gathering-origin-skill-card__toggle {
+    grid-template-columns: 34px minmax(0, 1fr) 24px;
+    gap: 0.5rem;
+  }
+
+  .gathering-origin-skill-card__icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.52rem;
+    border-radius: 0.6rem;
+  }
+
+  .gathering-origin-skill-card__heading strong {
+    font-size: 0.82rem;
+  }
+
+  .gathering-origin-skill-card__heading small {
+    font-size: 0.62rem;
+  }
+
+  .gathering-origin-skill-card .gathering-origin-summary--icon {
+    grid-template-columns: 50px minmax(0, 1fr);
+    gap: 0.62rem;
+  }
+
+  .gathering-origin-skill-card .gathering-origin-summary__visual {
+    width: 48px;
+    height: 48px;
+  }
+
+  .gathering-origin-skill-card .gathering-origin-summary__icon {
+    width: 38px;
+    height: 38px;
+    font-size: 0.58rem;
+  }
+
+  .gathering-origin-skill-card .gathering-origin-summary p {
+    font-size: 0.74rem;
+  }
+}
+
+/* =========================================================
+   ATÉ 430px — CELULAR PEQUENO
+   ========================================================= */
+
+@media (max-width: 430px) {
+  .gathering-origin-current-card {
+    padding: 0.6rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-action,
+  .gathering-origin-current-card .gathering-session__current-action--horizontal,
+  .gathering-origin-current-card .gathering-session__live-hero {
+    grid-template-columns: 40px minmax(0, 1fr) auto !important;
+    gap: 0.42rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-icon {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-image {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body h2,
+  .gathering-origin-current-card .gathering-session .gathering-session__current-body h2 {
+    font-size: 0.8rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body p {
+    display: none !important;
+  }
+
+  .gathering-origin-skill-card__toggle {
+    grid-template-columns: 36px minmax(0, 1fr) 22px !important;
+    gap: 0.44rem !important;
+  }
+
+  .gathering-origin-skill-card__icon {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .gathering-origin-skill-card__expanded-metrics {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    gap: 0.38rem !important;
+  }
+
+  .gathering-origin-skill-card__level-badge {
+    min-width: 50px !important;
+    min-height: 28px !important;
+    padding-inline: 0.42rem !important;
+    font-size: 0.64rem !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule,
+  .gathering-origin-skill-card__metric-progress.gathering-origin-skill-card__xp-capsule {
+    width: min(100%, 190px) !important;
+    min-height: 28px !important;
+    grid-template-columns: minmax(104px, 1fr) minmax(46px, auto) !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule-value,
+  .gathering-origin-skill-card__xp-capsule-percent {
+    min-height: 28px !important;
+    padding-inline: 0.42rem !important;
+    font-size: 0.62rem !important;
+  }
+}

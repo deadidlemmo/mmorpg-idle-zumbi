@@ -1,0 +1,332 @@
+/* =========================================================
+   ESTATÍSTICAS DA SESSÃO
+   ========================================================= */
+
+.auto-combat-session-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.72rem;
+}
+
+.auto-combat-session-panel__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  min-width: 0;
+  padding-bottom: 0.68rem;
+}
+
+.auto-combat-session-panel__header::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(231, 227, 216, 0.09),
+      rgba(110, 159, 67, 0.16),
+      rgba(231, 227, 216, 0.09),
+      transparent
+    );
+}
+
+.auto-combat-session-panel__header span {
+  display: block;
+  min-width: 0;
+  color: color-mix(in srgb, var(--action-primary-hover) 88%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(110, 159, 67, 0.14);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.auto-combat-session-panel__header strong {
+  flex: 0 0 auto;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.76rem;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.78),
+    0 0 10px rgba(255, 248, 232, 0.05);
+}
+
+/* =========================================================
+   GRID DAS ESTATÍSTICAS
+   Desktop: 3 colunas mais compactas.
+   Tablet/Mobile: 2 colunas.
+   ========================================================= */
+
+.auto-combat-session-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.58rem;
+  align-items: stretch;
+}
+
+.auto-combat-session-summary__card,
+.auto-combat-session-summary div {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 82px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.72rem 0.76rem 0.68rem;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(180, 214, 112, 0.055),
+      transparent 6.5rem
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent),
+    rgba(5, 9, 8, 0.28);
+  border: 1px solid rgba(231, 227, 216, 0.065);
+  border-radius: 0.78rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.024),
+    0 8px 18px rgba(0, 0, 0, 0.1);
+}
+
+.auto-combat-session-summary__card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 0;
+  width: 3px;
+  background: rgba(180, 214, 112, 0.66);
+  box-shadow: 0 0 14px rgba(180, 214, 112, 0.16);
+}
+
+.auto-combat-session-summary__card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.01) 0 1px,
+      transparent 1px 9px
+    ),
+    linear-gradient(90deg, rgba(110, 159, 67, 0.03), transparent 52%);
+  opacity: 0.78;
+}
+
+.auto-combat-session-summary__card--xp::before {
+  background: rgba(229, 182, 63, 0.72);
+  box-shadow: 0 0 14px rgba(229, 182, 63, 0.16);
+}
+
+.auto-combat-session-summary__card--xp::after {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.01) 0 1px,
+      transparent 1px 9px
+    ),
+    linear-gradient(90deg, rgba(229, 182, 63, 0.035), transparent 52%);
+}
+
+.auto-combat-session-summary__card--loot::before {
+  background: rgba(150, 188, 226, 0.68);
+  box-shadow: 0 0 14px rgba(150, 188, 226, 0.15);
+}
+
+.auto-combat-session-summary__card--loot::after {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.01) 0 1px,
+      transparent 1px 9px
+    ),
+    linear-gradient(90deg, rgba(150, 188, 226, 0.035), transparent 52%);
+}
+
+.auto-combat-session-summary__card--potions::before {
+  background: rgba(110, 159, 67, 0.74);
+  box-shadow: 0 0 14px rgba(110, 159, 67, 0.17);
+}
+
+.auto-combat-session-summary__card--potions::after {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.01) 0 1px,
+      transparent 1px 9px
+    ),
+    linear-gradient(90deg, rgba(110, 159, 67, 0.04), transparent 52%);
+}
+
+.auto-combat-session-summary span,
+.auto-combat-session-summary strong,
+.auto-combat-session-summary small {
+  position: relative;
+  z-index: 1;
+}
+
+.auto-combat-session-summary span {
+  display: block;
+  min-width: 0;
+  color: rgba(216, 225, 234, 0.88);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.12;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.auto-combat-session-summary strong {
+  display: block;
+  min-width: 0;
+  margin-top: 0.22rem;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 1.12rem;
+  font-weight: 950;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.78),
+    0 0 10px rgba(255, 248, 232, 0.05);
+}
+
+.auto-combat-session-summary small {
+  display: block;
+  min-width: 0;
+  margin-top: 0.22rem;
+  color: rgba(231, 227, 216, 0.56);
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .auto-combat-session-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.56rem;
+  }
+
+  .auto-combat-session-summary__card,
+  .auto-combat-session-summary div {
+    min-height: 78px;
+    padding: 0.68rem 0.72rem 0.64rem;
+  }
+
+  .auto-combat-session-summary span {
+    font-size: 0.68rem;
+  }
+
+  .auto-combat-session-summary strong {
+    font-size: 1.06rem;
+  }
+
+  .auto-combat-session-summary small {
+    font-size: 0.61rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .auto-combat-session-panel {
+    gap: 0.66rem;
+  }
+
+  .auto-combat-session-panel__header {
+    gap: 0.5rem;
+    padding-bottom: 0.58rem;
+  }
+
+  .auto-combat-session-panel__header span {
+    font-size: 0.68rem;
+  }
+
+  .auto-combat-session-panel__header strong {
+    font-size: 0.68rem;
+  }
+
+  .auto-combat-session-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.52rem;
+  }
+
+  .auto-combat-session-summary__card,
+  .auto-combat-session-summary div {
+    min-height: 74px;
+    padding: 0.62rem 0.64rem 0.6rem;
+    border-radius: 0.72rem;
+  }
+
+  .auto-combat-session-summary span {
+    font-size: 0.66rem;
+  }
+
+  .auto-combat-session-summary strong {
+    margin-top: 0.2rem;
+    font-size: 1rem;
+  }
+
+  .auto-combat-session-summary small {
+    margin-top: 0.18rem;
+    font-size: 0.58rem;
+    line-height: 1.14;
+  }
+}
+
+@media (max-width: 390px) {
+  .auto-combat-session-summary {
+    gap: 0.46rem;
+  }
+
+  .auto-combat-session-summary__card,
+  .auto-combat-session-summary div {
+    min-height: 70px;
+    padding: 0.58rem 0.58rem 0.56rem;
+  }
+
+  .auto-combat-session-summary span {
+    font-size: 0.62rem;
+  }
+
+  .auto-combat-session-summary strong {
+    font-size: 0.94rem;
+  }
+
+  .auto-combat-session-summary small {
+    font-size: 0.54rem;
+  }
+}
+
+@media (max-width: 320px) {
+  .auto-combat-session-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .auto-combat-session-summary__card,
+  .auto-combat-session-summary div {
+    min-height: 68px;
+  }
+}

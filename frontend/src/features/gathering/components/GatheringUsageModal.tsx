@@ -1,19 +1,30 @@
 import type { MouseEvent } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type {
     GatheringMaterialRecipeUsageViewModel,
     GatheringMaterialViewModel,
+    GatheringSkillViewModel,
 } from '../types/gathering.types';
 import {
     formatGatheringOutputItemSlot,
     formatGatheringRecipeQuantity,
+    formatGatheringTimePerUnitShort,
+    getGatheringMaterialRatePerHour,
     getGatheringMaterialUsedInRecipes,
+    getGatheringRequiredLevel,
+    getGatheringSkillLevel,
+    getGatheringXpPerUnit,
+    isGatheringMaterialUnlocked,
 } from '../types/gathering.types';
 
 interface GatheringUsageModalProps {
   isOpen: boolean;
   material?: GatheringMaterialViewModel | null;
+  gatheringSkill?: GatheringSkillViewModel | null;
+  fallbackRatePerHour?: number | null;
+  isBusy?: boolean;
   onClose: () => void;
+  onStart?: (material: GatheringMaterialViewModel) => void | Promise<void>;
 }
 
 function getRoleLabel(role?: string | null): string {
@@ -85,6 +96,33 @@ function getMaterialInitials(material?: GatheringMaterialViewModel | null): stri
   return `${words[0][0] ?? ''}${words[1][0] ?? ''}`.toUpperCase();
 }
 
+function getMaterialIconUrl(
+  material?: GatheringMaterialViewModel | null,
+): string | null {
+  if (!material) return null;
+
+  const materialWithOptionalIcon = material as GatheringMaterialViewModel & {
+    icon?: unknown;
+    iconUrl?: unknown;
+    iconPath?: unknown;
+    imageUrl?: unknown;
+  };
+
+  const possibleIcon =
+    materialWithOptionalIcon.iconUrl ??
+    materialWithOptionalIcon.imageUrl ??
+    materialWithOptionalIcon.iconPath ??
+    materialWithOptionalIcon.icon;
+
+  if (typeof possibleIcon !== 'string') {
+    return null;
+  }
+
+  const trimmedIcon = possibleIcon.trim();
+
+  return trimmedIcon.length > 0 ? trimmedIcon : null;
+}
+
 function getRecipeClassLabel(
   recipe: GatheringMaterialRecipeUsageViewModel,
 ): string {
@@ -131,22 +169,63 @@ function sortRecipes(
 
 function getRecipeSummary(recipes: GatheringMaterialRecipeUsageViewModel[]): string {
   if (recipes.length <= 0) {
-    return 'Este material ainda não possui receita vinculada.';
+    return 'Sem receita vinculada';
   }
 
   if (recipes.length === 1) {
-    return 'Este material é usado em 1 receita.';
+    return '1 receita vinculada';
   }
 
-  return `Este material é usado em ${recipes.length} receitas.`;
+  return `${recipes.length} receitas vinculadas`;
+}
+
+function getStartButtonLabel(params: {
+  isBusy: boolean;
+  isUnlocked: boolean;
+  requiredLevel: number;
+  hasStartAction: boolean;
+}): string {
+  if (params.isBusy) return 'Aguarde';
+  if (!params.isUnlocked) return `Req. Nv. ${params.requiredLevel}`;
+  if (!params.hasStartAction) return 'Iniciar';
+
+  return 'Iniciar';
 }
 
 export function GatheringUsageModal({
   isOpen,
   material,
+  gatheringSkill,
+  fallbackRatePerHour,
+  isBusy = false,
   onClose,
+  onStart,
 }: GatheringUsageModalProps) {
-  const recipes = sortRecipes(getGatheringMaterialUsedInRecipes(material));
+  const [isInspecting, setIsInspecting] = useState(false);
+
+  const recipes = useMemo(
+    () => sortRecipes(getGatheringMaterialUsedInRecipes(material)),
+    [material],
+  );
+
+  const requiredLevel = material ? getGatheringRequiredLevel(material) : 1;
+  const currentSkillLevel = getGatheringSkillLevel(gatheringSkill);
+
+  const isUnlocked = material
+    ? isGatheringMaterialUnlocked({
+        material,
+        skill: gatheringSkill,
+      })
+    : false;
+
+  const xpPerUnit = material ? getGatheringXpPerUnit(material) : 0;
+  const ratePerHour = material
+    ? getGatheringMaterialRatePerHour(material, fallbackRatePerHour)
+    : null;
+
+  const timePerUnitLabel = formatGatheringTimePerUnitShort(ratePerHour);
+  const iconUrl = getMaterialIconUrl(material);
+  const canStart = Boolean(material && onStart && isUnlocked && !isBusy);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -164,6 +243,16 @@ export function GatheringUsageModal({
     };
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setIsInspecting(false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    setIsInspecting(false);
+  }, [material?.id]);
+
   if (!isOpen || !material) {
     return null;
   }
@@ -176,6 +265,17 @@ export function GatheringUsageModal({
     event.stopPropagation();
   }
 
+  function handleInspectClick() {
+    setIsInspecting((currentValue) => !currentValue);
+  }
+
+  async function handleStartClick() {
+    if (!material || !canStart) return;
+
+    await onStart?.(material);
+    onClose();
+  }
+
   return (
     <div
       className="gathering-usage-modal"
@@ -183,79 +283,134 @@ export function GatheringUsageModal({
       onClick={handleBackdropClick}
     >
       <div
-        className="gathering-usage-modal__panel"
+        className={[
+          'gathering-usage-modal__panel',
+          'gathering-usage-modal__panel--compact',
+          isInspecting ? 'is-inspecting' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         role="dialog"
         aria-modal="true"
         aria-labelledby="gathering-usage-modal-title"
         onClick={handlePanelClick}
       >
-        <header className="gathering-usage-modal__header">
-          <div className="gathering-usage-modal__material">
-            <span className="gathering-usage-modal__material-icon" aria-hidden="true">
-              {getMaterialInitials(material)}
+        <button
+          type="button"
+          className="gathering-usage-modal__close"
+          onClick={onClose}
+          aria-label="Fechar detalhes do material"
+        >
+          ×
+        </button>
+
+        <header className="gathering-usage-modal__hero">
+          <span className="gathering-usage-modal__material-icon" aria-hidden="true">
+            {iconUrl ? (
+              <img
+                className="gathering-usage-modal__material-image"
+                src={iconUrl}
+                alt=""
+                draggable={false}
+              />
+            ) : (
+              getMaterialInitials(material)
+            )}
+          </span>
+
+          <div className="gathering-usage-modal__hero-body">
+            <span className="gathering-card__eyebrow">
+              Material de gathering
             </span>
 
-            <div>
-              <span className="gathering-card__eyebrow">Usos do material</span>
-              <h2 id="gathering-usage-modal-title">{material.name}</h2>
-              <p>{getRecipeSummary(recipes)}</p>
+            <h2 id="gathering-usage-modal-title">{material.name}</h2>
+
+            <div className="gathering-usage-modal__chips">
+              <span>Lv. {requiredLevel}</span>
+              <span>{timePerUnitLabel}</span>
+              <span>+{xpPerUnit} XP</span>
+              <span>{getRecipeSummary(recipes)}</span>
             </div>
           </div>
+        </header>
+
+        <div className="gathering-usage-modal__actions">
+          <button
+            type="button"
+            className="gathering-usage-modal__inspect-button"
+            onClick={handleInspectClick}
+          >
+            {isInspecting ? 'Ocultar detalhes' : 'Inspecionar item'}
+          </button>
 
           <button
             type="button"
-            className="gathering-usage-modal__close"
-            onClick={onClose}
-            aria-label="Fechar usos do material"
+            className="gathering-usage-modal__start-button"
+            onClick={() => void handleStartClick()}
+            disabled={!canStart}
+            title={
+              isUnlocked
+                ? undefined
+                : `Requer nível ${requiredLevel}. Seu nível atual é ${currentSkillLevel}.`
+            }
           >
-            ×
+            {getStartButtonLabel({
+              isBusy,
+              isUnlocked,
+              requiredLevel,
+              hasStartAction: Boolean(onStart),
+            })}
           </button>
-        </header>
-
-        <div className="gathering-usage-modal__content">
-          {recipes.length > 0 ? (
-            <div className="gathering-usage-modal__recipes">
-              {recipes.map((recipe) => (
-                <article
-                  key={recipe.recipeId}
-                  className="gathering-usage-modal__recipe"
-                >
-                  <span
-                    className="gathering-usage-modal__recipe-icon"
-                    aria-hidden="true"
-                  >
-                    {getOutputInitials(recipe)}
-                  </span>
-
-                  <div className="gathering-usage-modal__recipe-body">
-                    <div className="gathering-usage-modal__recipe-top">
-                      <strong title={recipe.outputItemName}>
-                        {recipe.outputItemName}
-                      </strong>
-
-                      <span>{formatGatheringOutputItemSlot(recipe.outputItemSlot)}</span>
-                    </div>
-
-                    <p>{getRecipeMetaLine(recipe)}</p>
-
-                    <div className="gathering-usage-modal__recipe-footer">
-                      <span>{getRoleLabel(recipe.role)}</span>
-                      <span>{getRecipeQuantityLine(recipe)}</span>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="gathering-empty gathering-empty--compact">
-              <strong>Nenhuma receita vinculada.</strong>
-              <p>
-                Este material já pode existir no jogo, mas ainda não está
-                associado a uma receita retornada pela API.
-              </p>
-            </div>
-          )}
         </div>
+
+        {isInspecting ? (
+          <div className="gathering-usage-modal__content">
+            {recipes.length > 0 ? (
+              <div className="gathering-usage-modal__recipes">
+                {recipes.map((recipe) => (
+                  <article
+                    key={recipe.recipeId}
+                    className="gathering-usage-modal__recipe"
+                  >
+                    <span
+                      className="gathering-usage-modal__recipe-icon"
+                      aria-hidden="true"
+                    >
+                      {getOutputInitials(recipe)}
+                    </span>
+
+                    <div className="gathering-usage-modal__recipe-body">
+                      <div className="gathering-usage-modal__recipe-top">
+                        <strong title={recipe.outputItemName}>
+                          {recipe.outputItemName}
+                        </strong>
+
+                        <span>
+                          {formatGatheringOutputItemSlot(recipe.outputItemSlot)}
+                        </span>
+                      </div>
+
+                      <p>{getRecipeMetaLine(recipe)}</p>
+
+                      <div className="gathering-usage-modal__recipe-footer">
+                        <span>{getRoleLabel(recipe.role)}</span>
+                        <span>{getRecipeQuantityLine(recipe)}</span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="gathering-empty gathering-empty--compact">
+                <strong>Nenhuma receita vinculada.</strong>
+                <p>
+                  Este material já pode existir no jogo, mas ainda não está
+                  associado a uma receita retornada pela API.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );

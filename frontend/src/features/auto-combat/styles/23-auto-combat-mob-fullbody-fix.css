@@ -1,0 +1,400 @@
+/* =========================================================
+   AUTO COMBAT — AJUSTE FULL BODY DOS MOBS
+   Arquivo: src/features/auto-combat/styles/23-auto-combat-mob-fullbody-fix.css
+
+   Escopo:
+   - Corrige exibição full-body dos mobs em "Inimigos Próximos"
+   - Corrige exibição full-body da "Ameaça Atual"
+   - Evita sobreposição do nome com a imagem
+   - Melhora o visual quando a imagem ainda tem fundo branco
+   ========================================================= */
+
+/* =========================================================
+   1. INIMIGOS PRÓXIMOS — CARD DO MOB
+   ========================================================= */
+
+.auto-combat-enemy-card {
+  display: flex;
+  min-height: 240px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.95rem;
+  overflow: hidden;
+}
+
+.auto-combat-enemy-card__portrait,
+.auto-combat-enemy-card__portrait--fullbody {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: min(100%, 168px);
+  height: 128px;
+  margin: 0.2rem auto 0.55rem;
+  overflow: visible;
+  background:
+    radial-gradient(circle at center bottom, rgba(188, 68, 68, 0.16), transparent 70%),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.035), transparent 72%);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.auto-combat-enemy-card__portrait::before,
+.auto-combat-enemy-card__portrait--fullbody::before {
+  content: '';
+  position: absolute;
+  inset: auto 10% 0;
+  z-index: 0;
+  height: 32px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.42), transparent 70%);
+  border-radius: 999px;
+}
+
+.auto-combat-enemy-card__portrait img,
+.auto-combat-enemy-card__portrait--fullbody img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: auto;
+  height: 132px;
+  max-width: 160px;
+  object-fit: contain;
+  object-position: center bottom;
+  filter:
+    drop-shadow(0 14px 18px rgba(0, 0, 0, 0.42))
+    drop-shadow(0 0 10px rgba(188, 68, 68, 0.1));
+}
+
+/*
+   Se suas imagens ainda estiverem com fundo branco,
+   isso ajuda a "sumir" com o branco no fundo escuro.
+   Se depois você trocar tudo para PNG transparente, pode remover esta linha.
+*/
+.auto-combat-enemy-card__portrait img,
+.auto-combat-enemy-card__portrait--fullbody img,
+.auto-combat-fighter-card__mob-image img {
+  mix-blend-mode: multiply;
+}
+
+.auto-combat-enemy-card__portrait span,
+.auto-combat-enemy-card__portrait-fallback {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 3.35rem;
+  height: 3.35rem;
+  margin: auto;
+  color: rgba(255, 226, 226, 0.9);
+  font-size: 1.35rem;
+  background:
+    radial-gradient(circle at center, rgba(188, 68, 68, 0.18), transparent 72%),
+    rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(188, 68, 68, 0.22);
+  border-radius: 0.9rem;
+}
+
+.auto-combat-enemy-card__content {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.58rem;
+  text-align: center;
+}
+
+.auto-combat-enemy-card__content > span {
+  display: none;
+}
+
+.auto-combat-enemy-card__content > strong {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: clamp(0.92rem, 1.25vw, 1.08rem);
+  font-weight: 950;
+  line-height: 1.08;
+  text-align: center;
+  overflow-wrap: anywhere;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.82),
+    0 0 12px rgba(255, 248, 232, 0.05);
+}
+
+.auto-combat-enemy-card__hp {
+  width: 100%;
+  margin-top: 0.28rem;
+}
+
+.auto-combat-enemy-card__hp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.32rem;
+}
+
+.auto-combat-enemy-card__hp-header span {
+  color: rgba(255, 220, 220, 0.74);
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auto-combat-enemy-card__hp-header strong {
+  color: #fff8e8;
+  font-family: var(--font-number);
+  font-size: 0.66rem;
+  font-weight: 950;
+}
+
+.auto-combat-enemy-card__hp-track {
+  height: 8px;
+}
+
+.auto-combat-enemy-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.34rem;
+  margin-top: 0.5rem;
+}
+
+.auto-combat-enemy-card__stats span {
+  min-height: 22px;
+  padding: 0.28rem 0.48rem;
+  font-size: 0.56rem;
+}
+
+/* Badges de nível e XP */
+.auto-combat-enemy-card__level,
+.auto-combat-enemy-card__xp {
+  z-index: 3;
+}
+
+/* =========================================================
+   2. SESSÃO ATIVA — AMEAÇA ATUAL FULL BODY
+   ========================================================= */
+
+.auto-combat-fighter-card--mob {
+  min-height: 220px;
+  padding: 1rem;
+}
+
+.auto-combat-fighter-card__identity--mob {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 1.05rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.auto-combat-fighter-card__mob-image {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 150px;
+  height: 160px;
+  overflow: visible;
+  background:
+    radial-gradient(circle at center bottom, rgba(188, 68, 68, 0.18), transparent 72%),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.035), transparent 70%);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.auto-combat-fighter-card__mob-image::before {
+  content: '';
+  position: absolute;
+  inset: auto 8% 0;
+  z-index: 0;
+  height: 38px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.46), transparent 72%);
+  border-radius: 999px;
+}
+
+.auto-combat-fighter-card__mob-image img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: auto;
+  height: 166px;
+  max-width: 158px;
+  object-fit: contain;
+  object-position: center bottom;
+  filter:
+    drop-shadow(0 16px 20px rgba(0, 0, 0, 0.48))
+    drop-shadow(0 0 10px rgba(188, 68, 68, 0.12));
+  transform: translateY(2px);
+}
+
+.auto-combat-fighter-card__mob-image span {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 3.35rem;
+  height: 3.35rem;
+  color: rgba(255, 226, 226, 0.9);
+  font-size: 1.35rem;
+  background:
+    radial-gradient(circle at center, rgba(188, 68, 68, 0.18), transparent 72%),
+    rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(188, 68, 68, 0.22);
+  border-radius: 0.9rem;
+}
+
+.auto-combat-fighter-card__heading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.28rem;
+}
+
+.auto-combat-fighter-card__heading span {
+  display: block;
+  color: rgba(231, 227, 216, 0.62);
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
+}
+
+.auto-combat-fighter-card__heading strong {
+  display: block;
+  min-width: 0;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: clamp(1.12rem, 1.8vw, 1.52rem);
+  font-weight: 950;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.82),
+    0 0 14px rgba(255, 248, 232, 0.05);
+}
+
+.auto-combat-fighter-card--mob .auto-combat-resource {
+  margin-top: 0.7rem;
+}
+
+/* =========================================================
+   3. RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 920px) {
+  .auto-combat-enemy-card {
+    min-height: 228px;
+  }
+
+  .auto-combat-enemy-card__portrait,
+  .auto-combat-enemy-card__portrait--fullbody {
+    height: 116px;
+    margin-bottom: 0.48rem;
+  }
+
+  .auto-combat-enemy-card__portrait img,
+  .auto-combat-enemy-card__portrait--fullbody img {
+    height: 120px;
+    max-width: 142px;
+  }
+
+  .auto-combat-fighter-card--mob {
+    min-height: 190px;
+  }
+
+  .auto-combat-fighter-card__identity--mob {
+    grid-template-columns: 118px minmax(0, 1fr);
+    gap: 0.82rem;
+  }
+
+  .auto-combat-fighter-card__mob-image {
+    width: 118px;
+    height: 132px;
+  }
+
+  .auto-combat-fighter-card__mob-image img {
+    height: 138px;
+    max-width: 130px;
+  }
+
+  .auto-combat-fighter-card__heading strong {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .auto-combat-enemy-card {
+    min-height: 218px;
+    padding: 0.82rem;
+  }
+
+  .auto-combat-enemy-card__portrait,
+  .auto-combat-enemy-card__portrait--fullbody {
+    width: min(100%, 138px);
+    height: 108px;
+    margin-top: 0.1rem;
+    margin-bottom: 0.42rem;
+  }
+
+  .auto-combat-enemy-card__portrait img,
+  .auto-combat-enemy-card__portrait--fullbody img {
+    height: 112px;
+    max-width: 132px;
+  }
+
+  .auto-combat-enemy-card__content > strong {
+    font-size: 0.9rem;
+  }
+
+  .auto-combat-enemy-card__stats span {
+    min-height: 21px;
+    padding: 0.24rem 0.38rem;
+    font-size: 0.5rem;
+  }
+
+  .auto-combat-fighter-card--mob {
+    min-height: 172px;
+  }
+
+  .auto-combat-fighter-card__identity--mob {
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 0.72rem;
+  }
+
+  .auto-combat-fighter-card__mob-image {
+    width: 92px;
+    height: 112px;
+  }
+
+  .auto-combat-fighter-card__mob-image img {
+    height: 118px;
+    max-width: 108px;
+  }
+
+  .auto-combat-fighter-card__heading span {
+    font-size: 0.52rem;
+    letter-spacing: 0.09em;
+  }
+
+  .auto-combat-fighter-card__heading strong {
+    font-size: 0.98rem;
+    line-height: 1.08;
+  }
+}

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { useMemo, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { removeAuthToken } from '../../../services/api/authToken';
 import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import { normalizeClassName } from '../../characters/api/characters.api';
@@ -10,16 +10,21 @@ import {
   getCharacterInitials,
 } from '../../characters/types/character.types';
 import type { DashboardCharacterViewModel } from '../types/dashboard.types';
-import { DashboardActivityBar } from './DashboardActivityBar';
+import {
+  DashboardTopBar,
+  type DashboardTopBarResource,
+} from './DashboardTopBar';
 
 interface DashboardLayoutProps {
   character: DashboardCharacterViewModel;
   children: ReactNode;
+  hideHero?: boolean;
 }
 
 interface DashboardLayoutContentProps {
   character: DashboardCharacterViewModel;
   children: ReactNode;
+  hideHero?: boolean;
 }
 
 interface DashboardNavItem {
@@ -27,6 +32,59 @@ interface DashboardNavItem {
   path: string;
   icon: string;
 }
+
+type DashboardGatheringOrigin =
+  | 'DESMANCHE'
+  | 'COLETA'
+  | 'PATRULHA'
+  | 'ARSENAL'
+  | 'TECNOVARREDURA'
+  | 'CONTENCAO';
+
+interface DashboardGatheringSidebarItem {
+  label: string;
+  slug: string;
+  origin: DashboardGatheringOrigin;
+  icon: string;
+}
+
+type GatheringSkillLoose = {
+  id?: string | null;
+  origin?: string | null;
+  key?: string | null;
+  slug?: string | null;
+  type?: string | null;
+  name?: string | null;
+  level?: number | string | null;
+  xp?: number | string | null;
+  totalXp?: number | string | null;
+};
+
+type GatheringSkillsSummaryLoose = {
+  skills?: GatheringSkillLoose[] | null;
+  byOrigin?: Partial<
+    Record<DashboardGatheringOrigin, GatheringSkillLoose | null>
+  > | null;
+};
+
+type GatheringSkillsSource =
+  | GatheringSkillLoose[]
+  | GatheringSkillsSummaryLoose
+  | null
+  | undefined;
+
+type DashboardCharacterWithGatheringSkills = DashboardCharacterViewModel & {
+  gatheringSkills?: GatheringSkillsSource;
+  gathering?: {
+    skills?: GatheringSkillLoose[] | null;
+    byOrigin?: Partial<
+      Record<DashboardGatheringOrigin, GatheringSkillLoose | null>
+    > | null;
+  } | null;
+  character?: {
+    gatheringSkills?: GatheringSkillsSource;
+  } | null;
+};
 
 type DashboardCharacterWithXpProgress = DashboardCharacterViewModel & {
   currentLevelXp?: number | null;
@@ -40,6 +98,17 @@ type DashboardCharacterWithXpProgress = DashboardCharacterViewModel & {
   currentLevelStartXp?: number | null;
   nextLevelRequiredXp?: number | null;
   isAtLevelCap?: boolean | null;
+
+  gold?: number | null;
+  cash?: number | null;
+  wallet?: {
+    gold?: number | null;
+    cash?: number | null;
+  } | null;
+  currencies?: {
+    gold?: number | null;
+    cash?: number | null;
+  } | null;
 
   levelProgress?: {
     oldLevel?: number | null;
@@ -192,6 +261,9 @@ type XpProgressResult = {
   progressPercent: number;
 };
 
+const GATHERING_SUBNAV_STORAGE_KEY =
+  'dead-idle.dashboard.gathering-subnav-open';
+
 const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   {
     label: 'Visão geral',
@@ -221,12 +293,12 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   {
     label: 'Equipamentos',
     path: 'equipment',
-    icon: '◈',
+    icon: '◇',
   },
   {
     label: 'Consumíveis',
     path: 'consumables',
-    icon: '✚',
+    icon: '+',
   },
   {
     label: 'Mapas',
@@ -234,6 +306,65 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: '◇',
   },
 ];
+
+const DASHBOARD_GATHERING_ITEMS: DashboardGatheringSidebarItem[] = [
+  {
+    label: 'Desmanche',
+    slug: 'desmanche',
+    origin: 'DESMANCHE',
+    icon: '⛏',
+  },
+  {
+    label: 'Coleta',
+    slug: 'coleta',
+    origin: 'COLETA',
+    icon: '◇',
+  },
+  {
+    label: 'Patrulha',
+    slug: 'patrulha',
+    origin: 'PATRULHA',
+    icon: '⌁',
+  },
+  {
+    label: 'Arsenal',
+    slug: 'arsenal',
+    origin: 'ARSENAL',
+    icon: '⌖',
+  },
+  {
+    label: 'Tecnovarredura',
+    slug: 'tecnovarredura',
+    origin: 'TECNOVARREDURA',
+    icon: '◌',
+  },
+  {
+    label: 'Contenção',
+    slug: 'contencao',
+    origin: 'CONTENCAO',
+    icon: '◎',
+  },
+];
+
+function getInitialGatheringSubnavState() {
+  if (typeof window === 'undefined') {
+    return true;
+  }
+
+  try {
+    const storedValue = window.localStorage.getItem(
+      GATHERING_SUBNAV_STORAGE_KEY,
+    );
+
+    if (storedValue === null) {
+      return true;
+    }
+
+    return storedValue === 'true';
+  } catch {
+    return true;
+  }
+}
 
 function toSafeNumber(value: unknown, fallback = 0) {
   if (value === null || value === undefined || value === '') {
@@ -532,6 +663,43 @@ function buildHpProgress(character: DashboardCharacterViewModel) {
   };
 }
 
+function buildWalletDisplay(character: DashboardCharacterViewModel) {
+  const characterWithWallet = character as DashboardCharacterWithXpProgress;
+
+  const gold = Math.max(
+    0,
+    Math.floor(
+      toSafeNumber(
+        characterWithWallet.gold ??
+          characterWithWallet.wallet?.gold ??
+          characterWithWallet.currencies?.gold,
+        0,
+      ),
+    ),
+  );
+
+  const cash = Math.max(
+    0,
+    Math.floor(
+      toSafeNumber(
+        characterWithWallet.cash ??
+          characterWithWallet.wallet?.cash ??
+          characterWithWallet.currencies?.cash,
+        0,
+      ),
+    ),
+  );
+
+  return {
+    gold,
+    cash,
+  };
+}
+
+function formatCurrency(value: number) {
+  return value.toLocaleString('pt-BR');
+}
+
 function getDashboardCharacterClassKey(character: DashboardCharacterViewModel) {
   return (
     character.classId ??
@@ -549,6 +717,109 @@ function getDashboardCharacterMapName(character: DashboardCharacterViewModel) {
     character.map?.name ??
     'Sem mapa'
   );
+}
+
+function normalizeGatheringOriginKey(
+  value?: string | null,
+): DashboardGatheringOrigin | null {
+  const normalized = String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  const aliases: Record<string, DashboardGatheringOrigin> = {
+    DESMANCHE: 'DESMANCHE',
+    COLETA: 'COLETA',
+    PATRULHA: 'PATRULHA',
+    ARSENAL: 'ARSENAL',
+    TECNOVARREDURA: 'TECNOVARREDURA',
+    TECNO_VARREDURA: 'TECNOVARREDURA',
+    CONTENCAO: 'CONTENCAO',
+    CONTENÇÃO: 'CONTENCAO',
+  };
+
+  return aliases[normalized] ?? null;
+}
+
+function getGatheringSkillOrigin(
+  skill?: GatheringSkillLoose | null,
+): DashboardGatheringOrigin | null {
+  if (!skill) return null;
+
+  return (
+    normalizeGatheringOriginKey(skill.origin) ??
+    normalizeGatheringOriginKey(skill.key) ??
+    normalizeGatheringOriginKey(skill.slug) ??
+    normalizeGatheringOriginKey(skill.type) ??
+    normalizeGatheringOriginKey(skill.name)
+  );
+}
+
+function extractGatheringSkillFromSource(
+  source: GatheringSkillsSource,
+  origin: DashboardGatheringOrigin,
+): GatheringSkillLoose | null {
+  if (!source) return null;
+
+  if (Array.isArray(source)) {
+    return (
+      source.find((skill) => getGatheringSkillOrigin(skill) === origin) ?? null
+    );
+  }
+
+  const byOriginSkill = source.byOrigin?.[origin];
+
+  if (byOriginSkill) {
+    return byOriginSkill;
+  }
+
+  return (
+    source.skills?.find((skill) => getGatheringSkillOrigin(skill) === origin) ??
+    null
+  );
+}
+
+function getGatheringSkillForOrigin(
+  character: DashboardCharacterViewModel,
+  origin: DashboardGatheringOrigin,
+): GatheringSkillLoose | null {
+  const characterWithGathering =
+    character as DashboardCharacterWithGatheringSkills;
+
+  return (
+    extractGatheringSkillFromSource(
+      characterWithGathering.gatheringSkills,
+      origin,
+    ) ??
+    extractGatheringSkillFromSource(
+      characterWithGathering.gathering?.skills,
+      origin,
+    ) ??
+    extractGatheringSkillFromSource(
+      characterWithGathering.gathering?.byOrigin
+        ? { byOrigin: characterWithGathering.gathering.byOrigin }
+        : null,
+      origin,
+    ) ??
+    extractGatheringSkillFromSource(
+      characterWithGathering.character?.gatheringSkills,
+      origin,
+    ) ??
+    null
+  );
+}
+
+function getGatheringSkillLevelLabel(
+  character: DashboardCharacterViewModel,
+  origin: DashboardGatheringOrigin,
+) {
+  const skill = getGatheringSkillForOrigin(character, origin);
+  const level = Math.max(1, Math.floor(toSafeNumber(skill?.level, 1)));
+
+  return `Lv. ${level}`;
 }
 
 function buildHeroCharacterFromRealtimeState(params: {
@@ -584,31 +855,31 @@ function buildHeroCharacterFromRealtimeState(params: {
 
   const nextLevelProgress =
     progress?.levelProgress ??
-    statusCharacter.levelProgress ??
     realtimeCharacter.levelProgress ??
+    statusCharacter.levelProgress ??
     baseCharacter.levelProgress ??
     null;
 
   const nextLevel =
     getFirstValidNumber(
-      statusCharacter.level,
       progress?.level,
       realtimeCharacter.level,
       nextLevelProgress?.newLevel,
       nextLevelProgress?.level,
+      statusCharacter.level,
       character.level,
     ) ?? character.level;
 
   const nextTotalXp =
     getFirstValidNumber(
-      statusCharacter.totalXp,
-      statusCharacter.xp,
       progress?.totalXp,
       progress?.xp,
       realtimeCharacter.totalXp,
       realtimeCharacter.xp,
       nextLevelProgress?.totalXp,
       nextLevelProgress?.xp,
+      statusCharacter.totalXp,
+      statusCharacter.xp,
       baseCharacter.totalXp,
       character.xp,
     ) ?? character.xp;
@@ -616,8 +887,8 @@ function buildHeroCharacterFromRealtimeState(params: {
   const nextCurrentHp =
     getFirstValidNumber(
       realtimeSessionIsActive ? combat?.characterCurrentHp : undefined,
-      statusCharacter.currentHp,
       realtimeSessionIsActive ? realtimeCharacter.currentHp : undefined,
+      statusCharacter.currentHp,
       statusHp?.current,
       character.currentHp,
     ) ?? character.currentHp;
@@ -625,8 +896,8 @@ function buildHeroCharacterFromRealtimeState(params: {
   const nextMaxHp =
     getFirstValidNumber(
       realtimeSessionIsActive ? combat?.characterMaxHp : undefined,
-      statusCharacter.maxHp,
       realtimeSessionIsActive ? realtimeCharacter.maxHp : undefined,
+      statusCharacter.maxHp,
       statusHp?.max,
       character.maxHp,
     ) ?? character.maxHp;
@@ -653,76 +924,76 @@ function buildHeroCharacterFromRealtimeState(params: {
     currentMapName: nextCurrentMapName,
 
     currentLevelXp:
-      statusCharacter.currentLevelXp ??
       progress?.currentLevelXp ??
       progress?.xpIntoCurrentLevel ??
       realtimeCharacter.currentLevelXp ??
-      baseCharacter.currentLevelXp ??
       nextLevelProgress?.currentLevelXp ??
-      nextLevelProgress?.xpIntoCurrentLevel,
+      nextLevelProgress?.xpIntoCurrentLevel ??
+      statusCharacter.currentLevelXp ??
+      baseCharacter.currentLevelXp,
 
     xpToNextLevel:
-      statusCharacter.xpToNextLevel ??
       progress?.xpToNextLevel ??
       progress?.nextLevelXp ??
       realtimeCharacter.xpToNextLevel ??
-      baseCharacter.xpToNextLevel ??
       nextLevelProgress?.xpToNextLevel ??
-      nextLevelProgress?.nextLevelXp,
+      nextLevelProgress?.nextLevelXp ??
+      statusCharacter.xpToNextLevel ??
+      baseCharacter.xpToNextLevel,
 
     nextLevelXp:
-      statusCharacter.nextLevelXp ??
       progress?.nextLevelXp ??
       progress?.xpToNextLevel ??
       realtimeCharacter.nextLevelXp ??
-      baseCharacter.nextLevelXp ??
       nextLevelProgress?.nextLevelXp ??
-      nextLevelProgress?.xpToNextLevel,
+      nextLevelProgress?.xpToNextLevel ??
+      statusCharacter.nextLevelXp ??
+      baseCharacter.nextLevelXp,
 
     xpProgressPercent:
-      statusCharacter.xpProgressPercent ??
       progress?.xpProgressPercent ??
       realtimeCharacter.xpProgressPercent ??
-      baseCharacter.xpProgressPercent ??
       nextLevelProgress?.xpProgressPercent ??
-      nextLevelProgress?.progressPercent,
+      nextLevelProgress?.progressPercent ??
+      statusCharacter.xpProgressPercent ??
+      baseCharacter.xpProgressPercent,
 
     xpIntoCurrentLevel:
-      statusCharacter.xpIntoCurrentLevel ??
       progress?.xpIntoCurrentLevel ??
       progress?.currentLevelXp ??
       realtimeCharacter.xpIntoCurrentLevel ??
-      baseCharacter.xpIntoCurrentLevel ??
       nextLevelProgress?.xpIntoCurrentLevel ??
-      nextLevelProgress?.currentLevelXp,
+      nextLevelProgress?.currentLevelXp ??
+      statusCharacter.xpIntoCurrentLevel ??
+      baseCharacter.xpIntoCurrentLevel,
 
     xpNeededForNextLevel:
-      statusCharacter.xpNeededForNextLevel ??
       progress?.xpNeededForNextLevel ??
       realtimeCharacter.xpNeededForNextLevel ??
-      baseCharacter.xpNeededForNextLevel ??
-      nextLevelProgress?.xpNeededForNextLevel,
+      nextLevelProgress?.xpNeededForNextLevel ??
+      statusCharacter.xpNeededForNextLevel ??
+      baseCharacter.xpNeededForNextLevel,
 
     currentLevelStartXp:
-      statusCharacter.currentLevelStartXp ??
       progress?.currentLevelStartXp ??
       realtimeCharacter.currentLevelStartXp ??
-      baseCharacter.currentLevelStartXp ??
-      nextLevelProgress?.currentLevelStartXp,
+      nextLevelProgress?.currentLevelStartXp ??
+      statusCharacter.currentLevelStartXp ??
+      baseCharacter.currentLevelStartXp,
 
     nextLevelRequiredXp:
-      statusCharacter.nextLevelRequiredXp ??
       progress?.nextLevelRequiredXp ??
       realtimeCharacter.nextLevelRequiredXp ??
-      baseCharacter.nextLevelRequiredXp ??
-      nextLevelProgress?.nextLevelRequiredXp,
+      nextLevelProgress?.nextLevelRequiredXp ??
+      statusCharacter.nextLevelRequiredXp ??
+      baseCharacter.nextLevelRequiredXp,
 
     isAtLevelCap:
-      statusCharacter.isAtLevelCap ??
       progress?.isAtLevelCap ??
       realtimeCharacter.isAtLevelCap ??
-      baseCharacter.isAtLevelCap ??
-      nextLevelProgress?.isAtLevelCap,
+      nextLevelProgress?.isAtLevelCap ??
+      statusCharacter.isAtLevelCap ??
+      baseCharacter.isAtLevelCap,
 
     levelProgress: nextLevelProgress,
   } as DashboardCharacterWithXpProgress;
@@ -733,11 +1004,29 @@ function buildHeroCharacterFromRealtimeState(params: {
 function DashboardLayoutContent({
   character,
   children,
+  hideHero = false,
 }: DashboardLayoutContentProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const realtimeState = useAutoCombatRealtimeState() as RealtimeStateLoose;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isGatheringMenuOpen, setIsGatheringMenuOpen] = useState(
+    getInitialGatheringSubnavState,
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      window.localStorage.setItem(
+        GATHERING_SUBNAV_STORAGE_KEY,
+        String(isGatheringMenuOpen),
+      );
+    } catch {
+      // Mantém o estado apenas em memória se o navegador bloquear localStorage.
+    }
+  }, [isGatheringMenuOpen]);
 
   const heroCharacter = useMemo(() => {
     return buildHeroCharacterFromRealtimeState({
@@ -745,6 +1034,11 @@ function DashboardLayoutContent({
       realtimeState,
     });
   }, [character, realtimeState]);
+
+  const characterId = getDashboardCharacterId(heroCharacter);
+  const dashboardBasePath = `/dashboard/${characterId}`;
+  const gatheringBasePath = `${dashboardBasePath}/gathering`;
+  const isGatheringRoute = location.pathname.startsWith(gatheringBasePath);
 
   const classKey = normalizeClassName(
     getDashboardCharacterClassKey(heroCharacter),
@@ -769,6 +1063,32 @@ function DashboardLayoutContent({
     return buildHpProgress(heroCharacter);
   }, [heroCharacter]);
 
+  const walletDisplay = useMemo(() => {
+    return buildWalletDisplay(heroCharacter);
+  }, [heroCharacter]);
+
+  const topBarResources = useMemo<DashboardTopBarResource[]>(
+    () => [
+      {
+        key: 'gold',
+        label: 'Gold',
+        value: formatCurrency(walletDisplay.gold),
+        icon: '●',
+        tone: 'gold',
+        title: 'Gold disponível',
+      },
+      {
+        key: 'cash',
+        label: 'Cash',
+        value: formatCurrency(walletDisplay.cash),
+        icon: '◆',
+        tone: 'cash',
+        title: 'Cash disponível',
+      },
+    ],
+    [walletDisplay.cash, walletDisplay.gold],
+  );
+
   const xpProgressStyle = {
     width: `${xpProgress.progressPercent}%`,
   } as CSSProperties;
@@ -784,6 +1104,16 @@ function DashboardLayoutContent({
   function handleLogout() {
     removeAuthToken();
     window.location.href = '/';
+  }
+
+  function handleToggleGatheringMenu() {
+    if (!isGatheringRoute) {
+      setIsGatheringMenuOpen(true);
+      navigate(gatheringBasePath);
+      return;
+    }
+
+    setIsGatheringMenuOpen((currentValue) => !currentValue);
   }
 
   return (
@@ -832,8 +1162,79 @@ function DashboardLayoutContent({
         <nav className="dashboard-sidebar__nav" aria-label="Menu do painel">
           {DASHBOARD_NAV_ITEMS.map((item) => {
             const to = item.path
-              ? `/dashboard/${heroCharacter.id}/${item.path}`
-              : `/dashboard/${heroCharacter.id}`;
+              ? `${dashboardBasePath}/${item.path}`
+              : dashboardBasePath;
+
+            if (item.path === 'gathering') {
+              return (
+                <div
+                  key={item.label}
+                  className="dashboard-sidebar__nav-group dashboard-sidebar__nav-group--gathering"
+                >
+                  <button
+                    type="button"
+                    className={[
+                      'dashboard-sidebar__link',
+                      'dashboard-sidebar__link--toggle',
+                      isGatheringRoute ? 'is-active' : '',
+                      isGatheringMenuOpen ? 'is-expanded' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    onClick={handleToggleGatheringMenu}
+                    aria-expanded={isGatheringMenuOpen}
+                    aria-controls="dashboard-gathering-subnav"
+                  >
+                    <span aria-hidden="true">{item.icon}</span>
+                    <strong>{item.label}</strong>
+                    <em
+                      className="dashboard-sidebar__link-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+
+                  {isGatheringMenuOpen ? (
+                    <div
+                      id="dashboard-gathering-subnav"
+                      className="dashboard-sidebar__subnav"
+                    >
+                      {DASHBOARD_GATHERING_ITEMS.map((gatheringItem) => {
+                        const gatheringTo = `${gatheringBasePath}/${gatheringItem.slug}`;
+
+                        return (
+                          <NavLink
+                            key={gatheringItem.origin}
+                            to={gatheringTo}
+                            onClick={closeSidebar}
+                            className={({ isActive }) =>
+                              `dashboard-sidebar__subitem ${
+                                isActive ? 'is-active' : ''
+                              }`
+                            }
+                          >
+                            <span
+                              className="dashboard-sidebar__subitem-icon"
+                              aria-hidden="true"
+                            >
+                              {gatheringItem.icon}
+                            </span>
+
+                            <strong>{gatheringItem.label}</strong>
+
+                            <span className="dashboard-sidebar__subitem-level">
+                              {getGatheringSkillLevelLabel(
+                                heroCharacter,
+                                gatheringItem.origin,
+                              )}
+                            </span>
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            }
 
             return (
               <NavLink
@@ -845,7 +1246,7 @@ function DashboardLayoutContent({
                   `dashboard-sidebar__link ${isActive ? 'is-active' : ''}`
                 }
               >
-                <span>{item.icon}</span>
+                <span aria-hidden="true">{item.icon}</span>
                 <strong>{item.label}</strong>
               </NavLink>
             );
@@ -875,82 +1276,111 @@ function DashboardLayoutContent({
       </aside>
 
       <main className="dashboard-main">
-        <header className="dashboard-topbar dashboard-topbar--clean">
-          <div>
-            <span className="dashboard-topbar__eyebrow">
-              MMORPG Idle Zumbi
-            </span>
-            <h1>Painel do abrigo</h1>
-          </div>
-        </header>
+        <DashboardTopBar
+          characterId={characterId}
+          characterName={heroCharacter.name}
+          characterClassName={classData.label}
+          characterLevel={heroCharacter.level}
+          characterCurrentHp={heroCharacter.currentHp}
+          characterMaxHp={heroCharacter.maxHp}
+          resources={topBarResources}
+        />
 
-        <div className="dashboard-activity-bar-zone">
-          <DashboardActivityBar characterId={heroCharacter.id} />
-        </div>
-
-        <section className="dashboard-hero" style={classStyle}>
-          <div className="dashboard-hero__avatar">
-            {avatarImage ? (
-              <img src={avatarImage} alt={heroCharacter.name} />
-            ) : (
-              <span>{getCharacterInitials(heroCharacter.name)}</span>
-            )}
-          </div>
-
-          <div className="dashboard-hero__content">
-            <span>{classData.label}</span>
-
-            <div className="dashboard-hero__heading">
-              <h2>{heroCharacter.name}</h2>
-
-              <div
-                className="dashboard-hero__level-badge"
-                aria-label={`Nível ${heroCharacter.level}`}
-                title={`Nível ${heroCharacter.level}`}
-              >
-                <strong>Nível {heroCharacter.level}</strong>
-              </div>
+        {!hideHero ? (
+          <section className="dashboard-hero" style={classStyle}>
+            <div className="dashboard-hero__avatar">
+              {avatarImage ? (
+                <img src={avatarImage} alt={heroCharacter.name} />
+              ) : (
+                <span>{getCharacterInitials(heroCharacter.name)}</span>
+              )}
             </div>
 
-            <div className="dashboard-hero__meta">
-              <strong>{characterMapName}</strong>
-            </div>
+            <div className="dashboard-hero__content">
+              <span>{classData.label}</span>
 
-            <div className="dashboard-hero__resources">
-              <div
-                className="dashboard-hero__resource dashboard-hero__resource--xp"
-                aria-label="Experiência"
-              >
-                <div className="dashboard-hero__resource-header">
-                  <span>Experiência</span>
-                  <strong>
-                    {xpProgress.currentXp} / {xpProgress.xpToNextLevel} XP
-                  </strong>
-                </div>
+              <div className="dashboard-hero__heading">
+                <h2>{heroCharacter.name}</h2>
 
-                <div className="dashboard-hero__resource-track">
-                  <i style={xpProgressStyle} />
+                <div
+                  className="dashboard-hero__level-badge"
+                  aria-label={`Nível ${heroCharacter.level}`}
+                  title={`Nível ${heroCharacter.level}`}
+                >
+                  <strong>Nível {heroCharacter.level}</strong>
                 </div>
               </div>
 
-              <div
-                className="dashboard-hero__resource dashboard-hero__resource--hp"
-                aria-label="Vida"
-              >
-                <div className="dashboard-hero__resource-header">
-                  <span>Vida</span>
-                  <strong>
-                    {hpProgress.currentHp} / {hpProgress.maxHp}
-                  </strong>
+              <div className="dashboard-hero__meta">
+                <strong>{characterMapName}</strong>
+              </div>
+
+              <div className="dashboard-hero__wallet" aria-label="Moedas">
+                <div className="dashboard-hero__currency dashboard-hero__currency--gold">
+                  <span>Gold</span>
+                  <strong>{formatCurrency(walletDisplay.gold)}</strong>
                 </div>
 
-                <div className="dashboard-hero__resource-track">
-                  <i style={hpProgressStyle} />
+                <div className="dashboard-hero__currency dashboard-hero__currency--cash">
+                  <span>Cash</span>
+                  <strong>{formatCurrency(walletDisplay.cash)}</strong>
+                </div>
+              </div>
+
+              <div className="dashboard-hero__resources">
+                <div
+                  className="dashboard-hero__resource dashboard-hero__resource--xp"
+                  aria-label="Experiência"
+                >
+                  <div className="dashboard-hero__resource-header">
+                    <div className="dashboard-hero__resource-title">
+                      <span>Experiência</span>
+                      <small>Progresso do nível</small>
+                    </div>
+
+                    <div className="dashboard-hero__resource-values">
+                      <strong>
+                        {xpProgress.currentXp} / {xpProgress.xpToNextLevel} XP
+                      </strong>
+                      <em>{Math.round(xpProgress.progressPercent)}%</em>
+                    </div>
+                  </div>
+
+                  <div className="dashboard-hero__resource-track">
+                    <i style={xpProgressStyle}>
+                      <b aria-hidden="true" />
+                    </i>
+                  </div>
+                </div>
+
+                <div
+                  className="dashboard-hero__resource dashboard-hero__resource--hp"
+                  aria-label="Vida"
+                >
+                  <div className="dashboard-hero__resource-header">
+                    <div className="dashboard-hero__resource-title">
+                      <span>Vida</span>
+                      <small>Integridade atual</small>
+                    </div>
+
+                    <div className="dashboard-hero__resource-values">
+                      <strong>
+                        {hpProgress.currentHp} / {hpProgress.maxHp}
+                      </strong>
+                      <em>{Math.round(hpProgress.progressPercent)}%</em>
+                    </div>
+                  </div>
+
+                  <div className="dashboard-hero__resource-track">
+                    <i style={hpProgressStyle}>
+                      <b aria-hidden="true" />
+                    </i>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        ) : null}
 
         {children}
       </main>
@@ -958,9 +1388,13 @@ function DashboardLayoutContent({
   );
 }
 
-export function DashboardLayout({ character, children }: DashboardLayoutProps) {
+export function DashboardLayout({
+  character,
+  children,
+  hideHero = false,
+}: DashboardLayoutProps) {
   return (
-    <DashboardLayoutContent character={character}>
+    <DashboardLayoutContent character={character} hideHero={hideHero}>
       {children}
     </DashboardLayoutContent>
   );

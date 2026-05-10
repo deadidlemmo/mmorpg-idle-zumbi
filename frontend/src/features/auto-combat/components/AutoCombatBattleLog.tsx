@@ -945,14 +945,6 @@ export function AutoCombatBattleLog({
     <article className={rootClassName}>
       <header className="auto-combat-battle-log__header">
         <strong>{title}</strong>
-
-        <span>
-          {logItems.length > 0
-            ? `${logItems.length} registro${logItems.length === 1 ? '' : 's'}`
-            : isActive
-              ? 'Ao vivo'
-              : 'Sem registros'}
-        </span>
       </header>
 
       {logItems.length > 0 ? (

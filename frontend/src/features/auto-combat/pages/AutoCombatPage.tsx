@@ -1,1561 +1,108 @@
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
-import statAgilityIcon from '../../../assets/images/stats/attributes/stat-agility.png';
-import statPrecisionIcon from '../../../assets/images/stats/attributes/stat-precision.png';
-import statStrengthIcon from '../../../assets/images/stats/attributes/stat-strength.png';
-import statTechniqueIcon from '../../../assets/images/stats/attributes/stat-technique.png';
-import statVitalityIcon from '../../../assets/images/stats/attributes/stat-vitality.png';
-import statWillpowerIcon from '../../../assets/images/stats/attributes/stat-willpower.png';
-import { apiClient } from '../../../services/api/apiClient';
-import { normalizeClassName } from '../../characters/api/characters.api';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
 import '../../dashboard/dashboard.css';
-import type {
-  CharacterOverviewResponse,
-  DashboardCharacterViewModel,
-  DashboardEquipmentItem,
-  DashboardPotionConfigViewModel,
-  DashboardStats,
-} from '../../dashboard/types/dashboard.types';
+import type { CharacterOverviewResponse } from '../../dashboard/types/dashboard.types';
 import {
   getAutoCombatMaps,
   getAutoCombatStatus,
   previewAutoCombat,
 } from '../api/auto-combat.api';
+import {
+  buildMapVisualStyle,
+  getMapImageByName,
+} from '../assets/auto-combat-map-assets';
+import '../auto-combat-mob-images.css';
 import '../auto-combat.css';
+import { AutoCombatAppHeader } from '../components/AutoCombatAppHeader';
 import { AutoCombatBattleLog } from '../components/AutoCombatBattleLog';
+import { AutoCombatSessionSummary } from '../components/AutoCombatSessionSummary';
+import { AutoCombatStatsTab } from '../components/AutoCombatStatsTab';
+import { AutoCombatTabs } from '../components/AutoCombatTabs';
 import {
   useAutoCombatRealtime,
   useAutoCombatRealtimeState,
 } from '../realtime/useAutoCombatRealtime';
 import type {
-  AutoCombatEncounterViewModel,
+  AutoCombatRealtimeStateLoose,
+  AutoCombatTab,
+  CharacterPotionConfigWithItem,
+  CharacterProgressSource,
+  CharacterViewModelWithLayoutFields,
+  CharacterWithSinglePotionConfig,
+  PotionEquipmentItem,
+  PotionInventoryOption,
+  RealtimeCharacterProgressState,
+  RealtimeCombatState,
+  RealtimeSessionTotalsState,
+} from '../types/auto-combat-page.types';
+import type {
   AutoCombatMapViewModel,
   AutoCombatProjectionPreview,
   AutoCombatRealtimeEvent,
-  AutoCombatSessionApiViewModel,
   AutoCombatStatusResponse,
-  AutoCombatSubMapViewModel,
 } from '../types/auto-combat.types';
-
-type AutoCombatTab = 'battle' | 'stats';
-
-type RealtimeActor = 'PLAYER' | 'MOB' | 'SYSTEM';
-type RealtimeTarget = 'PLAYER' | 'MOB' | 'SYSTEM';
-
-type LooseLevelProgressSource = {
-  level?: number | null;
-  oldLevel?: number | null;
-  newLevel?: number | null;
-
-  xp?: number | null;
-  totalXp?: number | null;
-  currentXp?: number | null;
-  gainedXp?: number | null;
-
-  currentLevelXp?: number | null;
-  xpToNextLevel?: number | null;
-  nextLevelXp?: number | null;
-
-  currentLevelStartXp?: number | null;
-  nextLevelRequiredXp?: number | null;
-  xpIntoCurrentLevel?: number | null;
-  xpNeededForNextLevel?: number | null;
-
-  progressPercent?: number | null;
-  xpProgressPercent?: number | null;
-  isAtLevelCap?: boolean | null;
-};
-
-type CharacterViewModelWithLayoutFields = DashboardCharacterViewModel & {
-  className: string;
-  classId: string;
-  avatarKey?: string | null;
-  avatarUrl?: string | null;
-  currentMapName: string;
-
-  totalXp?: number | null;
-  currentLevelXp?: number | null;
-  xpToNextLevel?: number | null;
-  nextLevelXp?: number | null;
-  xpProgressPercent?: number | null;
-  xpIntoCurrentLevel?: number | null;
-  xpNeededForNextLevel?: number | null;
-  currentLevelStartXp?: number | null;
-  nextLevelRequiredXp?: number | null;
-  isAtLevelCap?: boolean | null;
-
-  levelProgress?: LooseLevelProgressSource | null;
-};
-
-type PotionEquipmentItem = DashboardEquipmentItem & {
-  quantity?: number | null;
-  availableQuantity?: number | null;
-};
-
-type CharacterPotionConfigWithItem = Omit<
-  DashboardPotionConfigViewModel,
-  'potion' | 'potionItem'
-> & {
-  potion?: PotionEquipmentItem | null;
-  potionItem?: PotionEquipmentItem | null;
-};
-
-type CharacterWithSinglePotionConfig = Omit<
-  CharacterViewModelWithLayoutFields,
-  'potionConfig' | 'potionConfigs' | 'autoPotionConfig'
-> & {
-  potionConfig?: CharacterPotionConfigWithItem | null;
-  potionConfigs?: CharacterPotionConfigWithItem[];
-  autoPotionConfig?: CharacterPotionConfigWithItem | null;
-};
-
-type PotionInventoryOption = PotionEquipmentItem & {
-  itemId: string;
-  quantity: number;
-  inventoryItemId?: string | null;
-};
-
-type PotionConfigApiResponse = {
-  message?: string;
-  character?: {
-    id?: string;
-    name?: string;
-  };
-  config?: {
-    id?: string;
-    enabled?: boolean;
-    potionItemId?: string | null;
-    hpThresholdPercent?: number | null;
-    useInManualCombat?: boolean | null;
-    useInAutoCombat?: boolean | null;
-  };
-  potion?: PotionEquipmentItem | null;
-  summary?: {
-    hasPotion?: boolean;
-    hasPotionInInventory?: boolean;
-    availableQuantity?: number;
-    canAutoUseInManualCombat?: boolean;
-    canAutoUseInAutoCombat?: boolean;
-    canAutoUse?: boolean;
-    triggerText?: string;
-  };
-};
-
-type UpdatePotionConfigPayload = {
-  enabled?: boolean;
-  potionItemId?: string | null;
-  hpThresholdPercent?: number;
-  useInManualCombat?: boolean;
-  useInAutoCombat?: boolean;
-};
-
-type CharacterProgressSource = {
-  level?: number | null;
-  xp?: number | null;
-  totalXp?: number | null;
-
-  currentLevelXp?: number | null;
-  xpToNextLevel?: number | null;
-  nextLevelXp?: number | null;
-  xpProgressPercent?: number | null;
-
-  xpIntoCurrentLevel?: number | null;
-  xpNeededForNextLevel?: number | null;
-  currentLevelStartXp?: number | null;
-  nextLevelRequiredXp?: number | null;
-  isAtLevelCap?: boolean | null;
-
-  levelProgress?: LooseLevelProgressSource | null;
-};
-
-type RealtimeCombatState = {
-  sessionId?: string | null;
-
-  mobId?: string | null;
-  mobName?: string | null;
-  mobCurrentHp?: number | null;
-  mobMaxHp?: number | null;
-  mobHpPercent?: number | null;
-
-  characterCurrentHp?: number | null;
-  characterMaxHp?: number | null;
-  characterHpPercent?: number | null;
-
-  lastMessage?: string | null;
-  message?: string | null;
-  lastDamage?: number | null;
-  lastEventType?: string | null;
-  isCritical?: boolean | null;
-  isDodged?: boolean | null;
-
-  actor?: RealtimeActor | null;
-  target?: RealtimeTarget | null;
-
-  round?: number | null;
-  combatIndex?: number | null;
-
-  totalCombats?: number | null;
-  totalRounds?: number | null;
-  totalKills?: number | null;
-  totalXpGained?: number | null;
-  totalLoot?: number | null;
-  potionsUsed?: number | null;
-
-  updatedAt?: number;
-};
-
-type RealtimeCharacterProgressState = {
-  sessionId?: string | null;
-
-  level?: number;
-  xp?: number;
-
-  currentLevelXp?: number;
-  xpToNextLevel?: number;
-  nextLevelXp?: number;
-  xpProgressPercent?: number;
-
-  xpIntoCurrentLevel?: number;
-  xpNeededForNextLevel?: number;
-  currentLevelStartXp?: number;
-  nextLevelRequiredXp?: number;
-  isAtLevelCap?: boolean;
-
-  xpGained?: number;
-  leveledUp?: boolean;
-  levelsGained?: number;
-
-  updatedAt?: number;
-};
-
-type RealtimeSessionTotalsState = {
-  sessionId?: string | null;
-
-  currentCombatIndex?: number;
-  totalCombats?: number;
-  totalRounds?: number;
-  totalKills?: number;
-  totalXpGained?: number;
-  totalLoot?: number;
-  potionsUsed?: number;
-
-  updatedAt?: number;
-};
-
-type AutoCombatRealtimeStateLoose = {
-  status?: AutoCombatStatusResponse | null;
-  autoCombatStatus?: AutoCombatStatusResponse | null;
-
-  session?: AutoCombatSessionApiViewModel | null;
-  activeSession?: AutoCombatSessionApiViewModel | null;
-
-  character?: {
-    id?: string | null;
-    name?: string | null;
-
-    level?: number | null;
-    xp?: number | null;
-    totalXp?: number | null;
-
-    currentHp?: number | null;
-    maxHp?: number | null;
-    hpPercent?: number | null;
-
-    currentLevelXp?: number | null;
-    xpToNextLevel?: number | null;
-    nextLevelXp?: number | null;
-    xpProgressPercent?: number | null;
-
-    xpIntoCurrentLevel?: number | null;
-    xpNeededForNextLevel?: number | null;
-    currentLevelStartXp?: number | null;
-    nextLevelRequiredXp?: number | null;
-    isAtLevelCap?: boolean | null;
-
-    xpGained?: number | null;
-    leveledUp?: boolean | null;
-    levelsGained?: number | null;
-
-    updatedAt?: number | null;
-  } | null;
-
-  mob?: {
-    id?: string | null;
-    name?: string | null;
-
-    currentHp?: number | null;
-    maxHp?: number | null;
-    hpPercent?: number | null;
-
-    level?: number | null;
-    tier?: number | null;
-
-    updatedAt?: number | null;
-  } | null;
-
-  visual?: {
-    lastMessage?: string | null;
-    lastDamage?: number | null;
-    lastEventType?: string | null;
-
-    actor?: RealtimeActor | null;
-    target?: RealtimeTarget | null;
-
-    isCritical?: boolean | null;
-    isDodged?: boolean | null;
-
-    updatedAt?: number | null;
-  } | null;
-
-  combat?: RealtimeCombatState | null;
-  realtimeCombat?: RealtimeCombatState | null;
-
-  characterProgress?: RealtimeCharacterProgressState | null;
-  progress?: RealtimeCharacterProgressState | null;
-  realtimeCharacterProgress?: RealtimeCharacterProgressState | null;
-
-  sessionTotals?: RealtimeSessionTotalsState | null;
-  totals?: RealtimeSessionTotalsState | null;
-  realtimeSessionTotals?: RealtimeSessionTotalsState | null;
-
-  battleLogEvents?: AutoCombatRealtimeEvent[];
-  eventLog?: AutoCombatRealtimeEvent[];
-  events?: AutoCombatRealtimeEvent[];
-
-  activeEvent?: AutoCombatRealtimeEvent | null;
-  displayedEvent?: AutoCombatRealtimeEvent | null;
-  currentEvent?: AutoCombatRealtimeEvent | null;
-  lastProcessedEvent?: AutoCombatRealtimeEvent | null;
-  lastEvent?: AutoCombatRealtimeEvent | null;
-
-  eventQueue?: AutoCombatRealtimeEvent[];
-  queue?: AutoCombatRealtimeEvent[];
-  realtimeEventQueue?: AutoCombatRealtimeEvent[];
-
-  isConnected?: boolean;
-  isJoined?: boolean;
-  isActive?: boolean;
-  hasActiveSession?: boolean;
-  hasActiveAutoCombat?: boolean;
-};
-
-type AutoCombatRealtimeActions = {
-  start?: (payload: {
-    characterId: string;
-    subMapId: string;
-  }) => Promise<AutoCombatStatusResponse>;
-
-  startAutoCombat?: (payload: {
-    characterId: string;
-    subMapId: string;
-  }) => Promise<AutoCombatStatusResponse>;
-
-  stop?: () => Promise<AutoCombatStatusResponse>;
-
-  stopAutoCombat?: (
-    characterId?: string,
-  ) => Promise<AutoCombatStatusResponse>;
-};
-
-type AutoCombatRealtimeEventLoose = AutoCombatRealtimeEvent & {
-  createdAt?: string | null;
-
-  characterXp?: number | null;
-  characterLevel?: number | null;
-  totalXp?: number | null;
-
-  totalCombats?: number | null;
-  totalRounds?: number | null;
-  totalKills?: number | null;
-  totalXpGained?: number | null;
-  totalLoot?: number | null;
-  potionsUsed?: number | null;
-
-  healedAmount?: number | null;
-
-  potionItemId?: string | null;
-  potionItemName?: string | null;
-  potionTriggerPercent?: number | null;
-
-  potionQuantityBefore?: number | null;
-  potionQuantityAfter?: number | null;
-  potionQuantityRemaining?: number | null;
-  potionUsedQuantity?: number | null;
-};
-
-type AutoCombatRealtimePotionEvent = AutoCombatRealtimeEventLoose;
-
-const EMPTY_STATS: DashboardStats = {
-  strength: 0,
-  vitality: 0,
-  agility: 0,
-  precision: 0,
-  technique: 0,
-  willpower: 0,
-};
-
-const STAT_CARDS = [
-  {
-    key: 'strength',
-    className: 'strength',
-    label: 'Força',
-    description: 'Impacto físico e dano com armas corpo a corpo.',
-    icon: statStrengthIcon,
-  },
-  {
-    key: 'vitality',
-    className: 'vitality',
-    label: 'Vitalidade',
-    description: 'Vigor físico, resistência e sobrevivência.',
-    icon: statVitalityIcon,
-  },
-  {
-    key: 'agility',
-    className: 'agility',
-    label: 'Agilidade',
-    description: 'Mobilidade, reação e ritmo de movimento.',
-    icon: statAgilityIcon,
-  },
-  {
-    key: 'precision',
-    className: 'precision',
-    label: 'Precisão',
-    description: 'Mira, controle e eficiência em ataques certeiros.',
-    icon: statPrecisionIcon,
-  },
-  {
-    key: 'technique',
-    className: 'technique',
-    label: 'Técnica',
-    description: 'Uso de equipamentos, ferramentas e recursos táticos.',
-    icon: statTechniqueIcon,
-  },
-  {
-    key: 'willpower',
-    className: 'willpower',
-    label: 'Vontade',
-    description: 'Foco, resistência mental e controle sob pressão.',
-    icon: statWillpowerIcon,
-  },
-] as const;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function toSafeNumber(value: unknown, fallback = 0) {
-  if (value === null || value === undefined || value === '') {
-    return fallback;
-  }
-
-  const parsed = Number(value);
-
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function getOptionalNumber(value: unknown) {
-  if (value === null || value === undefined || value === '') {
-    return undefined;
-  }
-
-  const parsed = Number(value);
-
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function getFirstOptionalNumber(...values: unknown[]) {
-  for (const value of values) {
-    const parsed = getOptionalNumber(value);
-
-    if (parsed !== undefined) {
-      return parsed;
-    }
-  }
-
-  return undefined;
-}
-
-function getOptionalBoolean(value: unknown) {
-  return typeof value === 'boolean' ? value : undefined;
-}
-
-
-function clampPercent(value: unknown) {
-  const parsed = toSafeNumber(value, 0);
-
-  return Math.max(0, Math.min(100, parsed));
-}
-
-function clampNumber(value: unknown, min: number, max: number) {
-  const parsed = toSafeNumber(value, min);
-
-  return Math.max(min, Math.min(parsed, max));
-}
-
-function formatSeconds(seconds?: number | null) {
-  if (seconds === null || seconds === undefined) return '—';
-
-  const safeSeconds = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor((safeSeconds % 3600) / 60);
-  const remainingSeconds = safeSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}min`;
-  }
-
-  if (minutes > 0) {
-    return `${minutes}min ${remainingSeconds}s`;
-  }
-
-  return `${remainingSeconds}s`;
-}
-
-function formatSessionStatus(status?: string | null) {
-  const labels: Record<string, string> = {
-    ACTIVE: 'Sessão ativa',
-    STOPPED: 'Sessão interrompida manualmente',
-    FINISHED: 'Sessão finalizada',
-    DEFEATED: 'Sobrevivente derrotado',
-    FAILED: 'Sessão falhou',
-    CANCELLED: 'Sessão cancelada',
-  };
-
-  if (!status) return 'Sem sessão';
-
-  return labels[status] ?? status;
-}
-
-function formatRiskLabel(risk?: string | null) {
-  const labels: Record<string, string> = {
-    LOW: 'Baixo',
-    MEDIUM: 'Médio',
-    HIGH: 'Alto',
-    LETHAL: 'Letal',
-  };
-
-  if (!risk) return '—';
-
-  return labels[risk] ?? risk;
-}
-
-function getApiErrorMessage(error: unknown, fallback: string) {
-  const apiError = error as {
-    response?: {
-      data?: {
-        message?: string | string[];
-      };
-    };
-  };
-
-  const message = apiError.response?.data?.message;
-
-  if (Array.isArray(message)) {
-    return message.join(' ');
-  }
-
-  if (typeof message === 'string' && message.trim()) {
-    return message;
-  }
-
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-
-  return fallback;
-}
-
-function normalizeStats(value: unknown): DashboardStats | null {
-  if (!value || typeof value !== 'object') return null;
-
-  const stats = value as Partial<DashboardStats>;
-
-  return {
-    strength: toSafeNumber(stats.strength, 0),
-    vitality: toSafeNumber(stats.vitality, 0),
-    agility: toSafeNumber(stats.agility, 0),
-    precision: toSafeNumber(stats.precision, 0),
-    technique: toSafeNumber(stats.technique, 0),
-    willpower: toSafeNumber(stats.willpower, 0),
-  };
-}
-
-function getStatsScore(stats: DashboardStats) {
-  return (
-    stats.strength +
-    stats.vitality +
-    stats.agility +
-    stats.precision +
-    stats.technique +
-    stats.willpower
-  );
-}
-
-function normalizePotionInventoryEntry(
-  value: unknown,
-): PotionInventoryOption | null {
-  if (!isRecord(value)) return null;
-
-  const rawItem = isRecord(value.item) ? value.item : value;
-  const item = rawItem as unknown as PotionEquipmentItem;
-
-  const id =
-    typeof item.id === 'string'
-      ? item.id
-      : typeof value.itemId === 'string'
-        ? value.itemId
-        : '';
-
-  if (!id) return null;
-
-  const slot = item.slot ?? value.slot;
-  const type = value.type ?? item.slot;
-
-  if (slot !== 'CONSUMABLE' && type !== 'CONSUMABLE') {
-    return null;
-  }
-
-  const healFlat = toSafeNumber(item.healFlat, 0);
-  const healPercent = toSafeNumber(item.healPercent, 0);
-
-  if (healFlat <= 0 && healPercent <= 0) {
-    return null;
-  }
-
-  const quantity = Math.max(
-    0,
-    Math.floor(
-      toSafeNumber(
-        value.quantity ?? item.quantity ?? item.availableQuantity,
-        0,
-      ),
-    ),
-  );
-
-  return {
-    ...item,
-    id,
-    itemId: id,
-    inventoryItemId: typeof value.id === 'string' ? value.id : null,
-    quantity,
-    healFlat,
-    healPercent,
-  };
-}
-
-function normalizePotionInventoryResponse(data: unknown) {
-  const candidates: unknown[] = [];
-
-  if (Array.isArray(data)) {
-    candidates.push(...data);
-  }
-
-  if (isRecord(data)) {
-    const inventoryItems = data.inventoryItems;
-    const items = data.items;
-    const consumables = data.consumables;
-    const inventorySummary = data.inventorySummary;
-
-    if (Array.isArray(inventoryItems)) candidates.push(...inventoryItems);
-    if (Array.isArray(items)) candidates.push(...items);
-    if (Array.isArray(consumables)) candidates.push(...consumables);
-
-    if (
-      isRecord(inventorySummary) &&
-      Array.isArray(inventorySummary.consumables)
-    ) {
-      candidates.push(...inventorySummary.consumables);
-    }
-  }
-
-  const byItemId = new Map<string, PotionInventoryOption>();
-
-  for (const candidate of candidates) {
-    const potion = normalizePotionInventoryEntry(candidate);
-
-    if (!potion) continue;
-
-    const existing = byItemId.get(potion.itemId);
-
-    if (!existing) {
-      byItemId.set(potion.itemId, potion);
-      continue;
-    }
-
-    byItemId.set(potion.itemId, {
-      ...existing,
-      ...potion,
-      quantity: Math.max(existing.quantity, potion.quantity),
-    });
-  }
-
-  return Array.from(byItemId.values()).sort((a, b) => {
-    return (
-      (a.tier ?? 0) - (b.tier ?? 0) ||
-      String(a.name ?? '').localeCompare(String(b.name ?? ''))
-    );
-  });
-}
-
-function normalizePotionConfigResponse(
-  data: unknown,
-): CharacterPotionConfigWithItem | null {
-  if (!isRecord(data)) return null;
-
-  const response = data as PotionConfigApiResponse & Record<string, unknown>;
-
-  const rawConfig = isRecord(response.config)
-    ? response.config
-    : isRecord(response.autoPotionConfig)
-      ? response.autoPotionConfig
-      : isRecord(response.potionConfig)
-        ? response.potionConfig
-        : response;
-
-  const rawConfigRecord = rawConfig as Record<string, unknown>;
-
-  const rawPotion =
-    response.potion ??
-    (isRecord(rawConfigRecord.potion) ? rawConfigRecord.potion : null) ??
-    (isRecord(rawConfigRecord.potionItem) ? rawConfigRecord.potionItem : null);
-
-  const potion = isRecord(rawPotion)
-    ? (rawPotion as unknown as PotionEquipmentItem)
-    : null;
-
-  const potionItemId =
-    typeof rawConfigRecord.potionItemId === 'string'
-      ? rawConfigRecord.potionItemId
-      : potion?.id ?? null;
-
-  const hasAnyConfigValue =
-    Boolean(rawConfigRecord.id) ||
-    typeof rawConfigRecord.enabled === 'boolean' ||
-    Boolean(potionItemId) ||
-    potion !== null;
-
-  if (!hasAnyConfigValue) {
-    return null;
-  }
-
-  return {
-    id: typeof rawConfigRecord.id === 'string' ? rawConfigRecord.id : undefined,
-    characterId:
-      typeof rawConfigRecord.characterId === 'string'
-        ? rawConfigRecord.characterId
-        : undefined,
-    enabled: Boolean(rawConfigRecord.enabled),
-    potionItemId,
-    hpThresholdPercent: clampNumber(rawConfigRecord.hpThresholdPercent, 1, 100) || 35,
-    useInManualCombat:
-      typeof rawConfigRecord.useInManualCombat === 'boolean'
-        ? rawConfigRecord.useInManualCombat
-        : true,
-    useInAutoCombat:
-      typeof rawConfigRecord.useInAutoCombat === 'boolean'
-        ? rawConfigRecord.useInAutoCombat
-        : true,
-    potion,
-    potionItem: potion,
-  };
-}
-
-function getPotionItem(potionConfig?: CharacterPotionConfigWithItem | null) {
-  return potionConfig?.potion ?? potionConfig?.potionItem ?? null;
-}
-
-function getPotionName(potionConfig?: CharacterPotionConfigWithItem | null) {
-  return getPotionItem(potionConfig)?.name ?? 'Configurar poção';
-}
-
-function getPotionDescription(
-  potionConfig?: CharacterPotionConfigWithItem | null,
-) {
-  const potionItem = getPotionItem(potionConfig);
-
-  if (!potionItem) {
-    return 'Clique para escolher uma poção e definir quando ela será usada.';
-  }
-
-  return potionConfig?.enabled
-    ? `Usa automaticamente com ${potionConfig.hpThresholdPercent ?? 35}% de HP ou menos.`
-    : 'Poção selecionada, mas uso automático desativado.';
-}
-
-function getPotionQuantity(
-  potionConfig: CharacterPotionConfigWithItem | null,
-  availablePotions: PotionInventoryOption[],
-) {
-  const potionItem = getPotionItem(potionConfig);
-
-  if (!potionItem?.id) return 0;
-
-  const inventoryPotion = availablePotions.find(
-    (potion) => potion.itemId === potionItem.id || potion.id === potionItem.id,
-  );
-
-  return Math.max(
-    0,
-    toSafeNumber(
-      inventoryPotion?.quantity ??
-        potionItem.availableQuantity ??
-        potionItem.quantity,
-      0,
-    ),
-  );
-}
-
-function getNormalizedQuantity(value: unknown) {
-  const quantity = getOptionalNumber(value);
-
-  if (quantity === undefined) {
-    return undefined;
-  }
-
-  return Math.max(0, Math.floor(quantity));
-}
-
-function resolvePotionEventItemId(
-  payload: AutoCombatRealtimeEvent,
-  fallbackPotionItemId?: string | null,
-) {
-  const event = payload as AutoCombatRealtimePotionEvent;
-
-  if (typeof event.potionItemId === 'string' && event.potionItemId.trim()) {
-    return event.potionItemId.trim();
-  }
-
-  if (
-    typeof fallbackPotionItemId === 'string' &&
-    fallbackPotionItemId.trim()
-  ) {
-    return fallbackPotionItemId.trim();
-  }
-
-  return '';
-}
-
-function resolvePotionQuantityAfter(
-  payload: AutoCombatRealtimeEvent,
-  currentQuantity: number,
-) {
-  const event = payload as AutoCombatRealtimePotionEvent;
-
-  const explicitQuantity =
-    getNormalizedQuantity(event.potionQuantityRemaining) ??
-    getNormalizedQuantity(event.potionQuantityAfter);
-
-  if (explicitQuantity !== undefined) {
-    return explicitQuantity;
-  }
-
-  const quantityBefore = getNormalizedQuantity(event.potionQuantityBefore);
-  const usedQuantity = getNormalizedQuantity(event.potionUsedQuantity) ?? 1;
-
-  if (quantityBefore !== undefined) {
-    return Math.max(0, quantityBefore - usedQuantity);
-  }
-
-  return Math.max(0, Math.floor(currentQuantity) - usedQuantity);
-}
-
-function formatPotionHeal(potion?: PotionEquipmentItem | null) {
-  if (!potion) return 'Sem cura';
-
-  const healFlat = toSafeNumber(potion.healFlat, 0);
-  const healPercent = toSafeNumber(potion.healPercent, 0);
-
-  if (healFlat > 0 && healPercent > 0) {
-    return `Cura ${healFlat} + ${healPercent}% HP`;
-  }
-
-  if (healPercent > 0) {
-    return `Cura ${healPercent}% HP`;
-  }
-
-  if (healFlat > 0) {
-    return `Cura ${healFlat} HP`;
-  }
-
-  return 'Sem cura';
-}
-
-async function getCharacterInventoryRaw(characterId: string) {
-  const response = await apiClient.get<unknown>(`/inventory/${characterId}`);
-
-  return response.data;
-}
-
-async function getCharacterPotionConfigRaw(characterId: string) {
-  const response = await apiClient.get<PotionConfigApiResponse>(
-    `/consumables/${characterId}/config`,
-  );
-
-  return response.data;
-}
-
-async function updateCharacterPotionConfigRaw(
-  characterId: string,
-  payload: UpdatePotionConfigPayload,
-) {
-  const response = await apiClient.patch<PotionConfigApiResponse>(
-    `/consumables/${characterId}/config`,
-    payload,
-  );
-
-  return response.data;
-}
-
-function resolveCharacterStats(
-  overview: CharacterOverviewResponse | null,
-  character: CharacterViewModelWithLayoutFields | null,
-): DashboardStats {
-  type LooseOverview = CharacterOverviewResponse & {
-    totalStats?: DashboardStats;
-    stats?: DashboardStats;
-    characterStats?: DashboardStats;
-  };
-
-  type LooseCharacter = CharacterOverviewResponse['character'] & {
-    totalStats?: DashboardStats;
-    primaryStats?: DashboardStats;
-    stats?: DashboardStats;
-    baseStats?: DashboardStats;
-  };
-
-  const looseOverview = overview as LooseOverview | null;
-  const looseCharacter = overview?.character as LooseCharacter | undefined;
-
-  const candidates = [
-    character?.totalStats,
-    looseCharacter?.totalStats,
-    looseOverview?.totalStats,
-    looseOverview?.stats,
-    looseOverview?.characterStats,
-    looseCharacter?.primaryStats,
-    looseCharacter?.stats,
-    looseCharacter?.baseStats,
-    character?.baseStats,
-  ]
-    .map(normalizeStats)
-    .filter((stats): stats is DashboardStats => Boolean(stats));
-
-  if (candidates.length <= 0) return EMPTY_STATS;
-
-  return candidates.reduce((best, current) => {
-    return getStatsScore(current) > getStatsScore(best) ? current : best;
-  }, candidates[0]);
-}
-
-function buildCharacterViewModel(
-  overview: CharacterOverviewResponse,
-): CharacterViewModelWithLayoutFields {
-  const character = overview.character;
-
-  const className =
-    character.className ??
-    character.class?.name ??
-    character.gameClass?.name ??
-    'Lutador';
-
-  const currentMapName =
-    character.currentMapName ??
-    character.currentMap?.name ??
-    character.map?.name ??
-    overview.progression?.currentMap?.name ??
-    'Sem mapa';
-
-  return {
-    ...character,
-    id: character.id,
-    name: character.name,
-    className,
-    classId: character.classId ?? normalizeClassName(className),
-    level: character.level ?? 1,
-    xp: character.xp ?? 0,
-    totalXp: character.totalXp ?? character.xp ?? 0,
-    status: character.status ?? 'IDLE',
-    currentHp: character.currentHp ?? character.maxHp ?? 1,
-    maxHp: character.maxHp ?? 1,
-    avatarKey: character.avatarKey ?? null,
-    avatarUrl: character.avatarUrl ?? null,
-    currentMapName,
-    totalStats: character.totalStats ?? character.baseStats ?? EMPTY_STATS,
-    equipment: character.equipment ?? overview.equipment ?? {},
-  } as CharacterViewModelWithLayoutFields;
-}
-
-function getSessionFromStatus(
-  status: AutoCombatStatusResponse | null,
-): AutoCombatSessionApiViewModel | null {
-  if (!status) return null;
-
-  return (
-    status.session ??
-    status.activeSession ??
-    status.autoCombatSession ??
-    status.lastSession ??
-    null
-  );
-}
-
-function normalizeSessionStatus(status?: string | null) {
-  return String(status ?? '').trim().toUpperCase();
-}
-
-function isTerminalSessionStatus(status?: string | null) {
-  const normalizedStatus = normalizeSessionStatus(status);
-
-  return (
-    normalizedStatus === 'STOPPED' ||
-    normalizedStatus === 'FINISHED' ||
-    normalizedStatus === 'DEFEATED' ||
-    normalizedStatus === 'FAILED' ||
-    normalizedStatus === 'CANCELLED'
-  );
-}
-
-function isSessionActive(
-  status: AutoCombatStatusResponse | null,
-  session: AutoCombatSessionApiViewModel | null,
-) {
-  const normalizedStatus = normalizeSessionStatus(session?.status);
-
-  if (isTerminalSessionStatus(normalizedStatus)) {
-    return false;
-  }
-
-  if (normalizedStatus === 'ACTIVE') {
-    return true;
-  }
-
-  return Boolean(status?.active) || Boolean(status?.hasActiveAutoCombat);
-}
-
-function getActiveEncounters(subMap?: AutoCombatSubMapViewModel | null) {
-  return (subMap?.encounters ?? []).filter((encounter) => {
-    return encounter.isActive !== false && Boolean(encounter.mob);
-  });
-}
-
-function flattenCombatSubMaps(
-  maps: AutoCombatMapViewModel[],
-  characterLevel: number,
-) {
-  return maps
-    .flatMap((gameMap) => {
-      return (gameMap.subMaps ?? []).map((subMap) => {
-        return {
-          ...subMap,
-          map: {
-            id: gameMap.id,
-            name: gameMap.name,
-            tier: gameMap.tier,
-          },
-          mapName: gameMap.name,
-        };
-      });
-    })
-    .filter((subMap) => {
-      const minLevel = subMap.minLevel ?? 1;
-
-      return characterLevel >= minLevel && getActiveEncounters(subMap).length > 0;
-    })
-    .sort((a, b) => {
-      return (
-        (a.tier ?? 0) - (b.tier ?? 0) ||
-        (a.minLevel ?? 0) - (b.minLevel ?? 0) ||
-        a.name.localeCompare(b.name)
-      );
-    });
-}
-
-function getSubMapLabel(subMap: AutoCombatSubMapViewModel) {
-  return subMap.name;
-}
-
-function getDefaultSubMapId(params: {
-  maps: AutoCombatMapViewModel[];
-  characterLevel: number;
-  status: AutoCombatStatusResponse | null;
-}) {
-  const subMaps = flattenCombatSubMaps(params.maps, params.characterLevel);
-  const sessionSubMapId = params.status?.subMap?.id;
-
-  if (
-    sessionSubMapId &&
-    subMaps.some((subMap) => subMap.id === sessionSubMapId)
-  ) {
-    return sessionSubMapId;
-  }
-
-  return subMaps[0]?.id ?? '';
-}
-
-function getRemainingSeconds(status: AutoCombatStatusResponse | null) {
-  return (
-    status?.session?.remainingSeconds ??
-    status?.activeSession?.remainingSeconds ??
-    status?.autoCombatSession?.remainingSeconds ??
-    status?.sessionSummary?.duration?.remainingSeconds ??
-    0
-  );
-}
-
-function getLatestKilledMob(status: AutoCombatStatusResponse | null) {
-  const mobs = status?.rewards?.mobs ?? status?.sessionSummary?.mobs?.kills ?? [];
-
-  if (mobs.length <= 0) return null;
-
-  return mobs[mobs.length - 1];
-}
-
-function getThreatWeightPercent(
-  encounter: AutoCombatEncounterViewModel,
-  encounters: AutoCombatEncounterViewModel[],
-) {
-  const totalWeight = encounters.reduce((total, currentEncounter) => {
-    return total + Math.max(0, currentEncounter.weight ?? 0);
-  }, 0);
-
-  if (totalWeight <= 0) return 0;
-
-  return Math.round(((encounter.weight ?? 0) / totalWeight) * 100);
-}
-
-function normalizeRealtimeEventType(type?: string | null) {
-  return String(type ?? '').trim().toUpperCase();
-}
-
-function isDamageRealtimeEvent(eventType?: string | null) {
-  const normalizedType = normalizeRealtimeEventType(eventType);
-
-  return normalizedType === 'PLAYER_HIT' || normalizedType === 'MOB_HIT';
-}
-
-function buildSessionTotalsFromStatus(
-  status: AutoCombatStatusResponse | null,
-  session: AutoCombatSessionApiViewModel | null,
-): RealtimeSessionTotalsState | null {
-  if (!status && !session) return null;
-
-  const rewardsKillsTotal = status?.rewards?.mobs?.reduce((total, mob) => {
-    return total + toSafeNumber(mob.kills, 0);
-  }, 0);
-
-  const rewardsLootTotal = status?.rewards?.loots?.reduce((total, loot) => {
-    return total + toSafeNumber(loot.quantity, 0);
-  }, 0);
-
-  /*
-   * Fonte da verdade:
-   * - Para totais de sessão ativa, o backend deve mandar o valor final consolidado.
-   * - Não use "maior valor" aqui, porque cache visual/realtime pode contaminar sessão nova
-   *   ou manter número antigo depois de troca/stop/start.
-   * - processing.* representa apenas o processamento da requisição atual em alguns endpoints,
-   *   portanto não deve ser usado como total consolidado quando session/sessionSummary existem.
-   */
-  const totalKills =
-    getFirstOptionalNumber(
-      status?.sessionSummary?.mobs?.totalKills,
-      session?.totalCombatsResolved,
-      session?.totalKills,
-      rewardsKillsTotal,
-      0,
-    ) ?? 0;
-
-  const totalCombats =
-    getFirstOptionalNumber(
-      status?.sessionSummary?.combat?.totalCombats,
-      session?.totalCombatsResolved,
-      session?.totalCombats,
-      totalKills,
-      0,
-    ) ?? 0;
-
-  const totalRounds =
-    getFirstOptionalNumber(
-      status?.sessionSummary?.combat?.totalRounds,
-      session?.totalRoundsResolved,
-      session?.totalRounds,
-      0,
-    ) ?? 0;
-
-  const totalXpGained =
-    getFirstOptionalNumber(
-      status?.sessionSummary?.progression?.totalXpGained,
-      session?.totalXpGained,
-      0,
-    ) ?? 0;
-
-  const totalLoot =
-    getFirstOptionalNumber(
-      status?.sessionSummary?.loot?.totalQuantity,
-      session?.totalLoot,
-      rewardsLootTotal,
-      0,
-    ) ?? 0;
-
-  const potionsUsed =
-    getFirstOptionalNumber(
-      status?.sessionSummary?.potions?.used,
-      session?.totalPotionsUsed,
-      session?.potionsUsed,
-      0,
-    ) ?? 0;
-
-  const currentCombatIndex = Math.max(
-    1,
-    Math.floor(
-      getFirstOptionalNumber(session?.currentCombatIndex, totalKills + 1, 1) ??
-        1,
-    ),
-  );
-
-  return {
-    sessionId: session?.id ?? null,
-    currentCombatIndex,
-    totalCombats: Math.max(0, Math.floor(totalCombats)),
-    totalRounds: Math.max(0, Math.floor(totalRounds)),
-    totalKills: Math.max(0, Math.floor(totalKills)),
-    totalXpGained: Math.max(0, Math.floor(totalXpGained)),
-    totalLoot: Math.max(0, Math.floor(totalLoot)),
-    potionsUsed: Math.max(0, Math.floor(potionsUsed)),
-    updatedAt: Date.now(),
-  };
-}
-
-function buildProgressFromSource(
-  source: CharacterProgressSource | null | undefined,
-  sessionId?: string | null,
-): RealtimeCharacterProgressState | null {
-  if (!source) return null;
-
-  const levelProgress = source.levelProgress ?? null;
-
-  const totalXp =
-    getOptionalNumber(source.totalXp) ??
-    getOptionalNumber(levelProgress?.totalXp) ??
-    getOptionalNumber(source.xp) ??
-    getOptionalNumber(levelProgress?.xp);
-
-  const level =
-    getOptionalNumber(source.level) ?? getOptionalNumber(levelProgress?.level);
-
-  if (totalXp === undefined && level === undefined) {
-    return null;
-  }
-
-  return {
-    sessionId: sessionId ?? null,
-
-    level: level !== undefined ? Math.max(1, Math.floor(level)) : undefined,
-
-    xp: totalXp !== undefined ? Math.max(0, Math.floor(totalXp)) : undefined,
-
-    currentLevelXp:
-      getOptionalNumber(source.currentLevelXp) ??
-      getOptionalNumber(source.xpIntoCurrentLevel) ??
-      getOptionalNumber(levelProgress?.currentLevelXp) ??
-      getOptionalNumber(levelProgress?.xpIntoCurrentLevel),
-
-    xpToNextLevel:
-      getOptionalNumber(source.xpToNextLevel) ??
-      getOptionalNumber(source.nextLevelXp) ??
-      getOptionalNumber(levelProgress?.xpToNextLevel) ??
-      getOptionalNumber(levelProgress?.nextLevelXp),
-
-    nextLevelXp:
-      getOptionalNumber(source.nextLevelXp) ??
-      getOptionalNumber(source.xpToNextLevel) ??
-      getOptionalNumber(levelProgress?.nextLevelXp) ??
-      getOptionalNumber(levelProgress?.xpToNextLevel),
-
-    xpProgressPercent:
-      getOptionalNumber(source.xpProgressPercent) ??
-      getOptionalNumber(levelProgress?.xpProgressPercent) ??
-      getOptionalNumber(levelProgress?.progressPercent),
-
-    xpIntoCurrentLevel:
-      getOptionalNumber(source.xpIntoCurrentLevel) ??
-      getOptionalNumber(source.currentLevelXp) ??
-      getOptionalNumber(levelProgress?.xpIntoCurrentLevel) ??
-      getOptionalNumber(levelProgress?.currentLevelXp),
-
-    xpNeededForNextLevel:
-      getOptionalNumber(source.xpNeededForNextLevel) ??
-      getOptionalNumber(levelProgress?.xpNeededForNextLevel),
-
-    currentLevelStartXp:
-      getOptionalNumber(source.currentLevelStartXp) ??
-      getOptionalNumber(levelProgress?.currentLevelStartXp),
-
-    nextLevelRequiredXp:
-      getOptionalNumber(source.nextLevelRequiredXp) ??
-      getOptionalNumber(levelProgress?.nextLevelRequiredXp),
-
-    isAtLevelCap:
-      getOptionalBoolean(source.isAtLevelCap) ??
-      getOptionalBoolean(levelProgress?.isAtLevelCap),
-
-    updatedAt: Date.now(),
-  };
-}
-
-function buildProgressFromStatus(
-  status: AutoCombatStatusResponse | null,
-  session: AutoCombatSessionApiViewModel | null,
-): RealtimeCharacterProgressState | null {
-  return buildProgressFromSource(
-    status?.character as CharacterProgressSource | null | undefined,
-    session?.id ?? null,
-  );
-}
-
-function mergeProgressKeepingHighestXp(
-  current: RealtimeCharacterProgressState | null,
-  incoming: RealtimeCharacterProgressState | null,
-): RealtimeCharacterProgressState | null {
-  if (!incoming) return current;
-  if (!current) return incoming;
-
-  const currentXp = current.xp;
-  const incomingXp = incoming.xp;
-
-  if (
-    currentXp !== undefined &&
-    incomingXp !== undefined &&
-    currentXp > incomingXp
-  ) {
-    return {
-      ...incoming,
-      ...current,
-      sessionId: incoming.sessionId ?? current.sessionId ?? null,
-      updatedAt: Date.now(),
-    };
-  }
-
-  return {
-    ...current,
-    ...incoming,
-    sessionId: incoming.sessionId ?? current.sessionId ?? null,
-    level: incoming.level ?? current.level,
-    xp: incoming.xp ?? current.xp,
-    currentLevelXp: incoming.currentLevelXp ?? current.currentLevelXp,
-    xpToNextLevel: incoming.xpToNextLevel ?? current.xpToNextLevel,
-    nextLevelXp: incoming.nextLevelXp ?? current.nextLevelXp,
-    xpProgressPercent:
-      incoming.xpProgressPercent ?? current.xpProgressPercent,
-    xpIntoCurrentLevel:
-      incoming.xpIntoCurrentLevel ?? current.xpIntoCurrentLevel,
-    xpNeededForNextLevel:
-      incoming.xpNeededForNextLevel ?? current.xpNeededForNextLevel,
-    currentLevelStartXp:
-      incoming.currentLevelStartXp ?? current.currentLevelStartXp,
-    nextLevelRequiredXp:
-      incoming.nextLevelRequiredXp ?? current.nextLevelRequiredXp,
-    isAtLevelCap: incoming.isAtLevelCap ?? current.isAtLevelCap,
-    xpGained: incoming.xpGained ?? current.xpGained,
-    leveledUp: incoming.leveledUp ?? current.leveledUp,
-    levelsGained: incoming.levelsGained ?? current.levelsGained,
-    updatedAt: Date.now(),
-  };
-}
-
-function pickHighestProgress(
-  ...progresses: Array<RealtimeCharacterProgressState | null>
-) {
-  return progresses.reduce<RealtimeCharacterProgressState | null>(
-    (best, current) => mergeProgressKeepingHighestXp(best, current),
-    null,
-  );
-}
-
-function getRealtimeStatus(state: AutoCombatRealtimeStateLoose) {
-  return state.status ?? state.autoCombatStatus ?? null;
-}
-
-function getRealtimeSession(
-  state: AutoCombatRealtimeStateLoose,
-  status: AutoCombatStatusResponse | null,
-) {
-  return state.activeSession ?? state.session ?? getSessionFromStatus(status);
-}
-
-function getRealtimeCombat(state: AutoCombatRealtimeStateLoose) {
-  if (state.combat || state.realtimeCombat) {
-    return state.combat ?? state.realtimeCombat ?? null;
-  }
-
-  const mob = state.mob ?? null;
-  const character = state.character ?? null;
-  const visual = state.visual ?? null;
-  const totals =
-    state.totals ?? state.sessionTotals ?? state.realtimeSessionTotals ?? null;
-  const status = getRealtimeStatus(state);
-  const session = state.session ?? state.activeSession ?? getSessionFromStatus(status);
-
-  if (!mob && !character && !visual && !totals && !session) {
-    return null;
-  }
-
-  return {
-    sessionId: session?.id ?? totals?.sessionId ?? null,
-
-    mobId: mob?.id ?? null,
-    mobName: mob?.name ?? null,
-    mobCurrentHp: mob?.currentHp ?? null,
-    mobMaxHp: mob?.maxHp ?? null,
-    mobHpPercent: mob?.hpPercent ?? null,
-
-    characterCurrentHp: character?.currentHp ?? null,
-    characterMaxHp: character?.maxHp ?? null,
-    characterHpPercent: character?.hpPercent ?? null,
-
-    lastMessage: visual?.lastMessage ?? null,
-    message: visual?.lastMessage ?? null,
-    lastDamage: visual?.lastDamage ?? null,
-    lastEventType: visual?.lastEventType ?? null,
-    isCritical: visual?.isCritical ?? false,
-    isDodged: visual?.isDodged ?? false,
-
-    actor: visual?.actor ?? null,
-    target: visual?.target ?? null,
-
-    round: session?.currentRound ?? null,
-    combatIndex:
-      session?.currentCombatIndex ?? totals?.currentCombatIndex ?? null,
-
-    totalCombats: totals?.totalCombats ?? null,
-    totalRounds: totals?.totalRounds ?? null,
-    totalKills: totals?.totalKills ?? null,
-    totalXpGained: totals?.totalXpGained ?? null,
-    totalLoot: totals?.totalLoot ?? null,
-    potionsUsed: totals?.potionsUsed ?? null,
-
-    updatedAt:
-      visual?.updatedAt ??
-      mob?.updatedAt ??
-      character?.updatedAt ??
-      totals?.updatedAt ??
-      Date.now(),
-  } satisfies RealtimeCombatState;
-}
-
-function getRealtimeProgress(state: AutoCombatRealtimeStateLoose) {
-  if (
-    state.characterProgress ||
-    state.realtimeCharacterProgress ||
-    state.progress
-  ) {
-    return (
-      state.characterProgress ??
-      state.realtimeCharacterProgress ??
-      state.progress ??
-      null
-    );
-  }
-
-  const character = state.character ?? null;
-  const status = getRealtimeStatus(state);
-  const session = state.session ?? state.activeSession ?? getSessionFromStatus(status);
-
-  if (!character) {
-    return null;
-  }
-
-  return {
-    sessionId: session?.id ?? null,
-
-    level:
-      character.level !== null && character.level !== undefined
-        ? Math.max(1, Math.floor(character.level))
-        : undefined,
-
-    xp:
-      character.totalXp !== null && character.totalXp !== undefined
-        ? Math.max(0, Math.floor(character.totalXp))
-        : character.xp !== null && character.xp !== undefined
-          ? Math.max(0, Math.floor(character.xp))
-          : undefined,
-
-    currentLevelXp:
-      character.currentLevelXp ?? character.xpIntoCurrentLevel ?? undefined,
-    xpToNextLevel: character.xpToNextLevel ?? character.nextLevelXp ?? undefined,
-    nextLevelXp: character.nextLevelXp ?? character.xpToNextLevel ?? undefined,
-    xpProgressPercent: character.xpProgressPercent ?? undefined,
-
-    xpIntoCurrentLevel:
-      character.xpIntoCurrentLevel ?? character.currentLevelXp ?? undefined,
-    xpNeededForNextLevel: character.xpNeededForNextLevel ?? undefined,
-    currentLevelStartXp: character.currentLevelStartXp ?? undefined,
-    nextLevelRequiredXp: character.nextLevelRequiredXp ?? undefined,
-    isAtLevelCap: character.isAtLevelCap ?? undefined,
-
-    xpGained: character.xpGained ?? undefined,
-    leveledUp: character.leveledUp ?? undefined,
-    levelsGained: character.levelsGained ?? undefined,
-
-    updatedAt: character.updatedAt ?? Date.now(),
-  } satisfies RealtimeCharacterProgressState;
-}
-
-function getRealtimeTotals(state: AutoCombatRealtimeStateLoose) {
-  return (
-    state.sessionTotals ??
-    state.realtimeSessionTotals ??
-    state.totals ??
-    null
-  );
-}
-
-function getRealtimeBattleLogEvents(state: AutoCombatRealtimeStateLoose) {
-  return state.battleLogEvents ?? state.eventLog ?? state.events ?? [];
-}
-
-function getRealtimeActiveEvent(state: AutoCombatRealtimeStateLoose) {
-  return (
-    state.activeEvent ??
-    state.displayedEvent ??
-    state.currentEvent ??
-    state.lastProcessedEvent ??
-    state.lastEvent ??
-    null
-  );
-}
-
-function getRealtimeQueueLength(state: AutoCombatRealtimeStateLoose) {
-  return (
-    state.eventQueue?.length ??
-    state.realtimeEventQueue?.length ??
-    state.queue?.length ??
-    0
-  );
-}
-
-function getPotionEventKey(payload: AutoCombatRealtimeEvent) {
-  const event = payload as AutoCombatRealtimePotionEvent;
-
-  return [
-    event.sessionId ?? 'no-session',
-    event.characterId ?? 'no-character',
-    event.potionItemId ?? 'no-potion',
-    event.potionQuantityBefore ?? 'no-before',
-    event.potionQuantityAfter ?? 'no-after',
-    event.potionQuantityRemaining ?? 'no-remaining',
-    event.potionUsedQuantity ?? 'no-used',
-    event.characterCurrentHp ?? 'no-hp',
-    event.round ?? 'no-round',
-    event.combatIndex ?? 'no-combat',
-  ].join('|');
-}
-
-function getRealtimeActions(context: unknown): AutoCombatRealtimeActions {
-  return context as AutoCombatRealtimeActions;
-}
+import {
+  buildCharacterViewModel,
+  buildProgressFromSource,
+  buildProgressFromStatus,
+  buildSessionTotalsFromStatus,
+  buildZeroRealtimeSessionTotals,
+  clampNumber,
+  clampPercent,
+  flattenCombatSubMaps,
+  formatPotionHeal,
+  formatRiskLabel,
+  formatSeconds,
+  formatSessionStatus,
+  getActiveEncounters,
+  getApiErrorMessage,
+  getCharacterInventoryRaw,
+  getCharacterPotionConfigRaw,
+  getDefaultSubMapId,
+  getGameMapMaxLevel,
+  getGameMapMinLevel,
+  getLatestKilledMob,
+  getPotionDescription,
+  getPotionEventKey,
+  getPotionItem,
+  getPotionName,
+  getPotionQuantity,
+  getRealtimeActions,
+  getRealtimeActiveEvent,
+  getRealtimeBattleLogEvents,
+  getRealtimeCombat,
+  getRealtimeProgress,
+  getRealtimeQueueLength,
+  getRealtimeSession,
+  getRealtimeStatus,
+  getRealtimeTotals,
+  getRemainingSeconds,
+  getSessionFromStatus,
+  getSubMapLabel,
+  getSubMapsForMap,
+  getThreatWeightPercent,
+  getVisibleCombatMaps,
+  isDamageRealtimeEvent,
+  isSessionActive,
+  isTerminalSessionStatus,
+  mergeProgressKeepingHighestXp,
+  normalizePotionConfigResponse,
+  normalizePotionInventoryResponse,
+  normalizeRealtimeEventType,
+  pickHighestProgress,
+  resolveCharacterStats,
+  resolvePotionEventItemId,
+  resolvePotionQuantityAfter,
+  toSafeNumber,
+  updateCharacterPotionConfigRaw,
+} from '../utils/auto-combat-page.helpers';
+import {
+  getMobFullBodyImage,
+  getMobPortraitImage,
+} from '../utils/mobAssets';
 
 export function AutoCombatPage() {
   const { characterId } = useParams();
@@ -1573,6 +120,7 @@ export function AutoCombatPage() {
   const [maps, setMaps] = useState<AutoCombatMapViewModel[]>([]);
   const [autoCombatStatus, setAutoCombatStatus] =
     useState<AutoCombatStatusResponse | null>(null);
+  const [selectedMapId, setSelectedMapId] = useState('');
   const [selectedSubMapId, setSelectedSubMapId] = useState('');
   const [preparationPreview, setPreparationPreview] =
     useState<AutoCombatProjectionPreview | null>(null);
@@ -1611,6 +159,12 @@ export function AutoCombatPage() {
     useRef<CharacterPotionConfigWithItem | null>(null);
   const selectedPotionItemIdRef = useRef('');
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
+  const stableActiveMobRef = useRef<{
+    sessionId: string | null;
+    name: string;
+    normalizedName: string;
+    level: number;
+  } | null>(null);
 
   useEffect(() => {
     autoPotionConfigRef.current = autoPotionConfig;
@@ -1629,6 +183,7 @@ export function AutoCombatPage() {
     setIsPotionConfigPanelOpen(false);
     setPotionConfigMessage('');
     processedPotionEventKeysRef.current.clear();
+    stableActiveMobRef.current = null;
   }, [characterId]);
 
   const realtimeStatus = getRealtimeStatus(realtimeState);
@@ -1660,6 +215,12 @@ export function AutoCombatPage() {
     (providerQueueLength > 0 || Boolean(providerActiveEvent));
 
   const showActiveSession = hasActiveSession || hasPendingRealtimeVisual;
+
+  useEffect(() => {
+    if (!showActiveSession) {
+      stableActiveMobRef.current = null;
+    }
+  }, [showActiveSession]);
 
   const isSocketConnected = Boolean(realtimeState.isConnected);
 
@@ -1890,7 +451,21 @@ export function AutoCombatPage() {
     return buildProgressFromStatus(effectiveStatus, effectiveSession);
   }, [effectiveStatus, effectiveSession]);
 
+  const hasProviderVisualTimeline =
+    showActiveSession &&
+    (providerBattleLogEvents.length > 0 ||
+      providerQueueLength > 0 ||
+      Boolean(providerActiveEvent));
+
   const visibleCharacterProgress = useMemo(() => {
+    if (hasProviderVisualTimeline) {
+      return pickHighestProgress(
+        overviewCharacterProgress,
+        localCharacterProgress,
+        providerProgress,
+      );
+    }
+
     return pickHighestProgress(
       overviewCharacterProgress,
       statusCharacterProgress,
@@ -1898,6 +473,7 @@ export function AutoCombatPage() {
       providerProgress,
     );
   }, [
+    hasProviderVisualTimeline,
     overviewCharacterProgress,
     statusCharacterProgress,
     localCharacterProgress,
@@ -1922,8 +498,16 @@ export function AutoCombatPage() {
     ? buildSessionTotalsFromStatus(effectiveStatus, effectiveSession)
     : null;
 
+  const visibleZeroSessionTotals =
+    hasActiveSession && hasProviderVisualTimeline
+      ? buildZeroRealtimeSessionTotals(effectiveSession)
+      : null;
+
   const visibleSessionTotals = hasActiveSession
-    ? statusSessionTotals ?? visibleRealtimeSessionTotals ?? visibleLocalSessionTotals
+    ? visibleRealtimeSessionTotals ??
+      visibleLocalSessionTotals ??
+      visibleZeroSessionTotals ??
+      statusSessionTotals
     : null;
 
   const battleLogEvents =
@@ -1993,30 +577,99 @@ export function AutoCombatPage() {
     return () => window.clearInterval(intervalId);
   }, [hasActiveSession, isSocketConnected, loadAutoCombatData]);
 
+  const currentSelectionLevel =
+    visibleCharacterProgress?.level ?? character?.level ?? 1;
+
+  const availableMaps = useMemo(() => {
+    return getVisibleCombatMaps(maps);
+  }, [maps]);
+
+  const selectedMap = useMemo(() => {
+    const mapBySelectedId = availableMaps.find((gameMap) => {
+      return gameMap.id === selectedMapId;
+    });
+
+    if (mapBySelectedId) return mapBySelectedId;
+
+    if (selectedSubMapId) {
+      const mapBySubMap = availableMaps.find((gameMap) => {
+        return gameMap.subMaps?.some((subMap) => subMap.id === selectedSubMapId);
+      });
+
+      if (mapBySubMap) return mapBySubMap;
+    }
+
+    return availableMaps[0] ?? null;
+  }, [availableMaps, selectedMapId, selectedSubMapId]);
+
   const availableSubMaps = useMemo(() => {
-    return flattenCombatSubMaps(
-      maps,
-      visibleCharacterProgress?.level ?? character?.level ?? 1,
-    );
-  }, [maps, visibleCharacterProgress?.level, character?.level]);
+    if (selectedMap) {
+      return getSubMapsForMap(selectedMap, currentSelectionLevel);
+    }
+
+    return flattenCombatSubMaps(maps, currentSelectionLevel);
+  }, [maps, selectedMap, currentSelectionLevel]);
 
   const selectedSubMap = useMemo(() => {
     return availableSubMaps.find((subMap) => subMap.id === selectedSubMapId);
   }, [availableSubMaps, selectedSubMapId]);
-
-  const selectedMap = useMemo(() => {
-    if (!selectedSubMap) return null;
-
-    return maps.find((gameMap) => {
-      return gameMap.subMaps?.some((subMap) => subMap.id === selectedSubMap.id);
-    });
-  }, [maps, selectedSubMap]);
 
   const selectedSubMapThreats = useMemo(() => {
     return getActiveEncounters(selectedSubMap).sort((a, b) => {
       return (b.weight ?? 0) - (a.weight ?? 0);
     });
   }, [selectedSubMap]);
+
+  const selectedMapIsUnlocked = selectedMap
+    ? currentSelectionLevel >= getGameMapMinLevel(selectedMap)
+    : false;
+
+  const selectedSubMapIsUnlocked = selectedSubMap
+    ? currentSelectionLevel >=
+      (selectedSubMap.minLevel ?? getGameMapMinLevel(selectedMap))
+    : false;
+
+  const selectedSubMapHasActiveEncounters = selectedSubMapThreats.length > 0;
+
+  useEffect(() => {
+    if (maps.length <= 0) return;
+
+    const nextMap = selectedMap ?? availableMaps[0] ?? null;
+
+    if (!nextMap) {
+      if (selectedMapId) {
+        setSelectedMapId('');
+      }
+
+      if (selectedSubMapId) {
+        setSelectedSubMapId('');
+      }
+
+      return;
+    }
+
+    if (selectedMapId !== nextMap.id) {
+      setSelectedMapId(nextMap.id);
+    }
+
+    const mapSubMaps = getSubMapsForMap(nextMap, currentSelectionLevel);
+
+    if (
+      selectedSubMapId &&
+      mapSubMaps.some((subMap) => subMap.id === selectedSubMapId)
+    ) {
+      return;
+    }
+
+    setSelectedSubMapId(mapSubMaps[0]?.id ?? '');
+  }, [
+    maps,
+    availableMaps,
+    selectedMap,
+    selectedMapId,
+    selectedSubMapId,
+    currentSelectionLevel,
+  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -2027,7 +680,11 @@ export function AutoCombatPage() {
         return;
       }
 
-      if (showActiveSession) {
+      if (
+        showActiveSession ||
+        !selectedSubMapIsUnlocked ||
+        !selectedSubMapHasActiveEncounters
+      ) {
         setPreparationPreview(null);
         return;
       }
@@ -2060,7 +717,14 @@ export function AutoCombatPage() {
     return () => {
       isMounted = false;
     };
-  }, [characterId, selectedSubMapId, hasStartedHunt, showActiveSession]);
+  }, [
+    characterId,
+    selectedSubMapId,
+    hasStartedHunt,
+    showActiveSession,
+    selectedSubMapIsUnlocked,
+    selectedSubMapHasActiveEncounters,
+  ]);
 
   if (!characterId) {
     return <Navigate to="/characters" replace />;
@@ -2116,11 +780,18 @@ export function AutoCombatPage() {
     return Array.from(byId.values());
   })();
 
-  const potionSlots = Array.from({ length: 3 }, (_, index) => {
-    return index === 0 ? currentPotionConfig : null;
+  const potionOptionsCountLabel =
+    potionOptions.length === 1
+      ? '1 opção no inventário'
+      : `${potionOptions.length} opções no inventário`;
+
+  const potionSlots = Array.from({ length: 1 }, () => {
+    return currentPotionConfig;
   });
 
-  const latestKilledMob = showActiveSession ? getLatestKilledMob(effectiveStatus) : null;
+  const latestKilledMob = showActiveSession
+    ? getLatestKilledMob(effectiveStatus)
+    : null;
   const mainThreat = selectedSubMapThreats[0] ?? null;
   const remainingSeconds = showActiveSession
     ? getRemainingSeconds(effectiveStatus)
@@ -2261,6 +932,17 @@ export function AutoCombatPage() {
     currentMapName: currentLayoutMapName,
   };
 
+  const characterBattleImage = layoutCharacter.avatarUrl ?? null;
+
+  const selectedMapName =
+    selectedMap?.name ??
+    selectedSubMap?.map?.name ??
+    selectedSubMap?.mapName ??
+    layoutCharacter.currentMapName;
+
+  const selectedMapImage = getMapImageByName(selectedMapName);
+  const selectedMapVisualStyle = buildMapVisualStyle(selectedMapImage);
+
   const characterHasHp = currentCharacterHp > 0;
 
   const characterHpPercent =
@@ -2272,21 +954,98 @@ export function AutoCombatPage() {
     width: `${clampPercent(characterHpPercent)}%`,
   } as CSSProperties;
 
+  const activeMobSessionId = effectiveSession?.id ?? null;
+
+  const stableActiveMobForSession =
+    stableActiveMobRef.current &&
+    stableActiveMobRef.current.sessionId === activeMobSessionId
+      ? stableActiveMobRef.current
+      : null;
+
   const activeMobName = showActiveSession
     ? visualRealtimeCombat?.mobName ??
       effectiveStatus?.currentMob?.name ??
-      mainThreat?.mob?.name ??
+      stableActiveMobForSession?.name ??
       latestKilledMob?.mobName ??
+      mainThreat?.mob?.name ??
       'Aguardando ameaça'
     : mainThreat?.mob?.name ?? 'Aguardando ameaça';
+
+  const normalizedActiveMobName = activeMobName.trim().toLowerCase();
+
+  const activeMobThreat =
+    selectedSubMapThreats.find((encounter) => {
+      const encounterMobName = encounter.mob?.name;
+
+      return Boolean(
+        encounterMobName &&
+          encounterMobName.trim().toLowerCase() === normalizedActiveMobName,
+      );
+    }) ?? null;
+
+  const activeMobLevel = Math.max(
+    1,
+    Math.floor(
+      toSafeNumber(
+        (
+          visualRealtimeCombat as
+            | { mobLevel?: number | string; level?: number | string }
+            | null
+            | undefined
+        )?.mobLevel ??
+          (
+            visualRealtimeCombat as
+              | { mobLevel?: number | string; level?: number | string }
+              | null
+              | undefined
+          )?.level ??
+          effectiveStatus?.currentMob?.level ??
+          activeMobThreat?.mob?.level ??
+          stableActiveMobForSession?.level ??
+          (
+            latestKilledMob as
+              | { mobLevel?: number | string; level?: number | string }
+              | null
+              | undefined
+          )?.mobLevel ??
+          (
+            latestKilledMob as
+              | { mobLevel?: number | string; level?: number | string }
+              | null
+              | undefined
+          )?.level ??
+          mainThreat?.mob?.level ??
+          1,
+        1,
+      ),
+    ),
+  );
+
+  if (
+    showActiveSession &&
+    activeMobName &&
+    activeMobName !== 'Aguardando ameaça' &&
+    activeMobLevel > 1
+  ) {
+    stableActiveMobRef.current = {
+      sessionId: activeMobSessionId,
+      name: activeMobName,
+      normalizedName: normalizedActiveMobName,
+      level: activeMobLevel,
+    };
+  }
+
+  const activeMobFullBodyImage =
+    getMobFullBodyImage(activeMobName) ?? getMobPortraitImage(activeMobName);
 
   const rawActiveMobMaxHp = showActiveSession
     ? visualRealtimeCombat?.mobMaxHp ??
       effectiveStatus?.currentMob?.maxHp ??
       effectiveStatus?.currentMob?.hp ??
+      activeMobThreat?.mob?.hp ??
       mainThreat?.mob?.hp ??
       0
-    : mainThreat?.mob?.hp ?? 0;
+    : activeMobThreat?.mob?.hp ?? mainThreat?.mob?.hp ?? 0;
 
   const activeMobMaxHp = Math.max(0, toSafeNumber(rawActiveMobMaxHp, 0));
 
@@ -2314,7 +1073,9 @@ export function AutoCombatPage() {
   const activeMobReference = showActiveSession
     ? visualRealtimeCombat?.combatIndex
       ? `Combate ${visualRealtimeCombat.combatIndex}${
-          visualRealtimeCombat.round ? ` · Rodada ${visualRealtimeCombat.round}` : ''
+          visualRealtimeCombat.round
+            ? ` · Rodada ${visualRealtimeCombat.round}`
+            : ''
         }`
       : effectiveStatus?.session?.currentCombatIndex
         ? `Combate ${effectiveStatus.session.currentCombatIndex}${
@@ -2322,14 +1083,18 @@ export function AutoCombatPage() {
               ? ` · Rodada ${effectiveStatus.session.currentRound}`
               : ''
           }`
-        : mainThreat?.mob
-          ? `Nv. ${mainThreat.mob.level}`
-          : latestKilledMob
-            ? `${latestKilledMob.kills} abate(s)`
-            : '—'
-    : mainThreat?.mob
-      ? `Nv. ${mainThreat.mob.level}`
-      : '—';
+        : activeMobThreat?.mob
+          ? `Nv. ${activeMobThreat.mob.level}`
+          : mainThreat?.mob
+            ? `Nv. ${mainThreat.mob.level}`
+            : latestKilledMob
+              ? `${latestKilledMob.kills} abate(s)`
+              : '—'
+    : activeMobThreat?.mob
+      ? `Nv. ${activeMobThreat.mob.level}`
+      : mainThreat?.mob
+        ? `Nv. ${mainThreat.mob.level}`
+        : '—';
 
   const sessionStatusText = showActiveSession
     ? effectiveStatus?.sessionSummary?.statusText ??
@@ -2412,14 +1177,34 @@ export function AutoCombatPage() {
   );
 
   const canStartHunt =
-    availableSubMaps.length > 0 && !showActiveSession && characterHasHp;
+    Boolean(selectedMap) &&
+    Boolean(selectedSubMap) &&
+    selectedMapIsUnlocked &&
+    selectedSubMapIsUnlocked &&
+    !showActiveSession &&
+    characterHasHp;
 
   const canStartCombat =
-    Boolean(selectedSubMap) &&
+    canStartHunt &&
+    selectedSubMapHasActiveEncounters &&
     hasStartedHunt &&
     !showActiveSession &&
     !isActionLoading &&
     characterHasHp;
+
+  const activeVisualEventType = normalizeRealtimeEventType(
+    providerActiveEvent?.type ?? visualRealtimeCombat?.lastEventType,
+  );
+
+  const isMobDefeatedVisual =
+    showActiveSession &&
+    (activeVisualEventType === 'MOB_DEFEATED' ||
+      (activeMobMaxHp > 0 && activeMobCurrentHp <= 0));
+
+  const isPlayerDefeatedVisual =
+    showActiveSession &&
+    (activeVisualEventType === 'PLAYER_DEFEATED' ||
+      (currentCharacterMaxHp > 0 && currentCharacterHp <= 0));
 
   const latestDamageAmount =
     visualRealtimeCombat?.lastDamage && visualRealtimeCombat.lastDamage > 0
@@ -2464,6 +1249,7 @@ export function AutoCombatPage() {
       ? 'is-critical-hit'
       : '',
     shouldShowPlayerDodge ? 'is-dodging' : '',
+    isPlayerDefeatedVisual ? 'is-defeated' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -2476,6 +1262,7 @@ export function AutoCombatPage() {
       ? 'is-critical-hit'
       : '',
     shouldShowMobDodge ? 'is-dodging' : '',
+    isMobDefeatedVisual ? 'is-defeated' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -2485,6 +1272,52 @@ export function AutoCombatPage() {
     availablePotions,
   );
 
+  function getPotionHealLabel(
+    potion: PotionEquipmentItem | PotionInventoryOption | null | undefined,
+  ) {
+    if (!potion) {
+      return 'Cura não informada';
+    }
+
+    const formattedHeal = formatPotionHeal(potion).trim();
+
+    if (!formattedHeal) {
+      return 'Cura não informada';
+    }
+
+    if (/^cura\b/i.test(formattedHeal)) {
+      return formattedHeal.replace(/^cura\s*/i, 'Cura: ');
+    }
+
+    return `Cura: ${formattedHeal}`;
+  }
+
+  function handleMapChange(mapId: string) {
+    const nextMap = maps.find((gameMap) => gameMap.id === mapId) ?? null;
+    const nextSubMaps = getSubMapsForMap(nextMap, currentSelectionLevel);
+
+    setSelectedMapId(mapId);
+    setSelectedSubMapId(nextSubMaps[0]?.id ?? '');
+    setPreparationPreview(null);
+    setHasStartedHunt(false);
+    setErrorMessage('');
+  }
+
+  function handleSubMapChange(subMapId: string) {
+    const parentMap = maps.find((gameMap) => {
+      return gameMap.subMaps?.some((subMap) => subMap.id === subMapId);
+    });
+
+    if (parentMap?.id && parentMap.id !== selectedMapId) {
+      setSelectedMapId(parentMap.id);
+    }
+
+    setSelectedSubMapId(subMapId);
+    setPreparationPreview(null);
+    setHasStartedHunt(false);
+    setErrorMessage('');
+  }
+
   function handleStartHunt() {
     if (!characterHasHp) {
       setErrorMessage(
@@ -2493,10 +1326,34 @@ export function AutoCombatPage() {
       return;
     }
 
-    if (!canStartHunt) {
+    if (!selectedMap) {
+      setErrorMessage('Nenhum mapa disponível para o nível atual.');
+      return;
+    }
+
+    if (!selectedMapIsUnlocked) {
       setErrorMessage(
-        'Nenhum submapa com encontros ativos foi encontrado para o nível atual.',
+        `Este mapa libera no nível ${getGameMapMinLevel(selectedMap)}.`,
       );
+      return;
+    }
+
+    if (!selectedSubMap) {
+      setErrorMessage('Nenhum submapa disponível para o mapa selecionado.');
+      return;
+    }
+
+    if (!selectedSubMapIsUnlocked) {
+      setErrorMessage(
+        `Este submapa libera no nível ${
+          selectedSubMap.minLevel ?? getGameMapMinLevel(selectedMap)
+        }.`,
+      );
+      return;
+    }
+
+    if (!canStartHunt) {
+      setErrorMessage('Não foi possível iniciar a caça com a seleção atual.');
       return;
     }
 
@@ -2522,6 +1379,15 @@ export function AutoCombatPage() {
   }
 
   function handleOpenPotionConfig(slotIndex: number) {
+    const isClickingCurrentOpenSlot =
+      isPotionConfigPanelOpen && selectedPotionSlotIndex === slotIndex;
+
+    if (isClickingCurrentOpenSlot) {
+      setIsPotionConfigPanelOpen(false);
+      setPotionConfigMessage('');
+      return;
+    }
+
     setSelectedPotionSlotIndex(slotIndex);
     setPotionConfigMessage('');
 
@@ -2538,6 +1404,7 @@ export function AutoCombatPage() {
     setIsPotionEnabled(Boolean(currentPotionConfig?.enabled));
     setIsPotionConfigPanelOpen(true);
   }
+
   async function handleSavePotionConfig() {
     if (!characterId || isPotionConfigLoading) return;
 
@@ -2675,6 +1542,22 @@ export function AutoCombatPage() {
       return;
     }
 
+    if (!selectedSubMapIsUnlocked) {
+      setErrorMessage(
+        `Este submapa libera no nível ${
+          selectedSubMap?.minLevel ?? getGameMapMinLevel(selectedMap)
+        }.`,
+      );
+      return;
+    }
+
+    if (!selectedSubMapHasActiveEncounters) {
+      setErrorMessage(
+        'Este submapa ainda não possui inimigos cadastrados para o auto-combate.',
+      );
+      return;
+    }
+
     try {
       setIsActionLoading(true);
       setErrorMessage('');
@@ -2777,19 +1660,7 @@ export function AutoCombatPage() {
   return (
     <DashboardLayout character={layoutCharacter}>
       <div className="auto-combat-page">
-        <header className="auto-combat-app-header">
-          <button
-            type="button"
-            className="auto-combat-back-button"
-            onClick={() => window.history.back()}
-          >
-            ‹ Voltar
-          </button>
-
-          <strong>Combate</strong>
-
-          <span />
-        </header>
+        <AutoCombatAppHeader />
 
         {errorMessage ? (
           <div className="auto-combat-alert" role="alert">
@@ -2802,59 +1673,87 @@ export function AutoCombatPage() {
             <span>Combate Automático</span>
           </div>
 
-          <div className="auto-combat-tabs" role="tablist">
-            <button
-              type="button"
-              className={activeTab === 'battle' ? 'is-active' : ''}
-              onClick={() => setActiveTab('battle')}
-            >
-              Combate
-            </button>
-
-            <button
-              type="button"
-              className={activeTab === 'stats' ? 'is-active' : ''}
-              onClick={() => setActiveTab('stats')}
-            >
-              Status
-            </button>
-          </div>
+          <AutoCombatTabs activeTab={activeTab} onChange={setActiveTab} />
 
           {activeTab === 'battle' ? (
             <div className="auto-combat-tab-panel">
               {!hasStartedHunt && !showActiveSession ? (
                 <article className="auto-combat-stage-card auto-combat-map-stage">
                   <div className="auto-combat-map-preview">
-                    <div className="auto-combat-map-preview__visual">
+                    <div
+                      className={[
+                        'auto-combat-map-preview__visual',
+                        selectedMapImage
+                          ? 'auto-combat-map-preview__visual--with-image'
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      style={selectedMapVisualStyle}
+                    >
                       <span>Zona atual</span>
 
-                      <strong>
-                        {selectedMap?.name ??
-                          selectedSubMap?.map?.name ??
-                          selectedSubMap?.mapName ??
-                          layoutCharacter.currentMapName}
-                      </strong>
+                      <strong>{selectedMapName}</strong>
 
                       {selectedSubMap?.name ? (
                         <small>{selectedSubMap.name}</small>
                       ) : null}
+
+                      <div className="auto-combat-map-meta auto-combat-map-meta--visual">
+                        <div>
+                          <span>Tier</span>
+                          <strong>
+                            {selectedSubMap?.tier ?? selectedMap?.tier ?? '—'}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Nível</span>
+                          <strong>
+                            {selectedSubMap?.minLevel && selectedSubMap.maxLevel
+                              ? `${selectedSubMap.minLevel}-${selectedSubMap.maxLevel}`
+                              : selectedMap
+                                ? `${getGameMapMinLevel(selectedMap)}-${getGameMapMaxLevel(selectedMap)}`
+                                : '—'}
+                          </strong>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="auto-combat-map-preview__content">
                       <span>Preparação da incursão</span>
 
-                      <strong>
-                        {selectedMap?.name ??
-                          selectedSubMap?.map?.name ??
-                          selectedSubMap?.mapName ??
-                          layoutCharacter.currentMapName}
-                      </strong>
+                      <strong>{selectedMapName}</strong>
 
                       <p>
                         {selectedMap?.description ??
                           selectedSubMap?.description ??
                           'Escolha um submapa disponível e inicie a caça para revelar os infectados próximos.'}
                       </p>
+
+                      <label className="auto-combat-field auto-combat-field--map">
+                        <span>Mapa</span>
+
+                        <div className="auto-combat-select-shell">
+                          <select
+                            value={selectedMapId}
+                            onChange={(event) =>
+                              handleMapChange(event.target.value)
+                            }
+                            disabled={isActionLoading}
+                          >
+                            {availableMaps.length <= 0 ? (
+                              <option value="">Nenhum mapa disponível</option>
+                            ) : null}
+
+                            {availableMaps.map((gameMap) => (
+                              <option key={gameMap.id} value={gameMap.id}>
+                                {gameMap.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </label>
 
                       <label className="auto-combat-field auto-combat-field--submap">
                         <span>Submapa</span>
@@ -2863,9 +1762,9 @@ export function AutoCombatPage() {
                           <select
                             value={selectedSubMapId}
                             onChange={(event) =>
-                              setSelectedSubMapId(event.target.value)
+                              handleSubMapChange(event.target.value)
                             }
-                            disabled={isActionLoading}
+                            disabled={isActionLoading || !selectedMap}
                           >
                             {availableSubMaps.length <= 0 ? (
                               <option value="">Nenhum submapa disponível</option>
@@ -2879,32 +1778,6 @@ export function AutoCombatPage() {
                           </select>
                         </div>
                       </label>
-
-                      <div className="auto-combat-map-meta">
-                        <div>
-                          <span>Mapa</span>
-                          <strong>
-                            {selectedMap?.name ??
-                              selectedSubMap?.map?.name ??
-                              selectedSubMap?.mapName ??
-                              layoutCharacter.currentMapName}
-                          </strong>
-                        </div>
-
-                        <div>
-                          <span>Tier</span>
-                          <strong>{selectedSubMap?.tier ?? '—'}</strong>
-                        </div>
-
-                        <div>
-                          <span>Nível</span>
-                          <strong>
-                            {selectedSubMap?.minLevel && selectedSubMap.maxLevel
-                              ? `${selectedSubMap.minLevel}-${selectedSubMap.maxLevel}`
-                              : '—'}
-                          </strong>
-                        </div>
-                      </div>
 
                       <div className="auto-combat-stage-actions">
                         <button
@@ -2935,6 +1808,9 @@ export function AutoCombatPage() {
                           encounter,
                           selectedSubMapThreats,
                         );
+                        const mobFullBodyImage =
+                          getMobFullBodyImage(mob?.name) ??
+                          getMobPortraitImage(mob?.name);
 
                         return (
                           <article
@@ -2949,8 +1825,28 @@ export function AutoCombatPage() {
                               XP {mob?.xpReward ?? '—'}
                             </div>
 
-                            <div className="auto-combat-enemy-card__portrait">
-                              ☣
+                            <div
+                              className={[
+                                'auto-combat-enemy-card__portrait',
+                                'auto-combat-enemy-card__portrait--fullbody',
+                                mobFullBodyImage
+                                  ? 'auto-combat-enemy-card__portrait--loaded'
+                                  : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                            >
+                              {mobFullBodyImage ? (
+                                <img
+                                  src={mobFullBodyImage}
+                                  alt={mob?.name ?? 'Infectado'}
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <span className="auto-combat-enemy-card__portrait-fallback">
+                                  ☣
+                                </span>
+                              )}
                             </div>
 
                             <div className="auto-combat-enemy-card__content">
@@ -2991,7 +1887,9 @@ export function AutoCombatPage() {
                       <strong>Nenhum inimigo encontrado</strong>
 
                       <p>
-                        Este submapa não possui encontros ativos no momento.
+                        Este submapa está cadastrado, mas ainda não possui
+                        encontros ativos. Quando os mobs forem vinculados ao
+                        seed/backend, ele ficará disponível para combate.
                       </p>
                     </div>
                   )}
@@ -3062,7 +1960,11 @@ export function AutoCombatPage() {
                     </div>
 
                     <div className="auto-combat-duel-row">
-                      <div className={playerFighterClassName}>
+                      <div
+                        className={playerFighterClassName}
+                        data-fighter-role="player"
+                        data-has-avatar={characterBattleImage ? 'true' : 'false'}
+                      >
                         {shouldShowPlayerDamage ? (
                           <span
                             key={playerDamageKey}
@@ -3079,9 +1981,56 @@ export function AutoCombatPage() {
                           </span>
                         ) : null}
 
-                        <span>Sobrevivente</span>
+                        {isPlayerDefeatedVisual ? (
+                          <span className="auto-combat-defeated-badge auto-combat-defeated-badge--player">
+                            Derrotado
+                          </span>
+                        ) : null}
 
-                        <strong>{layoutCharacter.name}</strong>
+                        <span className="auto-combat-fighter-card__level-badge auto-combat-fighter-card__level-badge--player">
+                          Nv. {currentCharacterLevel}
+                        </span>
+
+                        <div
+                          className={[
+                            'auto-combat-fighter-card__identity',
+                            'auto-combat-fighter-card__identity--player',
+                            characterBattleImage
+                              ? 'auto-combat-fighter-card__identity--player-with-avatar'
+                              : 'auto-combat-fighter-card__identity--player-empty',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                        >
+                          <div
+                            className={[
+                              'auto-combat-fighter-card__character-image',
+                              characterBattleImage
+                                ? 'auto-combat-fighter-card__character-image--loaded'
+                                : 'auto-combat-fighter-card__character-image--empty',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                            aria-hidden={!characterBattleImage}
+                          >
+                            {characterBattleImage ? (
+                              <img
+                                src={characterBattleImage}
+                                alt={layoutCharacter.name}
+                              />
+                            ) : (
+                              <span
+                                className="auto-combat-fighter-card__character-placeholder"
+                                aria-hidden="true"
+                              />
+                            )}
+                          </div>
+
+                          <div className="auto-combat-fighter-card__heading auto-combat-fighter-card__heading--player">
+                            <span>Sobrevivente</span>
+                            <strong>{layoutCharacter.name}</strong>
+                          </div>
+                        </div>
 
                         <div className="auto-combat-resource">
                           <div>
@@ -3099,7 +2048,10 @@ export function AutoCombatPage() {
 
                       <div className="auto-combat-vs">VS</div>
 
-                      <div className={mobFighterClassName}>
+                      <div
+                        className={mobFighterClassName}
+                        data-fighter-role="mob"
+                      >
                         {shouldShowMobDamage ? (
                           <span
                             key={mobDamageKey}
@@ -3116,9 +2068,44 @@ export function AutoCombatPage() {
                           </span>
                         ) : null}
 
-                        <span>Ameaça atual</span>
+                        {isMobDefeatedVisual ? (
+                          <span className="auto-combat-defeated-badge">
+                            Derrotado
+                          </span>
+                        ) : null}
 
-                        <strong>{activeMobName}</strong>
+                        <span className="auto-combat-fighter-card__level-badge auto-combat-fighter-card__level-badge--mob">
+                          Nv. {activeMobLevel}
+                        </span>
+
+                        <div className="auto-combat-fighter-card__identity auto-combat-fighter-card__identity--mob">
+                          <div
+                            className={[
+                              'auto-combat-fighter-card__mob-image',
+                              activeMobFullBodyImage
+                                ? 'auto-combat-fighter-card__mob-image--loaded'
+                                : 'auto-combat-fighter-card__mob-image--empty',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                          >
+                            {activeMobFullBodyImage ? (
+                              <img
+                                src={activeMobFullBodyImage}
+                                alt={activeMobName}
+                              />
+                            ) : (
+                              <span className="auto-combat-fighter-card__mob-placeholder">
+                                ☣
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="auto-combat-fighter-card__heading auto-combat-fighter-card__heading--mob">
+                            <span>Ameaça atual</span>
+                            <strong>{activeMobName}</strong>
+                          </div>
+                        </div>
 
                         <div className="auto-combat-resource">
                           <div>
@@ -3156,19 +2143,23 @@ export function AutoCombatPage() {
                     maxItems={20}
                   />
 
-                  <div className="auto-combat-consumables">
+                  <div className="auto-combat-consumables auto-combat-consumables--minimal">
                     {potionSlots.map((potionConfig, index) => {
                       const potionItem = getPotionItem(potionConfig);
-                      const potionQuantity =
-                        index === 0 ? configuredPotionQuantity : 0;
+                      const potionQuantity = configuredPotionQuantity;
+                      const hasConfiguredPotion = Boolean(potionItem);
+                      const isEnabled = Boolean(
+                        potionConfig?.enabled && hasConfiguredPotion,
+                      );
 
                       return (
                         <button
-                          key={potionConfig?.id ?? `empty-potion-${index}`}
+                          key={potionConfig?.id ?? `auto-potion-${index}`}
                           type="button"
                           className={[
                             'auto-combat-consumable-slot',
-                            potionConfig?.enabled ? 'is-enabled' : 'is-empty',
+                            'auto-combat-consumable-slot--primary',
+                            isEnabled ? 'is-enabled' : 'is-empty',
                             index === selectedPotionSlotIndex &&
                             isPotionConfigPanelOpen
                               ? 'is-selected'
@@ -3182,28 +2173,32 @@ export function AutoCombatPage() {
                             ✚
                           </div>
 
-                          <div>
+                          <div className="auto-combat-consumable-slot__body">
+                            <span className="auto-combat-consumable-slot__eyebrow">
+                              Poção automática
+                            </span>
+
                             <strong>
-                              {index === 0
+                              {potionItem
                                 ? getPotionName(potionConfig)
-                                : 'Slot reserva'}
+                                : 'Nenhuma poção configurada'}
                             </strong>
 
                             <span>
-                              {index === 0
+                              {potionItem
                                 ? getPotionDescription(potionConfig)
-                                : 'Clique para configurar. O backend atual usa 1 poção automática.'}
+                                : 'Clique para escolher uma poção e definir o gatilho de HP.'}
                             </span>
 
                             <small className="auto-combat-consumable-slot__meta">
                               {potionItem
-                                ? `${formatPotionHeal(potionItem)} · Qtd. ${potionQuantity}`
-                                : 'Defina poção e gatilho de HP'}
+                                ? `${getPotionHealLabel(potionItem)} · Qtd. ${potionQuantity} · HP ≤ ${currentPotionConfig?.hpThresholdPercent ?? potionThresholdPercent}%`
+                                : 'Grid de poções · gatilho automático'}
                             </small>
                           </div>
 
                           <em className="auto-combat-consumable-slot__action">
-                            Configurar
+                            {isPotionConfigPanelOpen ? 'Editando' : 'Configurar'}
                           </em>
                         </button>
                       );
@@ -3211,17 +2206,11 @@ export function AutoCombatPage() {
                   </div>
 
                   {isPotionConfigPanelOpen ? (
-                    <article className="auto-combat-potion-config-panel">
+                    <article className="auto-combat-potion-config-panel auto-combat-potion-config-panel--minimal">
                       <div className="auto-combat-potion-config-panel__header">
                         <div>
                           <span>Poção automática</span>
-                          <strong>
-                            {selectedPotionSlotIndex === 0
-                              ? 'Configurar slot principal'
-                              : `Configurar slot reserva ${
-                                  selectedPotionSlotIndex + 1
-                                }`}
-                          </strong>
+                          <strong>Escolha a poção e o gatilho de HP</strong>
                         </div>
 
                         <button
@@ -3233,47 +2222,107 @@ export function AutoCombatPage() {
                         </button>
                       </div>
 
-                      <div className="auto-combat-potion-config-grid">
-                        <label className="auto-combat-field">
-                          <span>Poção</span>
+                      <div className="auto-combat-potion-config-grid auto-combat-potion-config-grid--minimal">
+                        <section className="auto-combat-potion-picker">
+                          <div className="auto-combat-potion-picker__header">
+                            <div className="auto-combat-potion-picker__title">
+                              <span>Poções disponíveis</span>
+                              <strong>
+                                {potionOptions.length > 0
+                                  ? potionOptionsCountLabel
+                                  : 'Inventário sem poções'}
+                              </strong>
+                            </div>
 
-                          <div className="auto-combat-select-shell">
-                            <select
-                              value={selectedPotionItemId}
+                            <label className="auto-combat-potion-toggle auto-combat-potion-toggle--compact">
+                              <input
+                                type="checkbox"
+                                checked={isPotionEnabled}
+                                disabled={isPotionConfigLoading}
+                                onChange={(event) =>
+                                  setIsPotionEnabled(event.target.checked)
+                                }
+                              />
+
+                              <span>Auto</span>
+                            </label>
+                          </div>
+
+                          {potionOptions.length > 0 ? (
+                            <div className="auto-combat-potion-grid">
+                              {potionOptions.map((potion) => {
+                                const potionId = potion.itemId;
+                                const potionQuantity = Math.max(
+                                  0,
+                                  toSafeNumber(potion.quantity, 0),
+                                );
+                                const isSelectedPotion =
+                                  selectedPotionItemId === potionId;
+                                const isUnavailable = potionQuantity <= 0;
+
+                                return (
+                                  <button
+                                    key={potionId}
+                                    type="button"
+                                    className={[
+                                      'auto-combat-potion-option',
+                                      isSelectedPotion ? 'is-selected' : '',
+                                      isUnavailable ? 'is-unavailable' : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                    disabled={
+                                      isPotionConfigLoading || isUnavailable
+                                    }
+                                    onClick={() => {
+                                      setSelectedPotionItemId(potionId);
+                                      setIsPotionEnabled(true);
+                                      setPotionConfigMessage('');
+                                    }}
+                                  >
+                                    <span className="auto-combat-potion-option__icon">
+                                      ✚
+                                    </span>
+
+                                    <span className="auto-combat-potion-option__content">
+                                      <strong>{potion.name}</strong>
+                                      <small>{getPotionHealLabel(potion)}</small>
+                                    </span>
+
+                                    <span className="auto-combat-potion-option__quantity">
+                                      x{potionQuantity}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="auto-combat-potion-config-warning">
+                              Nenhuma poção de cura foi encontrada no inventário
+                              deste personagem.
+                            </p>
+                          )}
+                        </section>
+
+                        <section className="auto-combat-potion-threshold auto-combat-potion-threshold--minimal">
+                          <div className="auto-combat-potion-threshold__header">
+                            <div>
+                              <span>Usar quando o HP estiver em</span>
+                              <strong>{potionThresholdPercent}% ou menos</strong>
+                            </div>
+
+                            <input
+                              type="number"
+                              min={1}
+                              max={100}
+                              value={potionThresholdPercent}
                               disabled={isPotionConfigLoading}
                               onChange={(event) =>
-                                setSelectedPotionItemId(event.target.value)
+                                setPotionThresholdPercent(
+                                  clampNumber(event.target.value, 1, 100),
+                                )
                               }
-                            >
-                              <option value="">Nenhuma poção selecionada</option>
-
-                              {potionOptions.map((potion) => (
-                                <option key={potion.itemId} value={potion.itemId}>
-                                  {potion.name} · Qtd. {potion.quantity} ·{' '}
-                                  {formatPotionHeal(potion)}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </label>
-
-                        <label className="auto-combat-potion-toggle">
-                          <input
-                            type="checkbox"
-                            checked={isPotionEnabled}
-                            disabled={isPotionConfigLoading}
-                            onChange={(event) =>
-                              setIsPotionEnabled(event.target.checked)
-                            }
-                          />
-
-                          <span>Ativar uso automático no auto-combate</span>
-                        </label>
-
-                        <div className="auto-combat-potion-threshold">
-                          <div>
-                            <span>Gatilho de HP</span>
-                            <strong>{potionThresholdPercent}% ou menos</strong>
+                            />
                           </div>
 
                           <input
@@ -3289,27 +2338,26 @@ export function AutoCombatPage() {
                             }
                           />
 
-                          <input
-                            type="number"
-                            min={1}
-                            max={100}
-                            value={potionThresholdPercent}
-                            disabled={isPotionConfigLoading}
-                            onChange={(event) =>
-                              setPotionThresholdPercent(
-                                clampNumber(event.target.value, 1, 100),
-                              )
-                            }
-                          />
-                        </div>
+                          <div className="auto-combat-potion-threshold__presets">
+                            {[25, 35, 50, 65].map((value) => (
+                              <button
+                                key={value}
+                                type="button"
+                                className={
+                                  potionThresholdPercent === value
+                                    ? 'is-selected'
+                                    : ''
+                                }
+                                aria-pressed={potionThresholdPercent === value}
+                                disabled={isPotionConfigLoading}
+                                onClick={() => setPotionThresholdPercent(value)}
+                              >
+                                {value}%
+                              </button>
+                            ))}
+                          </div>
+                        </section>
                       </div>
-
-                      {potionOptions.length <= 0 ? (
-                        <p className="auto-combat-potion-config-warning">
-                          Nenhuma poção de cura foi encontrada no inventário
-                          deste personagem.
-                        </p>
-                      ) : null}
 
                       {potionConfigMessage ? (
                         <p className="auto-combat-potion-config-message">
@@ -3317,7 +2365,7 @@ export function AutoCombatPage() {
                         </p>
                       ) : null}
 
-                      <div className="auto-combat-potion-config-actions">
+                      <div className="auto-combat-potion-config-actions auto-combat-potion-config-actions--minimal">
                         <button
                           type="button"
                           className="auto-combat-primary-button"
@@ -3344,90 +2392,26 @@ export function AutoCombatPage() {
                           disabled={isPotionConfigLoading}
                           onClick={handleClearPotionConfig}
                         >
-                          Remover poção
+                          Remover
                         </button>
                       </div>
                     </article>
                   ) : null}
 
-                  <article className="auto-combat-session-panel">
-                    <div className="auto-combat-session-panel__header">
-                      <span>Estatísticas da sessão</span>
-                      <strong>{formatSessionStatus(effectiveSession?.status)}</strong>
-                    </div>
-
-                    <div className="auto-combat-session-summary">
-                      <div>
-                        <span>Combate atual</span>
-                        <strong>{currentCombatIndex}</strong>
-                        <small>{totalCombats} luta(s) resolvida(s)</small>
-                      </div>
-
-                      <div>
-                        <span>Abates</span>
-                        <strong>{totalKills}</strong>
-                        <small>infectados derrotados</small>
-                      </div>
-
-                      <div>
-                        <span>XP ganho</span>
-                        <strong>{totalXpGained}</strong>
-                        <small>progressão obtida</small>
-                      </div>
-
-                      <div>
-                        <span>Loot</span>
-                        <strong>{totalLoot}</strong>
-                        <small>itens coletados</small>
-                      </div>
-
-                      <div>
-                        <span>Poções</span>
-                        <strong>{potionsUsed}</strong>
-                        <small>usadas automaticamente</small>
-                      </div>
-                    </div>
-                  </article>
+                  <AutoCombatSessionSummary
+                    status={effectiveSession?.status}
+                    currentCombatIndex={currentCombatIndex}
+                    totalCombats={totalCombats}
+                    totalKills={totalKills}
+                    totalXpGained={totalXpGained}
+                    totalLoot={totalLoot}
+                    potionsUsed={potionsUsed}
+                  />
                 </div>
               ) : null}
             </div>
           ) : (
-            <div className="auto-combat-tab-panel auto-combat-tab-panel--stats">
-              <div className="auto-combat-character-stats-panel character-stats-panel character-stats-panel--primary-only">
-                <section className="character-stats-group character-stats-group--primary">
-                  <header className="character-stats-group__header">
-                    <span>Base do personagem</span>
-                    <h3>Atributos primários</h3>
-                  </header>
-
-                  <div className="character-stats-grid character-stats-grid--primary">
-                    {STAT_CARDS.map((stat) => {
-                      const value = totalStats[stat.key] ?? 0;
-
-                      return (
-                        <article
-                          key={stat.key}
-                          className={`character-stat-card character-stat-card--${stat.className}`}
-                        >
-                          <div className="character-stat-card__icon">
-                            <img src={stat.icon} alt="" aria-hidden="true" />
-                          </div>
-
-                          <div className="character-stat-card__content">
-                            <strong>{stat.label}</strong>
-                            <p>{stat.description}</p>
-                          </div>
-
-                          <div className="character-stat-card__value">
-                            {value}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                </section>
-              </div>
-            </div>
+            <AutoCombatStatsTab totalStats={totalStats} />
           )}
         </section>
       </div>

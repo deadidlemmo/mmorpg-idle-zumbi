@@ -1,0 +1,135 @@
+/* =========================================================
+   WEBSOCKET / TEMPO REAL
+   ========================================================= */
+
+.auto-combat-realtime-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 1rem;
+  padding: 0.48rem 0.8rem;
+  color: rgba(231, 227, 216, 0.76);
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent),
+    rgba(5, 9, 8, 0.42);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.auto-combat-realtime-status::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  background: #7d8792;
+  border-radius: 999px;
+  box-shadow: 0 0 12px rgba(125, 135, 146, 0.28);
+}
+
+.auto-combat-realtime-status.is-connected {
+  color: #ecffd5;
+  border-color: rgba(110, 159, 67, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(35, 64, 31, 0.24);
+}
+
+.auto-combat-realtime-status.is-connected::before {
+  background: #93d35f;
+  box-shadow:
+    0 0 0 4px rgba(147, 211, 95, 0.08),
+    0 0 16px rgba(147, 211, 95, 0.34);
+}
+
+.auto-combat-realtime-status.is-disconnected {
+  color: #ffe1dd;
+  border-color: rgba(205, 88, 88, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(151, 49, 49, 0.2);
+}
+
+.auto-combat-realtime-status.is-disconnected::before {
+  background: #d75b62;
+  box-shadow:
+    0 0 0 4px rgba(215, 91, 98, 0.08),
+    0 0 16px rgba(215, 91, 98, 0.3);
+}
+
+.auto-combat-live-event {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+  padding: 0.78rem 0.9rem;
+  background:
+    radial-gradient(circle at left, rgba(229, 182, 63, 0.08), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.38);
+  border: 1px solid rgba(229, 182, 63, 0.18);
+  border-radius: 0.9rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 10px 22px rgba(0, 0, 0, 0.12),
+    0 0 18px rgba(229, 182, 63, 0.055);
+}
+
+.auto-combat-live-event strong {
+  min-width: 0;
+  color: #fff4df;
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  line-height: 1.18;
+}
+
+.auto-combat-live-event span {
+  color: rgba(231, 227, 216, 0.62);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.auto-combat-live-event.is-player-hit {
+  border-color: rgba(110, 159, 67, 0.25);
+  background:
+    radial-gradient(circle at left, rgba(110, 159, 67, 0.1), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.38);
+}
+
+.auto-combat-live-event.is-mob-hit,
+.auto-combat-live-event.is-player-defeated {
+  border-color: rgba(215, 91, 98, 0.28);
+  background:
+    radial-gradient(circle at left, rgba(215, 91, 98, 0.12), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.38);
+}
+
+.auto-combat-live-event.is-critical {
+  border-color: rgba(229, 182, 63, 0.32);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 10px 22px rgba(0, 0, 0, 0.12),
+    0 0 22px rgba(229, 182, 63, 0.12);
+}
+
+.auto-combat-live-event.is-dodge {
+  border-color: rgba(150, 188, 226, 0.22);
+  background:
+    radial-gradient(circle at left, rgba(150, 188, 226, 0.09), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(5, 9, 8, 0.38);
+}

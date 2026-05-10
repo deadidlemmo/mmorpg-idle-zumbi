@@ -34,10 +34,31 @@ const GATHERING_SLUG_BY_ORIGIN = {
 type GatheringOriginSlug =
   (typeof GATHERING_SLUG_BY_ORIGIN)[GatheringAllowedOrigin];
 
+type GatheringSkillLoose = Partial<GatheringSkillViewModel> & {
+  key?: string | null;
+  slug?: string | null;
+  type?: string | null;
+  name?: string | null;
+  origin?: string | null;
+};
+
+type GatheringSkillsSummaryLoose = {
+  skills?: GatheringSkillLoose[] | null;
+  byOrigin?: Partial<Record<GatheringAllowedOrigin, GatheringSkillLoose | null>> | null;
+};
+
 interface CharacterOverviewWithGatheringSkills {
-  gatheringSkills?: GatheringSkillsSummaryViewModel | null;
+  gatheringSkills?:
+    | GatheringSkillsSummaryViewModel
+    | GatheringSkillsSummaryLoose
+    | GatheringSkillLoose[]
+    | null;
   character?: {
-    gatheringSkills?: GatheringSkillsSummaryViewModel | null;
+    gatheringSkills?:
+      | GatheringSkillsSummaryViewModel
+      | GatheringSkillsSummaryLoose
+      | GatheringSkillLoose[]
+      | null;
   } | null;
 }
 
@@ -54,16 +75,73 @@ function getOriginIconFallback(label: string): string {
   return label.slice(0, 2).toUpperCase();
 }
 
+function normalizeGatheringOriginKey(
+  value?: string | null,
+): GatheringAllowedOrigin | null {
+  const normalized = String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  const aliases: Record<string, GatheringAllowedOrigin> = {
+    DESMANCHE: 'DESMANCHE',
+    COLETA: 'COLETA',
+    PATRULHA: 'PATRULHA',
+    ARSENAL: 'ARSENAL',
+    TECNOVARREDURA: 'TECNOVARREDURA',
+    TECNO_VARREDURA: 'TECNOVARREDURA',
+    CONTENCAO: 'CONTENCAO',
+    CONTENÇÃO: 'CONTENCAO',
+  };
+
+  return aliases[normalized] ?? null;
+}
+
+function getSkillOrigin(
+  skill?: GatheringSkillLoose | null,
+): GatheringAllowedOrigin | null {
+  if (!skill) return null;
+
+  return (
+    normalizeGatheringOriginKey(skill.origin) ??
+    normalizeGatheringOriginKey(skill.key) ??
+    normalizeGatheringOriginKey(skill.slug) ??
+    normalizeGatheringOriginKey(skill.type) ??
+    normalizeGatheringOriginKey(skill.name)
+  );
+}
+
 function getSkillByOrigin(
-  gatheringSkills: GatheringSkillsSummaryViewModel | null,
+  gatheringSkills:
+    | GatheringSkillsSummaryViewModel
+    | GatheringSkillsSummaryLoose
+    | GatheringSkillLoose[]
+    | null,
   origin: GatheringAllowedOrigin,
 ): GatheringSkillViewModel | null {
   if (!gatheringSkills) return null;
 
+  if (Array.isArray(gatheringSkills)) {
+    return (
+      (gatheringSkills.find((skill) => getSkillOrigin(skill) === origin) as
+        | GatheringSkillViewModel
+        | undefined) ?? null
+    );
+  }
+
+  const directSkill = gatheringSkills.byOrigin?.[origin];
+
+  if (directSkill) {
+    return directSkill as GatheringSkillViewModel;
+  }
+
   return (
-    gatheringSkills.byOrigin?.[origin] ??
-    gatheringSkills.skills.find((skill) => skill.origin === origin) ??
-    null
+    (gatheringSkills.skills?.find((skill) => getSkillOrigin(skill) === origin) as
+      | GatheringSkillViewModel
+      | undefined) ?? null
   );
 }
 
@@ -158,7 +236,11 @@ function getOriginClassName(params: {
 
 function getOverviewGatheringSkills(
   overview: unknown,
-): GatheringSkillsSummaryViewModel | null {
+):
+  | GatheringSkillsSummaryViewModel
+  | GatheringSkillsSummaryLoose
+  | GatheringSkillLoose[]
+  | null {
   const overviewWithGathering =
     overview as CharacterOverviewWithGatheringSkills;
 
@@ -175,11 +257,18 @@ export function GatheringHubPage() {
 
   const [character, setCharacter] =
     useState<DashboardCharacterViewModel | null>(null);
-  const [gatheringSkills, setGatheringSkills] =
-    useState<GatheringSkillsSummaryViewModel | null>(null);
+
+  const [gatheringSkills, setGatheringSkills] = useState<
+    | GatheringSkillsSummaryViewModel
+    | GatheringSkillsSummaryLoose
+    | GatheringSkillLoose[]
+    | null
+  >(null);
+
   const [status, setStatus] = useState<GatheringStatusResponse | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const hubOrigins = useMemo(() => buildHubOrigins(), []);
@@ -201,8 +290,10 @@ export function GatheringHubPage() {
       setCharacter(buildGatheringDashboardCharacter(overviewResponse));
       setGatheringSkills(getOverviewGatheringSkills(overviewResponse));
       setStatus(statusResponse);
+      setHasLoadedOnce(true);
     } catch (error) {
       setErrorMessage(extractGatheringApiError(error));
+      setHasLoadedOnce(true);
     } finally {
       setIsLoading(false);
     }
@@ -239,8 +330,8 @@ export function GatheringHubPage() {
   }
 
   return (
-    <DashboardLayout character={character}>
-      <section className="gathering-page gathering-page--clean">
+    <DashboardLayout character={character} hideHero>
+      <section className="gathering-page gathering-page--clean gathering-page--hub">
         <header className="gathering-page__header gathering-page__header--compact">
           <div className="gathering-page__header-main">
             <span className="gathering-page__eyebrow">Proficiências</span>
@@ -302,7 +393,9 @@ export function GatheringHubPage() {
               <span className="gathering-card__eyebrow">
                 Atividades disponíveis
               </span>
+
               <h2>Escolha o tipo de gathering</h2>
+
               <p className="gathering-card__description">
                 Cada gathering possui materiais próprios, nível de proficiência
                 e progressão independente.
@@ -310,7 +403,7 @@ export function GatheringHubPage() {
             </div>
           </div>
 
-          {isLoading ? (
+          {isLoading && !hasLoadedOnce ? (
             <div className="gathering-loading">
               <span className="gathering-loading__spinner" />
               <p>Carregando proficiências...</p>

@@ -1,0 +1,50 @@
+/* =========================================================
+   9. PROGRESS BAR
+   ========================================================= */
+
+.dashboard-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.36rem;
+}
+
+.dashboard-progress__label {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.dashboard-progress__label strong {
+  color: var(--text-primary);
+  font-family: var(--font-number);
+}
+
+.dashboard-progress__track {
+  height: 8px;
+  overflow: hidden;
+  background: rgba(5, 9, 8, 0.74);
+  border: 1px solid rgba(231, 227, 216, 0.06);
+  border-radius: var(--radius-pill);
+}
+
+.dashboard-progress__track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.dashboard-progress--hp .dashboard-progress__track i {
+  background: linear-gradient(90deg, #3f8548, #65c271);
+  box-shadow: 0 0 12px rgba(101, 194, 113, 0.24);
+}
+
+.dashboard-progress--xp .dashboard-progress__track i {
+  background: linear-gradient(90deg, #b9832d, #e0b65b);
+  box-shadow: 0 0 12px rgba(224, 182, 91, 0.22);
+}
+
+.dashboard-progress--neutral .dashboard-progress__track i {
+  background: linear-gradient(90deg, #52605c, #92a29a);
+}

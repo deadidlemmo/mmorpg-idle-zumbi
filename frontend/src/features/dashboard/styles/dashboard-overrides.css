@@ -1,0 +1,538 @@
+/* ========================================================= 
+   DASHBOARD OVERRIDES
+   Ajustes finos finais do dashboard.
+   ========================================================= */
+
+/* =========================================================
+   HERO MOBILE — NÚMEROS DE EXP / VIDA MAIS LEGÍVEIS
+   ========================================================= */
+
+@media (max-width: 720px) {
+  .dashboard-hero .dashboard-hero__resource-header {
+    align-items: center !important;
+  }
+
+  .dashboard-hero .dashboard-hero__resource-values {
+    flex: 0 0 auto !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 0.46rem !important;
+    margin-left: auto !important;
+  }
+
+  .dashboard-hero .dashboard-hero__resource-values strong,
+  .dashboard-hero .dashboard-hero__resource-header > strong {
+    color: #fff8e8 !important;
+    font-size: 1rem !important;
+    font-weight: 950 !important;
+    line-height: 1 !important;
+    letter-spacing: 0.01em !important;
+    white-space: nowrap !important;
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.9),
+      0 0 12px rgba(255, 248, 232, 0.14) !important;
+  }
+
+  .dashboard-hero .dashboard-hero__resource-values em {
+    min-width: 48px !important;
+    min-height: 28px !important;
+    padding: 0.28rem 0.44rem !important;
+    color: #fff8e8 !important;
+    font-size: 0.82rem !important;
+    font-weight: 950 !important;
+    line-height: 1 !important;
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.9),
+      0 0 10px rgba(255, 248, 232, 0.12) !important;
+  }
+
+  .dashboard-hero .dashboard-hero__resource-title span,
+  .dashboard-hero .dashboard-hero__resource-header > span {
+    font-size: 0.76rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .dashboard-hero .dashboard-hero__resource-values strong,
+  .dashboard-hero .dashboard-hero__resource-header > strong {
+    font-size: 0.96rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__resource-values em {
+    min-width: 46px !important;
+    min-height: 27px !important;
+    padding: 0.26rem 0.4rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__resource-title span,
+  .dashboard-hero .dashboard-hero__resource-header > span {
+    font-size: 0.72rem !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .dashboard-hero .dashboard-hero__resource-values strong,
+  .dashboard-hero .dashboard-hero__resource-header > strong {
+    font-size: 0.88rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__resource-values em {
+    min-width: 42px !important;
+    min-height: 25px !important;
+    font-size: 0.74rem !important;
+  }
+}
+
+/* =========================================================
+   HERO MOBILE — BADGE DE NÍVEL MAIS LEGÍVEL
+   ========================================================= */
+
+@media (max-width: 720px) {
+  .dashboard-hero .dashboard-hero__level-badge {
+    min-width: 78px !important;
+    min-height: 38px !important;
+    padding: 0.48rem 0.7rem !important;
+
+    background:
+      radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.18), transparent 58%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.03)),
+      color-mix(in srgb, var(--hero-accent) 54%, rgba(13, 10, 18, 0.96)) !important;
+
+    border: 1px solid color-mix(in srgb, var(--hero-accent) 82%, rgba(255, 255, 255, 0.28)) !important;
+    border-radius: 0.78rem !important;
+
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 0 20px color-mix(in srgb, var(--hero-accent) 34%, transparent),
+      0 8px 18px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .dashboard-hero .dashboard-hero__level-badge small,
+  .dashboard-hero .dashboard-hero__level-badge strong {
+    color: #fff8df !important;
+    font-size: 0.78rem !important;
+    font-weight: 950 !important;
+    line-height: 1 !important;
+    letter-spacing: 0.015em !important;
+    text-transform: none !important;
+
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.95),
+      0 0 10px rgba(255, 248, 223, 0.18) !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .dashboard-hero .dashboard-hero__level-badge {
+    min-width: 74px !important;
+    min-height: 36px !important;
+    padding: 0.46rem 0.64rem !important;
+    border-radius: 0.72rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__level-badge small,
+  .dashboard-hero .dashboard-hero__level-badge strong {
+    font-size: 0.74rem !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .dashboard-hero .dashboard-hero__level-badge {
+    min-width: 68px !important;
+    min-height: 34px !important;
+    padding: 0.42rem 0.56rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__level-badge small,
+  .dashboard-hero .dashboard-hero__level-badge strong {
+    font-size: 0.68rem !important;
+  }
+}
+
+/* =========================================================
+   DASHBOARD SIDEBAR — GRUPO DE EXPEDIÇÕES
+   ========================================================= */
+
+.dashboard-sidebar__nav-group {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.dashboard-sidebar__nav-group--gathering {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Botão principal "Expedições" usando a mesma aparência dos links */
+
+.dashboard-sidebar__link--toggle {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.dashboard-sidebar__link--toggle,
+.dashboard-sidebar__link--toggle:visited {
+  color: inherit;
+  text-decoration: none;
+}
+
+.dashboard-sidebar__link--toggle {
+  display: grid !important;
+  grid-template-columns: 18px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 0.72rem;
+  text-align: left;
+}
+
+.dashboard-sidebar__link--toggle > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  min-width: 18px;
+  line-height: 1;
+}
+
+.dashboard-sidebar__link--toggle > strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Seta elegante: ignora o caractere do TSX e desenha a seta via CSS */
+.dashboard-sidebar__link-chevron {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  min-width: 14px;
+  height: 14px;
+  margin-left: auto;
+  color: rgba(231, 227, 216, 0.62);
+  font-size: 0;
+  font-style: normal;
+  line-height: 1;
+  text-align: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  user-select: none;
+  pointer-events: none;
+  transition:
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+.dashboard-sidebar__link-chevron::before {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-right: 1.8px solid currentColor;
+  border-bottom: 1.8px solid currentColor;
+  transform: translateY(-1px) rotate(45deg);
+  transform-origin: center;
+  transition:
+    transform 180ms ease,
+    border-color 150ms ease;
+}
+
+/* Aberto = seta para baixo */
+.dashboard-sidebar__link--toggle.is-expanded .dashboard-sidebar__link-chevron::before {
+  transform: translateY(-1px) rotate(45deg);
+}
+
+/* Fechado = seta para a direita */
+.dashboard-sidebar__link--toggle:not(.is-expanded) .dashboard-sidebar__link-chevron::before {
+  transform: translateX(-1px) rotate(-45deg);
+}
+
+.dashboard-sidebar__link--toggle:hover .dashboard-sidebar__link-chevron,
+.dashboard-sidebar__link--toggle.is-active .dashboard-sidebar__link-chevron,
+.dashboard-sidebar__link--toggle.is-expanded .dashboard-sidebar__link-chevron {
+  color: #fff8e8;
+  opacity: 1;
+}
+
+.dashboard-sidebar__link--toggle:focus-visible {
+  outline: 2px solid rgba(159, 211, 106, 0.65);
+  outline-offset: 2px;
+}
+
+/* Compatibilidade caso alguma versão antiga ainda renderize estas classes */
+
+.dashboard-sidebar__link--has-toggle {
+  display: grid !important;
+  grid-template-columns: 18px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 0.72rem;
+}
+
+.dashboard-sidebar__submenu-toggle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  min-width: 14px;
+  height: 14px;
+  margin-left: auto;
+  padding: 0;
+  color: rgba(231, 227, 216, 0.62);
+  font-size: 0;
+  line-height: 1;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+.dashboard-sidebar__submenu-toggle::before {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-right: 1.8px solid currentColor;
+  border-bottom: 1.8px solid currentColor;
+  transform: translateY(-1px) rotate(45deg);
+  transform-origin: center;
+  transition:
+    transform 180ms ease,
+    border-color 150ms ease;
+}
+
+.dashboard-sidebar__submenu-toggle:hover {
+  color: #fff8e8;
+}
+
+.dashboard-sidebar__submenu-toggle:active {
+  transform: scale(0.94);
+}
+
+.dashboard-sidebar__submenu-toggle:focus-visible {
+  outline: 2px solid rgba(159, 211, 106, 0.65);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   DASHBOARD SIDEBAR — SUBMENU DE EXPEDIÇÕES / GATHERING
+   ========================================================= */
+
+.dashboard-sidebar__subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  width: calc(100% - 1.08rem);
+  min-width: 0;
+  margin: 0.16rem 0 0.58rem 1.08rem;
+  padding: 0.12rem 0 0.12rem 0.58rem;
+  overflow: hidden;
+  border-left: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+.dashboard-sidebar__subitem {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.46rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0.36rem 0.46rem 0.36rem 0.5rem;
+  color: rgba(231, 227, 216, 0.64);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: 0.68rem;
+  background: transparent;
+  overflow: hidden;
+  box-sizing: border-box;
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.dashboard-sidebar__subitem:hover {
+  color: #fff8e8;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.dashboard-sidebar__subitem.is-active {
+  color: #fff8e8;
+  border-color: rgba(110, 159, 67, 0.26);
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.16), rgba(110, 159, 67, 0.06)),
+    rgba(7, 16, 10, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 6px 14px rgba(0, 0, 0, 0.16);
+}
+
+.dashboard-sidebar__subitem-icon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  min-width: 18px;
+  color: rgba(231, 227, 216, 0.44);
+  font-size: 0.76rem;
+  line-height: 1;
+}
+
+.dashboard-sidebar__subitem strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit;
+  font-size: 0.75rem;
+  font-weight: 850;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-sidebar__subitem-level {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 23px;
+  padding: 0.16rem 0.42rem;
+  color: rgba(255, 248, 232, 0.88);
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.015em;
+  white-space: nowrap;
+  border: 1px solid rgba(231, 227, 216, 0.1);
+  border-radius: 0.5rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(115, 123, 140, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 4px 8px rgba(0, 0, 0, 0.13);
+}
+
+.dashboard-sidebar__subitem:hover .dashboard-sidebar__subitem-level {
+  color: #fff8e8;
+  border-color: rgba(231, 227, 216, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent),
+    rgba(132, 142, 162, 0.28);
+}
+
+.dashboard-sidebar__subitem.is-active .dashboard-sidebar__subitem-icon {
+  color: #aeda78;
+  filter: drop-shadow(0 0 8px rgba(159, 211, 106, 0.28));
+}
+
+.dashboard-sidebar__subitem.is-active .dashboard-sidebar__subitem-level {
+  color: #f6ffe6;
+  border-color: rgba(110, 159, 67, 0.28);
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.2), rgba(110, 159, 67, 0.08)),
+    rgba(7, 16, 10, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 0 12px rgba(110, 159, 67, 0.1);
+}
+
+/* =========================================================
+   DASHBOARD SIDEBAR — SUBMENU MOBILE
+   ========================================================= */
+
+@media (max-width: 720px) {
+  .dashboard-sidebar__link--toggle,
+  .dashboard-sidebar__link--has-toggle {
+    grid-template-columns: 18px minmax(0, 1fr) 14px;
+    gap: 0.6rem;
+  }
+
+  .dashboard-sidebar__link-chevron,
+  .dashboard-sidebar__submenu-toggle {
+    width: 14px;
+    min-width: 14px;
+    height: 14px;
+  }
+
+  .dashboard-sidebar__link-chevron::before,
+  .dashboard-sidebar__submenu-toggle::before {
+    width: 6px;
+    height: 6px;
+    border-right-width: 1.7px;
+    border-bottom-width: 1.7px;
+  }
+
+  .dashboard-sidebar__subnav {
+    width: calc(100% - 1rem);
+    margin-left: 1rem;
+    padding-left: 0.58rem;
+  }
+
+  .dashboard-sidebar__subitem {
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    min-height: 36px;
+    padding: 0.42rem 0.54rem;
+  }
+
+  .dashboard-sidebar__subitem strong {
+    font-size: 0.78rem;
+  }
+
+  .dashboard-sidebar__subitem-level {
+    min-width: 42px;
+    min-height: 24px;
+    font-size: 0.58rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .dashboard-sidebar__link--toggle,
+  .dashboard-sidebar__link--has-toggle {
+    gap: 0.48rem;
+  }
+
+  .dashboard-sidebar__link-chevron,
+  .dashboard-sidebar__submenu-toggle {
+    width: 12px;
+    min-width: 12px;
+    height: 12px;
+  }
+
+  .dashboard-sidebar__link-chevron::before,
+  .dashboard-sidebar__submenu-toggle::before {
+    width: 5.5px;
+    height: 5.5px;
+    border-right-width: 1.6px;
+    border-bottom-width: 1.6px;
+  }
+
+  .dashboard-sidebar__subitem {
+    gap: 0.38rem;
+    padding-inline: 0.42rem;
+  }
+
+  .dashboard-sidebar__subitem-level {
+    min-width: 38px;
+    padding-inline: 0.34rem;
+    font-size: 0.54rem;
+  }
+}

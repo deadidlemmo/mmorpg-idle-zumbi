@@ -1,0 +1,840 @@
+/* =========================================================
+   DASHBOARD — TOPBAR GLOBAL MINIMALISTA
+   Arquivo: src/features/dashboard/styles/dashboard-topbar.css
+
+   Objetivo:
+   - Cluster compacto no lado direito da página no desktop.
+   - No mobile/tablet, alinhar com o conteúdo abaixo.
+   - Activity pill sólida, sem quebrar o layout.
+   - Progresso preenchendo o card inteiro da atividade.
+   - Indicador circular animado menor à direita da atividade.
+   - Balão de quantidade maior e mais legível.
+   - Gold e Cash com o mesmo fundo/base da activity bar.
+   - Textos legíveis mesmo sobre preenchimento verde.
+   ========================================================= */
+
+/* =========================================================
+   BASE
+   ========================================================= */
+
+.dashboard-topbar {
+  --dashboard-topbar-surface-rgb: 17, 24, 34;
+  --dashboard-topbar-surface-strong-rgb: 20, 30, 42;
+  --dashboard-topbar-green-rgb: 86, 175, 87;
+  --dashboard-topbar-green-dark-rgb: 23, 86, 47;
+  --dashboard-topbar-gold-rgb: 232, 184, 78;
+  --dashboard-topbar-blue-rgb: 72, 144, 214;
+  --dashboard-topbar-red-rgb: 176, 66, 58;
+  --dashboard-topbar-white-rgb: 231, 227, 216;
+  --dashboard-topbar-border-rgb: var(--dashboard-topbar-green-rgb);
+
+  position: relative;
+  z-index: 12;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.38rem;
+
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+
+  margin-left: auto;
+  margin-right: 0;
+  margin-bottom: 0.72rem;
+  padding: 0;
+
+  color: rgba(255, 248, 232, 0.94);
+
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow: visible;
+}
+
+.dashboard-topbar::before {
+  display: none;
+}
+
+.dashboard-topbar > * {
+  min-width: 0;
+}
+
+/* =========================================================
+   VARIAÇÕES
+   ========================================================= */
+
+.dashboard-topbar--gathering {
+  --dashboard-topbar-border-rgb: var(--dashboard-topbar-green-rgb);
+}
+
+.dashboard-topbar--auto-combat {
+  --dashboard-topbar-border-rgb: var(--dashboard-topbar-red-rgb);
+}
+
+.dashboard-topbar--idle {
+  --dashboard-topbar-border-rgb: var(--dashboard-topbar-white-rgb);
+}
+
+/* =========================================================
+   CAMPOS OCULTOS / LEGACY
+   ========================================================= */
+
+.dashboard-topbar__identity,
+.dashboard-topbar__avatar,
+.dashboard-topbar__identity-text,
+.dashboard-topbar__activity-eyebrow,
+.dashboard-topbar__activity-meta,
+.dashboard-topbar__activity-pill,
+.dashboard-topbar__activity-badge,
+.dashboard-topbar__resource-label {
+  display: none !important;
+}
+
+/* O progresso não deve acontecer dentro do ícone */
+.dashboard-topbar__activity-icon-progress {
+  display: none !important;
+}
+
+/* =========================================================
+   ACTIVITY PILL
+   ========================================================= */
+
+.dashboard-topbar__activity {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: 34px minmax(142px, auto) 25px;
+  align-items: center;
+  gap: 0.42rem;
+
+  width: fit-content;
+  max-width: min(420px, 54vw);
+  min-width: 0;
+  min-height: 38px;
+
+  padding: 0.23rem 0.34rem 0.23rem 0.24rem;
+  overflow: visible;
+
+  border: 1px solid rgba(var(--dashboard-topbar-border-rgb), 0.28);
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.055),
+      rgba(255, 255, 255, 0.018)
+    ),
+    rgb(var(--dashboard-topbar-surface-rgb));
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+    0 7px 16px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-topbar__activity::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 45%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018), transparent 52%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.008) 0 1px,
+      transparent 1px 8px
+    );
+  opacity: 0.9;
+}
+
+.dashboard-topbar__activity > :not(.dashboard-topbar__activity-progress) {
+  position: relative;
+  z-index: 2;
+}
+
+/* =========================================================
+   PROGRESSO DO CARD INTEIRO
+   ========================================================= */
+
+.dashboard-topbar__activity-progress {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+
+  display: block !important;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.1)),
+    rgb(20, 31, 39);
+}
+
+.dashboard-topbar__activity-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(82, 205, 93, 0.92),
+      rgba(35, 135, 65, 0.94)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 0 10px rgba(var(--dashboard-topbar-green-rgb), 0.16);
+
+  transition: width 220ms ease;
+}
+
+.dashboard-topbar--gathering .dashboard-topbar__activity-progress span {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(96, 214, 103, 0.92),
+      rgba(34, 142, 68, 0.94)
+    );
+}
+
+.dashboard-topbar--auto-combat .dashboard-topbar__activity {
+  border-color: rgba(var(--dashboard-topbar-red-rgb), 0.3);
+}
+
+.dashboard-topbar--auto-combat .dashboard-topbar__activity-progress {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.12)),
+    rgb(33, 25, 29);
+}
+
+.dashboard-topbar--auto-combat .dashboard-topbar__activity-progress span {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(214, 86, 74, 0.92),
+      rgba(129, 38, 34, 0.94)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset -1px 0 0 rgba(255, 255, 255, 0.07),
+    0 0 10px rgba(var(--dashboard-topbar-red-rgb), 0.16);
+}
+
+.dashboard-topbar--idle .dashboard-topbar__activity {
+  border-color: rgba(var(--dashboard-topbar-white-rgb), 0.14);
+}
+
+.dashboard-topbar--idle .dashboard-topbar__activity-progress {
+  display: none !important;
+}
+
+/* =========================================================
+   ÍCONE ESQUERDO
+   ========================================================= */
+
+.dashboard-topbar__activity-icon {
+  position: relative;
+
+  display: grid;
+  place-items: center;
+
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  overflow: hidden;
+
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+
+  border: 1px solid rgba(var(--dashboard-topbar-border-rgb), 0.34);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02)),
+    rgb(18, 27, 35);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 3px 8px rgba(0, 0, 0, 0.22);
+}
+
+.dashboard-topbar__activity-icon span {
+  display: inline-grid;
+  place-items: center;
+  line-height: 1;
+  color: #fff8e8;
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.86),
+    0 0 8px rgba(0, 0, 0, 0.55);
+}
+
+.dashboard-topbar__activity-image {
+  display: block;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  object-position: center;
+
+  filter:
+    drop-shadow(0 3px 5px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 5px rgba(0, 0, 0, 0.22));
+}
+
+/* =========================================================
+   TEXTO DA ATIVIDADE
+   ========================================================= */
+
+.dashboard-topbar__activity-copy,
+.dashboard-topbar__activity-main {
+  display: grid;
+  min-width: 0;
+  gap: 0.04rem;
+}
+
+.dashboard-topbar__activity-copy strong,
+.dashboard-topbar__activity-main strong {
+  display: block;
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.76rem;
+  font-weight: 950;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  text-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.92),
+    0 1px 0 rgba(0, 0, 0, 0.78),
+    0 0 9px rgba(0, 0, 0, 0.42);
+}
+
+.dashboard-topbar__activity-copy small,
+.dashboard-topbar__activity-main small {
+  display: block;
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+
+  color: rgba(255, 248, 232, 0.92);
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  font-weight: 850;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.95),
+    0 1px 0 rgba(0, 0, 0, 0.72),
+    0 0 8px rgba(0, 0, 0, 0.45);
+}
+
+/* =========================================================
+   STATUS ORB — DIREITA DA ATIVIDADE
+   Menor, mais discreto, com balão maior.
+   ========================================================= */
+
+.dashboard-topbar__activity-status {
+  position: relative;
+  z-index: 4;
+
+  display: grid;
+  place-items: center;
+
+  width: 23px;
+  min-width: 23px;
+  height: 23px;
+
+  overflow: visible;
+  border-radius: 999px;
+}
+
+.dashboard-topbar__activity-status-ring {
+  position: absolute;
+  inset: 1px;
+
+  display: block;
+  border-radius: 999px;
+
+  background:
+    conic-gradient(
+      from 0deg,
+      rgba(var(--dashboard-topbar-border-rgb), 0.94) 0deg,
+      rgba(var(--dashboard-topbar-border-rgb), 0.94) 68deg,
+      rgba(var(--dashboard-topbar-border-rgb), 0.22) 68deg,
+      rgba(var(--dashboard-topbar-border-rgb), 0.22) 168deg,
+      rgba(var(--dashboard-topbar-border-rgb), 0.5) 168deg,
+      rgba(var(--dashboard-topbar-border-rgb), 0.5) 226deg,
+      transparent 226deg,
+      transparent 360deg
+    );
+
+  box-shadow:
+    0 0 6px rgba(var(--dashboard-topbar-border-rgb), 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  animation: dashboardTopbarStatusSpin 3.1s linear infinite;
+}
+
+.dashboard-topbar__activity-status-core {
+  position: absolute;
+  inset: 6px;
+
+  display: block;
+  border-radius: 999px;
+
+  border: 1px solid rgba(var(--dashboard-topbar-border-rgb), 0.2);
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.08), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgb(19, 33, 28);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+    0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+.dashboard-topbar__activity-status-bubble {
+  position: absolute;
+  top: -10px;
+  right: -12px;
+  z-index: 5;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 25px;
+  height: 18px;
+  padding: 0 0.42rem;
+
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent),
+    rgb(var(--dashboard-topbar-surface-strong-rgb));
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 3px 8px rgba(0, 0, 0, 0.34),
+    0 0 10px rgba(var(--dashboard-topbar-border-rgb), 0.16);
+
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.86),
+    0 1px 0 rgba(0, 0, 0, 0.72);
+}
+
+.dashboard-topbar--gathering .dashboard-topbar__activity-status-core {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.1), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgb(20, 75, 39);
+}
+
+.dashboard-topbar--auto-combat .dashboard-topbar__activity-status-core {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.1), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgb(88, 30, 27);
+}
+
+.dashboard-topbar--idle .dashboard-topbar__activity-status-ring {
+  background:
+    conic-gradient(
+      from 0deg,
+      rgba(var(--dashboard-topbar-white-rgb), 0.24),
+      rgba(var(--dashboard-topbar-white-rgb), 0.08),
+      rgba(var(--dashboard-topbar-white-rgb), 0.16),
+      rgba(var(--dashboard-topbar-white-rgb), 0.08)
+    );
+  animation: none;
+}
+
+.dashboard-topbar--idle .dashboard-topbar__activity-status-core {
+  border-color: rgba(var(--dashboard-topbar-white-rgb), 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgb(32, 39, 48);
+}
+
+/* =========================================================
+   RECURSOS — GOLD / CASH
+   Mesmo fundo/base da activity bar.
+   A diferença visual fica só no ícone/conteúdo.
+   ========================================================= */
+
+.dashboard-topbar__resources {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.34rem;
+  min-width: 0;
+}
+
+.dashboard-topbar__resource {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.34rem;
+
+  min-width: 0;
+  min-height: 36px;
+  padding: 0.24rem 0.66rem;
+
+  color: rgba(255, 248, 232, 0.95);
+
+  border: 1px solid rgba(var(--dashboard-topbar-border-rgb), 0.24);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgb(var(--dashboard-topbar-surface-rgb));
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+    0 7px 16px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-topbar__resource-icon {
+  display: grid;
+  place-items: center;
+
+  width: 17px;
+  min-width: 17px;
+  height: 17px;
+
+  font-family: var(--font-title);
+  font-size: 0.6rem;
+  font-weight: 950;
+  line-height: 1;
+
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.78),
+    0 0 8px rgba(0, 0, 0, 0.34);
+}
+
+.dashboard-topbar__resource-value {
+  display: block;
+
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.74rem;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+
+  text-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.86),
+    0 1px 0 rgba(0, 0, 0, 0.6),
+    0 0 8px rgba(0, 0, 0, 0.28);
+}
+
+/* Gold: mesmo fundo; destaque só no ícone */
+.dashboard-topbar__resource--gold {
+  border-color: rgba(var(--dashboard-topbar-border-rgb), 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgb(var(--dashboard-topbar-surface-rgb));
+}
+
+.dashboard-topbar__resource--gold .dashboard-topbar__resource-icon {
+  color: rgba(255, 222, 126, 0.98);
+}
+
+.dashboard-topbar__resource--gold .dashboard-topbar__resource-value {
+  color: #fff8e8;
+}
+
+/* Cash: mesmo fundo; destaque só no ícone */
+.dashboard-topbar__resource--cash {
+  border-color: rgba(var(--dashboard-topbar-border-rgb), 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgb(var(--dashboard-topbar-surface-rgb));
+}
+
+.dashboard-topbar__resource--cash .dashboard-topbar__resource-icon {
+  color: rgba(164, 211, 255, 0.98);
+}
+
+.dashboard-topbar__resource--cash .dashboard-topbar__resource-value {
+  color: #fff8e8;
+}
+
+.dashboard-topbar__resource--default {
+  border-color: rgba(var(--dashboard-topbar-border-rgb), 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgb(var(--dashboard-topbar-surface-rgb));
+}
+
+/* =========================================================
+   REFRESH
+   ========================================================= */
+
+.dashboard-topbar__refresh {
+  display: grid;
+  place-items: center;
+
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+
+  color: rgba(255, 248, 232, 0.78);
+  font-family: var(--font-title);
+  font-size: 0.84rem;
+  font-weight: 950;
+  line-height: 1;
+
+  border: 1px solid rgba(var(--dashboard-topbar-border-rgb), 0.24);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgb(var(--dashboard-topbar-surface-rgb));
+
+  cursor: pointer;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+    0 7px 16px rgba(0, 0, 0, 0.2);
+
+  transition:
+    transform 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.dashboard-topbar__refresh:hover {
+  transform: translateY(-1px);
+  color: #fff8e8;
+  border-color: rgba(var(--dashboard-topbar-border-rgb), 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.02)),
+    rgb(var(--dashboard-topbar-surface-strong-rgb));
+}
+
+.dashboard-topbar__refresh:active {
+  transform: scale(0.96);
+}
+
+/* =========================================================
+   ANIMAÇÕES
+   ========================================================= */
+
+@keyframes dashboardTopbarStatusSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 980px) {
+  .dashboard-topbar {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.02rem;
+    scrollbar-width: none;
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  .dashboard-topbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard-topbar__activity {
+    max-width: min(380px, 66vw);
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 45;
+
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.3rem;
+    margin-left: 0;
+    margin-right: auto;
+    margin-bottom: 0.62rem;
+  }
+
+  .dashboard-topbar__activity {
+    grid-template-columns: 30px minmax(92px, auto) 24px;
+    gap: 0.32rem;
+
+    max-width: 62vw;
+    min-height: 34px;
+    padding: 0.2rem 0.3rem 0.2rem 0.22rem;
+  }
+
+  .dashboard-topbar__activity-icon {
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    font-size: 0.52rem;
+  }
+
+  .dashboard-topbar__activity-image {
+    width: 22px;
+    height: 22px;
+  }
+
+  .dashboard-topbar__activity-copy strong,
+  .dashboard-topbar__activity-main strong {
+    max-width: 140px;
+    font-size: 0.67rem;
+  }
+
+  .dashboard-topbar__activity-copy small,
+  .dashboard-topbar__activity-main small {
+    max-width: 140px;
+    font-size: 0.53rem;
+  }
+
+  .dashboard-topbar__activity-status {
+    width: 22px;
+    min-width: 22px;
+    height: 22px;
+  }
+
+  .dashboard-topbar__activity-status-ring {
+    inset: 1px;
+  }
+
+  .dashboard-topbar__activity-status-core {
+    inset: 6px;
+  }
+
+  .dashboard-topbar__activity-status-bubble {
+    top: -9px;
+    right: -11px;
+    min-width: 22px;
+    height: 17px;
+    padding-inline: 0.34rem;
+    font-size: 0.56rem;
+  }
+
+  .dashboard-topbar__resource {
+    min-height: 34px;
+    padding: 0.22rem 0.54rem;
+    gap: 0.28rem;
+  }
+
+  .dashboard-topbar__resource-icon {
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.54rem;
+  }
+
+  .dashboard-topbar__resource-value {
+    font-size: 0.68rem;
+  }
+
+  .dashboard-topbar__refresh {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .dashboard-topbar {
+    gap: 0.26rem;
+  }
+
+  .dashboard-topbar__activity {
+    max-width: 59vw;
+    grid-template-columns: 28px minmax(78px, auto) 22px;
+  }
+
+  .dashboard-topbar__activity-copy small,
+  .dashboard-topbar__activity-main small {
+    display: none;
+  }
+
+  .dashboard-topbar__activity-copy strong,
+  .dashboard-topbar__activity-main strong {
+    max-width: 108px;
+  }
+
+  .dashboard-topbar__activity-status {
+    width: 21px;
+    min-width: 21px;
+    height: 21px;
+  }
+
+  .dashboard-topbar__activity-status-ring {
+    inset: 1px;
+  }
+
+  .dashboard-topbar__activity-status-core {
+    inset: 6px;
+  }
+
+  .dashboard-topbar__activity-status-bubble {
+    top: -9px;
+    right: -10px;
+    min-width: 21px;
+    height: 16px;
+    padding-inline: 0.3rem;
+    font-size: 0.52rem;
+  }
+
+  .dashboard-topbar__resource {
+    padding-inline: 0.46rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-topbar__activity-progress span,
+  .dashboard-topbar__activity-status-ring,
+  .dashboard-topbar__refresh {
+    transition: none !important;
+    animation: none !important;
+  }
+}

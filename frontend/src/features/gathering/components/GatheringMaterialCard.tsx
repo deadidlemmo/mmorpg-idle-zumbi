@@ -1,19 +1,18 @@
 import type { CSSProperties } from 'react';
 import type {
-    GatheringMaterialRecipeUsageViewModel,
-    GatheringMaterialViewModel,
-    GatheringSkillViewModel,
+  GatheringMaterialRecipeUsageViewModel,
+  GatheringMaterialViewModel,
+  GatheringSkillViewModel,
 } from '../types/gathering.types';
 import {
-    formatGatheringOutputItemSlot,
-    formatGatheringTimePerUnitShort,
-    getGatheringMaterialPrimaryRecipe,
-    getGatheringMaterialRatePerHour,
-    getGatheringMaterialRelatedClasses,
-    getGatheringRequiredLevel,
-    getGatheringSkillLevel,
-    getGatheringXpPerUnit,
-    isGatheringMaterialUnlocked,
+  formatGatheringOutputItemSlot,
+  getGatheringMaterialPrimaryRecipe,
+  getGatheringMaterialRatePerHour,
+  getGatheringMaterialRelatedClasses,
+  getGatheringRequiredLevel,
+  getGatheringSkillLevel,
+  getGatheringXpPerUnit,
+  isGatheringMaterialUnlocked,
 } from '../types/gathering.types';
 
 type GatheringVisualRarity =
@@ -42,6 +41,15 @@ interface RarityMeta {
   label: string;
   rgb: string;
   cssClass: string;
+}
+
+interface GatheringRateDisplayMeta {
+  baseRatePerHour: number | null;
+  effectiveRatePerHour: number | null;
+  hasBonus: boolean;
+  bonusPercent: number;
+  label: string;
+  title: string;
 }
 
 function normalizeGatheringRarity(
@@ -140,13 +148,10 @@ function getPrimaryRecipeSummary(
   recipe?: GatheringMaterialRecipeUsageViewModel | null,
 ): string {
   if (!recipe) {
-    return 'Receita ainda não vinculada';
+    return 'Material';
   }
 
-  const outputSlot = formatGatheringOutputItemSlot(recipe.outputItemSlot);
-  const outputClass = recipe.outputItemClassName ?? 'Classe livre';
-
-  return `${outputClass} • ${outputSlot}`;
+  return formatGatheringOutputItemSlot(recipe.outputItemSlot);
 }
 
 function getRecipeUsageTitle(material: GatheringMaterialViewModel): string {
@@ -175,18 +180,228 @@ function getMaterialRelatedSummary(
   primaryRecipe?: GatheringMaterialRecipeUsageViewModel | null,
 ): string {
   const relatedClasses = getGatheringMaterialRelatedClasses(material);
+  const slotLabel = primaryRecipe
+    ? formatGatheringOutputItemSlot(primaryRecipe.outputItemSlot)
+    : getPrimaryRecipeSummary(primaryRecipe);
 
-  if (relatedClasses.length > 0 && primaryRecipe) {
-    return `${relatedClasses.join(' / ')} • ${formatGatheringOutputItemSlot(
-      primaryRecipe.outputItemSlot,
-    )}`;
+  if (relatedClasses.length > 0 && slotLabel) {
+    return `${relatedClasses.join(' / ')} • ${slotLabel}`;
   }
 
   if (relatedClasses.length > 0) {
     return relatedClasses.join(' / ');
   }
 
-  return getPrimaryRecipeSummary(primaryRecipe);
+  return slotLabel;
+}
+
+function getPositiveNumber(value: unknown): number | null {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function normalizeOrigin(value?: string | null): string | null {
+  const normalized = value?.trim().toUpperCase();
+
+  return normalized && normalized.length > 0 ? normalized : null;
+}
+
+function isSkillApplicableToMaterial(params: {
+  material: GatheringMaterialViewModel;
+  gatheringSkill?: GatheringSkillViewModel | null;
+}): boolean {
+  const materialOrigin = normalizeOrigin(params.material.materialOrigin);
+  const skillOrigin = normalizeOrigin(params.gatheringSkill?.origin);
+
+  if (!materialOrigin || !skillOrigin) {
+    return true;
+  }
+
+  return materialOrigin === skillOrigin;
+}
+
+function getMaterialBaseRatePerHour(params: {
+  material: GatheringMaterialViewModel;
+  fallbackRatePerHour?: number | null;
+}): number | null {
+  const baseRate = getPositiveNumber(params.material.baseGatheringRatePerHour);
+
+  if (baseRate !== null) {
+    return baseRate;
+  }
+
+  const fallbackRate = getPositiveNumber(params.fallbackRatePerHour);
+
+  if (fallbackRate !== null) {
+    return fallbackRate;
+  }
+
+  const materialRate = getPositiveNumber(params.material.ratePerHour);
+
+  if (materialRate !== null) {
+    return materialRate;
+  }
+
+  return null;
+}
+
+function getGatheringSkillProductionMultiplier(
+  gatheringSkill?: GatheringSkillViewModel | null,
+): number {
+  if (!gatheringSkill) {
+    return 1;
+  }
+
+  const directMultiplier = getPositiveNumber(gatheringSkill.productionMultiplier);
+
+  const skillMultiplier =
+    directMultiplier ??
+    1 + Math.max(0, Number(gatheringSkill.productionBonusPercent ?? 0)) / 100;
+
+  const affinityMultiplier =
+    gatheringSkill.isClassAffinity && gatheringSkill.affinityBonus
+      ? getPositiveNumber(gatheringSkill.affinityBonus.productionMultiplier) ?? 1
+      : 1;
+
+  return Math.max(1, skillMultiplier * affinityMultiplier);
+}
+
+function formatGatheringTimePerUnitReadable(
+  ratePerHour?: number | null,
+): string {
+  const rate = Number(ratePerHour);
+
+  if (!Number.isFinite(rate) || rate <= 0) {
+    return '—';
+  }
+
+  const totalSeconds = Math.max(1, Math.ceil(3600 / rate));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours}h ${minutes} min`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h`;
+  }
+
+  if (minutes > 0 && seconds > 0) {
+    return `${minutes} min ${seconds}s`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes} min`;
+  }
+
+  return `${seconds}s`;
+}
+
+function formatGatheringTimePerUnitCompact(
+  ratePerHour?: number | null,
+): string {
+  const rate = Number(ratePerHour);
+
+  if (!Number.isFinite(rate) || rate <= 0) {
+    return '—';
+  }
+
+  const totalSeconds = Math.max(1, Math.ceil(3600 / rate));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h`;
+  }
+
+  if (minutes > 0 && seconds > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}m`;
+  }
+
+  return `${seconds}s`;
+}
+
+function getGatheringRateDisplayMeta(params: {
+  material: GatheringMaterialViewModel;
+  gatheringSkill?: GatheringSkillViewModel | null;
+  fallbackRatePerHour?: number | null;
+}): GatheringRateDisplayMeta {
+  const baseRatePerHour = getMaterialBaseRatePerHour({
+    material: params.material,
+    fallbackRatePerHour: params.fallbackRatePerHour,
+  });
+
+  const rawRatePerHour = getGatheringMaterialRatePerHour(
+    params.material,
+    params.fallbackRatePerHour,
+  );
+
+  const skillApplies = isSkillApplicableToMaterial({
+    material: params.material,
+    gatheringSkill: params.gatheringSkill,
+  });
+
+  const skillMultiplier = skillApplies
+    ? getGatheringSkillProductionMultiplier(params.gatheringSkill)
+    : 1;
+
+  const calculatedEffectiveRate =
+    baseRatePerHour !== null ? baseRatePerHour * skillMultiplier : null;
+
+  const effectiveRatePerHour =
+    calculatedEffectiveRate !== null
+      ? Math.max(calculatedEffectiveRate, rawRatePerHour ?? 0)
+      : rawRatePerHour;
+
+  const hasBonus =
+    baseRatePerHour !== null &&
+    effectiveRatePerHour !== null &&
+    effectiveRatePerHour > baseRatePerHour * 1.005;
+
+  const bonusPercent =
+    hasBonus && baseRatePerHour !== null && effectiveRatePerHour !== null
+      ? Math.round((effectiveRatePerHour / baseRatePerHour - 1) * 100)
+      : 0;
+
+  const effectiveTimeReadable =
+    formatGatheringTimePerUnitReadable(effectiveRatePerHour);
+  const baseTimeReadable = formatGatheringTimePerUnitReadable(baseRatePerHour);
+
+  if (hasBonus) {
+    return {
+      baseRatePerHour,
+      effectiveRatePerHour,
+      hasBonus,
+      bonusPercent,
+      label: `${formatGatheringTimePerUnitCompact(effectiveRatePerHour)} real`,
+      title: `Tempo real com bônus: ${effectiveTimeReadable}. Tempo base: ${baseTimeReadable}. Bônus aplicado: +${bonusPercent}%.`,
+    };
+  }
+
+  return {
+    baseRatePerHour,
+    effectiveRatePerHour,
+    hasBonus,
+    bonusPercent,
+    label: `${formatGatheringTimePerUnitCompact(effectiveRatePerHour)} base`,
+    title: `Tempo base por item: ${baseTimeReadable}.`,
+  };
 }
 
 export function GatheringMaterialCard({
@@ -208,21 +423,25 @@ export function GatheringMaterialCard({
   });
 
   const xpPerUnit = getGatheringXpPerUnit(material);
-  const ratePerHour = getGatheringMaterialRatePerHour(
+
+  const rateDisplayMeta = getGatheringRateDisplayMeta({
     material,
+    gatheringSkill,
     fallbackRatePerHour,
-  );
+  });
 
   const rarityMeta = getRarityMeta(material.rarity, material.tier);
   const primaryRecipe = getGatheringMaterialPrimaryRecipe(material);
   const iconUrl = getMaterialIconUrl(material);
 
-  const timePerUnitLabel = formatGatheringTimePerUnitShort(ratePerHour);
+  const timePerUnitLabel = rateDisplayMeta.label;
+  const timePerUnitTitle = rateDisplayMeta.title;
+
   const relatedSummary = getMaterialRelatedSummary(material, primaryRecipe);
   const usageTitle = getRecipeUsageTitle(material);
 
   const canStart = Boolean(onStart) && isUnlocked && !isBusy && !isActive;
-  const canViewUsage = Boolean(onViewUsage);
+  const canViewUsage = Boolean(onViewUsage) && isUnlocked && !isBusy;
 
   const cardClassName = [
     'gathering-material-card',
@@ -243,6 +462,10 @@ export function GatheringMaterialCard({
     if (!isUnlocked || isBusy) return;
 
     onSelect?.(material);
+
+    if (canViewUsage) {
+      onViewUsage?.(material);
+    }
   }
 
   function handleStart() {
@@ -271,7 +494,8 @@ export function GatheringMaterialCard({
         className="gathering-material-card__select"
         onClick={handleSelect}
         disabled={!isUnlocked || isBusy}
-        aria-label={`Selecionar material ${material.name}`}
+        aria-label={`Abrir detalhes do material ${material.name}`}
+        title={usageTitle}
       >
         <span className="gathering-material-card__visual" aria-hidden="true">
           <span className="gathering-material-card__icon-frame">
@@ -332,21 +556,32 @@ export function GatheringMaterialCard({
             <span
               className={
                 isUnlocked
-                  ? 'gathering-material-card__pill'
-                  : 'gathering-material-card__pill gathering-material-card__pill--locked'
+                  ? 'gathering-material-card__pill gathering-material-card__pill--level'
+                  : 'gathering-material-card__pill gathering-material-card__pill--locked gathering-material-card__pill--level'
               }
             >
-              Req. Nv. {requiredLevel}
+              Lv. {requiredLevel}
             </span>
 
             <span className="gathering-material-card__pill gathering-material-card__pill--rate">
               +{xpPerUnit} XP
             </span>
 
-            <span className="gathering-material-card__pill gathering-material-card__pill--time">
+            <span
+              className="gathering-material-card__pill gathering-material-card__pill--time"
+              title={timePerUnitTitle}
+            >
               {timePerUnitLabel}
             </span>
           </span>
+        </span>
+
+        <span className="gathering-material-card__active-indicator" aria-hidden="true">
+          {isActive ? <span /> : null}
+        </span>
+
+        <span className="gathering-material-card__chevron" aria-hidden="true">
+          ›
         </span>
       </button>
 

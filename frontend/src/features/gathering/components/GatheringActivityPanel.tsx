@@ -1,21 +1,14 @@
-import type { CSSProperties } from 'react';
 import { useGatheringRealtimeState } from '../realtime/useGatheringRealtime';
 import type {
-    GatheringMaterialViewModel,
-    GatheringProductionPreviewViewModel,
-    GatheringSessionViewModel,
-    GatheringSkillViewModel,
-    GatheringStatusResponse,
+  GatheringMaterialViewModel,
+  GatheringProductionPreviewViewModel,
+  GatheringSessionViewModel,
+  GatheringStatusResponse,
 } from '../types/gathering.types';
 import {
-    clampGatheringPercent,
-    formatGatheringDuration,
-    formatGatheringRate,
-    formatGatheringTimePerUnitShort,
-    getGatheringMaterialRatePerHour,
-    getGatheringOriginLabel,
-    getGatheringSkillLevel,
-    getGatheringXpPerUnit,
+  clampGatheringPercent,
+  getGatheringMaterialRatePerHour,
+  getGatheringXpPerUnit,
 } from '../types/gathering.types';
 
 interface GatheringActivityPanelProps {
@@ -23,10 +16,12 @@ interface GatheringActivityPanelProps {
 
   session?: GatheringSessionViewModel | null;
   productionPreview?: GatheringProductionPreviewViewModel | null;
-  gatheringSkill?: GatheringSkillViewModel | null;
 
+  /**
+   * Mantido por compatibilidade com chamadas antigas.
+   * A coleta agora é automática pelo backend/status.
+   */
   isBusy?: boolean;
-
   onCollect?: () => void | Promise<void>;
   onStop?: () => void | Promise<void>;
   onRefresh?: () => void | Promise<void>;
@@ -39,6 +34,12 @@ interface LiveProductionViewModel {
   ratePerHour: number | null;
   timePerUnitSeconds: number | null;
 }
+
+type GatheringSessionWithCounters = GatheringSessionViewModel & {
+  collectedQuantity?: unknown;
+  totalCollectedQuantity?: unknown;
+  sessionCollectedQuantity?: unknown;
+};
 
 function isActiveStatus(
   status?: GatheringStatusResponse | null,
@@ -60,6 +61,14 @@ function getSafeNumber(value: unknown, fallback = 0): number {
   if (!Number.isFinite(parsed)) return fallback;
 
   return parsed;
+}
+
+function getSafeInteger(value: unknown, fallback = 0): number {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) return fallback;
+
+  return Math.max(0, Math.floor(parsed));
 }
 
 function getMaterialInitials(materialName?: string | null): string {
@@ -121,18 +130,6 @@ function getSessionPreview(params: {
   }
 
   return params.productionPreview ?? params.session?.productionPreview ?? null;
-}
-
-function getSessionSkill(params: {
-  status?: GatheringStatusResponse | null;
-  session?: GatheringSessionViewModel | null;
-  gatheringSkill?: GatheringSkillViewModel | null;
-}): GatheringSkillViewModel | null {
-  if (isActiveStatus(params.status)) {
-    return params.status.gatheringSkill ?? params.status.session.gatheringSkill ?? null;
-  }
-
-  return params.gatheringSkill ?? params.session?.gatheringSkill ?? null;
 }
 
 function getActiveSession(params: {
@@ -212,7 +209,9 @@ function getStaticLiveProduction(params: {
       : null;
 
   const timePerUnitSeconds =
-    productionPerSecond > 0 ? Math.max(1, Math.ceil(1 / productionPerSecond)) : null;
+    productionPerSecond > 0
+      ? Math.max(1, Math.ceil(1 / productionPerSecond))
+      : null;
 
   return {
     readyQuantity,
@@ -224,52 +223,89 @@ function getStaticLiveProduction(params: {
 }
 
 function getActivityTitle(material?: GatheringMaterialViewModel | null): string {
-  return material?.name ?? 'Coleta em andamento';
+  return material?.name ?? 'Material em coleta';
 }
 
-function getActivityDescription(params: {
-  session?: GatheringSessionViewModel | null;
-  material?: GatheringMaterialViewModel | null;
+function getCollectedQuantityLabel(collectedQuantity: number): string {
+  return `+${Math.max(0, collectedQuantity).toLocaleString('pt-BR')}`;
+}
+
+function formatGatheringDurationFriendly(seconds?: number | null): string {
+  if (seconds === null || seconds === undefined) return '—';
+
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainingSeconds = safeSeconds % 60;
+
+  if (hours > 0) {
+    if (minutes > 0 && remainingSeconds > 0) {
+      return `${hours}h ${minutes} min ${remainingSeconds}s`;
+    }
+
+    if (minutes > 0) {
+      return `${hours}h ${minutes} min`;
+    }
+
+    return `${hours}h`;
+  }
+
+  if (minutes > 0) {
+    return remainingSeconds > 0
+      ? `${minutes} min ${remainingSeconds}s`
+      : `${minutes} min`;
+  }
+
+  return `${remainingSeconds}s`;
+}
+
+function getNextUnitLabel(secondsToNextUnit: number | null): string {
+  if (secondsToNextUnit === null) {
+    return 'Próximo em: —';
+  }
+
+  return `Próximo em: ${formatGatheringDurationFriendly(secondsToNextUnit)}`;
+}
+
+function getExpPerSecondLabel(params: {
+  xpPerUnit: number;
+  ratePerHour?: number | null;
 }): string {
-  const originLabel = getGatheringOriginLabel(params.session?.origin);
-  const mapName = params.session?.map?.name;
+  const ratePerHour = Number(params.ratePerHour ?? 0);
 
-  if (mapName) {
-    return `${originLabel} em ${mapName}`;
+  if (!Number.isFinite(ratePerHour) || ratePerHour <= 0) {
+    return '0 EXP/s';
   }
 
-  return originLabel;
+  const expPerSecond = (ratePerHour * params.xpPerUnit) / 3600;
+  const normalizedExpPerSecond =
+    expPerSecond > 0 && expPerSecond < 0.1 ? 0.1 : expPerSecond;
+
+  return `${normalizedExpPerSecond.toFixed(1)} EXP/s`;
 }
 
-function getSkillProgressLabel(skill?: GatheringSkillViewModel | null): string {
-  if (!skill) {
-    return 'Proficiência Nv. 1';
-  }
+function getCollectedQuantity(params: {
+  realtimeState: ReturnType<typeof useGatheringRealtimeState>;
+  activeSession?: GatheringSessionViewModel | null;
+}): number {
+  const realtimeStateWithCounters = params.realtimeState as typeof params.realtimeState & {
+    collectedQuantity?: unknown;
+    totalCollectedQuantity?: unknown;
+    sessionCollectedQuantity?: unknown;
+  };
 
-  const level = getGatheringSkillLevel(skill);
+  const activeSessionWithCounters =
+    params.activeSession as GatheringSessionWithCounters | null;
 
-  if (skill.xpToNextLevel === null || skill.isAtLevelCap) {
-    return `Proficiência Nv. ${level} · nível máximo`;
-  }
-
-  return `Proficiência Nv. ${level} · ${skill.xp}/${skill.xpToNextLevel} XP`;
-}
-
-function getCollectedButtonLabel(params: {
-  readyQuantity: number;
-  isBusy: boolean;
-}): string {
-  if (params.isBusy) return 'Coletando...';
-
-  if (params.readyQuantity <= 0) {
-    return 'Nada pronto';
-  }
-
-  if (params.readyQuantity === 1) {
-    return 'Coletar 1';
-  }
-
-  return `Coletar ${params.readyQuantity}`;
+  return getSafeInteger(
+    realtimeStateWithCounters.collectedQuantity ??
+      realtimeStateWithCounters.sessionCollectedQuantity ??
+      realtimeStateWithCounters.totalCollectedQuantity ??
+      activeSessionWithCounters?.collectedQuantity ??
+      activeSessionWithCounters?.sessionCollectedQuantity ??
+      activeSessionWithCounters?.totalCollectedQuantity ??
+      0,
+  );
 }
 
 function getSyncedLiveProduction(params: {
@@ -299,9 +335,7 @@ export function GatheringActivityPanel({
   status,
   session,
   productionPreview,
-  gatheringSkill,
   isBusy = false,
-  onCollect,
   onStop,
   onRefresh,
 }: GatheringActivityPanelProps) {
@@ -325,14 +359,6 @@ export function GatheringActivityPanel({
       productionPreview,
     });
 
-  const skill =
-    realtimeState.gatheringSkill ??
-    getSessionSkill({
-      status: statusSource,
-      session: activeSession,
-      gatheringSkill,
-    });
-
   const material =
     realtimeState.targetMaterial ?? getSessionMaterial(activeSession);
 
@@ -351,33 +377,25 @@ export function GatheringActivityPanel({
     fallback: fallbackLiveProduction,
   });
 
-  const ratePerHour =
-    liveProduction.ratePerHour ??
-    getRatePerHour({
-      material,
-      preview,
-    });
+  const progressPercent = clampGatheringPercent(
+    liveProduction.progressPercent,
+  );
+
+  const collectedQuantity = getCollectedQuantity({
+    realtimeState,
+    activeSession,
+  });
 
   const xpPerUnit = getGatheringXpPerUnit(material);
+  const expPerSecondLabel = getExpPerSecondLabel({
+    xpPerUnit,
+    ratePerHour: liveProduction.ratePerHour,
+  });
 
-  const progressStyle = {
-    width: `${liveProduction.progressPercent}%`,
-  } as CSSProperties;
-
-  const canCollect =
-    Boolean(onCollect) &&
-    isActive &&
-    !isBusy &&
-    liveProduction.readyQuantity > 0;
+  const nextUnitLabel = getNextUnitLabel(liveProduction.secondsToNextUnit);
 
   const canStop = Boolean(onStop) && isActive && !isBusy;
   const canRefresh = Boolean(onRefresh) && !isBusy;
-
-  function handleCollect() {
-    if (!canCollect) return;
-
-    void onCollect?.();
-  }
 
   function handleStop() {
     if (!canStop) return;
@@ -393,57 +411,37 @@ export function GatheringActivityPanel({
 
   if (!isActive || !activeSession) {
     return (
-      <section className="gathering-session gathering-session--empty">
-        <div className="gathering-card__header">
-          <div className="gathering-card__title-group">
-            <span className="gathering-card__eyebrow">Atividade atual</span>
-            <h2>Nenhuma coleta ativa</h2>
-            <p className="gathering-card__description">
-              Escolha um material para iniciar uma expedição de gathering.
-            </p>
-          </div>
-        </div>
-
-        <div className="gathering-session__empty-state">
+      <section className="gathering-session gathering-session--empty gathering-session--compact">
+        <div className="gathering-session__empty-card">
           <span className="gathering-session__empty-icon" aria-hidden="true">
             ⛏
           </span>
 
-          <div>
-            <strong>Pronto para iniciar</strong>
-            <p>
-              Quando uma coleta estiver ativa, o progresso, a taxa e a quantidade
-              pronta aparecerão aqui.
-            </p>
+          <div className="gathering-session__empty-content">
+            <strong>Nenhuma coleta ativa</strong>
+            <p>Escolha um material para iniciar uma expedição.</p>
           </div>
-        </div>
 
-        {onRefresh ? (
-          <div className="gathering-session__actions">
+          {onRefresh ? (
             <button
               type="button"
-              className="gathering-button gathering-button--secondary"
+              className="gathering-session__icon-button"
               onClick={handleRefresh}
               disabled={!canRefresh}
+              aria-label="Atualizar gathering"
+              title="Atualizar"
             >
-              Atualizar
+              ↻
             </button>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </section>
     );
   }
 
   return (
-    <section className="gathering-session gathering-session--active">
-      <div className="gathering-card__header">
-        <div className="gathering-card__title-group">
-          <span className="gathering-card__eyebrow">Atividade atual</span>
-          <h2>Coleta em andamento</h2>
-        </div>
-      </div>
-
-      <div className="gathering-session__live-hero">
+    <section className="gathering-session gathering-session--active gathering-session--compact gathering-session--horizontal">
+      <div className="gathering-session__current-action gathering-session__current-action--horizontal">
         <div className="gathering-session__item-icon" aria-hidden="true">
           {iconUrl ? (
             <img
@@ -457,121 +455,85 @@ export function GatheringActivityPanel({
               {getMaterialInitials(material?.name)}
             </span>
           )}
-
-          <span className="gathering-session__origin-mini">
-            {getGatheringOriginLabel(activeSession.origin).slice(0, 2)}
-          </span>
         </div>
 
-        <div className="gathering-session__live-body">
-          <span className="gathering-session__label">Coletando agora</span>
-
-          <h2 title={getActivityTitle(material)}>{getActivityTitle(material)}</h2>
-
-          <p className="gathering-session__description">
-            {getActivityDescription({
-              session: activeSession,
-              material,
-            })}
-          </p>
-        </div>
-      </div>
-
-      <div className="gathering-session__activity">
-        <div className="gathering-session__activity-header">
-          <span>Próxima unidade</span>
-          <strong>{Math.floor(liveProduction.progressPercent)}%</strong>
+        <div className="gathering-session__current-body gathering-session__current-body--title-only">
+          <h2 title={getActivityTitle(material)}>
+            {getActivityTitle(material)}
+          </h2>
         </div>
 
-        <div
-          className="gathering-session__activity-track"
-          role="progressbar"
-          aria-label="Progresso da próxima unidade"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.floor(liveProduction.progressPercent)}
-        >
-          <i style={progressStyle} />
-        </div>
+        <div className="gathering-session__header-actions">
+          {onRefresh ? (
+            <button
+              type="button"
+              className="gathering-session__icon-button"
+              onClick={handleRefresh}
+              disabled={!canRefresh}
+              aria-label="Atualizar gathering"
+              title="Atualizar"
+            >
+              ↻
+            </button>
+          ) : null}
 
-        <div className="gathering-session__activity-footer">
-          <span>
-            Pronto:{' '}
-            <strong>{liveProduction.readyQuantity.toLocaleString('pt-BR')}</strong>
-          </span>
-
-          <span>
-            Próximo:{' '}
-            <strong>
-              {liveProduction.secondsToNextUnit === null
-                ? '—'
-                : formatGatheringDuration(liveProduction.secondsToNextUnit)}
-            </strong>
-          </span>
+          {onStop ? (
+            <button
+              type="button"
+              className="gathering-session__icon-button gathering-session__icon-button--danger"
+              onClick={handleStop}
+              disabled={!canStop}
+              aria-label="Parar gathering"
+              title="Parar"
+            >
+              ×
+            </button>
+          ) : null}
         </div>
       </div>
 
-      <div className="gathering-session__rate-strip">
-        <span>
-          <small>Taxa</small>
-          <strong>{formatGatheringRate(ratePerHour)}</strong>
-        </span>
-
-        <span>
-          <small>Tempo/item</small>
-          <strong>{formatGatheringTimePerUnitShort(ratePerHour)}</strong>
-        </span>
-
-        <span>
-          <small>XP/item</small>
-          <strong>+{xpPerUnit}</strong>
-        </span>
-      </div>
-
-      <div className="gathering-session__skill-line">
-        <span>{getSkillProgressLabel(skill)}</span>
-
-        <div
-          className="gathering-session__skill-track"
-          role="progressbar"
-          aria-label="Progresso da proficiência"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.floor(skill?.xpProgressPercent ?? 0)}
-        >
-          <i
-            style={
-              {
-                width: `${clampGatheringPercent(
-                  skill?.xpProgressPercent ?? 0,
-                )}%`,
-              } as CSSProperties
-            }
+      <div
+        className="gathering-session__progress-strip"
+        role="progressbar"
+        aria-label="Progresso até a próxima unidade coletada"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(progressPercent)}
+        title={`${Math.round(progressPercent)}% até a próxima unidade`}
+      >
+        <span className="gathering-session__progress-track" aria-hidden="true">
+          <span
+            className="gathering-session__progress-fill"
+            style={{
+              width: `${progressPercent}%`,
+            }}
           />
-        </div>
+        </span>
       </div>
 
-      <div className="gathering-session__actions">
-        <button
-          type="button"
-          className="gathering-button gathering-button--primary"
-          onClick={handleCollect}
-          disabled={!canCollect}
+      <div className="gathering-session__inline-stats gathering-session__inline-stats--auto">
+        <span
+          className="gathering-session__inline-badge gathering-session__inline-value--collected"
+          title="Quantidade coletada automaticamente nesta sessão"
         >
-          {getCollectedButtonLabel({
-            readyQuantity: liveProduction.readyQuantity,
-            isBusy,
-          })}
-        </button>
+          {getCollectedQuantityLabel(collectedQuantity)}
+        </span>
 
-        <button
-          type="button"
-          className="gathering-button gathering-button--danger"
-          onClick={handleStop}
-          disabled={!canStop}
-        >
-          Parar
-        </button>
+        <span className="gathering-session__inline-capsule">
+          <span
+            className="gathering-session__inline-value gathering-session__inline-value--time"
+            title="Tempo estimado para a próxima unidade"
+          >
+            {nextUnitLabel}
+          </span>
+
+          <span
+            className="gathering-session__inline-value gathering-session__inline-value--xp"
+            title="Experiência gerada por segundo"
+          >
+            {expPerSecondLabel}
+          </span>
+        </span>
       </div>
     </section>
   );

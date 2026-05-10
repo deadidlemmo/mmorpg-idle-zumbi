@@ -1,0 +1,58 @@
+Listagem de caminhos de pasta
+O número de série do volume é CAC1-22D2
+C:\USERS\NETO\DESKTOP\PROJETOS\EM USO\MMORPG-IDLE-ZUMBI\FRONTEND\SRC\FEATURES\GATHERING
++---api
+|       gathering.api.ts
+|       
++---components
+|       GatheringActivityPanel.tsx
+|       GatheringHubCard.tsx
+|       GatheringMaterialCard.tsx
+|       GatheringMaterialList.tsx
+|       GatheringOriginHeader.tsx
+|       GatheringOriginSummary.tsx
+|       GatheringSkillProgress.tsx
+|       GatheringUsageModal.tsx
+|       
++---constants
+|       gathering-icons.ts
+|       gathering-origins.config.ts
+|       gathering-routes.ts
+|       
++---hooks
++---pages
+|       GatheringHubPage.tsx
+|       GatheringOriginPage.tsx
+|       GatheringPage.tsx
+|       
++---realtime
+|       gatheringRealtime.events.ts
+|       gatheringRealtime.selectors.ts
+|       gatheringRealtime.types.ts
+|       gatheringRealtimeContext.ts
+|       GatheringRealtimeProvider.tsx
+|       gatheringRealtimeReducer.ts
+|       useGatheringRealtime.ts
+|       
++---styles
+|       gathering.cards.css
+|       gathering.css
+|       gathering.hub.css
+|       gathering.layout.css
+|       gathering.materials.css
+|       gathering.modal.css
+|       gathering.origin-page.css
+|       gathering.origins.css
+|       gathering.rarity.css
+|       gathering.responsive.css
+|       gathering.session.css
+|       gathering.states.css
+|       
++---types
+|       gathering.types.ts
+|       
+\---utils
+        gathering-formatters.ts
+        gathering-origin.utils.ts
+        gathering-progress.utils.ts
+        

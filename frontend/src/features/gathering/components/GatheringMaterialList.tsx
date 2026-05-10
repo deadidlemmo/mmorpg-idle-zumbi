@@ -24,227 +24,226 @@ interface GatheringMaterialListProps {
   onViewMaterialUsage?: (material: GatheringMaterialViewModel) => void;
 }
 
-interface MaterialGroup {
+interface MaterialGroupViewModel {
   key: string;
-  title: string;
-  description: string;
+  label: string;
+  order: number;
   materials: GatheringMaterialViewModel[];
 }
 
-const GROUP_ORDER = [
-  'MAIN_HAND',
-  'OFF_HAND',
-  'HEAD',
-  'ARMOR',
-  'PANTS',
-  'BOOTS',
-  'CONSUMABLE',
-  'MULTIPLE',
-  'UNLINKED',
-] as const;
+type RecipeOutputSlot = GatheringMaterialRecipeUsageViewModel['outputItemSlot'];
 
-function getRecipeSlotKey(
+function normalizeSlotKey(slot?: RecipeOutputSlot | string | null): string {
+  return String(slot ?? '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function getRecipeSlot(
   recipe?: GatheringMaterialRecipeUsageViewModel | null,
-): string {
-  if (!recipe) {
-    return 'UNLINKED';
+): RecipeOutputSlot | null {
+  return recipe?.outputItemSlot ?? null;
+}
+
+function getMaterialPrimarySlot(
+  material: GatheringMaterialViewModel,
+): RecipeOutputSlot | null {
+  const primaryRecipe = getGatheringMaterialPrimaryRecipe(material);
+
+  if (primaryRecipe?.outputItemSlot) {
+    return primaryRecipe.outputItemSlot;
   }
 
-  const slot = recipe.outputItemSlot;
+  const recipes = material.usedInRecipes ?? [];
 
-  if (
-    slot === 'MAIN_HAND' ||
-    slot === 'OFF_HAND' ||
-    slot === 'HEAD' ||
-    slot === 'ARMOR' ||
-    slot === 'PANTS' ||
-    slot === 'BOOTS' ||
-    slot === 'CONSUMABLE'
-  ) {
-    return slot;
+  if (recipes.length <= 0) {
+    return null;
   }
 
-  return 'MULTIPLE';
+  const uniqueSlots = Array.from(
+    new Set(
+      recipes
+        .map((recipe) => recipe.outputItemSlot)
+        .filter(Boolean),
+    ),
+  );
+
+  if (uniqueSlots.length === 1) {
+    return uniqueSlots[0] ?? null;
+  }
+
+  return null;
+}
+
+function getMaterialGroupOrder(slot?: RecipeOutputSlot | string | null): number {
+  const normalizedSlot = normalizeSlotKey(slot);
+
+  const orderBySlot: Record<string, number> = {
+    MAIN_HAND: 10,
+    WEAPON: 10,
+    ARMA: 10,
+
+    OFF_HAND: 20,
+    SECONDARY: 20,
+    SHIELD: 20,
+    APOIO: 20,
+
+    HEAD: 30,
+    HELMET: 30,
+    ELMO: 30,
+
+    ARMOR: 40,
+    CHEST: 40,
+    BODY: 40,
+    CAMISA: 40,
+    ARMADURA: 40,
+
+    PANTS: 50,
+    LEGS: 50,
+    CALCA: 50,
+    CALÇA: 50,
+
+    BOOTS: 60,
+    FEET: 60,
+    BOTAS: 60,
+
+    CONSUMABLE: 70,
+    CONSUMIVEL: 70,
+    CONSUMIVEL_: 70,
+
+    MULTIPLE: 90,
+    GENERAL: 100,
+  };
+
+  return orderBySlot[normalizedSlot] ?? 999;
+}
+
+function getMaterialGroupLabel(slot?: RecipeOutputSlot | string | null): string {
+  const normalizedSlot = normalizeSlotKey(slot);
+
+  const labelBySlot: Record<string, string> = {
+    MAIN_HAND: 'Armas',
+    WEAPON: 'Armas',
+    ARMA: 'Armas',
+
+    OFF_HAND: 'Apoios e secundárias',
+    SECONDARY: 'Apoios e secundárias',
+    SHIELD: 'Apoios e secundárias',
+    APOIO: 'Apoios e secundárias',
+
+    HEAD: 'Elmos',
+    HELMET: 'Elmos',
+    ELMO: 'Elmos',
+
+    ARMOR: 'Armaduras e coletes',
+    CHEST: 'Armaduras e coletes',
+    BODY: 'Armaduras e coletes',
+    CAMISA: 'Armaduras e coletes',
+    ARMADURA: 'Armaduras e coletes',
+
+    PANTS: 'Calças e proteção inferior',
+    LEGS: 'Calças e proteção inferior',
+    CALCA: 'Calças e proteção inferior',
+    CALÇA: 'Calças e proteção inferior',
+
+    BOOTS: 'Botas e deslocamento',
+    FEET: 'Botas e deslocamento',
+    BOTAS: 'Botas e deslocamento',
+
+    CONSUMABLE: 'Consumíveis',
+    CONSUMIVEL: 'Consumíveis',
+
+    MULTIPLE: 'Materiais versáteis',
+    GENERAL: 'Materiais gerais',
+  };
+
+  if (labelBySlot[normalizedSlot]) {
+    return labelBySlot[normalizedSlot];
+  }
+
+  if (slot) {
+    return formatGatheringOutputItemSlot(slot as RecipeOutputSlot);
+  }
+
+  return 'Materiais gerais';
 }
 
 function getMaterialGroupKey(material: GatheringMaterialViewModel): string {
   const recipes = material.usedInRecipes ?? [];
+  const primarySlot = getMaterialPrimarySlot(material);
 
-  if (recipes.length <= 0) {
-    return 'UNLINKED';
+  if (primarySlot) {
+    return normalizeSlotKey(primarySlot);
   }
 
-  const uniqueSlots = Array.from(
-    new Set(recipes.map((recipe) => recipe.outputItemSlot)),
-  );
-
-  if (uniqueSlots.length > 1) {
+  if (recipes.length > 1) {
     return 'MULTIPLE';
   }
 
-  return getRecipeSlotKey(recipes[0]);
+  return 'GENERAL';
 }
 
-function getGroupTitle(groupKey: string): string {
-  switch (groupKey) {
-    case 'MAIN_HAND':
-      return 'Armas';
-
-    case 'OFF_HAND':
-      return 'Apoios e secundárias';
-
-    case 'HEAD':
-      return 'Elmos e proteção de cabeça';
-
-    case 'ARMOR':
-      return 'Armaduras e coletes';
-
-    case 'PANTS':
-      return 'Calças e proteção inferior';
-
-    case 'BOOTS':
-      return 'Botas e deslocamento';
-
-    case 'CONSUMABLE':
-      return 'Consumíveis';
-
-    case 'MULTIPLE':
-      return 'Materiais versáteis';
-
-    case 'UNLINKED':
-      return 'Materiais sem receita vinculada';
-
-    default:
-      return formatGatheringOutputItemSlot(groupKey);
-  }
-}
-
-function getGroupDescription(groupKey: string): string {
-  switch (groupKey) {
-    case 'MAIN_HAND':
-      return 'Materiais usados principalmente para criar armas.';
-
-    case 'OFF_HAND':
-      return 'Materiais usados em escudos, apoios e itens secundários.';
-
-    case 'HEAD':
-      return 'Materiais usados em elmos, máscaras e proteção de cabeça.';
-
-    case 'ARMOR':
-      return 'Materiais usados em coletes, jaquetas e armaduras.';
-
-    case 'PANTS':
-      return 'Materiais usados em calças e proteções inferiores.';
-
-    case 'BOOTS':
-      return 'Materiais usados em botas e equipamentos de marcha.';
-
-    case 'CONSUMABLE':
-      return 'Materiais usados em itens de uso e suporte.';
-
-    case 'MULTIPLE':
-      return 'Materiais usados em mais de um tipo de equipamento.';
-
-    case 'UNLINKED':
-      return 'Materiais ainda sem uso de receita exibido pela API.';
-
-    default:
-      return 'Materiais desta categoria.';
-  }
-}
-
-function compareMaterials(
-  first: GatheringMaterialViewModel,
-  second: GatheringMaterialViewModel,
-): number {
-  const firstRequiredLevel = getGatheringRequiredLevel(first);
-  const secondRequiredLevel = getGatheringRequiredLevel(second);
-
-  if (firstRequiredLevel !== secondRequiredLevel) {
-    return firstRequiredLevel - secondRequiredLevel;
-  }
-
-  if (first.tier !== second.tier) {
-    return first.tier - second.tier;
-  }
-
-  return first.name.localeCompare(second.name, 'pt-BR');
-}
-
-function buildMaterialGroups(
+function sortMaterials(
   materials: GatheringMaterialViewModel[],
-): MaterialGroup[] {
-  const groupsByKey = new Map<string, GatheringMaterialViewModel[]>();
+): GatheringMaterialViewModel[] {
+  return [...materials].sort((first, second) => {
+    const firstRequiredLevel = getGatheringRequiredLevel(first);
+    const secondRequiredLevel = getGatheringRequiredLevel(second);
+
+    if (firstRequiredLevel !== secondRequiredLevel) {
+      return firstRequiredLevel - secondRequiredLevel;
+    }
+
+    const firstTier = Number(first.tier ?? 1);
+    const secondTier = Number(second.tier ?? 1);
+
+    if (firstTier !== secondTier) {
+      return firstTier - secondTier;
+    }
+
+    return first.name.localeCompare(second.name, 'pt-BR');
+  });
+}
+
+function groupMaterials(
+  materials: GatheringMaterialViewModel[],
+): MaterialGroupViewModel[] {
+  const groupsByKey = new Map<string, MaterialGroupViewModel>();
 
   for (const material of materials) {
-    const groupKey = getMaterialGroupKey(material);
-    const currentGroup = groupsByKey.get(groupKey) ?? [];
+    const slot = getMaterialPrimarySlot(material);
+    const key = getMaterialGroupKey(material);
+    const currentGroup = groupsByKey.get(key);
 
-    currentGroup.push(material);
-    groupsByKey.set(groupKey, currentGroup);
+    if (currentGroup) {
+      currentGroup.materials.push(material);
+      continue;
+    }
+
+    groupsByKey.set(key, {
+      key,
+      label: getMaterialGroupLabel(slot ?? key),
+      order: getMaterialGroupOrder(slot ?? key),
+      materials: [material],
+    });
   }
 
-  const orderedKeys = [
-    ...GROUP_ORDER.filter((groupKey) => groupsByKey.has(groupKey)),
-    ...Array.from(groupsByKey.keys()).filter(
-      (groupKey) =>
-        !GROUP_ORDER.includes(groupKey as (typeof GROUP_ORDER)[number]),
-    ),
-  ];
+  return [...groupsByKey.values()]
+    .map((group) => ({
+      ...group,
+      materials: sortMaterials(group.materials),
+    }))
+    .sort((first, second) => {
+      if (first.order !== second.order) {
+        return first.order - second.order;
+      }
 
-  return orderedKeys.map((groupKey) => ({
-    key: groupKey,
-    title: getGroupTitle(groupKey),
-    description: getGroupDescription(groupKey),
-    materials: [...(groupsByKey.get(groupKey) ?? [])].sort(compareMaterials),
-  }));
-}
-
-function getMaterialUsageCount(material: GatheringMaterialViewModel): number {
-  return material.usedInRecipeCount ?? material.usedInRecipes?.length ?? 0;
-}
-
-function getMaterialListSummary(materials: GatheringMaterialViewModel[]): string {
-  if (materials.length <= 0) {
-    return 'Nenhum material encontrado.';
-  }
-
-  const recipeLinkedCount = materials.filter(
-    (material) => getMaterialUsageCount(material) > 0,
-  ).length;
-
-  if (recipeLinkedCount <= 0) {
-    return `${materials.length} material(is) disponível(is).`;
-  }
-
-  return `${materials.length} material(is) · ${recipeLinkedCount} com receita vinculada`;
-}
-
-function getGroupUsageHint(materials: GatheringMaterialViewModel[]): string {
-  const recipeNames = materials
-    .map((material) => getGatheringMaterialPrimaryRecipe(material))
-    .filter((recipe): recipe is GatheringMaterialRecipeUsageViewModel =>
-      Boolean(recipe),
-    )
-    .map((recipe) => recipe.outputItemName);
-
-  const uniqueRecipeNames = Array.from(new Set(recipeNames));
-
-  if (uniqueRecipeNames.length <= 0) {
-    return 'Sem item fabricado vinculado.';
-  }
-
-  const displayedRecipes = uniqueRecipeNames.slice(0, 3);
-  const hiddenCount = Math.max(
-    0,
-    uniqueRecipeNames.length - displayedRecipes.length,
-  );
-
-  if (hiddenCount > 0) {
-    return `Fabrica: ${displayedRecipes.join(' / ')} +${hiddenCount}`;
-  }
-
-  return `Fabrica: ${displayedRecipes.join(' / ')}`;
+      return first.label.localeCompare(second.label, 'pt-BR');
+    });
 }
 
 export function GatheringMaterialList({
@@ -258,58 +257,45 @@ export function GatheringMaterialList({
   onStartMaterial,
   onViewMaterialUsage,
 }: GatheringMaterialListProps) {
-  const safeMaterials = Array.isArray(materials) ? materials : [];
-  const materialGroups = buildMaterialGroups(safeMaterials);
+  const groups = groupMaterials(materials);
 
-  if (safeMaterials.length <= 0) {
+  if (materials.length <= 0) {
     return (
       <div className="gathering-empty gathering-empty--compact">
-        <strong>Nenhum material disponível.</strong>
-        <p>
-          Não encontramos materiais para este tipo de gathering no mapa atual.
-        </p>
+        <strong>Nenhum material encontrado.</strong>
+        <p>Não há materiais disponíveis para esta origem neste mapa.</p>
       </div>
     );
   }
 
   return (
-    <div className="gathering-materials">
-      <div className="gathering-materials-toolbar gathering-materials-toolbar--compact">
-        <span className="gathering-materials-toolbar__summary">
-          <strong>{getMaterialListSummary(safeMaterials)}</strong>
-        </span>
-      </div>
-
-      <div className="gathering-material-groups">
-        {materialGroups.map((group) => (
-          <section key={group.key} className="gathering-material-group">
-            <header className="gathering-material-group__header">
-              <div>
-                <h3>{group.title}</h3>
-                <p>{group.description}</p>
-                <span>{getGroupUsageHint(group.materials)}</span>
-              </div>
-            </header>
-
-            <div className="gathering-material-grid gathering-material-grid--visual">
-              {group.materials.map((material) => (
-                <GatheringMaterialCard
-                  key={material.id}
-                  material={material}
-                  gatheringSkill={gatheringSkill}
-                  fallbackRatePerHour={fallbackRatePerHour}
-                  isSelected={selectedMaterialId === material.id}
-                  isActive={activeMaterialId === material.id}
-                  isBusy={isBusy}
-                  onSelect={onSelectMaterial}
-                  onStart={onStartMaterial}
-                  onViewUsage={onViewMaterialUsage}
-                />
-              ))}
+    <div className="gathering-material-groups">
+      {groups.map((group) => (
+        <section key={group.key} className="gathering-material-group">
+          <header className="gathering-material-group__header">
+            <div>
+              <h3>{group.label}</h3>
             </div>
-          </section>
-        ))}
-      </div>
+          </header>
+
+          <div className="gathering-material-grid gathering-material-grid--visual">
+            {group.materials.map((material) => (
+              <GatheringMaterialCard
+                key={material.id}
+                material={material}
+                gatheringSkill={gatheringSkill}
+                fallbackRatePerHour={fallbackRatePerHour}
+                isSelected={selectedMaterialId === material.id}
+                isActive={activeMaterialId === material.id}
+                isBusy={isBusy}
+                onSelect={onSelectMaterial}
+                onStart={onStartMaterial}
+                onViewUsage={onViewMaterialUsage}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

@@ -1,0 +1,832 @@
+/* =========================================================
+   ETAPA 2 — CAÇA / INIMIGOS
+   Arquivo: src/features/auto-combat/styles/10-auto-combat-hunt-enemies.css
+
+   Escopo:
+   - Estado vazio da caça
+   - Grid de inimigos próximos
+   - Card de inimigo
+   - Imagem full-body dos mobs nos cards de inimigos
+   - HP e atributos do mob
+
+   Ajuste importante:
+   - Topo seguro para badges.
+   - Divisória não fica rente ao Nv./XP.
+   - Imagem full-body não ultrapassa a divisória superior.
+   - Mobile com mobs maiores, stats em 2x2 e melhor aproveitamento vertical.
+   ========================================================= */
+
+.auto-combat-hunt-stage {
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(158, 47, 47, 0.07),
+      transparent 14rem
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(5, 9, 8, 0.34);
+}
+
+/* =========================================================
+   ESTADO VAZIO
+   ========================================================= */
+
+.auto-combat-hunt-empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  align-content: center;
+  gap: 0.65rem;
+  padding: 1.5rem;
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.016), transparent),
+    rgba(9, 15, 22, 0.36);
+  border: 2px dashed rgba(231, 227, 216, 0.08);
+  border-radius: 1rem;
+}
+
+.auto-combat-hunt-empty--compact {
+  min-height: 165px;
+}
+
+.auto-combat-hunt-empty__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: rgba(231, 227, 216, 0.72);
+  font-family: var(--font-title);
+  font-size: 1.28rem;
+  font-weight: 950;
+  border: 3px solid rgba(231, 227, 216, 0.45);
+  border-radius: 999px;
+}
+
+.auto-combat-hunt-empty strong {
+  color: var(--text-primary);
+  font-family: var(--font-title);
+  font-size: 1.18rem;
+  line-height: 1.1;
+}
+
+.auto-combat-hunt-empty p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+/* =========================================================
+   GRID DE INIMIGOS
+   Desktop em 2 colunas
+   ========================================================= */
+
+.auto-combat-enemy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+
+/* =========================================================
+   CARD DO INIMIGO
+   ========================================================= */
+
+.auto-combat-enemy-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 458px;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 1.15rem 1.1rem 1.05rem;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 50% 18%,
+      rgba(140, 190, 104, 0.12),
+      transparent 10rem
+    ),
+    radial-gradient(
+      circle at left 36%,
+      rgba(158, 47, 47, 0.105),
+      transparent 11rem
+    ),
+    radial-gradient(
+      circle at 82% 10%,
+      rgba(255, 255, 255, 0.035),
+      transparent 8rem
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent 58%),
+    rgba(7, 12, 18, 0.52);
+  border: 1px solid rgba(177, 63, 63, 0.24);
+  border-radius: 1.1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 14px 32px rgba(0, 0, 0, 0.2);
+}
+
+.auto-combat-enemy-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 9px
+    ),
+    linear-gradient(90deg, rgba(188, 68, 68, 0.04), transparent 52%);
+  opacity: 0.74;
+}
+
+.auto-combat-enemy-card::after {
+  content: '';
+  position: absolute;
+  top: 3.55rem;
+  right: 1rem;
+  left: 1rem;
+  z-index: 1;
+  height: 1px;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(231, 227, 216, 0.08),
+      rgba(224, 182, 91, 0.15),
+      rgba(231, 227, 216, 0.08),
+      transparent
+    );
+}
+
+.auto-combat-enemy-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* =========================================================
+   BADGES NÍVEL / XP
+   ========================================================= */
+
+.auto-combat-enemy-card__level,
+.auto-combat-enemy-card__xp {
+  position: absolute;
+  top: 0.78rem;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0.26rem 0.86rem;
+  font-family: var(--font-title);
+  font-size: 0.94rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.015em;
+  white-space: nowrap;
+  border-radius: 999px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(4px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.auto-combat-enemy-card__level::before,
+.auto-combat-enemy-card__xp::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent);
+  opacity: 0.8;
+}
+
+.auto-combat-enemy-card__level {
+  left: 0.78rem;
+  color: #f3f5f7;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+    rgba(46, 56, 73, 0.96);
+  border: 1px solid rgba(184, 196, 214, 0.2);
+}
+
+.auto-combat-enemy-card__xp {
+  right: 0.78rem;
+  color: #ffe5a1;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+    rgba(92, 67, 23, 0.58);
+  border: 1px solid rgba(224, 182, 91, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 18px rgba(0, 0, 0, 0.18),
+    0 0 14px rgba(224, 182, 91, 0.08);
+}
+
+/* =========================================================
+   IMAGEM FULL-BODY DO MOB
+   ========================================================= */
+
+.auto-combat-enemy-card__portrait,
+.auto-combat-enemy-card__portrait--fullbody {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: min(100%, 300px);
+  height: 208px;
+  margin: 3.4rem auto 0.82rem;
+  overflow: visible;
+  color: #ffd0ca;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.auto-combat-enemy-card__portrait::before,
+.auto-combat-enemy-card__portrait--fullbody::before {
+  content: '';
+  position: absolute;
+  inset: auto 18% 0;
+  z-index: 0;
+  height: 34px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.38),
+    transparent 72%
+  );
+  border-radius: 999px;
+  filter: blur(1px);
+}
+
+.auto-combat-enemy-card__portrait img,
+.auto-combat-enemy-card__portrait--fullbody img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: auto;
+  height: 220px;
+  max-width: 278px;
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: 1;
+  filter:
+    brightness(1.08)
+    contrast(1.05)
+    saturate(1.03)
+    drop-shadow(0 12px 18px rgba(0, 0, 0, 0.42))
+    drop-shadow(0 0 12px rgba(120, 170, 90, 0.08));
+}
+
+.auto-combat-enemy-card__portrait span,
+.auto-combat-enemy-card__portrait-fallback {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  margin: auto;
+  color: rgba(255, 226, 226, 0.9);
+  font-size: 1.35rem;
+  background:
+    radial-gradient(circle at center, rgba(188, 68, 68, 0.18), transparent 72%),
+    rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(188, 68, 68, 0.22);
+  border-radius: 0.95rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 16px rgba(188, 68, 68, 0.12);
+}
+
+/* =========================================================
+   CONTEÚDO DO CARD
+   ========================================================= */
+
+.auto-combat-enemy-card__content {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.78rem;
+  text-align: center;
+}
+
+.auto-combat-enemy-card__content > span,
+.auto-combat-enemy-card__content > strong {
+  position: relative;
+  z-index: 1;
+}
+
+.auto-combat-enemy-card__content > span {
+  display: block;
+  margin-top: 0.08rem;
+  color: rgba(231, 227, 216, 0.68);
+  font-family: var(--font-title);
+  font-size: 0.95rem;
+  font-weight: 850;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.auto-combat-enemy-card__content > strong {
+  display: block;
+  min-width: 0;
+  min-height: 2.1em;
+  margin: 0;
+  padding: 0 0.5rem 0.82rem;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: clamp(1.28rem, 1.5vw, 1.52rem);
+  font-weight: 950;
+  line-height: 1.08;
+  text-align: center;
+  overflow-wrap: anywhere;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.82),
+    0 0 12px rgba(255, 248, 232, 0.055);
+}
+
+.auto-combat-enemy-card__content > strong::after {
+  content: '';
+  position: absolute;
+  right: 0.2rem;
+  bottom: 0;
+  left: 0.2rem;
+  height: 1px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(231, 227, 216, 0.12),
+      rgba(213, 91, 98, 0.18),
+      rgba(231, 227, 216, 0.12),
+      transparent
+    );
+}
+
+/* =========================================================
+   HP DO MOB
+   ========================================================= */
+
+.auto-combat-enemy-card__hp {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 0.46rem;
+  margin-top: auto;
+  padding: 0.78rem 0.72rem 0.82rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(231, 227, 216, 0.055);
+  border-radius: 0.78rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.auto-combat-enemy-card__hp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.04rem;
+}
+
+.auto-combat-enemy-card__hp-header span {
+  color: rgba(255, 220, 220, 0.9);
+  font-family: var(--font-title);
+  font-size: 0.82rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 8px rgba(215, 91, 98, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.68);
+}
+
+.auto-combat-enemy-card__hp-header strong {
+  color: #fff8e8;
+  font-family: var(--font-number);
+  font-size: 1rem;
+  font-weight: 950;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.68);
+}
+
+.auto-combat-enemy-card__hp-track {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 12px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(14, 20, 26, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.36),
+    0 0 0 1px rgba(255, 255, 255, 0.012);
+}
+
+.auto-combat-enemy-card__hp-track b {
+  display: block;
+  height: 100%;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 48%),
+    linear-gradient(90deg, #94404a, #d85b67 55%, #f37d88);
+  border-radius: inherit;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 12px rgba(215, 91, 98, 0.24);
+}
+
+/* =========================================================
+   ATRIBUTOS DO MOB
+   ========================================================= */
+
+.auto-combat-enemy-card__stats {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.52rem;
+  margin-top: 0.08rem;
+  padding: 0.78rem 0.52rem 0.1rem;
+}
+
+.auto-combat-enemy-card__stats::before {
+  content: '';
+  position: absolute;
+  top: 0.16rem;
+  right: 0.6rem;
+  left: 0.6rem;
+  height: 1px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(231, 227, 216, 0.09),
+      rgba(140, 190, 104, 0.13),
+      rgba(231, 227, 216, 0.09),
+      transparent
+    );
+}
+
+.auto-combat-enemy-card__stats span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0.48rem 0.88rem;
+  color: #f2f4f5;
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(231, 227, 216, 0.135);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 12px rgba(0, 0, 0, 0.16);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .auto-combat-enemy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .auto-combat-enemy-card {
+    min-height: 432px;
+  }
+
+  .auto-combat-enemy-card__portrait,
+  .auto-combat-enemy-card__portrait--fullbody {
+    width: min(100%, 255px);
+    height: 186px;
+    margin-top: 3.3rem;
+  }
+
+  .auto-combat-enemy-card__portrait img,
+  .auto-combat-enemy-card__portrait--fullbody img {
+    height: 198px;
+    max-width: 242px;
+  }
+
+  .auto-combat-enemy-card__content > strong {
+    font-size: 1.32rem;
+  }
+}
+
+@media (max-width: 920px) {
+  .auto-combat-enemy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.82rem;
+  }
+
+  .auto-combat-enemy-card {
+    min-height: 410px;
+    padding: 0.92rem 0.86rem 0.88rem;
+  }
+
+  .auto-combat-enemy-card::after {
+    top: 3.14rem;
+    right: 0.8rem;
+    left: 0.8rem;
+  }
+
+  .auto-combat-enemy-card__level,
+  .auto-combat-enemy-card__xp {
+    min-height: 32px;
+    padding: 0.16rem 0.68rem;
+    font-size: 0.8rem;
+  }
+
+  .auto-combat-enemy-card__portrait,
+  .auto-combat-enemy-card__portrait--fullbody {
+    width: min(100%, 245px);
+    height: 176px;
+    margin-top: 2.95rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .auto-combat-enemy-card__portrait img,
+  .auto-combat-enemy-card__portrait--fullbody img {
+    height: 172px;
+    max-width: 235px;
+  }
+
+  .auto-combat-enemy-card__content {
+    gap: 0.6rem;
+  }
+
+  .auto-combat-enemy-card__content > span {
+    font-size: 0.84rem;
+  }
+
+  .auto-combat-enemy-card__content > strong {
+    min-height: 2.2em;
+    padding-bottom: 0.68rem;
+    font-size: 1.08rem;
+  }
+
+  .auto-combat-enemy-card__hp {
+    padding: 0.64rem 0.58rem 0.66rem;
+    border-radius: 0.68rem;
+  }
+
+  .auto-combat-enemy-card__hp-header span {
+    font-size: 0.72rem;
+  }
+
+  .auto-combat-enemy-card__hp-header strong {
+    font-size: 0.86rem;
+  }
+
+  .auto-combat-enemy-card__hp-track {
+    height: 10px;
+  }
+
+  .auto-combat-enemy-card__stats {
+    gap: 0.4rem;
+    padding-top: 0.66rem;
+  }
+
+  .auto-combat-enemy-card__stats span {
+    min-height: 31px;
+    padding: 0.34rem 0.62rem;
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .auto-combat-enemy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.46rem;
+  }
+
+  .auto-combat-enemy-card {
+    min-height: 338px;
+    padding: 0.64rem 0.42rem 0.54rem;
+    border-radius: 0.88rem;
+  }
+
+  .auto-combat-enemy-card::after {
+    top: 2.58rem;
+    right: 0.48rem;
+    left: 0.48rem;
+  }
+
+  .auto-combat-enemy-card__level,
+  .auto-combat-enemy-card__xp {
+    top: 0.42rem;
+    min-height: 27px;
+    padding: 0.1rem 0.48rem;
+    font-size: 0.66rem;
+  }
+
+  .auto-combat-enemy-card__level {
+    left: 0.38rem;
+  }
+
+  .auto-combat-enemy-card__xp {
+    right: 0.38rem;
+  }
+
+  .auto-combat-enemy-card__portrait,
+  .auto-combat-enemy-card__portrait--fullbody {
+    width: min(100%, 158px);
+    height: 142px;
+    margin-top: 2.18rem;
+    margin-bottom: 0.24rem;
+  }
+
+  .auto-combat-enemy-card__portrait::before,
+  .auto-combat-enemy-card__portrait--fullbody::before {
+    inset: auto 10% 0;
+    height: 28px;
+  }
+
+  .auto-combat-enemy-card__portrait img,
+  .auto-combat-enemy-card__portrait--fullbody img {
+    height: 144px;
+    max-width: 154px;
+  }
+
+  .auto-combat-enemy-card__content {
+    flex: 1 1 auto;
+    justify-content: space-between;
+    gap: 0.24rem;
+  }
+
+  .auto-combat-enemy-card__content > span {
+    margin-top: 0;
+    font-size: 0.62rem;
+  }
+
+  .auto-combat-enemy-card__content > strong {
+    min-height: 2.05em;
+    padding: 0 0.12rem 0.34rem;
+    font-size: 0.8rem;
+    line-height: 1.06;
+  }
+
+  .auto-combat-enemy-card__hp {
+    display: none;
+  }
+
+  .auto-combat-enemy-card__stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.32rem;
+    width: 100%;
+    margin-top: 0.16rem;
+    padding: 0.5rem 0.02rem 0;
+  }
+
+  .auto-combat-enemy-card__stats::before {
+    top: 0.18rem;
+    right: 0.22rem;
+    left: 0.22rem;
+  }
+
+  .auto-combat-enemy-card__stats span {
+    width: 100%;
+    min-height: 34px;
+    padding: 0.32rem 0.16rem;
+    font-size: 0.64rem;
+    border-radius: 0.58rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .auto-combat-enemy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .auto-combat-enemy-card {
+    min-height: 332px;
+    padding: 0.58rem 0.36rem 0.5rem;
+  }
+
+  .auto-combat-enemy-card::after {
+    top: 2.42rem;
+    right: 0.42rem;
+    left: 0.42rem;
+  }
+
+  .auto-combat-enemy-card__level,
+  .auto-combat-enemy-card__xp {
+    top: 0.38rem;
+    min-height: 25px;
+    padding: 0.08rem 0.4rem;
+    font-size: 0.6rem;
+  }
+
+  .auto-combat-enemy-card__level {
+    left: 0.34rem;
+  }
+
+  .auto-combat-enemy-card__xp {
+    right: 0.34rem;
+  }
+
+  .auto-combat-enemy-card__portrait,
+  .auto-combat-enemy-card__portrait--fullbody {
+    width: min(100%, 148px);
+    height: 136px;
+    margin-top: 2rem;
+    margin-bottom: 0.22rem;
+  }
+
+  .auto-combat-enemy-card__portrait img,
+  .auto-combat-enemy-card__portrait--fullbody img {
+    height: 136px;
+    max-width: 144px;
+  }
+
+  .auto-combat-enemy-card__content {
+    gap: 0.22rem;
+  }
+
+  .auto-combat-enemy-card__content > span {
+    font-size: 0.58rem;
+  }
+
+  .auto-combat-enemy-card__content > strong {
+    min-height: 2.12em;
+    padding-bottom: 0.32rem;
+    font-size: 0.74rem;
+  }
+
+  .auto-combat-enemy-card__stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.28rem;
+    width: 100%;
+    margin-top: 0.14rem;
+    padding: 0.48rem 0 0;
+  }
+
+  .auto-combat-enemy-card__stats span {
+    width: 100%;
+    min-height: 32px;
+    padding: 0.28rem 0.1rem;
+    font-size: 0.6rem;
+    border-radius: 0.52rem;
+  }
+}
+
+@media (max-width: 320px) {
+  .auto-combat-enemy-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auto-combat-enemy-card {
+    min-height: 350px;
+  }
+
+  .auto-combat-enemy-card__portrait,
+  .auto-combat-enemy-card__portrait--fullbody {
+    width: min(100%, 170px);
+    height: 152px;
+    margin-top: 2.05rem;
+  }
+
+  .auto-combat-enemy-card__portrait img,
+  .auto-combat-enemy-card__portrait--fullbody img {
+    height: 148px;
+    max-width: 166px;
+  }
+
+  .auto-combat-enemy-card__content > strong {
+    min-height: auto;
+    font-size: 0.84rem;
+  }
+
+  .auto-combat-enemy-card__stats span {
+    min-height: 34px;
+    font-size: 0.64rem;
+  }
+}

@@ -18,19 +18,18 @@ export const API_ENDPOINTS = {
     byId: (mapId: string) => `/maps/${mapId}`,
   },
 
-  inventory: {
-    byCharacter: (characterId: string) => `/inventory/${characterId}`,
-  },
-
-  consumables: {
-    use: '/consumables/use',
-    config: (characterId: string) => `/consumables/${characterId}/config`,
-  },
-
   autoCombat: {
     start: '/auto-combat/start',
     preview: '/auto-combat/preview',
     status: (characterId: string) => `/auto-combat/${characterId}/status`,
     stop: (characterId: string) => `/auto-combat/${characterId}/stop`,
+  },
+
+  gathering: {
+    materials: '/gathering/materials',
+    start: '/gathering/start',
+    status: (characterId: string) => `/gathering/${characterId}/status`,
+    collect: (characterId: string) => `/gathering/${characterId}/collect`,
+    stop: (characterId: string) => `/gathering/${characterId}/stop`,
   },
 } as const;

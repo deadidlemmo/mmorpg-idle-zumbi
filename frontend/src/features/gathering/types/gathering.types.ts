@@ -124,6 +124,7 @@ export interface GatheringRulesViewModel {
 
 export interface GatheringSkillsSummaryViewModel {
   skills: GatheringSkillViewModel[];
+
   byOrigin: Partial<Record<GatheringAllowedOrigin, GatheringSkillViewModel>> &
     Record<string, GatheringSkillViewModel | undefined>;
 
@@ -184,6 +185,11 @@ export interface GatheringMaterialViewModel {
 
   ratePerHour?: number | null;
 
+  icon?: string | null;
+  iconUrl?: string | null;
+  iconPath?: string | null;
+  imageUrl?: string | null;
+
   isUnlockedByDefault?: boolean | null;
 
   usedInRecipes?: GatheringMaterialRecipeUsageViewModel[];
@@ -214,6 +220,9 @@ export interface GatheringSessionViewModel {
   startedAt: string;
   lastResolvedAt?: string | null;
   progressRemainder?: number | null;
+
+  collectedQuantity?: number | null;
+  collectedXp?: number | null;
 
   character?: GatheringCharacterViewModel | null;
   map?: GatheringMapViewModel | null;
@@ -253,11 +262,33 @@ export interface GatheringProductionPreviewViewModel {
   gatheringSkill?: GatheringSkillViewModel | null;
 }
 
+export interface GatheringCollectedViewModel {
+  itemId: string;
+  name: string;
+  quantity: number;
+}
+
+export interface GatheringInventoryItemViewModel {
+  id: string;
+
+  characterId: string;
+  itemId: string;
+
+  type: GatheringInventoryItemType | string;
+  quantity: number;
+
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface GatheringStatusActiveResponse {
   active: true;
   session: GatheringSessionViewModel;
   gatheringSkill?: GatheringSkillViewModel | null;
   productionPreview: GatheringProductionPreviewViewModel;
+
+  autoCollected?: GatheringCollectedViewModel | null;
+  inventoryItem?: GatheringInventoryItemViewModel | null;
 }
 
 export interface GatheringStatusInactiveResponse {
@@ -268,12 +299,6 @@ export interface GatheringStatusInactiveResponse {
 export type GatheringStatusResponse =
   | GatheringStatusActiveResponse
   | GatheringStatusInactiveResponse;
-
-export interface GatheringCollectedViewModel {
-  itemId: string;
-  name: string;
-  quantity: number;
-}
 
 export interface GatheringProductionResultViewModel {
   elapsedSeconds: number;
@@ -317,19 +342,6 @@ export interface GatheringProgressViewModel {
   statBonusGained?: GatheringStatBonusGainedViewModel | null;
 
   skill?: GatheringSkillViewModel | null;
-}
-
-export interface GatheringInventoryItemViewModel {
-  id: string;
-
-  characterId: string;
-  itemId: string;
-
-  type: GatheringInventoryItemType | string;
-  quantity: number;
-
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface CollectGatheringResponse {
@@ -416,14 +428,14 @@ export const GATHERING_ORIGIN_OPTIONS: GatheringOriginOption[] = [
     label: 'Patrulha',
     description: 'Explore rotas, reconhecimento e peças leves de mobilidade.',
     statLabel: '+ Agilidade',
-    relatedClasses: ['Atirador', 'Assassino'],
+    relatedClasses: ['Assassino', 'Atirador'],
   },
   {
     key: 'ARSENAL',
     label: 'Arsenal',
     description: 'Busque munição, mecanismos e partes de armamentos.',
     statLabel: '+ Precisão',
-    relatedClasses: ['Atirador', 'Assassino'],
+    relatedClasses: ['Assassino', 'Atirador'],
   },
   {
     key: 'TECNOVARREDURA',
@@ -478,26 +490,18 @@ export function getGatheringOriginStatLabel(origin?: string | null): string {
   return option?.statLabel ?? 'Progressão';
 }
 
-export function getGatheringOriginRelatedClasses(
-  origin?: string | null,
-): string[] {
-  if (!origin) return [];
-
-  const option = GATHERING_ORIGIN_OPTIONS.find((item) => item.key === origin);
-
-  return option?.relatedClasses ?? [];
-}
-
 export function formatGatheringOriginRelatedClasses(
   origin?: string | null,
 ): string {
-  const relatedClasses = getGatheringOriginRelatedClasses(origin);
+  if (!origin) return 'Classes: —';
 
-  if (relatedClasses.length <= 0) {
+  const option = GATHERING_ORIGIN_OPTIONS.find((item) => item.key === origin);
+
+  if (!option || option.relatedClasses.length <= 0) {
     return 'Classes: —';
   }
 
-  return `Classes: ${relatedClasses.join(' / ')}`;
+  return `Classes: ${option.relatedClasses.join(' / ')}`;
 }
 
 export function getGatheringSkillByOrigin(
@@ -542,29 +546,36 @@ export function isGatheringMaterialUnlocked(params: {
 export function getGatheringXpPerUnit(
   material?: GatheringMaterialViewModel | null,
 ): number {
-  const xp = Number(material?.gatheringXpPerUnit ?? 0);
+  const xp = Number(material?.gatheringXpPerUnit ?? 1);
 
-  if (!Number.isFinite(xp)) return 0;
+  if (!Number.isFinite(xp)) return 1;
 
-  return Math.max(0, Math.floor(xp));
+  return Math.max(1, Math.floor(xp));
 }
 
 export function getGatheringMaterialRatePerHour(
   material?: GatheringMaterialViewModel | null,
   fallbackRatePerHour?: number | null,
 ): number | null {
-  const rate = Number(
-    material?.ratePerHour ??
-      material?.baseGatheringRatePerHour ??
-      fallbackRatePerHour ??
-      NaN,
-  );
+  const materialRate = Number(material?.ratePerHour);
 
-  if (!Number.isFinite(rate) || rate <= 0) {
-    return null;
+  if (Number.isFinite(materialRate) && materialRate > 0) {
+    return materialRate;
   }
 
-  return rate;
+  const baseRate = Number(material?.baseGatheringRatePerHour);
+
+  if (Number.isFinite(baseRate) && baseRate > 0) {
+    return baseRate;
+  }
+
+  const fallbackRate = Number(fallbackRatePerHour);
+
+  if (Number.isFinite(fallbackRate) && fallbackRate > 0) {
+    return fallbackRate;
+  }
+
+  return null;
 }
 
 export function getGatheringMaterialUsedInRecipes(
@@ -576,9 +587,17 @@ export function getGatheringMaterialUsedInRecipes(
 export function getGatheringMaterialPrimaryRecipe(
   material?: GatheringMaterialViewModel | null,
 ): GatheringMaterialRecipeUsageViewModel | null {
-  const usedInRecipes = getGatheringMaterialUsedInRecipes(material);
+  const recipes = getGatheringMaterialUsedInRecipes(material);
 
-  return usedInRecipes[0] ?? null;
+  if (recipes.length <= 0) return null;
+
+  return [...recipes].sort((first, second) => {
+    if (first.outputItemTier !== second.outputItemTier) {
+      return first.outputItemTier - second.outputItemTier;
+    }
+
+    return first.outputItemName.localeCompare(second.outputItemName, 'pt-BR');
+  })[0];
 }
 
 export function getGatheringMaterialRelatedClasses(
@@ -586,91 +605,64 @@ export function getGatheringMaterialRelatedClasses(
 ): string[] {
   if (!material) return [];
 
-  if (material.relatedClasses && material.relatedClasses.length > 0) {
-    return material.relatedClasses;
+  if (Array.isArray(material.relatedClasses) && material.relatedClasses.length > 0) {
+    return Array.from(new Set(material.relatedClasses.filter(Boolean))).sort(
+      (a, b) => a.localeCompare(b, 'pt-BR'),
+    );
   }
 
-  const recipeClasses = getGatheringMaterialUsedInRecipes(material)
+  const classes = getGatheringMaterialUsedInRecipes(material)
     .map((recipe) => recipe.outputItemClassName)
     .filter((className): className is string => Boolean(className));
 
-  return Array.from(new Set(recipeClasses));
+  return Array.from(new Set(classes)).sort((a, b) =>
+    a.localeCompare(b, 'pt-BR'),
+  );
 }
 
-export function formatGatheringMaterialRelatedClasses(
-  material?: GatheringMaterialViewModel | null,
+export function formatGatheringOutputItemSlot(
+  slot?: GatheringItemSlot | string | null,
 ): string {
-  const relatedClasses = getGatheringMaterialRelatedClasses(material);
+  switch (slot) {
+    case 'MAIN_HAND':
+      return 'Arma';
 
-  if (relatedClasses.length <= 0) {
-    return 'Classe: —';
+    case 'OFF_HAND':
+      return 'Apoio';
+
+    case 'HEAD':
+      return 'Elmo';
+
+    case 'ARMOR':
+      return 'Armadura';
+
+    case 'PANTS':
+      return 'Calça';
+
+    case 'BOOTS':
+      return 'Botas';
+
+    case 'MATERIAL':
+      return 'Material';
+
+    case 'CONSUMABLE':
+      return 'Consumível';
+
+    default:
+      return slot ?? 'Item';
   }
-
-  if (relatedClasses.length === 1) {
-    return `Classe: ${relatedClasses[0]}`;
-  }
-
-  return `Classes: ${relatedClasses.join(' / ')}`;
-}
-
-export function formatGatheringMaterialUsedInRecipes(
-  material?: GatheringMaterialViewModel | null,
-  limit = 2,
-): string {
-  const usedInRecipes = getGatheringMaterialUsedInRecipes(material);
-
-  if (usedInRecipes.length <= 0) {
-    return 'Usado em: receita não vinculada';
-  }
-
-  const displayedRecipes = usedInRecipes
-    .slice(0, limit)
-    .map((recipe) => recipe.outputItemName);
-
-  const hiddenCount = Math.max(0, usedInRecipes.length - displayedRecipes.length);
-
-  if (hiddenCount > 0) {
-    return `Usado em: ${displayedRecipes.join(' / ')} +${hiddenCount}`;
-  }
-
-  return `Usado em: ${displayedRecipes.join(' / ')}`;
 }
 
 export function formatGatheringRecipeQuantity(
   recipe?: GatheringMaterialRecipeUsageViewModel | null,
 ): string {
-  if (!recipe) return 'Qtd. —';
+  const quantity = Number(recipe?.quantity ?? 1);
 
-  const quantity = Number(recipe.quantity);
-
-  if (!Number.isFinite(quantity) || quantity <= 0) {
-    return 'Qtd. —';
+  if (!Number.isFinite(quantity) || quantity <= 1) {
+    return '1 unidade';
   }
 
-  return `Qtd. ${Math.floor(quantity)}`;
-}
-
-export function formatGatheringOutputItemSlot(slot?: string | null): string {
-  switch (slot) {
-    case 'MAIN_HAND':
-      return 'Arma';
-    case 'OFF_HAND':
-      return 'Apoio';
-    case 'HEAD':
-      return 'Elmo';
-    case 'ARMOR':
-      return 'Armadura';
-    case 'PANTS':
-      return 'Calça';
-    case 'BOOTS':
-      return 'Botas';
-    case 'CONSUMABLE':
-      return 'Consumível';
-    case 'MATERIAL':
-      return 'Material';
-    default:
-      return slot ?? 'Item';
-  }
+  return `${Math.floor(quantity)} unidades`;
 }
 
 export function formatGatheringDuration(seconds?: number | null): string {
@@ -776,4 +768,24 @@ export function clampGatheringPercent(value: unknown): number {
   if (!Number.isFinite(parsed)) return 0;
 
   return Math.max(0, Math.min(100, parsed));
+}
+
+export function getGatheringSessionCollectedQuantity(
+  session?: GatheringSessionViewModel | null,
+): number {
+  const collectedQuantity = Number(session?.collectedQuantity ?? 0);
+
+  if (!Number.isFinite(collectedQuantity)) return 0;
+
+  return Math.max(0, Math.floor(collectedQuantity));
+}
+
+export function getGatheringSessionCollectedXp(
+  session?: GatheringSessionViewModel | null,
+): number {
+  const collectedXp = Number(session?.collectedXp ?? 0);
+
+  if (!Number.isFinite(collectedXp)) return 0;
+
+  return Math.max(0, Math.floor(collectedXp));
 }
