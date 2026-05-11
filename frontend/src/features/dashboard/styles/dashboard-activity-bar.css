@@ -122,10 +122,8 @@
 .dashboard-activity-bar__monster-hp-fill {
   position: absolute;
   inset: 0;
-  width: 100%;
+  width: var(--dashboard-activity-monster-hp-percent);
   min-width: 0;
-  transform: scaleX(var(--dashboard-activity-monster-hp-scale));
-  transform-origin: left center;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 42%, rgba(0, 0, 0, 0.2)),
     repeating-linear-gradient(135deg, rgba(255, 235, 235, 0.09) 0 5px, transparent 5px 12px),
@@ -135,7 +133,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     inset -18px 0 28px rgba(255, 42, 48, 0.16),
     0 0 24px rgba(255, 45, 56, 0.18);
-  transition: transform 230ms ease;
+  transition: width 230ms ease;
 }
 
 .dashboard-activity-bar__item--auto-combat .dashboard-activity-bar__icon,
