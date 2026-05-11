@@ -28,8 +28,11 @@ type ActivityBarItem = {
   description: string;
   progressLabel: string;
   progressPercent: number;
+  progressValueLabel?: string | null;
   primaryMetric: string;
   secondaryMetric: string;
+  indicatorMetric?: string | null;
+  indicatorLabel?: string | null;
   href: string;
 
   imageUrl?: string | null;
@@ -463,6 +466,12 @@ function formatCompactNumber(value: unknown) {
   }
 
   return String(amount);
+}
+
+function formatSessionCountIndicator(value: unknown) {
+  const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
+
+  return amount.toLocaleString('pt-BR');
 }
 
 function formatPercentLabel(value: unknown) {
@@ -1155,8 +1164,12 @@ function buildAutoCombatTotalsFromOverview(
       id?: string | null;
       totalKills?: number | null;
       totalLoot?: number | null;
+      mobSummaries?: Array<{ kills?: number | null }> | null;
+      mobSummary?: Array<{ kills?: number | null }> | null;
       combatPreview?: {
         totals?: {
+          kills?: number | null;
+          totalKills?: number | null;
           combatsResolved?: number | null;
           roundsResolved?: number | null;
           xpGained?: number | null;
@@ -1164,10 +1177,19 @@ function buildAutoCombatTotalsFromOverview(
       } | null;
     };
 
+  const overviewMobKillsTotal = (
+    looseSession.mobSummaries ?? looseSession.mobSummary ?? []
+  ).reduce((total, summary) => {
+    return total + toSafeNumber(summary.kills, 0);
+  }, 0);
+
   const totalKills =
     getFirstValidNumber(
-      looseSession.totalCombatsResolved,
       looseSession.totalKills,
+      looseSession.combatPreview?.totals?.totalKills,
+      looseSession.combatPreview?.totals?.kills,
+      overviewMobKillsTotal,
+      looseSession.totalCombatsResolved,
       looseSession.combatPreview?.totals?.combatsResolved,
       0,
     ) ?? 0;
@@ -1329,8 +1351,11 @@ function buildAutoCombatItemFromRealtime(params: {
     description,
     progressLabel: formatHpLabel(mobHp.currentHp, mobHp.maxHp),
     progressPercent: mobHp.percent,
+    progressValueLabel: formatPercentLabel(mobHp.percent),
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
     secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
+    indicatorMetric: formatSessionCountIndicator(totalKills),
+    indicatorLabel: `Abates na sessão: ${formatSessionCountIndicator(totalKills)}`,
     href: `/dashboard/${characterId}/auto-combat`,
 
     imageUrl: getActivityMobPortraitUrl(mobName),
@@ -1435,8 +1460,11 @@ function buildAutoCombatItemFromOverview(params: {
     description: session.combatPreview?.label ?? locationLabel,
     progressLabel: formatHpLabel(mobHp.currentHp, mobHp.maxHp),
     progressPercent: mobHp.percent,
+    progressValueLabel: formatPercentLabel(mobHp.percent),
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
     secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
+    indicatorMetric: formatSessionCountIndicator(totalKills),
+    indicatorLabel: `Abates na sessão: ${formatSessionCountIndicator(totalKills)}`,
     href: `/dashboard/${characterId}/auto-combat`,
 
     imageUrl: getActivityMobPortraitUrl(currentMob?.name),
@@ -1605,12 +1633,15 @@ function buildGatheringItemFromRealtime(params: {
       preview?.label ?? `${originLabel} em ${mapName}. Produzindo ${materialName}.`,
     progressLabel: 'Próxima unidade',
     progressPercent,
+    progressValueLabel: `${progressPercentLabel}%`,
     primaryMetric: `${progressPercentLabel}%`,
     secondaryMetric: formatGatheringSecondaryMetric({
       collectedQuantity,
       collectedXp,
       ratePerHour,
     }),
+    indicatorMetric: formatSessionCountIndicator(collectedQuantity),
+    indicatorLabel: `Coletados na sessão: ${formatSessionCountIndicator(collectedQuantity)}`,
     href,
 
     imageUrl: getGatheringMaterialIconUrl(material),
@@ -1680,12 +1711,15 @@ function buildGatheringItemFromOverview(params: {
       `${originLabel} em ${mapName}. Produzindo ${materialName}.`,
     progressLabel: 'Próxima unidade',
     progressPercent,
+    progressValueLabel: `${progressPercentLabel}%`,
     primaryMetric: `${progressPercentLabel}%`,
     secondaryMetric: formatGatheringSecondaryMetric({
       collectedQuantity,
       collectedXp,
       ratePerHour,
     }),
+    indicatorMetric: formatSessionCountIndicator(collectedQuantity),
+    indicatorLabel: `Coletados na sessão: ${formatSessionCountIndicator(collectedQuantity)}`,
     href,
 
     imageUrl: getGatheringMaterialIconUrl(material),
@@ -1874,6 +1908,15 @@ export function DashboardActivityBar({
       {activityItems.map((item, index) => {
         const progressPercent = clampPercent(item.progressPercent);
         const progressPercentLabel = floorPercent(progressPercent);
+        const progressValueLabel =
+          item.progressValueLabel ?? `${progressPercentLabel}%`;
+        const progressHeaderLabel =
+          item.type === 'auto-combat'
+            ? `${item.progressLabel} • ${progressValueLabel}`
+            : item.progressLabel;
+        const shouldShowProgressValue = item.type !== 'auto-combat';
+        const hasSessionIndicator =
+          item.indicatorMetric !== null && item.indicatorMetric !== undefined;
         const progressStyle = {
           width: `${progressPercent}%`,
         };
@@ -1960,9 +2003,13 @@ export function DashboardActivityBar({
                     ) : null}
                   </div>
 
-                  {item.type === 'gathering' ? (
-                    <span className="dashboard-activity-bar__percent-pill">
-                      {progressPercentLabel}%
+                  {hasSessionIndicator ? (
+                    <span
+                      className="dashboard-activity-bar__percent-pill dashboard-activity-bar__session-indicator"
+                      aria-label={item.indicatorLabel ?? undefined}
+                      title={item.indicatorLabel ?? undefined}
+                    >
+                      {item.indicatorMetric}
                     </span>
                   ) : null}
                 </div>
@@ -2016,8 +2063,10 @@ export function DashboardActivityBar({
 
                 <div className="dashboard-activity-bar__progress-block">
                   <div className="dashboard-activity-bar__progress-header">
-                    <span>{item.progressLabel}</span>
-                    <strong>{progressPercentLabel}%</strong>
+                    <span>{progressHeaderLabel}</span>
+                    {shouldShowProgressValue ? (
+                      <strong>{progressValueLabel}</strong>
+                    ) : null}
                   </div>
 
                   <div className="dashboard-activity-bar__track">
@@ -2069,12 +2118,24 @@ export function DashboardActivityBar({
                       : 'Expedição ativa'}
                   </span>
                   <strong>{item.title}</strong>
+
+                  {hasSessionIndicator ? (
+                    <span
+                      className="dashboard-activity-bar__compact-indicator"
+                      aria-label={item.indicatorLabel ?? undefined}
+                      title={item.indicatorLabel ?? undefined}
+                    >
+                      {item.indicatorMetric}
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="dashboard-activity-bar__compact-track-block">
                   <div className="dashboard-activity-bar__compact-track-header">
-                    <span>{item.progressLabel}</span>
-                    <strong>{progressPercentLabel}%</strong>
+                    <span>{progressHeaderLabel}</span>
+                    {shouldShowProgressValue ? (
+                      <strong>{progressValueLabel}</strong>
+                    ) : null}
                   </div>
 
                   <div className="dashboard-activity-bar__compact-track">
