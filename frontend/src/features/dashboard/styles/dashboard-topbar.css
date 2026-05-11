@@ -119,6 +119,7 @@
 
   padding: 0.23rem 0.34rem 0.23rem 0.24rem;
   overflow: visible;
+  isolation: isolate;
 
   border: 1px solid rgba(var(--dashboard-topbar-border-rgb), 0.28);
   border-radius: 999px;
@@ -221,10 +222,13 @@
 
 .dashboard-topbar--auto-combat .dashboard-topbar__activity-progress span {
   background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 48%, rgba(0, 0, 0, 0.18)),
+    repeating-linear-gradient(135deg, rgba(255, 235, 235, 0.09) 0 5px, transparent 5px 12px),
     linear-gradient(
       90deg,
-      rgba(214, 86, 74, 0.92),
-      rgba(129, 38, 34, 0.94)
+      rgba(126, 19, 26, 0.96),
+      rgba(198, 40, 45, 0.94) 58%,
+      rgba(255, 78, 78, 0.9)
     );
 
   box-shadow:

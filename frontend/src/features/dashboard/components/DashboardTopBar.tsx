@@ -110,6 +110,27 @@ function clampPercent(value: unknown): number {
   return Math.max(0, Math.min(100, parsed));
 }
 
+function calculateHpPercent(
+  currentHp?: number | null,
+  maxHp?: number | null,
+): number {
+  const safeCurrentHp = Number(currentHp);
+  const safeMaxHp = Number(maxHp);
+
+  if (!Number.isFinite(safeMaxHp) || safeMaxHp <= 0) {
+    return 0;
+  }
+
+  const normalizedCurrentHp = Number.isFinite(safeCurrentHp)
+    ? safeCurrentHp
+    : 0;
+
+  return Math.max(
+    0,
+    Math.min(100, (normalizedCurrentHp / safeMaxHp) * 100),
+  );
+}
+
 function formatNumber(value?: number | null): string {
   const safeValue = Number(value ?? 0);
 
@@ -182,18 +203,89 @@ function getMaterialIconUrl(
   return trimmedIcon.length > 0 ? trimmedIcon : null;
 }
 
-function getAutoCombatMobName(autoCombatState: unknown): string | null {
+
+function getAutoCombatMobRecord(autoCombatState: unknown): LooseRecord | null {
   const status = getRecordField(autoCombatState, 'status');
   const session = getRecordField(autoCombatState, 'session');
+  const statusSession = getRecordField(status, 'session');
+  const activeSession = getRecordField(status, 'activeSession');
+  const autoCombatSession = getRecordField(status, 'autoCombatSession');
 
-  const mob =
+  return (
     getRecordField(autoCombatState, 'mob') ??
     getRecordField(autoCombatState, 'currentMob') ??
     getRecordField(status, 'mob') ??
     getRecordField(status, 'currentMob') ??
-    getRecordField(session, 'mob') ??
     getRecordField(session, 'currentMob') ??
-    getRecordField(status, 'lastKnownMob');
+    getRecordField(session, 'mob') ??
+    getRecordField(statusSession, 'currentMob') ??
+    getRecordField(activeSession, 'currentMob') ??
+    getRecordField(autoCombatSession, 'currentMob') ??
+    getRecordField(status, 'lastKnownMob')
+  );
+}
+
+function getAutoCombatCurrentHpEvent(autoCombatState: unknown): LooseRecord | null {
+  const activeEvent = getRecordField(autoCombatState, 'activeEvent');
+  const displayedEvent = getRecordField(autoCombatState, 'displayedEvent');
+  const displayedAutoCombatEvent = getRecordField(
+    autoCombatState,
+    'displayedAutoCombatEvent',
+  );
+  const currentEvent = getRecordField(autoCombatState, 'currentEvent');
+  const lastProcessedEvent = getRecordField(autoCombatState, 'lastProcessedEvent');
+  const lastEvent = getRecordField(autoCombatState, 'lastEvent');
+
+  return (
+    activeEvent ??
+    displayedEvent ??
+    displayedAutoCombatEvent ??
+    currentEvent ??
+    lastProcessedEvent ??
+    lastEvent
+  );
+}
+
+function getAutoCombatMonsterHpPercent(autoCombatState: unknown): number | null {
+  const status = getRecordField(autoCombatState, 'status');
+  const session = getRecordField(autoCombatState, 'session');
+  const statusSession = getRecordField(status, 'session');
+  const activeSession = getRecordField(status, 'activeSession');
+  const autoCombatSession = getRecordField(status, 'autoCombatSession');
+  const mob = getAutoCombatMobRecord(autoCombatState);
+  const event = getAutoCombatCurrentHpEvent(autoCombatState);
+
+  const maxHp =
+    getNumberField(mob, 'maxHp') ??
+    getNumberField(event, 'mobMaxHp') ??
+    getNumberField(session, 'currentMobMaxHp') ??
+    getNumberField(statusSession, 'currentMobMaxHp') ??
+    getNumberField(activeSession, 'currentMobMaxHp') ??
+    getNumberField(autoCombatSession, 'currentMobMaxHp') ??
+    getNumberField(mob, 'hp');
+
+  const currentHp =
+    getNumberField(mob, 'currentHp') ??
+    getNumberField(event, 'mobCurrentHp') ??
+    getNumberField(session, 'currentMobHp') ??
+    getNumberField(statusSession, 'currentMobHp') ??
+    getNumberField(activeSession, 'currentMobHp') ??
+    getNumberField(autoCombatSession, 'currentMobHp') ??
+    maxHp;
+
+  if (maxHp !== null) {
+    return calculateHpPercent(currentHp, maxHp);
+  }
+
+  const explicitPercent =
+    getNumberField(mob, 'hpPercent') ??
+    getNumberField(event, 'mobHpPercent');
+
+  return explicitPercent !== null ? clampPercent(explicitPercent) : null;
+}
+
+function getAutoCombatMobName(autoCombatState: unknown): string | null {
+  const mob = getAutoCombatMobRecord(autoCombatState);
 
   return (
     getStringField(mob, 'name') ??
@@ -300,13 +392,14 @@ function buildAutoCombatActivity(
     getAutoCombatMobName(autoCombatState) ?? 'Combate automático';
 
   const kills = getAutoCombatKills(autoCombatState) ?? 0;
+  const monsterHpPercent = getAutoCombatMonsterHpPercent(autoCombatState);
 
   return {
     kind: 'auto-combat',
     title: mobName,
     subtitle: `${formatNumber(kills)} monstros mortos`,
     icon: '☠',
-    progressPercent: null,
+    progressPercent: monsterHpPercent,
     badge: formatNumber(kills),
     titleText: `Combate automático em andamento • ${formatNumber(
       kills,
