@@ -4,11 +4,11 @@ import {
   NotFoundException,
   OnModuleDestroy,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
 import {
   AutoCombatSessionStatus,
   InventoryItemType,
   ItemSlot,
+  Prisma,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import {
@@ -709,37 +709,77 @@ export class AutoCombatService implements OnModuleDestroy {
      */
     const firstRoundReadyAt = now;
 
-    const session = await this.prisma.$transaction(async (tx) => {
-      await tx.character.update({
-        where: {
-          id: character.id,
-        },
-        data: {
-          mapId: subMap.mapId,
-          maxHp: characterStats.maxHp,
-          currentHp: characterStats.hp,
-        },
-      });
+    let session;
 
-      return tx.autoCombatSession.create({
-        data: {
-          characterId: character.id,
-          subMapId: subMap.id,
-          status: AutoCombatSessionStatus.ACTIVE,
-          startedAt: now,
-          endsAt,
-          lastProcessedAt: firstRoundReadyAt,
-          durationSeconds: AUTO_COMBAT_SESSION_DURATION_SECONDS,
-          roundDurationSeconds: AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS,
+    try {
+      session = await this.prisma.$transaction(async (tx) => {
+        await tx.character.update({
+          where: {
+            id: character.id,
+          },
+          data: {
+            mapId: subMap.mapId,
+            maxHp: characterStats.maxHp,
+            currentHp: characterStats.hp,
+          },
+        });
 
-          currentMobId: firstMob.id,
-          currentMobHp: firstMob.hp,
-          currentMobMaxHp: firstMob.hp,
-          currentRound: 0,
-          currentCombatIndex: 1,
-        },
+        return tx.autoCombatSession.create({
+          data: {
+            characterId: character.id,
+            subMapId: subMap.id,
+            status: AutoCombatSessionStatus.ACTIVE,
+            startedAt: now,
+            endsAt,
+            lastProcessedAt: firstRoundReadyAt,
+            durationSeconds: AUTO_COMBAT_SESSION_DURATION_SECONDS,
+            roundDurationSeconds: AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS,
+
+            currentMobId: firstMob.id,
+            currentMobHp: firstMob.hp,
+            currentMobMaxHp: firstMob.hp,
+            currentRound: 0,
+            currentCombatIndex: 1,
+          },
+        });
       });
-    });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+
+      const activeSessionAfterConflict =
+        await this.prisma.autoCombatSession.findFirst({
+          where: {
+            characterId: character.id,
+            status: AutoCombatSessionStatus.ACTIVE,
+          },
+          orderBy: {
+            startedAt: 'desc',
+          },
+        });
+
+      if (!activeSessionAfterConflict) {
+        throw error;
+      }
+
+      await this.ensureResponsiveRoundDuration(activeSessionAfterConflict.id);
+      this.startRealtimeProcessingLoop(userId, character.id);
+
+      const conflictResponse = await this.buildSessionResponse(
+        activeSessionAfterConflict.id,
+        {
+          message:
+            'Este personagem já possui uma sessão de combate automático ativa.',
+          processing: this.buildEmptyProcessingSummary(),
+        },
+      );
+
+      this.autoCombatGateway.emitSessionUpdated(character.id, conflictResponse);
+      this.autoCombatGateway.emitStatus(character.id, conflictResponse);
+
+      return conflictResponse;
+    }
 
     this.clearPotionUsageForSession(session.id);
 
@@ -1212,6 +1252,13 @@ export class AutoCombatService implements OnModuleDestroy {
     this.autoCombatGateway.emitStatus(character.id, response);
 
     return response;
+  }
+
+  private isUniqueConstraintError(error: unknown) {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    );
   }
 
   private getEffectiveRoundDurationSeconds(roundDurationSeconds?: number | null) {
