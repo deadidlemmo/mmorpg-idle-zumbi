@@ -2003,7 +2003,7 @@ export function DashboardActivityBar({
                     ) : null}
                   </div>
 
-                  {hasSessionIndicator ? (
+                  {item.indicatorMetric ? (
                     <span
                       className="dashboard-activity-bar__percent-pill dashboard-activity-bar__session-indicator"
                       aria-label={item.indicatorLabel ?? undefined}
@@ -2119,7 +2119,7 @@ export function DashboardActivityBar({
                   </span>
                   <strong>{item.title}</strong>
 
-                  {hasSessionIndicator ? (
+                  {item.indicatorMetric ? (
                     <span
                       className="dashboard-activity-bar__compact-indicator"
                       aria-label={item.indicatorLabel ?? undefined}
