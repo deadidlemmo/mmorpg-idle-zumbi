@@ -684,7 +684,7 @@ function extractPartialPreviewFromRecord(
   record: LooseRecord,
 ): GatheringProductionPreviewViewModel | null {
   if (isRecord(record.productionPreview)) {
-    return record.productionPreview as GatheringProductionPreviewViewModel;
+    return record.productionPreview as unknown as GatheringProductionPreviewViewModel;
   }
 
   const previewFields: GatheringProductionPreviewLoose =
@@ -707,23 +707,23 @@ function extractPartialPreviewFromRecord(
 
   for (const field of fields) {
     if (field in record) {
-      (previewFields as LooseRecord)[field] = record[field];
+      (previewFields as unknown as LooseRecord)[field] = record[field];
       hasPreviewField = true;
     }
   }
 
   if (isRecord(record.material)) {
-    previewFields.material = record.material as GatheringMaterialViewModel;
+    previewFields.material = record.material as unknown as GatheringMaterialViewModel;
     hasPreviewField = true;
   }
 
   if (isRecord(record.targetMaterial)) {
-    previewFields.targetMaterial = record.targetMaterial as GatheringMaterialViewModel;
+    previewFields.targetMaterial = record.targetMaterial as unknown as GatheringMaterialViewModel;
     hasPreviewField = true;
   }
 
   return hasPreviewField
-    ? (previewFields as GatheringProductionPreviewViewModel)
+    ? (previewFields as unknown as GatheringProductionPreviewViewModel)
     : null;
 }
 
@@ -740,7 +740,7 @@ function mergeSocketPartialStatus(params: {
   const previousLoose = params.previous as GatheringStatusLoose | null;
 
   const incomingSession = isRecord(unwrapped.session)
-    ? (unwrapped.session as GatheringSessionViewModel)
+    ? (unwrapped.session as unknown as GatheringSessionViewModel)
     : null;
 
   const session = incomingSession ?? previousLoose?.session ?? null;
@@ -753,13 +753,13 @@ function mergeSocketPartialStatus(params: {
   const productionPreview =
     incomingPreview || previousPreview
       ? ({
-          ...((previousPreview as LooseRecord | null) ?? {}),
-          ...((incomingPreview as LooseRecord | null) ?? {}),
-        } as GatheringProductionPreviewViewModel)
+          ...((previousPreview as unknown as LooseRecord | null) ?? {}),
+          ...((incomingPreview as unknown as LooseRecord | null) ?? {}),
+        } as unknown as GatheringProductionPreviewViewModel)
       : null;
 
   const incomingGatheringSkill = isRecord(unwrapped.gatheringSkill)
-    ? (unwrapped.gatheringSkill as GatheringSkillViewModel)
+    ? (unwrapped.gatheringSkill as unknown as GatheringSkillViewModel)
     : null;
 
   const gatheringSkill =

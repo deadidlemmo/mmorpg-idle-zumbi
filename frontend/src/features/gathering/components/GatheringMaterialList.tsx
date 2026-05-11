@@ -43,12 +43,6 @@ function normalizeSlotKey(slot?: RecipeOutputSlot | string | null): string {
     .replace(/^_+|_+$/g, '');
 }
 
-function getRecipeSlot(
-  recipe?: GatheringMaterialRecipeUsageViewModel | null,
-): RecipeOutputSlot | null {
-  return recipe?.outputItemSlot ?? null;
-}
-
 function getMaterialPrimarySlot(
   material: GatheringMaterialViewModel,
 ): RecipeOutputSlot | null {
