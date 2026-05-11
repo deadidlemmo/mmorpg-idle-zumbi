@@ -671,6 +671,10 @@ function publishDisplayTotalsIfAllowed(
     return state.totals ?? state.displayTotals ?? null;
   }
 
+  if (isStatusProgressAheadOfReleasedVisualState(state, state.totals)) {
+    return state.displayTotals ?? null;
+  }
+
   /**
    * Quando a fila visual está completamente vazia, a UI pode reconciliar
    * com o total canônico do backend.
@@ -1355,8 +1359,36 @@ function mergeRecentEventsIntoBattleLog(
   );
 }
 
-function shouldDeferStatusProgress(state: AutoCombatRealtimeState) {
-  return hasPendingVisualEvents(state);
+function isStatusProgressAheadOfReleasedVisualState(
+  state: AutoCombatRealtimeState,
+  incomingTotals: AutoCombatRealtimeTotalsState | null,
+) {
+  if (!state.hasLoadedOnce || !incomingTotals) {
+    return false;
+  }
+
+  const incomingXpGained = incomingTotals.totalXpGained ?? 0;
+  const releasedXpGained = state.displayTotals?.totalXpGained ?? 0;
+
+  if (incomingXpGained > releasedXpGained) {
+    return true;
+  }
+
+  const incomingKills = incomingTotals.totalKills ?? incomingTotals.totalCombats ?? 0;
+  const releasedKills =
+    state.displayTotals?.totalKills ?? state.displayTotals?.totalCombats ?? 0;
+
+  return incomingKills > releasedKills;
+}
+
+function shouldDeferStatusProgress(
+  state: AutoCombatRealtimeState,
+  incomingTotals?: AutoCombatRealtimeTotalsState | null,
+) {
+  return (
+    hasPendingVisualEvents(state) ||
+    isStatusProgressAheadOfReleasedVisualState(state, incomingTotals ?? null)
+  );
 }
 
 function buildOverviewCharacterState(
@@ -1540,8 +1572,12 @@ function hydrateFromStatus(
       })
     : state;
 
+  const nextTotals = buildTotalsStateFromStatus(status, null);
+
   const deferCharacterProgress =
-    !sessionChanged && !statusIsTerminal && shouldDeferStatusProgress(baseState);
+    !sessionChanged &&
+    !statusIsTerminal &&
+    shouldDeferStatusProgress(baseState, nextTotals);
 
   const nextSession = buildSessionStateFromStatus(status, baseState.session);
   const nextLocation = buildLocationStateFromStatus(status, baseState.location);
@@ -1568,15 +1604,15 @@ function hydrateFromStatus(
     ? preserveCharacterHpFromRealtimeState(baseState.character, mergedCharacter)
     : mergedCharacter;
 
-  const nextTotals = buildTotalsStateFromStatus(status, null);
-
   const mobFromStatus = buildMobStateFromStatus(
     status,
     sessionChanged ? null : baseState.mob,
   );
 
   const deferMobProgress =
-    !sessionChanged && !statusIsTerminal && shouldDeferStatusProgress(baseState);
+    !sessionChanged &&
+    !statusIsTerminal &&
+    shouldDeferStatusProgress(baseState, nextTotals);
 
   const shouldPreservePreviousMob =
     deferMobProgress ||
@@ -1615,7 +1651,8 @@ function hydrateFromStatus(
   const canPublishStatusTotals =
     statusIsTerminal ||
     sessionChanged ||
-    (!baseState.displayTotals &&
+    (!deferCharacterProgress &&
+      !baseState.displayTotals &&
       canPublishCanonicalDisplayTotals(baseState) &&
       baseState.battleLogEvents.length <= 0);
 
