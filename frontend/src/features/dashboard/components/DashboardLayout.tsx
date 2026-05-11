@@ -171,6 +171,9 @@ type RealtimeStateLoose = {
   progress?: RealtimeProgressLoose | null;
   realtimeCharacterProgress?: RealtimeProgressLoose | null;
 
+  eventQueue?: unknown[] | null;
+  activeEvent?: unknown | null;
+
   combat?: {
     sessionId?: string | null;
     characterCurrentHp?: number | null;
@@ -852,11 +855,25 @@ function buildHeroCharacterFromRealtimeState(params: {
   const progress = getProgressForCurrentSession(realtimeState, realtimeSessionId);
   const combat = getCombatForCurrentSession(realtimeState, realtimeSessionId);
   const statusHp = realtimeState.status?.sessionSummary?.hp ?? null;
+  const hasPendingVisualEvents = Boolean(
+    realtimeSessionIsActive &&
+      (realtimeState.activeEvent || (realtimeState.eventQueue?.length ?? 0) > 0),
+  );
+
+  /**
+   * Status/poll do backend pode chegar com a sessão já avançada antes da fila
+   * visual mostrar MOB_DEFEATED. Durante activeEvent/eventQueue, a EXP do topo
+   * deve seguir somente eventos já aplicados no reducer realtime para não
+   * antecipar o ganho quando, por exemplo, uma poção ainda está em cena.
+   */
+  const statusCharacterForProgress = hasPendingVisualEvents
+    ? {}
+    : statusCharacter;
 
   const nextLevelProgress =
     progress?.levelProgress ??
     realtimeCharacter.levelProgress ??
-    statusCharacter.levelProgress ??
+    statusCharacterForProgress.levelProgress ??
     baseCharacter.levelProgress ??
     null;
 
@@ -866,7 +883,7 @@ function buildHeroCharacterFromRealtimeState(params: {
       realtimeCharacter.level,
       nextLevelProgress?.newLevel,
       nextLevelProgress?.level,
-      statusCharacter.level,
+      statusCharacterForProgress.level,
       character.level,
     ) ?? character.level;
 
@@ -878,8 +895,8 @@ function buildHeroCharacterFromRealtimeState(params: {
       realtimeCharacter.xp,
       nextLevelProgress?.totalXp,
       nextLevelProgress?.xp,
-      statusCharacter.totalXp,
-      statusCharacter.xp,
+      statusCharacterForProgress.totalXp,
+      statusCharacterForProgress.xp,
       baseCharacter.totalXp,
       character.xp,
     ) ?? character.xp;
@@ -929,7 +946,7 @@ function buildHeroCharacterFromRealtimeState(params: {
       realtimeCharacter.currentLevelXp ??
       nextLevelProgress?.currentLevelXp ??
       nextLevelProgress?.xpIntoCurrentLevel ??
-      statusCharacter.currentLevelXp ??
+      statusCharacterForProgress.currentLevelXp ??
       baseCharacter.currentLevelXp,
 
     xpToNextLevel:
@@ -938,7 +955,7 @@ function buildHeroCharacterFromRealtimeState(params: {
       realtimeCharacter.xpToNextLevel ??
       nextLevelProgress?.xpToNextLevel ??
       nextLevelProgress?.nextLevelXp ??
-      statusCharacter.xpToNextLevel ??
+      statusCharacterForProgress.xpToNextLevel ??
       baseCharacter.xpToNextLevel,
 
     nextLevelXp:
@@ -947,7 +964,7 @@ function buildHeroCharacterFromRealtimeState(params: {
       realtimeCharacter.nextLevelXp ??
       nextLevelProgress?.nextLevelXp ??
       nextLevelProgress?.xpToNextLevel ??
-      statusCharacter.nextLevelXp ??
+      statusCharacterForProgress.nextLevelXp ??
       baseCharacter.nextLevelXp,
 
     xpProgressPercent:
@@ -955,7 +972,7 @@ function buildHeroCharacterFromRealtimeState(params: {
       realtimeCharacter.xpProgressPercent ??
       nextLevelProgress?.xpProgressPercent ??
       nextLevelProgress?.progressPercent ??
-      statusCharacter.xpProgressPercent ??
+      statusCharacterForProgress.xpProgressPercent ??
       baseCharacter.xpProgressPercent,
 
     xpIntoCurrentLevel:
@@ -964,35 +981,35 @@ function buildHeroCharacterFromRealtimeState(params: {
       realtimeCharacter.xpIntoCurrentLevel ??
       nextLevelProgress?.xpIntoCurrentLevel ??
       nextLevelProgress?.currentLevelXp ??
-      statusCharacter.xpIntoCurrentLevel ??
+      statusCharacterForProgress.xpIntoCurrentLevel ??
       baseCharacter.xpIntoCurrentLevel,
 
     xpNeededForNextLevel:
       progress?.xpNeededForNextLevel ??
       realtimeCharacter.xpNeededForNextLevel ??
       nextLevelProgress?.xpNeededForNextLevel ??
-      statusCharacter.xpNeededForNextLevel ??
+      statusCharacterForProgress.xpNeededForNextLevel ??
       baseCharacter.xpNeededForNextLevel,
 
     currentLevelStartXp:
       progress?.currentLevelStartXp ??
       realtimeCharacter.currentLevelStartXp ??
       nextLevelProgress?.currentLevelStartXp ??
-      statusCharacter.currentLevelStartXp ??
+      statusCharacterForProgress.currentLevelStartXp ??
       baseCharacter.currentLevelStartXp,
 
     nextLevelRequiredXp:
       progress?.nextLevelRequiredXp ??
       realtimeCharacter.nextLevelRequiredXp ??
       nextLevelProgress?.nextLevelRequiredXp ??
-      statusCharacter.nextLevelRequiredXp ??
+      statusCharacterForProgress.nextLevelRequiredXp ??
       baseCharacter.nextLevelRequiredXp,
 
     isAtLevelCap:
       progress?.isAtLevelCap ??
       realtimeCharacter.isAtLevelCap ??
       nextLevelProgress?.isAtLevelCap ??
-      statusCharacter.isAtLevelCap ??
+      statusCharacterForProgress.isAtLevelCap ??
       baseCharacter.isAtLevelCap,
 
     levelProgress: nextLevelProgress,
