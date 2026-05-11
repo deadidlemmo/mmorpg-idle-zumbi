@@ -1314,33 +1314,38 @@ function DashboardLayoutContent({
             </div>
 
             <div className="dashboard-hero__content">
-              <span>{classData.label}</span>
+              <div className="dashboard-hero__identity">
+                <span>{classData.label}</span>
 
-              <div className="dashboard-hero__heading">
-                <h2>{heroCharacter.name}</h2>
+                <div className="dashboard-hero__heading">
+                  <h2>{heroCharacter.name}</h2>
+                </div>
 
+                <div className="dashboard-hero__meta">
+                  <strong>{characterMapName}</strong>
+                </div>
+              </div>
+
+              <div className="dashboard-hero__status">
                 <div
                   className="dashboard-hero__level-badge"
                   aria-label={`Nível ${heroCharacter.level}`}
                   title={`Nível ${heroCharacter.level}`}
                 >
-                  <strong>Nível {heroCharacter.level}</strong>
-                </div>
-              </div>
-
-              <div className="dashboard-hero__meta">
-                <strong>{characterMapName}</strong>
-              </div>
-
-              <div className="dashboard-hero__wallet" aria-label="Moedas">
-                <div className="dashboard-hero__currency dashboard-hero__currency--gold">
-                  <span>Gold</span>
-                  <strong>{formatCurrency(walletDisplay.gold)}</strong>
+                  <span>Nível</span>
+                  <strong>{heroCharacter.level}</strong>
                 </div>
 
-                <div className="dashboard-hero__currency dashboard-hero__currency--cash">
-                  <span>Cash</span>
-                  <strong>{formatCurrency(walletDisplay.cash)}</strong>
+                <div className="dashboard-hero__wallet" aria-label="Moedas">
+                  <div className="dashboard-hero__currency dashboard-hero__currency--gold">
+                    <span>Gold</span>
+                    <strong>{formatCurrency(walletDisplay.gold)}</strong>
+                  </div>
+
+                  <div className="dashboard-hero__currency dashboard-hero__currency--cash">
+                    <span>Cash</span>
+                    <strong>{formatCurrency(walletDisplay.cash)}</strong>
+                  </div>
                 </div>
               </div>
 
