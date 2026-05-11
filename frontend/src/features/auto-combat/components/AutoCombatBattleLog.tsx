@@ -34,6 +34,10 @@ type BattleLogResultTone =
   | 'empty';
 
 type AutoCombatRealtimeEventExtra = AutoCombatRealtimeEvent & {
+  id?: string | null;
+  eventId?: string | null;
+  sequence?: number | string | null;
+
   characterId?: string | null;
   createdAt?: string | null;
 
@@ -108,6 +112,18 @@ function normalizeEventType(event?: AutoCombatRealtimeEvent | null) {
   return normalizeRealtimeValue(event?.type);
 }
 
+function getEventSequence(event: AutoCombatRealtimeEvent) {
+  const value = (event as AutoCombatRealtimeEventExtra).sequence;
+
+  if (value === null || value === undefined || value === '') {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 function getCreatedAtTimestamp(event: AutoCombatRealtimeEvent) {
   const createdAt = (event as AutoCombatRealtimeEventExtra).createdAt;
 
@@ -124,7 +140,9 @@ function getEventKey(event: AutoCombatRealtimeEvent) {
   const looseEvent = event as AutoCombatRealtimeEventExtra;
 
   return [
+    looseEvent.eventId ?? looseEvent.id ?? 'no-event-id',
     looseEvent.sessionId ?? 'no-session',
+    looseEvent.sequence ?? 'no-sequence',
     looseEvent.characterId ?? 'no-character',
     looseEvent.type ?? 'no-type',
     looseEvent.createdAt ?? 'no-created-at',
@@ -198,7 +216,9 @@ function getPotionUsedDedupeKey(event: AutoCombatRealtimeEvent) {
   const looseEvent = event as AutoCombatRealtimeEventExtra;
 
   return [
+    looseEvent.eventId ?? looseEvent.id ?? 'no-event-id',
     looseEvent.sessionId ?? 'no-session',
+    looseEvent.sequence ?? 'no-sequence',
     looseEvent.characterId ?? 'no-character',
     looseEvent.potionItemId ?? 'no-potion-item',
     looseEvent.potionQuantityBefore ?? 'no-before',
@@ -216,7 +236,9 @@ function getGenericDedupeKey(event: AutoCombatRealtimeEvent) {
   const looseEvent = event as AutoCombatRealtimeEventExtra;
 
   return [
+    looseEvent.eventId ?? looseEvent.id ?? 'no-event-id',
     looseEvent.sessionId ?? 'no-session',
+    looseEvent.sequence ?? 'no-sequence',
     looseEvent.characterId ?? 'no-character',
     looseEvent.type ?? 'no-type',
     looseEvent.mobId ?? 'no-mob',
@@ -695,6 +717,17 @@ function compareDecoratedEventsChronologically(
   a: DecoratedBattleLogEvent,
   b: DecoratedBattleLogEvent,
 ) {
+  const sequenceA = getEventSequence(a.event);
+  const sequenceB = getEventSequence(b.event);
+
+  if (
+    sequenceA !== undefined &&
+    sequenceB !== undefined &&
+    sequenceA !== sequenceB
+  ) {
+    return sequenceA - sequenceB;
+  }
+
   const combatA = toSafeNumber(a.event.combatIndex, 0);
   const combatB = toSafeNumber(b.event.combatIndex, 0);
 
