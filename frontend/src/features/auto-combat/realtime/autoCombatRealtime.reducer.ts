@@ -573,6 +573,67 @@ function preserveCharacterHpFromRealtimeState(
   };
 }
 
+function preserveCharacterProgressFromRealtimeState(
+  previous: AutoCombatRealtimeCharacterState | null,
+  incoming: AutoCombatRealtimeCharacterState | null,
+): AutoCombatRealtimeCharacterState | null {
+  if (!previous || !incoming) {
+    return incoming ?? previous;
+  }
+
+  return {
+    ...incoming,
+
+    level: previous.level ?? incoming.level,
+    xp: previous.xp ?? incoming.xp,
+    totalXp: previous.totalXp ?? previous.xp ?? incoming.totalXp ?? incoming.xp,
+    currentLevelXp: previous.currentLevelXp ?? incoming.currentLevelXp,
+    xpToNextLevel: previous.xpToNextLevel ?? incoming.xpToNextLevel,
+    nextLevelXp: previous.nextLevelXp ?? incoming.nextLevelXp,
+    xpProgressPercent:
+      previous.xpProgressPercent ?? incoming.xpProgressPercent,
+    xpIntoCurrentLevel:
+      previous.xpIntoCurrentLevel ?? incoming.xpIntoCurrentLevel,
+    xpNeededForNextLevel:
+      previous.xpNeededForNextLevel ?? incoming.xpNeededForNextLevel,
+    currentLevelStartXp:
+      previous.currentLevelStartXp ?? incoming.currentLevelStartXp,
+    nextLevelRequiredXp:
+      previous.nextLevelRequiredXp ?? incoming.nextLevelRequiredXp,
+    isAtLevelCap: previous.isAtLevelCap ?? incoming.isAtLevelCap,
+    xpGained: previous.xpGained ?? incoming.xpGained,
+    leveledUp: previous.leveledUp ?? incoming.leveledUp,
+    levelsGained: previous.levelsGained ?? incoming.levelsGained,
+    updatedAt: now(),
+  };
+}
+
+function isIncomingCharacterProgressAhead(
+  current: AutoCombatRealtimeCharacterState | null,
+  incoming: AutoCombatRealtimeCharacterState | null,
+) {
+  if (!current || !incoming) {
+    return false;
+  }
+
+  const currentXp = current.totalXp ?? current.xp;
+  const incomingXp = incoming.totalXp ?? incoming.xp;
+
+  if (currentXp !== undefined && incomingXp !== undefined) {
+    return incomingXp > currentXp;
+  }
+
+  const currentLevelXp = current.currentLevelXp ?? current.xpIntoCurrentLevel;
+  const incomingLevelXp =
+    incoming.currentLevelXp ?? incoming.xpIntoCurrentLevel;
+
+  return (
+    currentLevelXp !== undefined &&
+    incomingLevelXp !== undefined &&
+    incomingLevelXp > currentLevelXp
+  );
+}
+
 function isRealtimeSessionActiveState(state: AutoCombatRealtimeState) {
   const sessionStatus = normalizeSessionStatus(state.session?.status);
 
@@ -1503,17 +1564,34 @@ function hydrateFromOverview(
   characterId: string,
   overview: CharacterOverviewResponse | null,
 ): AutoCombatRealtimeState {
-  const overviewCharacter = buildOverviewCharacterState(overview, state.character);
+  const overviewCharacter = buildOverviewCharacterState(
+    overview,
+    state.character,
+  );
   const location = buildOverviewLocationState(overview, state.location);
+
+  const shouldPreserveRealtimeProgress =
+    isRealtimeSessionActiveState(state) &&
+    isIncomingCharacterProgressAhead(state.character, overviewCharacter);
+
+  const progressSafeCharacter = shouldPreserveRealtimeProgress
+    ? preserveCharacterProgressFromRealtimeState(
+        state.character,
+        overviewCharacter,
+      )
+    : overviewCharacter;
 
   const shouldPreserveRealtimeHp =
     isRealtimeSessionActiveState(state) &&
     state.character?.currentHp !== undefined &&
-    overviewCharacter?.currentHp !== undefined;
+    progressSafeCharacter?.currentHp !== undefined;
 
   const character = shouldPreserveRealtimeHp
-    ? preserveCharacterHpFromRealtimeState(state.character, overviewCharacter)
-    : overviewCharacter;
+    ? preserveCharacterHpFromRealtimeState(
+        state.character,
+        progressSafeCharacter,
+      )
+    : progressSafeCharacter;
 
   return {
     ...state,

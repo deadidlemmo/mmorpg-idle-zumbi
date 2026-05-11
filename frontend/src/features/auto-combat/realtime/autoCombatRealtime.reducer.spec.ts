@@ -333,3 +333,48 @@ test('POTION_USED não herda EXP canônica pendente de status antes do abate', (
   assert.equal(afterDefeat.character?.xpProgressPercent, 75);
   assert.equal(afterDefeat.displayTotals?.totalXpGained, 50);
 });
+
+test('overview canônico não antecipa EXP durante timeline visual pendente', () => {
+  const pendingHit = makeHit(5, 10);
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    activeEvent: pendingHit,
+    activeEventImpactApplied: true,
+    character: {
+      id: 'char-1',
+      name: 'Sobrevivente',
+      currentHp: 70,
+      maxHp: 100,
+      hpPercent: 70,
+      level: 1,
+      xp: 100,
+      totalXp: 100,
+      currentLevelXp: 100,
+      xpToNextLevel: 200,
+      xpProgressPercent: 50,
+    },
+  };
+
+  const hydrated = autoCombatRealtimeReducer(state, {
+    type: 'HYDRATE_OVERVIEW',
+    characterId: 'char-1',
+    overview: {
+      character: {
+        id: 'char-1',
+        name: 'Sobrevivente',
+        level: 1,
+        xp: 150,
+        totalXp: 150,
+        currentHp: 90,
+        maxHp: 100,
+        currentLevelXp: 150,
+        xpToNextLevel: 200,
+        xpProgressPercent: 75,
+      },
+    } as never,
+  });
+
+  assert.equal(hydrated.character?.totalXp, 100);
+  assert.equal(hydrated.character?.currentLevelXp, 100);
+  assert.equal(hydrated.character?.xpProgressPercent, 50);
+});

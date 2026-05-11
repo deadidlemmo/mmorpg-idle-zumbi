@@ -104,6 +104,7 @@ import {
   getMobFullBodyImage,
   getMobPortraitImage,
 } from '../utils/mobAssets';
+import { selectVisibleCharacterProgress } from '../utils/visible-progress';
 
 function getRealtimeFeedbackTarget(event?: AutoCombatRealtimeEvent | null) {
   const eventType = normalizeRealtimeEventType(event?.type);
@@ -188,6 +189,7 @@ export function AutoCombatPage() {
   const autoPotionConfigRef =
     useRef<CharacterPotionConfigWithItem | null>(null);
   const selectedPotionItemIdRef = useRef('');
+  const hasPendingRealtimeVisualRef = useRef(false);
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
   const stableActiveMobRef = useRef<{
     sessionId: string | null;
@@ -245,6 +247,10 @@ export function AutoCombatPage() {
     (providerQueueLength > 0 || Boolean(providerActiveEvent));
 
   const showActiveSession = hasActiveSession || hasPendingRealtimeVisual;
+
+  useEffect(() => {
+    hasPendingRealtimeVisualRef.current = hasPendingRealtimeVisual;
+  }, [hasPendingRealtimeVisual]);
 
   useEffect(() => {
     if (!showActiveSession) {
@@ -416,9 +422,13 @@ export function AutoCombatPage() {
       );
       setIsPotionEnabled(Boolean(normalizedPotionConfig?.enabled));
 
-      setLocalCharacterProgress((current) =>
-        pickHighestProgress(current, mergedProgress),
-      );
+      setLocalCharacterProgress((current) => {
+        if (hasPendingRealtimeVisualRef.current && current) {
+          return current;
+        }
+
+        return pickHighestProgress(current, mergedProgress);
+      });
 
       if (isSessionActive(statusData, statusSession)) {
         setLocalSessionTotals(
@@ -488,22 +498,15 @@ export function AutoCombatPage() {
       Boolean(providerActiveEvent));
 
   const visibleCharacterProgress = useMemo(() => {
-    if (hasProviderVisualTimeline) {
-      return pickHighestProgress(
-        overviewCharacterProgress,
-        localCharacterProgress,
-        providerProgress,
-      );
-    }
-
-    return pickHighestProgress(
+    return selectVisibleCharacterProgress({
+      hasProviderVisualTimeline: showActiveSession && Boolean(providerProgress),
       overviewCharacterProgress,
       statusCharacterProgress,
       localCharacterProgress,
       providerProgress,
-    );
+    });
   }, [
-    hasProviderVisualTimeline,
+    showActiveSession,
     overviewCharacterProgress,
     statusCharacterProgress,
     localCharacterProgress,
