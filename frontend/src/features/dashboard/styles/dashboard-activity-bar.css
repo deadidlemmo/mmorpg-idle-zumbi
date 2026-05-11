@@ -96,6 +96,61 @@
   --activity-rgb: 194, 74, 74;
 }
 
+.dashboard-activity-bar__item--auto-combat {
+  --dashboard-activity-monster-hp-percent: 100%;
+  --dashboard-activity-monster-hp-scale: 1;
+}
+
+.dashboard-activity-bar__monster-hp-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.dashboard-activity-bar__monster-hp-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(5, 7, 8, 0.16), rgba(5, 7, 8, 0.36)),
+    radial-gradient(circle at 95% 50%, rgba(255, 255, 255, 0.06), transparent 8rem);
+}
+
+.dashboard-activity-bar__monster-hp-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  transform: scaleX(var(--dashboard-activity-monster-hp-scale));
+  transform-origin: left center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 42%, rgba(0, 0, 0, 0.2)),
+    repeating-linear-gradient(135deg, rgba(255, 235, 235, 0.09) 0 5px, transparent 5px 12px),
+    linear-gradient(90deg, rgba(111, 16, 22, 0.92), rgba(183, 35, 40, 0.9) 58%, rgba(255, 79, 79, 0.86));
+  border-right: 1px solid rgba(255, 196, 196, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset -18px 0 28px rgba(255, 42, 48, 0.16),
+    0 0 24px rgba(255, 45, 56, 0.18);
+  transition: transform 230ms ease;
+}
+
+.dashboard-activity-bar__item--auto-combat .dashboard-activity-bar__icon,
+.dashboard-activity-bar__item--auto-combat .dashboard-activity-bar__body,
+.dashboard-activity-bar__item--auto-combat .dashboard-activity-bar__metrics,
+.dashboard-activity-bar__item--auto-combat .dashboard-activity-bar__compact {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-activity-bar__item--auto-combat .dashboard-activity-bar__progress-block,
+.dashboard-activity-bar__item--auto-combat .dashboard-activity-bar__compact-track-block {
+  display: none;
+}
+
 .dashboard-activity-bar__item--gathering {
   --activity-rgb: 224, 182, 91;
 }

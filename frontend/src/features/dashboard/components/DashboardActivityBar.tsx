@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import type {
@@ -1810,7 +1810,6 @@ export function DashboardActivityBar({
     if (!characterId) return;
 
     let isDisposed = false;
-    let intervalId: number | undefined;
 
     async function loadActivity() {
       try {
@@ -1830,16 +1829,14 @@ export function DashboardActivityBar({
 
     loadActivity();
 
-    intervalId = window.setInterval(() => {
+    const intervalId = window.setInterval(() => {
       loadActivity();
     }, refreshMs);
 
     return () => {
       isDisposed = true;
 
-      if (intervalId !== undefined) {
-        window.clearInterval(intervalId);
-      }
+      window.clearInterval(intervalId);
     };
   }, [characterId, refreshMs]);
 
@@ -1883,6 +1880,13 @@ export function DashboardActivityBar({
         const progressStyle = {
           width: `${progressPercent}%`,
         };
+        const itemStyle =
+          item.type === 'auto-combat'
+            ? ({
+                '--dashboard-activity-monster-hp-percent': `${progressPercent}%`,
+                '--dashboard-activity-monster-hp-scale': progressPercent / 100,
+              } as CSSProperties)
+            : undefined;
         const progressTrackClassName = [
           item.type === 'auto-combat'
             ? 'dashboard-activity-bar__track dashboard-activity-bar__track--monster-hp'
@@ -1905,7 +1909,17 @@ export function DashboardActivityBar({
             ]
               .filter(Boolean)
               .join(' ')}
+            style={itemStyle}
           >
+            {item.type === 'auto-combat' ? (
+              <span
+                className="dashboard-activity-bar__monster-hp-backdrop"
+                aria-hidden="true"
+              >
+                <span className="dashboard-activity-bar__monster-hp-fill" />
+              </span>
+            ) : null}
+
             {isFirstItem ? (
               <button
                 type="button"
