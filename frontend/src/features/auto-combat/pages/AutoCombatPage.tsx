@@ -25,6 +25,7 @@ import {
   useAutoCombatRealtime,
   useAutoCombatRealtimeState,
 } from '../realtime/useAutoCombatRealtime';
+import { getRealtimeEventKey } from '../realtime/autoCombatRealtime.utils';
 import type {
   AutoCombatRealtimeStateLoose,
   AutoCombatTab,
@@ -103,6 +104,35 @@ import {
   getMobFullBodyImage,
   getMobPortraitImage,
 } from '../utils/mobAssets';
+
+function getRealtimeFeedbackTarget(event?: AutoCombatRealtimeEvent | null) {
+  const eventType = normalizeRealtimeEventType(event?.type);
+  const eventTarget = normalizeRealtimeEventType(event?.target);
+
+  if (eventTarget === 'PLAYER' || eventTarget === 'MOB') {
+    return eventTarget;
+  }
+
+  if (eventType === 'PLAYER_HIT') {
+    return 'MOB';
+  }
+
+  if (eventType === 'MOB_HIT') {
+    return 'PLAYER';
+  }
+
+  return null;
+}
+
+function getRealtimeFeedbackDamage(event?: AutoCombatRealtimeEvent | null) {
+  if (!event || !isDamageRealtimeEvent(event.type) || event.isDodged) {
+    return 0;
+  }
+
+  const damage = toSafeNumber(event.damage, 0);
+
+  return damage > 0 ? damage : 0;
+}
 
 export function AutoCombatPage() {
   const { characterId } = useParams();
@@ -1206,46 +1236,54 @@ export function AutoCombatPage() {
     (activeVisualEventType === 'PLAYER_DEFEATED' ||
       (currentCharacterMaxHp > 0 && currentCharacterHp <= 0));
 
-  const latestDamageAmount =
-    visualRealtimeCombat?.lastDamage && visualRealtimeCombat.lastDamage > 0
-      ? visualRealtimeCombat.lastDamage
-      : 0;
+  const realtimeFeedbackEvent = showActiveSession ? activeBattleLogEvent : null;
+  const realtimeFeedbackTarget = getRealtimeFeedbackTarget(realtimeFeedbackEvent);
+  const latestDamageAmount = getRealtimeFeedbackDamage(realtimeFeedbackEvent);
+  const isRealtimeFeedbackCritical = Boolean(realtimeFeedbackEvent?.isCritical);
+  const isRealtimeFeedbackDodged = Boolean(
+    realtimeFeedbackEvent?.isDodged ||
+      normalizeRealtimeEventType(realtimeFeedbackEvent?.type) === 'DODGE',
+  );
+  const realtimeFeedbackEventKey = realtimeFeedbackEvent
+    ? getRealtimeEventKey(realtimeFeedbackEvent)
+    : '';
 
   const canShowFloatingDamage =
     showActiveSession &&
-    isDamageRealtimeEvent(visualRealtimeCombat?.lastEventType) &&
-    !visualRealtimeCombat?.isDodged &&
+    Boolean(realtimeFeedbackEvent) &&
     latestDamageAmount > 0;
 
   const shouldShowPlayerDamage =
-    canShowFloatingDamage && visualRealtimeCombat?.target === 'PLAYER';
+    canShowFloatingDamage && realtimeFeedbackTarget === 'PLAYER';
 
   const shouldShowMobDamage =
-    canShowFloatingDamage && visualRealtimeCombat?.target === 'MOB';
+    canShowFloatingDamage && realtimeFeedbackTarget === 'MOB';
 
   const shouldShowPlayerDodge =
     showActiveSession &&
-    visualRealtimeCombat?.target === 'PLAYER' &&
-    visualRealtimeCombat?.isDodged;
+    Boolean(realtimeFeedbackEvent) &&
+    realtimeFeedbackTarget === 'PLAYER' &&
+    isRealtimeFeedbackDodged;
 
   const shouldShowMobDodge =
     showActiveSession &&
-    visualRealtimeCombat?.target === 'MOB' &&
-    visualRealtimeCombat?.isDodged;
+    Boolean(realtimeFeedbackEvent) &&
+    realtimeFeedbackTarget === 'MOB' &&
+    isRealtimeFeedbackDodged;
 
   const playerDamageKey = shouldShowPlayerDamage
-    ? `player-damage-${visualRealtimeCombat?.updatedAt ?? Date.now()}`
+    ? `player-damage-${realtimeFeedbackEventKey}`
     : '';
 
   const mobDamageKey = shouldShowMobDamage
-    ? `mob-damage-${visualRealtimeCombat?.updatedAt ?? Date.now()}`
+    ? `mob-damage-${realtimeFeedbackEventKey}`
     : '';
 
   const playerFighterClassName = [
     'auto-combat-fighter-card',
     'auto-combat-fighter-card--player',
     shouldShowPlayerDamage ? 'is-hit' : '',
-    shouldShowPlayerDamage && visualRealtimeCombat?.isCritical
+    shouldShowPlayerDamage && isRealtimeFeedbackCritical
       ? 'is-critical-hit'
       : '',
     shouldShowPlayerDodge ? 'is-dodging' : '',
@@ -1258,7 +1296,7 @@ export function AutoCombatPage() {
     'auto-combat-fighter-card',
     'auto-combat-fighter-card--mob',
     shouldShowMobDamage ? 'is-hit' : '',
-    shouldShowMobDamage && visualRealtimeCombat?.isCritical
+    shouldShowMobDamage && isRealtimeFeedbackCritical
       ? 'is-critical-hit'
       : '',
     shouldShowMobDodge ? 'is-dodging' : '',
@@ -1970,7 +2008,7 @@ export function AutoCombatPage() {
                             key={playerDamageKey}
                             className={[
                               'auto-combat-floating-damage',
-                              visualRealtimeCombat?.isCritical
+                              isRealtimeFeedbackCritical
                                 ? 'is-critical'
                                 : '',
                             ]
@@ -2057,7 +2095,7 @@ export function AutoCombatPage() {
                             key={mobDamageKey}
                             className={[
                               'auto-combat-floating-damage',
-                              visualRealtimeCombat?.isCritical
+                              isRealtimeFeedbackCritical
                                 ? 'is-critical'
                                 : '',
                             ]
