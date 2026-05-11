@@ -226,30 +226,6 @@ function normalizeKillCount(value: number | null): number | null {
   return Math.max(0, Math.floor(value));
 }
 
-function getRecordArrayField(record: unknown, key: string): LooseRecord[] {
-  if (!isRecord(record)) return [];
-
-  const value = record[key];
-
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function sumNumberField(records: LooseRecord[], key: string): number | null {
-  if (records.length <= 0) return null;
-
-  const total = records.reduce((sum, record) => {
-    return sum + (getNumberField(record, key) ?? 0);
-  }, 0);
-
-  return Number.isFinite(total) ? total : null;
-}
-
-function normalizeKillCount(value: number | null): number | null {
-  if (value === null) return null;
-
-  return Math.max(0, Math.floor(value));
-}
-
 function getAutoCombatKills(autoCombatState: unknown): number | null {
   const totals = getRecordField(autoCombatState, 'totals');
   const displayTotals = getRecordField(autoCombatState, 'displayTotals');

@@ -373,6 +373,7 @@ export interface AutoCombatSessionApiViewModel {
   currentMobId?: string | null;
   currentMobHp?: number | null;
   currentMobMaxHp?: number | null;
+  currentMob?: AutoCombatCurrentMobViewModel | null;
 
   /**
    * Posição atual do combate.

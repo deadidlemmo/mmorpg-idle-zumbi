@@ -3291,28 +3291,18 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMobMaxHp,
         currentRound: session.currentRound,
         currentCombatIndex: session.currentCombatIndex,
+        currentMob: this.buildCurrentMobStatusPayload(
+          session.currentMob,
+          currentMobHp,
+          currentMobMaxHp,
+        ),
       },
 
-      currentMob: session.currentMob
-        ? {
-            id: session.currentMob.id,
-            name: session.currentMob.name,
-            description: session.currentMob.description,
-            level: session.currentMob.level,
-            tier: session.currentMob.tier,
-            hp: session.currentMob.hp,
-            attack: session.currentMob.attack,
-            defense: session.currentMob.defense,
-            speed: session.currentMob.speed,
-            xpReward: session.currentMob.xpReward,
-            currentHp: currentMobHp,
-            maxHp: currentMobMaxHp,
-            hpPercent:
-              currentMobHp !== null && currentMobMaxHp
-                ? this.calculatePercent(currentMobHp, currentMobMaxHp)
-                : 0,
-          }
-        : null,
+      currentMob: this.buildCurrentMobStatusPayload(
+        session.currentMob,
+        currentMobHp,
+        currentMobMaxHp,
+      ),
 
       subMap: {
         id: session.subMap.id,
@@ -3350,6 +3340,35 @@ export class AutoCombatService implements OnModuleDestroy {
       sessionSummary,
 
       processing: extra?.processing ?? this.buildEmptyProcessingSummary(),
+    };
+  }
+
+  private buildCurrentMobStatusPayload(
+    currentMob: any,
+    currentMobHp: number | null,
+    currentMobMaxHp: number | null,
+  ) {
+    if (!currentMob) {
+      return null;
+    }
+
+    return {
+      id: currentMob.id,
+      name: currentMob.name,
+      description: currentMob.description,
+      level: currentMob.level,
+      tier: currentMob.tier,
+      hp: currentMob.hp,
+      attack: currentMob.attack,
+      defense: currentMob.defense,
+      speed: currentMob.speed,
+      xpReward: currentMob.xpReward,
+      currentHp: currentMobHp,
+      maxHp: currentMobMaxHp,
+      hpPercent:
+        currentMobHp !== null && currentMobMaxHp
+          ? this.calculatePercent(currentMobHp, currentMobMaxHp)
+          : 0,
     };
   }
 
