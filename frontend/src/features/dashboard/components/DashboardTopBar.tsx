@@ -202,47 +202,28 @@ function getAutoCombatMobName(autoCombatState: unknown): string | null {
   );
 }
 
-function getAutoCombatMobHpPercent(autoCombatState: unknown): number | null {
-  const status = getRecordField(autoCombatState, 'status');
-  const session = getRecordField(autoCombatState, 'session');
-  const realtimeSnapshot = getRecordField(status, 'realtimeSnapshot');
+function getRecordArrayField(record: unknown, key: string): LooseRecord[] {
+  if (!isRecord(record)) return [];
 
-  const mob =
-    getRecordField(autoCombatState, 'mob') ??
-    getRecordField(autoCombatState, 'currentMob') ??
-    getRecordField(status, 'mob') ??
-    getRecordField(status, 'currentMob') ??
-    getRecordField(session, 'mob') ??
-    getRecordField(session, 'currentMob');
+  const value = record[key];
 
-  const directPercent =
-    getNumberField(mob, 'hpPercent') ??
-    getNumberField(realtimeSnapshot, 'mobHpPercent') ??
-    getNumberField(session, 'currentMobHpPercent');
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
 
-  if (directPercent !== null) {
-    return clampPercent(directPercent);
-  }
+function sumNumberField(records: LooseRecord[], key: string): number | null {
+  if (records.length <= 0) return null;
 
-  const currentHp =
-    getNumberField(mob, 'currentHp') ??
-    getNumberField(mob, 'hp') ??
-    getNumberField(mob, 'currentHealth') ??
-    getNumberField(realtimeSnapshot, 'mobCurrentHp') ??
-    getNumberField(session, 'currentMobHp');
+  const total = records.reduce((sum, record) => {
+    return sum + (getNumberField(record, key) ?? 0);
+  }, 0);
 
-  const maxHp =
-    getNumberField(mob, 'maxHp') ??
-    getNumberField(mob, 'maxHealth') ??
-    getNumberField(mob, 'totalHp') ??
-    getNumberField(realtimeSnapshot, 'mobMaxHp') ??
-    getNumberField(session, 'currentMobMaxHp');
+  return Number.isFinite(total) ? total : null;
+}
 
-  if (currentHp === null || maxHp === null || maxHp <= 0) {
-    return null;
-  }
+function normalizeKillCount(value: number | null): number | null {
+  if (value === null) return null;
 
-  return clampPercent((currentHp / maxHp) * 100);
+  return Math.max(0, Math.floor(value));
 }
 
 function getAutoCombatKills(autoCombatState: unknown): number | null {
@@ -250,18 +231,35 @@ function getAutoCombatKills(autoCombatState: unknown): number | null {
   const displayTotals = getRecordField(autoCombatState, 'displayTotals');
   const status = getRecordField(autoCombatState, 'status');
   const session = getRecordField(autoCombatState, 'session');
+  const statusSession = getRecordField(status, 'session');
+  const activeSession = getRecordField(status, 'activeSession');
+  const autoCombatSession = getRecordField(status, 'autoCombatSession');
+  const sessionSummary = getRecordField(status, 'sessionSummary');
+  const summaryMobs = getRecordField(sessionSummary, 'mobs');
+  const rewards = getRecordField(status, 'rewards');
+  const rewardsKills = sumNumberField(getRecordArrayField(rewards, 'mobs'), 'kills');
 
-  return (
-    getNumberField(displayTotals, 'kills') ??
-    getNumberField(displayTotals, 'killCount') ??
-    getNumberField(displayTotals, 'mobsDefeated') ??
-    getNumberField(totals, 'kills') ??
-    getNumberField(totals, 'killCount') ??
-    getNumberField(totals, 'mobsDefeated') ??
-    getNumberField(session, 'totalKills') ??
-    getNumberField(session, 'totalCombats') ??
-    getNumberField(session, 'totalCombatsResolved') ??
-    getNumberField(status, 'totalKills')
+  return normalizeKillCount(
+    getNumberField(displayTotals, 'totalKills') ??
+      getNumberField(displayTotals, 'kills') ??
+      getNumberField(displayTotals, 'killCount') ??
+      getNumberField(displayTotals, 'mobsDefeated') ??
+      getNumberField(totals, 'totalKills') ??
+      getNumberField(totals, 'kills') ??
+      getNumberField(totals, 'killCount') ??
+      getNumberField(totals, 'mobsDefeated') ??
+      getNumberField(session, 'totalKills') ??
+      getNumberField(session, 'totalCombatsResolved') ??
+      getNumberField(session, 'totalCombats') ??
+      getNumberField(statusSession, 'totalKills') ??
+      getNumberField(statusSession, 'totalCombatsResolved') ??
+      getNumberField(activeSession, 'totalKills') ??
+      getNumberField(activeSession, 'totalCombatsResolved') ??
+      getNumberField(autoCombatSession, 'totalKills') ??
+      getNumberField(autoCombatSession, 'totalCombatsResolved') ??
+      getNumberField(summaryMobs, 'totalKills') ??
+      rewardsKills ??
+      getNumberField(status, 'totalKills'),
   );
 }
 
@@ -301,27 +299,18 @@ function buildAutoCombatActivity(
   const mobName =
     getAutoCombatMobName(autoCombatState) ?? 'Combate automático';
 
-  const mobHpPercent = getAutoCombatMobHpPercent(autoCombatState);
-  const kills = getAutoCombatKills(autoCombatState);
+  const kills = getAutoCombatKills(autoCombatState) ?? 0;
 
   return {
     kind: 'auto-combat',
     title: mobName,
-    subtitle:
-      kills !== null
-        ? `${formatNumber(kills)} abates`
-        : mobHpPercent !== null
-          ? `HP ${Math.round(mobHpPercent)}%`
-          : 'Em combate',
+    subtitle: `${formatNumber(kills)} monstros mortos`,
     icon: '☠',
-    progressPercent: mobHpPercent,
-    badge:
-      kills !== null && kills > 0
-        ? formatNumber(kills)
-        : mobHpPercent !== null
-          ? `${Math.round(mobHpPercent)}`
-          : null,
-    titleText: 'Combate automático em andamento',
+    progressPercent: null,
+    badge: formatNumber(kills),
+    titleText: `Combate automático em andamento • ${formatNumber(
+      kills,
+    )} monstros mortos`,
   };
 }
 

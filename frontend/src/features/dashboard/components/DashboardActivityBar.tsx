@@ -51,13 +51,6 @@ type ActivityBarItem = {
   xpMetric?: string | null;
 };
 
-type MobHpSnapshot = {
-  currentHp: number | null;
-  maxHp: number | null;
-  percent: number;
-  hasHpData: boolean;
-};
-
 type AutoCombatTotalsSnapshot = {
   sessionId?: string | null;
 
@@ -395,13 +388,6 @@ function isTerminalStatus(status?: string | null) {
   );
 }
 
-function normalizeRealtimeEventType(event?: AutoCombatRealtimeEvent | null) {
-  return String(event?.type ?? '').trim().toUpperCase();
-}
-
-function isMobDefeatedEvent(event?: AutoCombatRealtimeEvent | null) {
-  return normalizeRealtimeEventType(event) === 'MOB_DEFEATED';
-}
 
 function formatOrigin(origin?: string | null) {
   if (!origin) return 'Expedição';
@@ -564,20 +550,6 @@ function formatCharacterHpLabel(currentHp?: number | null, maxHp?: number | null
 
   if (safeCurrentHp === undefined || safeMaxHp === undefined || safeMaxHp <= 0) {
     return 'HP —';
-  }
-
-  return `HP ${Math.max(0, Math.floor(safeCurrentHp))}/${Math.max(
-    1,
-    Math.floor(safeMaxHp),
-  )}`;
-}
-
-function formatHpLabel(currentHp?: number | null, maxHp?: number | null) {
-  const safeCurrentHp = getFirstValidNumber(currentHp);
-  const safeMaxHp = getFirstValidNumber(maxHp);
-
-  if (safeCurrentHp === undefined || safeMaxHp === undefined || safeMaxHp <= 0) {
-    return 'HP do infectado';
   }
 
   return `HP ${Math.max(0, Math.floor(safeCurrentHp))}/${Math.max(
@@ -847,86 +819,6 @@ function buildCharacterActivitySnapshot(params: {
     hpPercentLabel: formatPercentLabel(hpPercent),
     xpLabel: xpSnapshot.label,
     xpPercent: xpSnapshot.percent,
-  };
-}
-
-function buildMobHpSnapshot(params: {
-  displayedEvent?: AutoCombatRealtimeEvent | null;
-  realtimeCombat?: AutoCombatRealtimeCombatLike | null;
-  statusCurrentMob?: AutoCombatStatusCurrentMobLike | null;
-  session?: AutoCombatSessionLike | null;
-  fallbackPercent?: number | null;
-}): MobHpSnapshot {
-  const {
-    displayedEvent,
-    realtimeCombat,
-    statusCurrentMob,
-    session,
-    fallbackPercent,
-  } = params;
-
-  if (isMobDefeatedEvent(displayedEvent)) {
-    const maxHp = getFirstValidNumber(
-      displayedEvent?.mobMaxHp,
-      realtimeCombat?.mobMaxHp,
-      statusCurrentMob?.maxHp,
-      session?.currentMobMaxHp,
-      statusCurrentMob?.hp,
-    );
-
-    return {
-      currentHp: 0,
-      maxHp: maxHp ?? null,
-      percent: 0,
-      hasHpData: true,
-    };
-  }
-
-  const currentHp = getFirstValidNumber(
-    displayedEvent?.mobCurrentHp,
-    realtimeCombat?.mobCurrentHp,
-    statusCurrentMob?.currentHp,
-    session?.currentMobHp,
-  );
-
-  const maxHp = getFirstValidNumber(
-    displayedEvent?.mobMaxHp,
-    realtimeCombat?.mobMaxHp,
-    statusCurrentMob?.maxHp,
-    session?.currentMobMaxHp,
-    statusCurrentMob?.hp,
-  );
-
-  if (currentHp !== undefined && maxHp !== undefined && maxHp > 0) {
-    return {
-      currentHp,
-      maxHp,
-      percent: calculateHpPercent(currentHp, maxHp),
-      hasHpData: true,
-    };
-  }
-
-  const percent = getFirstValidNumber(
-    displayedEvent?.mobHpPercent,
-    realtimeCombat?.mobHpPercent,
-    statusCurrentMob?.hpPercent,
-    fallbackPercent,
-  );
-
-  if (percent !== undefined) {
-    return {
-      currentHp: currentHp ?? null,
-      maxHp: maxHp ?? null,
-      percent: clampPercent(percent),
-      hasHpData: true,
-    };
-  }
-
-  return {
-    currentHp: currentHp ?? null,
-    maxHp: maxHp ?? null,
-    percent: 100,
-    hasHpData: false,
   };
 }
 
@@ -1308,13 +1200,6 @@ function buildAutoCombatItemFromRealtime(params: {
 
   const locationLabel = getStatusLocationLabel(status);
 
-  const mobHp = buildMobHpSnapshot({
-    displayedEvent,
-    realtimeCombat,
-    statusCurrentMob,
-    session,
-  });
-
   const mobName =
     displayedEvent?.mobName ??
     realtimeCombat?.mobName ??
@@ -1349,9 +1234,9 @@ function buildAutoCombatItemFromRealtime(params: {
     icon: '⚔',
     title: mobName,
     description,
-    progressLabel: formatHpLabel(mobHp.currentHp, mobHp.maxHp),
-    progressPercent: mobHp.percent,
-    progressValueLabel: formatPercentLabel(mobHp.percent),
+    progressLabel: 'Monstros mortos',
+    progressPercent: 0,
+    progressValueLabel: formatKillCount(totalKills),
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
     secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
     indicatorMetric: formatSessionCountIndicator(totalKills),
@@ -1403,6 +1288,8 @@ function buildAutoCombatItemFromOverview(params: {
         currentMobHp?: number | null;
         currentMobMaxHp?: number | null;
         totals?: {
+          kills?: number | null;
+          totalKills?: number | null;
           combatsResolved?: number | null;
           roundsResolved?: number | null;
           xpGained?: number | null;
@@ -1413,21 +1300,6 @@ function buildAutoCombatItemFromOverview(params: {
   const visualTotals = buildAutoCombatTotalsFromOverview(session);
   const previewCurrentMob = session.combatPreview?.currentMob;
   const currentMob = session.currentMob ?? previewCurrentMob ?? null;
-
-  const mobHp = buildMobHpSnapshot({
-    statusCurrentMob: currentMob,
-    session: {
-      id: session.id,
-      status: session.status,
-      currentCombatIndex: session.currentCombatIndex,
-      currentMobHp:
-        session.currentMobHp ?? session.combatPreview?.currentMobHp ?? null,
-      currentMobMaxHp:
-        session.currentMobMaxHp ??
-        session.combatPreview?.currentMobMaxHp ??
-        null,
-    },
-  });
 
   const subMapName = session.subMap?.name;
   const mapName = session.subMap?.map?.name ?? session.subMap?.mapName;
@@ -1458,9 +1330,9 @@ function buildAutoCombatItemFromOverview(params: {
     icon: '⚔',
     title: currentMob?.name ?? 'Combate automático',
     description: session.combatPreview?.label ?? locationLabel,
-    progressLabel: formatHpLabel(mobHp.currentHp, mobHp.maxHp),
-    progressPercent: mobHp.percent,
-    progressValueLabel: formatPercentLabel(mobHp.percent),
+    progressLabel: 'Monstros mortos',
+    progressPercent: 0,
+    progressValueLabel: formatKillCount(totalKills),
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
     secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
     indicatorMetric: formatSessionCountIndicator(totalKills),
@@ -1915,8 +1787,6 @@ export function DashboardActivityBar({
             ? `${item.progressLabel} • ${progressValueLabel}`
             : item.progressLabel;
         const shouldShowProgressValue = item.type !== 'auto-combat';
-        const hasSessionIndicator =
-          item.indicatorMetric !== null && item.indicatorMetric !== undefined;
         const progressStyle = {
           width: `${progressPercent}%`,
         };
