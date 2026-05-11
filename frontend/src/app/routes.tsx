@@ -16,6 +16,7 @@ import { DashboardPlaceholderPage } from '../features/dashboard/pages/DashboardP
 import { GatheringHubPage } from '../features/gathering/pages/GatheringHubPage';
 import { GatheringOriginPage } from '../features/gathering/pages/GatheringOriginPage';
 import { GatheringRealtimeProvider } from '../features/gathering/realtime/GatheringRealtimeProvider';
+import { LootNotificationProvider } from '../features/loot-notifications/LootNotificationProvider';
 import { useAuthStore } from '../store/auth.store';
 
 interface RouteGuardProps {
@@ -50,22 +51,24 @@ function DashboardRealtimeRoute() {
   }
 
   return (
-    <AutoCombatRealtimeProvider
-      key={`auto-combat-${characterId}`}
-      characterId={characterId}
-      autoLoad
-      refreshMs={3000}
-    >
-      <GatheringRealtimeProvider
-        key={`gathering-${characterId}`}
+    <LootNotificationProvider>
+      <AutoCombatRealtimeProvider
+        key={`auto-combat-${characterId}`}
         characterId={characterId}
         autoLoad
-        refreshMs={5000}
-        tickMs={1000}
+        refreshMs={3000}
       >
-        <Outlet />
-      </GatheringRealtimeProvider>
-    </AutoCombatRealtimeProvider>
+        <GatheringRealtimeProvider
+          key={`gathering-${characterId}`}
+          characterId={characterId}
+          autoLoad
+          refreshMs={5000}
+          tickMs={1000}
+        >
+          <Outlet />
+        </GatheringRealtimeProvider>
+      </AutoCombatRealtimeProvider>
+    </LootNotificationProvider>
   );
 }
 

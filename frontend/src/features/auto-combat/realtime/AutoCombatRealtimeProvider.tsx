@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
+import { useLootNotifications } from '../../loot-notifications/lootNotificationContext';
 import type { CharacterOverviewResponse } from '../../dashboard/types/dashboard.types';
 import {
   getAutoCombatRecentEvents,
@@ -18,6 +19,7 @@ import {
 import { useAutoCombatSocket } from '../hooks/useAutoCombatSocket';
 import type {
   AutoCombatRealtimeEvent,
+  AutoCombatRewardLootViewModel,
   AutoCombatStatusResponse,
   StartAutoCombatPayload,
 } from '../types/auto-combat.types';
@@ -57,6 +59,89 @@ const AFTER_VISIBILITY_RELOAD_DELAY_MS = 120;
 
 const NEXT_EVENT_PROCESS_DELAY_MS = 120;
 const ACTIVE_EVENT_IMPACT_RATIO = 0.55;
+
+type AutoCombatLootNotificationTracker = {
+  sessionId: string | null;
+  totalsByItemId: Map<string, number>;
+  hasBaseline: boolean;
+};
+
+type AutoCombatLootWithOptionalIcon = AutoCombatRewardLootViewModel & {
+  item?: {
+    name?: string | null;
+    icon?: string | null;
+    iconUrl?: string | null;
+    iconPath?: string | null;
+    imageUrl?: string | null;
+  } | null;
+  icon?: string | null;
+  iconUrl?: string | null;
+  iconPath?: string | null;
+  imageUrl?: string | null;
+};
+
+function getLootQuantity(loot: AutoCombatRewardLootViewModel) {
+  const quantity = Number(loot.quantity ?? 0);
+
+  return Number.isFinite(quantity) ? Math.max(0, Math.floor(quantity)) : 0;
+}
+
+function getLootItemName(loot: AutoCombatRewardLootViewModel) {
+  const looseLoot = loot as AutoCombatLootWithOptionalIcon;
+
+  return String(looseLoot.itemName ?? looseLoot.item?.name ?? 'Item').trim();
+}
+
+function getLootImageUrl(loot: AutoCombatRewardLootViewModel) {
+  const looseLoot = loot as AutoCombatLootWithOptionalIcon;
+  const possibleImage =
+    looseLoot.item?.iconUrl ??
+    looseLoot.item?.imageUrl ??
+    looseLoot.item?.iconPath ??
+    looseLoot.item?.icon ??
+    looseLoot.iconUrl ??
+    looseLoot.imageUrl ??
+    looseLoot.iconPath ??
+    looseLoot.icon;
+
+  if (typeof possibleImage !== 'string') {
+    return null;
+  }
+
+  const trimmedImage = possibleImage.trim();
+
+  return trimmedImage.length > 0 ? trimmedImage : null;
+}
+
+function buildAutoCombatLootTotals(status: AutoCombatStatusResponse | null) {
+  const totals = new Map<string, AutoCombatRewardLootViewModel>();
+  const processing = status?.processing as
+    | { loot?: { items?: AutoCombatRewardLootViewModel[] | null } | null }
+    | null
+    | undefined;
+  const loots = status?.rewards?.loots ?? processing?.loot?.items ?? [];
+
+  for (const loot of loots) {
+    if (!loot?.itemId) {
+      continue;
+    }
+
+    const quantity = getLootQuantity(loot);
+
+    if (quantity <= 0) {
+      continue;
+    }
+
+    const current = totals.get(loot.itemId);
+
+    totals.set(loot.itemId, {
+      ...loot,
+      quantity: (current?.quantity ?? 0) + quantity,
+    });
+  }
+
+  return totals;
+}
 
 export const AutoCombatRealtimeContext =
   createContext<AutoCombatRealtimeContextValue | null>(null);
@@ -317,6 +402,12 @@ export function AutoCombatRealtimeProvider({
   const recentEventsRequestRef = useRef(0);
   const wasBackgroundedRef = useRef(false);
   const lastInactiveStatusSignatureRef = useRef<string | null>(null);
+  const lootNotificationTrackerRef = useRef<AutoCombatLootNotificationTracker>({
+    sessionId: null,
+    totalsByItemId: new Map(),
+    hasBaseline: false,
+  });
+  const { notifyLoot } = useLootNotifications();
 
   useEffect(() => {
     stateRef.current = state;
@@ -329,6 +420,11 @@ export function AutoCombatRealtimeProvider({
     });
 
     lastInactiveStatusSignatureRef.current = null;
+    lootNotificationTrackerRef.current = {
+      sessionId: null,
+      totalsByItemId: new Map(),
+      hasBaseline: false,
+    };
   }, [normalizedCharacterId]);
 
   const clearScheduledReload = useCallback(() => {
@@ -428,8 +524,79 @@ export function AutoCombatRealtimeProvider({
     });
   }, [clearScheduledActiveEvent]);
 
+
+  const publishConfirmedLootNotifications = useCallback(
+    (status: AutoCombatStatusResponse | null) => {
+      if (!normalizedCharacterId || !status) return;
+
+      const session = getStatusSession(status);
+      const sessionId = session?.id ?? null;
+      const nextLootTotals = buildAutoCombatLootTotals(status);
+      const tracker = lootNotificationTrackerRef.current;
+
+      if (!tracker.hasBaseline || tracker.sessionId !== sessionId) {
+        lootNotificationTrackerRef.current = {
+          sessionId,
+          totalsByItemId: new Map(
+            Array.from(nextLootTotals.entries()).map(([itemId, loot]) => [
+              itemId,
+              loot.quantity,
+            ]),
+          ),
+          hasBaseline: true,
+        };
+        return;
+      }
+
+      let changed = false;
+      const nextTotalsByItemId = new Map(tracker.totalsByItemId);
+
+      for (const [itemId, loot] of nextLootTotals) {
+        const previousQuantity = tracker.totalsByItemId.get(itemId) ?? 0;
+        const nextQuantity = getLootQuantity(loot);
+        const receivedQuantity = nextQuantity - previousQuantity;
+
+        nextTotalsByItemId.set(itemId, nextQuantity);
+
+        if (receivedQuantity <= 0) {
+          continue;
+        }
+
+        changed = true;
+
+        notifyLoot({
+          idempotencyKey: [
+            'auto-combat',
+            normalizedCharacterId,
+            sessionId ?? 'no-session',
+            itemId,
+            previousQuantity,
+            nextQuantity,
+          ].join('|'),
+          itemId,
+          itemName: getLootItemName(loot),
+          quantity: receivedQuantity,
+          imageUrl: getLootImageUrl(loot),
+          rarity: loot.rarity,
+          source: 'auto-combat',
+        });
+      }
+
+      if (changed || nextLootTotals.size !== tracker.totalsByItemId.size) {
+        lootNotificationTrackerRef.current = {
+          sessionId,
+          totalsByItemId: nextTotalsByItemId,
+          hasBaseline: true,
+        };
+      }
+    },
+    [normalizedCharacterId, notifyLoot],
+  );
+
   const reload = useCallback(
-    async (_options?: ReloadOptions) => {
+    async (options?: ReloadOptions) => {
+      void options;
+
       if (!normalizedCharacterId || isLoadingRef.current) return;
 
       const currentState = stateRef.current;
@@ -465,6 +632,8 @@ export function AutoCombatRealtimeProvider({
           });
         }
 
+        publishConfirmedLootNotifications(statusData);
+
         dispatch({
           type: 'HYDRATE_STATUS',
           characterId: normalizedCharacterId,
@@ -488,7 +657,7 @@ export function AutoCombatRealtimeProvider({
         }
       }
     },
-    [normalizedCharacterId],
+    [normalizedCharacterId, publishConfirmedLootNotifications],
   );
 
   const scheduleReload = useCallback(
@@ -614,6 +783,8 @@ export function AutoCombatRealtimeProvider({
         const session = getStatusSession(response);
         const sessionId = session?.id ?? null;
 
+        publishConfirmedLootNotifications(response);
+
         dispatch({
           type: 'HYDRATE_STATUS',
           characterId: normalizedCharacterId,
@@ -666,6 +837,7 @@ export function AutoCombatRealtimeProvider({
       clearScheduledReload,
       clearSessionVisualState,
       normalizedCharacterId,
+      publishConfirmedLootNotifications,
       scheduleReload,
     ],
   );
@@ -681,6 +853,8 @@ export function AutoCombatRealtimeProvider({
       const response = await stopAutoCombat(normalizedCharacterId);
 
       lastInactiveStatusSignatureRef.current = getStableStatusSignature(response);
+
+      publishConfirmedLootNotifications(response);
 
       dispatch({
         type: 'HYDRATE_STATUS',
@@ -716,6 +890,7 @@ export function AutoCombatRealtimeProvider({
     clearScheduledReload,
     flushVisualQueueWithoutAnimation,
     normalizedCharacterId,
+    publishConfirmedLootNotifications,
   ]);
 
   const handleStatusPayload = useCallback(
@@ -740,13 +915,19 @@ export function AutoCombatRealtimeProvider({
         flushVisualQueueWithoutAnimation();
       }
 
+      publishConfirmedLootNotifications(payload);
+
       dispatch({
         type: 'HYDRATE_STATUS',
         characterId: normalizedCharacterId,
         status: payload,
       });
     },
-    [flushVisualQueueWithoutAnimation, normalizedCharacterId],
+    [
+      flushVisualQueueWithoutAnimation,
+      normalizedCharacterId,
+      publishConfirmedLootNotifications,
+    ],
   );
 
   const handleFinishedPayload = useCallback(
@@ -756,6 +937,8 @@ export function AutoCombatRealtimeProvider({
       flushVisualQueueWithoutAnimation();
 
       lastInactiveStatusSignatureRef.current = getStableStatusSignature(payload);
+
+      publishConfirmedLootNotifications(payload);
 
       dispatch({
         type: 'HYDRATE_STATUS',
@@ -773,6 +956,7 @@ export function AutoCombatRealtimeProvider({
       clearScheduledReload,
       flushVisualQueueWithoutAnimation,
       normalizedCharacterId,
+      publishConfirmedLootNotifications,
     ],
   );
 
@@ -784,6 +968,8 @@ export function AutoCombatRealtimeProvider({
 
       lastInactiveStatusSignatureRef.current = getStableStatusSignature(payload);
 
+      publishConfirmedLootNotifications(payload);
+
       dispatch({
         type: 'HYDRATE_STATUS',
         characterId: normalizedCharacterId,
@@ -800,6 +986,7 @@ export function AutoCombatRealtimeProvider({
       clearScheduledReload,
       flushVisualQueueWithoutAnimation,
       normalizedCharacterId,
+      publishConfirmedLootNotifications,
     ],
   );
 
