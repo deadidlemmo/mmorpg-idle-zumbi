@@ -189,6 +189,7 @@ export function AutoCombatPage() {
   const autoPotionConfigRef =
     useRef<CharacterPotionConfigWithItem | null>(null);
   const selectedPotionItemIdRef = useRef('');
+  const hasPendingRealtimeVisualRef = useRef(false);
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
   const stableActiveMobRef = useRef<{
     sessionId: string | null;
@@ -246,6 +247,10 @@ export function AutoCombatPage() {
     (providerQueueLength > 0 || Boolean(providerActiveEvent));
 
   const showActiveSession = hasActiveSession || hasPendingRealtimeVisual;
+
+  useEffect(() => {
+    hasPendingRealtimeVisualRef.current = hasPendingRealtimeVisual;
+  }, [hasPendingRealtimeVisual]);
 
   useEffect(() => {
     if (!showActiveSession) {
