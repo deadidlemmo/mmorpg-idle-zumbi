@@ -12,6 +12,7 @@ export interface LootNotificationPayload {
 
 export interface LootNotificationContextValue {
   notifyLoot: (payload: LootNotificationPayload) => void;
+  notifyLootBatch: (payloads: LootNotificationPayload[]) => void;
 }
 
 export const LootNotificationContext =

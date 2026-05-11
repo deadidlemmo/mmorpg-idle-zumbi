@@ -75,44 +75,66 @@ export function LootNotificationProvider({
     setNotifications((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
-  const notifyLoot = useCallback(
-    (payload: LootNotificationPayload) => {
-      const quantity = normalizeQuantity(payload.quantity);
-      const itemName = payload.itemName.trim();
-      const idempotencyKey = payload.idempotencyKey.trim();
-
-      if (!idempotencyKey || !itemName || quantity <= 0) {
+  const notifyLootBatch = useCallback(
+    (payloads: LootNotificationPayload[]) => {
+      if (payloads.length <= 0) {
         return;
       }
 
-      if (processedKeysRef.current.has(idempotencyKey)) {
+      const createdAt = Date.now();
+      const nextToasts: LootNotificationToast[] = [];
+
+      for (const payload of payloads) {
+        const quantity = normalizeQuantity(payload.quantity);
+        const itemName = payload.itemName.trim();
+        const idempotencyKey = payload.idempotencyKey.trim();
+
+        if (!idempotencyKey || !itemName || quantity <= 0) {
+          continue;
+        }
+
+        if (processedKeysRef.current.has(idempotencyKey)) {
+          continue;
+        }
+
+        processedKeysRef.current.add(idempotencyKey);
+
+        nextToasts.push({
+          ...payload,
+          id: `${idempotencyKey}-${createdAt}-${nextToasts.length}`,
+          idempotencyKey,
+          itemName,
+          quantity,
+          createdAt,
+        });
+      }
+
+      if (nextToasts.length <= 0) {
         return;
       }
 
-      processedKeysRef.current.add(idempotencyKey);
       processedKeysRef.current = trimProcessedKeys(processedKeysRef.current);
 
-      const id = `${idempotencyKey}-${Date.now()}`;
-      const toast: LootNotificationToast = {
-        ...payload,
-        id,
-        idempotencyKey,
-        itemName,
-        quantity,
-        createdAt: Date.now(),
-      };
-
       setNotifications((current) =>
-        [toast, ...current].slice(0, MAX_VISIBLE_LOOT_NOTIFICATIONS),
+        [...nextToasts, ...current].slice(0, MAX_VISIBLE_LOOT_NOTIFICATIONS),
       );
 
-      const timeoutId = window.setTimeout(() => {
-        removeNotification(id);
-      }, LOOT_NOTIFICATION_TTL_MS);
+      for (const toast of nextToasts) {
+        const timeoutId = window.setTimeout(() => {
+          removeNotification(toast.id);
+        }, LOOT_NOTIFICATION_TTL_MS);
 
-      timersRef.current.set(id, timeoutId);
+        timersRef.current.set(toast.id, timeoutId);
+      }
     },
     [removeNotification],
+  );
+
+  const notifyLoot = useCallback(
+    (payload: LootNotificationPayload) => {
+      notifyLootBatch([payload]);
+    },
+    [notifyLootBatch],
   );
 
   useEffect(() => {
@@ -128,8 +150,8 @@ export function LootNotificationProvider({
   }, []);
 
   const value = useMemo<LootNotificationContextValue>(
-    () => ({ notifyLoot }),
-    [notifyLoot],
+    () => ({ notifyLoot, notifyLootBatch }),
+    [notifyLoot, notifyLootBatch],
   );
 
   return (

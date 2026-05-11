@@ -8,7 +8,10 @@ import {
   type ReactNode,
 } from 'react';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
-import { useLootNotifications } from '../../loot-notifications/lootNotificationContext';
+import {
+  useLootNotifications,
+  type LootNotificationPayload,
+} from '../../loot-notifications/lootNotificationContext';
 import type { CharacterOverviewResponse } from '../../dashboard/types/dashboard.types';
 import {
   getAutoCombatRecentEvents,
@@ -141,6 +144,14 @@ function buildAutoCombatLootTotals(status: AutoCombatStatusResponse | null) {
   }
 
   return totals;
+}
+
+function getAutoCombatLootTotalQuantity(
+  totals: Map<string, AutoCombatRewardLootViewModel>,
+) {
+  return Array.from(totals.values()).reduce((total, loot) => {
+    return total + getLootQuantity(loot);
+  }, 0);
 }
 
 export const AutoCombatRealtimeContext =
@@ -407,7 +418,7 @@ export function AutoCombatRealtimeProvider({
     totalsByItemId: new Map(),
     hasBaseline: false,
   });
-  const { notifyLoot } = useLootNotifications();
+  const { notifyLootBatch } = useLootNotifications();
 
   useEffect(() => {
     stateRef.current = state;
@@ -526,7 +537,7 @@ export function AutoCombatRealtimeProvider({
 
 
   const publishConfirmedLootNotifications = useCallback(
-    (status: AutoCombatStatusResponse | null) => {
+    (status: AutoCombatStatusResponse | null, releasedLootTotal?: number | null) => {
       if (!normalizedCharacterId || !status) return;
 
       const session = getStatusSession(status);
@@ -540,7 +551,7 @@ export function AutoCombatRealtimeProvider({
           totalsByItemId: new Map(
             Array.from(nextLootTotals.entries()).map(([itemId, loot]) => [
               itemId,
-              loot.quantity,
+              getLootQuantity(loot),
             ]),
           ),
           hasBaseline: true,
@@ -548,8 +559,19 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
-      let changed = false;
+      const confirmedLootTotal = getAutoCombatLootTotalQuantity(nextLootTotals);
+
+      if (releasedLootTotal === null || releasedLootTotal === undefined) {
+        return;
+      }
+
+      if (releasedLootTotal < confirmedLootTotal) {
+        return;
+      }
+
+      let changed = nextLootTotals.size !== tracker.totalsByItemId.size;
       const nextTotalsByItemId = new Map(tracker.totalsByItemId);
+      const lootBatch: LootNotificationPayload[] = [];
 
       for (const [itemId, loot] of nextLootTotals) {
         const previousQuantity = tracker.totalsByItemId.get(itemId) ?? 0;
@@ -564,7 +586,7 @@ export function AutoCombatRealtimeProvider({
 
         changed = true;
 
-        notifyLoot({
+        lootBatch.push({
           idempotencyKey: [
             'auto-combat',
             normalizedCharacterId,
@@ -582,7 +604,11 @@ export function AutoCombatRealtimeProvider({
         });
       }
 
-      if (changed || nextLootTotals.size !== tracker.totalsByItemId.size) {
+      if (lootBatch.length > 0) {
+        notifyLootBatch(lootBatch);
+      }
+
+      if (changed) {
         lootNotificationTrackerRef.current = {
           sessionId,
           totalsByItemId: nextTotalsByItemId,
@@ -590,8 +616,19 @@ export function AutoCombatRealtimeProvider({
         };
       }
     },
-    [normalizedCharacterId, notifyLoot],
+    [normalizedCharacterId, notifyLootBatch],
   );
+
+  useEffect(() => {
+    publishConfirmedLootNotifications(
+      state.status,
+      state.displayTotals?.totalLoot ?? null,
+    );
+  }, [
+    publishConfirmedLootNotifications,
+    state.displayTotals?.totalLoot,
+    state.status,
+  ]);
 
   const reload = useCallback(
     async (options?: ReloadOptions) => {
@@ -632,8 +669,6 @@ export function AutoCombatRealtimeProvider({
           });
         }
 
-        publishConfirmedLootNotifications(statusData);
-
         dispatch({
           type: 'HYDRATE_STATUS',
           characterId: normalizedCharacterId,
@@ -657,7 +692,7 @@ export function AutoCombatRealtimeProvider({
         }
       }
     },
-    [normalizedCharacterId, publishConfirmedLootNotifications],
+    [normalizedCharacterId],
   );
 
   const scheduleReload = useCallback(
@@ -783,8 +818,6 @@ export function AutoCombatRealtimeProvider({
         const session = getStatusSession(response);
         const sessionId = session?.id ?? null;
 
-        publishConfirmedLootNotifications(response);
-
         dispatch({
           type: 'HYDRATE_STATUS',
           characterId: normalizedCharacterId,
@@ -837,7 +870,6 @@ export function AutoCombatRealtimeProvider({
       clearScheduledReload,
       clearSessionVisualState,
       normalizedCharacterId,
-      publishConfirmedLootNotifications,
       scheduleReload,
     ],
   );
@@ -853,8 +885,6 @@ export function AutoCombatRealtimeProvider({
       const response = await stopAutoCombat(normalizedCharacterId);
 
       lastInactiveStatusSignatureRef.current = getStableStatusSignature(response);
-
-      publishConfirmedLootNotifications(response);
 
       dispatch({
         type: 'HYDRATE_STATUS',
@@ -890,7 +920,6 @@ export function AutoCombatRealtimeProvider({
     clearScheduledReload,
     flushVisualQueueWithoutAnimation,
     normalizedCharacterId,
-    publishConfirmedLootNotifications,
   ]);
 
   const handleStatusPayload = useCallback(
@@ -915,8 +944,6 @@ export function AutoCombatRealtimeProvider({
         flushVisualQueueWithoutAnimation();
       }
 
-      publishConfirmedLootNotifications(payload);
-
       dispatch({
         type: 'HYDRATE_STATUS',
         characterId: normalizedCharacterId,
@@ -926,7 +953,6 @@ export function AutoCombatRealtimeProvider({
     [
       flushVisualQueueWithoutAnimation,
       normalizedCharacterId,
-      publishConfirmedLootNotifications,
     ],
   );
 
@@ -938,8 +964,6 @@ export function AutoCombatRealtimeProvider({
 
       lastInactiveStatusSignatureRef.current = getStableStatusSignature(payload);
 
-      publishConfirmedLootNotifications(payload);
-
       dispatch({
         type: 'HYDRATE_STATUS',
         characterId: normalizedCharacterId,
@@ -956,7 +980,6 @@ export function AutoCombatRealtimeProvider({
       clearScheduledReload,
       flushVisualQueueWithoutAnimation,
       normalizedCharacterId,
-      publishConfirmedLootNotifications,
     ],
   );
 
@@ -968,8 +991,6 @@ export function AutoCombatRealtimeProvider({
 
       lastInactiveStatusSignatureRef.current = getStableStatusSignature(payload);
 
-      publishConfirmedLootNotifications(payload);
-
       dispatch({
         type: 'HYDRATE_STATUS',
         characterId: normalizedCharacterId,
@@ -986,7 +1007,6 @@ export function AutoCombatRealtimeProvider({
       clearScheduledReload,
       flushVisualQueueWithoutAnimation,
       normalizedCharacterId,
-      publishConfirmedLootNotifications,
     ],
   );
 
