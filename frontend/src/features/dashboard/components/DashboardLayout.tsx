@@ -1326,14 +1326,14 @@ function DashboardLayoutContent({
                 </div>
               </div>
 
-              <div className="dashboard-hero__command">
+              <div className="dashboard-hero__status">
                 <div
                   className="dashboard-hero__level-badge"
                   aria-label={`Nível ${heroCharacter.level}`}
                   title={`Nível ${heroCharacter.level}`}
                 >
-                  <small>Patente</small>
-                  <strong>Nível {heroCharacter.level}</strong>
+                  <span>Nível</span>
+                  <strong>{heroCharacter.level}</strong>
                 </div>
 
                 <div className="dashboard-hero__wallet" aria-label="Moedas">
