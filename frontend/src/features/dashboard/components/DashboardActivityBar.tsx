@@ -30,6 +30,8 @@ type ActivityBarItem = {
   progressPercent: number;
   primaryMetric: string;
   secondaryMetric: string;
+  indicatorMetric?: string | null;
+  indicatorLabel?: string | null;
   href: string;
 
   imageUrl?: string | null;
@@ -463,6 +465,12 @@ function formatCompactNumber(value: unknown) {
   }
 
   return String(amount);
+}
+
+function formatSessionCountIndicator(value: unknown) {
+  const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
+
+  return amount.toLocaleString('pt-BR');
 }
 
 function formatPercentLabel(value: unknown) {
@@ -1331,6 +1339,8 @@ function buildAutoCombatItemFromRealtime(params: {
     progressPercent: mobHp.percent,
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
     secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
+    indicatorMetric: formatSessionCountIndicator(totalKills),
+    indicatorLabel: `Abates na sessão: ${formatSessionCountIndicator(totalKills)}`,
     href: `/dashboard/${characterId}/auto-combat`,
 
     imageUrl: getActivityMobPortraitUrl(mobName),
@@ -1437,6 +1447,8 @@ function buildAutoCombatItemFromOverview(params: {
     progressPercent: mobHp.percent,
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
     secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
+    indicatorMetric: formatSessionCountIndicator(totalKills),
+    indicatorLabel: `Abates na sessão: ${formatSessionCountIndicator(totalKills)}`,
     href: `/dashboard/${characterId}/auto-combat`,
 
     imageUrl: getActivityMobPortraitUrl(currentMob?.name),
@@ -1611,6 +1623,8 @@ function buildGatheringItemFromRealtime(params: {
       collectedXp,
       ratePerHour,
     }),
+    indicatorMetric: formatSessionCountIndicator(collectedQuantity),
+    indicatorLabel: `Coletados na sessão: ${formatSessionCountIndicator(collectedQuantity)}`,
     href,
 
     imageUrl: getGatheringMaterialIconUrl(material),
@@ -1686,6 +1700,8 @@ function buildGatheringItemFromOverview(params: {
       collectedXp,
       ratePerHour,
     }),
+    indicatorMetric: formatSessionCountIndicator(collectedQuantity),
+    indicatorLabel: `Coletados na sessão: ${formatSessionCountIndicator(collectedQuantity)}`,
     href,
 
     imageUrl: getGatheringMaterialIconUrl(material),
@@ -1960,9 +1976,13 @@ export function DashboardActivityBar({
                     ) : null}
                   </div>
 
-                  {item.type === 'gathering' ? (
-                    <span className="dashboard-activity-bar__percent-pill">
-                      {progressPercentLabel}%
+                  {item.indicatorMetric ? (
+                    <span
+                      className="dashboard-activity-bar__percent-pill dashboard-activity-bar__session-indicator"
+                      aria-label={item.indicatorLabel ?? undefined}
+                      title={item.indicatorLabel ?? undefined}
+                    >
+                      {item.indicatorMetric}
                     </span>
                   ) : null}
                 </div>
@@ -2069,6 +2089,16 @@ export function DashboardActivityBar({
                       : 'Expedição ativa'}
                   </span>
                   <strong>{item.title}</strong>
+
+                  {item.indicatorMetric ? (
+                    <span
+                      className="dashboard-activity-bar__compact-indicator"
+                      aria-label={item.indicatorLabel ?? undefined}
+                      title={item.indicatorLabel ?? undefined}
+                    >
+                      {item.indicatorMetric}
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="dashboard-activity-bar__compact-track-block">
