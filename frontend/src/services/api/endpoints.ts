@@ -32,4 +32,8 @@ export const API_ENDPOINTS = {
     collect: (characterId: string) => `/gathering/${characterId}/collect`,
     stop: (characterId: string) => `/gathering/${characterId}/stop`,
   },
+
+  inventory: {
+    byCharacter: (characterId: string) => `/inventory/${characterId}`,
+  },
 } as const;
