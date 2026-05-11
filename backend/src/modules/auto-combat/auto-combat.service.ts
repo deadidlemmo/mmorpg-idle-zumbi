@@ -1275,9 +1275,7 @@ export class AutoCombatService implements OnModuleDestroy {
     );
   }
 
-  private getEffectiveRoundDurationSeconds(
-    roundDurationSeconds?: number | null,
-  ) {
+  private getEffectiveRoundDurationSeconds(roundDurationSeconds?: number | null) {
     return this.clampNumber(
       Math.floor(
         roundDurationSeconds ?? AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS,
