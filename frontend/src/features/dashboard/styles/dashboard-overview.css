@@ -7,24 +7,24 @@
 
   position: relative;
   display: grid;
-  grid-template-columns: clamp(9rem, 12vw, 10.4rem) minmax(0, 1fr);
-  gap: clamp(1.5rem, 2.4vw, 2.2rem);
-  align-items: center;
+  grid-template-columns: clamp(8.2rem, 11vw, 9.6rem) minmax(0, 1fr);
+  gap: clamp(1rem, 2vw, 1.7rem);
+  align-items: stretch;
   margin-bottom: 1rem;
-  padding: clamp(1.35rem, 2.3vw, 1.85rem);
+  padding: clamp(0.85rem, 1.6vw, 1.12rem);
   overflow: hidden;
   background:
     radial-gradient(
-      circle at 18% 18%,
-      color-mix(in srgb, var(--hero-accent) 22%, transparent),
-      transparent 18rem
+      circle at 16% 18%,
+      color-mix(in srgb, var(--hero-accent) 24%, transparent),
+      transparent 17rem
     ),
-    radial-gradient(circle at 92% 8%, rgba(255, 255, 255, 0.07), transparent 17rem),
+    radial-gradient(circle at 88% 10%, rgba(255, 255, 255, 0.065), transparent 17rem),
     linear-gradient(
       135deg,
       rgba(47, 47, 61, 0.94),
-      rgba(16, 25, 22, 0.96) 48%,
-      rgba(8, 12, 11, 0.98)
+      rgba(16, 25, 22, 0.97) 48%,
+      rgba(8, 12, 11, 0.99)
     );
   border: 1px solid
     color-mix(in srgb, var(--hero-accent) 62%, rgba(255, 255, 255, 0.18));
@@ -59,17 +59,14 @@
 .dashboard-hero::after {
   content: '';
   position: absolute;
-  inset: auto 1.2rem 0;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--hero-accent) 82%, #fff 12%),
-    transparent
-  );
-  opacity: 0.58;
+  inset: 0;
   pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 12%, rgba(255, 255, 255, 0.08), transparent 88%)
+      top / 100% 1px no-repeat,
+    linear-gradient(90deg, transparent 12%, color-mix(in srgb, var(--hero-accent) 70%, #fff 12%), transparent 88%)
+      bottom / 100% 2px no-repeat;
+  opacity: 0.58;
 }
 
 .dashboard-hero > * {
@@ -78,31 +75,44 @@
 }
 
 .dashboard-hero__avatar {
+  position: relative;
   display: grid;
   place-items: center;
-  justify-self: center;
-  width: clamp(7.4rem, 10vw, 9.25rem);
-  height: clamp(7.4rem, 10vw, 9.25rem);
+  justify-self: stretch;
+  align-self: stretch;
+  min-height: clamp(9.4rem, 13vw, 11.4rem);
   overflow: hidden;
   background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
     radial-gradient(
       circle at center,
-      color-mix(in srgb, var(--hero-accent) 18%, transparent),
+      color-mix(in srgb, var(--hero-accent) 22%, transparent),
       transparent 70%
     ),
     rgba(5, 8, 9, 0.72);
   border: 1px solid
     color-mix(in srgb, var(--hero-accent) 62%, rgba(255, 255, 255, 0.22));
-  border-radius: 1rem;
+  border-radius: 1.05rem;
   box-shadow:
     0 16px 30px rgba(0, 0, 0, 0.36),
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 0 22px color-mix(in srgb, var(--hero-accent) 18%, transparent);
 }
 
+.dashboard-hero__avatar::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 34%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(3, 7, 7, 0.48));
+}
+
 .dashboard-hero__avatar img {
+  position: relative;
+  z-index: 1;
   width: auto;
-  height: 94%;
+  height: 92%;
   max-width: 100%;
   object-fit: contain;
   object-position: center bottom;
@@ -110,28 +120,36 @@
 }
 
 .dashboard-hero__avatar span {
+  position: relative;
+  z-index: 1;
   font-family: var(--font-title);
   font-size: 1.8rem;
 }
 
 .dashboard-hero__content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(10.4rem, 11.6rem);
   grid-template-areas:
-    'class level'
-    'name level'
-    'meta level'
-    'wallet wallet'
+    'identity command'
     'resources resources';
-  align-items: start;
-  column-gap: 1.2rem;
-  row-gap: 0.45rem;
+  align-content: stretch;
+  column-gap: clamp(1rem, 2vw, 1.5rem);
+  row-gap: 0.42rem;
   min-width: 0;
   width: 100%;
 }
 
+.dashboard-hero__identity {
+  grid-area: identity;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.12rem 0 clamp(0.35rem, 0.9vw, 0.55rem);
+}
+
+.dashboard-hero__identity > span,
 .dashboard-hero__content > span {
-  grid-area: class;
   display: block;
   min-width: 0;
   color: color-mix(in srgb, var(--hero-accent) 88%, #ffffff 16%);
@@ -144,14 +162,12 @@
 }
 
 .dashboard-hero__heading {
-  grid-area: name;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   width: 100%;
   min-width: 0;
-  margin: 0.08rem 0 0.08rem;
+  margin: 0.34rem 0 0.38rem;
 }
 
 .dashboard-hero__heading h2,
@@ -159,7 +175,7 @@
   min-width: 0;
   margin: 0;
   color: #fff7df;
-  font-size: clamp(2.35rem, 4.2vw, 3.45rem);
+  font-size: clamp(2.05rem, 3.55vw, 2.9rem);
   line-height: 0.95;
   overflow-wrap: anywhere;
   text-shadow:
@@ -167,17 +183,26 @@
     0 0 24px color-mix(in srgb, var(--hero-accent) 18%, transparent);
 }
 
+.dashboard-hero__command {
+  grid-area: command;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.42rem;
+  min-width: 0;
+  padding-left: clamp(1rem, 1.8vw, 1.35rem);
+  border-left: 1px solid rgba(231, 227, 216, 0.08);
+}
+
 .dashboard-hero__level-badge {
-  grid-area: level;
-  justify-self: end;
-  align-self: start;
-  margin-top: 0.1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 92px;
-  min-height: 42px;
-  padding: 0.72rem 1rem;
+  flex-direction: column;
+  gap: 0.16rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.48rem 0.78rem;
   color: #f5f0df;
   font-family: var(--font-title);
   background:
@@ -196,24 +221,24 @@
 
 .dashboard-hero__level-badge small {
   display: block;
-  color: color-mix(in srgb, #f5f0df 82%, var(--hero-accent));
-  font-size: 0.84rem;
+  color: color-mix(in srgb, #f5f0df 72%, var(--hero-accent));
+  font-size: 0.54rem;
   font-weight: 900;
   line-height: 1;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
 }
 
 .dashboard-hero__level-badge strong {
   display: block;
   color: #fff8df;
-  font-size: 0.94rem;
+  font-size: 0.86rem;
   font-weight: 950;
   line-height: 1;
   letter-spacing: 0.01em;
 }
 
 .dashboard-hero__meta {
-  grid-area: meta;
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
@@ -223,14 +248,14 @@
 
 .dashboard-hero__meta strong {
   display: inline-flex;
-  min-height: 1.75rem;
+  min-height: 1.48rem;
   align-items: center;
-  padding: 0.32rem 0.76rem;
+  padding: 0.24rem 0.66rem;
   color: #e9f4df;
   background: rgba(190, 210, 176, 0.12);
   border: 1px solid rgba(220, 240, 210, 0.1);
   border-radius: 999px;
-  font-size: 0.88rem;
+  font-size: 0.7rem;
   font-weight: 800;
   line-height: 1;
 }
@@ -241,12 +266,9 @@
    ========================================================= */
 
 .dashboard-hero__wallet {
-  grid-area: wallet;
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 0.58rem;
-  margin-top: 0.1rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.42rem;
 }
 
 .dashboard-hero__currency {
@@ -255,9 +277,9 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.46rem;
-  min-width: 90px;
-  min-height: 34px;
-  padding: 0.34rem 0.68rem 0.34rem 0.56rem;
+  min-width: 78px;
+  min-height: 30px;
+  padding: 0.27rem 0.58rem 0.27rem 0.48rem;
   overflow: hidden;
   color: #fff8e8;
   background:
@@ -305,7 +327,7 @@
 .dashboard-hero__currency strong {
   color: #fff8e8;
   font-family: var(--font-number);
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 950;
   line-height: 1;
   white-space: nowrap;
@@ -315,11 +337,11 @@
 .dashboard-hero__currency::before {
   display: inline-grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   margin-right: auto;
   font-family: var(--font-title);
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 950;
   line-height: 1;
   border-radius: 999px;
@@ -366,9 +388,37 @@
   grid-area: resources;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.86rem;
+  gap: 0.5rem;
   width: 100%;
-  margin-top: 0.35rem;
+  margin-top: 0;
+  padding-top: 0.58rem;
+  border-top: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+.dashboard-hero__resources-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.52rem;
+  min-width: 0;
+}
+
+.dashboard-hero__resources-heading span {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--hero-accent) 78%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.66);
+}
+
+.dashboard-hero__resources-heading i {
+  display: block;
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--hero-accent) 45%, rgba(231, 227, 216, 0.18)), transparent);
 }
 
 .dashboard-hero__resource {
@@ -377,16 +427,16 @@
   flex-direction: column;
   gap: 0;
   min-width: 0;
-  padding: 0.74rem 0.76rem 0.78rem;
+  padding: 0.5rem 0.66rem 0.54rem;
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.062), rgba(255, 255, 255, 0.018)),
     rgba(3, 7, 7, 0.44);
   border: 1px solid rgba(255, 255, 255, 0.058);
-  border-radius: 0.86rem;
+  border-radius: 0.78rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.045),
-    inset 0 -16px 30px rgba(0, 0, 0, 0.14),
+    inset 0 -10px 22px rgba(0, 0, 0, 0.14),
     0 10px 20px rgba(0, 0, 0, 0.14);
 }
 
@@ -412,7 +462,7 @@
   justify-content: space-between;
   gap: 0.85rem;
   min-width: 0;
-  margin-bottom: 0.52rem;
+  margin-bottom: 0.34rem;
 }
 
 .dashboard-hero__resource-title {
@@ -429,7 +479,7 @@
   display: block;
   color: rgba(255, 249, 226, 0.94);
   font-family: var(--font-title);
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 950;
   line-height: 1;
   letter-spacing: 0.055em;
@@ -439,7 +489,7 @@
 .dashboard-hero__resource-title small {
   display: block;
   color: rgba(220, 225, 211, 0.55);
-  font-size: 0.65rem;
+  font-size: 0.58rem;
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: 0.03em;
@@ -473,11 +523,11 @@
   align-items: center;
   justify-content: center;
   min-width: 44px;
-  min-height: 25px;
-  padding: 0.25rem 0.42rem;
+  min-height: 22px;
+  padding: 0.2rem 0.36rem;
   color: #fff8e8;
   font-family: var(--font-title);
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-style: normal;
   font-weight: 950;
   line-height: 1;
@@ -490,7 +540,7 @@
 .dashboard-hero__resource-track {
   position: relative;
   z-index: 1;
-  height: 13px;
+  height: 10px;
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.038), transparent),
@@ -578,7 +628,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.52rem;
   color: var(--text-muted);
   font-size: 0.74rem;
 }
@@ -607,6 +657,39 @@
 /* =========================================================
    HERO DO PERSONAGEM — REFINO MOBILE
    ========================================================= */
+
+@media (max-width: 860px) {
+  .dashboard-hero {
+    grid-template-columns: clamp(7rem, 18vw, 8.5rem) minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .dashboard-hero__content {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'identity'
+      'command'
+      'resources';
+  }
+
+  .dashboard-hero__identity {
+    padding-bottom: 0;
+  }
+
+  .dashboard-hero__command {
+    display: grid;
+    grid-template-columns: minmax(8rem, 0.8fr) minmax(0, 1.2fr);
+    align-items: stretch;
+    padding-top: 0.9rem;
+    padding-left: 0;
+    border-top: 1px solid rgba(231, 227, 216, 0.08);
+    border-left: 0;
+  }
+
+  .dashboard-hero__wallet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 
 @media (max-width: 720px) {
   .dashboard-hero {
@@ -641,26 +724,20 @@
   }
 
   .dashboard-hero::after {
-    inset-inline: 0.9rem;
     opacity: 0.42;
   }
 
   .dashboard-hero__avatar {
     grid-column: 1;
-    grid-row: 1 / span 3;
-    align-self: start;
-    justify-self: start;
+    grid-row: 1;
     width: 78px;
+    min-height: 78px;
     height: 78px;
-    border-radius: 0.86rem;
+    border-radius: 0.78rem;
     box-shadow:
       0 10px 20px rgba(0, 0, 0, 0.34),
       inset 0 1px 0 rgba(255, 255, 255, 0.06),
       0 0 18px color-mix(in srgb, var(--hero-accent) 18%, transparent);
-  }
-
-  .dashboard-hero__avatar img {
-    height: 96%;
   }
 
   .dashboard-hero__avatar span {
@@ -668,25 +745,27 @@
   }
 
   .dashboard-hero__content {
-    display: contents;
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    grid-template-areas:
+      'avatar-space identity'
+      'command command'
+      'resources resources';
+    gap: 0.72rem;
   }
 
-  .dashboard-hero__content > span,
-  .dashboard-hero__heading,
-  .dashboard-hero__meta,
-  .dashboard-hero__wallet,
-  .dashboard-hero__resources,
-  .dashboard-hero__xp {
-    position: relative;
-    z-index: 1;
+  .dashboard-hero__identity {
+    grid-area: identity;
+    min-height: 78px;
+    justify-content: center;
+    padding: 0;
   }
 
+  .dashboard-hero__identity > span,
   .dashboard-hero__content > span {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: end;
     color: color-mix(in srgb, var(--hero-accent) 94%, #ffffff 22%);
-    font-size: 0.68rem;
+    font-size: 0.58rem;
     line-height: 1;
     letter-spacing: 0.14em;
     text-shadow:
@@ -695,11 +774,8 @@
   }
 
   .dashboard-hero__heading {
-    grid-column: 2;
-    grid-row: 2;
-    align-items: flex-start;
     gap: 0.5rem;
-    margin: 0.12rem 0 0.26rem;
+    margin: 0.28rem 0 0.34rem;
   }
 
   .dashboard-hero__heading h2,
@@ -713,39 +789,26 @@
       0 0 16px color-mix(in srgb, var(--hero-accent) 16%, transparent);
   }
 
+  .dashboard-hero__command {
+    grid-area: command;
+    grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+    gap: 0.56rem;
+    padding-top: 0.7rem;
+  }
+
   .dashboard-hero__level-badge {
-    min-width: 72px;
-    min-height: 34px;
+    min-height: 36px;
     padding: 0.46rem 0.62rem;
     border-radius: 0.72rem;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent),
-      color-mix(in srgb, var(--hero-accent) 42%, rgba(15, 13, 19, 0.94));
-    border-color: color-mix(in srgb, var(--hero-accent) 70%, rgba(255, 255, 255, 0.2));
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.1),
-      0 0 18px color-mix(in srgb, var(--hero-accent) 26%, transparent);
   }
 
   .dashboard-hero__level-badge small {
-    color: #fff8df;
-    font-size: 0.66rem;
-    font-weight: 950;
-    letter-spacing: 0.035em;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.82);
+    font-size: 0.56rem;
+    letter-spacing: 0.11em;
   }
 
   .dashboard-hero__level-badge strong {
-    color: #fff8df;
-    font-size: 0.78rem;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.82);
-  }
-
-  .dashboard-hero__meta {
-    grid-column: 2;
-    grid-row: 3;
-    gap: 0.32rem;
-    margin: 0;
+    font-size: 0.7rem;
   }
 
   .dashboard-hero__meta strong {
@@ -754,29 +817,24 @@
     color: #f4ffe9;
     background: rgba(214, 232, 202, 0.16);
     border-color: rgba(220, 240, 210, 0.18);
-    font-size: 0.72rem;
+    font-size: 0.66rem;
     font-weight: 950;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.66);
   }
 
   .dashboard-hero__wallet {
-    grid-column: 1 / -1;
-    grid-row: 4;
-    justify-content: stretch;
-    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.46rem;
-    margin-top: 0.6rem;
   }
 
   .dashboard-hero__currency {
     min-width: 0;
-    min-height: 34px;
+    min-height: 30px;
     padding: 0.36rem 0.58rem 0.36rem 0.5rem;
   }
 
   .dashboard-hero__currency strong {
-    font-size: 0.78rem;
+    font-size: 0.7rem;
   }
 
   .dashboard-hero__currency::before {
@@ -786,10 +844,14 @@
   }
 
   .dashboard-hero__resources {
-    grid-column: 1 / -1;
-    grid-row: 5;
     gap: 0.62rem;
-    margin-top: 0.1rem;
+    margin-top: 0;
+    padding-top: 0.72rem;
+  }
+
+  .dashboard-hero__resources-heading span {
+    font-size: 0.62rem;
+    letter-spacing: 0.13em;
   }
 
   .dashboard-hero__resource {
@@ -808,10 +870,6 @@
     align-items: center;
     gap: 0.48rem;
     margin-bottom: 0.48rem;
-  }
-
-  .dashboard-hero__resource-title {
-    gap: 0.12rem;
   }
 
   .dashboard-hero__resource-title span,
@@ -851,35 +909,11 @@
     min-width: 48px;
     min-height: 28px;
     padding: 0.28rem 0.44rem;
-    font-size: 0.82rem;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent),
-      rgba(255, 255, 255, 0.08);
-    text-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.9),
-      0 0 10px rgba(255, 248, 232, 0.12);
+    font-size: 0.76rem;
   }
 
   .dashboard-hero__resource-track {
     height: 12px;
-  }
-
-  .dashboard-hero__xp {
-    grid-column: 1 / -1;
-    grid-row: 5;
-    margin-top: 0.74rem;
-  }
-
-  .dashboard-hero__xp-label {
-    font-size: 0.74rem;
-  }
-
-  .dashboard-hero__xp-label strong {
-    font-size: 0.84rem;
-  }
-
-  .dashboard-hero__xp-track {
-    height: 11px;
   }
 }
 
@@ -893,18 +927,28 @@
 
   .dashboard-hero__avatar {
     width: 70px;
+    min-height: 70px;
     height: 70px;
     border-radius: 0.78rem;
   }
 
+  .dashboard-hero__content {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 0.62rem;
+  }
+
+  .dashboard-hero__identity {
+    min-height: 70px;
+  }
+
+  .dashboard-hero__identity > span,
   .dashboard-hero__content > span {
     font-size: 0.62rem;
     letter-spacing: 0.12em;
   }
 
   .dashboard-hero__heading {
-    gap: 0.42rem;
-    margin: 0.1rem 0 0.24rem;
+    margin: 0.2rem 0 0.24rem;
   }
 
   .dashboard-hero__heading h2,
@@ -913,31 +957,12 @@
     line-height: 1.04;
   }
 
-  .dashboard-hero__level-badge {
-    min-width: 66px;
-    min-height: 32px;
-    padding: 0.42rem 0.54rem;
-    border-radius: 0.66rem;
-  }
-
-  .dashboard-hero__level-badge small {
-    font-size: 0.62rem;
-    letter-spacing: 0.025em;
-  }
-
-  .dashboard-hero__level-badge strong {
-    font-size: 0.72rem;
-  }
-
-  .dashboard-hero__meta strong {
-    min-height: 1.36rem;
-    padding: 0.23rem 0.48rem;
-    font-size: 0.66rem;
+  .dashboard-hero__command {
+    grid-template-columns: 1fr;
   }
 
   .dashboard-hero__wallet {
     gap: 0.4rem;
-    margin-top: 0.54rem;
   }
 
   .dashboard-hero__currency {
@@ -946,18 +971,13 @@
   }
 
   .dashboard-hero__currency strong {
-    font-size: 0.72rem;
+    font-size: 0.66rem;
   }
 
   .dashboard-hero__currency::before {
     width: 17px;
     height: 17px;
     font-size: 0.62rem;
-  }
-
-  .dashboard-hero__resources {
-    gap: 0.56rem;
-    margin-top: 0.08rem;
   }
 
   .dashboard-hero__resource {
@@ -972,7 +992,7 @@
 
   .dashboard-hero__resource-title span,
   .dashboard-hero__resource-header > span {
-    font-size: 0.72rem;
+    font-size: 0.66rem;
   }
 
   .dashboard-hero__resource-title small {
@@ -1009,17 +1029,16 @@
 
   .dashboard-hero__avatar {
     width: 64px;
+    min-height: 64px;
     height: 64px;
   }
 
-  .dashboard-hero__heading {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.32rem;
+  .dashboard-hero__content {
+    grid-template-columns: 64px minmax(0, 1fr);
   }
 
-  .dashboard-hero__level-badge {
-    min-width: auto;
+  .dashboard-hero__identity {
+    min-height: 64px;
   }
 
   .dashboard-hero__wallet {
@@ -1031,17 +1050,17 @@
   }
 
   .dashboard-hero__resource-values {
-    gap: 0.24rem;
+    gap: 0.16rem;
   }
 
   .dashboard-hero__resource-values strong,
   .dashboard-hero__resource-header > strong {
-    font-size: 0.88rem;
+    font-size: 0.7rem;
   }
 
   .dashboard-hero__resource-values em {
     min-width: 42px;
-    min-height: 25px;
+    min-height: 22px;
     font-size: 0.74rem;
   }
 }
