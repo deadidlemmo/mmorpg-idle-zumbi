@@ -77,8 +77,10 @@ type AutoCombatSessionLike = {
   characterId?: string | null;
   status?: string | null;
 
+  currentMobId?: string | null;
   currentMobHp?: number | null;
   currentMobMaxHp?: number | null;
+  currentMob?: AutoCombatStatusCurrentMobLike | null;
   currentRound?: number | null;
   currentCombatIndex?: number | null;
 
@@ -431,7 +433,7 @@ function formatCurrentCombatLabel(value: unknown) {
 function formatKillCount(value: unknown) {
   const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
 
-  return `${amount} ${amount === 1 ? 'abate' : 'abates'}`;
+  return `${amount} ${amount === 1 ? 'monstro morto' : 'monstros mortos'}`;
 }
 
 function formatXp(value: unknown) {
@@ -458,6 +460,13 @@ function formatSessionCountIndicator(value: unknown) {
   const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
 
   return amount.toLocaleString('pt-BR');
+}
+
+function formatMonsterCounter(value: unknown) {
+  const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
+  const formattedAmount = amount.toLocaleString('pt-BR');
+
+  return `${formattedAmount} ${amount === 1 ? 'monstro' : 'monstros'}`;
 }
 
 function formatPercentLabel(value: unknown) {
@@ -556,6 +565,66 @@ function formatCharacterHpLabel(currentHp?: number | null, maxHp?: number | null
     1,
     Math.floor(safeMaxHp),
   )}`;
+}
+
+function buildMonsterHpSnapshot(params: {
+  event?: AutoCombatRealtimeEvent | null;
+  realtimeCombat?: AutoCombatRealtimeCombatLike | null;
+  statusMob?: AutoCombatStatusCurrentMobLike | null;
+  session?: AutoCombatSessionLike | null;
+}) {
+  const { event, realtimeCombat, statusMob, session } = params;
+
+  const maxHp = getFirstValidNumber(
+    event?.mobMaxHp,
+    realtimeCombat?.mobMaxHp,
+    realtimeCombat?.currentMob?.maxHp,
+    statusMob?.maxHp,
+    session?.currentMobMaxHp,
+    session?.currentMob?.maxHp,
+    statusMob?.hp,
+    session?.currentMob?.hp,
+  );
+
+  const currentHp = getFirstValidNumber(
+    event?.mobCurrentHp,
+    realtimeCombat?.mobCurrentHp,
+    realtimeCombat?.currentMob?.currentHp,
+    statusMob?.currentHp,
+    session?.currentMobHp,
+    session?.currentMob?.currentHp,
+    maxHp,
+  );
+
+  const hpPercent =
+    currentHp !== undefined && maxHp !== undefined && maxHp > 0
+      ? calculateHpPercent(currentHp, maxHp)
+      : clampPercent(
+          getFirstValidNumber(
+            event?.mobHpPercent,
+            realtimeCombat?.mobHpPercent,
+            realtimeCombat?.currentMob?.hpPercent,
+            statusMob?.hpPercent,
+            session?.currentMob?.hpPercent,
+            100,
+          ),
+        );
+
+  const safeMaxHp = maxHp !== undefined ? Math.max(1, Math.floor(maxHp)) : null;
+  const safeCurrentHp =
+    currentHp !== undefined && safeMaxHp !== null
+      ? Math.max(0, Math.min(Math.floor(currentHp), safeMaxHp))
+      : null;
+
+  return {
+    currentHp: safeCurrentHp,
+    maxHp: safeMaxHp,
+    hpPercent,
+    label:
+      safeCurrentHp !== null && safeMaxHp !== null
+        ? `${safeCurrentHp}/${safeMaxHp} HP`
+        : `${formatPercentLabel(hpPercent)} HP`,
+  };
 }
 
 function getLooseStatus(status: AutoCombatStatusResponse | null) {
@@ -881,9 +950,18 @@ function getRealtimeCombat(
 
     mobId: mob?.id ?? null,
     mobName: mob?.name ?? null,
-    mobCurrentHp: mob?.currentHp ?? session?.currentMobHp ?? null,
-    mobMaxHp: mob?.maxHp ?? session?.currentMobMaxHp ?? mob?.hp ?? null,
-    mobHpPercent: mob?.hpPercent ?? null,
+    mobCurrentHp:
+      mob?.currentHp ?? session?.currentMobHp ?? session?.currentMob?.currentHp ?? null,
+    mobMaxHp:
+      mob?.maxHp ??
+      session?.currentMobMaxHp ??
+      session?.currentMob?.maxHp ??
+      mob?.hp ??
+      session?.currentMob?.hp ??
+      null,
+    mobHpPercent: mob?.hpPercent ?? session?.currentMob?.hpPercent ?? null,
+
+    currentMob: mob ?? session?.currentMob ?? null,
 
     round: session?.currentRound ?? null,
     combatIndex: session?.currentCombatIndex ?? null,
@@ -1196,7 +1274,11 @@ function buildAutoCombatItemFromRealtime(params: {
   );
 
   const statusCurrentMob =
-    getStatusCurrentMob(status) ?? realtimeCombat?.currentMob ?? realtimeState.mob ?? null;
+    getStatusCurrentMob(status) ??
+    realtimeCombat?.currentMob ??
+    realtimeState.mob ??
+    session.currentMob ??
+    null;
 
   const locationLabel = getStatusLocationLabel(status);
 
@@ -1205,6 +1287,13 @@ function buildAutoCombatItemFromRealtime(params: {
     realtimeCombat?.mobName ??
     statusCurrentMob?.name ??
     'Combate automático';
+
+  const monsterHp = buildMonsterHpSnapshot({
+    event: displayedEvent,
+    realtimeCombat,
+    statusMob: statusCurrentMob,
+    session,
+  });
 
   const totalKills = visualTotals?.totalKills ?? 0;
   const totalXpGained = visualTotals?.totalXpGained ?? 0;
@@ -1234,13 +1323,13 @@ function buildAutoCombatItemFromRealtime(params: {
     icon: '⚔',
     title: mobName,
     description,
-    progressLabel: 'Monstros mortos',
-    progressPercent: 0,
-    progressValueLabel: formatKillCount(totalKills),
+    progressLabel: 'HP do monstro',
+    progressPercent: monsterHp.hpPercent,
+    progressValueLabel: monsterHp.label,
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
     secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
-    indicatorMetric: formatSessionCountIndicator(totalKills),
-    indicatorLabel: `Abates na sessão: ${formatSessionCountIndicator(totalKills)}`,
+    indicatorMetric: formatMonsterCounter(totalKills),
+    indicatorLabel: `Monstros mortos na sessão: ${formatSessionCountIndicator(totalKills)}`,
     href: `/dashboard/${characterId}/auto-combat`,
 
     imageUrl: getActivityMobPortraitUrl(mobName),
@@ -1300,6 +1389,10 @@ function buildAutoCombatItemFromOverview(params: {
   const visualTotals = buildAutoCombatTotalsFromOverview(session);
   const previewCurrentMob = session.combatPreview?.currentMob;
   const currentMob = session.currentMob ?? previewCurrentMob ?? null;
+  const monsterHp = buildMonsterHpSnapshot({
+    statusMob: currentMob,
+    session,
+  });
 
   const subMapName = session.subMap?.name;
   const mapName = session.subMap?.map?.name ?? session.subMap?.mapName;
@@ -1330,13 +1423,13 @@ function buildAutoCombatItemFromOverview(params: {
     icon: '⚔',
     title: currentMob?.name ?? 'Combate automático',
     description: session.combatPreview?.label ?? locationLabel,
-    progressLabel: 'Monstros mortos',
-    progressPercent: 0,
-    progressValueLabel: formatKillCount(totalKills),
+    progressLabel: 'HP do monstro',
+    progressPercent: monsterHp.hpPercent,
+    progressValueLabel: monsterHp.label,
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
     secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
-    indicatorMetric: formatSessionCountIndicator(totalKills),
-    indicatorLabel: `Abates na sessão: ${formatSessionCountIndicator(totalKills)}`,
+    indicatorMetric: formatMonsterCounter(totalKills),
+    indicatorLabel: `Monstros mortos na sessão: ${formatSessionCountIndicator(totalKills)}`,
     href: `/dashboard/${characterId}/auto-combat`,
 
     imageUrl: getActivityMobPortraitUrl(currentMob?.name),
@@ -1790,6 +1883,16 @@ export function DashboardActivityBar({
         const progressStyle = {
           width: `${progressPercent}%`,
         };
+        const progressTrackClassName = [
+          item.type === 'auto-combat'
+            ? 'dashboard-activity-bar__track dashboard-activity-bar__track--monster-hp'
+            : 'dashboard-activity-bar__track',
+        ].join(' ');
+        const compactProgressTrackClassName = [
+          item.type === 'auto-combat'
+            ? 'dashboard-activity-bar__compact-track dashboard-activity-bar__compact-track--monster-hp'
+            : 'dashboard-activity-bar__compact-track',
+        ].join(' ');
         const isFirstItem = index === 0;
 
         return (
@@ -1939,7 +2042,7 @@ export function DashboardActivityBar({
                     ) : null}
                   </div>
 
-                  <div className="dashboard-activity-bar__track">
+                  <div className={progressTrackClassName}>
                     <i style={progressStyle}>
                       <em aria-hidden="true" />
                     </i>
@@ -1956,7 +2059,7 @@ export function DashboardActivityBar({
                     </span>
 
                     <span className="dashboard-activity-bar__metric dashboard-activity-bar__metric--kills">
-                      <small>Abates</small>
+                      <small>Monstros</small>
                       <strong>{item.killsMetric ?? formatKillCount(0)}</strong>
                     </span>
 
@@ -2008,7 +2111,7 @@ export function DashboardActivityBar({
                     ) : null}
                   </div>
 
-                  <div className="dashboard-activity-bar__compact-track">
+                  <div className={compactProgressTrackClassName}>
                     <i style={progressStyle} />
                   </div>
                 </div>
@@ -2022,7 +2125,7 @@ export function DashboardActivityBar({
                       </span>
 
                       <span className="dashboard-activity-bar__compact-stat dashboard-activity-bar__compact-stat--kills">
-                        <small>Abates</small>
+                        <small>Monstros</small>
                         <strong>{item.killsMetric ?? formatKillCount(0)}</strong>
                       </span>
 
