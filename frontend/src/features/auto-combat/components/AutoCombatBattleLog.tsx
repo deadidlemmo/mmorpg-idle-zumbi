@@ -357,22 +357,6 @@ function getBattleLogVisualType(
   }
 }
 
-function getBattleLogTypeOrder(event: AutoCombatRealtimeEvent) {
-  const type = normalizeEventType(event);
-
-  const order: Record<string, number> = {
-    MOB_SPAWNED: 10,
-    PLAYER_HIT: 20,
-    MOB_HIT: 30,
-    DODGE: 35,
-    POTION_USED: 40,
-    MOB_DEFEATED: 90,
-    PLAYER_DEFEATED: 95,
-  };
-
-  return order[type] ?? 50;
-}
-
 function getBattleLogActorRole(
   event: AutoCombatRealtimeEvent,
   type: BattleLogVisualType,
@@ -753,13 +737,12 @@ function compareDecoratedEventsChronologically(
     return createdAtA - createdAtB;
   }
 
-  const orderA = getBattleLogTypeOrder(a.event);
-  const orderB = getBattleLogTypeOrder(b.event);
-
-  if (orderA !== orderB) {
-    return orderA - orderB;
-  }
-
+  /**
+   * Não ordenar por tipo/ator aqui. Quando PLAYER_HIT e MOB_HIT chegam na
+   * mesma rodada sem sequence/createdAt distintos, uma prioridade por tipo
+   * move ataques do jogador para cima de ataques do monstro já renderizados.
+   * O fallback deve preservar a sequência em que o reducer acumulou os eventos.
+   */
   return a.sourceIndex - b.sourceIndex;
 }
 
@@ -897,11 +880,17 @@ function buildMergedEvents(params: {
   const { events, activeEvent, maxItems } = params;
 
   const decoratedEvents: DecoratedBattleLogEvent[] = [];
+  /**
+   * O reducer mantém battleLogEvents com o mais recente primeiro. Para renderizar
+   * antigo -> recente sem reordenar eventos da mesma rodada pelo ator/tipo,
+   * convertemos o índice de origem para uma posição cronológica ascendente.
+   */
+  const lastEventIndex = Math.max(0, events.length - 1);
 
   events.forEach((event, index) => {
     decoratedEvents.push({
       event,
-      sourceIndex: index,
+      sourceIndex: lastEventIndex - index,
       isActiveEvent: Boolean(activeEvent && isSameDedupeScope(event, activeEvent)),
     });
   });
@@ -912,7 +901,7 @@ function buildMergedEvents(params: {
   ) {
     decoratedEvents.push({
       event: activeEvent,
-      sourceIndex: decoratedEvents.length,
+      sourceIndex: events.length,
       isActiveEvent: true,
     });
   }
