@@ -16,6 +16,7 @@ import { DashboardPlaceholderPage } from '../features/dashboard/pages/DashboardP
 import { GatheringHubPage } from '../features/gathering/pages/GatheringHubPage';
 import { GatheringOriginPage } from '../features/gathering/pages/GatheringOriginPage';
 import { GatheringRealtimeProvider } from '../features/gathering/realtime/GatheringRealtimeProvider';
+import { InventoryPage } from '../features/inventory/pages/InventoryPage';
 import { LootNotificationProvider } from '../features/loot-notifications/LootNotificationProvider';
 import { useAuthStore } from '../store/auth.store';
 
@@ -120,15 +121,7 @@ export function AppRoutes() {
             }
           />
 
-          <Route
-            path="inventory"
-            element={
-              <DashboardPlaceholderPage
-                title="Mochila"
-                description="Tela futura para materiais, consumíveis e equipamentos guardados pelo personagem."
-              />
-            }
-          />
+          <Route path="inventory" element={<InventoryPage />} />
 
           <Route
             path="equipment"
