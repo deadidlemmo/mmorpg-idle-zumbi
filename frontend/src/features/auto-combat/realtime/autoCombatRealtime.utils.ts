@@ -799,11 +799,138 @@ export function buildCharacterStateFromRealtimeEvent(
       ? calculatePercent(nextCurrentHp, nextMaxHp)
       : getOptionalNumber(event.characterHpPercent) ?? fallback?.hpPercent;
 
+  const nextCurrentLevelStartXp =
+    getOptionalNumber(event.currentLevelStartXp) ??
+    getOptionalNumber(levelProgress?.currentLevelStartXp) ??
+    fallback?.currentLevelStartXp;
+
+  const nextNextLevelRequiredXp =
+    getOptionalNumber(event.nextLevelRequiredXp) ??
+    getOptionalNumber(levelProgress?.nextLevelRequiredXp) ??
+    fallback?.nextLevelRequiredXp;
+
+  const explicitXpToNextLevel =
+    getOptionalNumber(event.xpToNextLevel) ??
+    getOptionalNumber(event.nextLevelXp) ??
+    getOptionalNumber(levelProgress?.xpToNextLevel) ??
+    getOptionalNumber(levelProgress?.nextLevelXp);
+
+  const derivedXpToNextLevel =
+    nextCurrentLevelStartXp !== undefined &&
+    nextNextLevelRequiredXp !== null &&
+    nextNextLevelRequiredXp !== undefined &&
+    nextNextLevelRequiredXp > nextCurrentLevelStartXp
+      ? nextNextLevelRequiredXp - nextCurrentLevelStartXp
+      : undefined;
+
+  const nextXpToNextLevel =
+    explicitXpToNextLevel ??
+    derivedXpToNextLevel ??
+    fallback?.xpToNextLevel ??
+    fallback?.nextLevelXp;
+
+  const explicitCurrentLevelXp =
+    getOptionalNumber(event.currentLevelXp) ??
+    getOptionalNumber(event.xpIntoCurrentLevel) ??
+    getOptionalNumber(levelProgress?.currentLevelXp) ??
+    getOptionalNumber(levelProgress?.xpIntoCurrentLevel);
+
+  const derivedCurrentLevelXpFromTotal =
+    nextTotalXp !== undefined && nextCurrentLevelStartXp !== undefined
+      ? nextTotalXp - nextCurrentLevelStartXp
+      : undefined;
+
+  const fallbackCurrentLevelXp =
+    fallback?.currentLevelXp ?? fallback?.xpIntoCurrentLevel;
+
+  const fallbackTotalXpForDelta = fallback?.totalXp ?? fallback?.xp;
+
+  const isSameLevelProgressEvent =
+    nextLevel === undefined ||
+    fallback?.level === undefined ||
+    nextLevel === fallback.level;
+
+  const derivedCurrentLevelXpFromTotalDelta =
+    nextTotalXp !== undefined &&
+    fallbackTotalXpForDelta !== undefined &&
+    fallbackCurrentLevelXp !== undefined &&
+    isSameLevelProgressEvent
+      ? fallbackCurrentLevelXp + (nextTotalXp - fallbackTotalXpForDelta)
+      : undefined;
+
+  const shouldEstimateCurrentLevelXpFromGain =
+    isMobDefeatedEvent(event) &&
+    xpGained !== undefined &&
+    fallbackCurrentLevelXp !== undefined &&
+    !event.leveledUp &&
+    !levelProgress?.leveledUp &&
+    isSameLevelProgressEvent;
+
+  const derivedCurrentLevelXpFromGain = shouldEstimateCurrentLevelXpFromGain
+    ? fallbackCurrentLevelXp + xpGained
+    : undefined;
+
+  const rawNextCurrentLevelXp =
+    explicitCurrentLevelXp ??
+    derivedCurrentLevelXpFromTotal ??
+    derivedCurrentLevelXpFromTotalDelta ??
+    derivedCurrentLevelXpFromGain ??
+    fallback?.currentLevelXp;
+
+  const nextCurrentLevelXp =
+    rawNextCurrentLevelXp !== undefined
+      ? Math.max(
+          0,
+          Math.min(
+            Math.floor(rawNextCurrentLevelXp),
+            nextXpToNextLevel !== undefined
+              ? Math.max(1, Math.floor(nextXpToNextLevel))
+              : Number.MAX_SAFE_INTEGER,
+          ),
+        )
+      : undefined;
+
+  const explicitXpIntoCurrentLevel =
+    getOptionalNumber(event.xpIntoCurrentLevel) ??
+    getOptionalNumber(event.currentLevelXp) ??
+    getOptionalNumber(levelProgress?.xpIntoCurrentLevel) ??
+    getOptionalNumber(levelProgress?.currentLevelXp);
+
+  const nextXpIntoCurrentLevel =
+    explicitXpIntoCurrentLevel ??
+    nextCurrentLevelXp ??
+    fallback?.xpIntoCurrentLevel;
+
+  const derivedXpNeededForNextLevel =
+    nextXpToNextLevel !== undefined && nextXpIntoCurrentLevel !== undefined
+      ? Math.max(0, nextXpToNextLevel - nextXpIntoCurrentLevel)
+      : undefined;
+
+  const nextXpNeededForNextLevel =
+    getOptionalNumber(event.xpNeededForNextLevel) ??
+    getOptionalNumber(levelProgress?.xpNeededForNextLevel) ??
+    derivedXpNeededForNextLevel ??
+    fallback?.xpNeededForNextLevel;
+
+  const derivedXpProgressPercent =
+    nextCurrentLevelXp !== undefined && nextXpToNextLevel !== undefined
+      ? calculatePercent(nextCurrentLevelXp, nextXpToNextLevel)
+      : undefined;
+
+  const nextXpProgressPercent =
+    getOptionalNumber(event.xpProgressPercent) ??
+    getOptionalNumber(levelProgress?.xpProgressPercent) ??
+    getOptionalNumber(levelProgress?.progressPercent) ??
+    derivedXpProgressPercent ??
+    fallback?.xpProgressPercent;
+
   return {
     ...fallback,
 
     level:
-      nextLevel !== undefined ? Math.max(1, Math.floor(nextLevel)) : fallback?.level,
+      nextLevel !== undefined
+        ? Math.max(1, Math.floor(nextLevel))
+        : fallback?.level,
 
     xp:
       nextTotalXp !== undefined
@@ -827,54 +954,39 @@ export function buildCharacterStateFromRealtimeEvent(
 
     hpPercent,
 
-    currentLevelXp:
-      getOptionalNumber(event.currentLevelXp) ??
-      getOptionalNumber(event.xpIntoCurrentLevel) ??
-      getOptionalNumber(levelProgress?.currentLevelXp) ??
-      getOptionalNumber(levelProgress?.xpIntoCurrentLevel) ??
-      fallback?.currentLevelXp,
+    currentLevelXp: nextCurrentLevelXp,
 
     xpToNextLevel:
-      getOptionalNumber(event.xpToNextLevel) ??
-      getOptionalNumber(event.nextLevelXp) ??
-      getOptionalNumber(levelProgress?.xpToNextLevel) ??
-      getOptionalNumber(levelProgress?.nextLevelXp) ??
-      fallback?.xpToNextLevel,
+      nextXpToNextLevel !== undefined
+        ? Math.max(1, Math.floor(nextXpToNextLevel))
+        : fallback?.xpToNextLevel,
 
     nextLevelXp:
-      getOptionalNumber(event.nextLevelXp) ??
-      getOptionalNumber(event.xpToNextLevel) ??
-      getOptionalNumber(levelProgress?.nextLevelXp) ??
-      getOptionalNumber(levelProgress?.xpToNextLevel) ??
-      fallback?.nextLevelXp,
+      nextXpToNextLevel !== undefined
+        ? Math.max(1, Math.floor(nextXpToNextLevel))
+        : fallback?.nextLevelXp,
 
-    xpProgressPercent:
-      getOptionalNumber(event.xpProgressPercent) ??
-      getOptionalNumber(levelProgress?.xpProgressPercent) ??
-      getOptionalNumber(levelProgress?.progressPercent) ??
-      fallback?.xpProgressPercent,
+    xpProgressPercent: nextXpProgressPercent,
 
     xpIntoCurrentLevel:
-      getOptionalNumber(event.xpIntoCurrentLevel) ??
-      getOptionalNumber(event.currentLevelXp) ??
-      getOptionalNumber(levelProgress?.xpIntoCurrentLevel) ??
-      getOptionalNumber(levelProgress?.currentLevelXp) ??
-      fallback?.xpIntoCurrentLevel,
+      nextXpIntoCurrentLevel !== undefined
+        ? Math.max(0, Math.floor(nextXpIntoCurrentLevel))
+        : fallback?.xpIntoCurrentLevel,
 
     xpNeededForNextLevel:
-      getOptionalNumber(event.xpNeededForNextLevel) ??
-      getOptionalNumber(levelProgress?.xpNeededForNextLevel) ??
-      fallback?.xpNeededForNextLevel,
+      nextXpNeededForNextLevel !== null && nextXpNeededForNextLevel !== undefined
+        ? Math.max(0, Math.floor(nextXpNeededForNextLevel))
+        : fallback?.xpNeededForNextLevel,
 
     currentLevelStartXp:
-      getOptionalNumber(event.currentLevelStartXp) ??
-      getOptionalNumber(levelProgress?.currentLevelStartXp) ??
-      fallback?.currentLevelStartXp,
+      nextCurrentLevelStartXp !== undefined
+        ? Math.max(0, Math.floor(nextCurrentLevelStartXp))
+        : fallback?.currentLevelStartXp,
 
     nextLevelRequiredXp:
-      getOptionalNumber(event.nextLevelRequiredXp) ??
-      getOptionalNumber(levelProgress?.nextLevelRequiredXp) ??
-      fallback?.nextLevelRequiredXp,
+      nextNextLevelRequiredXp !== null && nextNextLevelRequiredXp !== undefined
+        ? Math.max(0, Math.floor(nextNextLevelRequiredXp))
+        : fallback?.nextLevelRequiredXp,
 
     isAtLevelCap:
       getOptionalBoolean(event.isAtLevelCap) ??
