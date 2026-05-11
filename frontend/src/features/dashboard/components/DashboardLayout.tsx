@@ -1349,7 +1349,14 @@ function DashboardLayoutContent({
                 </div>
               </div>
 
-              <div className="dashboard-hero__resources">
+              <div
+                className="dashboard-hero__resources"
+                aria-label="Status operacional"
+              >
+                <div className="dashboard-hero__resources-heading">
+                  <span>Status operacional</span>
+                  <i aria-hidden="true" />
+                </div>
                 <div
                   className="dashboard-hero__resource dashboard-hero__resource--xp"
                   aria-label="Experiência"
