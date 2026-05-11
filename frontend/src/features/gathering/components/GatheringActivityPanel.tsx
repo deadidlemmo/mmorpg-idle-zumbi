@@ -16,6 +16,7 @@ interface GatheringActivityPanelProps {
 
   session?: GatheringSessionViewModel | null;
   productionPreview?: GatheringProductionPreviewViewModel | null;
+  gatheringSkill?: unknown;
 
   /**
    * Mantido por compatibilidade com chamadas antigas.

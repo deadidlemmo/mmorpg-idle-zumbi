@@ -536,6 +536,13 @@ export interface AutoCombatProcessingSummary {
   potionQuantityAfter?: number | null;
   potionQuantityRemaining?: number | null;
   potionUsedQuantity?: number | null;
+
+  catchUp?: boolean;
+  actionsAvailable?: number;
+  actionsProcessed?: number;
+  processingLimited?: boolean;
+  eventsEmitted?: number;
+  eventsSuppressed?: number;
 }
 
 /* =========================================================

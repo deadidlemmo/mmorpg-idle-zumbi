@@ -469,16 +469,6 @@ function formatPercentLabel(value: unknown) {
   return `${Math.round(clampPercent(value))}%`;
 }
 
-function formatGatheringReadyQuantity(value: unknown) {
-  const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
-
-  if (amount === 1) {
-    return '1 pronto';
-  }
-
-  return `${amount} prontos`;
-}
-
 function formatGatheringCollectedQuantity(value: unknown) {
   const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
 
