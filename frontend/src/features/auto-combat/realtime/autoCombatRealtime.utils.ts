@@ -843,28 +843,15 @@ export function buildCharacterStateFromRealtimeEvent(
   const fallbackCurrentLevelXp =
     fallback?.currentLevelXp ?? fallback?.xpIntoCurrentLevel;
 
-  const fallbackTotalXpForDelta = fallback?.totalXp ?? fallback?.xp;
-
-  const isSameLevelProgressEvent =
-    nextLevel === undefined ||
-    fallback?.level === undefined ||
-    nextLevel === fallback.level;
-
-  const derivedCurrentLevelXpFromTotalDelta =
-    nextTotalXp !== undefined &&
-    fallbackTotalXpForDelta !== undefined &&
-    fallbackCurrentLevelXp !== undefined &&
-    isSameLevelProgressEvent
-      ? fallbackCurrentLevelXp + (nextTotalXp - fallbackTotalXpForDelta)
-      : undefined;
-
   const shouldEstimateCurrentLevelXpFromGain =
     isMobDefeatedEvent(event) &&
     xpGained !== undefined &&
     fallbackCurrentLevelXp !== undefined &&
     !event.leveledUp &&
     !levelProgress?.leveledUp &&
-    isSameLevelProgressEvent;
+    (nextLevel === undefined ||
+      fallback?.level === undefined ||
+      nextLevel === fallback.level);
 
   const derivedCurrentLevelXpFromGain = shouldEstimateCurrentLevelXpFromGain
     ? fallbackCurrentLevelXp + xpGained
@@ -873,7 +860,6 @@ export function buildCharacterStateFromRealtimeEvent(
   const rawNextCurrentLevelXp =
     explicitCurrentLevelXp ??
     derivedCurrentLevelXpFromTotal ??
-    derivedCurrentLevelXpFromTotalDelta ??
     derivedCurrentLevelXpFromGain ??
     fallback?.currentLevelXp;
 
