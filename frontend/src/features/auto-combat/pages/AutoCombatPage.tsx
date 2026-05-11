@@ -423,7 +423,7 @@ export function AutoCombatPage() {
       setIsPotionEnabled(Boolean(normalizedPotionConfig?.enabled));
 
       setLocalCharacterProgress((current) => {
-        if (hasPendingRealtimeVisualRef.current && current) {
+        if (hasPendingRealtimeVisual && current) {
           return current;
         }
 
@@ -468,7 +468,7 @@ export function AutoCombatPage() {
         ),
       );
     }
-  }, [characterId]);
+  }, [characterId, hasPendingRealtimeVisual]);
 
   const character = useMemo(() => {
     if (!overview) return null;

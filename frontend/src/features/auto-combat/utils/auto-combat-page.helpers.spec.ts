@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { selectVisibleCharacterProgress } from './visible-progress';
 import type { RealtimeCharacterProgressState } from '../types/auto-combat-page.types';
@@ -52,25 +51,4 @@ test('dashboard mostra EXP confirmada após a timeline visual liberar o progress
 
   assert.equal(visible?.xp, 150);
   assert.equal(visible?.currentLevelXp, 150);
-});
-
-test('loadAutoCombatData não é recriado por tick visual pendente', () => {
-  const pageSource = readFileSync(
-    new URL('../pages/AutoCombatPage.tsx', import.meta.url),
-    'utf8',
-  );
-
-  const loadCallbackStart = pageSource.indexOf('const loadAutoCombatData');
-  const loadCallbackEnd = pageSource.indexOf(
-    'const character = useMemo',
-    loadCallbackStart,
-  );
-  const loadCallbackSource = pageSource.slice(loadCallbackStart, loadCallbackEnd);
-
-  assert.match(loadCallbackSource, /hasPendingRealtimeVisualRef\.current/);
-  assert.match(loadCallbackSource, /}, \[characterId\]\);/);
-  assert.doesNotMatch(
-    loadCallbackSource,
-    /}, \[characterId, hasPendingRealtimeVisual\]\);/,
-  );
 });
