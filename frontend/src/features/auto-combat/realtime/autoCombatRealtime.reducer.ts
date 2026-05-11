@@ -2023,64 +2023,31 @@ function processRealtimeEvent(
   const nextQueue = state.eventQueue.slice(1);
 
   /**
-   * PROCESS_NEXT_EVENT inicia somente a cena/animação.
-   * O impacto (HP, totais liberados e battlelog canônico) é aplicado por
-   * APPLY_ACTIVE_EVENT_IMPACT, disparado pelo Provider no frame de hit.
+   * PROCESS_NEXT_EVENT coloca a cena/animação no ar e aplica o snapshot do
+   * mesmo evento no mesmo reducer pass. Assim HP, cura de poção e label
+   * flutuante mudam juntos, sem o atraso visual entre feedback e barra.
    */
-  const nextVisual = buildVisualStateFromRealtimeEvent(event, state.visual);
-
-  const nextSession: AutoCombatRealtimeSessionState | null = state.session
-    ? {
-        ...state.session,
-
-        id: event.sessionId ?? state.session.id ?? null,
-
-        currentRound:
-          event.round !== undefined && event.round !== null
-            ? Math.max(0, Math.floor(toSafeNumber(event.round, 0)))
-            : state.session.currentRound,
-
-        currentCombatIndex:
-          !state.status &&
-          event.combatIndex !== undefined &&
-          event.combatIndex !== null
-            ? Math.max(1, Math.floor(toSafeNumber(event.combatIndex, 1)))
-            : state.session.currentCombatIndex,
-
-        updatedAt: now(),
-      }
-    : event.sessionId
-      ? {
-          id: event.sessionId,
-          characterId: event.characterId ?? state.characterId,
-          subMapId: null,
-          status: 'ACTIVE',
-          startedAt: null,
-          endsAt: null,
-          finishedAt: null,
-          remainingSeconds: null,
-          durationSeconds: null,
-          roundDurationSeconds: null,
-          currentRound:
-            event.round !== undefined && event.round !== null
-              ? Math.max(0, Math.floor(toSafeNumber(event.round, 0)))
-              : null,
-          currentCombatIndex:
-            event.combatIndex !== undefined && event.combatIndex !== null
-              ? Math.max(1, Math.floor(toSafeNumber(event.combatIndex, 1)))
-              : null,
-          updatedAt: now(),
-        }
-      : null;
-
-  return {
+  const stagedState: AutoCombatRealtimeState = {
     ...state,
-
-    session: nextSession,
-    visual: nextVisual,
 
     activeEvent: event,
     activeEventImpactApplied: false,
+    eventQueue: nextQueue,
+
+    ...processedMarkers,
+    ...queuedMarkers,
+
+    hasLoadedOnce: true,
+    updatedAt: now(),
+  };
+
+  const impactedState = applyRealtimeEventSnapshot(stagedState, event);
+
+  return {
+    ...impactedState,
+
+    activeEvent: event,
+    activeEventImpactApplied: true,
     eventQueue: nextQueue,
 
     ...processedMarkers,
