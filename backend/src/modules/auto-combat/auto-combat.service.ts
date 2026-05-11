@@ -47,6 +47,16 @@ const AUTO_COMBAT_STORED_EVENTS_LIMIT = 50;
 const AUTO_COMBAT_RECENT_EVENTS_LIMIT = 20;
 const AUTO_COMBAT_MAX_REALTIME_EVENTS_TO_EMIT = 20;
 
+const AUTO_COMBAT_CONCURRENT_PROCESSING_MESSAGE =
+  'Processamento abortado: outra execução já avançou esta sessão.';
+
+class AutoCombatSessionConcurrencyError extends Error {
+  constructor() {
+    super(AUTO_COMBAT_CONCURRENT_PROCESSING_MESSAGE);
+    this.name = 'AutoCombatSessionConcurrencyError';
+  }
+}
+
 type CombatWinner = 'PLAYER' | 'MOB';
 
 type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'LETHAL';
@@ -1275,7 +1285,9 @@ export class AutoCombatService implements OnModuleDestroy {
     );
   }
 
-  private getEffectiveRoundDurationSeconds(roundDurationSeconds?: number | null) {
+  private getEffectiveRoundDurationSeconds(
+    roundDurationSeconds?: number | null,
+  ) {
     return this.clampNumber(
       Math.floor(
         roundDurationSeconds ?? AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS,
@@ -1691,7 +1703,9 @@ export class AutoCombatService implements OnModuleDestroy {
         processing: this.buildProcessingSummary(aggregateResult, true),
       });
 
-      this.emitRealtimeEvents(session.characterId, aggregateResult.events);
+      this.emitRealtimeEvents(session.characterId, aggregateResult.events, {
+        persist: false,
+      });
       this.autoCombatGateway.emitSessionUpdated(session.characterId, response);
       this.autoCombatGateway.emitStatus(session.characterId, response);
 
@@ -1708,6 +1722,19 @@ export class AutoCombatService implements OnModuleDestroy {
       }
 
       return response;
+    } catch (error) {
+      if (error instanceof AutoCombatSessionConcurrencyError) {
+        const response = await this.buildSessionResponse(session.id, {
+          message: AUTO_COMBAT_CONCURRENT_PROCESSING_MESSAGE,
+          processing: this.buildEmptyProcessingSummary(),
+        });
+
+        this.autoCombatGateway.emitStatus(session.characterId, response);
+
+        return response;
+      }
+
+      throw error;
     } finally {
       this.processingLocks.delete(session.characterId);
     }
@@ -1725,20 +1752,6 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const combatIndex = Math.max(1, session.currentCombatIndex ?? 1);
     const lastProcessedAt = options?.lastProcessedAt ?? new Date();
-
-    const updatedSession = await this.prisma.autoCombatSession.update({
-      where: {
-        id: session.id,
-      },
-      data: {
-        currentMobId: mob.id,
-        currentMobHp: mob.hp,
-        currentMobMaxHp: mob.hp,
-        currentRound: 0,
-        currentCombatIndex: combatIndex,
-        lastProcessedAt,
-      },
-    });
 
     const characterStats = this.calculateCharacterFighterStats(
       session.character,
@@ -1789,8 +1802,35 @@ export class AutoCombatService implements OnModuleDestroy {
       potionsUsed: totalPotionsUsed,
     });
 
+    const updatedSession = await this.prisma.$transaction(async (tx) => {
+      await this.claimSessionProcessingStep(tx, session, {
+        currentMobId: mob.id,
+        currentMobHp: mob.hp,
+        currentMobMaxHp: mob.hp,
+        currentRound: 0,
+        currentCombatIndex: combatIndex,
+        lastProcessedAt,
+      });
+
+      await this.persistRealtimeEventsInTransaction(tx, session.characterId, [
+        event,
+      ]);
+
+      return {
+        ...session,
+        currentMobId: mob.id,
+        currentMobHp: mob.hp,
+        currentMobMaxHp: mob.hp,
+        currentRound: 0,
+        currentCombatIndex: combatIndex,
+        lastProcessedAt,
+      };
+    });
+
     if (options?.emitRealtimeEvent !== false) {
-      this.emitRealtimeEvents(session.characterId, [event]);
+      this.emitRealtimeEvents(session.characterId, [event], {
+        persist: false,
+      });
     }
 
     return {
@@ -1815,11 +1855,8 @@ export class AutoCombatService implements OnModuleDestroy {
   }
 
   private async finishActiveSessionAtEnd(session: any) {
-    return this.prisma.autoCombatSession.update({
-      where: {
-        id: session.id,
-      },
-      data: {
+    return this.prisma.$transaction(async (tx) => {
+      await this.claimSessionProcessingStep(tx, session, {
         status: AutoCombatSessionStatus.FINISHED,
         finishedAt: session.endsAt,
         lastProcessedAt: session.endsAt,
@@ -1827,7 +1864,18 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMobHp: null,
         currentMobMaxHp: null,
         currentRound: 0,
-      },
+      });
+
+      return {
+        ...session,
+        status: AutoCombatSessionStatus.FINISHED,
+        finishedAt: session.endsAt,
+        lastProcessedAt: session.endsAt,
+        currentMobId: null,
+        currentMobHp: null,
+        currentMobMaxHp: null,
+        currentRound: 0,
+      };
     });
   }
 
@@ -2936,6 +2984,31 @@ export class AutoCombatService implements OnModuleDestroy {
     result: RealtimeRoundResult,
   ) {
     await this.prisma.$transaction(async (tx) => {
+      await this.claimSessionProcessingStep(tx, session, {
+        status: result.finalStatus,
+        lastProcessedAt: result.newLastProcessedAt,
+        finishedAt: result.finishedAt,
+
+        currentMobId: result.currentMobId,
+        currentMobHp: result.currentMobHp,
+        currentMobMaxHp: result.currentMobMaxHp,
+        currentRound: result.currentRound,
+        currentCombatIndex: result.currentCombatIndex,
+
+        totalCombatsResolved: {
+          increment: result.combatsResolved,
+        },
+        totalRoundsResolved: {
+          increment: result.roundsResolved,
+        },
+        totalXpGained: {
+          increment: result.xpGained,
+        },
+        totalPotionsUsed: {
+          increment: result.potionsUsed,
+        },
+      });
+
       await tx.character.update({
         where: {
           id: session.characterId,
@@ -3024,6 +3097,14 @@ export class AutoCombatService implements OnModuleDestroy {
         });
       }
 
+      if (result.events.length > 0) {
+        await this.persistRealtimeEventsInTransaction(
+          tx,
+          session.characterId,
+          result.events,
+        );
+      }
+
       if (result.potionsUsed > 0 && result.potionItemId) {
         const potionInventoryItem = await tx.inventoryItem.findUnique({
           where: {
@@ -3055,37 +3136,26 @@ export class AutoCombatService implements OnModuleDestroy {
           }
         }
       }
-
-      await tx.autoCombatSession.update({
-        where: {
-          id: session.id,
-        },
-        data: {
-          status: result.finalStatus,
-          lastProcessedAt: result.newLastProcessedAt,
-          finishedAt: result.finishedAt,
-
-          currentMobId: result.currentMobId,
-          currentMobHp: result.currentMobHp,
-          currentMobMaxHp: result.currentMobMaxHp,
-          currentRound: result.currentRound,
-          currentCombatIndex: result.currentCombatIndex,
-
-          totalCombatsResolved: {
-            increment: result.combatsResolved,
-          },
-          totalRoundsResolved: {
-            increment: result.roundsResolved,
-          },
-          totalXpGained: {
-            increment: result.xpGained,
-          },
-          totalPotionsUsed: {
-            increment: result.potionsUsed,
-          },
-        },
-      });
     });
+  }
+
+  private async claimSessionProcessingStep(
+    tx: Prisma.TransactionClient,
+    session: any,
+    data: Prisma.AutoCombatSessionUncheckedUpdateManyInput,
+  ) {
+    const updateResult = await tx.autoCombatSession.updateMany({
+      where: {
+        id: session.id,
+        status: AutoCombatSessionStatus.ACTIVE,
+        lastProcessedAt: session.lastProcessedAt,
+      },
+      data,
+    });
+
+    if (updateResult.count === 0) {
+      throw new AutoCombatSessionConcurrencyError();
+    }
   }
 
   private async buildSessionResponse(
@@ -4336,6 +4406,16 @@ export class AutoCombatService implements OnModuleDestroy {
     characterId: string,
     events: AutoCombatRealtimeEvent[],
   ) {
+    await this.prisma.$transaction(async (tx) => {
+      await this.persistRealtimeEventsInTransaction(tx, characterId, events);
+    });
+  }
+
+  private async persistRealtimeEventsInTransaction(
+    tx: Prisma.TransactionClient,
+    characterId: string,
+    events: AutoCombatRealtimeEvent[],
+  ) {
     const validEvents = events.filter((event) => {
       return Boolean(event.sessionId && event.type);
     });
@@ -4360,34 +4440,32 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     for (const [sessionId, sessionEvents] of eventsBySessionId.entries()) {
-      await this.prisma.$transaction(async (tx) => {
-        const latestEvent = await tx.autoCombatSessionEvent.findFirst({
-          where: {
-            sessionId,
-          },
-          orderBy: {
-            sequence: 'desc',
-          },
-          select: {
-            sequence: true,
-          },
-        });
-
-        const nextSequence = (latestEvent?.sequence ?? 0) + 1;
-
-        await tx.autoCombatSessionEvent.createMany({
-          data: sessionEvents.map((event, index) => ({
-            sessionId,
-            characterId: event.characterId ?? characterId,
-            type: String(event.type ?? 'UNKNOWN'),
-            sequence: nextSequence + index,
-            payloadJson: this.normalizeRealtimeEventForStorage(event),
-          })),
-          skipDuplicates: true,
-        });
-
-        await this.pruneOldRealtimeEvents(tx, sessionId);
+      const latestEvent = await tx.autoCombatSessionEvent.findFirst({
+        where: {
+          sessionId,
+        },
+        orderBy: {
+          sequence: 'desc',
+        },
+        select: {
+          sequence: true,
+        },
       });
+
+      const nextSequence = (latestEvent?.sequence ?? 0) + 1;
+
+      await tx.autoCombatSessionEvent.createMany({
+        data: sessionEvents.map((event, index) => ({
+          sessionId,
+          characterId: event.characterId ?? characterId,
+          type: String(event.type ?? 'UNKNOWN'),
+          sequence: nextSequence + index,
+          payloadJson: this.normalizeRealtimeEventForStorage(event),
+        })),
+        skipDuplicates: true,
+      });
+
+      await this.pruneOldRealtimeEvents(tx, sessionId);
     }
   }
 
@@ -4421,13 +4499,16 @@ export class AutoCombatService implements OnModuleDestroy {
   private emitRealtimeEvents(
     characterId: string,
     events: AutoCombatRealtimeEvent[],
+    options?: { persist?: boolean },
   ) {
-    void this.persistRealtimeEvents(characterId, events).catch(() => {
-      /**
-       * O histórico de eventos é uma camada auxiliar.
-       * Se falhar, não pode quebrar o auto-combate em tempo real.
-       */
-    });
+    if (options?.persist !== false) {
+      void this.persistRealtimeEvents(characterId, events).catch(() => {
+        /**
+         * O histórico de eventos é uma camada auxiliar.
+         * Se falhar, não pode quebrar o auto-combate em tempo real.
+         */
+      });
+    }
 
     for (const event of events) {
       switch (event.type) {
