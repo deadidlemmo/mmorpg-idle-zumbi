@@ -300,6 +300,7 @@ export type AutoCombatRealtimeStateLoose = {
   events?: AutoCombatRealtimeEvent[];
 
   activeEvent?: AutoCombatRealtimeEvent | null;
+  activeEventImpactApplied?: boolean;
   displayedEvent?: AutoCombatRealtimeEvent | null;
   currentEvent?: AutoCombatRealtimeEvent | null;
   lastProcessedEvent?: AutoCombatRealtimeEvent | null;

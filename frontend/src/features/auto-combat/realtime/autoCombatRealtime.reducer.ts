@@ -86,6 +86,13 @@ export type AutoCombatRealtimeState = {
    */
   eventQueue: AutoCombatRealtimeEvent[];
   activeEvent: AutoCombatRealtimeEvent | null;
+
+  /**
+   * Indica se o evento ativo já chegou ao frame de impacto.
+   * Enquanto false, animação/log podem existir, mas HP/totais não devem avançar.
+   */
+  activeEventImpactApplied: boolean;
+
   battleLogEvents: AutoCombatRealtimeEvent[];
 
   processedEventKeys: string[];
@@ -161,6 +168,9 @@ export type AutoCombatRealtimeAction =
       type: 'PROCESS_NEXT_EVENT';
     }
   | {
+      type: 'APPLY_ACTIVE_EVENT_IMPACT';
+    }
+  | {
       type: 'CLEAR_ACTIVE_EVENT';
     }
   | {
@@ -203,6 +213,7 @@ export const initialAutoCombatRealtimeState: AutoCombatRealtimeState = {
 
   eventQueue: [],
   activeEvent: null,
+  activeEventImpactApplied: false,
   battleLogEvents: [],
 
   processedEventKeys: [],
@@ -711,6 +722,7 @@ function clearRealtimeRuntimeState(
 
     eventQueue: [],
     activeEvent: null,
+    activeEventImpactApplied: false,
     battleLogEvents: clearBattleLog ? [] : state.battleLogEvents,
 
     processedEventKeys: clearEventCaches ? [] : state.processedEventKeys,
@@ -1307,7 +1319,10 @@ function appendBattleLogEvent(
    * Mantém o log interno com o mais recente primeiro.
    * O componente de log pode inverter somente para renderizar antigo -> recente.
    */
-  return [event, ...currentEvents].slice(0, MAX_BATTLE_LOG_SIZE);
+  return sortBattleLogEventsNewestFirst([event, ...currentEvents]).slice(
+    0,
+    MAX_BATTLE_LOG_SIZE,
+  );
 }
 
 function mergeRecentEventsIntoBattleLog(
@@ -1560,7 +1575,11 @@ function hydrateFromStatus(
     sessionChanged ? null : baseState.mob,
   );
 
+  const deferMobProgress =
+    !sessionChanged && !statusIsTerminal && shouldDeferStatusProgress(baseState);
+
   const shouldPreservePreviousMob =
+    deferMobProgress ||
     shouldPreservePreviousMobOnActiveStatus({
       baseState,
       status,
@@ -1756,13 +1775,15 @@ function applyRealtimeEventSnapshot(
 function flushEventQueueWithoutAnimation(
   state: AutoCombatRealtimeState,
 ): AutoCombatRealtimeState {
-  if (state.eventQueue.length <= 0) {
+  if (state.eventQueue.length <= 0 && !state.activeEvent) {
     return {
       ...state,
       activeEvent: null,
+      activeEventImpactApplied: false,
       displayTotals: publishDisplayTotalsIfAllowed({
         ...state,
         activeEvent: null,
+        activeEventImpactApplied: false,
       }),
       updatedAt: now(),
     };
@@ -1771,6 +1792,7 @@ function flushEventQueueWithoutAnimation(
   let nextState: AutoCombatRealtimeState = {
     ...state,
     activeEvent: null,
+    activeEventImpactApplied: false,
     eventQueue: [],
     queuedEventKeys: [],
     queuedGenericFingerprints: [],
@@ -1779,7 +1801,11 @@ function flushEventQueueWithoutAnimation(
     updatedAt: now(),
   };
 
-  for (const event of sortRealtimeEventsChronologically(state.eventQueue)) {
+  const pendingEvents = state.activeEvent
+    ? [state.activeEvent, ...state.eventQueue]
+    : state.eventQueue;
+
+  for (const event of sortRealtimeEventsChronologically(pendingEvents)) {
     nextState = applyRealtimeEventSnapshot(nextState, event);
   }
 
@@ -1991,42 +2017,16 @@ function processRealtimeEvent(
     return discardQueuedEvent(state, event);
   }
 
-  const eventType = normalizeRealtimeEventType(event);
-
   const processedMarkers = markEventAsProcessed(state, event);
   const queuedMarkers = unmarkEventAsQueued(state, event);
 
   const nextQueue = state.eventQueue.slice(1);
 
-  const nextCharacter =
-    eventType === 'MOB_DEFEATED' ||
-    eventType === 'PLAYER_DEFEATED' ||
-    eventType === 'POTION_USED'
-      ? mergeCharacterKeepingHighestXp(
-          state.character,
-          buildCharacterStateFromRealtimeEvent(event, state.character),
-        )
-      : buildCharacterStateFromRealtimeEvent(event, state.character);
-
-  const nextMob = buildMobStateFromRealtimeEvent(event, state.mob);
-
   /**
-   * Realtime é camada visual/animação/log.
-   * Totais reais da sessão continuam vindo de HYDRATE_STATUS.
-   * Totais visuais precisam avançar no mesmo instante em que o evento entra em cena.
-   *
-   * Isso evita o atraso visual onde o log mostra MOB_DEFEATED, mas abates/XP
-   * só sobem depois que a animação termina.
+   * PROCESS_NEXT_EVENT inicia somente a cena/animação.
+   * O impacto (HP, totais liberados e battlelog canônico) é aplicado por
+   * APPLY_ACTIVE_EVENT_IMPACT, disparado pelo Provider no frame de hit.
    */
-  const nextTotals = state.totals;
-  const nextDisplayTotals = isDisplayTotalsReleaseEvent(event)
-    ? buildDisplayTotalsFromReleaseEvent(state, event)
-    : state.displayTotals;
-
-  const nextPotion = isPotionUsedEvent(event)
-    ? buildPotionStateFromRealtimeEvent(event, state.potion)
-    : state.potion;
-
   const nextVisual = buildVisualStateFromRealtimeEvent(event, state.visual);
 
   const nextSession: AutoCombatRealtimeSessionState | null = state.session
@@ -2077,24 +2077,35 @@ function processRealtimeEvent(
     ...state,
 
     session: nextSession,
-    character: nextCharacter,
-    mob: nextMob,
-
-    totals: nextTotals,
-    displayTotals: nextDisplayTotals,
-
     visual: nextVisual,
-    potion: nextPotion,
 
     activeEvent: event,
+    activeEventImpactApplied: false,
     eventQueue: nextQueue,
-    battleLogEvents: appendBattleLogEvent(state.battleLogEvents, event),
 
     ...processedMarkers,
     ...queuedMarkers,
-    ...updateAppliedEventClock(state, event),
 
     hasLoadedOnce: true,
+    updatedAt: now(),
+  };
+}
+
+
+function applyActiveEventImpact(
+  state: AutoCombatRealtimeState,
+): AutoCombatRealtimeState {
+  if (!state.activeEvent || state.activeEventImpactApplied) {
+    return state;
+  }
+
+  const impactedState = applyRealtimeEventSnapshot(state, state.activeEvent);
+
+  return {
+    ...impactedState,
+    activeEvent: state.activeEvent,
+    activeEventImpactApplied: true,
+    eventQueue: state.eventQueue,
     updatedAt: now(),
   };
 }
@@ -2198,6 +2209,10 @@ export function autoCombatRealtimeReducer(
       return processRealtimeEvent(state);
     }
 
+    case 'APPLY_ACTIVE_EVENT_IMPACT': {
+      return applyActiveEventImpact(state);
+    }
+
     case 'CLEAR_ACTIVE_EVENT': {
       if (!state.activeEvent) {
         return state;
@@ -2206,6 +2221,7 @@ export function autoCombatRealtimeReducer(
       const nextState: AutoCombatRealtimeState = {
         ...state,
         activeEvent: null,
+        activeEventImpactApplied: false,
         updatedAt: now(),
       };
 

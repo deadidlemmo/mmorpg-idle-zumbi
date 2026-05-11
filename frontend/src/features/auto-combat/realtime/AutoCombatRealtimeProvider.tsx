@@ -56,6 +56,7 @@ const AFTER_START_RELOAD_DELAY_MS = 700;
 const AFTER_VISIBILITY_RELOAD_DELAY_MS = 120;
 
 const NEXT_EVENT_PROCESS_DELAY_MS = 120;
+const ACTIVE_EVENT_IMPACT_RATIO = 0.55;
 
 export const AutoCombatRealtimeContext =
   createContext<AutoCombatRealtimeContextValue | null>(null);
@@ -310,6 +311,7 @@ export function AutoCombatRealtimeProvider({
   const stateRef = useRef(state);
   const isLoadingRef = useRef(false);
   const activeEventTimeoutRef = useRef<number | null>(null);
+  const activeEventImpactTimeoutRef = useRef<number | null>(null);
   const reloadTimeoutRef = useRef<number | null>(null);
   const reloadRequestRef = useRef(0);
   const recentEventsRequestRef = useRef(0);
@@ -340,6 +342,11 @@ export function AutoCombatRealtimeProvider({
     if (activeEventTimeoutRef.current !== null) {
       window.clearTimeout(activeEventTimeoutRef.current);
       activeEventTimeoutRef.current = null;
+    }
+
+    if (activeEventImpactTimeoutRef.current !== null) {
+      window.clearTimeout(activeEventImpactTimeoutRef.current);
+      activeEventImpactTimeoutRef.current = null;
     }
   }, []);
 
@@ -979,13 +986,33 @@ export function AutoCombatRealtimeProvider({
     }
 
     if (state.activeEvent) {
+      const eventDelay = getRealtimeEventDelay(state.activeEvent);
+      const impactDelay = Math.max(
+        0,
+        Math.floor(eventDelay * ACTIVE_EVENT_IMPACT_RATIO),
+      );
+
+      if (!state.activeEventImpactApplied) {
+        activeEventImpactTimeoutRef.current = window.setTimeout(() => {
+          dispatch({
+            type: 'APPLY_ACTIVE_EVENT_IMPACT',
+          });
+
+          activeEventImpactTimeoutRef.current = null;
+        }, impactDelay);
+      }
+
       activeEventTimeoutRef.current = window.setTimeout(() => {
+        dispatch({
+          type: 'APPLY_ACTIVE_EVENT_IMPACT',
+        });
+
         dispatch({
           type: 'CLEAR_ACTIVE_EVENT',
         });
 
         activeEventTimeoutRef.current = null;
-      }, getRealtimeEventDelay(state.activeEvent));
+      }, eventDelay);
 
       return () => {
         clearScheduledActiveEvent();
@@ -1010,6 +1037,7 @@ export function AutoCombatRealtimeProvider({
   }, [
     clearScheduledActiveEvent,
     state.activeEvent,
+    state.activeEventImpactApplied,
     state.eventQueue.length,
   ]);
 
