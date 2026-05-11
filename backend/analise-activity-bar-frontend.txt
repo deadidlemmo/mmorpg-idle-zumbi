@@ -1,0 +1,47 @@
+================= FRONTEND SRC STRUCTURE ================
+Listagem de caminhos de pasta
+O número de série do volume é CAC1-22D2
+C:\USERS\NETO\DESKTOP\PROJETOS\EM USO\MMORPG-IDLE-ZUMBI\BACKEND\FRONTEND\SRC
+Caminho inválido - \USERS\NETO\DESKTOP\PROJETOS\EM USO\MMORPG-IDLE-ZUMBI\BACKEND\FRONTEND\SRC
+Não existem subpastas 
+
+
+================= App.tsx ================
+
+================= main.tsx ================
+
+================= endpoints.ts ================
+
+================= apiClient.ts ================
+
+================= socketClient.ts ================
+
+================= DashboardLayout.tsx ================
+
+================= dashboard.css ================
+
+================= dashboard.api.ts ================
+
+================= dashboard.types.ts ================
+
+================= DashboardOverviewPage.tsx ================
+
+================= AutoCombatPage.tsx ================
+
+================= auto-combat.api.ts ================
+
+================= auto-combat.types.ts ================
+
+================= useAutoCombatSocket.ts ================
+
+================= AUTO-COMBAT CSS ================
+
+================= GATHERING STRUCTURE ================
+
+================= GatheringPage.tsx ================
+
+================= gathering.api.ts ================
+
+================= gathering.types.ts ================
+
+================= gathering.css ================

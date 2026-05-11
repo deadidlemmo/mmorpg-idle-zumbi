@@ -1,0 +1,65 @@
+============================================================
+ANALISE SESSION STATS REALTIME - AUTO COMBAT
+Gerado em 01/05/2026 17:37:50,07
+============================================================
+
+============================================================
+FRONTEND - AutoCombatPage.tsx
+============================================================
+ARQUIVO NAO ENCONTRADO: frontend\src\features\auto-combat\pages\AutoCombatPage.tsx
+
+
+============================================================
+FRONTEND - useAutoCombatSocket.ts
+============================================================
+ARQUIVO NAO ENCONTRADO: frontend\src\features\auto-combat\hooks\useAutoCombatSocket.ts
+
+
+============================================================
+FRONTEND - socketClient.ts
+============================================================
+ARQUIVO NAO ENCONTRADO: frontend\src\services\websocket\socketClient.ts
+
+
+============================================================
+FRONTEND - auto-combat.types.ts
+============================================================
+ARQUIVO NAO ENCONTRADO: frontend\src\features\auto-combat\types\auto-combat.types.ts
+
+
+============================================================
+FRONTEND - auto-combat.api.ts
+============================================================
+ARQUIVO NAO ENCONTRADO: frontend\src\features\auto-combat\api\auto-combat.api.ts
+
+
+============================================================
+BACKEND - auto-combat.service.ts
+============================================================
+ARQUIVO NAO ENCONTRADO: backend\src\modules\auto-combat\auto-combat.service.ts
+
+
+============================================================
+BACKEND - auto-combat.gateway.ts
+============================================================
+ARQUIVO NAO ENCONTRADO: backend\src\modules\auto-combat\auto-combat.gateway.ts
+
+
+============================================================
+BACKEND - auto-combat.controller.ts
+============================================================
+ARQUIVO NAO ENCONTRADO: backend\src\modules\auto-combat\auto-combat.controller.ts
+
+
+============================================================
+BACKEND - auto-combat.module.ts
+============================================================
+ARQUIVO NAO ENCONTRADO: backend\src\modules\auto-combat\auto-combat.module.ts
+
+
+============================================================
+BACKEND - prisma schema
+============================================================
+ARQUIVO NAO ENCONTRADO: backend\prisma\schema.prisma
+
+

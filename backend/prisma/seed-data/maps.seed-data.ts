@@ -1,0 +1,94 @@
+import type { MapDefinition } from '../seed-types';
+
+export const mapDefinitions: MapDefinition[] = [
+  {
+    name: 'Subúrbio Silencioso',
+    tier: 1,
+    minLevel: 1,
+    maxLevel: 10,
+    description:
+      'Mapa de entrada do sistema, com foco em sobrevivência urbana básica, saque inicial e introdução às rotas de gathering.',
+    subMaps: ['Rua das Cercas', 'Quintais Abandonados', 'Bloco do Síndico'],
+  },
+  {
+    name: 'Distrito da Ferrugem',
+    tier: 2,
+    minLevel: 11,
+    maxLevel: 20,
+    description:
+      'Zona industrial degradada, com oficinas abandonadas, depósitos quebrados, galpões saqueados, trilhos enferrujados e maquinário pesado em colapso.',
+    subMaps: ['Pátio de Carga', 'Linha de Prensas', 'Galpão do Capataz'],
+  },
+  {
+    name: 'Hospital Santa Ruína',
+    tier: 3,
+    minLevel: 21,
+    maxLevel: 30,
+    description:
+      'Hospital colapsado, tomado por corredores escuros, alas isoladas, laboratórios abandonados e enfermarias contaminadas.',
+    subMaps: ['Triagem Vazia', 'Ala de Isolamento', 'Centro Cirúrgico'],
+  },
+  {
+    name: 'Terminal dos Esquecidos',
+    tier: 4,
+    minLevel: 31,
+    maxLevel: 40,
+    description:
+      'Antiga rodoviária de evacuação, conectada a plataformas abandonadas, depósitos de bagagem, túneis de manutenção e áreas de embarque colapsadas.',
+    subMaps: ['Saguão de Embarque', 'Plataformas Mortas', 'Cabine Final'],
+  },
+  {
+    name: 'Zona de Quarentena 9',
+    tier: 5,
+    minLevel: 41,
+    maxLevel: 50,
+    description:
+      'Área de contenção militar colapsada, com cercas eletrificadas, torres destruídas, contêineres de triagem, postos de descontaminação e blocos selados.',
+    subMaps: ['Triagem Externa', 'Cercas Internas', 'Posto de Comando'],
+  },
+  {
+    name: 'Refinaria do Pó Cinzento',
+    tier: 6,
+    minLevel: 51,
+    maxLevel: 60,
+    description:
+      'Complexo industrial tomado por fumaça tóxica, tubulações rompidas, tanques de combustível perfurados e fornos desligados à força.',
+    subMaps: ['Tanques Vazios', 'Tubulação Quente', 'Câmara da Fornalha'],
+  },
+  {
+    name: 'Avenida dos Caídos',
+    tier: 7,
+    minLevel: 61,
+    maxLevel: 70,
+    description:
+      'Centro urbano destruído, com arranha-céus quebrados, avenidas engarrafadas, ônibus queimados, fachadas destruídas e becos infestados.',
+    subMaps: ['Faixa Engarrafada', 'Becos de Caça', 'Cruzamento Central'],
+  },
+  {
+    name: 'Complexo Helix',
+    tier: 8,
+    minLevel: 71,
+    maxLevel: 80,
+    description:
+      'Centro de pesquisa biomédica e tecnológica parcialmente subterrâneo, com laboratórios selados, alas de observação, câmaras de amostra e áreas de pesquisa proibida.',
+    subMaps: ['Ala de Observação', 'Câmaras Seladas', 'Diretoria Helix'],
+  },
+  {
+    name: 'Necrópole Industrial',
+    tier: 9,
+    minLevel: 81,
+    maxLevel: 90,
+    description:
+      'Cemitério colossal de fábricas, galpões e linhas de produção esmagadas por ferrugem, fuligem, mutação e carne infectada presa a estruturas metálicas.',
+    subMaps: ['Pátio de Escória', 'Esteiras Mortas', 'Coração da Usina'],
+  },
+  {
+    name: 'Marco Zero',
+    tier: 10,
+    minLevel: 91,
+    maxLevel: 100,
+    description:
+      'Zona final devastada por ondas de colapso biológico, ruína estrutural e saturação infecciosa. O mapa final conhecido.',
+    subMaps: ['Anel Externo', 'Zona de Saturação', 'Núcleo do Colapso'],
+  },
+];

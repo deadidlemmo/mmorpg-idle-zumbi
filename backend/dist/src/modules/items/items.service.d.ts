@@ -1,0 +1,113 @@
+import { PrismaService } from '../../prisma/prisma.service';
+export declare class ItemsService {
+    private readonly prisma;
+    constructor(prisma: PrismaService);
+    findAll(): Promise<({
+        map: {
+            name: string;
+            id: string;
+            tier: number;
+            minLevel: number;
+            maxLevel: number;
+            description: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+        } | null;
+        class: {
+            name: string;
+            id: string;
+            description: string;
+            createdAt: Date;
+            updatedAt: Date;
+            baseStrength: number;
+            baseVitality: number;
+            baseAgility: number;
+            basePrecision: number;
+            baseTechnique: number;
+            baseWillpower: number;
+        } | null;
+    } & {
+        name: string;
+        id: string;
+        tier: number;
+        description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        mapId: string | null;
+        rarity: import("@prisma/client").$Enums.Rarity;
+        slot: import("@prisma/client").$Enums.ItemSlot;
+        family: string;
+        materialOrigin: import("@prisma/client").$Enums.MaterialOrigin | null;
+        requiredGatheringLevel: number;
+        gatheringXpPerUnit: number;
+        baseGatheringRatePerHour: number | null;
+        strengthBonus: number;
+        vitalityBonus: number;
+        agilityBonus: number;
+        precisionBonus: number;
+        techniqueBonus: number;
+        willpowerBonus: number;
+        healFlat: number;
+        healPercent: number;
+        usableInCombat: boolean;
+        usableOutOfCombat: boolean;
+        minTier: number | null;
+        maxTier: number | null;
+        isCraftable: boolean;
+        classId: string | null;
+    })[]>;
+    findOne(id: string): Promise<({
+        map: {
+            name: string;
+            id: string;
+            tier: number;
+            minLevel: number;
+            maxLevel: number;
+            description: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+        } | null;
+        class: {
+            name: string;
+            id: string;
+            description: string;
+            createdAt: Date;
+            updatedAt: Date;
+            baseStrength: number;
+            baseVitality: number;
+            baseAgility: number;
+            basePrecision: number;
+            baseTechnique: number;
+            baseWillpower: number;
+        } | null;
+    } & {
+        name: string;
+        id: string;
+        tier: number;
+        description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        mapId: string | null;
+        rarity: import("@prisma/client").$Enums.Rarity;
+        slot: import("@prisma/client").$Enums.ItemSlot;
+        family: string;
+        materialOrigin: import("@prisma/client").$Enums.MaterialOrigin | null;
+        requiredGatheringLevel: number;
+        gatheringXpPerUnit: number;
+        baseGatheringRatePerHour: number | null;
+        strengthBonus: number;
+        vitalityBonus: number;
+        agilityBonus: number;
+        precisionBonus: number;
+        techniqueBonus: number;
+        willpowerBonus: number;
+        healFlat: number;
+        healPercent: number;
+        usableInCombat: boolean;
+        usableOutOfCombat: boolean;
+        minTier: number | null;
+        maxTier: number | null;
+        isCraftable: boolean;
+        classId: string | null;
+    }) | null>;
+}
