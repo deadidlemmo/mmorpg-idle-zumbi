@@ -357,6 +357,8 @@ export interface DashboardAutoCombatPreviewViewModel {
   nextRoundRemainingMinutes?: number;
 
   totals?: {
+    kills?: number;
+    totalKills?: number;
     combatsResolved?: number;
     roundsResolved?: number;
     xpGained?: number;

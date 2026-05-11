@@ -806,6 +806,12 @@ export class CharactersService {
           totalRoundsResolved: true,
           totalXpGained: true,
 
+          mobSummaries: {
+            select: {
+              kills: true,
+            },
+          },
+
           currentMob: {
             select: {
               id: true,
@@ -1478,8 +1484,16 @@ export class CharactersService {
             }
           : null;
 
+    const totalKills = (activeAutoCombatSession.mobSummaries ?? []).reduce(
+      (total: number, summary: { kills?: number | null }) => {
+        return total + (summary.kills ?? 0);
+      },
+      0,
+    );
+
     return {
       ...activeAutoCombatSession,
+      totalKills,
       currentMobHp,
       currentMobMaxHp,
       currentMob,
@@ -1586,6 +1600,13 @@ export class CharactersService {
           }
         : null;
 
+    const totalKills = (activeAutoCombatSession.mobSummaries ?? []).reduce(
+      (total: number, summary: { kills?: number | null }) => {
+        return total + (summary.kills ?? 0);
+      },
+      0,
+    );
+
     return {
       label: activeAutoCombatSession.subMap
         ? `Combatendo em ${activeAutoCombatSession.subMap.name}`
@@ -1647,6 +1668,8 @@ export class CharactersService {
       nextRoundRemainingMinutes: Math.floor(nextRoundRemainingSeconds / 60),
 
       totals: {
+        kills: totalKills,
+        totalKills,
         combatsResolved: activeAutoCombatSession.totalCombatsResolved ?? 0,
         roundsResolved: activeAutoCombatSession.totalRoundsResolved ?? 0,
         xpGained: activeAutoCombatSession.totalXpGained ?? 0,

@@ -28,6 +28,7 @@ type ActivityBarItem = {
   description: string;
   progressLabel: string;
   progressPercent: number;
+  progressValueLabel?: string | null;
   primaryMetric: string;
   secondaryMetric: string;
   indicatorMetric?: string | null;
@@ -1163,8 +1164,12 @@ function buildAutoCombatTotalsFromOverview(
       id?: string | null;
       totalKills?: number | null;
       totalLoot?: number | null;
+      mobSummaries?: Array<{ kills?: number | null }> | null;
+      mobSummary?: Array<{ kills?: number | null }> | null;
       combatPreview?: {
         totals?: {
+          kills?: number | null;
+          totalKills?: number | null;
           combatsResolved?: number | null;
           roundsResolved?: number | null;
           xpGained?: number | null;
@@ -1172,10 +1177,19 @@ function buildAutoCombatTotalsFromOverview(
       } | null;
     };
 
+  const overviewMobKillsTotal = (
+    looseSession.mobSummaries ?? looseSession.mobSummary ?? []
+  ).reduce((total, summary) => {
+    return total + toSafeNumber(summary.kills, 0);
+  }, 0);
+
   const totalKills =
     getFirstValidNumber(
-      looseSession.totalCombatsResolved,
       looseSession.totalKills,
+      looseSession.combatPreview?.totals?.totalKills,
+      looseSession.combatPreview?.totals?.kills,
+      overviewMobKillsTotal,
+      looseSession.totalCombatsResolved,
       looseSession.combatPreview?.totals?.combatsResolved,
       0,
     ) ?? 0;
@@ -1337,6 +1351,7 @@ function buildAutoCombatItemFromRealtime(params: {
     description,
     progressLabel: formatHpLabel(mobHp.currentHp, mobHp.maxHp),
     progressPercent: mobHp.percent,
+    progressValueLabel: formatPercentLabel(mobHp.percent),
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
     secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
     indicatorMetric: formatSessionCountIndicator(totalKills),
@@ -1445,6 +1460,7 @@ function buildAutoCombatItemFromOverview(params: {
     description: session.combatPreview?.label ?? locationLabel,
     progressLabel: formatHpLabel(mobHp.currentHp, mobHp.maxHp),
     progressPercent: mobHp.percent,
+    progressValueLabel: formatPercentLabel(mobHp.percent),
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
     secondaryMetric: `${formatKillCount(totalKills)} • ${formatXp(totalXpGained)}`,
     indicatorMetric: formatSessionCountIndicator(totalKills),
@@ -1617,6 +1633,7 @@ function buildGatheringItemFromRealtime(params: {
       preview?.label ?? `${originLabel} em ${mapName}. Produzindo ${materialName}.`,
     progressLabel: 'Próxima unidade',
     progressPercent,
+    progressValueLabel: `${progressPercentLabel}%`,
     primaryMetric: `${progressPercentLabel}%`,
     secondaryMetric: formatGatheringSecondaryMetric({
       collectedQuantity,
@@ -1694,6 +1711,7 @@ function buildGatheringItemFromOverview(params: {
       `${originLabel} em ${mapName}. Produzindo ${materialName}.`,
     progressLabel: 'Próxima unidade',
     progressPercent,
+    progressValueLabel: `${progressPercentLabel}%`,
     primaryMetric: `${progressPercentLabel}%`,
     secondaryMetric: formatGatheringSecondaryMetric({
       collectedQuantity,
@@ -1890,6 +1908,15 @@ export function DashboardActivityBar({
       {activityItems.map((item, index) => {
         const progressPercent = clampPercent(item.progressPercent);
         const progressPercentLabel = floorPercent(progressPercent);
+        const progressValueLabel =
+          item.progressValueLabel ?? `${progressPercentLabel}%`;
+        const progressHeaderLabel =
+          item.type === 'auto-combat'
+            ? `${item.progressLabel} • ${progressValueLabel}`
+            : item.progressLabel;
+        const shouldShowProgressValue = item.type !== 'auto-combat';
+        const hasSessionIndicator =
+          item.indicatorMetric !== null && item.indicatorMetric !== undefined;
         const progressStyle = {
           width: `${progressPercent}%`,
         };
@@ -2036,8 +2063,10 @@ export function DashboardActivityBar({
 
                 <div className="dashboard-activity-bar__progress-block">
                   <div className="dashboard-activity-bar__progress-header">
-                    <span>{item.progressLabel}</span>
-                    <strong>{progressPercentLabel}%</strong>
+                    <span>{progressHeaderLabel}</span>
+                    {shouldShowProgressValue ? (
+                      <strong>{progressValueLabel}</strong>
+                    ) : null}
                   </div>
 
                   <div className="dashboard-activity-bar__track">
@@ -2103,8 +2132,10 @@ export function DashboardActivityBar({
 
                 <div className="dashboard-activity-bar__compact-track-block">
                   <div className="dashboard-activity-bar__compact-track-header">
-                    <span>{item.progressLabel}</span>
-                    <strong>{progressPercentLabel}%</strong>
+                    <span>{progressHeaderLabel}</span>
+                    {shouldShowProgressValue ? (
+                      <strong>{progressValueLabel}</strong>
+                    ) : null}
                   </div>
 
                   <div className="dashboard-activity-bar__compact-track">
