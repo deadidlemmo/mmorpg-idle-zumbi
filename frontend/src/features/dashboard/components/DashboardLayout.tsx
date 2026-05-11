@@ -19,12 +19,14 @@ interface DashboardLayoutProps {
   character: DashboardCharacterViewModel;
   children: ReactNode;
   hideHero?: boolean;
+  hideTopBar?: boolean;
 }
 
 interface DashboardLayoutContentProps {
   character: DashboardCharacterViewModel;
   children: ReactNode;
   hideHero?: boolean;
+  hideTopBar?: boolean;
 }
 
 interface DashboardNavItem {
@@ -1022,6 +1024,7 @@ function DashboardLayoutContent({
   character,
   children,
   hideHero = false,
+  hideTopBar = false,
 }: DashboardLayoutContentProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1292,16 +1295,18 @@ function DashboardLayoutContent({
         </div>
       </aside>
 
-      <main className="dashboard-main">
-        <DashboardTopBar
-          characterId={characterId}
-          characterName={heroCharacter.name}
-          characterClassName={classData.label}
-          characterLevel={heroCharacter.level}
-          characterCurrentHp={heroCharacter.currentHp}
-          characterMaxHp={heroCharacter.maxHp}
-          resources={topBarResources}
-        />
+      <main className={hideTopBar ? 'dashboard-main dashboard-main--content-only' : 'dashboard-main'}>
+        {!hideTopBar ? (
+          <DashboardTopBar
+            characterId={characterId}
+            characterName={heroCharacter.name}
+            characterClassName={classData.label}
+            characterLevel={heroCharacter.level}
+            characterCurrentHp={heroCharacter.currentHp}
+            characterMaxHp={heroCharacter.maxHp}
+            resources={topBarResources}
+          />
+        ) : null}
 
         {!hideHero ? (
           <section className="dashboard-hero" style={classStyle}>
@@ -1421,9 +1426,14 @@ export function DashboardLayout({
   character,
   children,
   hideHero = false,
+  hideTopBar = false,
 }: DashboardLayoutProps) {
   return (
-    <DashboardLayoutContent character={character} hideHero={hideHero}>
+    <DashboardLayoutContent
+      character={character}
+      hideHero={hideHero}
+      hideTopBar={hideTopBar}
+    >
       {children}
     </DashboardLayoutContent>
   );
