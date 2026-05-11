@@ -9,6 +9,7 @@ import {
 } from 'react';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
+import { useLootNotifications } from '../../loot-notifications/lootNotificationContext';
 import {
   collectGatheringRequest,
   extractGatheringApiError,
@@ -18,6 +19,8 @@ import {
 } from '../api/gathering.api';
 import type {
   GatheringAllowedOrigin,
+  GatheringCollectedViewModel,
+  GatheringInventoryItemViewModel,
   GatheringMaterialViewModel,
   GatheringProductionPreviewViewModel,
   GatheringSessionViewModel,
@@ -101,6 +104,8 @@ type GatheringStatusLoose = GatheringStatusResponse & {
   session?: GatheringSessionViewModel | null;
   productionPreview?: GatheringProductionPreviewViewModel | null;
   gatheringSkill?: GatheringSkillViewModel | null;
+  autoCollected?: GatheringCollectedViewModel | null;
+  inventoryItem?: GatheringInventoryItemViewModel | null;
 };
 
 type GatheringSessionLoose = GatheringSessionViewModel & {
@@ -140,6 +145,60 @@ type GatheringMaterialLoose = GatheringMaterialViewModel & {
 };
 
 const GATHERING_SOCKET_NAMESPACE = '/gathering';
+
+
+type GatheringLootNotificationSource = {
+  collected?: GatheringCollectedViewModel | null;
+  session?: GatheringSessionViewModel | null;
+  targetMaterial?: GatheringMaterialViewModel | null;
+  inventoryItem?: GatheringInventoryItemViewModel | null;
+};
+
+function getMaterialImageUrl(material?: GatheringMaterialViewModel | null) {
+  const materialWithOptionalIcon = material as
+    | (GatheringMaterialViewModel & { icon?: string | null })
+    | null
+    | undefined;
+  const possibleImage =
+    materialWithOptionalIcon?.iconUrl ??
+    materialWithOptionalIcon?.imageUrl ??
+    materialWithOptionalIcon?.iconPath ??
+    materialWithOptionalIcon?.icon;
+
+  if (typeof possibleImage !== 'string') {
+    return null;
+  }
+
+  const trimmedImage = possibleImage.trim();
+
+  return trimmedImage.length > 0 ? trimmedImage : null;
+}
+
+function getCollectedQuantity(collected?: GatheringCollectedViewModel | null) {
+  const quantity = Number(collected?.quantity ?? 0);
+
+  return Number.isFinite(quantity) ? Math.max(0, Math.floor(quantity)) : 0;
+}
+
+function buildGatheringLootNotificationKey(params: {
+  characterId: string;
+  collected: GatheringCollectedViewModel;
+  session?: GatheringSessionViewModel | null;
+  inventoryItem?: GatheringInventoryItemViewModel | null;
+}) {
+  const session = params.session as GatheringSessionLoose | null | undefined;
+  const collectedTotal = getSessionCollectedQuantity(params.session);
+
+  return [
+    'gathering',
+    params.characterId,
+    params.session?.id ?? 'no-session',
+    params.collected.itemId,
+    collectedTotal,
+    params.collected.quantity,
+    session?.lastResolvedAt ?? params.inventoryItem?.updatedAt ?? 'no-resolved-at',
+  ].join('|');
+}
 
 const GATHERING_STATUS_EVENTS = [
   'gathering:status',
@@ -271,6 +330,15 @@ function getTargetMaterial(params: {
     loosePreview?.material ??
     null
   );
+}
+
+function getStatusTargetMaterial(
+  status?: GatheringStatusResponse | null,
+): GatheringMaterialViewModel | null {
+  const session = getActiveSession(status);
+  const productionPreview = getProductionPreview({ status, session });
+
+  return getTargetMaterial({ session, productionPreview });
 }
 
 function getSessionCollectedQuantity(
@@ -830,10 +898,55 @@ export function GatheringRealtimeProvider({
 
   const socketRef = useRef<Socket | null>(null);
   const isMountedRef = useRef(false);
+  const processedLootNotificationKeysRef = useRef<Set<string>>(new Set());
+  const { notifyLoot } = useLootNotifications();
   const isRefreshingRef = useRef(false);
   const statusRef = useRef<GatheringStatusResponse | null>(null);
   const statusSignatureRef = useRef<string>('null');
   const socketConnectedRef = useRef(false);
+
+  const publishGatheringLootNotification = useCallback(
+    ({ collected, session, targetMaterial, inventoryItem }: GatheringLootNotificationSource) => {
+      if (!enabled || !characterId || !collected) return;
+
+      const quantity = getCollectedQuantity(collected);
+      const itemName = String(collected.name ?? targetMaterial?.name ?? 'Item').trim();
+
+      if (quantity <= 0 || !itemName) {
+        return;
+      }
+
+      const idempotencyKey = buildGatheringLootNotificationKey({
+        characterId,
+        collected,
+        session,
+        inventoryItem,
+      });
+
+      if (processedLootNotificationKeysRef.current.has(idempotencyKey)) {
+        return;
+      }
+
+      processedLootNotificationKeysRef.current.add(idempotencyKey);
+
+      if (processedLootNotificationKeysRef.current.size > 240) {
+        processedLootNotificationKeysRef.current = new Set(
+          Array.from(processedLootNotificationKeysRef.current).slice(-120),
+        );
+      }
+
+      notifyLoot({
+        idempotencyKey,
+        itemId: collected.itemId,
+        itemName,
+        quantity,
+        imageUrl: getMaterialImageUrl(targetMaterial),
+        rarity: targetMaterial?.rarity,
+        source: 'gathering',
+      });
+    },
+    [characterId, enabled, notifyLoot],
+  );
 
   const applyStatus = useCallback((nextStatus: GatheringStatusResponse | null) => {
     if (!isMountedRef.current) return;
@@ -845,13 +958,25 @@ export function GatheringRealtimeProvider({
       return;
     }
 
+    const previousStatus = statusRef.current;
+
     statusSignatureRef.current = nextSignature;
     statusRef.current = nextStatus;
+
+    if (previousStatus) {
+      const activeStatus = nextStatus as GatheringStatusLoose | null;
+      publishGatheringLootNotification({
+        collected: activeStatus?.autoCollected ?? null,
+        session: getActiveSession(nextStatus),
+        targetMaterial: getStatusTargetMaterial(nextStatus),
+        inventoryItem: activeStatus?.inventoryItem ?? null,
+      });
+    }
 
     setStatus(nextStatus);
     setLastUpdatedAt(Date.now());
     setErrorMessage(null);
-  }, []);
+  }, [publishGatheringLootNotification]);
 
   const applySocketPayload = useCallback(
     (payload: unknown) => {
@@ -973,6 +1098,15 @@ export function GatheringRealtimeProvider({
     try {
       const response = await collectGatheringRequest(characterId);
 
+      publishGatheringLootNotification({
+        collected: response.collected,
+        session: response.session,
+        targetMaterial:
+          response.session?.targetMaterial ??
+          getStatusTargetMaterial(statusRef.current),
+        inventoryItem: response.inventoryItem ?? null,
+      });
+
       requestSocketSnapshot();
 
       if (!socketConnectedRef.current) {
@@ -991,7 +1125,13 @@ export function GatheringRealtimeProvider({
         setIsBusy((previous) => (previous ? false : previous));
       }
     }
-  }, [characterId, enabled, refresh, requestSocketSnapshot]);
+  }, [
+    characterId,
+    enabled,
+    publishGatheringLootNotification,
+    refresh,
+    requestSocketSnapshot,
+  ]);
 
   const stop = useCallback(async () => {
     if (!enabled || !characterId) {
@@ -1039,6 +1179,7 @@ export function GatheringRealtimeProvider({
   useEffect(() => {
     statusRef.current = null;
     statusSignatureRef.current = 'null';
+    processedLootNotificationKeysRef.current.clear();
 
     setStatus((previous) => (previous === null ? previous : null));
     setLastUpdatedAt((previous) => (previous === null ? previous : null));
