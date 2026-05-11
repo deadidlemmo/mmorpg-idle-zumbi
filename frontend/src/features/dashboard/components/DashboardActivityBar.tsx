@@ -1915,8 +1915,6 @@ export function DashboardActivityBar({
             ? `${item.progressLabel} • ${progressValueLabel}`
             : item.progressLabel;
         const shouldShowProgressValue = item.type !== 'auto-combat';
-        const hasSessionIndicator =
-          item.indicatorMetric !== null && item.indicatorMetric !== undefined;
         const progressStyle = {
           width: `${progressPercent}%`,
         };
