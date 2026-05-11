@@ -72,25 +72,17 @@ function enqueueAndProcess(
   });
 }
 
-test('aplica dano visual somente no impacto da animação', () => {
+test('processa dano visual junto com o evento ativo', () => {
   const event = makeHit(1, 70);
   const started = enqueueAndProcess(makeState(), event);
 
   assert.equal(started.activeEvent, event);
-  assert.equal(started.activeEventImpactApplied, false);
-  assert.equal(started.mob?.currentHp, 100);
-  assert.equal(started.battleLogEvents.length, 0);
-
-  const impacted = autoCombatRealtimeReducer(started, {
-    type: 'APPLY_ACTIVE_EVENT_IMPACT',
-  });
-
-  assert.equal(impacted.activeEventImpactApplied, true);
-  assert.equal(impacted.mob?.currentHp, 70);
-  assert.equal(impacted.battleLogEvents.at(0), event);
+  assert.equal(started.activeEventImpactApplied, true);
+  assert.equal(started.mob?.currentHp, 70);
+  assert.equal(started.battleLogEvents.at(0), event);
 });
 
-test('snapshots/status durante animação não antecipam HP visual', () => {
+test('status durante evento ativo não faz rollback do HP visual', () => {
   const started = enqueueAndProcess(makeState(), makeHit(1, 70));
 
   const hydrated = autoCombatRealtimeReducer(started, {
@@ -116,8 +108,8 @@ test('snapshots/status durante animação não antecipam HP visual', () => {
     } as never,
   });
 
-  assert.equal(hydrated.mob?.currentHp, 100);
-  assert.equal(hydrated.activeEventImpactApplied, false);
+  assert.equal(hydrated.mob?.currentHp, 70);
+  assert.equal(hydrated.activeEventImpactApplied, true);
 });
 
 test('múltiplas ações em autocombat avançam em sequência monotônica', () => {
@@ -167,4 +159,177 @@ test('eventos atrasados não reordenam nem restauram estado antigo', () => {
     restored.battleLogEvents.map((event) => (event as { sequence?: number }).sequence),
     [2, 1],
   );
+});
+
+test('status canônico não antecipa EXP antes do MOB_DEFEATED visual', () => {
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    character: {
+      id: 'char-1',
+      name: 'Sobrevivente',
+      currentHp: 60,
+      maxHp: 100,
+      hpPercent: 60,
+      level: 1,
+      xp: 100,
+      totalXp: 100,
+      currentLevelXp: 100,
+      xpToNextLevel: 200,
+      xpProgressPercent: 50,
+    },
+    displayTotals: {
+      sessionId: 'session-1',
+      totalKills: 0,
+      totalCombats: 0,
+      totalRounds: 4,
+      totalXpGained: 0,
+      totalLoot: 0,
+      potionsUsed: 0,
+    },
+  };
+
+  const hydrated = autoCombatRealtimeReducer(state, {
+    type: 'HYDRATE_STATUS',
+    characterId: 'char-1',
+    status: {
+      active: true,
+      hasActiveAutoCombat: true,
+      character: {
+        id: 'char-1',
+        name: 'Sobrevivente',
+        level: 1,
+        xp: 150,
+        totalXp: 150,
+        currentHp: 90,
+        maxHp: 100,
+        currentLevelXp: 150,
+        xpToNextLevel: 200,
+        xpProgressPercent: 75,
+      },
+      session: {
+        id: 'session-1',
+        characterId: 'char-1',
+        status: 'ACTIVE',
+        currentRound: 5,
+        currentCombatIndex: 1,
+        totalCombatsResolved: 1,
+        totalRoundsResolved: 5,
+        totalXpGained: 50,
+      },
+      currentMob: {
+        id: 'mob-1',
+        name: 'Zumbi',
+        currentHp: 0,
+        maxHp: 100,
+      },
+    } as never,
+  });
+
+  assert.equal(hydrated.character?.totalXp, 100);
+  assert.equal(hydrated.character?.currentLevelXp, 100);
+  assert.equal(hydrated.character?.xpProgressPercent, 50);
+  assert.equal(hydrated.displayTotals?.totalXpGained, 0);
+});
+
+test('POTION_USED não herda EXP canônica pendente de status antes do abate', () => {
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    character: {
+      id: 'char-1',
+      name: 'Sobrevivente',
+      currentHp: 40,
+      maxHp: 100,
+      hpPercent: 40,
+      level: 1,
+      xp: 100,
+      totalXp: 100,
+      currentLevelXp: 100,
+      xpToNextLevel: 200,
+      xpProgressPercent: 50,
+    },
+    totals: {
+      sessionId: 'session-1',
+      totalKills: 1,
+      totalCombats: 1,
+      totalRounds: 5,
+      totalXpGained: 50,
+      totalLoot: 0,
+      potionsUsed: 1,
+    },
+    displayTotals: {
+      sessionId: 'session-1',
+      totalKills: 0,
+      totalCombats: 0,
+      totalRounds: 4,
+      totalXpGained: 0,
+      totalLoot: 0,
+      potionsUsed: 0,
+    },
+  };
+
+  const potionEvent = {
+    characterId: 'char-1',
+    sessionId: 'session-1',
+    type: 'POTION_USED',
+    actor: 'PLAYER',
+    target: 'PLAYER',
+    mobId: 'mob-1',
+    mobName: 'Zumbi',
+    mobCurrentHp: 10,
+    mobMaxHp: 100,
+    characterCurrentHp: 90,
+    characterMaxHp: 100,
+    healedAmount: 50,
+    round: 5,
+    combatIndex: 1,
+    totalKills: 0,
+    totalXpGained: 0,
+    potionsUsed: 1,
+    createdAt: '2026-05-11T00:00:05.000Z',
+    sequence: 5,
+  } as AutoCombatRealtimeEvent;
+
+  const afterPotion = autoCombatRealtimeReducer(
+    enqueueAndProcess(state, potionEvent),
+    { type: 'CLEAR_ACTIVE_EVENT' },
+  );
+
+  assert.equal(afterPotion.character?.totalXp, 100);
+  assert.equal(afterPotion.character?.currentLevelXp, 100);
+  assert.equal(afterPotion.character?.xpProgressPercent, 50);
+  assert.equal(afterPotion.displayTotals?.totalXpGained, 0);
+
+  const defeatEvent = {
+    characterId: 'char-1',
+    sessionId: 'session-1',
+    type: 'MOB_DEFEATED',
+    actor: 'PLAYER',
+    target: 'MOB',
+    mobId: 'mob-1',
+    mobName: 'Zumbi',
+    mobCurrentHp: 0,
+    mobMaxHp: 100,
+    characterCurrentHp: 90,
+    characterMaxHp: 100,
+    xpGained: 50,
+    characterXp: 150,
+    totalXp: 150,
+    currentLevelXp: 150,
+    xpToNextLevel: 200,
+    xpProgressPercent: 75,
+    round: 5,
+    combatIndex: 1,
+    totalKills: 1,
+    totalXpGained: 50,
+    potionsUsed: 1,
+    createdAt: '2026-05-11T00:00:06.000Z',
+    sequence: 6,
+  } as AutoCombatRealtimeEvent;
+
+  const afterDefeat = enqueueAndProcess(afterPotion, defeatEvent);
+
+  assert.equal(afterDefeat.character?.totalXp, 150);
+  assert.equal(afterDefeat.character?.currentLevelXp, 150);
+  assert.equal(afterDefeat.character?.xpProgressPercent, 75);
+  assert.equal(afterDefeat.displayTotals?.totalXpGained, 50);
 });
