@@ -316,7 +316,11 @@ model Item {
   classId String?
   mapId   String?
 
+  slug           String?         @unique
   materialOrigin MaterialOrigin?
+  materialSlot   ItemSlot?
+
+  isGatheringMaterial Boolean @default(false)
 
   requiredGatheringLevel   Int  @default(1)
   gatheringXpPerUnit       Int  @default(1)
@@ -370,6 +374,9 @@ model Item {
   @@index([slot])
   @@index([rarity])
   @@index([materialOrigin])
+  @@index([materialSlot])
+  @@index([isGatheringMaterial])
+  @@index([materialOrigin, materialSlot])
   @@index([materialOrigin, requiredGatheringLevel])
   @@index([requiredGatheringLevel])
   @@index([baseGatheringRatePerHour])

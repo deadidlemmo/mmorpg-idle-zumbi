@@ -1,5 +1,12 @@
-import type { GameClass, GameMap, Item, Mob, Prisma, SubMap } from '@prisma/client';
-import { ItemSlot, PrismaClient, Rarity } from '@prisma/client';
+import type {
+  GameClass,
+  GameMap,
+  Item,
+  Mob,
+  Prisma,
+  SubMap,
+} from '@prisma/client';
+import { ItemSlot, MaterialOrigin, PrismaClient, Rarity } from '@prisma/client';
 import { classDefinitions } from './seed-data/classes.seed-data';
 import { consumableDefinitions } from './seed-data/consumables.seed-data';
 import {
@@ -227,6 +234,7 @@ async function upsertMaterialItem(params: {
 
   return upsertItemByName({
     name: data.name,
+    slug: data.slug ?? null,
     description: data.description,
     tier: data.tier,
     rarity: getRarityByTier(data.tier),
@@ -235,6 +243,8 @@ async function upsertMaterialItem(params: {
     classId: null,
     mapId,
     materialOrigin: data.materialOrigin,
+    materialSlot: data.materialSlot ?? null,
+    isGatheringMaterial: data.isGatheringMaterial ?? false,
 
     requiredGatheringLevel: data.requiredGatheringLevel ?? 1,
     gatheringXpPerUnit: data.gatheringXpPerUnit ?? (isMobDrop ? 0 : 1),
@@ -430,6 +440,123 @@ async function upsertCraftingRecipe(params: {
       },
     },
   });
+}
+
+async function validateOfficialGatheringMaterials() {
+  const total = await prisma.item.count({
+    where: {
+      isGatheringMaterial: true,
+    },
+  });
+
+  if (total !== 360) {
+    throw new Error(
+      `Validação de gathering falhou: esperado 360 materiais oficiais, encontrado ${total}.`,
+    );
+  }
+
+  const tierGroups = await prisma.item.groupBy({
+    by: ['tier'],
+    where: {
+      isGatheringMaterial: true,
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  for (let tier = 1; tier <= 10; tier += 1) {
+    const group = tierGroups.find((entry) => entry.tier === tier);
+    const count = group?._count._all ?? 0;
+
+    if (count !== 36) {
+      throw new Error(
+        `Validação de gathering falhou: tier ${tier} deveria ter 36 materiais, encontrado ${count}.`,
+      );
+    }
+  }
+
+  const combinationGroups = await prisma.item.groupBy({
+    by: ['tier', 'materialOrigin', 'materialSlot'],
+    where: {
+      isGatheringMaterial: true,
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  if (combinationGroups.length !== 360) {
+    throw new Error(
+      `Validação de gathering falhou: esperado 360 combinações tier+gathering+slot, encontrado ${combinationGroups.length}.`,
+    );
+  }
+
+  const officialOrigins: MaterialOrigin[] = [
+    MaterialOrigin.DESMANCHE,
+    MaterialOrigin.COLETA,
+    MaterialOrigin.PATRULHA,
+    MaterialOrigin.ARSENAL,
+    MaterialOrigin.TECNOVARREDURA,
+    MaterialOrigin.CONTENCAO,
+  ];
+  const officialSlots: ItemSlot[] = [
+    ItemSlot.MAIN_HAND,
+    ItemSlot.OFF_HAND,
+    ItemSlot.HEAD,
+    ItemSlot.ARMOR,
+    ItemSlot.PANTS,
+    ItemSlot.BOOTS,
+  ];
+
+  const invalidCombination = combinationGroups.find(
+    (entry) =>
+      entry._count._all !== 1 ||
+      !entry.materialOrigin ||
+      !entry.materialSlot ||
+      !officialOrigins.includes(entry.materialOrigin) ||
+      !officialSlots.includes(entry.materialSlot),
+  );
+
+  if (invalidCombination) {
+    throw new Error(
+      `Validação de gathering falhou: combinação inválida ${JSON.stringify(invalidCombination)}.`,
+    );
+  }
+
+  for (let tier = 1; tier <= 10; tier += 1) {
+    for (const origin of officialOrigins) {
+      const count = combinationGroups.filter(
+        (entry) => entry.tier === tier && entry.materialOrigin === origin,
+      ).length;
+
+      if (count !== 6) {
+        throw new Error(
+          `Validação de gathering falhou: tier ${tier} / ${origin} deveria ter 6 slots, encontrado ${count}.`,
+        );
+      }
+
+      for (const slot of officialSlots) {
+        const hasSlot = combinationGroups.some(
+          (entry) =>
+            entry.tier === tier &&
+            entry.materialOrigin === origin &&
+            entry.materialSlot === slot &&
+            entry._count._all === 1,
+        );
+
+        if (!hasSlot) {
+          throw new Error(
+            `Validação de gathering falhou: faltando tier ${tier} / ${origin} / ${slot}.`,
+          );
+        }
+      }
+    }
+  }
+
+  console.log(
+    'Validação de gathering concluída: 360 materiais oficiais, 36 por tier e 1 por combinação tier+gathering+slot.',
+  );
 }
 
 function getRequiredFromMap<T>(params: {
@@ -654,7 +781,9 @@ async function main() {
     });
   }
 
-  console.log('Limpando drops antigos dos mobs oficiais cadastrados neste seed...');
+  console.log(
+    'Limpando drops antigos dos mobs oficiais cadastrados neste seed...',
+  );
 
   await prisma.mobDrop.deleteMany({
     where: {
@@ -676,6 +805,8 @@ async function main() {
       itemId: item.id,
     });
   }
+
+  await validateOfficialGatheringMaterials();
 
   console.log('Seed seguro modularizado finalizado com sucesso!');
 
