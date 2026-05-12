@@ -523,8 +523,11 @@ export class GatheringService {
           select: {
             id: true,
             name: true,
+            slug: true,
             tier: true,
             materialOrigin: true,
+            materialSlot: true,
+            isGatheringMaterial: true,
             requiredGatheringLevel: true,
             gatheringXpPerUnit: true,
             baseGatheringRatePerHour: true,
@@ -625,7 +628,8 @@ export class GatheringService {
       return null;
     }
 
-    const currentHp = session.character.currentHp ?? session.character.maxHp ?? 1;
+    const currentHp =
+      session.character.currentHp ?? session.character.maxHp ?? 1;
 
     if (session.character.status !== CharacterStatus.ACTIVE || currentHp <= 0) {
       return {
@@ -685,8 +689,7 @@ export class GatheringService {
       elapsedSeconds,
       tier: session.map.tier,
       progressRemainder: session.progressRemainder,
-      baseGatheringRatePerHour:
-        session.targetMaterial.baseGatheringRatePerHour,
+      baseGatheringRatePerHour: session.targetMaterial.baseGatheringRatePerHour,
       skillLevel: gatheringSkill.level,
       isAffinity: affinity,
     });
@@ -925,6 +928,7 @@ export class GatheringService {
         mapId: gameMap.id,
         slot: ItemSlot.MATERIAL,
         materialOrigin: origin,
+        isGatheringMaterial: true,
       },
       orderBy: [
         {
@@ -940,12 +944,15 @@ export class GatheringService {
       select: {
         id: true,
         name: true,
+        slug: true,
         description: true,
         tier: true,
         rarity: true,
         slot: true,
         family: true,
         materialOrigin: true,
+        materialSlot: true,
+        isGatheringMaterial: true,
         mapId: true,
         requiredGatheringLevel: true,
         gatheringXpPerUnit: true,
@@ -1006,12 +1013,15 @@ export class GatheringService {
         return {
           id: material.id,
           name: material.name,
+          slug: material.slug,
           description: material.description,
           tier: material.tier,
           rarity: material.rarity,
           slot: material.slot,
           family: material.family,
           materialOrigin: material.materialOrigin,
+          materialSlot: material.materialSlot,
+          isGatheringMaterial: material.isGatheringMaterial,
           mapId: material.mapId,
           requiredGatheringLevel: material.requiredGatheringLevel,
           gatheringXpPerUnit: material.gatheringXpPerUnit,
@@ -1060,10 +1070,13 @@ export class GatheringService {
       select: {
         id: true,
         name: true,
+        slug: true,
         tier: true,
         slot: true,
         mapId: true,
         materialOrigin: true,
+        materialSlot: true,
+        isGatheringMaterial: true,
         requiredGatheringLevel: true,
         gatheringXpPerUnit: true,
         baseGatheringRatePerHour: true,
@@ -1194,8 +1207,11 @@ export class GatheringService {
           select: {
             id: true,
             name: true,
+            slug: true,
             tier: true,
             materialOrigin: true,
+            materialSlot: true,
+            isGatheringMaterial: true,
             requiredGatheringLevel: true,
             gatheringXpPerUnit: true,
             baseGatheringRatePerHour: true,
@@ -1296,7 +1312,8 @@ export class GatheringService {
       throw new BadRequestException('Nenhum gathering ativo para encerrar.');
     }
 
-    const currentHp = session.character.currentHp ?? session.character.maxHp ?? 1;
+    const currentHp =
+      session.character.currentHp ?? session.character.maxHp ?? 1;
 
     if (session.character.status !== CharacterStatus.ACTIVE || currentHp <= 0) {
       const stoppedSession = await this.prisma.gatheringSession.update({
@@ -1383,8 +1400,11 @@ export class GatheringService {
           select: {
             id: true,
             name: true,
+            slug: true,
             tier: true,
             materialOrigin: true,
+            materialSlot: true,
+            isGatheringMaterial: true,
             requiredGatheringLevel: true,
             gatheringXpPerUnit: true,
             baseGatheringRatePerHour: true,
