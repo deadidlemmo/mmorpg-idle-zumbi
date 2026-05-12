@@ -1,5 +1,8 @@
--- Garante que cada personagem tenha no máximo uma sessão de auto-combate ativa.
--- Sessões históricas FINISHED, STOPPED ou DEFEATED continuam permitidas.
-CREATE UNIQUE INDEX "auto_combat_sessions_unique_active_character"
-ON "auto_combat_sessions" ("characterId")
-WHERE "status" = 'ACTIVE';
+-- Migration intentionally left as a no-op.
+--
+-- The partial unique index below was already created by the previous migration:
+-- 20260511015902_add_unique_active_auto_combat_session
+--
+-- Keeping this migration directory preserves chronological migration history while
+-- avoiding P3006 in Prisma's shadow database caused by creating the same relation
+-- name twice from a clean migration replay.
