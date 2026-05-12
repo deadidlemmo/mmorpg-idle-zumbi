@@ -27,6 +27,14 @@ const AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS = Math.max(1, Math.floor(auto
 const AUTO_COMBAT_REALTIME_TICK_MS = 1000;
 const AUTO_COMBAT_STORED_EVENTS_LIMIT = 50;
 const AUTO_COMBAT_RECENT_EVENTS_LIMIT = 20;
+const AUTO_COMBAT_MAX_REALTIME_EVENTS_TO_EMIT = 20;
+const AUTO_COMBAT_CONCURRENT_PROCESSING_MESSAGE = 'Processamento abortado: outra execução já avançou esta sessão.';
+class AutoCombatSessionConcurrencyError extends Error {
+    constructor() {
+        super(AUTO_COMBAT_CONCURRENT_PROCESSING_MESSAGE);
+        this.name = 'AutoCombatSessionConcurrencyError';
+    }
+}
 let AutoCombatService = class AutoCombatService {
     prisma;
     activityGuard;
@@ -136,35 +144,64 @@ let AutoCombatService = class AutoCombatService {
         const now = new Date();
         const endsAt = new Date(now.getTime() + auto_combat_config_1.AUTO_COMBAT_SESSION_DURATION_SECONDS * 1000);
         const firstRoundReadyAt = now;
-        const session = await this.prisma.$transaction(async (tx) => {
-            await tx.character.update({
+        let session;
+        try {
+            session = await this.prisma.$transaction(async (tx) => {
+                await tx.character.update({
+                    where: {
+                        id: character.id,
+                    },
+                    data: {
+                        mapId: subMap.mapId,
+                        maxHp: characterStats.maxHp,
+                        currentHp: characterStats.hp,
+                    },
+                });
+                return tx.autoCombatSession.create({
+                    data: {
+                        characterId: character.id,
+                        subMapId: subMap.id,
+                        status: client_1.AutoCombatSessionStatus.ACTIVE,
+                        startedAt: now,
+                        endsAt,
+                        lastProcessedAt: firstRoundReadyAt,
+                        durationSeconds: auto_combat_config_1.AUTO_COMBAT_SESSION_DURATION_SECONDS,
+                        roundDurationSeconds: AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS,
+                        currentMobId: firstMob.id,
+                        currentMobHp: firstMob.hp,
+                        currentMobMaxHp: firstMob.hp,
+                        currentRound: 0,
+                        currentCombatIndex: 1,
+                    },
+                });
+            });
+        }
+        catch (error) {
+            if (!this.isUniqueConstraintError(error)) {
+                throw error;
+            }
+            const activeSessionAfterConflict = await this.prisma.autoCombatSession.findFirst({
                 where: {
-                    id: character.id,
-                },
-                data: {
-                    mapId: subMap.mapId,
-                    maxHp: characterStats.maxHp,
-                    currentHp: characterStats.hp,
-                },
-            });
-            return tx.autoCombatSession.create({
-                data: {
                     characterId: character.id,
-                    subMapId: subMap.id,
                     status: client_1.AutoCombatSessionStatus.ACTIVE,
-                    startedAt: now,
-                    endsAt,
-                    lastProcessedAt: firstRoundReadyAt,
-                    durationSeconds: auto_combat_config_1.AUTO_COMBAT_SESSION_DURATION_SECONDS,
-                    roundDurationSeconds: AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS,
-                    currentMobId: firstMob.id,
-                    currentMobHp: firstMob.hp,
-                    currentMobMaxHp: firstMob.hp,
-                    currentRound: 0,
-                    currentCombatIndex: 1,
+                },
+                orderBy: {
+                    startedAt: 'desc',
                 },
             });
-        });
+            if (!activeSessionAfterConflict) {
+                throw error;
+            }
+            await this.ensureResponsiveRoundDuration(activeSessionAfterConflict.id);
+            this.startRealtimeProcessingLoop(userId, character.id);
+            const conflictResponse = await this.buildSessionResponse(activeSessionAfterConflict.id, {
+                message: 'Este personagem já possui uma sessão de combate automático ativa.',
+                processing: this.buildEmptyProcessingSummary(),
+            });
+            this.autoCombatGateway.emitSessionUpdated(character.id, conflictResponse);
+            this.autoCombatGateway.emitStatus(character.id, conflictResponse);
+            return conflictResponse;
+        }
         this.clearPotionUsageForSession(session.id);
         const response = await this.buildSessionResponse(session.id, {
             message: 'Sessão de combate automático iniciada com sucesso.',
@@ -460,9 +497,7 @@ let AutoCombatService = class AutoCombatService {
             },
             take: AUTO_COMBAT_RECENT_EVENTS_LIMIT,
         });
-        const events = [...storedEvents]
-            .reverse()
-            .map((event) => {
+        const events = [...storedEvents].reverse().map((event) => {
             const payload = event.payloadJson &&
                 typeof event.payloadJson === 'object' &&
                 !Array.isArray(event.payloadJson)
@@ -552,6 +587,10 @@ let AutoCombatService = class AutoCombatService {
         this.autoCombatGateway.emitStatus(character.id, response);
         return response;
     }
+    isUniqueConstraintError(error) {
+        return (error instanceof client_1.Prisma.PrismaClientKnownRequestError &&
+            error.code === 'P2002');
+    }
     getEffectiveRoundDurationSeconds(roundDurationSeconds) {
         return this.clampNumber(Math.floor(roundDurationSeconds ?? AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS), 1, AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS);
     }
@@ -621,8 +660,8 @@ let AutoCombatService = class AutoCombatService {
         clearInterval(interval);
         this.realtimeIntervals.delete(characterId);
     }
-    async processActiveSessionById(userId, sessionId) {
-        const session = await this.prisma.autoCombatSession.findFirst({
+    loadAutoCombatSession(userId, sessionId) {
+        return this.prisma.autoCombatSession.findFirst({
             where: {
                 id: sessionId,
                 character: {
@@ -689,6 +728,9 @@ let AutoCombatService = class AutoCombatService {
                 },
             },
         });
+    }
+    async processActiveSessionById(userId, sessionId) {
+        const session = await this.loadAutoCombatSession(userId, sessionId);
         if (!session) {
             throw new common_1.NotFoundException('Sessão de combate automático não encontrada.');
         }
@@ -717,34 +759,23 @@ let AutoCombatService = class AutoCombatService {
                 session.roundDurationSeconds = effectiveRoundDurationSeconds;
             }
             const now = new Date();
-            if (now.getTime() >= session.endsAt.getTime()) {
-                const finishedSession = await this.prisma.autoCombatSession.update({
-                    where: {
-                        id: session.id,
-                    },
-                    data: {
-                        status: client_1.AutoCombatSessionStatus.FINISHED,
-                        finishedAt: session.endsAt,
-                        lastProcessedAt: session.endsAt,
-                        currentMobId: null,
-                        currentMobHp: null,
-                        currentMobMaxHp: null,
-                        currentRound: 0,
-                    },
-                });
-                this.clearPotionUsageForSession(finishedSession.id);
-                const response = await this.buildSessionResponse(finishedSession.id, {
-                    message: 'Sessão finalizada com sucesso.',
-                    processing: this.buildEmptyProcessingSummary(),
-                });
-                this.stopRealtimeProcessingLoop(session.characterId);
-                this.autoCombatGateway.emitSessionUpdated(session.characterId, response);
-                this.autoCombatGateway.emitStatus(session.characterId, response);
-                this.autoCombatGateway.emitFinished(session.characterId, response);
-                return response;
-            }
-            const secondsAvailable = Math.floor((now.getTime() - session.lastProcessedAt.getTime()) / 1000);
-            if (secondsAvailable < session.roundDurationSeconds) {
+            const effectiveNow = new Date(Math.min(now.getTime(), session.endsAt.getTime()));
+            const secondsAvailable = Math.floor((effectiveNow.getTime() - session.lastProcessedAt.getTime()) / 1000);
+            const actionsAvailable = Math.max(0, Math.floor(secondsAvailable / effectiveRoundDurationSeconds));
+            if (actionsAvailable <= 0) {
+                if (now.getTime() >= session.endsAt.getTime()) {
+                    const finishedSession = await this.finishActiveSessionAtEnd(session);
+                    const response = await this.buildSessionResponse(finishedSession.id, {
+                        message: 'Sessão finalizada com sucesso.',
+                        processing: this.buildEmptyProcessingSummary(),
+                    });
+                    this.clearPotionUsageForSession(finishedSession.id);
+                    this.stopRealtimeProcessingLoop(session.characterId);
+                    this.autoCombatGateway.emitSessionUpdated(session.characterId, response);
+                    this.autoCombatGateway.emitStatus(session.characterId, response);
+                    this.autoCombatGateway.emitFinished(session.characterId, response);
+                    return response;
+                }
                 const response = await this.buildSessionResponse(session.id, {
                     message: 'Sessão ativa aguardando próxima rodada.',
                     processing: this.buildEmptyProcessingSummary(),
@@ -752,68 +783,133 @@ let AutoCombatService = class AutoCombatService {
                 this.autoCombatGateway.emitStatus(session.characterId, response);
                 return response;
             }
-            if (!session.currentMob ||
-                !session.currentMobId ||
-                session.currentMobHp === null ||
-                session.currentMobHp === undefined ||
-                session.currentMobHp <= 0) {
-                const spawnedSession = await this.spawnNextMobForSession(session);
-                const response = await this.buildSessionResponse(spawnedSession.id, {
-                    message: 'Novo infectado encontrado.',
-                    processing: this.buildEmptyProcessingSummary(),
-                });
-                this.autoCombatGateway.emitSessionUpdated(session.characterId, response);
-                this.autoCombatGateway.emitStatus(session.characterId, response);
-                return response;
-            }
-            const roundResult = this.resolveRealtimeRound(session);
-            await this.persistRealtimeRoundResult(session, roundResult);
-            const response = await this.buildSessionResponse(session.id, {
-                message: roundResult.finalStatus === client_1.AutoCombatSessionStatus.DEFEATED
-                    ? 'Sessão encerrada: o personagem foi derrotado.'
-                    : roundResult.finalStatus === client_1.AutoCombatSessionStatus.FINISHED
-                        ? 'Sessão finalizada com sucesso.'
-                        : roundResult.combatsResolved > 0
-                            ? 'Infectado abatido. Próxima ameaça localizada.'
-                            : 'Rodada processada em tempo real.',
-                processing: this.buildProcessingSummary(roundResult, true),
+            const actionsToProcess = Math.min(actionsAvailable, auto_combat_config_1.AUTO_COMBAT_MAX_COMBATS_PER_PROCESS);
+            let currentSession = session;
+            let aggregateResult = this.buildBaseRealtimeProcessingResult(currentSession, {
+                actionsAvailable,
+                processingLimited: actionsToProcess < actionsAvailable,
             });
-            this.emitRealtimeEvents(session.characterId, roundResult.events);
+            for (let actionIndex = 0; actionIndex < actionsToProcess; actionIndex++) {
+                if (currentSession.status !== client_1.AutoCombatSessionStatus.ACTIVE) {
+                    break;
+                }
+                if (this.sessionNeedsMobSpawn(currentSession)) {
+                    const nextLastProcessedAt = this.addSeconds(currentSession.lastProcessedAt, effectiveRoundDurationSeconds);
+                    if (nextLastProcessedAt.getTime() >= currentSession.endsAt.getTime()) {
+                        aggregateResult = this.mergeProcessedWaitAction(aggregateResult, currentSession, currentSession.endsAt);
+                        const finishedSession = await this.finishActiveSessionAtEnd(currentSession);
+                        currentSession = {
+                            ...currentSession,
+                            ...finishedSession,
+                            status: client_1.AutoCombatSessionStatus.FINISHED,
+                            currentMob: null,
+                            currentMobId: null,
+                            currentMobHp: null,
+                            currentMobMaxHp: null,
+                            currentRound: 0,
+                            lastProcessedAt: currentSession.endsAt,
+                            finishedAt: currentSession.endsAt,
+                        };
+                        aggregateResult.finalStatus = client_1.AutoCombatSessionStatus.FINISHED;
+                        aggregateResult.finishedAt = currentSession.endsAt;
+                        aggregateResult.newLastProcessedAt = currentSession.endsAt;
+                        aggregateResult.currentMobId = null;
+                        aggregateResult.currentMobHp = null;
+                        aggregateResult.currentMobMaxHp = null;
+                        aggregateResult.currentRound = 0;
+                        aggregateResult.actionsProcessed =
+                            (aggregateResult.actionsProcessed ?? 0) + 1;
+                        break;
+                    }
+                    const spawnResult = await this.spawnNextMobForSession(currentSession, {
+                        emitRealtimeEvent: false,
+                        lastProcessedAt: nextLastProcessedAt,
+                    });
+                    aggregateResult = this.mergeProcessedWaitAction(aggregateResult, currentSession, nextLastProcessedAt);
+                    aggregateResult.actionsProcessed =
+                        (aggregateResult.actionsProcessed ?? 0) + 1;
+                    aggregateResult.events = this.appendRealtimeEventsWithLimit(aggregateResult.events, [spawnResult.event]);
+                    currentSession = this.applySpawnToSession(currentSession, spawnResult, nextLastProcessedAt);
+                    continue;
+                }
+                const roundResult = this.resolveRealtimeRound(currentSession);
+                await this.persistRealtimeRoundResult(currentSession, roundResult);
+                aggregateResult = this.mergeRealtimeRoundResults(aggregateResult, roundResult);
+                aggregateResult.actionsProcessed =
+                    (aggregateResult.actionsProcessed ?? 0) + 1;
+                currentSession = this.applyRealtimeRoundResultToSession(currentSession, roundResult);
+                if (roundResult.finalStatus !== client_1.AutoCombatSessionStatus.ACTIVE) {
+                    break;
+                }
+            }
+            if (currentSession.status === client_1.AutoCombatSessionStatus.ACTIVE &&
+                now.getTime() >= currentSession.endsAt.getTime() &&
+                currentSession.lastProcessedAt.getTime() >=
+                    currentSession.endsAt.getTime()) {
+                const finishedSession = await this.finishActiveSessionAtEnd(currentSession);
+                currentSession = {
+                    ...currentSession,
+                    ...finishedSession,
+                    status: client_1.AutoCombatSessionStatus.FINISHED,
+                    currentMob: null,
+                    currentMobId: null,
+                    currentMobHp: null,
+                    currentMobMaxHp: null,
+                    currentRound: 0,
+                    lastProcessedAt: currentSession.endsAt,
+                    finishedAt: currentSession.endsAt,
+                };
+                aggregateResult.finalStatus = client_1.AutoCombatSessionStatus.FINISHED;
+                aggregateResult.finishedAt = currentSession.endsAt;
+                aggregateResult.newLastProcessedAt = currentSession.endsAt;
+                aggregateResult.currentMobId = null;
+                aggregateResult.currentMobHp = null;
+                aggregateResult.currentMobMaxHp = null;
+                aggregateResult.currentRound = 0;
+            }
+            aggregateResult.eventsEmitted = aggregateResult.events.length;
+            aggregateResult.eventsSuppressed = Math.max(0, aggregateResult.eventsSuppressed ?? 0);
+            const response = await this.buildSessionResponse(session.id, {
+                message: this.getProcessingResultMessage(aggregateResult),
+                processing: this.buildProcessingSummary(aggregateResult, true),
+            });
+            this.emitRealtimeEvents(session.characterId, aggregateResult.events, {
+                persist: false,
+            });
             this.autoCombatGateway.emitSessionUpdated(session.characterId, response);
             this.autoCombatGateway.emitStatus(session.characterId, response);
-            if (roundResult.finalStatus === client_1.AutoCombatSessionStatus.FINISHED) {
+            if (aggregateResult.finalStatus === client_1.AutoCombatSessionStatus.FINISHED) {
                 this.clearPotionUsageForSession(session.id);
                 this.stopRealtimeProcessingLoop(session.characterId);
                 this.autoCombatGateway.emitFinished(session.characterId, response);
             }
-            if (roundResult.finalStatus === client_1.AutoCombatSessionStatus.DEFEATED) {
+            if (aggregateResult.finalStatus === client_1.AutoCombatSessionStatus.DEFEATED) {
                 this.clearPotionUsageForSession(session.id);
                 this.stopRealtimeProcessingLoop(session.characterId);
                 this.autoCombatGateway.emitFinished(session.characterId, response);
             }
             return response;
         }
+        catch (error) {
+            if (error instanceof AutoCombatSessionConcurrencyError) {
+                const response = await this.buildSessionResponse(session.id, {
+                    message: AUTO_COMBAT_CONCURRENT_PROCESSING_MESSAGE,
+                    processing: this.buildEmptyProcessingSummary(),
+                });
+                this.autoCombatGateway.emitStatus(session.characterId, response);
+                return response;
+            }
+            throw error;
+        }
         finally {
             this.processingLocks.delete(session.characterId);
         }
     }
-    async spawnNextMobForSession(session) {
+    async spawnNextMobForSession(session, options) {
         const encounter = this.rollEncounter(session.subMap.encounters);
         const mob = encounter.mob;
         const combatIndex = Math.max(1, session.currentCombatIndex ?? 1);
-        const updatedSession = await this.prisma.autoCombatSession.update({
-            where: {
-                id: session.id,
-            },
-            data: {
-                currentMobId: mob.id,
-                currentMobHp: mob.hp,
-                currentMobMaxHp: mob.hp,
-                currentRound: 0,
-                currentCombatIndex: combatIndex,
-                lastProcessedAt: new Date(),
-            },
-        });
+        const lastProcessedAt = options?.lastProcessedAt ?? new Date();
         const characterStats = this.calculateCharacterFighterStats(session.character);
         const xpProgressPayload = this.buildCharacterXpPayload(session.character.level, session.character.xp);
         const totalLoot = (session.loots ?? []).reduce((total, loot) => total + loot.quantity, 0);
@@ -850,8 +946,362 @@ let AutoCombatService = class AutoCombatService {
             totalLoot,
             potionsUsed: totalPotionsUsed,
         });
-        this.emitRealtimeEvents(session.characterId, [event]);
-        return updatedSession;
+        const updatedSession = await this.prisma.$transaction(async (tx) => {
+            await this.claimSessionProcessingStep(tx, session, {
+                currentMobId: mob.id,
+                currentMobHp: mob.hp,
+                currentMobMaxHp: mob.hp,
+                currentRound: 0,
+                currentCombatIndex: combatIndex,
+                lastProcessedAt,
+            });
+            await this.persistRealtimeEventsInTransaction(tx, session.characterId, [
+                event,
+            ]);
+            return {
+                ...session,
+                currentMobId: mob.id,
+                currentMobHp: mob.hp,
+                currentMobMaxHp: mob.hp,
+                currentRound: 0,
+                currentCombatIndex: combatIndex,
+                lastProcessedAt,
+            };
+        });
+        if (options?.emitRealtimeEvent !== false) {
+            this.emitRealtimeEvents(session.characterId, [event], {
+                persist: false,
+            });
+        }
+        return {
+            session: updatedSession,
+            event,
+            mob,
+        };
+    }
+    sessionNeedsMobSpawn(session) {
+        return (!session.currentMob ||
+            !session.currentMobId ||
+            session.currentMobHp === null ||
+            session.currentMobHp === undefined ||
+            session.currentMobHp <= 0);
+    }
+    addSeconds(date, seconds) {
+        return new Date(date.getTime() + seconds * 1000);
+    }
+    async finishActiveSessionAtEnd(session) {
+        return this.prisma.$transaction(async (tx) => {
+            await this.claimSessionProcessingStep(tx, session, {
+                status: client_1.AutoCombatSessionStatus.FINISHED,
+                finishedAt: session.endsAt,
+                lastProcessedAt: session.endsAt,
+                currentMobId: null,
+                currentMobHp: null,
+                currentMobMaxHp: null,
+                currentRound: 0,
+            });
+            return {
+                ...session,
+                status: client_1.AutoCombatSessionStatus.FINISHED,
+                finishedAt: session.endsAt,
+                lastProcessedAt: session.endsAt,
+                currentMobId: null,
+                currentMobHp: null,
+                currentMobMaxHp: null,
+                currentRound: 0,
+            };
+        });
+    }
+    buildBaseRealtimeProcessingResult(session, options) {
+        const equipmentItems = this.getEquipmentItems(session.character);
+        const stats = (0, stats_util_1.calculateFullStats)(session.character.class, equipmentItems, session.character.level);
+        const maxHp = stats.derivedCombatStats.maxHp;
+        const currentHp = this.clampHp(session.character.currentHp ?? maxHp, maxHp);
+        return {
+            processedSeconds: 0,
+            combatsResolved: 0,
+            roundsResolved: 0,
+            xpGained: 0,
+            initialHp: currentHp,
+            finalCurrentHp: currentHp,
+            initialMaxHp: maxHp,
+            finalMaxHp: maxHp,
+            maxHpGained: 0,
+            hpLost: 0,
+            damageDealt: 0,
+            damageTaken: 0,
+            healingReceived: 0,
+            healingFromPotions: 0,
+            healingFromLevelUp: 0,
+            totalHealingReceived: 0,
+            hpChange: 0,
+            hpLostNet: 0,
+            hpRecoveredNet: 0,
+            tookDamage: false,
+            wasHealed: false,
+            criticalHitsDealt: 0,
+            criticalHitsTaken: 0,
+            criticalBonusDamageDealt: 0,
+            criticalBonusDamageTaken: 0,
+            playerAttackAttempts: 0,
+            mobAttackAttempts: 0,
+            criticalRateDealt: 0,
+            criticalRateTaken: 0,
+            criticalDamageSharePercent: 0,
+            dealtCritical: false,
+            tookCritical: false,
+            dodgesByPlayer: 0,
+            dodgesByMob: 0,
+            playerDodgeRate: 0,
+            mobDodgeRate: 0,
+            playerDodged: false,
+            mobDodged: false,
+            initialLevel: session.character.level,
+            finalLevel: session.character.level,
+            levelsGained: 0,
+            leveledUp: false,
+            potionsUsed: 0,
+            potionItemId: null,
+            potionItemName: null,
+            potionTriggerPercent: null,
+            potionQuantityBefore: null,
+            potionQuantityAfter: null,
+            potionQuantityRemaining: null,
+            potionUsedQuantity: null,
+            finalXp: session.character.xp,
+            finalStatus: session.status,
+            newLastProcessedAt: session.lastProcessedAt,
+            finishedAt: session.finishedAt ?? null,
+            currentMobId: session.currentMobId ?? null,
+            currentMobHp: session.currentMobHp ?? null,
+            currentMobMaxHp: session.currentMobMaxHp ?? null,
+            currentRound: session.currentRound ?? 0,
+            currentCombatIndex: Math.max(1, session.currentCombatIndex ?? 1),
+            loots: new Map(),
+            mobSummaries: new Map(),
+            events: [],
+            catchUp: true,
+            actionsAvailable: options?.actionsAvailable ?? 0,
+            actionsProcessed: 0,
+            processingLimited: options?.processingLimited ?? false,
+            eventsEmitted: 0,
+            eventsSuppressed: 0,
+        };
+    }
+    mergeProcessedWaitAction(aggregate, session, nextLastProcessedAt) {
+        const processedSeconds = Math.max(0, Math.floor((nextLastProcessedAt.getTime() - session.lastProcessedAt.getTime()) /
+            1000));
+        return {
+            ...aggregate,
+            processedSeconds: aggregate.processedSeconds + processedSeconds,
+            newLastProcessedAt: nextLastProcessedAt,
+            currentMobId: session.currentMobId ?? null,
+            currentMobHp: session.currentMobHp ?? null,
+            currentMobMaxHp: session.currentMobMaxHp ?? null,
+            currentRound: session.currentRound ?? 0,
+            currentCombatIndex: Math.max(1, session.currentCombatIndex ?? 1),
+        };
+    }
+    appendRealtimeEventsWithLimit(currentEvents, newEvents) {
+        return [...currentEvents, ...newEvents].slice(-AUTO_COMBAT_MAX_REALTIME_EVENTS_TO_EMIT);
+    }
+    mergeRealtimeRoundResults(aggregate, result) {
+        const combinedEventCount = aggregate.events.length + result.events.length;
+        const nextEvents = this.appendRealtimeEventsWithLimit(aggregate.events, result.events);
+        const suppressedNow = Math.max(0, combinedEventCount - nextEvents.length);
+        for (const loot of result.loots.values()) {
+            this.addLoot(aggregate.loots, loot.itemId, loot.quantity);
+        }
+        for (const summary of result.mobSummaries.values()) {
+            const current = aggregate.mobSummaries.get(summary.mobId);
+            aggregate.mobSummaries.set(summary.mobId, {
+                mobId: summary.mobId,
+                kills: (current?.kills ?? 0) + summary.kills,
+                xpGained: (current?.xpGained ?? 0) + summary.xpGained,
+            });
+        }
+        const playerAttackAttempts = aggregate.playerAttackAttempts + result.playerAttackAttempts;
+        const mobAttackAttempts = aggregate.mobAttackAttempts + result.mobAttackAttempts;
+        const criticalHitsDealt = aggregate.criticalHitsDealt + result.criticalHitsDealt;
+        const criticalHitsTaken = aggregate.criticalHitsTaken + result.criticalHitsTaken;
+        const criticalBonusDamageDealt = aggregate.criticalBonusDamageDealt + result.criticalBonusDamageDealt;
+        const criticalBonusDamageTaken = aggregate.criticalBonusDamageTaken + result.criticalBonusDamageTaken;
+        const damageDealt = aggregate.damageDealt + result.damageDealt;
+        const dodgesByPlayer = aggregate.dodgesByPlayer + result.dodgesByPlayer;
+        const dodgesByMob = aggregate.dodgesByMob + result.dodgesByMob;
+        const healingFromPotions = aggregate.healingFromPotions + result.healingFromPotions;
+        const healingFromLevelUp = aggregate.healingFromLevelUp + result.healingFromLevelUp;
+        const healingReceived = healingFromPotions + healingFromLevelUp;
+        const finalCurrentHp = result.finalCurrentHp;
+        const hpChange = finalCurrentHp - aggregate.initialHp;
+        const hpLostNet = Math.max(0, aggregate.initialHp - finalCurrentHp);
+        const hpRecoveredNet = Math.max(0, finalCurrentHp - aggregate.initialHp);
+        const levelsGained = Math.max(0, result.finalLevel - aggregate.initialLevel);
+        return {
+            ...aggregate,
+            processedSeconds: aggregate.processedSeconds + result.processedSeconds,
+            combatsResolved: aggregate.combatsResolved + result.combatsResolved,
+            roundsResolved: aggregate.roundsResolved + result.roundsResolved,
+            xpGained: aggregate.xpGained + result.xpGained,
+            finalCurrentHp,
+            finalMaxHp: result.finalMaxHp,
+            maxHpGained: Math.max(0, result.finalMaxHp - aggregate.initialMaxHp),
+            hpLost: hpLostNet,
+            damageDealt,
+            damageTaken: aggregate.damageTaken + result.damageTaken,
+            healingReceived,
+            healingFromPotions,
+            healingFromLevelUp,
+            totalHealingReceived: healingReceived,
+            hpChange,
+            hpLostNet,
+            hpRecoveredNet,
+            tookDamage: aggregate.tookDamage || result.tookDamage,
+            wasHealed: aggregate.wasHealed || result.wasHealed,
+            criticalHitsDealt,
+            criticalHitsTaken,
+            criticalBonusDamageDealt,
+            criticalBonusDamageTaken,
+            playerAttackAttempts,
+            mobAttackAttempts,
+            criticalRateDealt: this.calculatePercent(criticalHitsDealt, playerAttackAttempts),
+            criticalRateTaken: this.calculatePercent(criticalHitsTaken, mobAttackAttempts),
+            criticalDamageSharePercent: this.calculatePercent(criticalBonusDamageDealt, damageDealt),
+            dealtCritical: aggregate.dealtCritical || result.dealtCritical,
+            tookCritical: aggregate.tookCritical || result.tookCritical,
+            dodgesByPlayer,
+            dodgesByMob,
+            playerDodgeRate: this.calculatePercent(dodgesByPlayer, mobAttackAttempts),
+            mobDodgeRate: this.calculatePercent(dodgesByMob, playerAttackAttempts),
+            playerDodged: aggregate.playerDodged || result.playerDodged,
+            mobDodged: aggregate.mobDodged || result.mobDodged,
+            finalLevel: result.finalLevel,
+            levelsGained,
+            leveledUp: levelsGained > 0,
+            potionsUsed: aggregate.potionsUsed + result.potionsUsed,
+            potionItemId: result.potionsUsed > 0 ? result.potionItemId : aggregate.potionItemId,
+            potionItemName: result.potionsUsed > 0
+                ? result.potionItemName
+                : aggregate.potionItemName,
+            potionTriggerPercent: result.potionsUsed > 0
+                ? result.potionTriggerPercent
+                : aggregate.potionTriggerPercent,
+            potionQuantityBefore: result.potionsUsed > 0
+                ? result.potionQuantityBefore
+                : aggregate.potionQuantityBefore,
+            potionQuantityAfter: result.potionsUsed > 0
+                ? result.potionQuantityAfter
+                : aggregate.potionQuantityAfter,
+            potionQuantityRemaining: result.potionsUsed > 0
+                ? result.potionQuantityRemaining
+                : aggregate.potionQuantityRemaining,
+            potionUsedQuantity: result.potionsUsed > 0
+                ? result.potionUsedQuantity
+                : aggregate.potionUsedQuantity,
+            finalXp: result.finalXp,
+            finalStatus: result.finalStatus,
+            newLastProcessedAt: result.newLastProcessedAt,
+            finishedAt: result.finishedAt,
+            currentMobId: result.currentMobId,
+            currentMobHp: result.currentMobHp,
+            currentMobMaxHp: result.currentMobMaxHp,
+            currentRound: result.currentRound,
+            currentCombatIndex: result.currentCombatIndex,
+            events: nextEvents,
+            eventsSuppressed: (aggregate.eventsSuppressed ?? 0) + suppressedNow,
+        };
+    }
+    applySpawnToSession(session, spawnResult, lastProcessedAt) {
+        return {
+            ...session,
+            ...spawnResult.session,
+            currentMob: spawnResult.mob,
+            currentMobId: spawnResult.mob.id,
+            currentMobHp: spawnResult.mob.hp,
+            currentMobMaxHp: spawnResult.mob.hp,
+            currentRound: 0,
+            lastProcessedAt,
+        };
+    }
+    applyRealtimeRoundResultToSession(session, result) {
+        const nextSession = {
+            ...session,
+            status: result.finalStatus,
+            lastProcessedAt: result.newLastProcessedAt,
+            finishedAt: result.finishedAt,
+            currentMobId: result.currentMobId,
+            currentMobHp: result.currentMobHp,
+            currentMobMaxHp: result.currentMobMaxHp,
+            currentRound: result.currentRound,
+            currentCombatIndex: result.currentCombatIndex,
+            totalCombatsResolved: (session.totalCombatsResolved ?? 0) + result.combatsResolved,
+            totalRoundsResolved: (session.totalRoundsResolved ?? 0) + result.roundsResolved,
+            totalXpGained: (session.totalXpGained ?? 0) + result.xpGained,
+            totalPotionsUsed: (session.totalPotionsUsed ?? 0) + result.potionsUsed,
+            character: {
+                ...session.character,
+                xp: result.finalXp,
+                level: result.finalLevel,
+                currentHp: result.finalCurrentHp,
+                maxHp: result.finalMaxHp,
+                inventoryItems: this.applyPotionUsageToInventoryItems(session.character.inventoryItems ?? [], result),
+            },
+            loots: this.applyLootResultToSessionLoots(session.loots ?? [], result),
+        };
+        if (!result.currentMobId) {
+            nextSession.currentMob = null;
+        }
+        return nextSession;
+    }
+    applyPotionUsageToInventoryItems(inventoryItems, result) {
+        if (result.potionsUsed <= 0 || !result.potionItemId) {
+            return inventoryItems;
+        }
+        return inventoryItems
+            .map((inventoryItem) => {
+            if (inventoryItem.itemId !== result.potionItemId) {
+                return inventoryItem;
+            }
+            return {
+                ...inventoryItem,
+                quantity: Math.max(0, inventoryItem.quantity - result.potionsUsed),
+            };
+        })
+            .filter((inventoryItem) => inventoryItem.quantity > 0);
+    }
+    applyLootResultToSessionLoots(sessionLoots, result) {
+        const lootByItemId = new Map();
+        for (const loot of sessionLoots) {
+            lootByItemId.set(loot.itemId, { ...loot });
+        }
+        for (const loot of result.loots.values()) {
+            const current = lootByItemId.get(loot.itemId);
+            lootByItemId.set(loot.itemId, {
+                ...(current ?? {
+                    itemId: loot.itemId,
+                }),
+                quantity: (current?.quantity ?? 0) + loot.quantity,
+            });
+        }
+        return Array.from(lootByItemId.values());
+    }
+    getProcessingResultMessage(result) {
+        if (result.finalStatus === client_1.AutoCombatSessionStatus.DEFEATED) {
+            return 'Sessão encerrada: o personagem foi derrotado.';
+        }
+        if (result.finalStatus === client_1.AutoCombatSessionStatus.FINISHED) {
+            return 'Sessão finalizada com sucesso.';
+        }
+        if ((result.actionsProcessed ?? 0) > 1) {
+            return `Auto-combate sincronizado: ${result.actionsProcessed} ações processadas.`;
+        }
+        if (result.combatsResolved > 0) {
+            return 'Infectado abatido. Próxima ameaça localizada.';
+        }
+        if ((result.actionsProcessed ?? 0) > 0 && result.roundsResolved <= 0) {
+            return 'Novo infectado encontrado.';
+        }
+        return 'Rodada processada em tempo real.';
     }
     resolveRealtimeRound(session) {
         const loots = new Map();
@@ -1232,10 +1682,8 @@ let AutoCombatService = class AutoCombatService {
                 totalLoot: totalLootAfterKill,
                 potionsUsed: totalPotionsAfterRound,
             });
-            const now = new Date();
-            const sessionShouldFinish = now.getTime() >= session.endsAt.getTime() ||
-                new Date(session.lastProcessedAt.getTime() +
-                    session.roundDurationSeconds * 1000).getTime() >= session.endsAt.getTime();
+            const sessionShouldFinish = new Date(session.lastProcessedAt.getTime() +
+                session.roundDurationSeconds * 1000).getTime() >= session.endsAt.getTime();
             if (sessionShouldFinish) {
                 finalStatus = client_1.AutoCombatSessionStatus.FINISHED;
                 finishedAt = session.endsAt;
@@ -1337,6 +1785,28 @@ let AutoCombatService = class AutoCombatService {
     }
     async persistRealtimeRoundResult(session, result) {
         await this.prisma.$transaction(async (tx) => {
+            await this.claimSessionProcessingStep(tx, session, {
+                status: result.finalStatus,
+                lastProcessedAt: result.newLastProcessedAt,
+                finishedAt: result.finishedAt,
+                currentMobId: result.currentMobId,
+                currentMobHp: result.currentMobHp,
+                currentMobMaxHp: result.currentMobMaxHp,
+                currentRound: result.currentRound,
+                currentCombatIndex: result.currentCombatIndex,
+                totalCombatsResolved: {
+                    increment: result.combatsResolved,
+                },
+                totalRoundsResolved: {
+                    increment: result.roundsResolved,
+                },
+                totalXpGained: {
+                    increment: result.xpGained,
+                },
+                totalPotionsUsed: {
+                    increment: result.potionsUsed,
+                },
+            });
             await tx.character.update({
                 where: {
                     id: session.characterId,
@@ -1419,6 +1889,9 @@ let AutoCombatService = class AutoCombatService {
                     },
                 });
             }
+            if (result.events.length > 0) {
+                await this.persistRealtimeEventsInTransaction(tx, session.characterId, result.events);
+            }
             if (result.potionsUsed > 0 && result.potionItemId) {
                 const potionInventoryItem = await tx.inventoryItem.findUnique({
                     where: {
@@ -1450,34 +1923,20 @@ let AutoCombatService = class AutoCombatService {
                     }
                 }
             }
-            await tx.autoCombatSession.update({
-                where: {
-                    id: session.id,
-                },
-                data: {
-                    status: result.finalStatus,
-                    lastProcessedAt: result.newLastProcessedAt,
-                    finishedAt: result.finishedAt,
-                    currentMobId: result.currentMobId,
-                    currentMobHp: result.currentMobHp,
-                    currentMobMaxHp: result.currentMobMaxHp,
-                    currentRound: result.currentRound,
-                    currentCombatIndex: result.currentCombatIndex,
-                    totalCombatsResolved: {
-                        increment: result.combatsResolved,
-                    },
-                    totalRoundsResolved: {
-                        increment: result.roundsResolved,
-                    },
-                    totalXpGained: {
-                        increment: result.xpGained,
-                    },
-                    totalPotionsUsed: {
-                        increment: result.potionsUsed,
-                    },
-                },
-            });
         });
+    }
+    async claimSessionProcessingStep(tx, session, data) {
+        const updateResult = await tx.autoCombatSession.updateMany({
+            where: {
+                id: session.id,
+                status: client_1.AutoCombatSessionStatus.ACTIVE,
+                lastProcessedAt: session.lastProcessedAt,
+            },
+            data,
+        });
+        if (updateResult.count === 0) {
+            throw new AutoCombatSessionConcurrencyError();
+        }
     }
     async buildSessionResponse(sessionId, extra) {
         const session = await this.prisma.autoCombatSession.findUnique({
@@ -1525,7 +1984,7 @@ let AutoCombatService = class AutoCombatService {
             : null;
         const currentMobMaxHp = session.currentMob && session.currentMobMaxHp !== null
             ? session.currentMobMaxHp
-            : session.currentMob?.hp ?? null;
+            : (session.currentMob?.hp ?? null);
         const characterXpPayload = this.buildCharacterXpPayload(session.character.level, session.character.xp);
         const totalLoot = session.loots.reduce((total, loot) => total + loot.quantity, 0);
         const totalKills = session.mobSummaries.reduce((total, summary) => total + summary.kills, 0);
@@ -1569,26 +2028,9 @@ let AutoCombatService = class AutoCombatService {
                 currentMobMaxHp,
                 currentRound: session.currentRound,
                 currentCombatIndex: session.currentCombatIndex,
+                currentMob: this.buildCurrentMobStatusPayload(session.currentMob, currentMobHp, currentMobMaxHp),
             },
-            currentMob: session.currentMob
-                ? {
-                    id: session.currentMob.id,
-                    name: session.currentMob.name,
-                    description: session.currentMob.description,
-                    level: session.currentMob.level,
-                    tier: session.currentMob.tier,
-                    hp: session.currentMob.hp,
-                    attack: session.currentMob.attack,
-                    defense: session.currentMob.defense,
-                    speed: session.currentMob.speed,
-                    xpReward: session.currentMob.xpReward,
-                    currentHp: currentMobHp,
-                    maxHp: currentMobMaxHp,
-                    hpPercent: currentMobHp !== null && currentMobMaxHp
-                        ? this.calculatePercent(currentMobHp, currentMobMaxHp)
-                        : 0,
-                }
-                : null,
+            currentMob: this.buildCurrentMobStatusPayload(session.currentMob, currentMobHp, currentMobMaxHp),
             subMap: {
                 id: session.subMap.id,
                 name: session.subMap.name,
@@ -1623,11 +2065,33 @@ let AutoCombatService = class AutoCombatService {
             processing: extra?.processing ?? this.buildEmptyProcessingSummary(),
         };
     }
+    buildCurrentMobStatusPayload(currentMob, currentMobHp, currentMobMaxHp) {
+        if (!currentMob) {
+            return null;
+        }
+        return {
+            id: currentMob.id,
+            name: currentMob.name,
+            description: currentMob.description,
+            level: currentMob.level,
+            tier: currentMob.tier,
+            hp: currentMob.hp,
+            attack: currentMob.attack,
+            defense: currentMob.defense,
+            speed: currentMob.speed,
+            xpReward: currentMob.xpReward,
+            currentHp: currentMobHp,
+            maxHp: currentMobMaxHp,
+            hpPercent: currentMobHp !== null && currentMobMaxHp
+                ? this.calculatePercent(currentMobHp, currentMobMaxHp)
+                : 0,
+        };
+    }
     buildSessionSummary(session, remainingSeconds, now = new Date()) {
         const status = session.status;
         const referenceDate = status === client_1.AutoCombatSessionStatus.ACTIVE
             ? now
-            : session.finishedAt ?? session.endsAt ?? now;
+            : (session.finishedAt ?? session.endsAt ?? now);
         const elapsedSeconds = this.clampNumber(Math.floor((referenceDate.getTime() - session.startedAt.getTime()) / 1000), 0, session.durationSeconds);
         const processedCombatSeconds = Math.max(0, session.totalRoundsResolved * session.roundDurationSeconds);
         const unusedSeconds = Math.max(0, session.durationSeconds - elapsedSeconds);
@@ -1799,6 +2263,12 @@ let AutoCombatService = class AutoCombatService {
             potionQuantityAfter: result.potionQuantityAfter,
             potionQuantityRemaining: result.potionQuantityRemaining,
             potionUsedQuantity: result.potionUsedQuantity,
+            catchUp: result.catchUp,
+            actionsAvailable: result.actionsAvailable,
+            actionsProcessed: result.actionsProcessed,
+            processingLimited: result.processingLimited,
+            eventsEmitted: result.eventsEmitted,
+            eventsSuppressed: result.eventsSuppressed,
         };
     }
     buildInitialProcessingSummary(params) {
@@ -1898,6 +2368,12 @@ let AutoCombatService = class AutoCombatService {
             potionQuantityAfter: null,
             potionQuantityRemaining: null,
             potionUsedQuantity: null,
+            catchUp: false,
+            actionsAvailable: 0,
+            actionsProcessed: 0,
+            processingLimited: false,
+            eventsEmitted: 0,
+            eventsSuppressed: 0,
         };
     }
     buildEmptyProcessingSummary() {
@@ -1915,6 +2391,12 @@ let AutoCombatService = class AutoCombatService {
             potionQuantityAfter: null,
             potionQuantityRemaining: null,
             potionUsedQuantity: null,
+            catchUp: false,
+            actionsAvailable: 0,
+            actionsProcessed: 0,
+            processingLimited: false,
+            eventsEmitted: 0,
+            eventsSuppressed: 0,
         };
     }
     buildAutoCombatPreview(session, options) {
@@ -2301,6 +2783,11 @@ let AutoCombatService = class AutoCombatService {
         return JSON.parse(JSON.stringify(event));
     }
     async persistRealtimeEvents(characterId, events) {
+        await this.prisma.$transaction(async (tx) => {
+            await this.persistRealtimeEventsInTransaction(tx, characterId, events);
+        });
+    }
+    async persistRealtimeEventsInTransaction(tx, characterId, events) {
         const validEvents = events.filter((event) => {
             return Boolean(event.sessionId && event.type);
         });
@@ -2318,31 +2805,29 @@ let AutoCombatService = class AutoCombatService {
             eventsBySessionId.set(sessionId, currentEvents);
         }
         for (const [sessionId, sessionEvents] of eventsBySessionId.entries()) {
-            await this.prisma.$transaction(async (tx) => {
-                const latestEvent = await tx.autoCombatSessionEvent.findFirst({
-                    where: {
-                        sessionId,
-                    },
-                    orderBy: {
-                        sequence: 'desc',
-                    },
-                    select: {
-                        sequence: true,
-                    },
-                });
-                const nextSequence = (latestEvent?.sequence ?? 0) + 1;
-                await tx.autoCombatSessionEvent.createMany({
-                    data: sessionEvents.map((event, index) => ({
-                        sessionId,
-                        characterId: event.characterId ?? characterId,
-                        type: String(event.type ?? 'UNKNOWN'),
-                        sequence: nextSequence + index,
-                        payloadJson: this.normalizeRealtimeEventForStorage(event),
-                    })),
-                    skipDuplicates: true,
-                });
-                await this.pruneOldRealtimeEvents(tx, sessionId);
+            const latestEvent = await tx.autoCombatSessionEvent.findFirst({
+                where: {
+                    sessionId,
+                },
+                orderBy: {
+                    sequence: 'desc',
+                },
+                select: {
+                    sequence: true,
+                },
             });
+            const nextSequence = (latestEvent?.sequence ?? 0) + 1;
+            await tx.autoCombatSessionEvent.createMany({
+                data: sessionEvents.map((event, index) => ({
+                    sessionId,
+                    characterId: event.characterId ?? characterId,
+                    type: String(event.type ?? 'UNKNOWN'),
+                    sequence: nextSequence + index,
+                    payloadJson: this.normalizeRealtimeEventForStorage(event),
+                })),
+                skipDuplicates: true,
+            });
+            await this.pruneOldRealtimeEvents(tx, sessionId);
         }
     }
     async pruneOldRealtimeEvents(tx, sessionId) {
@@ -2369,9 +2854,11 @@ let AutoCombatService = class AutoCombatService {
             },
         });
     }
-    emitRealtimeEvents(characterId, events) {
-        void this.persistRealtimeEvents(characterId, events).catch(() => {
-        });
+    emitRealtimeEvents(characterId, events, options) {
+        if (options?.persist !== false) {
+            void this.persistRealtimeEvents(characterId, events).catch(() => {
+            });
+        }
         for (const event of events) {
             switch (event.type) {
                 case 'MOB_SPAWNED':

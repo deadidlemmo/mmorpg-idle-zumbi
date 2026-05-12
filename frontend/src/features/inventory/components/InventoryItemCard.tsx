@@ -1,11 +1,8 @@
 import type { InventoryEntry } from '../types/inventory.types';
 import {
-  formatInventoryRarity,
   formatInventoryType,
-  getInventoryBonusList,
   getInventoryItemIcon,
   getInventoryItemInitials,
-  getInventoryPrimaryDetail,
 } from '../utils/inventory.utils';
 
 interface InventoryItemCardProps {
@@ -13,61 +10,128 @@ interface InventoryItemCardProps {
   onSelect: () => void;
 }
 
+type InventoryItemWithOptionalLevel = InventoryEntry['item'] & {
+  level?: number | null;
+  requiredLevel?: number | null;
+  minLevel?: number | null;
+};
+
+function normalizeRarityClass(rarity?: string | null) {
+  return String(rarity ?? 'COMMON')
+    .trim()
+    .toLowerCase();
+}
+
+function formatQuantity(quantity?: number | null) {
+  const safeQuantity = Math.max(0, Math.floor(Number(quantity) || 0));
+
+  if (safeQuantity >= 1000000) {
+    return `${(safeQuantity / 1000000).toFixed(
+      safeQuantity >= 10000000 ? 0 : 1,
+    )}M`;
+  }
+
+  if (safeQuantity >= 1000) {
+    return `${(safeQuantity / 1000).toFixed(
+      safeQuantity >= 10000 ? 0 : 1,
+    )}K`;
+  }
+
+  return String(safeQuantity);
+}
+
+function getCompactTypeLabel(label: string) {
+  const normalizedLabel = label.trim();
+
+  const labels: Record<string, string> = {
+    Equipamento: 'E',
+    Equipamentos: 'E',
+    Material: 'M',
+    Materiais: 'M',
+    Consumível: 'C',
+    Consumíveis: 'C',
+    Recurso: 'R',
+    Recursos: 'R',
+    Outro: 'O',
+    Outros: 'O',
+  };
+
+  return labels[normalizedLabel] ?? normalizedLabel.slice(0, 1).toUpperCase();
+}
+
+function getItemLevelLabel(item: InventoryItemWithOptionalLevel) {
+  const rawLevel = item.level ?? item.requiredLevel ?? item.minLevel;
+
+  if (typeof rawLevel !== 'number' || !Number.isFinite(rawLevel)) {
+    return null;
+  }
+
+  return `Level ${Math.max(1, Math.floor(rawLevel))}`;
+}
+
+function getItemTierLabel(item: InventoryItemWithOptionalLevel) {
+  if (typeof item.tier !== 'number' || !Number.isFinite(item.tier)) {
+    return null;
+  }
+
+  return `Tier ${Math.max(0, Math.floor(item.tier))}`;
+}
+
 export function InventoryItemCard({ entry, onSelect }: InventoryItemCardProps) {
-  const item = entry.item;
-  const bonuses = getInventoryBonusList(item);
-  const description = item.description?.trim();
-  const primaryDetail = getInventoryPrimaryDetail(entry);
+  const item = entry.item as InventoryItemWithOptionalLevel;
+
+  const itemName = item.name?.trim() || 'Item desconhecido';
   const rarity = item.rarity ?? 'COMMON';
+  const rarityClass = normalizeRarityClass(rarity);
+
+  const itemTypeLabel = formatInventoryType(entry);
+  const compactTypeLabel = getCompactTypeLabel(itemTypeLabel);
+
+  const tierLabel = getItemTierLabel(item);
+  const levelLabel = getItemLevelLabel(item);
+  const secondaryTooltipLabel = levelLabel ?? tierLabel ?? itemTypeLabel;
+
+  const quantity = Math.max(0, Math.floor(Number(entry.quantity) || 0));
+  const quantityLabel = formatQuantity(quantity);
 
   return (
-    <article className={`inventory-item-card rarity-${rarity.toLowerCase()}`}>
+    <article
+      className={`inventory-item-card rarity-${rarityClass}`}
+      data-rarity={rarityClass}
+      data-type={itemTypeLabel}
+    >
       <button
         type="button"
         className="inventory-item-card__button"
         onClick={onSelect}
-        aria-label={`Ver detalhes de ${item.name || 'item desconhecido'}`}
+        aria-label={`Ver detalhes de ${itemName}. Quantidade: ${quantity}. ${secondaryTooltipLabel}.`}
       >
-        <div className="inventory-item-card__topline">
-          <span className="inventory-item-card__type">{formatInventoryType(entry)}</span>
-          <span className="inventory-item-card__quantity">x{entry.quantity ?? 0}</span>
+        <div className="inventory-item-card__topline" aria-hidden="true">
+          {quantity > 0 ? (
+            <span className="inventory-item-card__quantity">
+              x{quantityLabel}
+            </span>
+          ) : null}
+
+          <span className="inventory-item-card__type">
+            {compactTypeLabel}
+          </span>
         </div>
 
         <div className="inventory-item-card__content">
           <div className="inventory-item-card__icon" aria-hidden="true">
-            <span className="inventory-item-card__glyph">{getInventoryItemIcon(entry)}</span>
-            <strong>{getInventoryItemInitials(item)}</strong>
-          </div>
+            <span className="inventory-item-card__glyph">
+              {getInventoryItemIcon(entry)}
+            </span>
 
-          <div className="inventory-item-card__info">
-            <h3>{item.name || 'Item desconhecido'}</h3>
-            <div className="inventory-item-card__meta">
-              <span>{formatInventoryRarity(item.rarity)}</span>
-              {typeof item.tier === 'number' ? <span>Tier {item.tier}</span> : null}
-              {primaryDetail ? <span>{primaryDetail}</span> : null}
-            </div>
+            <strong>{getInventoryItemInitials(item)}</strong>
           </div>
         </div>
 
-        {description ? (
-          <p className="inventory-item-card__description">{description}</p>
-        ) : (
-          <p className="inventory-item-card__description is-muted">
-            Sem descrição registrada.
-          </p>
-        )}
-
-        {bonuses.length > 0 || item.healFlat || item.healPercent ? (
-          <div className="inventory-item-card__stats" aria-label="Atributos do item">
-            {bonuses.slice(0, 3).map(([label, value]) => (
-              <span key={label}>+{value} {label}</span>
-            ))}
-            {item.healFlat ? <span>+{item.healFlat} HP</span> : null}
-            {item.healPercent ? <span>{item.healPercent}% HP</span> : null}
-          </div>
-        ) : null}
-
-        <span className="inventory-item-card__details">Ver detalhes</span>
+        <div className="inventory-item-card__tooltip" aria-hidden="true">
+          <strong>{itemName}</strong>
+          <span>{secondaryTooltipLabel}</span>
+        </div>
       </button>
     </article>
   );
