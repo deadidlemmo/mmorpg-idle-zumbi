@@ -11,7 +11,6 @@ import type {
 import { EmptyInventoryState } from '../components/EmptyInventoryState';
 import { InventoryFilters } from '../components/InventoryFilters';
 import { InventoryGrid } from '../components/InventoryGrid';
-import { InventoryHeader } from '../components/InventoryHeader';
 import { InventoryItemDetailsModal } from '../components/InventoryItemDetailsModal';
 import { useInventory } from '../hooks/useInventory';
 import '../styles/inventory.css';
@@ -441,16 +440,6 @@ export function InventoryPage() {
     }
   }, [filteredItems, selectedItem]);
 
-  const totalQuantity = useMemo(() => {
-    return items.reduce((total, entry) => total + (entry.quantity ?? 0), 0);
-  }, [items]);
-
-  const equipmentCount =
-    filters.find((filter) => filter.key === 'EQUIPMENT')?.count ?? 0;
-
-  const materialCount =
-    filters.find((filter) => filter.key === 'MATERIAL')?.count ?? 0;
-
   const selectedItemId = getInventoryEntryId(selectedItem);
 
   const hasItems = items.length > 0;
@@ -486,14 +475,6 @@ export function InventoryPage() {
         className="inventory-page inventory-page--dashboard"
         aria-label="Mochila do personagem"
       >
-        <InventoryHeader
-          totalTypes={items.length}
-          totalQuantity={totalQuantity}
-          equipmentCount={equipmentCount}
-          materialCount={materialCount}
-          onRefresh={refetch}
-        />
-
         <div className="inventory-content-layout">
           <section
             className="inventory-panel inventory-panel--items inventory-content-layout__grid"
