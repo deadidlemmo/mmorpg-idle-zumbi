@@ -1,6 +1,8 @@
 import type { InventoryEntry } from '../types/inventory.types';
 import { InventoryItemCard } from './InventoryItemCard';
 
+type InventoryEntryWithOptionalId = InventoryEntry & { id?: string | null };
+
 interface InventoryGridProps {
   items: InventoryEntry[];
   onSelectItem: (entry: InventoryEntry) => void;
@@ -15,16 +17,20 @@ interface InventoryGridProps {
 const MIN_VISIBLE_SLOTS = 42;
 
 function getInventoryItemKey(entry: InventoryEntry, index: number) {
+  const looseEntry = entry as InventoryEntryWithOptionalId;
+
   return (
-    entry.inventoryItemId ??
-    entry.id ??
-    entry.item?.id ??
-    `${entry.item?.name ?? 'inventory-item'}-${index}`
+    looseEntry.inventoryItemId ??
+    looseEntry.id ??
+    looseEntry.item?.id ??
+    `${looseEntry.item?.name ?? 'inventory-item'}-${index}`
   );
 }
 
 function getInventoryEntryId(entry: InventoryEntry) {
-  return entry.inventoryItemId ?? entry.id ?? entry.item?.id ?? null;
+  const looseEntry = entry as InventoryEntryWithOptionalId;
+
+  return looseEntry.inventoryItemId ?? looseEntry.id ?? looseEntry.item?.id ?? null;
 }
 
 function getEmptySlotsCount(itemsCount: number) {
