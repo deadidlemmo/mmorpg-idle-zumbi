@@ -443,6 +443,13 @@ async function upsertCraftingRecipe(params: {
 }
 
 async function validateOfficialGatheringMaterials() {
+  if (materialDefinitions.length === 0) {
+    console.log(
+      'Validação de gathering ignorada: seed de materiais está vazio para reconstrução da base de itens.',
+    );
+    return;
+  }
+
   const total = await prisma.item.count({
     where: {
       isGatheringMaterial: true,
@@ -718,7 +725,9 @@ async function main() {
     });
   }
 
-  console.log('Criando/atualizando itens...');
+  console.log(
+    'Seed de itens vazio: nenhum equipamento, material ou consumível antigo será criado/atualizado.',
+  );
 
   const itemsByName = new Map<string, Item>();
 
@@ -759,7 +768,9 @@ async function main() {
     itemsByName.set(item.name, item);
   }
 
-  console.log('Criando/atualizando receitas...');
+  console.log(
+    'Seed de receitas vazio: nenhuma receita antiga será criada/atualizada.',
+  );
 
   for (const recipeDefinition of recipeDefinitions) {
     const outputItem = getRequiredItem(
@@ -793,7 +804,9 @@ async function main() {
     },
   });
 
-  console.log('Criando/atualizando drops oficiais...');
+  console.log(
+    'Seed de drops vazio: nenhum drop antigo será criado/atualizado.',
+  );
 
   for (const mobDropDefinition of mobDropDefinitions) {
     const mob = getRequiredMob(mobsByName, mobDropDefinition.mobName);
