@@ -74,12 +74,15 @@ export type EquipmentSeedData = {
 
 export type MaterialSeedData = {
   name: string;
+  slug?: string;
   description: string;
   tier: number;
   rarity?: Rarity;
   family?: string;
   mapName: string;
   materialOrigin: MaterialOrigin;
+  materialSlot?: ItemSlot | null;
+  isGatheringMaterial?: boolean;
 };
 
 export type ConsumableSeedData = {

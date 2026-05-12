@@ -1,5 +1,6 @@
 import { ItemSlot, MaterialOrigin, Rarity } from '@prisma/client';
 import type { EquipmentSeedData, MaterialSeedData } from '../seed-types';
+import { officialGatheringMaterialDefinitions } from './gathering-materials.seed-data';
 
 const SUBURBIO = 'Subúrbio Silencioso';
 
@@ -325,7 +326,7 @@ export const starterEquipmentDefinitions: EquipmentSeedData[] = [
   },
 ];
 
-export const materialDefinitions: MaterialSeedDataWithGatheringProgression[] = [
+const legacyMaterialDefinitions: MaterialSeedDataWithGatheringProgression[] = [
   {
     name: 'Resíduo Infecto Pálido',
     description:
@@ -521,7 +522,8 @@ export const materialDefinitions: MaterialSeedDataWithGatheringProgression[] = [
   },
   {
     name: 'Revestimento Imune Simples',
-    description: 'Material de contenção usado em proteções corporais de entrada.',
+    description:
+      'Material de contenção usado em proteções corporais de entrada.',
     tier: 1,
     family: 'Material de Contenção',
     mapName: SUBURBIO,
@@ -628,10 +630,16 @@ export const materialDefinitions: MaterialSeedDataWithGatheringProgression[] = [
   },
 ];
 
+export const materialDefinitions: MaterialSeedDataWithGatheringProgression[] = [
+  ...legacyMaterialDefinitions,
+  ...officialGatheringMaterialDefinitions,
+];
+
 export const equipmentDefinitions: EquipmentSeedData[] = [
   {
     name: 'Maça de Cano de Cerca',
-    description: 'Arma improvisada feita a partir de um cano de cerca amassado.',
+    description:
+      'Arma improvisada feita a partir de um cano de cerca amassado.',
     tier: 1,
     rarity: Rarity.COMMON,
     slot: ItemSlot.MAIN_HAND,
