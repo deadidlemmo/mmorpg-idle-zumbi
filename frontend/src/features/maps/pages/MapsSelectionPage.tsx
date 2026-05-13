@@ -198,7 +198,7 @@ export function MapsSelectionPage() {
   }
 
   return (
-    <DashboardLayout character={character}>
+    <DashboardLayout character={character} hideHero>
       <div className="maps-selection-page">
         <DashboardCard className="dashboard-card--wide maps-selection-hero">
           <div className="maps-selection-hero__content">
