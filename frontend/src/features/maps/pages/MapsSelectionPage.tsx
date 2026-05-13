@@ -114,11 +114,19 @@ function getProgressionLabel(map: AutoCombatMapViewModel) {
   return 'Avançado';
 }
 
-function getMapDescription(map: AutoCombatMapViewModel) {
-  return (
-    map.description ??
-    'Zona infestada com ameaças graduais, recursos de sobrevivência e confrontos automáticos compatíveis com a progressão do personagem.'
-  );
+function getMapTierClassName(tier?: number | null) {
+  const safeTier = Number(tier);
+
+  if (!Number.isFinite(safeTier)) {
+    return 'maps-selection-card--common';
+  }
+
+  if (safeTier >= 9) return 'maps-selection-card--legendary';
+  if (safeTier >= 7) return 'maps-selection-card--epic';
+  if (safeTier >= 5) return 'maps-selection-card--rare';
+  if (safeTier >= 3) return 'maps-selection-card--uncommon';
+
+  return 'maps-selection-card--common';
 }
 
 export function MapsSelectionPage() {
@@ -173,12 +181,6 @@ export function MapsSelectionPage() {
 
   const sortedMaps = useMemo(() => getVisibleCombatMaps(maps), [maps]);
   const characterLevel = character?.level ?? 1;
-  const unlockedMapsCount = sortedMaps.filter(
-    (map) => characterLevel >= getGameMapMinLevel(map),
-  ).length;
-  const nextLockedMap = sortedMaps.find(
-    (map) => characterLevel < getGameMapMinLevel(map),
-  );
 
   if (!characterId) {
     return <Navigate to="/characters" replace />;
@@ -200,35 +202,6 @@ export function MapsSelectionPage() {
   return (
     <DashboardLayout character={character} hideHero>
       <div className="maps-selection-page">
-        <DashboardCard className="dashboard-card--wide maps-selection-hero">
-          <div className="maps-selection-hero__content">
-            <span className="maps-selection-kicker">Seleção de mapas</span>
-            <h1>Escolha a próxima zona de contenção</h1>
-            <p>
-              Compare tiers, faixas de nível e status de desbloqueio antes de entrar em combate. Mapas acima do seu nível ficam bloqueados até a progressão necessária.
-            </p>
-          </div>
-
-          <div className="maps-selection-hero__stats" aria-label="Resumo de progressão">
-            <div>
-              <span>Nível atual</span>
-              <strong>{characterLevel}</strong>
-            </div>
-            <div>
-              <span>Mapas liberados</span>
-              <strong>{unlockedMapsCount}/{sortedMaps.length}</strong>
-            </div>
-            <div>
-              <span>Próximo bloqueio</span>
-              <strong>
-                {nextLockedMap
-                  ? `Nv. ${getGameMapMinLevel(nextLockedMap)}`
-                  : 'Tudo liberado'}
-              </strong>
-            </div>
-          </div>
-        </DashboardCard>
-
         {errorMessage ? (
           <DashboardCard title="Mapas indisponíveis" eyebrow="Erro">
             <div className="maps-selection-empty">{errorMessage}</div>
@@ -247,21 +220,33 @@ export function MapsSelectionPage() {
               const isUnlocked = characterLevel >= minLevel;
               const mapImage = map.imageUrl ?? getMapImageByName(map.name);
               const progressionLabel = getProgressionLabel(map);
+              const tierClassName = getMapTierClassName(map.tier);
 
               return (
                 <article
                   key={map.id}
-                  className={`maps-selection-card ${isUnlocked ? 'is-unlocked' : 'is-locked'}`}
+                  className={[
+                    'maps-selection-card',
+                    tierClassName,
+                    isUnlocked ? 'is-unlocked' : 'is-locked',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                 >
                   <div
                     className="maps-selection-card__media"
                     style={buildMapVisualStyle(mapImage)}
                   >
                     {!mapImage ? <MapPinned aria-hidden="true" /> : null}
+
                     <span className="maps-selection-card__tier">Tier {map.tier}</span>
                     <span className="maps-selection-card__stage">{progressionLabel}</span>
+
                     {!isUnlocked ? (
-                      <div className="maps-selection-card__lock" aria-label={`Bloqueado — requer nível ${minLevel}`}>
+                      <div
+                        className="maps-selection-card__lock"
+                        aria-label={`Bloqueado — requer nível ${minLevel}`}
+                      >
                         <Lock size={22} aria-hidden="true" />
                       </div>
                     ) : null}
@@ -273,25 +258,24 @@ export function MapsSelectionPage() {
                         <span>{progressionLabel}</span>
                         <h3>{map.name}</h3>
                       </div>
+
                       {isUnlocked ? (
-                        <ShieldCheck className="maps-selection-card__status-icon" aria-hidden="true" />
+                        <ShieldCheck
+                          className="maps-selection-card__status-icon"
+                          aria-hidden="true"
+                        />
                       ) : (
-                        <Skull className="maps-selection-card__status-icon" aria-hidden="true" />
+                        <Skull
+                          className="maps-selection-card__status-icon"
+                          aria-hidden="true"
+                        />
                       )}
                     </div>
 
-                    <p>{getMapDescription(map)}</p>
-
-                    <dl className="maps-selection-card__details">
-                      <div>
-                        <dt>Faixa recomendada</dt>
-                        <dd>Nível {minLevel}-{maxLevel}</dd>
-                      </div>
-                      <div>
-                        <dt>Status</dt>
-                        <dd>{isUnlocked ? 'Desbloqueado' : `Bloqueado — requer nível ${minLevel}`}</dd>
-                      </div>
-                    </dl>
+                    <div className="maps-selection-card__level-pill">
+                      <span>Faixa recomendada</span>
+                      <strong>Nv. {minLevel}-{maxLevel}</strong>
+                    </div>
 
                     <div className="maps-selection-card__footer">
                       {isUnlocked ? (

@@ -21,11 +21,11 @@ import { AutoCombatBattleLog } from '../components/AutoCombatBattleLog';
 import { AutoCombatSessionSummary } from '../components/AutoCombatSessionSummary';
 import { AutoCombatStatsTab } from '../components/AutoCombatStatsTab';
 import { AutoCombatTabs } from '../components/AutoCombatTabs';
+import { getRealtimeEventKey } from '../realtime/autoCombatRealtime.utils';
 import {
   useAutoCombatRealtime,
   useAutoCombatRealtimeState,
 } from '../realtime/useAutoCombatRealtime';
-import { getRealtimeEventKey } from '../realtime/autoCombatRealtime.utils';
 import type {
   AutoCombatRealtimeStateLoose,
   AutoCombatTab,
@@ -133,6 +133,21 @@ function getRealtimeFeedbackDamage(event?: AutoCombatRealtimeEvent | null) {
   const damage = toSafeNumber(event.damage, 0);
 
   return damage > 0 ? damage : 0;
+}
+
+function getMapRarityClassName(tier?: number | string | null) {
+  const safeTier = Number(tier);
+
+  if (!Number.isFinite(safeTier)) {
+    return 'auto-combat-map-rarity-common';
+  }
+
+  if (safeTier >= 9) return 'auto-combat-map-rarity-legendary';
+  if (safeTier >= 7) return 'auto-combat-map-rarity-epic';
+  if (safeTier >= 5) return 'auto-combat-map-rarity-rare';
+  if (safeTier >= 3) return 'auto-combat-map-rarity-uncommon';
+
+  return 'auto-combat-map-rarity-common';
 }
 
 export function AutoCombatPage() {
@@ -992,6 +1007,9 @@ export function AutoCombatPage() {
 
   const selectedMapImage = getMapImageByName(selectedMapName);
   const selectedMapVisualStyle = buildMapVisualStyle(selectedMapImage);
+  const selectedMapRarityClassName = getMapRarityClassName(
+    selectedSubMap?.tier ?? selectedMap?.tier,
+  );
 
   const characterHasHp = currentCharacterHp > 0;
 
@@ -1736,11 +1754,20 @@ export function AutoCombatPage() {
           {activeTab === 'battle' ? (
             <div className="auto-combat-tab-panel">
               {!hasStartedHunt && !showActiveSession ? (
-                <article className="auto-combat-stage-card auto-combat-map-stage">
+                <article
+                  className={[
+                    'auto-combat-stage-card',
+                    'auto-combat-map-stage',
+                    selectedMapRarityClassName,
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
                   <div className="auto-combat-map-preview">
                     <div
                       className={[
                         'auto-combat-map-preview__visual',
+                        selectedMapRarityClassName,
                         selectedMapImage
                           ? 'auto-combat-map-preview__visual--with-image'
                           : '',
