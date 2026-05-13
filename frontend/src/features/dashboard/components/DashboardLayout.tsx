@@ -1090,6 +1090,14 @@ function DashboardLayoutContent({
   const topBarResources = useMemo<DashboardTopBarResource[]>(
     () => [
       {
+        key: 'map',
+        label: 'Mapa',
+        value: characterMapName,
+        icon: '⌖',
+        tone: 'map',
+        title: `Mapa atual: ${characterMapName}`,
+      },
+      {
         key: 'gold',
         label: 'Gold',
         value: formatCurrency(walletDisplay.gold),
@@ -1106,7 +1114,7 @@ function DashboardLayoutContent({
         title: 'Cash disponível',
       },
     ],
-    [walletDisplay.cash, walletDisplay.gold],
+    [characterMapName, walletDisplay.cash, walletDisplay.gold],
   );
 
   const xpProgressStyle = {
