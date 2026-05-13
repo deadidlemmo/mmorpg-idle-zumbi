@@ -39,6 +39,7 @@ color: #aeda78;
 .gathering-origin-shell,
 .gathering-origin-lore-card,
 .gathering-origin-premium-card,
+.gathering-origin-map-context,
 .gathering-origin-materials-panel,
 .gathering-origin-current-card,
 .gathering-origin-skill-card {
@@ -49,6 +50,9 @@ font-family: var(--font-body);
 .gathering-origin-lore-card h2,
 .gathering-origin-premium-card h2,
 .gathering-origin-premium-card__button,
+.gathering-origin-map-context h2,
+.gathering-origin-map-context__eyebrow,
+.gathering-origin-map-context__chips span,
 .gathering-origin-section-divider,
 .gathering-origin-skill-card__icon,
 .gathering-origin-skill-card__heading strong,

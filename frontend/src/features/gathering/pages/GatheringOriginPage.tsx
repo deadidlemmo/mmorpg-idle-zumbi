@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
+import {
+  buildMapVisualStyle,
+  getMapImageByName,
+} from '../../auto-combat/assets/auto-combat-map-assets';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
 import '../../dashboard/dashboard.css';
@@ -90,6 +94,29 @@ function isGatheringOriginSlug(value?: string): value is GatheringOriginSlug {
 
 function getOriginIconFallback(origin: GatheringAllowedOrigin): string {
   return getGatheringOriginLabel(origin).slice(0, 2).toUpperCase();
+}
+
+function formatMapLevelRange(
+  map?: { minLevel?: number | null; maxLevel?: number | null } | null,
+): string | null {
+  const minLevel = Number(map?.minLevel);
+  const maxLevel = Number(map?.maxLevel);
+  const hasMinLevel = Number.isFinite(minLevel) && minLevel > 0;
+  const hasMaxLevel = Number.isFinite(maxLevel) && maxLevel > 0;
+
+  if (hasMinLevel && hasMaxLevel) {
+    return `Nv. ${minLevel}–${maxLevel}`;
+  }
+
+  if (hasMinLevel) {
+    return `A partir do Nv. ${minLevel}`;
+  }
+
+  if (hasMaxLevel) {
+    return `Até Nv. ${maxLevel}`;
+  }
+
+  return null;
 }
 
 function normalizeGatheringOriginKey(
@@ -530,6 +557,10 @@ export function GatheringOriginPage() {
 
   const materials = materialsResponse?.materials ?? [];
   const currentMap = materialsResponse?.map ?? null;
+  const currentMapName = currentMap?.name ?? 'Mapa não identificado';
+  const currentMapImage = getMapImageByName(currentMap?.name);
+  const currentMapVisualStyle = buildMapVisualStyle(currentMapImage);
+  const currentMapLevelRangeLabel = formatMapLevelRange(currentMap);
   const fallbackRatePerHour = materialsResponse?.ratePerHour ?? null;
 
   const activeMaterialId = getActiveMaterialId(status);
@@ -894,9 +925,72 @@ export function GatheringOriginPage() {
             </aside>
           </section>
 
+          <section
+            className="gathering-origin-map-context"
+            aria-label={`Mapa atual: ${currentMapName}`}
+          >
+            <div
+              className="gathering-origin-map-context__media"
+              style={currentMapVisualStyle}
+            >
+              {!currentMapImage ? (
+                <span aria-hidden="true">
+                  {currentMapName.slice(0, 2).toUpperCase()}
+                </span>
+              ) : null}
+            </div>
+
+            <div className="gathering-origin-map-context__body">
+              <span className="gathering-origin-map-context__eyebrow">
+                Mapa atual
+              </span>
+
+              <div className="gathering-origin-map-context__title-row">
+                <h2>{currentMapName}</h2>
+
+                <div className="gathering-origin-map-context__chips">
+                  {currentMap?.tier ? (
+                    <span>Tier {currentMap.tier}</span>
+                  ) : null}
+
+                  {currentMapLevelRangeLabel ? (
+                    <span>{currentMapLevelRangeLabel}</span>
+                  ) : null}
+                </div>
+              </div>
+
+              <p>
+                Os materiais abaixo pertencem a este mapa. Ao mudar de região,
+                os recursos disponíveis para {originLabel.toLowerCase()} também
+                mudam.
+              </p>
+            </div>
+          </section>
+
           <div className="gathering-origin-content-grid">
             <main className="gathering-origin-main">
               <section className="gathering-card gathering-card--compact gathering-origin-materials-panel">
+                <header className="gathering-card__header">
+                  <div className="gathering-card__title-group">
+                    <span className="gathering-card__eyebrow">
+                      Materiais deste mapa
+                    </span>
+                    <h2>Materiais disponíveis em {currentMapName}</h2>
+                    <p className="gathering-card__description">
+                      Lista filtrada para {originLabel.toLowerCase()} em
+                      {` ${currentMapName}`}. Cada mapa possui recursos próprios
+                      para farmar.
+                    </p>
+                  </div>
+
+                  <div className="gathering-origin-materials-panel__summary">
+                    <span>{materials.length} recursos</span>
+                    {fallbackRatePerHour ? (
+                      <strong>{fallbackRatePerHour}/h base</strong>
+                    ) : null}
+                  </div>
+                </header>
+
                 {isLoading ? (
                   <div className="gathering-loading">
                     <span className="gathering-loading__spinner" />
