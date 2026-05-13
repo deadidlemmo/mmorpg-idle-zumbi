@@ -121,8 +121,21 @@
     border-bottom: 0;
   }
 
-  .dashboard-topbar > div {
+  .dashboard-topbar > div,
+  .dashboard-topbar > section,
+  .dashboard-topbar > nav {
     min-width: 0;
+  }
+
+  .dashboard-topbar__activity {
+    width: 100%;
+    max-width: none;
+    overflow: hidden;
+  }
+
+  .dashboard-topbar__resources {
+    flex: 0 0 auto;
+    min-width: max-content;
   }
 
   .dashboard-topbar__eyebrow {

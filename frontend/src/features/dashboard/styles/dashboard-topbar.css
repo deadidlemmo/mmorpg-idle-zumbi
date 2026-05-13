@@ -706,10 +706,11 @@
   }
 
   .dashboard-topbar__activity {
-    grid-template-columns: 30px minmax(92px, auto) 24px;
+    grid-template-columns: 30px minmax(0, 1fr) 24px;
     gap: 0.32rem;
 
-    max-width: 62vw;
+    width: 100%;
+    max-width: none;
     min-height: 34px;
     padding: 0.2rem 0.3rem 0.2rem 0.22rem;
   }
@@ -792,8 +793,8 @@
   }
 
   .dashboard-topbar__activity {
-    max-width: 59vw;
-    grid-template-columns: 28px minmax(78px, auto) 22px;
+    max-width: none;
+    grid-template-columns: 28px minmax(0, 1fr) 22px;
   }
 
   .dashboard-topbar__activity-copy small,
