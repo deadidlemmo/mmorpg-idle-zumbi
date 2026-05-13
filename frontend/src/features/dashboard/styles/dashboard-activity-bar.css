@@ -1454,61 +1454,17 @@
   }
 }
 /* =========================================================
-   MOBILE — AJUSTE ENTRE MENU HAMBÚRGUER E ACTIVITY BAR
-   Corrige sobreposição do botão .dashboard-mobile-menu.
+   MOBILE — ACTIVITY BAR SOB A TOPBAR ÚNICA
+   Mantém o menu no fluxo flex de .dashboard-mobile-topbar.
    ========================================================= */
 
 @media (max-width: 900px) {
-  .dashboard-mobile-menu {
-    position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 0.72rem);
-    left: 0.72rem;
-    z-index: 320;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 42px;
-    height: 42px;
-
-    color: #fff8e8;
-    font-family: var(--font-title);
-    font-size: 1.15rem;
-    font-weight: 950;
-    line-height: 1;
-
-    background:
-      radial-gradient(circle at center, rgba(232, 184, 78, 0.16), transparent 70%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.085), transparent),
-      rgba(7, 11, 10, 0.96);
-
-    border: 1px solid rgba(232, 184, 78, 0.3);
-    border-radius: 0.86rem;
-
-    box-shadow:
-      0 12px 24px rgba(0, 0, 0, 0.36),
-      0 0 16px rgba(232, 184, 78, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.07);
-
-    backdrop-filter: blur(10px);
-  }
-
-  .dashboard-mobile-menu:hover {
-    color: #fff8e8;
-    border-color: rgba(232, 184, 78, 0.48);
-    background:
-      radial-gradient(circle at center, rgba(232, 184, 78, 0.22), transparent 70%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent),
-      rgba(10, 15, 13, 0.98);
-  }
-
-  .dashboard-mobile-menu:active {
-    transform: scale(0.98);
-  }
-
   .dashboard-activity-bar-zone {
-    top: calc(env(safe-area-inset-top, 0px) + 3.55rem);
+    top: calc(
+      env(safe-area-inset-top, 0px) +
+      var(--dashboard-mobile-topbar-height, 52px) +
+      0.62rem
+    );
     z-index: 210;
   }
 
@@ -1523,7 +1479,11 @@
 
 @media (max-width: 720px) {
   .dashboard-activity-bar-zone {
-    top: calc(env(safe-area-inset-top, 0px) + 3.45rem);
+    top: calc(
+      env(safe-area-inset-top, 0px) +
+      var(--dashboard-mobile-topbar-height, 50px) +
+      0.56rem
+    );
     margin-bottom: 0.76rem;
   }
 
@@ -1539,16 +1499,16 @@
 
 @media (max-width: 430px) {
   .dashboard-mobile-menu {
-    top: calc(env(safe-area-inset-top, 0px) + 0.62rem);
-    left: 0.62rem;
-    width: 39px;
-    height: 39px;
     font-size: 1.05rem;
     border-radius: 0.78rem;
   }
 
   .dashboard-activity-bar-zone {
-    top: calc(env(safe-area-inset-top, 0px) + 3.25rem);
+    top: calc(
+      env(safe-area-inset-top, 0px) +
+      var(--dashboard-mobile-topbar-height, 50px) +
+      0.48rem
+    );
   }
 }
 
