@@ -1138,15 +1138,6 @@ function DashboardLayoutContent({
 
   return (
     <div className="dashboard-shell">
-      <button
-        type="button"
-        className="dashboard-mobile-menu"
-        onClick={() => setIsSidebarOpen(true)}
-        aria-label="Abrir menu"
-      >
-        ☰
-      </button>
-
       {isSidebarOpen ? (
         <button
           type="button"
@@ -1296,17 +1287,32 @@ function DashboardLayoutContent({
       </aside>
 
       <main className={hideTopBar ? 'dashboard-main dashboard-main--content-only' : 'dashboard-main'}>
-        {!hideTopBar ? (
-          <DashboardTopBar
-            characterId={characterId}
-            characterName={heroCharacter.name}
-            characterClassName={classData.label}
-            characterLevel={heroCharacter.level}
-            characterCurrentHp={heroCharacter.currentHp}
-            characterMaxHp={heroCharacter.maxHp}
-            resources={topBarResources}
-          />
-        ) : null}
+        <div
+          className={`dashboard-mobile-topbar ${
+            hideTopBar ? 'dashboard-mobile-topbar--menu-only' : ''
+          }`}
+        >
+          <button
+            type="button"
+            className="dashboard-mobile-menu"
+            onClick={() => setIsSidebarOpen(true)}
+            aria-label="Abrir menu"
+          >
+            ☰
+          </button>
+
+          {!hideTopBar ? (
+            <DashboardTopBar
+              characterId={characterId}
+              characterName={heroCharacter.name}
+              characterClassName={classData.label}
+              characterLevel={heroCharacter.level}
+              characterCurrentHp={heroCharacter.currentHp}
+              characterMaxHp={heroCharacter.maxHp}
+              resources={topBarResources}
+            />
+          ) : null}
+        </div>
 
         {!hideHero ? (
           <section className="dashboard-hero" style={classStyle}>

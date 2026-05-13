@@ -693,16 +693,16 @@
 
 @media (max-width: 720px) {
   .dashboard-topbar {
-    position: sticky;
-    top: 0;
-    z-index: 45;
+    position: relative;
+    top: auto;
+    z-index: 1;
 
     width: 100%;
     justify-content: flex-start;
+    align-items: center;
     gap: 0.3rem;
-    margin-left: 0;
-    margin-right: auto;
-    margin-bottom: 0.62rem;
+    margin: 0;
+    padding: 0;
   }
 
   .dashboard-topbar__activity {
