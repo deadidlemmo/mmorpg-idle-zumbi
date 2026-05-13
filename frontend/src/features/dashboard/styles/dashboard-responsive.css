@@ -43,7 +43,7 @@
 
   .dashboard-mobile-topbar {
     position: sticky;
-    top: 0;
+    top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
     z-index: 80;
 
     display: flex;
@@ -54,6 +54,7 @@
     min-height: var(--dashboard-mobile-topbar-height);
     margin: 0 0 0.82rem;
     padding: 0.3rem;
+    overflow: visible;
 
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
@@ -165,7 +166,7 @@
   .dashboard-topbar__activity {
     width: 100%;
     max-width: none;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .dashboard-topbar__resources {
@@ -642,6 +643,7 @@
 
     margin-bottom: 0.72rem;
     padding: 0.26rem;
+    top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
   }
 
   .dashboard-topbar {
