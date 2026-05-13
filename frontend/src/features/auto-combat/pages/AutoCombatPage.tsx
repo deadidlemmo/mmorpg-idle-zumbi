@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
 import '../../dashboard/dashboard.css';
@@ -137,6 +137,9 @@ function getRealtimeFeedbackDamage(event?: AutoCombatRealtimeEvent | null) {
 
 export function AutoCombatPage() {
   const { characterId } = useParams();
+  const [searchParams] = useSearchParams();
+  const requestedMapId = searchParams.get('mapId') ?? '';
+  const requestedSubMapId = searchParams.get('subMapId') ?? '';
   const realtimeContext = useAutoCombatRealtime();
   const realtimeActions = getRealtimeActions(realtimeContext);
   const realtimeState =
@@ -667,7 +670,15 @@ export function AutoCombatPage() {
   useEffect(() => {
     if (maps.length <= 0) return;
 
-    const nextMap = selectedMap ?? availableMaps[0] ?? null;
+    const requestedMap = requestedMapId
+      ? maps.find((gameMap) => gameMap.id === requestedMapId) ?? null
+      : null;
+    const requestedSubMapParent = requestedSubMapId
+      ? maps.find((gameMap) => {
+          return gameMap.subMaps?.some((subMap) => subMap.id === requestedSubMapId);
+        }) ?? null
+      : null;
+    const nextMap = selectedMap ?? requestedMap ?? requestedSubMapParent ?? availableMaps[0] ?? null;
 
     if (!nextMap) {
       if (selectedMapId) {
@@ -694,7 +705,11 @@ export function AutoCombatPage() {
       return;
     }
 
-    setSelectedSubMapId(mapSubMaps[0]?.id ?? '');
+    const requestedSubMap = requestedSubMapId
+      ? mapSubMaps.find((subMap) => subMap.id === requestedSubMapId)
+      : null;
+
+    setSelectedSubMapId(requestedSubMap?.id ?? mapSubMaps[0]?.id ?? '');
   }, [
     maps,
     availableMaps,
@@ -702,6 +717,8 @@ export function AutoCombatPage() {
     selectedMapId,
     selectedSubMapId,
     currentSelectionLevel,
+    requestedMapId,
+    requestedSubMapId,
   ]);
 
   useEffect(() => {
