@@ -4,7 +4,7 @@ import { useGatheringRealtimeState } from '../../gathering/realtime/useGathering
 import type { GatheringMaterialViewModel } from '../../gathering/types/gathering.types';
 import '../styles/dashboard-topbar.css';
 
-type DashboardTopBarResourceTone = 'default' | 'map' | 'gold' | 'cash';
+type DashboardTopBarResourceTone = 'default' | 'gold' | 'cash';
 
 export interface DashboardTopBarResource {
   key: string;
@@ -459,18 +459,6 @@ function buildIdleActivity(): DashboardTopBarActivityViewModel {
   };
 }
 
-function isMapResource(resource: DashboardTopBarResource): boolean {
-  const key = String(resource.key ?? '').trim().toLowerCase();
-  const label = String(resource.label ?? '').trim().toLowerCase();
-
-  return (
-    key === 'map' ||
-    key === 'current-map' ||
-    label === 'mapa' ||
-    resource.tone === 'map'
-  );
-}
-
 function isGoldResource(resource: DashboardTopBarResource): boolean {
   const key = String(resource.key ?? '').trim().toLowerCase();
   const label = String(resource.label ?? '').trim().toLowerCase();
@@ -488,17 +476,6 @@ function isCashResource(resource: DashboardTopBarResource): boolean {
 function buildVisibleResources(
   resources: DashboardTopBarResource[],
 ): DashboardTopBarResource[] {
-  const mapResource =
-    resources.find(isMapResource) ??
-    ({
-      key: 'map',
-      label: 'Mapa',
-      value: 'Sem mapa',
-      icon: '⌖',
-      tone: 'map',
-      title: 'Mapa atual: Sem mapa',
-    } satisfies DashboardTopBarResource);
-
   const goldResource =
     resources.find(isGoldResource) ??
     ({
@@ -522,13 +499,6 @@ function buildVisibleResources(
     } satisfies DashboardTopBarResource);
 
   return [
-    {
-      ...mapResource,
-      key: 'map',
-      label: mapResource.label || 'Mapa',
-      tone: 'map',
-      icon: mapResource.icon ?? '⌖',
-    },
     {
       ...goldResource,
       key: 'gold',
@@ -649,7 +619,6 @@ export function DashboardTopBar({
             key={resource.key}
             className={getResourceClassName(resource)}
             title={resource.title ?? resource.label}
-            aria-label={`${resource.label}: ${String(resource.value ?? '')}`}
           >
             {resource.icon ? (
               <span className="dashboard-topbar__resource-icon">
