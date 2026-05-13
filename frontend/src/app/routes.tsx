@@ -17,6 +17,7 @@ import { GatheringHubPage } from '../features/gathering/pages/GatheringHubPage';
 import { GatheringOriginPage } from '../features/gathering/pages/GatheringOriginPage';
 import { GatheringRealtimeProvider } from '../features/gathering/realtime/GatheringRealtimeProvider';
 import { InventoryPage } from '../features/inventory/pages/InventoryPage';
+import { MapsSelectionPage } from '../features/maps/pages/MapsSelectionPage';
 import { LootNotificationProvider } from '../features/loot-notifications/LootNotificationProvider';
 import { useAuthStore } from '../store/auth.store';
 
@@ -143,15 +144,7 @@ export function AppRoutes() {
             }
           />
 
-          <Route
-            path="maps"
-            element={
-              <DashboardPlaceholderPage
-                title="Mapas"
-                description="Tela futura para mapas, submapas disponíveis, recomendação de progressão e entrada em zonas."
-              />
-            }
-          />
+          <Route path="maps" element={<MapsSelectionPage />} />
 
           <Route path="*" element={<Navigate to="" replace />} />
         </Route>
