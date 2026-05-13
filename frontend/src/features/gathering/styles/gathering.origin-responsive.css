@@ -62,6 +62,20 @@
   .gathering-origin-side--stacked {
     gap: 0.78rem;
   }
+
+  .gathering-origin-map-context {
+    grid-template-columns: minmax(145px, 0.34fr) minmax(0, 1fr);
+  }
+
+  .gathering-origin-map-context__title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.48rem;
+  }
+
+  .gathering-origin-map-context__chips {
+    justify-content: flex-start;
+  }
 }
 
 /* =========================================================
@@ -86,6 +100,25 @@
   .gathering-origin-current-card {
     padding: 0.76rem;
     border-radius: 0.94rem;
+  }
+
+  .gathering-origin-map-context {
+    grid-template-columns: 1fr;
+    gap: 0.62rem;
+    min-height: 0;
+    padding: 0.62rem;
+  }
+
+  .gathering-origin-map-context__media {
+    min-height: 124px;
+  }
+
+  .gathering-origin-map-context h2 {
+    font-size: clamp(1.18rem, 6vw, 1.58rem);
+  }
+
+  .gathering-origin-map-context p {
+    font-size: 0.8rem;
   }
 
   .gathering-origin-materials-panel .gathering-card__header {
