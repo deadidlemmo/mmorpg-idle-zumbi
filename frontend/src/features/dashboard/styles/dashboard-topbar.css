@@ -769,7 +769,7 @@
 
   .dashboard-topbar__activity-status-bubble {
     top: -0.52rem;
-    right: -0.48rem;
+    right: -0.64rem;
     z-index: 20;
     transform: none;
     min-width: 22px;
@@ -844,7 +844,7 @@
 
   .dashboard-topbar__activity-status-bubble {
     top: -0.48rem;
-    right: -0.44rem;
+    right: -0.58rem;
     min-width: 22px;
     height: 22px;
     padding-inline: 0.32rem;
