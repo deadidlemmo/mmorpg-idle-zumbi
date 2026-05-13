@@ -563,6 +563,25 @@
     0 0 8px rgba(0, 0, 0, 0.28);
 }
 
+/* Mapa: mesmo fundo; destaque só no ícone e largura controlada */
+.dashboard-topbar__resource--map {
+  border-color: rgba(var(--dashboard-topbar-border-rgb), 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgb(var(--dashboard-topbar-surface-rgb));
+}
+
+.dashboard-topbar__resource--map .dashboard-topbar__resource-icon {
+  color: rgba(166, 236, 174, 0.98);
+  font-size: 0.72rem;
+}
+
+.dashboard-topbar__resource--map .dashboard-topbar__resource-value {
+  max-width: clamp(7.5rem, 18vw, 13rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Gold: mesmo fundo; destaque só no ícone */
 .dashboard-topbar__resource--gold {
   border-color: rgba(var(--dashboard-topbar-border-rgb), 0.24);
@@ -778,6 +797,10 @@
     font-size: 0.68rem;
   }
 
+  .dashboard-topbar__resource--map .dashboard-topbar__resource-value {
+    max-width: 8.5rem;
+  }
+
   .dashboard-topbar__refresh {
     width: 34px;
     min-width: 34px;
@@ -831,6 +854,10 @@
 
   .dashboard-topbar__resource {
     padding-inline: 0.46rem;
+  }
+
+  .dashboard-topbar__resource--map .dashboard-topbar__resource-value {
+    max-width: 6.8rem;
   }
 }
 
