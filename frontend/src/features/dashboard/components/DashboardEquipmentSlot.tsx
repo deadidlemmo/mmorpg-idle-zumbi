@@ -24,8 +24,8 @@ type EquipmentItemWithIcon = DashboardEquipmentItem & {
 
 const SLOT_LABELS: Record<EquipmentSlotKey, string> = {
   head: 'Elmo',
-  'main-hand': 'Main Hand',
-  'off-hand': 'Off Hand',
+  'main-hand': 'Mão principal',
+  'off-hand': 'Mão secundária',
   armor: 'Armadura',
   pants: 'Calça',
   boots: 'Botas',
