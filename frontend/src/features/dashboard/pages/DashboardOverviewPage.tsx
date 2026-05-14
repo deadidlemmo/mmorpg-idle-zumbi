@@ -373,14 +373,14 @@ export function DashboardOverviewPage() {
   return (
     <DashboardLayout character={characterWithVisualWallet}>
       <div className="dashboard-section-divider">
-        <span>Equipamentos</span>
+        <span>Resumo do personagem</span>
       </div>
 
-      <div className="dashboard-overview-grid">
+      <div className="dashboard-overview-grid dashboard-overview-grid--summary">
         <DashboardCard
           title="Equipamentos"
           eyebrow="Conjunto atual"
-          className="dashboard-card--wide dashboard-card--equipment"
+          className="dashboard-card--span-5 dashboard-card--equipment"
           action={
             <Link to={`/dashboard/${character.id}/equipment`}>
               Gerenciar conjunto
@@ -389,17 +389,11 @@ export function DashboardOverviewPage() {
         >
           <DashboardEquipmentBody equipment={equipment} />
         </DashboardCard>
-      </div>
 
-      <div className="dashboard-section-divider">
-        <span>Status</span>
-      </div>
-
-      <div className="dashboard-overview-grid">
         <DashboardCard
           title="Atributos do personagem"
           eyebrow="Status"
-          className="dashboard-card--wide"
+          className="dashboard-card--span-7"
         >
           <CharacterStatsPanel
             stats={stats}

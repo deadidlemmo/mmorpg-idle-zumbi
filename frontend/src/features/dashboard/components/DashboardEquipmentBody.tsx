@@ -14,11 +14,11 @@ interface DashboardEquipmentBodyProps {
 
 type EquipmentSlotKey =
   | 'head'
-  | 'main-hand'
   | 'armor'
-  | 'off-hand'
   | 'pants'
-  | 'boots';
+  | 'boots'
+  | 'main-hand'
+  | 'off-hand';
 
 type EquipmentSlotConfig = {
   slotKey: EquipmentSlotKey;
@@ -62,40 +62,24 @@ export function DashboardEquipmentBody({
     },
   ];
 
+  const equippedCount = slots.filter(({ item }) => Boolean(item)).length;
+
   return (
-    <section className="equipment-loadout" aria-label="Equipamentos atuais">
-      <div className="equipment-loadout__stage">
-        <div className="equipment-loadout__ambient" aria-hidden="true" />
-        <div className="equipment-loadout__aura" aria-hidden="true" />
+    <section className="equipment-summary" aria-label="Equipamentos atuais">
+      <div className="equipment-summary__intro">
+        <strong>{equippedCount}/6 slots ocupados</strong>
+        <span>Confira rapidamente o conjunto ativo do personagem.</span>
+      </div>
 
-        <div className="equipment-loadout__silhouette" aria-hidden="true">
-          <span className="equipment-loadout__shape equipment-loadout__shape--head" />
-          <span className="equipment-loadout__shape equipment-loadout__shape--neck" />
-          <span className="equipment-loadout__shape equipment-loadout__shape--torso" />
-          <span className="equipment-loadout__shape equipment-loadout__shape--left-arm" />
-          <span className="equipment-loadout__shape equipment-loadout__shape--right-arm" />
-          <span className="equipment-loadout__shape equipment-loadout__shape--hips" />
-          <span className="equipment-loadout__shape equipment-loadout__shape--left-leg" />
-          <span className="equipment-loadout__shape equipment-loadout__shape--right-leg" />
-          <span className="equipment-loadout__shape equipment-loadout__shape--left-foot" />
-          <span className="equipment-loadout__shape equipment-loadout__shape--right-foot" />
-        </div>
-
-        <div className="equipment-loadout__slots">
-          {slots.map(({ slotKey, label, item }) => (
-            <div
-              key={slotKey}
-              className={`equipment-loadout__slot equipment-loadout__slot--${slotKey}`}
-              data-slot={slotKey}
-            >
-              <DashboardEquipmentSlot
-                slotKey={slotKey}
-                label={label}
-                item={item}
-              />
-            </div>
-          ))}
-        </div>
+      <div className="equipment-summary__grid">
+        {slots.map(({ slotKey, label, item }) => (
+          <DashboardEquipmentSlot
+            key={slotKey}
+            slotKey={slotKey}
+            label={label}
+            item={item}
+          />
+        ))}
       </div>
     </section>
   );

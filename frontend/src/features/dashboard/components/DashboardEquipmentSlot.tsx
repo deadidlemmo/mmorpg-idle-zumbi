@@ -32,11 +32,11 @@ const SLOT_LABELS: Record<EquipmentSlotKey, string> = {
 };
 
 const SLOT_INITIALS: Record<EquipmentSlotKey, string> = {
-  head: 'H',
-  'main-hand': 'M',
-  'off-hand': 'O',
+  head: 'E',
+  'main-hand': 'MP',
+  'off-hand': 'MS',
   armor: 'A',
-  pants: 'P',
+  pants: 'C',
   boots: 'B',
 };
 
@@ -120,25 +120,26 @@ export function DashboardEquipmentSlot({
 
   const itemName = item?.name ?? 'Vazio';
   const slotLabel = SLOT_LABELS[normalizedSlotKey];
+  const rarityLabel = hasItem ? rarityMeta.label : 'Sem item';
 
   return (
     <article
       className={[
-        'equipment-node',
-        `equipment-node--${normalizedSlotKey}`,
-        `equipment-node--rarity-${rarityMeta.key}`,
+        'equipment-summary-slot',
+        `equipment-summary-slot--${normalizedSlotKey}`,
+        `equipment-summary-slot--rarity-${rarityMeta.key}`,
         rarityMeta.cssClass,
         hasItem ? 'has-item' : 'is-empty',
-        hasImage ? 'equipment-node--with-image' : 'equipment-node--fallback',
+        hasImage
+          ? 'equipment-summary-slot--with-image'
+          : 'equipment-summary-slot--fallback',
       ].join(' ')}
       style={style}
       title={`${slotLabel}: ${itemName}`}
       aria-label={`${slotLabel}: ${itemName}`}
     >
-      <div className="equipment-node__slot" aria-hidden="true">
-        <span className="equipment-node__tier">{tierLabel}</span>
-
-        <div className="equipment-node__icon">
+      <div className="equipment-summary-slot__slot" aria-hidden="true">
+        <div className="equipment-summary-slot__icon">
           {imageUrl ? (
             <img src={imageUrl} alt="" loading="lazy" />
           ) : (
@@ -147,9 +148,14 @@ export function DashboardEquipmentSlot({
         </div>
       </div>
 
-      <strong className="equipment-node__name">{itemName}</strong>
+      <div className="equipment-summary-slot__content">
+        <span className="equipment-summary-slot__label">{slotLabel}</span>
+        <strong className="equipment-summary-slot__name">{itemName}</strong>
+      </div>
 
-      <span className="equipment-node__label">{slotLabel}</span>
+      <span className="equipment-summary-slot__meta">
+        {hasItem ? `${tierLabel} · ${rarityLabel}` : rarityLabel}
+      </span>
     </article>
   );
 }
