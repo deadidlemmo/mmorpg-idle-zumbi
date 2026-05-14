@@ -12,7 +12,7 @@ interface ActiveGatheringSummary {
 
 interface GatheringSkillsPanelProps {
   skills: GatheringSkillViewModel[];
-  activeGathering: ActiveGatheringSummary;
+  activeGathering?: ActiveGatheringSummary;
 }
 
 function clampPercent(value: number) {
@@ -25,54 +25,58 @@ export function GatheringSkillsPanel({
   skills,
   activeGathering,
 }: GatheringSkillsPanelProps) {
-  const activeProgress = clampPercent(activeGathering.progressPercent);
+  const activeProgress = activeGathering
+    ? clampPercent(activeGathering.progressPercent)
+    : 0;
 
   return (
     <div className="gathering-panel">
-      <section
-        className={`gathering-panel__active ${
-          activeGathering.isActive ? 'is-active' : ''
-        }`}
-      >
-        <div className="gathering-panel__active-main">
-          <div>
-            <strong>{activeGathering.title}</strong>
-            <p>{activeGathering.description}</p>
+      {activeGathering ? (
+        <section
+          className={`gathering-panel__active ${
+            activeGathering.isActive ? 'is-active' : ''
+          }`}
+        >
+          <div className="gathering-panel__active-main">
+            <div>
+              <strong>{activeGathering.title}</strong>
+              <p>{activeGathering.description}</p>
+            </div>
+
+            <span className="gathering-panel__active-status">
+              {activeGathering.isActive ? 'Ativo' : 'Parado'}
+            </span>
           </div>
 
-          <span className="gathering-panel__active-status">
-            {activeGathering.isActive ? 'Ativo' : 'Parado'}
-          </span>
-        </div>
+          <div className="gathering-panel__metrics">
+            <div className="gathering-panel__metric">
+              <span>Origem</span>
+              <strong>{activeGathering.origin}</strong>
+            </div>
 
-        <div className="gathering-panel__metrics">
-          <div className="gathering-panel__metric">
-            <span>Origem</span>
-            <strong>{activeGathering.origin}</strong>
+            <div className="gathering-panel__metric">
+              <span>Estimado</span>
+              <strong>{activeGathering.estimatedQuantity}</strong>
+            </div>
+
+            <div className="gathering-panel__metric">
+              <span>Decorrido</span>
+              <strong>{activeGathering.elapsedMinutes}min</strong>
+            </div>
           </div>
 
-          <div className="gathering-panel__metric">
-            <span>Estimado</span>
-            <strong>{activeGathering.estimatedQuantity}</strong>
-          </div>
+          <div className="gathering-panel__progress">
+            <div className="gathering-panel__progress-label">
+              <span>Próxima unidade</span>
+              <strong>{activeProgress}/100</strong>
+            </div>
 
-          <div className="gathering-panel__metric">
-            <span>Decorrido</span>
-            <strong>{activeGathering.elapsedMinutes}min</strong>
+            <div className="gathering-panel__track">
+              <i style={{ width: `${activeProgress}%` }} />
+            </div>
           </div>
-        </div>
-
-        <div className="gathering-panel__progress">
-          <div className="gathering-panel__progress-label">
-            <span>Próxima unidade</span>
-            <strong>{activeProgress}/100</strong>
-          </div>
-
-          <div className="gathering-panel__track">
-            <i style={{ width: `${activeProgress}%` }} />
-          </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <section className="gathering-panel__skills">
         <div className="gathering-panel__section-header">

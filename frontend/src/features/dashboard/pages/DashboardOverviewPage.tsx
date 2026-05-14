@@ -32,23 +32,6 @@ function formatSeconds(seconds?: number | null) {
   return `${minutes}min ${remainingSeconds}s`;
 }
 
-function formatOrigin(origin?: string | null) {
-  if (!origin) return 'Sem origem';
-
-  const labels: Record<string, string> = {
-    DESMANCHE: 'Desmanche',
-    COLETA: 'Coleta',
-    PATRULHA: 'Patrulha',
-    ARSENAL: 'Arsenal',
-    TECNOVARREDURA: 'Tecnovarredura',
-    CONTENCAO: 'Contenção',
-    CONTENÇÃO: 'Contenção',
-    DROP_MOBS: 'Saque de monstros',
-  };
-
-  return labels[origin] ?? origin;
-}
-
 function toSafeNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
 
@@ -380,14 +363,8 @@ export function DashboardOverviewPage() {
   const stats = overview.stats;
   const equipment = overview.equipment ?? {};
   const activity = overview.activity;
-  const shortcuts = overview.shortcuts;
-  const progression = overview.progression;
-
   const activeAutoCombat = activity?.activeAutoCombatSession;
   const autoCombatPreview = activeAutoCombat?.combatPreview;
-
-  const activeGathering = activity?.activeGatheringSession;
-  const gatheringPreview = activeGathering?.productionPreview;
 
   /**
    * Preparação visual temporária para moedas.
@@ -409,20 +386,6 @@ export function DashboardOverviewPage() {
       gold: displayGold,
       cash: displayCash,
     },
-  };
-
-  const activeGatheringSummary = {
-    isActive: Boolean(activity?.hasActiveGathering),
-    title: activity?.hasActiveGathering
-      ? 'Expedição em andamento'
-      : 'Nenhuma expedição ativa',
-    description:
-      gatheringPreview?.label ??
-      'Envie o personagem em expedições para obter materiais de criação.',
-    origin: formatOrigin(activeGathering?.origin),
-    estimatedQuantity: gatheringPreview?.estimatedQuantityToCollect ?? 0,
-    elapsedMinutes: gatheringPreview?.elapsedMinutes ?? 0,
-    progressPercent: gatheringPreview?.nextUnitProgressPercent ?? 0,
   };
 
   return (
@@ -487,55 +450,29 @@ export function DashboardOverviewPage() {
       </div>
 
       <div className="dashboard-section-divider">
-        <span>Expedições e criação</span>
+        <span>Equipamentos</span>
       </div>
 
       <div className="dashboard-overview-grid">
         <DashboardCard
-          title="Expedições"
-          eyebrow="Produção idle"
-          className="dashboard-card--wide"
+          title="Equipamentos"
+          eyebrow="Conjunto atual"
+          className="dashboard-card--wide dashboard-card--equipment"
           action={
-            <Link to={`/dashboard/${character.id}/gathering`}>
-              Abrir expedições
+            <Link to={`/dashboard/${character.id}/equipment`}>
+              Gerenciar conjunto
             </Link>
           }
         >
-          <GatheringSkillsPanel
-            skills={gatheringSkills}
-            activeGathering={activeGatheringSummary}
-          />
-        </DashboardCard>
-
-        <DashboardCard
-          title="Criação de itens"
-          eyebrow="Receitas"
-          action={
-            <Link to={`/dashboard/${character.id}/crafting`}>
-              Abrir criação
-            </Link>
-          }
-        >
-          <div className="dashboard-status-callout">
-            <strong>
-              {shortcuts?.hasCraftableRecipes
-                ? 'Há receitas disponíveis'
-                : 'Nenhuma receita pronta'}
-            </strong>
-
-            <span>
-              A criação de itens depende de materiais obtidos em expedições e
-              saques do combate automático.
-            </span>
-          </div>
+          <DashboardEquipmentBody equipment={equipment} />
         </DashboardCard>
       </div>
 
       <div className="dashboard-section-divider">
-        <span>Personagem e progressão</span>
+        <span>Status</span>
       </div>
 
-      <div className="dashboard-overview-grid dashboard-overview-grid--character">
+      <div className="dashboard-overview-grid">
         <DashboardCard
           title="Atributos do personagem"
           eyebrow="Status"
@@ -547,49 +484,19 @@ export function DashboardOverviewPage() {
             maxHp={character.maxHp}
           />
         </DashboardCard>
+      </div>
 
+      <div className="dashboard-section-divider">
+        <span>Proficiências</span>
+      </div>
+
+      <div className="dashboard-overview-grid">
         <DashboardCard
-          title="Equipamentos"
-          eyebrow="Conjunto atual"
-          className="dashboard-card--span-6 dashboard-card--equipment"
-          action={
-            <Link to={`/dashboard/${character.id}/equipment`}>
-              Gerenciar conjunto
-            </Link>
-          }
+          title="Níveis de gathering"
+          eyebrow="Proficiências"
+          className="dashboard-card--wide"
         >
-          <DashboardEquipmentBody equipment={equipment} />
-        </DashboardCard>
-
-        <DashboardCard
-          title="Mapa e progressão"
-          eyebrow="Mundo"
-          className="dashboard-card--span-6"
-          action={<Link to={`/dashboard/${character.id}/maps`}>Ver mapas</Link>}
-        >
-          <div className="dashboard-map-summary">
-            <div>
-              <span>Mapa atual</span>
-
-              <strong>
-                {progression?.currentMap?.name ?? character.currentMapName}
-              </strong>
-            </div>
-
-            <div>
-              <span>Mapa recomendado</span>
-
-              <strong>
-                {progression?.recommendedMap?.name ?? 'Sem recomendação'}
-              </strong>
-            </div>
-
-            <div>
-              <span>Mapas disponíveis</span>
-
-              <strong>{progression?.availableMaps?.length ?? 0}</strong>
-            </div>
-          </div>
+          <GatheringSkillsPanel skills={gatheringSkills} />
         </DashboardCard>
       </div>
     </DashboardLayout>
