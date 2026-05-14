@@ -10,7 +10,7 @@ const FILTER_ORDER: Array<Omit<InventoryFilterOption, 'count'>> = [
   { key: 'MATERIAL', label: 'Materiais' },
   { key: 'EQUIPMENT', label: 'Equipamentos' },
   { key: 'CONSUMABLE', label: 'Consumíveis' },
-  { key: 'RESOURCE', label: 'Recursos' },
+  { key: 'RESOURCE', label: 'Receitas' },
   { key: 'OTHER', label: 'Outros' },
 ];
 
@@ -52,7 +52,9 @@ export function getInventoryItemCategory(entry: InventoryEntry): InventoryFilter
   if (type === 'EQUIPMENT') return 'EQUIPMENT';
   if (type === 'CONSUMABLE' || slot === 'CONSUMABLE') return 'CONSUMABLE';
   if (type === 'MATERIAL' || slot === 'MATERIAL') return 'MATERIAL';
-  if (family.includes('resource') || family.includes('recurso')) return 'RESOURCE';
+  if (entry.item?.isCraftable || family.includes('receita') || family.includes('recipe')) {
+    return 'RESOURCE';
+  }
 
   return 'OTHER';
 }
@@ -87,7 +89,7 @@ export function formatInventoryType(entry: InventoryEntry) {
     MATERIAL: 'Material',
     EQUIPMENT: 'Equipamento',
     CONSUMABLE: 'Consumível',
-    RESOURCE: 'Recurso',
+    RESOURCE: 'Receita',
     OTHER: 'Outro',
   };
 

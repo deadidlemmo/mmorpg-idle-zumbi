@@ -23,7 +23,7 @@ const FILTER_SHORT_LABELS: Partial<Record<InventoryFilterKey, string>> = {
   MATERIAL: 'Materiais',
   EQUIPMENT: 'Equip.',
   CONSUMABLE: 'Cons.',
-  RESOURCE: 'Rec.',
+  RESOURCE: 'Receitas',
   OTHER: 'Outros',
 };
 

@@ -17,6 +17,8 @@ interface InventoryHeaderProps {
  * - materialCount
  * - onRefresh
  */
-export function InventoryHeader(_props: InventoryHeaderProps) {
+export function InventoryHeader(props: InventoryHeaderProps) {
+  void props;
+
   return null;
 }
