@@ -1,6 +1,8 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import cashIcon from '../../../assets/images/coins/cash.png';
+import goldIcon from '../../../assets/images/coins/gold.png';
 import { removeAuthToken } from '../../../services/api/authToken';
 import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import { normalizeClassName } from '../../characters/api/characters.api';
@@ -1093,7 +1095,14 @@ function DashboardLayoutContent({
         key: 'gold',
         label: 'Gold',
         value: formatCurrency(walletDisplay.gold),
-        icon: '●',
+        icon: (
+          <img
+            src={goldIcon}
+            alt=""
+            aria-hidden="true"
+            className="dashboard-topbar__resource-icon-image"
+          />
+        ) as DashboardTopBarResource['icon'],
         tone: 'gold',
         title: 'Gold disponível',
       },
@@ -1101,7 +1110,14 @@ function DashboardLayoutContent({
         key: 'cash',
         label: 'Cash',
         value: formatCurrency(walletDisplay.cash),
-        icon: '◆',
+        icon: (
+          <img
+            src={cashIcon}
+            alt=""
+            aria-hidden="true"
+            className="dashboard-topbar__resource-icon-image"
+          />
+        ) as DashboardTopBarResource['icon'],
         tone: 'cash',
         title: 'Cash disponível',
       },
@@ -1349,12 +1365,28 @@ function DashboardLayoutContent({
 
                 <div className="dashboard-hero__wallet" aria-label="Moedas">
                   <div className="dashboard-hero__currency dashboard-hero__currency--gold">
-                    <span>Gold</span>
+                    <span>
+                      <img
+                        src={goldIcon}
+                        alt=""
+                        aria-hidden="true"
+                        className="dashboard-hero__currency-icon"
+                      />
+                      Gold
+                    </span>
                     <strong>{formatCurrency(walletDisplay.gold)}</strong>
                   </div>
 
                   <div className="dashboard-hero__currency dashboard-hero__currency--cash">
-                    <span>Cash</span>
+                    <span>
+                      <img
+                        src={cashIcon}
+                        alt=""
+                        aria-hidden="true"
+                        className="dashboard-hero__currency-icon"
+                      />
+                      Cash
+                    </span>
                     <strong>{formatCurrency(walletDisplay.cash)}</strong>
                   </div>
                 </div>
