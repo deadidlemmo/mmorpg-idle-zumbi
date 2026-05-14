@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { normalizeClassName } from '../../characters/api/characters.api';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
+import { DashboardEquipmentBody } from '../../dashboard/components/DashboardEquipmentBody';
 import '../../dashboard/dashboard.css';
 import type {
   CharacterOverviewResponse,
@@ -27,6 +28,30 @@ import {
   getInventoryItemInitials,
   getInventoryPrimaryDetail,
 } from '../utils/inventory.utils';
+
+type InventoryTabKey = 'inventory' | 'equipped' | 'bank';
+
+const INVENTORY_TABS: Array<{
+  key: InventoryTabKey;
+  label: string;
+  description: string;
+}> = [
+  {
+    key: 'inventory',
+    label: 'Inventário',
+    description: 'Itens guardados na mochila',
+  },
+  {
+    key: 'equipped',
+    label: 'Equipados',
+    description: 'Conjunto ativo do personagem',
+  },
+  {
+    key: 'bank',
+    label: 'Banco',
+    description: 'Armazenamento seguro',
+  },
+];
 
 function buildCharacterViewModel(
   overview: CharacterOverviewResponse,
@@ -365,6 +390,7 @@ export function InventoryPage() {
 
   const isMobileDetails = useIsMobileInventoryDetails();
 
+  const [activeTab, setActiveTab] = useState<InventoryTabKey>('inventory');
   const [activeFilter, setActiveFilter] = useState<InventoryFilterKey>('ALL');
   const [selectedItem, setSelectedItem] = useState<InventoryEntry | null>(null);
 
@@ -426,21 +452,19 @@ export function InventoryPage() {
     return filterInventoryItems(items, activeFilter);
   }, [activeFilter, items]);
 
-  useEffect(() => {
-    if (!selectedItem) return;
+  const selectedInventoryItem = useMemo(() => {
+    if (activeTab !== 'inventory' || !selectedItem) return null;
 
-    const selectedItemId = getInventoryEntryId(selectedItem);
+    const currentSelectedItemId = getInventoryEntryId(selectedItem);
 
-    const selectedItemStillVisible = filteredItems.some((entry) => {
-      return getInventoryEntryId(entry) === selectedItemId;
-    });
+    return (
+      filteredItems.find((entry) => {
+        return getInventoryEntryId(entry) === currentSelectedItemId;
+      }) ?? null
+    );
+  }, [activeTab, filteredItems, selectedItem]);
 
-    if (!selectedItemStillVisible) {
-      setSelectedItem(null);
-    }
-  }, [filteredItems, selectedItem]);
-
-  const selectedItemId = getInventoryEntryId(selectedItem);
+  const selectedItemId = getInventoryEntryId(selectedInventoryItem);
 
   const hasItems = items.length > 0;
   const hasFilteredItems = filteredItems.length > 0;
@@ -475,69 +499,167 @@ export function InventoryPage() {
         className="inventory-page inventory-page--dashboard"
         aria-label="Mochila do personagem"
       >
-        <div className="inventory-content-layout">
+        <div
+          className={`inventory-content-layout${
+            activeTab === 'inventory' ? '' : ' inventory-content-layout--single'
+          }`}
+        >
           <section
             className="inventory-panel inventory-panel--items inventory-content-layout__grid"
-            aria-labelledby="inventory-items-title"
+            aria-label="Mochila, equipamentos e banco do personagem"
           >
-            <div className="inventory-panel__header">
-              <div>
-                <span>Mochila</span>
-                <h2 id="inventory-items-title">Itens guardados</h2>
-              </div>
+            <div
+              className="inventory-tabs"
+              role="tablist"
+              aria-label="Seções da mochila"
+            >
+              {INVENTORY_TABS.map((tab) => {
+                const isActive = activeTab === tab.key;
 
-              <p>
-                {filteredItems.length} de {items.length} tipos visíveis
-              </p>
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    className={`inventory-tab${isActive ? ' is-active' : ''}`}
+                    onClick={() => {
+                      setActiveTab(tab.key);
+                      setSelectedItem(null);
+                    }}
+                    role="tab"
+                    aria-selected={isActive}
+                  >
+                    <span>{tab.label}</span>
+                    <small>{tab.description}</small>
+                  </button>
+                );
+              })}
             </div>
 
-            <InventoryFilters
-              filters={filters}
-              activeFilter={activeFilter}
-              onChange={setActiveFilter}
-            />
+            {activeTab === 'inventory' ? (
+              <>
+                <div className="inventory-panel__header inventory-panel__header--stacked">
+                  <div>
+                    <span>Mochila</span>
+                    <h2 id="inventory-items-title">Itens guardados</h2>
+                    <small>
+                      Gerencie recursos, equipamentos e consumíveis coletados nas
+                      expedições e combates.
+                    </small>
+                  </div>
 
-            {isInventoryLoading ? (
-              <div className="inventory-state-card">
-                <div className="loading-spinner" />
-                <span>Carregando itens...</span>
-              </div>
-            ) : null}
+                  <p>
+                    <strong>{filteredItems.length}</strong> de {items.length} tipos visíveis
+                  </p>
+                </div>
 
-            {!isInventoryLoading && inventoryError ? (
-              <div className="inventory-state-card inventory-state-card--error">
-                <strong>Falha ao carregar inventário</strong>
-                <p>{inventoryError}</p>
-
-                <button type="button" onClick={refetch}>
-                  Tentar novamente
-                </button>
-              </div>
-            ) : null}
-
-            {!isInventoryLoading && !inventoryError && hasFilteredItems ? (
-              <div className="inventory-grid-shell">
-                <InventoryGrid
-                  items={filteredItems}
-                  onSelectItem={setSelectedItem}
-                  selectedItemId={selectedItemId}
+                <InventoryFilters
+                  filters={filters}
+                  activeFilter={activeFilter}
+                  onChange={(filter) => {
+                    setActiveFilter(filter);
+                    setSelectedItem(null);
+                  }}
                 />
-              </div>
+
+                {isInventoryLoading ? (
+                  <div className="inventory-state-card">
+                    <div className="loading-spinner" />
+                    <span>Carregando itens...</span>
+                  </div>
+                ) : null}
+
+                {!isInventoryLoading && inventoryError ? (
+                  <div className="inventory-state-card inventory-state-card--error">
+                    <strong>Falha ao carregar inventário</strong>
+                    <p>{inventoryError}</p>
+
+                    <button type="button" onClick={refetch}>
+                      Tentar novamente
+                    </button>
+                  </div>
+                ) : null}
+
+                {!isInventoryLoading && !inventoryError && hasFilteredItems ? (
+                  <div className="inventory-grid-shell">
+                    <InventoryGrid
+                      items={filteredItems}
+                      onSelectItem={setSelectedItem}
+                      selectedItemId={selectedItemId}
+                    />
+                  </div>
+                ) : null}
+
+                {!isInventoryLoading && !inventoryError && isEmptyAfterFilter ? (
+                  <EmptyInventoryState hasActiveFilter />
+                ) : null}
+
+                {!isInventoryLoading && !inventoryError && isCompletelyEmpty ? (
+                  <EmptyInventoryState hasActiveFilter={false} />
+                ) : null}
+              </>
             ) : null}
 
-            {!isInventoryLoading && !inventoryError && isEmptyAfterFilter ? (
-              <EmptyInventoryState hasActiveFilter />
+            {activeTab === 'equipped' ? (
+              <section
+                className="inventory-equipped-tab"
+                aria-labelledby="inventory-equipped-title"
+              >
+                <div className="inventory-panel__header inventory-panel__header--stacked">
+                  <div>
+                    <span>Equipados</span>
+                    <h2 id="inventory-equipped-title">Conjunto atual</h2>
+                    <small>
+                      Slots ativos do personagem. Espaços sem item aparecem como Vazio.
+                    </small>
+                  </div>
+
+                  <Link
+                    className="inventory-panel__action-link"
+                    to={`/dashboard/${character.id}/equipment`}
+                  >
+                    Gerenciar equipamentos
+                  </Link>
+                </div>
+
+                <div className="inventory-equipped-shell">
+                  <DashboardEquipmentBody equipment={character.equipment ?? {}} />
+                </div>
+              </section>
             ) : null}
 
-            {!isInventoryLoading && !inventoryError && isCompletelyEmpty ? (
-              <EmptyInventoryState hasActiveFilter={false} />
+            {activeTab === 'bank' ? (
+              <section
+                className="inventory-bank-tab"
+                aria-labelledby="inventory-bank-title"
+              >
+                <div className="inventory-panel__header inventory-panel__header--stacked">
+                  <div>
+                    <span>Banco</span>
+                    <h2 id="inventory-bank-title">Armazenamento</h2>
+                    <small>
+                      Espaço reservado para itens guardados em áreas seguras.
+                    </small>
+                  </div>
+                </div>
+
+                <div className="inventory-bank-unavailable" role="status">
+                  <div className="inventory-bank-unavailable__icon" aria-hidden="true">
+                    ▣
+                  </div>
+                  <strong>Banco indisponível</strong>
+                  <p>
+                    Você não está próximo de um banco ou esta funcionalidade ainda não
+                    está disponível nesta área.
+                  </p>
+                </div>
+              </section>
             ) : null}
           </section>
 
-          {!isInventoryLoading && !inventoryError ? (
+          {activeTab === 'inventory' && !isInventoryLoading && !inventoryError ? (
             <div className="inventory-content-layout__details">
               <InventoryDesktopDetailsPanel
-                entry={selectedItem}
+                entry={selectedInventoryItem}
                 onClear={() => setSelectedItem(null)}
               />
             </div>
@@ -546,7 +668,7 @@ export function InventoryPage() {
 
         {isMobileDetails ? (
           <InventoryItemDetailsModal
-            entry={selectedItem}
+            entry={selectedInventoryItem}
             onClose={() => setSelectedItem(null)}
           />
         ) : null}

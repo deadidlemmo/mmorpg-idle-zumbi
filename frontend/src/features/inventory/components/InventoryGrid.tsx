@@ -79,7 +79,7 @@ export function InventoryGrid({
           className="inventory-empty-slot inventory-grid__empty-slot"
           aria-hidden="true"
         >
-          <span>Empty</span>
+          <span>Vazio</span>
         </div>
       ))}
     </div>
