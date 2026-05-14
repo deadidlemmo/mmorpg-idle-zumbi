@@ -6,11 +6,11 @@
 
 .gathering-origin-main,
 .gathering-origin-side {
-min-width: 0;
+  min-width: 0;
 }
 
 .gathering-page--origin .gathering-card {
-border-radius: 1.05rem;
+  border-radius: 1.05rem;
   background:
     radial-gradient(circle at 16% 0%, rgba(110, 159, 67, 0.055), transparent 17rem),
     linear-gradient(180deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.008)),
@@ -22,15 +22,15 @@ border-radius: 1.05rem;
 }
 
 .gathering-page--origin .gathering-card--compact {
-padding: 0.92rem;
+  padding: 0.92rem;
 }
 
 .gathering-origin-current-card .gathering-session .gathering-card__header {
-margin-bottom: 0.72rem;
+  margin-bottom: 0.72rem;
 }
 
 .gathering-origin-current-card .gathering-session .gathering-card__eyebrow {
-color: #aeda78;
+  color: #aeda78;
   font-size: 0.56rem;
   letter-spacing: 0.17em;
 }
@@ -43,7 +43,7 @@ color: #aeda78;
 .gathering-origin-materials-panel,
 .gathering-origin-current-card,
 .gathering-origin-skill-card {
-font-family: var(--font-body);
+  font-family: var(--font-body);
 }
 
 .gathering-origin-lore-card__npc,
@@ -53,6 +53,7 @@ font-family: var(--font-body);
 .gathering-origin-map-context h2,
 .gathering-origin-map-context__eyebrow,
 .gathering-origin-map-context__chips span,
+.gathering-origin-map-context__chip,
 .gathering-origin-section-divider,
 .gathering-origin-skill-card__icon,
 .gathering-origin-skill-card__heading strong,
@@ -60,12 +61,12 @@ font-family: var(--font-body);
 .gathering-origin-skill-card__chevron,
 .gathering-origin-skill-card__meta strong,
 .gathering-origin-skill-card__perk-button {
-font-family: var(--font-title);
+  font-family: var(--font-title);
 }
 
 .gathering-origin-current-card,
 .gathering-origin-skill-card {
-width: 100%;
+  width: 100%;
   border: 1px solid rgba(110, 159, 67, 0.22) !important;
   border-radius: 0.92rem !important;
   background:
@@ -82,5 +83,230 @@ width: 100%;
 .gathering-origin-current-card::after,
 .gathering-origin-skill-card::before,
 .gathering-origin-skill-card::after {
-display: none !important;
+  display: none !important;
+}
+
+/* =========================================================
+   MAP CONTEXT — TIER / RARITY COLORS
+   Regra visual oficial:
+   T0-T2  => Comum / Branco
+   T3-T4  => Incomum / Amarelo
+   T5-T6  => Raro / Verde
+   T7-T8  => Épico / Roxo
+   T9-T10 => Lendário / Vermelho
+   ========================================================= */
+
+.gathering-origin-map-context {
+  --gathering-map-tier-rgb: 231, 227, 216;
+  --gathering-map-tier-hex: #e7e3d8;
+  --gathering-map-tier-soft-alpha: 0.1;
+  --gathering-map-tier-border-alpha: 0.22;
+  --gathering-map-tier-glow-alpha: 0.08;
+
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(
+    var(--gathering-map-tier-rgb),
+    var(--gathering-map-tier-border-alpha)
+  ) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 14px 28px rgba(0, 0, 0, 0.18),
+    0 0 22px rgba(
+      var(--gathering-map-tier-rgb),
+      var(--gathering-map-tier-glow-alpha)
+    ) !important;
+}
+
+.gathering-origin-map-context::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 18% 12%,
+      rgba(
+        var(--gathering-map-tier-rgb),
+        var(--gathering-map-tier-soft-alpha)
+      ),
+      transparent 14rem
+    ),
+    linear-gradient(
+      90deg,
+      rgba(var(--gathering-map-tier-rgb), 0.055),
+      transparent 44%,
+      rgba(var(--gathering-map-tier-rgb), 0.035)
+    ),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 9px
+    );
+  opacity: 0.86;
+}
+
+/* T0, T1, T2 — Comum / Branco */
+.gathering-map-tier--common {
+  --gathering-map-tier-rgb: 231, 227, 216;
+  --gathering-map-tier-hex: #e7e3d8;
+  --gathering-map-tier-soft-alpha: 0.1;
+  --gathering-map-tier-border-alpha: 0.22;
+  --gathering-map-tier-glow-alpha: 0.08;
+}
+
+/* T3, T4 — Incomum / Amarelo */
+.gathering-map-tier--uncommon {
+  --gathering-map-tier-rgb: 224, 182, 91;
+  --gathering-map-tier-hex: #e0b65b;
+  --gathering-map-tier-soft-alpha: 0.13;
+  --gathering-map-tier-border-alpha: 0.34;
+  --gathering-map-tier-glow-alpha: 0.12;
+}
+
+/* T5, T6 — Raro / Verde */
+.gathering-map-tier--rare {
+  --gathering-map-tier-rgb: 101, 194, 113;
+  --gathering-map-tier-hex: #65c271;
+  --gathering-map-tier-soft-alpha: 0.13;
+  --gathering-map-tier-border-alpha: 0.34;
+  --gathering-map-tier-glow-alpha: 0.12;
+}
+
+/* T7, T8 — Épico / Roxo */
+.gathering-map-tier--epic {
+  --gathering-map-tier-rgb: 167, 111, 224;
+  --gathering-map-tier-hex: #a76fe0;
+  --gathering-map-tier-soft-alpha: 0.14;
+  --gathering-map-tier-border-alpha: 0.38;
+  --gathering-map-tier-glow-alpha: 0.14;
+}
+
+/* T9, T10+ — Lendário / Vermelho */
+.gathering-map-tier--legendary {
+  --gathering-map-tier-rgb: 218, 83, 73;
+  --gathering-map-tier-hex: #da5349;
+  --gathering-map-tier-soft-alpha: 0.15;
+  --gathering-map-tier-border-alpha: 0.42;
+  --gathering-map-tier-glow-alpha: 0.16;
+}
+
+.gathering-origin-map-context > * {
+  position: relative;
+  z-index: 1;
+}
+
+.gathering-origin-map-context__media {
+  border-color: rgba(
+    var(--gathering-map-tier-rgb),
+    var(--gathering-map-tier-border-alpha)
+  ) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 10px 20px rgba(0, 0, 0, 0.18),
+    0 0 18px rgba(
+      var(--gathering-map-tier-rgb),
+      var(--gathering-map-tier-glow-alpha)
+    ) !important;
+}
+
+.gathering-origin-map-context__eyebrow {
+  color: rgba(
+    var(--gathering-map-tier-rgb),
+    0.92
+  ) !important;
+  text-shadow:
+    0 0 8px rgba(
+      var(--gathering-map-tier-rgb),
+      var(--gathering-map-tier-glow-alpha)
+    ),
+    0 1px 2px rgba(0, 0, 0, 0.72);
+}
+
+.gathering-origin-map-context__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.gathering-origin-map-context__title-row h2 {
+  min-width: 0;
+}
+
+.gathering-origin-map-context__chips {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.gathering-origin-map-context__chip,
+.gathering-origin-map-context__chips span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0.2rem 0.62rem;
+  font-size: 0.64rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.gathering-origin-map-context__chip--tier {
+  color: var(--gathering-map-tier-hex);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
+    rgba(
+      var(--gathering-map-tier-rgb),
+      var(--gathering-map-tier-soft-alpha)
+    );
+  border: 1px solid rgba(
+    var(--gathering-map-tier-rgb),
+    var(--gathering-map-tier-border-alpha)
+  );
+  box-shadow:
+    0 0 14px rgba(
+      var(--gathering-map-tier-rgb),
+      var(--gathering-map-tier-glow-alpha)
+    ),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.48);
+}
+
+.gathering-origin-map-context__chip--level {
+  color: rgba(244, 248, 220, 0.88);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(5, 9, 8, 0.42);
+  border: 1px solid rgba(231, 227, 216, 0.1);
+}
+
+.gathering-origin-map-context__body > p {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .gathering-origin-map-context__title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .gathering-origin-map-context__chips {
+    justify-content: flex-start;
+  }
+
+  .gathering-origin-map-context__chip,
+  .gathering-origin-map-context__chips span {
+    min-height: 26px;
+    padding: 0.18rem 0.56rem;
+    font-size: 0.58rem;
+  }
 }

@@ -119,6 +119,21 @@ function formatMapLevelRange(
   return null;
 }
 
+function getMapTierClassName(tier?: number | null): string {
+  const safeTier = Number(tier);
+
+  if (!Number.isFinite(safeTier)) {
+    return 'gathering-map-tier--common';
+  }
+
+  if (safeTier >= 9) return 'gathering-map-tier--legendary';
+  if (safeTier >= 7) return 'gathering-map-tier--epic';
+  if (safeTier >= 5) return 'gathering-map-tier--rare';
+  if (safeTier >= 3) return 'gathering-map-tier--uncommon';
+
+  return 'gathering-map-tier--common';
+}
+
 function normalizeGatheringOriginKey(
   value?: string | null,
 ): GatheringAllowedOrigin | null {
@@ -561,6 +576,7 @@ export function GatheringOriginPage() {
   const currentMapImage = getMapImageByName(currentMap?.name);
   const currentMapVisualStyle = buildMapVisualStyle(currentMapImage);
   const currentMapLevelRangeLabel = formatMapLevelRange(currentMap);
+  const currentMapTierClassName = getMapTierClassName(currentMap?.tier);
   const fallbackRatePerHour = materialsResponse?.ratePerHour ?? null;
 
   const activeMaterialId = getActiveMaterialId(status);
@@ -905,6 +921,51 @@ export function GatheringOriginPage() {
               </div>
             </article>
 
+            <section
+              className={[
+                'gathering-origin-map-context',
+                currentMapTierClassName,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              aria-label={`Mapa atual: ${currentMapName}`}
+            >
+              <div
+                className="gathering-origin-map-context__media"
+                style={currentMapVisualStyle}
+              >
+                {!currentMapImage ? (
+                  <span aria-hidden="true">
+                    {currentMapName.slice(0, 2).toUpperCase()}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="gathering-origin-map-context__body">
+                <span className="gathering-origin-map-context__eyebrow">
+                  Mapa atual
+                </span>
+
+                <div className="gathering-origin-map-context__title-row">
+                  <h2>{currentMapName}</h2>
+
+                  <div className="gathering-origin-map-context__chips">
+                    {currentMap?.tier ? (
+                      <span className="gathering-origin-map-context__chip gathering-origin-map-context__chip--tier">
+                        Tier {currentMap.tier}
+                      </span>
+                    ) : null}
+
+                    {currentMapLevelRangeLabel ? (
+                      <span className="gathering-origin-map-context__chip gathering-origin-map-context__chip--level">
+                        {currentMapLevelRangeLabel}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <aside className="gathering-origin-premium-card">
               <div className="gathering-origin-premium-card__badge" aria-hidden="true">
                 i
@@ -925,69 +986,12 @@ export function GatheringOriginPage() {
             </aside>
           </section>
 
-          <section
-            className="gathering-origin-map-context"
-            aria-label={`Mapa atual: ${currentMapName}`}
-          >
-            <div
-              className="gathering-origin-map-context__media"
-              style={currentMapVisualStyle}
-            >
-              {!currentMapImage ? (
-                <span aria-hidden="true">
-                  {currentMapName.slice(0, 2).toUpperCase()}
-                </span>
-              ) : null}
-            </div>
-
-            <div className="gathering-origin-map-context__body">
-              <span className="gathering-origin-map-context__eyebrow">
-                Mapa atual
-              </span>
-
-              <div className="gathering-origin-map-context__title-row">
-                <h2>{currentMapName}</h2>
-
-                <div className="gathering-origin-map-context__chips">
-                  {currentMap?.tier ? (
-                    <span>Tier {currentMap.tier}</span>
-                  ) : null}
-
-                  {currentMapLevelRangeLabel ? (
-                    <span>{currentMapLevelRangeLabel}</span>
-                  ) : null}
-                </div>
-              </div>
-
-              <p>
-                Os materiais abaixo pertencem a este mapa. Ao mudar de região,
-                os recursos disponíveis para {originLabel.toLowerCase()} também
-                mudam.
-              </p>
-            </div>
-          </section>
-
           <div className="gathering-origin-content-grid">
             <main className="gathering-origin-main">
               <section className="gathering-card gathering-card--compact gathering-origin-materials-panel">
-                <header className="gathering-card__header">
-                  <div className="gathering-card__title-group">
-                    <span className="gathering-card__eyebrow">
-                      Materiais deste mapa
-                    </span>
-                    <h2>Materiais disponíveis em {currentMapName}</h2>
-                    <p className="gathering-card__description">
-                      Lista filtrada para {originLabel.toLowerCase()} em
-                      {` ${currentMapName}`}. Cada mapa possui recursos próprios
-                      para farmar.
-                    </p>
-                  </div>
-
-                  <div className="gathering-origin-materials-panel__summary">
-                    <span>{materials.length} recursos</span>
-                    {fallbackRatePerHour ? (
-                      <strong>{fallbackRatePerHour}/h base</strong>
-                    ) : null}
+                <header className="gathering-card__header gathering-origin-materials-panel__header">
+                  <div className="gathering-card__title-group gathering-origin-materials-panel__title-group">
+                    <h2>Materiais deste mapa</h2>
                   </div>
                 </header>
 
