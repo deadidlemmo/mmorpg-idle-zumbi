@@ -1,5 +1,12 @@
 /* =========================================================
    15. MOBILE / RESPONSIVO
+
+   Observação:
+   O layout do topo do personagem (.dashboard-hero) fica no
+   dashboard-overview.css. Este arquivo não deve sobrescrever
+   .dashboard-hero, .dashboard-hero__avatar, .dashboard-hero__content,
+   .dashboard-hero__status ou .dashboard-hero__resources, para evitar
+   conflito no mobile.
    ========================================================= */
 
 .dashboard-mobile-topbar {
@@ -409,88 +416,6 @@
   .dashboard-activity-bar-zone {
     margin-bottom: 0.7rem;
     padding-inline: 0;
-  }
-
-  .dashboard-hero {
-    gap: 0.88rem;
-    padding: 1rem;
-    border-radius: 1rem;
-  }
-
-  .dashboard-hero__avatar {
-    width: 5.8rem;
-    height: 5.8rem;
-    border-radius: 0.85rem;
-  }
-
-  .dashboard-hero__content > span {
-    font-size: 0.58rem;
-  }
-
-  .dashboard-hero__heading {
-    gap: 0.55rem;
-  }
-
-  .dashboard-hero__heading h2,
-  .dashboard-hero__content h2 {
-    font-size: clamp(1.55rem, 7.2vw, 2rem);
-  }
-
-  .dashboard-hero__level-badge {
-    min-width: 64px;
-    min-height: 32px;
-    padding: 0.48rem 0.58rem;
-    font-size: 0.68rem;
-  }
-
-  .dashboard-hero__meta strong {
-    min-height: 1.45rem;
-    padding: 0.24rem 0.54rem;
-    font-size: 0.7rem;
-  }
-
-  .dashboard-hero__resources {
-    gap: 0.52rem;
-    margin-top: 0.68rem;
-  }
-
-  .dashboard-hero__resource {
-    padding: 0.54rem 0.56rem 0.58rem;
-    border-radius: 0.72rem;
-  }
-
-  .dashboard-hero__resource-header {
-    gap: 0.48rem;
-    margin-bottom: 0.36rem;
-  }
-
-  .dashboard-hero__resource-title span,
-  .dashboard-hero__resource-header > span {
-    font-size: 0.62rem;
-  }
-
-  .dashboard-hero__resource-title small {
-    display: none;
-  }
-
-  .dashboard-hero__resource-values {
-    gap: 0.32rem;
-  }
-
-  .dashboard-hero__resource-values strong,
-  .dashboard-hero__resource-header > strong {
-    font-size: 0.66rem;
-  }
-
-  .dashboard-hero__resource-values em {
-    min-width: 36px;
-    min-height: 22px;
-    padding: 0.2rem 0.32rem;
-    font-size: 0.58rem;
-  }
-
-  .dashboard-hero__resource-track {
-    height: 9px;
   }
 
   .gathering-panel {
@@ -928,38 +853,17 @@
 }
 
 @media (max-width: 480px) {
-  .dashboard-hero {
-    display: grid;
-    grid-template-columns: 70px minmax(0, 1fr);
-    align-items: center;
+  .dashboard-main {
+    padding: 0.72rem 0.62rem 0.95rem;
   }
 
-  .dashboard-hero__avatar {
-    width: 70px;
-    height: 86px;
+  .dashboard-section-divider {
+    margin: 0.62rem 0 0.5rem;
   }
 
-  .dashboard-hero__content {
-    min-width: 0;
-  }
-
-  .dashboard-hero__heading {
-    margin-bottom: 0.36rem;
-  }
-
-  .dashboard-hero__heading h2,
-  .dashboard-hero__content h2 {
-    font-size: 1.55rem;
-  }
-
-  .dashboard-hero__level-badge {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
-  }
-
-  .dashboard-hero__resources {
-    grid-column: 1 / -1;
+  .dashboard-section-divider span {
+    font-size: 0.58rem;
+    padding: 0.14rem 0.44rem;
   }
 }
 
@@ -991,78 +895,6 @@
 
   .dashboard-activity-bar--collapsed .dashboard-activity-bar__top strong {
     font-size: 0.8rem;
-  }
-
-  .dashboard-hero {
-    grid-template-columns: 68px minmax(0, 1fr);
-    gap: 0.72rem;
-    padding: 0.78rem;
-    border-radius: 1.1rem;
-  }
-
-  .dashboard-hero__avatar {
-    width: 68px;
-    height: 86px;
-    border-radius: 0.86rem;
-  }
-
-  .dashboard-hero__content > span {
-    font-size: 0.62rem;
-    letter-spacing: 0.1em;
-  }
-
-  .dashboard-hero__heading {
-    gap: 0.42rem;
-    margin-bottom: 0.36rem;
-  }
-
-  .dashboard-hero__content h2,
-  .dashboard-hero__heading h2 {
-    font-size: 1.26rem;
-  }
-
-  .dashboard-hero__level-badge {
-    min-height: 29px;
-    padding: 0.2rem 0.42rem;
-    border-radius: 0.62rem;
-  }
-
-  .dashboard-hero__level-badge small,
-  .dashboard-hero__level-badge strong {
-    font-size: 0.6rem;
-  }
-
-  .dashboard-hero__level-badge small {
-    letter-spacing: 0.045em;
-  }
-
-  .dashboard-hero__meta strong {
-    max-width: 100%;
-    font-size: 0.66rem;
-  }
-
-  .dashboard-hero__resource {
-    padding: 0.3rem 0.38rem;
-  }
-
-  .dashboard-hero__resource-header {
-    gap: 0.45rem;
-  }
-
-  .dashboard-hero__resource-title span,
-  .dashboard-hero__resource-header > span {
-    font-size: 0.62rem;
-  }
-
-  .dashboard-hero__resource-values strong,
-  .dashboard-hero__resource-header > strong {
-    font-size: 0.62rem;
-  }
-
-  .dashboard-hero__resource-values em {
-    min-width: 32px;
-    min-height: 20px;
-    font-size: 0.55rem;
   }
 
   .dashboard-metric-row {
@@ -1289,11 +1121,5 @@
   .dashboard-activity-bar__icon::before,
   .dashboard-activity-bar__icon::after {
     animation: none;
-  }
-
-  .dashboard-activity-bar__track i,
-  .dashboard-activity-bar__mini-track i,
-  .dashboard-hero__resource-track i {
-    transition: none;
   }
 }

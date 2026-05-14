@@ -1500,3 +1500,112 @@
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+/* =========================================================
+   FIX FINAL — AVATAR + NOME DO HERO MOBILE
+   Colar no final de dashboard-overrides.css
+   ========================================================= */
+
+@media (max-width: 720px) {
+  .dashboard-hero {
+    display: grid !important;
+    grid-template-columns: 92px minmax(0, 1fr) !important;
+    grid-template-areas:
+      "avatar content"
+      "status status"
+      "resources resources" !important;
+    align-items: start !important;
+    gap: 0.56rem 0.7rem !important;
+  }
+
+  .dashboard-hero__avatar {
+    grid-area: avatar !important;
+    width: 92px !important;
+    height: 92px !important;
+    min-width: 92px !important;
+    min-height: 92px !important;
+    max-width: 92px !important;
+    max-height: 92px !important;
+    align-self: start !important;
+    justify-self: start !important;
+    overflow: hidden !important;
+  }
+
+  .dashboard-hero__avatar img {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    object-fit: contain !important;
+    object-position: center bottom !important;
+  }
+
+  .dashboard-hero__content {
+    grid-area: content !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "identity" !important;
+    align-content: start !important;
+    align-items: start !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .dashboard-hero__identity {
+    grid-area: identity !important;
+    align-self: start !important;
+    justify-content: flex-start !important;
+    min-width: 0 !important;
+    min-height: 92px !important;
+    padding: 0.06rem 0 0 !important;
+  }
+
+  .dashboard-hero__heading {
+    margin: 0.12rem 0 0.18rem !important;
+  }
+
+  .dashboard-hero__heading h2,
+  .dashboard-hero__content h2 {
+    margin: 0 !important;
+    font-size: clamp(1.34rem, 6vw, 1.7rem) !important;
+    line-height: 0.96 !important;
+  }
+
+  .dashboard-hero__meta {
+    margin: 0 !important;
+  }
+
+  .dashboard-hero__status {
+    grid-area: status !important;
+    display: grid !important;
+    grid-template-columns: minmax(58px, 0.35fr) minmax(0, 1fr) !important;
+    gap: 0.38rem !important;
+    width: 100% !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .dashboard-hero__resources {
+    grid-area: resources !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .dashboard-hero {
+    grid-template-columns: 88px minmax(0, 1fr) !important;
+  }
+
+  .dashboard-hero__avatar {
+    width: 88px !important;
+    height: 88px !important;
+    min-width: 88px !important;
+    min-height: 88px !important;
+    max-width: 88px !important;
+    max-height: 88px !important;
+  }
+
+  .dashboard-hero__identity {
+    min-height: 88px !important;
+  }
+}
