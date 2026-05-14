@@ -1233,3 +1233,270 @@
     clip-path: inset(50%) !important;
   }
 }
+
+/* =========================================================
+   HERO / TOPBAR — AJUSTES RESPONSIVOS DE STATUS E MOEDAS
+   Mantém Nível, Gold e Cash compactos e alinhados.
+   ========================================================= */
+
+.dashboard-hero .dashboard-hero__level-badge {
+  grid-template-columns: auto auto !important;
+  grid-auto-flow: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  align-self: stretch !important;
+  gap: 0.38rem !important;
+  min-height: 2.18rem !important;
+  padding: 0.34rem 0.58rem !important;
+  white-space: nowrap !important;
+}
+
+.dashboard-hero .dashboard-hero__level-badge span,
+.dashboard-hero .dashboard-hero__level-badge small,
+.dashboard-hero .dashboard-hero__level-badge strong {
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.dashboard-hero .dashboard-hero__level-badge span,
+.dashboard-hero .dashboard-hero__level-badge small {
+  font-size: 0.58rem !important;
+  letter-spacing: 0.1em !important;
+}
+
+.dashboard-hero .dashboard-hero__level-badge strong {
+  font-size: 0.95rem !important;
+}
+
+.dashboard-hero__currency--cash {
+  border-color: rgba(83, 176, 255, 0.36) !important;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(176, 224, 255, 0.22), transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.105), rgba(32, 92, 170, 0.08)),
+    linear-gradient(135deg, rgba(22, 72, 138, 0.58), rgba(11, 42, 92, 0.66)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.16),
+    0 0 14px rgba(68, 155, 255, 0.12) !important;
+}
+
+.dashboard-hero__currency--cash strong {
+  color: #eef8ff !important;
+}
+
+.dashboard-hero__currency--cash .dashboard-hero__currency-label,
+.dashboard-hero__currency--cash > span {
+  color: rgba(209, 235, 255, 0.86) !important;
+}
+
+@media (max-width: 720px) {
+  .dashboard-hero {
+    grid-template-columns: 60px minmax(0, 1fr) !important;
+    gap: 0.54rem !important;
+    margin-bottom: 0.58rem !important;
+    padding: 0.56rem !important;
+    border-radius: 0.92rem !important;
+  }
+
+  .dashboard-hero__avatar {
+    width: 60px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    border-radius: 0.78rem !important;
+  }
+
+  .dashboard-hero__content {
+    gap: 0.42rem !important;
+  }
+
+  .dashboard-hero__identity {
+    min-height: 60px !important;
+    gap: 0.18rem !important;
+  }
+
+  .dashboard-hero__identity::after {
+    display: none !important;
+  }
+
+  .dashboard-hero__identity > span,
+  .dashboard-hero__content > span {
+    font-size: 0.5rem !important;
+    letter-spacing: 0.1em !important;
+  }
+
+  .dashboard-hero__heading {
+    margin: 0.06rem 0 !important;
+  }
+
+  .dashboard-hero__heading h2,
+  .dashboard-hero__content h2 {
+    font-size: clamp(1.12rem, 5.1vw, 1.48rem) !important;
+    line-height: 1 !important;
+  }
+
+  .dashboard-hero__meta strong {
+    min-height: 1.08rem !important;
+    padding: 0.16rem 0.44rem !important;
+    font-size: 0.56rem !important;
+  }
+
+  .dashboard-hero__status {
+    grid-template-columns: minmax(3.8rem, auto) minmax(0, 1fr) !important;
+    gap: 0.34rem !important;
+    padding: 0.34rem !important;
+    border-radius: 0.72rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__level-badge {
+    min-width: 0 !important;
+    min-height: 1.74rem !important;
+    padding: 0.24rem 0.38rem !important;
+    border-radius: 0.62rem !important;
+    gap: 0.22rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__level-badge span,
+  .dashboard-hero .dashboard-hero__level-badge small {
+    font-size: 0.5rem !important;
+    letter-spacing: 0.06em !important;
+  }
+
+  .dashboard-hero .dashboard-hero__level-badge strong {
+    font-size: 0.72rem !important;
+  }
+
+  .dashboard-hero__wallet {
+    gap: 0.28rem !important;
+  }
+
+  .dashboard-hero__currency {
+    min-height: 1.74rem !important;
+    padding: 0.22rem 0.36rem !important;
+    border-radius: 0.62rem !important;
+  }
+
+  .dashboard-hero__currency-icon {
+    width: 15px !important;
+    min-width: 15px !important;
+    height: 15px !important;
+  }
+
+  .dashboard-hero__currency strong {
+    font-size: 0.68rem !important;
+  }
+
+  .dashboard-hero__resources {
+    gap: 0.32rem !important;
+    padding-top: 0.34rem !important;
+  }
+
+  .dashboard-hero__resources-heading span {
+    font-size: 0.48rem !important;
+    letter-spacing: 0.1em !important;
+  }
+
+  .dashboard-hero__resource {
+    padding: 0.32rem 0.42rem 0.36rem !important;
+    border-radius: 0.62rem !important;
+  }
+
+  .dashboard-hero__resource-header {
+    gap: 0.32rem !important;
+    margin-bottom: 0.22rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__resource-title span,
+  .dashboard-hero .dashboard-hero__resource-header > span {
+    font-size: 0.64rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__resource-values {
+    gap: 0.28rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__resource-values strong,
+  .dashboard-hero .dashboard-hero__resource-header > strong {
+    font-size: 0.8rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__resource-values em {
+    min-width: 36px !important;
+    min-height: 20px !important;
+    padding: 0.18rem 0.28rem !important;
+    font-size: 0.62rem !important;
+  }
+
+  .dashboard-hero__resource-track {
+    height: 7px !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .dashboard-hero {
+    grid-template-columns: 56px minmax(0, 1fr) !important;
+    gap: 0.48rem !important;
+    padding: 0.5rem !important;
+  }
+
+  .dashboard-hero__avatar {
+    width: 56px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+  }
+
+  .dashboard-hero__identity {
+    min-height: 56px !important;
+  }
+
+  .dashboard-hero__status {
+    grid-template-columns: minmax(3.55rem, auto) minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-hero {
+    grid-template-columns: 52px minmax(0, 1fr) !important;
+  }
+
+  .dashboard-hero__avatar {
+    width: 52px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+  }
+
+  .dashboard-hero__identity {
+    min-height: 52px !important;
+  }
+
+  .dashboard-hero__status {
+    grid-template-columns: minmax(3.4rem, auto) minmax(0, 1fr) !important;
+    padding: 0.3rem !important;
+  }
+
+  .dashboard-hero .dashboard-hero__level-badge {
+    min-height: 1.62rem !important;
+    padding: 0.2rem 0.32rem !important;
+    gap: 0.18rem !important;
+  }
+
+  .dashboard-hero__currency {
+    min-height: 1.62rem !important;
+    padding: 0.2rem 0.32rem !important;
+  }
+
+  .dashboard-hero__resources-heading {
+    display: none !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .dashboard-hero__status {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-hero__wallet {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
