@@ -357,58 +357,15 @@
   }
 
   .equipment-loadout__stage {
-    min-height: 500px;
-  }
-
-  .equipment-loadout__slot {
-    width: 140px;
-  }
-
-  .equipment-node {
-    width: 140px;
-  }
-
-  .equipment-node__slot {
-    width: 72px !important;
-    height: 72px !important;
-    min-width: 72px !important;
-    min-height: 72px !important;
-  }
-
-  .equipment-node__icon {
-    width: 54px;
-    height: 54px;
-  }
-
-  .equipment-node__name {
-    width: 140px;
-    font-size: 0.84rem;
-  }
-
-  .equipment-loadout__slot--head {
-    top: 1.35rem;
+    min-height: 386px;
   }
 
   .equipment-loadout__slot--main-hand {
-    top: 11.6rem;
-    left: clamp(1.2rem, 8vw, 4.2rem);
+    left: max(0.85rem, calc(50% - 224px));
   }
 
   .equipment-loadout__slot--off-hand {
-    top: 11.6rem;
-    right: clamp(1.2rem, 8vw, 4.2rem);
-  }
-
-  .equipment-loadout__slot--armor {
-    top: 8.8rem;
-  }
-
-  .equipment-loadout__slot--pants {
-    top: 16.45rem;
-  }
-
-  .equipment-loadout__slot--boots {
-    top: 22.35rem;
+    right: max(0.85rem, calc(50% - 224px));
   }
 }
 
@@ -814,6 +771,11 @@
     line-height: 1.12;
   }
 
+  .equipment-node__label {
+    width: min(100%, 148px);
+    font-size: 0.6rem;
+  }
+
   .equipment-node__tier {
     top: 0.28rem !important;
     left: 0.34rem !important;
@@ -981,6 +943,12 @@
     line-height: 1.08;
   }
 
+  .equipment-node__label {
+    width: min(100%, 124px);
+    font-size: 0.56rem;
+    letter-spacing: 0.06em;
+  }
+
   .gathering-panel__metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1090,7 +1058,8 @@
     grid-template-columns: 1fr;
   }
 
-  .equipment-node__name {
+  .equipment-node__name,
+  .equipment-node__label {
     width: min(100%, 160px);
   }
 

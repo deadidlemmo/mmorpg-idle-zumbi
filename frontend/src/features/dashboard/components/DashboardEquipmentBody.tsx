@@ -37,7 +37,7 @@ export function DashboardEquipmentBody({
     },
     {
       slotKey: 'main-hand',
-      label: 'Main Hand',
+      label: 'Mão principal',
       item: equipment.mainHand,
     },
     {
@@ -47,7 +47,7 @@ export function DashboardEquipmentBody({
     },
     {
       slotKey: 'off-hand',
-      label: 'Off Hand',
+      label: 'Mão secundária',
       item: equipment.offHand,
     },
     {

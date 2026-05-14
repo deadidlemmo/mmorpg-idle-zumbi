@@ -7,8 +7,6 @@ import { CharacterStatsPanel } from '../components/CharacterStatsPanel';
 import { DashboardCard } from '../components/DashboardCard';
 import { DashboardEquipmentBody } from '../components/DashboardEquipmentBody';
 import { DashboardLayout } from '../components/DashboardLayout';
-import { DashboardProgressBar } from '../components/DashboardProgressBar';
-import { DashboardStatCard } from '../components/DashboardStatCard';
 import { GatheringSkillsPanel } from '../components/GatheringSkillsPanel';
 import {
   GATHERING_SKILLS_CONFIG,
@@ -19,18 +17,6 @@ import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
 } from '../types/dashboard.types';
-
-function formatSeconds(seconds?: number | null) {
-  if (seconds === null || seconds === undefined) return '—';
-
-  const safeSeconds = Math.max(0, seconds);
-  const minutes = Math.floor(safeSeconds / 60);
-  const remainingSeconds = safeSeconds % 60;
-
-  if (minutes <= 0) return `${remainingSeconds}s`;
-
-  return `${minutes}min ${remainingSeconds}s`;
-}
 
 function toSafeNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
@@ -362,10 +348,6 @@ export function DashboardOverviewPage() {
 
   const stats = overview.stats;
   const equipment = overview.equipment ?? {};
-  const activity = overview.activity;
-  const activeAutoCombat = activity?.activeAutoCombatSession;
-  const autoCombatPreview = activeAutoCombat?.combatPreview;
-
   /**
    * Preparação visual temporária para moedas.
    * Não depende do backend, não altera API, não altera types e não salva nada.
@@ -390,65 +372,6 @@ export function DashboardOverviewPage() {
 
   return (
     <DashboardLayout character={characterWithVisualWallet}>
-      <div className="dashboard-section-divider">
-        <span>Combate</span>
-      </div>
-
-      <div className="dashboard-overview-grid">
-        <DashboardCard
-          title="Combate automático"
-          eyebrow="Batalhas idle"
-          className="dashboard-card--highlight dashboard-card--wide"
-          action={
-            <Link to={`/dashboard/${character.id}/auto-combat`}>
-              Abrir combate
-            </Link>
-          }
-        >
-          <div className="dashboard-activity-summary">
-            <strong>
-              {activity?.hasActiveAutoCombat
-                ? 'Combate automático em andamento'
-                : 'Nenhum combate ativo'}
-            </strong>
-
-            <p>
-              {autoCombatPreview?.label ??
-                'Escolha um submapa para iniciar uma sessão de combate automático.'}
-            </p>
-
-            <div className="dashboard-metric-row">
-              <DashboardStatCard
-                label="Combates"
-                value={autoCombatPreview?.totals?.combatsResolved ?? 0}
-              />
-
-              <DashboardStatCard
-                label="Rodadas"
-                value={autoCombatPreview?.totals?.roundsResolved ?? 0}
-              />
-
-              <DashboardStatCard
-                label="XP obtida"
-                value={autoCombatPreview?.totals?.xpGained ?? 0}
-              />
-            </div>
-
-            <DashboardProgressBar
-              label="Próxima rodada"
-              value={autoCombatPreview?.progressToNextRoundPercent ?? 0}
-              max={100}
-              variant="xp"
-            />
-
-            <small>
-              Tempo restante:{' '}
-              {formatSeconds(autoCombatPreview?.remainingSeconds ?? null)}
-            </small>
-          </div>
-        </DashboardCard>
-      </div>
-
       <div className="dashboard-section-divider">
         <span>Equipamentos</span>
       </div>
