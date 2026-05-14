@@ -5,6 +5,7 @@
 .equipment-summary {
   position: relative;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.82rem;
   min-width: 0;
@@ -58,7 +59,9 @@
   position: relative;
   z-index: 1;
   display: grid;
+  flex: 1;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: space-between;
   gap: 0.62rem;
 }
 

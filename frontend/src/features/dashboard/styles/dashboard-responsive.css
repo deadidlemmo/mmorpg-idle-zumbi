@@ -330,6 +330,14 @@
     gap: 0.85rem;
   }
 
+  .dashboard-overview-grid--summary {
+    align-items: start;
+  }
+
+  .dashboard-overview-grid--summary > .dashboard-card {
+    height: auto;
+  }
+
   .dashboard-card,
   .dashboard-card--highlight,
   .dashboard-card--wide,
