@@ -1372,7 +1372,7 @@ function DashboardLayoutContent({
                         aria-hidden="true"
                         className="dashboard-hero__currency-icon"
                       />
-                      Gold
+                      <span className="dashboard-hero__currency-label">Gold</span>
                     </span>
                     <strong>{formatCurrency(walletDisplay.gold)}</strong>
                   </div>
@@ -1385,7 +1385,7 @@ function DashboardLayoutContent({
                         aria-hidden="true"
                         className="dashboard-hero__currency-icon"
                       />
-                      Cash
+                      <span className="dashboard-hero__currency-label">Cash</span>
                     </span>
                     <strong>{formatCurrency(walletDisplay.cash)}</strong>
                   </div>
