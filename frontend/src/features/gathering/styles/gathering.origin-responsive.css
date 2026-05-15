@@ -138,17 +138,17 @@
   .gathering-origin-lore-card,
   .gathering-origin-lore-card.gathering-origin-lore-card--npc,
   .gathering-origin-lore-card--npc {
-    grid-template-columns: 62px minmax(0, 1fr) !important;
+    grid-template-columns: 72px minmax(0, 1fr) !important;
     gap: 0.72rem !important;
-    min-height: 78px !important;
+    min-height: 88px !important;
     max-height: none !important;
     padding: 0.68rem 0.74rem !important;
   }
 
   .gathering-origin-lore-card__portrait,
   .gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait {
-    width: 54px !important;
-    height: 54px !important;
+    width: 64px !important;
+    height: 64px !important;
     border-radius: 0.74rem;
   }
 
@@ -303,9 +303,9 @@
   .gathering-origin-lore-card,
   .gathering-origin-lore-card.gathering-origin-lore-card--npc,
   .gathering-origin-lore-card--npc {
-    grid-template-columns: 48px minmax(0, 1fr) !important;
+    grid-template-columns: 58px minmax(0, 1fr) !important;
     gap: 0.56rem !important;
-    min-height: 74px !important;
+    min-height: 82px !important;
     padding: 0.58rem !important;
     border-radius: 0.86rem !important;
     text-align: left;
@@ -313,8 +313,8 @@
 
   .gathering-origin-lore-card__portrait,
   .gathering-origin-lore-card--npc .gathering-origin-lore-card__portrait {
-    width: 44px !important;
-    height: 44px !important;
+    width: 54px !important;
+    height: 54px !important;
     border-radius: 0.72rem !important;
   }
 

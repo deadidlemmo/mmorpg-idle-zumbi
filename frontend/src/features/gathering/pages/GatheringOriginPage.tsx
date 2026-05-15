@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
+import npcArsenalNogueira from '../../../assets/images/npcs/npc_arsenal_nogueira.png';
+import npcColetaDonaCelia from '../../../assets/images/npcs/npc_coleta_dona_celia.png';
+import npcContencaoDrAlvaro from '../../../assets/images/npcs/npc_contencao_dr_alvaro.png';
+import npcDesmancheMarta from '../../../assets/images/npcs/npc_desmanche_marta.png';
+import npcPatrulhaRafa from '../../../assets/images/npcs/npc_patrulha_rafa.png';
+import npcTecnovarreduraLia from '../../../assets/images/npcs/npc_tecnovarredura_lia.png';
 import {
   buildMapVisualStyle,
   getMapImageByName,
@@ -82,6 +88,7 @@ type GatheringActionResponseLike = {
 interface OriginLoreViewModel {
   title: string;
   npcName: string;
+  npcAvatar: string;
   quote: string;
   description: string;
   riskLabel: string;
@@ -395,6 +402,7 @@ function getOriginLore(origin: GatheringAllowedOrigin): OriginLoreViewModel {
     DESMANCHE: {
       title: 'Sucata útil não nasce pronta',
       npcName: 'Marta, a desmontadora',
+      npcAvatar: npcDesmancheMarta,
       quote:
         'Se ainda está de pé, dá para desmontar. Se já caiu, dá para aproveitar melhor ainda.',
       description:
@@ -405,6 +413,7 @@ function getOriginLore(origin: GatheringAllowedOrigin): OriginLoreViewModel {
     COLETA: {
       title: 'Sobrevivência começa pelo básico',
       npcName: 'Dona Célia, triagem do abrigo',
+      npcAvatar: npcColetaDonaCelia,
       quote:
         'Pano seco, couro limpo e suprimento separado salvam mais gente do que parece.',
       description:
@@ -415,6 +424,7 @@ function getOriginLore(origin: GatheringAllowedOrigin): OriginLoreViewModel {
     PATRULHA: {
       title: 'Quem conhece o caminho volta vivo',
       npcName: 'Rafa, batedor avançado',
+      npcAvatar: npcPatrulhaRafa,
       quote:
         'A rua muda toda noite. Marca a rota, pisa leve e volta antes do barulho aumentar.',
       description:
@@ -425,6 +435,7 @@ function getOriginLore(origin: GatheringAllowedOrigin): OriginLoreViewModel {
     ARSENAL: {
       title: 'Precisão depende de manutenção',
       npcName: 'Nogueira, armeiro do abrigo',
+      npcAvatar: npcArsenalNogueira,
       quote:
         'Munição ruim falha na pior hora. Mecanismo sujo também. Aqui nada passa sem revisão.',
       description:
@@ -435,6 +446,7 @@ function getOriginLore(origin: GatheringAllowedOrigin): OriginLoreViewModel {
     TECNOVARREDURA: {
       title: 'Sinal fraco ainda é sinal',
       npcName: 'Lia, técnica de varredura',
+      npcAvatar: npcTecnovarreduraLia,
       quote:
         'Circuito queimado também conta história. Só precisa saber onde medir.',
       description:
@@ -445,6 +457,7 @@ function getOriginLore(origin: GatheringAllowedOrigin): OriginLoreViewModel {
     CONTENCAO: {
       title: 'Controle antes da contaminação',
       npcName: 'Dr. Álvaro, contenção química',
+      npcAvatar: npcContencaoDrAlvaro,
       quote:
         'Filtro vencido ainda filtra poeira. Lacre intacto ainda compra tempo. Tempo é vida.',
       description:
@@ -899,8 +912,14 @@ export function GatheringOriginPage() {
               className="gathering-origin-lore-card gathering-origin-lore-card--npc"
               aria-label={`Guia de ${originLabel}`}
             >
-              <div className="gathering-origin-lore-card__portrait" aria-hidden="true">
-                <span>{originKey ? getOriginIconFallback(originKey) : 'GA'}</span>
+              <div className="gathering-origin-lore-card__portrait">
+                {originLore?.npcAvatar ? (
+                  <img src={originLore.npcAvatar} alt={originLore.npcName} />
+                ) : (
+                  <span aria-hidden="true">
+                    {originKey ? getOriginIconFallback(originKey) : 'GA'}
+                  </span>
+                )}
               </div>
 
               <div className="gathering-origin-lore-card__content">
