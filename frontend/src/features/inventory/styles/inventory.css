@@ -30,7 +30,11 @@
   padding: 0.85rem;
   overflow: visible;
   background:
-    radial-gradient(circle at 18% 0%, rgba(110, 159, 67, 0.09), transparent 18rem),
+    radial-gradient(
+      circle at 18% 0%,
+      rgba(110, 159, 67, 0.09),
+      transparent 18rem
+    ),
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
     rgba(10, 18, 15, 0.9);
   border: 1px solid rgba(110, 159, 67, 0.14);
@@ -140,8 +144,7 @@
   width: 100%;
   min-width: 0;
   padding: 0.32rem;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  overflow: visible;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
     rgba(4, 9, 8, 0.62);
@@ -183,7 +186,11 @@
 .inventory-tab.is-active {
   color: #f4f8dc;
   background:
-    radial-gradient(circle at 20% 0%, rgba(180, 214, 112, 0.22), transparent 5rem),
+    radial-gradient(
+      circle at 20% 0%,
+      rgba(180, 214, 112, 0.22),
+      transparent 5rem
+    ),
     linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
     rgba(110, 159, 67, 0.2);
   border-color: rgba(110, 159, 67, 0.42);
@@ -211,6 +218,43 @@
 .inventory-refresh-button,
 .inventory-state-card button,
 .inventory-modal__close,
+.inventory-details-panel--empty {
+  display: grid;
+  place-items: center;
+  gap: 0.7rem;
+  min-height: 320px;
+  text-align: center;
+}
+
+.inventory-details-panel__empty-icon {
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 74px;
+  color: color-mix(in srgb, var(--action-primary-hover) 82%, #f4f8dc);
+  font-size: 1.7rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgba(110, 159, 67, 0.12);
+  border: 1px solid rgba(110, 159, 67, 0.28);
+  border-radius: 1.1rem;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.2);
+}
+
+.inventory-details-panel--empty strong {
+  color: var(--text-primary);
+  font-family: var(--font-title);
+  font-size: 1.08rem;
+}
+
+.inventory-details-panel--empty p {
+  max-width: 280px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
 .inventory-details-panel__close {
   min-height: 34px;
   padding: 0 0.85rem;
@@ -247,10 +291,6 @@
   gap: 0.85rem;
   align-items: start;
   min-width: 0;
-}
-
-.inventory-content-layout--single {
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .inventory-content-layout__grid,
@@ -343,7 +383,11 @@
 .inventory-filter.is-active {
   color: color-mix(in srgb, var(--action-primary-hover) 90%, #f4f8dc);
   background:
-    radial-gradient(circle at 20% 0%, rgba(180, 214, 112, 0.2), transparent 4rem),
+    radial-gradient(
+      circle at 20% 0%,
+      rgba(180, 214, 112, 0.2),
+      transparent 4rem
+    ),
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
     rgba(110, 159, 67, 0.18);
   border-color: rgba(110, 159, 67, 0.38);
@@ -424,7 +468,11 @@
   background:
     linear-gradient(rgba(110, 159, 67, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(110, 159, 67, 0.035) 1px, transparent 1px),
-    radial-gradient(circle at 18% 0%, rgba(110, 159, 67, 0.07), transparent 18rem),
+    radial-gradient(
+      circle at 18% 0%,
+      rgba(110, 159, 67, 0.07),
+      transparent 18rem
+    ),
     rgba(5, 11, 9, 0.58);
   background-size:
     80px 80px,
@@ -469,7 +517,15 @@
   aspect-ratio: 1 / 1.18;
   overflow: visible;
   background:
-    radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 18%, transparent), transparent 4.7rem),
+    radial-gradient(
+      circle at 50% 34%,
+      color-mix(
+        in srgb,
+        var(--inventory-rarity-color, #6e9f43) 18%,
+        transparent
+      ),
+      transparent 4.7rem
+    ),
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
     rgba(8, 15, 13, 0.94);
   border: 1px solid rgba(110, 159, 67, 0.13);
@@ -509,7 +565,11 @@
 .inventory-item-card:hover {
   z-index: 15;
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 58%, rgba(110, 159, 67, 0.14));
+  border-color: color-mix(
+    in srgb,
+    var(--inventory-rarity-color, #6e9f43) 58%,
+    rgba(110, 159, 67, 0.14)
+  );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 16px 34px rgba(0, 0, 0, 0.26);
@@ -580,12 +640,21 @@
   min-width: 19px;
   height: 19px;
   padding: 0;
-  color: color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 76%, #f2eddc);
+  color: color-mix(
+    in srgb,
+    var(--inventory-rarity-color, #6e9f43) 76%,
+    #f2eddc
+  );
   font-size: 0.58rem;
   font-weight: 900;
   line-height: 1;
-  background: color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 14%, rgba(8, 14, 13, 0.9));
-  border: 1px solid color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 30%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--inventory-rarity-color, #6e9f43) 14%,
+    rgba(8, 14, 13, 0.9)
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 30%, transparent);
   border-radius: 999px;
 }
 
@@ -634,9 +703,22 @@
   min-height: 0;
   overflow: hidden;
   background:
-    radial-gradient(circle, color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 32%, transparent), transparent 72%),
+    radial-gradient(
+      circle,
+      color-mix(
+        in srgb,
+        var(--inventory-rarity-color, #6e9f43) 32%,
+        transparent
+      ),
+      transparent 72%
+    ),
     rgba(4, 10, 8, 0.82);
-  border: 1px solid color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 44%, rgba(110, 159, 67, 0.12));
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--inventory-rarity-color, #6e9f43) 44%,
+      rgba(110, 159, 67, 0.12)
+    );
   border-radius: 0.52rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.045),
@@ -647,7 +729,11 @@
   position: absolute;
   top: 0.24rem;
   right: 0.32rem;
-  color: color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 78%, #f2eddc);
+  color: color-mix(
+    in srgb,
+    var(--inventory-rarity-color, #6e9f43) 78%,
+    #f2eddc
+  );
   font-size: 0.66rem;
   line-height: 1;
   opacity: 0.82;
@@ -726,7 +812,11 @@
 }
 
 .inventory-item-card__tooltip span {
-  color: color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 76%, #ffffff);
+  color: color-mix(
+    in srgb,
+    var(--inventory-rarity-color, #6e9f43) 76%,
+    #ffffff
+  );
   font-size: 0.64rem;
   font-weight: 800;
   line-height: 1.1;
@@ -749,12 +839,39 @@
   display: grid;
   place-items: center;
   color: rgba(180, 214, 112, 0.28);
+  font: inherit;
   font-size: 0.68rem;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent),
     rgba(8, 15, 13, 0.55);
   border: 1px solid rgba(110, 159, 67, 0.11);
   border-radius: 0.58rem;
+}
+
+.inventory-grid__empty-slot--button {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.inventory-grid__empty-slot--button:hover,
+.inventory-grid__empty-slot--button:focus-visible {
+  color: rgba(231, 227, 216, 0.62);
+  background:
+    radial-gradient(
+      circle at 50% 24%,
+      rgba(110, 159, 67, 0.12),
+      transparent 68%
+    ),
+    rgba(8, 15, 13, 0.68);
+  border-color: rgba(180, 214, 112, 0.28);
+  transform: translateY(-1px);
 }
 
 /* =========================================================
@@ -771,10 +888,23 @@
   padding: 0.95rem;
   align-self: flex-start;
   background:
-    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 13%, transparent), transparent 12rem),
+    radial-gradient(
+      circle at 50% 0%,
+      color-mix(
+        in srgb,
+        var(--inventory-rarity-color, #6e9f43) 13%,
+        transparent
+      ),
+      transparent 12rem
+    ),
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
     rgba(9, 19, 14, 0.96);
-  border: 1px solid color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 30%, rgba(110, 159, 67, 0.16));
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--inventory-rarity-color, #6e9f43) 30%,
+      rgba(110, 159, 67, 0.16)
+    );
   border-radius: 1rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.035),
@@ -789,6 +919,43 @@
   width: 4px;
   background: var(--inventory-rarity-color);
   opacity: 0.8;
+}
+
+.inventory-details-panel--empty {
+  display: grid;
+  place-items: center;
+  gap: 0.7rem;
+  min-height: 320px;
+  text-align: center;
+}
+
+.inventory-details-panel__empty-icon {
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 74px;
+  color: color-mix(in srgb, var(--action-primary-hover) 82%, #f4f8dc);
+  font-size: 1.7rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgba(110, 159, 67, 0.12);
+  border: 1px solid rgba(110, 159, 67, 0.28);
+  border-radius: 1.1rem;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.2);
+}
+
+.inventory-details-panel--empty strong {
+  color: var(--text-primary);
+  font-family: var(--font-title);
+  font-size: 1.08rem;
+}
+
+.inventory-details-panel--empty p {
+  max-width: 280px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.5;
 }
 
 .inventory-details-panel__close {
@@ -831,7 +998,11 @@
 
 .inventory-details-panel__eyebrow {
   grid-area: eyebrow;
-  color: color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 78%, #ffffff);
+  color: color-mix(
+    in srgb,
+    var(--inventory-rarity-color, #6e9f43) 78%,
+    #ffffff
+  );
   font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -867,11 +1038,20 @@
   align-items: center;
   min-height: 22px;
   padding: 0.16rem 0.5rem;
-  color: color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 78%, #ffffff);
+  color: color-mix(
+    in srgb,
+    var(--inventory-rarity-color, #6e9f43) 78%,
+    #ffffff
+  );
   font-size: 0.66rem;
   font-weight: 850;
-  background: color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 14%, rgba(7, 14, 10, 0.96));
-  border: 1px solid color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 28%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--inventory-rarity-color, #6e9f43) 14%,
+    rgba(7, 14, 10, 0.96)
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 28%, transparent);
   border-radius: var(--radius-pill);
 }
 
@@ -980,7 +1160,11 @@
   background:
     linear-gradient(rgba(110, 159, 67, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(110, 159, 67, 0.035) 1px, transparent 1px),
-    radial-gradient(circle at 18% 0%, rgba(110, 159, 67, 0.08), transparent 18rem),
+    radial-gradient(
+      circle at 18% 0%,
+      rgba(110, 159, 67, 0.08),
+      transparent 18rem
+    ),
     rgba(5, 11, 9, 0.64);
   background-size:
     82px 82px,
@@ -997,50 +1181,6 @@
 
 .inventory-equipped-shell .equipment-summary__grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.inventory-bank-unavailable {
-  display: grid;
-  place-items: center;
-  gap: 0.7rem;
-  min-height: 320px;
-  padding: 2rem;
-  text-align: center;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(110, 159, 67, 0.12), transparent 14rem),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
-    rgba(8, 14, 13, 0.72);
-  border: 1px dashed rgba(180, 214, 112, 0.22);
-  border-radius: 1rem;
-}
-
-.inventory-bank-unavailable__icon {
-  display: grid;
-  place-items: center;
-  width: 82px;
-  height: 82px;
-  color: color-mix(in srgb, var(--action-primary-hover) 82%, #f4f8dc);
-  font-size: 1.8rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
-    rgba(110, 159, 67, 0.12);
-  border: 1px solid rgba(110, 159, 67, 0.28);
-  border-radius: 1.2rem;
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.2);
-}
-
-.inventory-bank-unavailable strong {
-  color: var(--text-primary);
-  font-family: var(--font-title);
-  font-size: 1.16rem;
-}
-
-.inventory-bank-unavailable p {
-  max-width: 480px;
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  line-height: 1.55;
 }
 
 /* =========================================================
@@ -1125,10 +1265,23 @@
   overflow: auto;
   padding: 1.15rem;
   background:
-    radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 16%, transparent), transparent 15rem),
+    radial-gradient(
+      circle at 18% 0%,
+      color-mix(
+        in srgb,
+        var(--inventory-rarity-color, #6e9f43) 16%,
+        transparent
+      ),
+      transparent 15rem
+    ),
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
     rgba(12, 20, 19, 0.98);
-  border: 1px solid color-mix(in srgb, var(--inventory-rarity-color, #6e9f43) 36%, rgba(231, 227, 216, 0.1));
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--inventory-rarity-color, #6e9f43) 36%,
+      rgba(231, 227, 216, 0.1)
+    );
   border-radius: 1.1rem;
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5);
 }
@@ -1282,14 +1435,14 @@
 }
 
 @media (max-width: 980px) {
-  .inventory-content-layout,
-  .inventory-content-layout--single {
+  .inventory-content-layout {
     grid-template-columns: 1fr;
     align-items: start;
   }
 
   .inventory-content-layout__details {
-    display: none;
+    position: static;
+    display: flex;
   }
 }
 
@@ -1322,11 +1475,31 @@
   }
 
   .inventory-tabs {
-    scroll-padding-inline: 0.45rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.34rem;
+    overflow: visible;
   }
 
   .inventory-tab {
-    flex: 0 0 min(72vw, 210px);
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.5rem 0.42rem;
+    text-align: center;
+  }
+
+  .inventory-tab__label,
+  .inventory-tab span {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.74rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .inventory-tab__description,
+  .inventory-tab small {
+    display: none;
   }
 
   .inventory-equipped-shell {
@@ -1471,11 +1644,6 @@
 
   .inventory-equipped-shell .equipment-summary__grid {
     grid-template-columns: 1fr;
-  }
-
-  .inventory-bank-unavailable {
-    min-height: 260px;
-    padding: 1.35rem;
   }
 
   .inventory-grid {

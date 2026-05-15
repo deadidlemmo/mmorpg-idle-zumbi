@@ -8,14 +8,17 @@ import '../../dashboard/dashboard.css';
 import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
+  DashboardEquipmentItem,
 } from '../../dashboard/types/dashboard.types';
 import { EmptyInventoryState } from '../components/EmptyInventoryState';
 import { InventoryFilters } from '../components/InventoryFilters';
 import { InventoryGrid } from '../components/InventoryGrid';
-import { InventoryItemDetailsModal } from '../components/InventoryItemDetailsModal';
 import { useInventory } from '../hooks/useInventory';
 import '../styles/inventory.css';
-import type { InventoryEntry, InventoryFilterKey } from '../types/inventory.types';
+import type {
+  InventoryEntry,
+  InventoryFilterKey,
+} from '../types/inventory.types';
 import {
   buildInventoryFilters,
   filterInventoryItems,
@@ -80,7 +83,10 @@ function buildCharacterViewModel(
 
     xp: character.xp ?? 0,
     totalXp:
-      character.totalXp ?? character.levelProgress?.totalXp ?? character.xp ?? 0,
+      character.totalXp ??
+      character.levelProgress?.totalXp ??
+      character.xp ??
+      0,
 
     currentLevelXp:
       character.currentLevelXp ??
@@ -150,7 +156,8 @@ function buildCharacterViewModel(
     gameClass: character.gameClass ?? null,
 
     map: character.map ?? null,
-    currentMap: character.currentMap ?? overview.progression?.currentMap ?? null,
+    currentMap:
+      character.currentMap ?? overview.progression?.currentMap ?? null,
 
     equipment: character.equipment ?? overview.equipment ?? {},
     inventory: character.inventory ?? [],
@@ -177,12 +184,64 @@ type InventoryEntryLoose = InventoryEntry & {
   };
 };
 
+type InventorySelectionSource = 'inventory' | 'equipped' | 'bank';
+
+interface InventorySelectionState {
+  source: InventorySelectionSource;
+  entry: InventoryEntry | null;
+  emptySlotLabel?: string | null;
+}
+
+const EMPTY_PANEL_TEXT: Record<InventoryTabKey, string> = {
+  inventory:
+    'Clique em um slot da mochila para visualizar detalhes, quantidade, raridade, atributos e origem do item.',
+  equipped: 'Clique em um equipamento ou slot para visualizar os detalhes.',
+  bank: 'Clique em um slot do banco para visualizar os detalhes do item armazenado.',
+};
+
+function buildEquippedInventoryEntry(
+  item: DashboardEquipmentItem,
+): InventoryEntry {
+  return {
+    inventoryItemId: `equipped-${item.id}`,
+    quantity: 1,
+    type: 'EQUIPMENT',
+    item: {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      tier: item.tier,
+      rarity: item.rarity,
+      slot: item.slot,
+      family: item.family,
+      materialOrigin: item.materialOrigin,
+      strengthBonus: item.strengthBonus,
+      vitalityBonus: item.vitalityBonus,
+      agilityBonus: item.agilityBonus,
+      precisionBonus: item.precisionBonus,
+      techniqueBonus: item.techniqueBonus,
+      willpowerBonus: item.willpowerBonus,
+      healFlat: item.healFlat,
+      healPercent: item.healPercent,
+      usableInCombat: item.usableInCombat,
+      usableOutOfCombat: item.usableOutOfCombat,
+      minTier: item.minTier,
+      maxTier: item.maxTier,
+      isCraftable: item.isCraftable,
+    },
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+}
+
 function getInventoryEntryId(entry?: InventoryEntry | null) {
   if (!entry) return null;
 
   const looseEntry = entry as InventoryEntryLoose;
 
-  return looseEntry.inventoryItemId ?? looseEntry.id ?? looseEntry.item?.id ?? null;
+  return (
+    looseEntry.inventoryItemId ?? looseEntry.id ?? looseEntry.item?.id ?? null
+  );
 }
 
 function normalizeRarityClass(rarity?: string | null) {
@@ -216,53 +275,23 @@ function buildDetails(entry: InventoryEntry): Array<[string, string]> {
     ['Classe', item.class?.name ?? null],
   ];
 
-  return details.filter(
-    (detail): detail is [string, string] => Boolean(detail[1]),
+  return details.filter((detail): detail is [string, string] =>
+    Boolean(detail[1]),
   );
-}
-
-function useIsMobileInventoryDetails() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
-    }
-
-    const mediaQuery = window.matchMedia('(max-width: 980px)');
-
-    function updateIsMobile() {
-      setIsMobile(mediaQuery.matches);
-    }
-
-    updateIsMobile();
-
-    if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', updateIsMobile);
-
-      return () => {
-        mediaQuery.removeEventListener('change', updateIsMobile);
-      };
-    }
-
-    mediaQuery.addListener(updateIsMobile);
-
-    return () => {
-      mediaQuery.removeListener(updateIsMobile);
-    };
-  }, []);
-
-  return isMobile;
 }
 
 interface InventoryDesktopDetailsPanelProps {
   entry: InventoryEntry | null;
   onClear: () => void;
+  emptyText: string;
+  emptySlotLabel?: string | null;
 }
 
 function InventoryDesktopDetailsPanel({
   entry,
   onClear,
+  emptyText,
+  emptySlotLabel = null,
 }: InventoryDesktopDetailsPanelProps) {
   if (!entry) {
     return (
@@ -272,11 +301,12 @@ function InventoryDesktopDetailsPanel({
       >
         <div className="inventory-details-panel__empty-icon">▦</div>
 
-        <strong>Selecione um item</strong>
+        <strong>{emptySlotLabel ? 'Slot vazio' : 'Selecione um item'}</strong>
 
         <p>
-          Clique em um slot da mochila para visualizar detalhes, quantidade,
-          raridade, atributos e origem do item.
+          {emptySlotLabel
+            ? `${emptySlotLabel} está vazio. Escolha outro slot para visualizar os detalhes de um item.`
+            : emptyText}
         </p>
       </aside>
     );
@@ -335,9 +365,7 @@ function InventoryDesktopDetailsPanel({
           <span>{typeLabel}</span>
           <span>x{formatQuantity(entry.quantity)}</span>
 
-          {typeof item.tier === 'number' ? (
-            <span>Tier {item.tier}</span>
-          ) : null}
+          {typeof item.tier === 'number' ? <span>Tier {item.tier}</span> : null}
         </div>
       </div>
 
@@ -387,12 +415,13 @@ function InventoryDesktopDetailsPanel({
 
 export function InventoryPage() {
   const { characterId } = useParams();
-
-  const isMobileDetails = useIsMobileInventoryDetails();
-
   const [activeTab, setActiveTab] = useState<InventoryTabKey>('inventory');
   const [activeFilter, setActiveFilter] = useState<InventoryFilterKey>('ALL');
-  const [selectedItem, setSelectedItem] = useState<InventoryEntry | null>(null);
+  const [selection, setSelection] = useState<InventorySelectionState>({
+    source: 'inventory',
+    entry: null,
+    emptySlotLabel: null,
+  });
 
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
@@ -424,7 +453,9 @@ export function InventoryPage() {
         }
       } catch {
         if (isMounted) {
-          setCharacterError('Não foi possível carregar os dados do personagem.');
+          setCharacterError(
+            'Não foi possível carregar os dados do personagem.',
+          );
         }
       } finally {
         if (isMounted) {
@@ -452,19 +483,25 @@ export function InventoryPage() {
     return filterInventoryItems(items, activeFilter);
   }, [activeFilter, items]);
 
-  const selectedInventoryItem = useMemo(() => {
-    if (activeTab !== 'inventory' || !selectedItem) return null;
+  const selectedDetailsItem = useMemo(() => {
+    if (!selection.entry || selection.source !== activeTab) return null;
 
-    const currentSelectedItemId = getInventoryEntryId(selectedItem);
+    if (activeTab !== 'inventory') {
+      return selection.entry;
+    }
+
+    const currentSelectedItemId = getInventoryEntryId(selection.entry);
 
     return (
       filteredItems.find((entry) => {
         return getInventoryEntryId(entry) === currentSelectedItemId;
       }) ?? null
     );
-  }, [activeTab, filteredItems, selectedItem]);
+  }, [activeTab, filteredItems, selection]);
 
-  const selectedItemId = getInventoryEntryId(selectedInventoryItem);
+  const selectedItemId = getInventoryEntryId(selectedDetailsItem);
+  const selectedEmptySlotLabel =
+    selection.source === activeTab ? selection.emptySlotLabel : null;
 
   const hasItems = items.length > 0;
   const hasFilteredItems = filteredItems.length > 0;
@@ -499,11 +536,7 @@ export function InventoryPage() {
         className="inventory-page inventory-page--dashboard"
         aria-label="Mochila do personagem"
       >
-        <div
-          className={`inventory-content-layout${
-            activeTab === 'inventory' ? '' : ' inventory-content-layout--single'
-          }`}
-        >
+        <div className="inventory-content-layout">
           <section
             className="inventory-panel inventory-panel--items inventory-content-layout__grid"
             aria-label="Mochila, equipamentos e banco do personagem"
@@ -523,13 +556,19 @@ export function InventoryPage() {
                     className={`inventory-tab${isActive ? ' is-active' : ''}`}
                     onClick={() => {
                       setActiveTab(tab.key);
-                      setSelectedItem(null);
+                      setSelection({
+                        source: tab.key,
+                        entry: null,
+                        emptySlotLabel: null,
+                      });
                     }}
                     role="tab"
                     aria-selected={isActive}
                   >
-                    <span>{tab.label}</span>
-                    <small>{tab.description}</small>
+                    <span className="inventory-tab__label">{tab.label}</span>
+                    <small className="inventory-tab__description">
+                      {tab.description}
+                    </small>
                   </button>
                 );
               })}
@@ -541,14 +580,11 @@ export function InventoryPage() {
                   <div>
                     <span>Mochila</span>
                     <h2 id="inventory-items-title">Itens guardados</h2>
-                    <small>
-                      Gerencie recursos, equipamentos e consumíveis coletados nas
-                      expedições e combates.
-                    </small>
                   </div>
 
                   <p>
-                    <strong>{filteredItems.length}</strong> de {items.length} tipos visíveis
+                    <strong>{filteredItems.length}</strong> de {items.length}{' '}
+                    tipos visíveis
                   </p>
                 </div>
 
@@ -557,7 +593,11 @@ export function InventoryPage() {
                   activeFilter={activeFilter}
                   onChange={(filter) => {
                     setActiveFilter(filter);
-                    setSelectedItem(null);
+                    setSelection({
+                      source: 'inventory',
+                      entry: null,
+                      emptySlotLabel: null,
+                    });
                   }}
                 />
 
@@ -583,13 +623,21 @@ export function InventoryPage() {
                   <div className="inventory-grid-shell">
                     <InventoryGrid
                       items={filteredItems}
-                      onSelectItem={setSelectedItem}
+                      onSelectItem={(entry) => {
+                        setSelection({
+                          source: 'inventory',
+                          entry,
+                          emptySlotLabel: null,
+                        });
+                      }}
                       selectedItemId={selectedItemId}
                     />
                   </div>
                 ) : null}
 
-                {!isInventoryLoading && !inventoryError && isEmptyAfterFilter ? (
+                {!isInventoryLoading &&
+                !inventoryError &&
+                isEmptyAfterFilter ? (
                   <EmptyInventoryState hasActiveFilter />
                 ) : null}
 
@@ -608,9 +656,6 @@ export function InventoryPage() {
                   <div>
                     <span>Equipados</span>
                     <h2 id="inventory-equipped-title">Conjunto atual</h2>
-                    <small>
-                      Slots ativos do personagem. Espaços sem item aparecem como Vazio.
-                    </small>
                   </div>
 
                   <Link
@@ -622,7 +667,17 @@ export function InventoryPage() {
                 </div>
 
                 <div className="inventory-equipped-shell">
-                  <DashboardEquipmentBody equipment={character.equipment ?? {}} />
+                  <DashboardEquipmentBody
+                    equipment={character.equipment ?? {}}
+                    selectedItemId={selectedItemId}
+                    onSelectSlot={({ item, label }) => {
+                      setSelection({
+                        source: 'equipped',
+                        entry: item ? buildEquippedInventoryEntry(item) : null,
+                        emptySlotLabel: item ? null : label,
+                      });
+                    }}
+                  />
                 </div>
               </section>
             ) : null}
@@ -636,42 +691,50 @@ export function InventoryPage() {
                   <div>
                     <span>Banco</span>
                     <h2 id="inventory-bank-title">Armazenamento</h2>
-                    <small>
-                      Espaço reservado para itens guardados em áreas seguras.
-                    </small>
                   </div>
                 </div>
 
-                <div className="inventory-bank-unavailable" role="status">
-                  <div className="inventory-bank-unavailable__icon" aria-hidden="true">
-                    ▣
-                  </div>
-                  <strong>Banco indisponível</strong>
-                  <p>
-                    Você não está próximo de um banco ou esta funcionalidade ainda não
-                    está disponível nesta área.
-                  </p>
+                <div className="inventory-grid-shell inventory-grid-shell--bank">
+                  <InventoryGrid
+                    items={[]}
+                    onSelectItem={(entry) => {
+                      setSelection({
+                        source: 'bank',
+                        entry,
+                        emptySlotLabel: null,
+                      });
+                    }}
+                    selectedItemId={selectedItemId}
+                    ariaLabel="Grade de slots do banco"
+                    emptySlotLabel="Vazio"
+                    onSelectEmptySlot={(slotNumber) => {
+                      setSelection({
+                        source: 'bank',
+                        entry: null,
+                        emptySlotLabel: `Slot ${slotNumber}`,
+                      });
+                    }}
+                  />
                 </div>
               </section>
             ) : null}
           </section>
 
-          {activeTab === 'inventory' && !isInventoryLoading && !inventoryError ? (
-            <div className="inventory-content-layout__details">
-              <InventoryDesktopDetailsPanel
-                entry={selectedInventoryItem}
-                onClear={() => setSelectedItem(null)}
-              />
-            </div>
-          ) : null}
+          <div className="inventory-content-layout__details">
+            <InventoryDesktopDetailsPanel
+              entry={selectedDetailsItem}
+              emptyText={EMPTY_PANEL_TEXT[activeTab]}
+              emptySlotLabel={selectedEmptySlotLabel}
+              onClear={() => {
+                setSelection({
+                  source: activeTab,
+                  entry: null,
+                  emptySlotLabel: null,
+                });
+              }}
+            />
+          </div>
         </div>
-
-        {isMobileDetails ? (
-          <InventoryItemDetailsModal
-            entry={selectedInventoryItem}
-            onClose={() => setSelectedItem(null)}
-          />
-        ) : null}
       </main>
     </DashboardLayout>
   );
