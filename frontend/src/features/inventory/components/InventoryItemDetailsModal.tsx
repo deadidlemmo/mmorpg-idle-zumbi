@@ -16,6 +16,19 @@ interface InventoryItemDetailsModalProps {
   onClose: () => void;
 }
 
+type InventoryItemWithVisualMetadata = InventoryEntry['item'] & {
+  image?: string | null;
+  imageUrl?: string | null;
+  iconUrl?: string | null;
+  quality?: string | null;
+  value?: number | string | null;
+  goldValue?: number | string | null;
+  level?: number | null;
+  requiredLevel?: number | null;
+  minLevel?: number | null;
+  className?: string | null;
+};
+
 function normalizeRarityClass(rarity?: string | null) {
   return String(rarity ?? 'COMMON')
     .trim()
@@ -29,26 +42,49 @@ function hasPositiveNumber(value: unknown) {
 function formatQuantity(quantity?: number | null) {
   const safeQuantity = Math.max(0, Math.floor(Number(quantity) || 0));
 
-  return `x${safeQuantity.toLocaleString('pt-BR')}`;
+  return safeQuantity.toLocaleString('pt-BR');
+}
+
+function formatValue(value?: number | string | null) {
+  if (value === null || value === undefined || value === '') return null;
+
+  if (typeof value === 'number') {
+    return `${value.toLocaleString('pt-BR')} Gold`;
+  }
+
+  return value;
+}
+
+function getItemLevel(item: InventoryItemWithVisualMetadata) {
+  return item.level ?? item.requiredLevel ?? item.minLevel ?? null;
+}
+
+function getItemImageUrl(item: InventoryItemWithVisualMetadata) {
+  return item.imageUrl ?? item.iconUrl ?? item.image ?? null;
 }
 
 function buildDetails(entry: InventoryEntry): Array<[string, string]> {
-  const item = entry.item;
+  const item = entry.item as InventoryItemWithVisualMetadata;
+  const level = getItemLevel(item);
+  const value = formatValue(item.value ?? item.goldValue);
 
   const details: Array<[string, string | null]> = [
     ['Quantidade', formatQuantity(entry.quantity)],
     ['Tipo', formatInventoryType(entry)],
-    ['Raridade', formatInventoryRarity(item.rarity)],
-    ['Tier', typeof item.tier === 'number' ? String(item.tier) : null],
-    ['Slot', formatInventorySlot(item.slot)],
+    ['Qualidade', item.quality ?? null],
+    ['Valor', value],
     ['Origem', formatMaterialOrigin(item.materialOrigin)],
+    ['Raridade', formatInventoryRarity(item.rarity)],
+    ['Slot compatível', formatInventorySlot(item.slot)],
+    ['Tier', typeof item.tier === 'number' ? String(item.tier) : null],
+    ['Nível', typeof level === 'number' ? String(level) : null],
+    ['Classe', item.class?.name ?? item.className ?? null],
     ['Família', item.family ?? null],
     ['Mapa', item.map?.name ?? null],
-    ['Classe', item.class?.name ?? null],
   ];
 
-  return details.filter(
-    (detail): detail is [string, string] => Boolean(detail[1]),
+  return details.filter((detail): detail is [string, string] =>
+    Boolean(detail[1]),
   );
 }
 
@@ -86,17 +122,18 @@ export function InventoryItemDetailsModal({
 
   if (!entry) return null;
 
-  const item = entry.item;
+  const item = entry.item as InventoryItemWithVisualMetadata;
 
   const itemName = item.name?.trim() || 'Item desconhecido';
   const description = item.description?.trim();
+  const imageUrl = getItemImageUrl(item);
 
   const bonuses = getInventoryBonusList(item);
   const rarity = item.rarity ?? 'COMMON';
   const rarityClass = normalizeRarityClass(rarity);
-  const rarityLabel = formatInventoryRarity(item.rarity);
   const typeLabel = formatInventoryType(entry);
   const primaryDetail = getInventoryPrimaryDetail(entry);
+  const sourceLabel = primaryDetail ?? typeLabel;
   const details = buildDetails(entry);
 
   const hasStats =
@@ -110,7 +147,7 @@ export function InventoryItemDetailsModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="inventory-modal-title"
-      aria-describedby="inventory-modal-description"
+      aria-describedby={description ? 'inventory-modal-description' : undefined}
     >
       <button
         type="button"
@@ -126,51 +163,55 @@ export function InventoryItemDetailsModal({
           onClick={onClose}
           aria-label="Fechar detalhes"
         >
-          Fechar
+          ×
         </button>
 
-        <div className="inventory-modal__header">
+        <div className="inventory-modal__hero">
           <div
             className="inventory-item-card__icon inventory-modal__icon"
             aria-hidden="true"
           >
-            <span className="inventory-item-card__glyph">
-              {getInventoryItemIcon(entry)}
-            </span>
+            {imageUrl ? (
+              <img src={imageUrl} alt="" />
+            ) : (
+              <>
+                <span className="inventory-item-card__glyph">
+                  {getInventoryItemIcon(entry)}
+                </span>
 
-            <strong>{getInventoryItemInitials(item)}</strong>
+                <strong>{getInventoryItemInitials(item)}</strong>
+              </>
+            )}
           </div>
 
-          <div>
-            <span className="inventory-modal__eyebrow">
-              {primaryDetail ?? typeLabel}
-            </span>
+          <h2 id="inventory-modal-title">{itemName}</h2>
 
-            <h2 id="inventory-modal-title">{itemName}</h2>
-
-            <div className="inventory-modal__stats" aria-label="Resumo do item">
-              <span>{rarityLabel}</span>
-              <span>{typeLabel}</span>
-              <span>{formatQuantity(entry.quantity)}</span>
-
-              {typeof item.tier === 'number' ? (
-                <span>Tier {item.tier}</span>
-              ) : null}
-            </div>
-          </div>
+          <span className="inventory-modal__source">{sourceLabel}</span>
         </div>
 
-        <div className="inventory-modal__section">
-          <h3>Descrição</h3>
-
-          <p id="inventory-modal-description">
-            {description || 'Sem descrição registrada para este item.'}
+        {description ? (
+          <p
+            id="inventory-modal-description"
+            className="inventory-modal__description"
+          >
+            {description}
           </p>
-        </div>
+        ) : null}
+
+        {details.length > 0 ? (
+          <dl className="inventory-modal__details">
+            {details.map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
 
         {hasStats ? (
           <div className="inventory-modal__section">
-            <h3>Atributos principais</h3>
+            <h3>Atributos</h3>
 
             <div className="inventory-modal__stats">
               {bonuses.map(([label, value]) => (
@@ -189,19 +230,6 @@ export function InventoryItemDetailsModal({
             </div>
           </div>
         ) : null}
-
-        <div className="inventory-modal__section">
-          <h3>Informações</h3>
-
-          <dl className="inventory-modal__details">
-            {details.map(([label, value]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
       </section>
     </div>
   );

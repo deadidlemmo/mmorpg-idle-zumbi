@@ -13,6 +13,7 @@ import type {
 import { EmptyInventoryState } from '../components/EmptyInventoryState';
 import { InventoryFilters } from '../components/InventoryFilters';
 import { InventoryGrid } from '../components/InventoryGrid';
+import { InventoryItemDetailsModal } from '../components/InventoryItemDetailsModal';
 import { useInventory } from '../hooks/useInventory';
 import '../styles/inventory.css';
 import type {
@@ -55,6 +56,27 @@ const INVENTORY_TABS: Array<{
     description: 'Armazenamento seguro',
   },
 ];
+
+function useIsMobileInventoryDetails() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 760px)');
+
+    function updateIsMobile() {
+      setIsMobile(mediaQuery.matches);
+    }
+
+    updateIsMobile();
+    mediaQuery.addEventListener('change', updateIsMobile);
+
+    return () => {
+      mediaQuery.removeEventListener('change', updateIsMobile);
+    };
+  }, []);
+
+  return isMobile;
+}
 
 function buildCharacterViewModel(
   overview: CharacterOverviewResponse,
@@ -192,12 +214,7 @@ interface InventorySelectionState {
   emptySlotLabel?: string | null;
 }
 
-const EMPTY_PANEL_TEXT: Record<InventoryTabKey, string> = {
-  inventory:
-    'Clique em um slot da mochila para visualizar detalhes, quantidade, raridade, atributos e origem do item.',
-  equipped: 'Clique em um equipamento ou slot para visualizar os detalhes.',
-  bank: 'Clique em um slot do banco para visualizar os detalhes do item armazenado.',
-};
+const EMPTY_PANEL_TEXT = 'Clique em um slot para visualizar os detalhes.';
 
 function buildEquippedInventoryEntry(
   item: DashboardEquipmentItem,
@@ -422,6 +439,8 @@ export function InventoryPage() {
     entry: null,
     emptySlotLabel: null,
   });
+  const isMobileDetails = useIsMobileInventoryDetails();
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
@@ -508,6 +527,20 @@ export function InventoryPage() {
   const isEmptyAfterFilter = hasItems && !hasFilteredItems;
   const isCompletelyEmpty = !hasItems;
 
+  function updateSelection(nextSelection: InventorySelectionState) {
+    setSelection(nextSelection);
+    setIsDetailsModalOpen(Boolean(isMobileDetails && nextSelection.entry));
+  }
+
+  function clearSelection(source: InventorySelectionSource = activeTab) {
+    setSelection({
+      source,
+      entry: null,
+      emptySlotLabel: null,
+    });
+    setIsDetailsModalOpen(false);
+  }
+
   if (!characterId) {
     return <Navigate to="/characters" replace />;
   }
@@ -556,11 +589,7 @@ export function InventoryPage() {
                     className={`inventory-tab${isActive ? ' is-active' : ''}`}
                     onClick={() => {
                       setActiveTab(tab.key);
-                      setSelection({
-                        source: tab.key,
-                        entry: null,
-                        emptySlotLabel: null,
-                      });
+                      clearSelection(tab.key);
                     }}
                     role="tab"
                     aria-selected={isActive}
@@ -593,11 +622,7 @@ export function InventoryPage() {
                   activeFilter={activeFilter}
                   onChange={(filter) => {
                     setActiveFilter(filter);
-                    setSelection({
-                      source: 'inventory',
-                      entry: null,
-                      emptySlotLabel: null,
-                    });
+                    clearSelection('inventory');
                   }}
                 />
 
@@ -624,7 +649,7 @@ export function InventoryPage() {
                     <InventoryGrid
                       items={filteredItems}
                       onSelectItem={(entry) => {
-                        setSelection({
+                        updateSelection({
                           source: 'inventory',
                           entry,
                           emptySlotLabel: null,
@@ -671,7 +696,7 @@ export function InventoryPage() {
                     equipment={character.equipment ?? {}}
                     selectedItemId={selectedItemId}
                     onSelectSlot={({ item, label }) => {
-                      setSelection({
+                      updateSelection({
                         source: 'equipped',
                         entry: item ? buildEquippedInventoryEntry(item) : null,
                         emptySlotLabel: item ? null : label,
@@ -698,7 +723,7 @@ export function InventoryPage() {
                   <InventoryGrid
                     items={[]}
                     onSelectItem={(entry) => {
-                      setSelection({
+                      updateSelection({
                         source: 'bank',
                         entry,
                         emptySlotLabel: null,
@@ -708,7 +733,7 @@ export function InventoryPage() {
                     ariaLabel="Grade de slots do banco"
                     emptySlotLabel="Vazio"
                     onSelectEmptySlot={(slotNumber) => {
-                      setSelection({
+                      updateSelection({
                         source: 'bank',
                         entry: null,
                         emptySlotLabel: `Slot ${slotNumber}`,
@@ -723,18 +748,19 @@ export function InventoryPage() {
           <div className="inventory-content-layout__details">
             <InventoryDesktopDetailsPanel
               entry={selectedDetailsItem}
-              emptyText={EMPTY_PANEL_TEXT[activeTab]}
+              emptyText={EMPTY_PANEL_TEXT}
               emptySlotLabel={selectedEmptySlotLabel}
-              onClear={() => {
-                setSelection({
-                  source: activeTab,
-                  entry: null,
-                  emptySlotLabel: null,
-                });
-              }}
+              onClear={() => clearSelection()}
             />
           </div>
         </div>
+
+        <InventoryItemDetailsModal
+          entry={
+            isMobileDetails && isDetailsModalOpen ? selectedDetailsItem : null
+          }
+          onClose={() => setIsDetailsModalOpen(false)}
+        />
       </main>
     </DashboardLayout>
   );
