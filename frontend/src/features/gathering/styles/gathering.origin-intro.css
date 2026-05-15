@@ -35,12 +35,12 @@
 .gathering-origin-lore-card.gathering-origin-lore-card--npc,
 .gathering-origin-lore-card--npc {
   display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 1rem;
-  min-height: 104px;
+  min-height: 118px;
   max-height: none;
-  padding: 0.82rem 1rem;
+  padding: 0.82rem 1.12rem;
   border-color: rgba(110, 159, 67, 0.22);
   background:
     radial-gradient(circle at 8% 50%, rgba(232, 184, 78, 0.15), transparent 9.5rem),
@@ -52,6 +52,12 @@
       rgba(4, 10, 8, 0.96)
     ),
     rgba(5, 9, 8, 0.92);
+}
+
+.gathering-origin-lore-card.gathering-origin-lore-card--npc,
+.gathering-origin-lore-card--npc,
+.gathering-origin-npc {
+  overflow: visible;
 }
 
 .gathering-origin-lore-card::before,
@@ -99,52 +105,52 @@
     );
 }
 
+.gathering-origin-npc__portrait,
 .gathering-origin-lore-card__portrait {
   position: relative;
   z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 84px;
-  height: 84px;
-  overflow: hidden;
-  border: 1px solid rgba(159, 211, 106, 0.22);
-  border-radius: 1rem;
-  background:
-    radial-gradient(circle at 50% 32%, rgba(159, 211, 106, 0.2), transparent 62%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
-    rgba(5, 9, 8, 0.72);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 12px 24px rgba(0, 0, 0, 0.28),
-    0 0 18px rgba(159, 211, 106, 0.08);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: clamp(96px, 9vw, 130px);
+  height: clamp(96px, 9vw, 130px);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
 
+.gathering-origin-npc__portrait img,
 .gathering-origin-lore-card__portrait img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
   object-position: center bottom;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.38));
 }
 
+.gathering-origin-npc__portrait span,
 .gathering-origin-lore-card__portrait span {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 54px;
+  height: 54px;
   color: #ffe59b;
   font-family: var(--font-title);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.045em;
   border: 1px solid rgba(232, 184, 78, 0.15);
-  border-radius: 0.7rem;
+  border-radius: 0.8rem;
   background:
     radial-gradient(circle at 50% 35%, rgba(232, 184, 78, 0.15), transparent 68%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.052), transparent),
     rgba(5, 9, 8, 0.55);
 }
 
+.gathering-origin-npc__content,
 .gathering-origin-lore-card__content {
   position: relative;
   z-index: 1;
@@ -155,6 +161,7 @@
   gap: 0.28rem;
 }
 
+.gathering-origin-npc__meta,
 .gathering-origin-lore-card__meta {
   display: flex;
   align-items: center;
@@ -163,6 +170,7 @@
   margin: 0;
 }
 
+.gathering-origin-npc__name,
 .gathering-origin-lore-card__npc {
   display: inline-flex;
   min-width: 0;
@@ -179,6 +187,7 @@
   white-space: nowrap;
 }
 
+.gathering-origin-npc__role,
 .gathering-origin-lore-card__role {
   display: inline-flex;
   align-items: center;
