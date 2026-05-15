@@ -14,6 +14,8 @@ interface DashboardEquipmentSlotProps {
   label: string;
   item?: DashboardEquipmentItem | null;
   slotKey?: EquipmentSlotKey;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
 type EquipmentItemWithIcon = DashboardEquipmentItem & {
@@ -106,6 +108,8 @@ export function DashboardEquipmentSlot({
   label,
   item,
   slotKey,
+  isSelected = false,
+  onSelect,
 }: DashboardEquipmentSlotProps) {
   const normalizedSlotKey = normalizeSlotKey(label, slotKey);
   const rarityMeta = getEquipmentRarityFromItem(item);
@@ -122,22 +126,8 @@ export function DashboardEquipmentSlot({
   const slotLabel = SLOT_LABELS[normalizedSlotKey];
   const rarityLabel = hasItem ? rarityMeta.label : 'Sem item';
 
-  return (
-    <article
-      className={[
-        'equipment-summary-slot',
-        `equipment-summary-slot--${normalizedSlotKey}`,
-        `equipment-summary-slot--rarity-${rarityMeta.key}`,
-        rarityMeta.cssClass,
-        hasItem ? 'has-item' : 'is-empty',
-        hasImage
-          ? 'equipment-summary-slot--with-image'
-          : 'equipment-summary-slot--fallback',
-      ].join(' ')}
-      style={style}
-      title={`${slotLabel}: ${itemName}`}
-      aria-label={`${slotLabel}: ${itemName}`}
-    >
+  const content = (
+    <>
       <div className="equipment-summary-slot__slot" aria-hidden="true">
         <div className="equipment-summary-slot__icon">
           {imageUrl ? (
@@ -156,6 +146,48 @@ export function DashboardEquipmentSlot({
       <span className="equipment-summary-slot__meta">
         {hasItem ? `${tierLabel} · ${rarityLabel}` : rarityLabel}
       </span>
+    </>
+  );
+
+  const className = [
+    'equipment-summary-slot',
+    `equipment-summary-slot--${normalizedSlotKey}`,
+    `equipment-summary-slot--rarity-${rarityMeta.key}`,
+    rarityMeta.cssClass,
+    hasItem ? 'has-item' : 'is-empty',
+    hasImage
+      ? 'equipment-summary-slot--with-image'
+      : 'equipment-summary-slot--fallback',
+    isSelected ? 'is-selected' : '',
+    onSelect ? 'is-interactive' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  if (onSelect) {
+    return (
+      <button
+        type="button"
+        className={className}
+        style={style}
+        title={`${slotLabel}: ${itemName}`}
+        aria-label={`${slotLabel}: ${itemName}`}
+        aria-pressed={isSelected}
+        onClick={onSelect}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <article
+      className={className}
+      style={style}
+      title={`${slotLabel}: ${itemName}`}
+      aria-label={`${slotLabel}: ${itemName}`}
+    >
+      {content}
     </article>
   );
 }

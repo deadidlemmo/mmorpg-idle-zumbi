@@ -10,6 +10,12 @@ interface DashboardEquipmentBodyProps {
     pants?: DashboardEquipmentItem | null;
     boots?: DashboardEquipmentItem | null;
   };
+  selectedItemId?: string | null;
+  onSelectSlot?: (slot: {
+    slotKey: EquipmentSlotKey;
+    label: string;
+    item?: DashboardEquipmentItem | null;
+  }) => void;
 }
 
 type EquipmentSlotKey =
@@ -28,6 +34,8 @@ type EquipmentSlotConfig = {
 
 export function DashboardEquipmentBody({
   equipment,
+  selectedItemId = null,
+  onSelectSlot,
 }: DashboardEquipmentBodyProps) {
   const slots: EquipmentSlotConfig[] = [
     {
@@ -78,6 +86,16 @@ export function DashboardEquipmentBody({
             slotKey={slotKey}
             label={label}
             item={item}
+            isSelected={Boolean(
+              selectedItemId &&
+              item?.id &&
+              selectedItemId === `equipped-${item.id}`,
+            )}
+            onSelect={
+              onSelectSlot
+                ? () => onSelectSlot({ slotKey, label, item })
+                : undefined
+            }
           />
         ))}
       </div>
