@@ -37,27 +37,30 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 1rem;
-  min-height: 118px;
+  gap: 0.9rem;
+  min-height: auto;
   max-height: none;
-  padding: 0.82rem 1.12rem;
-  border-color: rgba(110, 159, 67, 0.22);
+  padding: 0.74rem 1rem;
+  border-color: rgba(150, 200, 90, 0.18);
+  border-radius: 1rem;
   background:
-    radial-gradient(circle at 8% 50%, rgba(232, 184, 78, 0.15), transparent 9.5rem),
-    radial-gradient(circle at 75% 20%, rgba(110, 159, 67, 0.11), transparent 18rem),
+    radial-gradient(circle at left, rgba(160, 210, 90, 0.12), transparent 34%),
+    radial-gradient(circle at 86% 48%, rgba(232, 184, 78, 0.08), transparent 18rem),
     linear-gradient(
       90deg,
-      rgba(31, 27, 14, 0.82),
-      rgba(7, 16, 11, 0.94) 48%,
-      rgba(4, 10, 8, 0.96)
-    ),
-    rgba(5, 9, 8, 0.92);
+      rgba(95, 76, 25, 0.22),
+      rgba(8, 20, 14, 0.92) 44%,
+      rgba(5, 12, 10, 0.98)
+    );
 }
 
 .gathering-origin-lore-card.gathering-origin-lore-card--npc,
-.gathering-origin-lore-card--npc,
+.gathering-origin-lore-card--npc {
+  overflow: hidden;
+}
+
 .gathering-origin-npc {
-  overflow: visible;
+  overflow: hidden;
 }
 
 .gathering-origin-lore-card::before,
@@ -67,41 +70,42 @@
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(232, 184, 78, 0.075), transparent 48%),
+    radial-gradient(circle at 4.6rem 56%, rgba(174, 218, 120, 0.16), transparent 5.8rem),
+    linear-gradient(90deg, rgba(232, 184, 78, 0.06), transparent 42%),
     radial-gradient(ellipse at 92% 48%, rgba(110, 159, 67, 0.11), transparent 18rem),
     repeating-linear-gradient(
       135deg,
       rgba(255, 255, 255, 0.012) 0 1px,
       transparent 1px 9px
     );
-  opacity: 0.88;
+  opacity: 0.9;
 }
 
 .gathering-origin-lore-card::after,
 .gathering-origin-lore-card--npc::after {
   content: '';
   position: absolute;
-  right: 1.2rem;
-  top: 0.55rem;
-  bottom: 0.55rem;
-  width: min(32%, 300px);
+  right: 0.9rem;
+  top: 0.45rem;
+  bottom: 0.45rem;
+  width: min(30%, 260px);
   pointer-events: none;
-  opacity: 0.12;
+  opacity: 0.14;
   border-radius: 0.9rem;
   transform: skewX(-7deg);
   background:
-    linear-gradient(90deg, transparent, rgba(174, 218, 120, 0.07)),
+    linear-gradient(90deg, transparent, rgba(174, 218, 120, 0.08)),
     repeating-linear-gradient(
       90deg,
-      transparent 0 22px,
-      rgba(232, 184, 78, 0.28) 22px 24px,
-      transparent 24px 42px
+      transparent 0 20px,
+      rgba(232, 184, 78, 0.24) 20px 22px,
+      transparent 22px 38px
     ),
     repeating-linear-gradient(
       0deg,
-      transparent 0 18px,
-      rgba(110, 159, 67, 0.22) 18px 20px,
-      transparent 20px 38px
+      transparent 0 16px,
+      rgba(110, 159, 67, 0.2) 16px 18px,
+      transparent 18px 34px
     );
 }
 
@@ -112,8 +116,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  width: clamp(96px, 9vw, 130px);
-  height: clamp(96px, 9vw, 130px);
+  width: clamp(74px, 6vw, 88px);
+  height: clamp(74px, 6vw, 88px);
   overflow: visible;
   border: 0;
   border-radius: 0;
@@ -128,7 +132,7 @@
   height: 100%;
   object-fit: contain;
   object-position: center bottom;
-  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.38));
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.36));
 }
 
 .gathering-origin-npc__portrait span,
@@ -158,14 +162,15 @@
   min-width: 0;
   flex-direction: column;
   justify-content: center;
-  gap: 0.28rem;
+  gap: 0.34rem;
 }
 
 .gathering-origin-npc__meta,
 .gathering-origin-lore-card__meta {
   display: flex;
   align-items: center;
-  gap: 0.42rem;
+  gap: 0.45rem;
+  flex-wrap: wrap;
   min-width: 0;
   margin: 0;
 }
@@ -176,12 +181,12 @@
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  color: rgba(174, 218, 120, 0.92);
+  color: var(--hero-accent, #aeda78);
   font-family: var(--font-title);
-  font-size: 0.55rem;
+  font-size: 0.66rem;
   font-weight: 950;
-  line-height: 1;
-  letter-spacing: 0.15em;
+  line-height: 1.05;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -192,17 +197,17 @@
   display: inline-flex;
   align-items: center;
   min-height: 18px;
-  padding: 0.06rem 0.36rem;
-  color: rgba(255, 229, 155, 0.8);
+  padding: 0.12rem 0.38rem;
+  color: #f6d98d;
   font-family: var(--font-title);
-  font-size: 0.46rem;
-  font-weight: 900;
-  letter-spacing: 0.07em;
+  font-size: 0.52rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
-  border: 1px solid rgba(232, 184, 78, 0.12);
+  border: 1px solid rgba(230, 190, 90, 0.22);
   border-radius: 999px;
-  background: rgba(232, 184, 78, 0.04);
+  background: rgba(230, 190, 90, 0.14);
 }
 
 .gathering-origin-lore-card h2,
@@ -212,18 +217,18 @@
 
 .gathering-origin-lore-card blockquote {
   display: block;
-  max-width: min(880px, 100%);
+  max-width: min(920px, 100%);
   margin: 0;
   overflow: hidden;
-  color: rgba(255, 248, 232, 0.9);
-  font-family: var(--font-body, inherit);
-  font-size: clamp(0.84rem, 1vw, 0.98rem);
-  font-style: italic;
-  font-weight: 780;
-  line-height: 1.28;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: clamp(1rem, 1.35vw, 1.28rem);
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1.18;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.58);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.28);
 }
 
 /* =========================================================
