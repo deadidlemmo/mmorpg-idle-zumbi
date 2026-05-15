@@ -909,10 +909,10 @@ export function GatheringOriginPage() {
 
           <section className="gathering-origin-intro-grid">
             <article
-              className="gathering-origin-lore-card gathering-origin-lore-card--npc"
+              className="gathering-origin-lore-card gathering-origin-lore-card--npc gathering-origin-npc"
               aria-label={`Guia de ${originLabel}`}
             >
-              <div className="gathering-origin-lore-card__portrait">
+              <div className="gathering-origin-npc__portrait">
                 {originLore?.npcAvatar ? (
                   <img src={originLore.npcAvatar} alt={originLore.npcName} />
                 ) : (
@@ -922,13 +922,13 @@ export function GatheringOriginPage() {
                 )}
               </div>
 
-              <div className="gathering-origin-lore-card__content">
-                <div className="gathering-origin-lore-card__meta">
-                  <span className="gathering-origin-lore-card__npc">
+              <div className="gathering-origin-npc__content">
+                <div className="gathering-origin-npc__meta">
+                  <strong className="gathering-origin-npc__name">
                     {originLore?.npcName ?? 'Especialista do abrigo'}
-                  </span>
+                  </strong>
 
-                  <span className="gathering-origin-lore-card__role">
+                  <span className="gathering-origin-npc__role">
                     {originLabel}
                   </span>
                 </div>
