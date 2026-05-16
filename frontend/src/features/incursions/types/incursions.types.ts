@@ -34,7 +34,13 @@ export interface IncursionLootPreview {
     slot?: string | null;
     family?: string | null;
     materialOrigin?: string | null;
+    iconUrl?: string | null;
+    imageUrl?: string | null;
+    assetKey?: string | null;
   } | null;
+  iconUrl?: string | null;
+  imageUrl?: string | null;
+  assetKey?: string | null;
   chance: number;
   minQuantity: number;
   maxQuantity: number;

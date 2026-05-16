@@ -82,17 +82,154 @@ function formatRemaining(seconds: number) {
   return `${secs}s`;
 }
 
-function formatReward(loot: IncursionLootPreview) {
-  const quantity =
-    loot.minQuantity === loot.maxQuantity
-      ? `${loot.minQuantity}`
-      : `${loot.minQuantity}-${loot.maxQuantity}`;
-  const chance = loot.guaranteed ? "Garantido" : `${loot.chance}%`;
+const EXP_ICON_URL: string | null = null;
 
-  if (loot.rewardType === "XP") return `${quantity} EXP • ${chance}`;
-  if (loot.rewardType === "GOLD") return `${quantity} gold • ${chance}`;
+function normalizeRewardRarityClass(rarity?: string | null) {
+  return String(rarity ?? "COMMON")
+    .trim()
+    .toLowerCase();
+}
 
-  return `${loot.item?.name ?? loot.rewardType} x${quantity} • ${chance}`;
+function formatLootQuantity(loot: IncursionLootPreview) {
+  const minQuantity = Math.max(0, Math.floor(Number(loot.minQuantity) || 0));
+  const maxQuantity = Math.max(0, Math.floor(Number(loot.maxQuantity) || 0));
+
+  if (minQuantity === maxQuantity) {
+    return minQuantity.toLocaleString("pt-BR");
+  }
+
+  return `${minQuantity.toLocaleString("pt-BR")}–${maxQuantity.toLocaleString("pt-BR")}`;
+}
+
+function formatLootChance(loot: IncursionLootPreview) {
+  const chance = Number(loot.chance);
+
+  if (loot.guaranteed || chance >= 100) return "Garantido";
+
+  const safeChance = Number.isFinite(chance) ? Math.max(0, chance) : 0;
+
+  return `${safeChance.toLocaleString("pt-BR", {
+    maximumFractionDigits: 1,
+  })}%`;
+}
+
+function getRewardTypeLabel(rewardType: IncursionLootPreview["rewardType"]) {
+  const labels: Record<IncursionLootPreview["rewardType"], string> = {
+    XP: "EXP",
+    GOLD: "Gold",
+    MATERIAL: "Material",
+    CONSUMABLE: "Consumível",
+    EQUIPMENT: "Equipamento",
+    ITEM: "Item",
+  };
+
+  return labels[rewardType] ?? rewardType;
+}
+
+function getLootName(loot: IncursionLootPreview) {
+  if (loot.rewardType === "XP") return "EXP";
+  if (loot.rewardType === "GOLD") return "Gold";
+
+  return loot.item?.name?.trim() || getRewardTypeLabel(loot.rewardType);
+}
+
+function getLootImageUrl(loot: IncursionLootPreview) {
+  if (loot.rewardType === "GOLD") return goldIcon;
+  if (loot.rewardType === "XP") {
+    return loot.iconUrl ?? loot.imageUrl ?? EXP_ICON_URL;
+  }
+
+  return (
+    loot.iconUrl ??
+    loot.imageUrl ??
+    loot.item?.iconUrl ??
+    loot.item?.imageUrl ??
+    null
+  );
+}
+
+function getLootInitials(loot: IncursionLootPreview) {
+  const name = getLootName(loot);
+
+  if (loot.rewardType === "XP") return "XP";
+  if (loot.rewardType === "GOLD") return "G";
+
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "?"
+  );
+}
+
+function getLootFallbackGlyph(loot: IncursionLootPreview) {
+  if (loot.rewardType === "XP") return "✦";
+  if (loot.rewardType === "GOLD") return "";
+  if (loot.rewardType === "EQUIPMENT") return "◇";
+  if (loot.rewardType === "CONSUMABLE") return "+";
+  if (loot.rewardType === "MATERIAL") return "▥";
+
+  return "◈";
+}
+
+function LootRewardCard({ loot }: { loot: IncursionLootPreview }) {
+  const name = getLootName(loot);
+  const quantity = formatLootQuantity(loot);
+  const chance = formatLootChance(loot);
+  const imageUrl = getLootImageUrl(loot);
+  const rarityClass = normalizeRewardRarityClass(
+    loot.rarity ?? loot.item?.rarity ?? null,
+  );
+  const typeClass = loot.rewardType.toLowerCase();
+
+  return (
+    <article
+      className={`incursion-loot-card incursion-loot-card--${typeClass} incursion-loot-card--rarity-${rarityClass}`}
+      aria-label={`${name}: ${quantity}. ${chance}.`}
+    >
+      <div className="incursion-loot-card__icon" aria-hidden="true">
+        <span className="incursion-loot-card__fallback-glyph">
+          {getLootFallbackGlyph(loot)}
+        </span>
+        <strong>{getLootInitials(loot)}</strong>
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt=""
+            loading="lazy"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+        ) : null}
+      </div>
+
+      <div className="incursion-loot-card__content">
+        <span className="incursion-loot-card__type">
+          {getRewardTypeLabel(loot.rewardType)}
+        </span>
+        <strong>{name}</strong>
+        {loot.item?.rarity ? (
+          <span className="incursion-loot-card__rarity">{loot.item.rarity}</span>
+        ) : null}
+      </div>
+
+      <div className="incursion-loot-card__meta">
+        <span className="incursion-loot-card__quantity">{quantity}</span>
+        <span
+          className={
+            chance === "Garantido"
+              ? "incursion-loot-card__chance incursion-loot-card__chance--guaranteed"
+              : "incursion-loot-card__chance"
+          }
+        >
+          {chance}
+        </span>
+      </div>
+    </article>
+  );
 }
 
 function formatMapLevelRange(
@@ -696,35 +833,22 @@ export function IncursionsPage() {
                     Dificuldade
                     <strong>{getDifficultyLabel(modalIncursion.difficulty)}</strong>
                   </span>
-                  <span>
-                    Risco
-                    <strong>{modalIncursion.riskLevel}/10</strong>
-                  </span>
-                  <span>
-                    Status
-                    <strong>
-                      {getIncursionStatusLabel({
-                        incursion: modalIncursion,
-                        activeSession,
-                        rewardedSession,
-                      })}
-                    </strong>
-                  </span>
                 </div>
 
                 <section className="incursions-modal__rewards">
-                  <strong>
-                    <PackageOpen size={16} /> Loot e EXP possíveis
+                  <strong className="incursions-modal__rewards-title">
+                    <PackageOpen size={16} /> Loot possível
                   </strong>
 
                   {modalIncursion.rewardsPreview.length > 0 ? (
-                    <ul>
+                    <div className="incursions-modal__loot-grid">
                       {modalIncursion.rewardsPreview.map((loot) => (
-                        <li key={loot.id ?? `${loot.rewardType}-${loot.sortOrder}`}>
-                          <Sparkles size={13} /> {formatReward(loot)}
-                        </li>
+                        <LootRewardCard
+                          key={loot.id ?? `${loot.rewardType}-${loot.sortOrder}`}
+                          loot={loot}
+                        />
                       ))}
-                    </ul>
+                    </div>
                   ) : (
                     <p>As recompensas desta operação ainda são desconhecidas.</p>
                   )}
