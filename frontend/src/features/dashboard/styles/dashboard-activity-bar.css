@@ -1762,8 +1762,28 @@
   --activity-rgb: 232, 184, 78;
 }
 
-.dashboard-activity-bar--expanded .dashboard-activity-bar__item--incursion {
+.dashboard-activity-bar--expanded .dashboard-activity-bar__item--has-action {
   grid-template-columns: 56px minmax(0, 1fr) minmax(168px, 0.25fr) auto;
+}
+
+.dashboard-activity-bar__feedback {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  border: 1px solid rgba(255, 116, 96, 0.3);
+  border-radius: 0.86rem;
+  padding: 0.48rem 0.74rem;
+  background: linear-gradient(135deg, rgba(102, 26, 28, 0.82), rgba(24, 11, 12, 0.92));
+  color: #ffd8cf;
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-align: center;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .dashboard-activity-bar__quick-cancel {
@@ -1772,6 +1792,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.34rem;
+  min-width: 0;
   min-height: 2.25rem;
   border: 1px solid rgba(255, 116, 96, 0.34);
   border-radius: 999px;
@@ -1802,6 +1824,25 @@
   opacity: 0.56;
 }
 
+.dashboard-activity-bar__quick-cancel-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 216, 207, 0.12);
+  color: #fff3ed;
+  font-size: 0.88rem;
+  line-height: 1;
+}
+
+.dashboard-activity-bar__quick-cancel-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dashboard-activity-bar--minimized .dashboard-activity-bar__quick-cancel,
 .dashboard-activity-bar--collapsed .dashboard-activity-bar__quick-cancel {
   position: absolute;
@@ -1813,11 +1854,11 @@
 }
 
 @media (max-width: 900px) {
-  .dashboard-activity-bar--expanded .dashboard-activity-bar__item--incursion {
+  .dashboard-activity-bar--expanded .dashboard-activity-bar__item--has-action {
     grid-template-columns: 52px minmax(0, 1fr) auto;
   }
 
-  .dashboard-activity-bar--expanded .dashboard-activity-bar__item--incursion .dashboard-activity-bar__metrics {
+  .dashboard-activity-bar--expanded .dashboard-activity-bar__item--has-action .dashboard-activity-bar__metrics {
     grid-column: 2 / -1;
   }
 }
@@ -1832,5 +1873,23 @@
     min-height: 1.75rem;
     padding: 0.3rem 0.52rem;
     font-size: 0.54rem;
+  }
+}
+
+
+@media (max-width: 430px) {
+  .dashboard-activity-bar__quick-cancel {
+    width: 1.85rem;
+    min-width: 1.85rem;
+    padding-inline: 0;
+  }
+
+  .dashboard-activity-bar__quick-cancel-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }
