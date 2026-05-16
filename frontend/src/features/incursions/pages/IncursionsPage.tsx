@@ -845,41 +845,6 @@ export function IncursionsPage() {
               </header>
 
               <div className="incursions-modal__body">
-                <div className="incursions-modal__stats">
-                  <span className="incursions-modal__stat incursions-modal__stat--map">
-                    Mapa
-                    <strong>{modalIncursion.map.name}</strong>
-                  </span>
-                  <span
-                    className={`incursions-modal__stat incursions-modal__stat--tier ${getIncursionTierClassName(modalIncursion.tier)}`}
-                  >
-                    Tier
-                    <strong>Tier {modalIncursion.tier}</strong>
-                  </span>
-                  <span className="incursions-modal__stat">
-                    Nível recomendado
-                    <strong>
-                      {modalIncursion.minLevel}–{modalIncursion.maxLevel}
-                    </strong>
-                  </span>
-                  <span className="incursions-modal__stat">
-                    Duração
-                    <strong>
-                      {formatDuration(modalIncursion.durationSeconds)}
-                    </strong>
-                  </span>
-                  <span className="incursions-modal__stat">
-                    Custo
-                    <GoldAmount value={modalIncursion.goldCost} />
-                  </span>
-                  <span className="incursions-modal__stat">
-                    Dificuldade
-                    <strong>
-                      {getDifficultyLabel(modalIncursion.difficulty)}
-                    </strong>
-                  </span>
-                </div>
-
                 <section className="incursions-modal__rewards">
                   <strong className="incursions-modal__rewards-title">
                     <PackageOpen size={16} /> Loot possível
