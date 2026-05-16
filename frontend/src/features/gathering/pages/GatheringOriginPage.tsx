@@ -64,13 +64,18 @@ type GatheringSkillLoose = Partial<GatheringSkillViewModel> & {
 
 type GatheringSkillsSummaryLoose = {
   skills?: GatheringSkillLoose[] | null;
-  byOrigin?: Partial<Record<GatheringAllowedOrigin, GatheringSkillLoose | null>> | null;
+  byOrigin?: Partial<
+    Record<GatheringAllowedOrigin, GatheringSkillLoose | null>
+  > | null;
 };
 
 type CharacterOverviewWithGatheringSkills = {
   gatheringSkills?: GatheringSkillsSummaryLoose | GatheringSkillLoose[] | null;
   character?: {
-    gatheringSkills?: GatheringSkillsSummaryLoose | GatheringSkillLoose[] | null;
+    gatheringSkills?:
+      | GatheringSkillsSummaryLoose
+      | GatheringSkillLoose[]
+      | null;
   } | null;
 };
 
@@ -175,7 +180,10 @@ function getGatheringXpToNextLevel(level: number): number | null {
   return Math.max(50, level * 50);
 }
 
-function getXpProgressPercent(xp: number, xpToNextLevel: number | null): number {
+function getXpProgressPercent(
+  xp: number,
+  xpToNextLevel: number | null,
+): number {
   if (!xpToNextLevel || xpToNextLevel <= 0) {
     return 100;
   }
@@ -227,12 +235,11 @@ function normalizeGatheringSkillViewModel(
     xpProgressPercent,
     isAtLevelCap: Boolean(skill.isAtLevelCap ?? level >= GATHERING_LEVEL_CAP),
     isClassAffinity: Boolean(skill.isClassAffinity),
-    statBonus:
-      skill.statBonus ?? {
-        stat: getOriginStatInternalName(origin),
-        label: getGatheringOriginStatLabel(origin).replace('+ ', ''),
-        amount: Math.max(0, level - 1) * 2,
-      },
+    statBonus: skill.statBonus ?? {
+      stat: getOriginStatInternalName(origin),
+      label: getGatheringOriginStatLabel(origin).replace('+ ', ''),
+      amount: Math.max(0, level - 1) * 2,
+    },
     productionBonusPercent:
       typeof skill.productionBonusPercent === 'number'
         ? skill.productionBonusPercent
@@ -277,7 +284,9 @@ function extractSkillFromCollection(
     return normalizeGatheringSkillViewModel(byOriginSkill, origin);
   }
 
-  const found = collection.skills?.find((skill) => getSkillOrigin(skill) === origin);
+  const found = collection.skills?.find(
+    (skill) => getSkillOrigin(skill) === origin,
+  );
 
   return found ? normalizeGatheringSkillViewModel(found, origin) : null;
 }
@@ -286,11 +295,15 @@ function getOverviewGatheringSkill(params: {
   overview: unknown;
   origin: GatheringAllowedOrigin;
 }): GatheringSkillViewModel | null {
-  const overview = params.overview as CharacterOverviewWithGatheringSkills | null;
+  const overview =
+    params.overview as CharacterOverviewWithGatheringSkills | null;
 
   return (
     extractSkillFromCollection(overview?.gatheringSkills, params.origin) ??
-    extractSkillFromCollection(overview?.character?.gatheringSkills, params.origin) ??
+    extractSkillFromCollection(
+      overview?.character?.gatheringSkills,
+      params.origin,
+    ) ??
     null
   );
 }
@@ -306,7 +319,10 @@ function getStatusGatheringSkill(
   }
 
   if (status.session.gatheringSkill?.origin === origin) {
-    return normalizeGatheringSkillViewModel(status.session.gatheringSkill, origin);
+    return normalizeGatheringSkillViewModel(
+      status.session.gatheringSkill,
+      origin,
+    );
   }
 
   return null;
@@ -348,7 +364,9 @@ function getActiveMaterialId(
   return status.session.targetMaterial?.id ?? null;
 }
 
-function getActiveOrigin(status?: GatheringStatusResponse | null): string | null {
+function getActiveOrigin(
+  status?: GatheringStatusResponse | null,
+): string | null {
   if (!status?.active) return null;
 
   return String(status.session.origin ?? '');
@@ -492,7 +510,9 @@ function getSkillXpNeededLabel(skill?: GatheringSkillViewModel | null): string {
   return `${xpNeeded.toLocaleString('pt-BR')} XP necessários`;
 }
 
-function getSkillProgressPercent(skill?: GatheringSkillViewModel | null): number {
+function getSkillProgressPercent(
+  skill?: GatheringSkillViewModel | null,
+): number {
   const percent = Number(skill?.xpProgressPercent ?? 0);
 
   if (!Number.isFinite(percent)) {
@@ -521,7 +541,8 @@ function areGatheringSkillsEquivalent(
     Boolean(current.isAtLevelCap) === Boolean(next.isAtLevelCap) &&
     Number(current.productionBonusPercent ?? 0) ===
       Number(next.productionBonusPercent ?? 0) &&
-    Number(current.statBonus?.amount ?? 0) === Number(next.statBonus?.amount ?? 0)
+    Number(current.statBonus?.amount ?? 0) ===
+      Number(next.statBonus?.amount ?? 0)
   );
 }
 
@@ -577,11 +598,17 @@ export function GatheringOriginPage() {
   const isBusy = isPageBusy || gatheringRealtimeState.isBusy;
   const errorMessage = pageErrorMessage ?? gatheringRealtimeState.errorMessage;
 
-  const originLabel = originKey ? getGatheringOriginLabel(originKey) : 'Gathering';
+  const originLabel = originKey
+    ? getGatheringOriginLabel(originKey)
+    : 'Gathering';
   const originDescription = originKey
     ? getGatheringOriginDescription(originKey)
     : 'Expedição idle para obtenção de materiais.';
   const originLore = originKey ? getOriginLore(originKey) : null;
+  const originQuote = `“${
+    originLore?.quote ??
+    'Toda expedição deixa alguma coisa para trás. O segredo é saber o que vale carregar.'
+  }”`;
 
   const materials = materialsResponse?.materials ?? [];
   const currentMap = materialsResponse?.map ?? null;
@@ -683,7 +710,10 @@ export function GatheringOriginPage() {
 
       if (activeSkill ?? overviewSkill) {
         setLastKnownGatheringSkill((currentSkill) =>
-          getNextGatheringSkillState(currentSkill, activeSkill ?? overviewSkill),
+          getNextGatheringSkillState(
+            currentSkill,
+            activeSkill ?? overviewSkill,
+          ),
         );
       }
 
@@ -912,14 +942,16 @@ export function GatheringOriginPage() {
               className="gathering-origin-lore-card gathering-origin-lore-card--npc gathering-origin-npc"
               aria-label={`Guia de ${originLabel}`}
             >
-              <div className="gathering-origin-npc__portrait">
-                {originLore?.npcAvatar ? (
-                  <img src={originLore.npcAvatar} alt={originLore.npcName} />
-                ) : (
-                  <span aria-hidden="true">
-                    {originKey ? getOriginIconFallback(originKey) : 'GA'}
-                  </span>
-                )}
+              <div className="gathering-origin-npc__stage" aria-hidden="true">
+                <div className="gathering-origin-npc__portrait">
+                  {originLore?.npcAvatar ? (
+                    <img src={originLore.npcAvatar} alt="" />
+                  ) : (
+                    <span>
+                      {originKey ? getOriginIconFallback(originKey) : 'GA'}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="gathering-origin-npc__content">
@@ -929,238 +961,255 @@ export function GatheringOriginPage() {
                   </strong>
 
                   <span className="gathering-origin-npc__role">
-                    {originLabel}
+                    Serviço de {originLabel}
                   </span>
                 </div>
 
-                <blockquote>
-                  “{originLore?.quote ??
-                    'Toda expedição deixa alguma coisa para trás. O segredo é saber o que vale carregar.'}”
-                </blockquote>
+                <h2>{originLore?.title ?? originLabel}</h2>
+
+                <blockquote>{originQuote}</blockquote>
+
+                <p>{originLore?.description ?? originDescription}</p>
+
+                <div
+                  className="gathering-origin-npc__chips"
+                  aria-label="Resumo do serviço"
+                >
+                  <span>{originLore?.riskLabel ?? 'Risco controlado'}</span>
+                  <span>{originLore?.benefitLabel ?? 'Progressão idle'}</span>
+                </div>
               </div>
             </article>
+          </section>
 
-            <section
-              className={[
-                'gathering-origin-map-context',
-                currentMapTierClassName,
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              aria-label={`Mapa atual: ${currentMapName}`}
-            >
-              <div
-                className="gathering-origin-map-context__media"
-                style={currentMapVisualStyle}
-              >
-                {!currentMapImage ? (
-                  <span aria-hidden="true">
-                    {currentMapName.slice(0, 2).toUpperCase()}
-                  </span>
-                ) : null}
+          <section
+            className="gathering-origin-flow-grid"
+            aria-label="Status da expedição"
+          >
+            <section className="gathering-origin-side-section gathering-origin-side-section--current">
+              <div className="gathering-origin-section-divider">
+                <span>Atividade atual</span>
               </div>
 
-              <div className="gathering-origin-map-context__body">
-                <span className="gathering-origin-map-context__eyebrow">
-                  Mapa atual
-                </span>
-
-                <div className="gathering-origin-map-context__title-row">
-                  <h2>{currentMapName}</h2>
-
-                  <div className="gathering-origin-map-context__chips">
-                    {currentMap?.tier ? (
-                      <span className="gathering-origin-map-context__chip gathering-origin-map-context__chip--tier">
-                        Tier {currentMap.tier}
-                      </span>
-                    ) : null}
-
-                    {currentMapLevelRangeLabel ? (
-                      <span className="gathering-origin-map-context__chip gathering-origin-map-context__chip--level">
-                        {currentMapLevelRangeLabel}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
+              <div className="gathering-card gathering-card--active gathering-origin-current-card">
+                <GatheringActivityPanel
+                  status={status}
+                  productionPreview={gatheringRealtimeState.productionPreview}
+                  gatheringSkill={gatheringSkill}
+                  isBusy={isBusy}
+                  onCollect={handleCollect}
+                  onStop={handleStop}
+                  onRefresh={handleRefreshActivity}
+                />
               </div>
             </section>
 
-            <aside className="gathering-origin-premium-card">
-              <div className="gathering-origin-premium-card__badge" aria-hidden="true">
-                i
+            <section className="gathering-origin-side-section gathering-origin-side-section--progress">
+              <div className="gathering-origin-section-divider">
+                <span>Sua proficiência</span>
               </div>
 
-              <div>
-                <h2>Aumente sua eficiência idle</h2>
-                <p>
-                  Membros premium podem receber benefícios futuros como maior
-                  tempo de expedição, fila de coleta, bônus de produção e
-                  notificações avançadas do abrigo.
-                </p>
-              </div>
+              <div
+                className={[
+                  'gathering-card',
+                  'gathering-origin-skill-card',
+                  isSkillPanelExpanded
+                    ? 'gathering-origin-skill-card--expanded'
+                    : 'gathering-origin-skill-card--collapsed',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <button
+                  type="button"
+                  className="gathering-origin-skill-card__toggle"
+                  aria-expanded={isSkillPanelExpanded}
+                  onClick={() =>
+                    setIsSkillPanelExpanded((currentValue) => !currentValue)
+                  }
+                >
+                  <span
+                    className="gathering-origin-skill-card__icon"
+                    aria-hidden="true"
+                  >
+                    {getOriginIconFallback(originKey)}
+                  </span>
 
-              <button type="button" className="gathering-origin-premium-card__button">
-                Ver benefícios
-              </button>
-            </aside>
-          </section>
+                  <span className="gathering-origin-skill-card__heading">
+                    <span>
+                      <strong>{originLabel}</strong>
+                      {!isSkillPanelExpanded ? (
+                        <em className="gathering-origin-skill-card__level-badge">
+                          {getSkillLevelLabel(gatheringSkill)}
+                        </em>
+                      ) : null}
+                    </span>
+                  </span>
 
-          <div className="gathering-origin-content-grid">
-            <main className="gathering-origin-main">
-              <section className="gathering-card gathering-card--compact gathering-origin-materials-panel">
-                <header className="gathering-card__header gathering-origin-materials-panel__header">
-                  <div className="gathering-card__title-group gathering-origin-materials-panel__title-group">
-                    <h2>Materiais deste mapa</h2>
-                  </div>
-                </header>
-
-                {isLoading ? (
-                  <div className="gathering-loading">
-                    <span className="gathering-loading__spinner" />
-                    <p>Carregando materiais...</p>
-                  </div>
-                ) : (
-                  <GatheringMaterialList
-                    materials={materials}
-                    gatheringSkill={gatheringSkill}
-                    fallbackRatePerHour={fallbackRatePerHour}
-                    selectedMaterialId={selectedMaterial?.id ?? null}
-                    activeMaterialId={
-                      isCurrentOriginActive ? activeMaterialId : null
-                    }
-                    isBusy={isBusy}
-                    onSelectMaterial={handleSelectMaterial}
-                    onStartMaterial={handleStartMaterial}
-                    onViewMaterialUsage={handleViewMaterialUsage}
+                  <span
+                    className={[
+                      'gathering-origin-skill-card__chevron',
+                      isSkillPanelExpanded
+                        ? 'gathering-origin-skill-card__chevron--expanded'
+                        : 'gathering-origin-skill-card__chevron--collapsed',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    aria-hidden="true"
                   />
-                )}
-              </section>
-            </main>
-
-            <aside className="gathering-origin-side gathering-origin-side--stacked">
-              <section className="gathering-origin-side-section gathering-origin-side-section--current">
-                <div className="gathering-origin-section-divider">
-                  <span>Atividade atual</span>
-                </div>
-
-                <div className="gathering-card gathering-card--active gathering-origin-current-card">
-                  <GatheringActivityPanel
-                    status={status}
-                    productionPreview={gatheringRealtimeState.productionPreview}
-                    gatheringSkill={gatheringSkill}
-                    isBusy={isBusy}
-                    onCollect={handleCollect}
-                    onStop={handleStop}
-                    onRefresh={handleRefreshActivity}
-                  />
-                </div>
-              </section>
-
-              <section className="gathering-origin-side-section gathering-origin-side-section--progress">
-                <div className="gathering-origin-section-divider">
-                  <span>Sua proficiência</span>
-                </div>
+                </button>
 
                 <div
+                  className="gathering-origin-skill-card__track"
+                  role="progressbar"
+                  aria-label="Progresso da proficiência"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={skillProgressPercent}
+                >
+                  <i
+                    aria-hidden="true"
+                    style={{ width: `${skillProgressPercent}%` }}
+                  />
+                </div>
+
+                {isSkillPanelExpanded ? (
+                  <div className="gathering-origin-skill-card__details">
+                    <div className="gathering-origin-skill-card__expanded-metrics">
+                      <span
+                        className="gathering-origin-skill-card__metric-level"
+                        aria-label={`Nível atual: ${getSkillLevelLabel(gatheringSkill)}`}
+                      >
+                        <em className="gathering-origin-skill-card__level-badge">
+                          {getSkillLevelLabel(gatheringSkill)}
+                        </em>
+                      </span>
+
+                      <span
+                        className="gathering-origin-skill-card__metric-progress gathering-origin-skill-card__xp-capsule"
+                        aria-label={`${getSkillXpNeededLabel(
+                          gatheringSkill,
+                        )}. Progresso: ${skillProgressPercent}%`}
+                      >
+                        <span className="gathering-origin-skill-card__xp-capsule-value">
+                          {getSkillXpNeededLabel(gatheringSkill)}
+                        </span>
+
+                        <span
+                          className="gathering-origin-skill-card__xp-capsule-percent"
+                          aria-hidden="true"
+                        >
+                          {skillProgressPercent}%
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          </section>
+
+          <main className="gathering-origin-main">
+            <section className="gathering-card gathering-card--compact gathering-origin-materials-panel">
+              <header className="gathering-origin-materials-panel__header">
+                <section
                   className={[
-                    'gathering-card',
-                    'gathering-origin-skill-card',
-                    isSkillPanelExpanded
-                      ? 'gathering-origin-skill-card--expanded'
-                      : 'gathering-origin-skill-card--collapsed',
+                    'gathering-origin-map-context',
+                    'gathering-origin-map-context--materials',
+                    currentMapTierClassName,
                   ]
                     .filter(Boolean)
                     .join(' ')}
+                  aria-label={`Mapa atual: ${currentMapName}`}
                 >
-                  <button
-                    type="button"
-                    className="gathering-origin-skill-card__toggle"
-                    aria-expanded={isSkillPanelExpanded}
-                    onClick={() =>
-                      setIsSkillPanelExpanded((currentValue) => !currentValue)
-                    }
-                  >
-                    <span
-                      className="gathering-origin-skill-card__icon"
-                      aria-hidden="true"
-                    >
-                      {getOriginIconFallback(originKey)}
-                    </span>
-
-                    <span className="gathering-origin-skill-card__heading">
-                      <span>
-                        <strong>{originLabel}</strong>
-                        {!isSkillPanelExpanded ? (
-                          <em className="gathering-origin-skill-card__level-badge">
-                            {getSkillLevelLabel(gatheringSkill)}
-                          </em>
-                        ) : null}
-                      </span>
-                    </span>
-
-                    <span
-                      className={[
-                        'gathering-origin-skill-card__chevron',
-                        isSkillPanelExpanded
-                          ? 'gathering-origin-skill-card__chevron--expanded'
-                          : 'gathering-origin-skill-card__chevron--collapsed',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      aria-hidden="true"
-                    />
-                  </button>
-
                   <div
-                    className="gathering-origin-skill-card__track"
-                    role="progressbar"
-                    aria-label="Progresso da proficiência"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={skillProgressPercent}
+                    className="gathering-origin-map-context__media"
+                    style={currentMapVisualStyle}
                   >
-                    <i
-                      aria-hidden="true"
-                      style={{ width: `${skillProgressPercent}%` }}
-                    />
+                    {!currentMapImage ? (
+                      <span aria-hidden="true">
+                        {currentMapName.slice(0, 2).toUpperCase()}
+                      </span>
+                    ) : null}
                   </div>
 
-                  {isSkillPanelExpanded ? (
-                    <div className="gathering-origin-skill-card__details">
-                      <div className="gathering-origin-skill-card__expanded-metrics">
-                        <span
-                          className="gathering-origin-skill-card__metric-level"
-                          aria-label={`Nível atual: ${getSkillLevelLabel(gatheringSkill)}`}
-                        >
-                          <em className="gathering-origin-skill-card__level-badge">
-                            {getSkillLevelLabel(gatheringSkill)}
-                          </em>
-                        </span>
+                  <div className="gathering-origin-map-context__body">
+                    <span className="gathering-origin-map-context__eyebrow">
+                      Mapa atual
+                    </span>
 
-                        <span
-                          className="gathering-origin-skill-card__metric-progress gathering-origin-skill-card__xp-capsule"
-                          aria-label={`${getSkillXpNeededLabel(
-                            gatheringSkill,
-                          )}. Progresso: ${skillProgressPercent}%`}
-                        >
-                          <span className="gathering-origin-skill-card__xp-capsule-value">
-                            {getSkillXpNeededLabel(gatheringSkill)}
-                          </span>
+                    <div className="gathering-origin-map-context__title-row">
+                      <h2>{currentMapName}</h2>
 
-                          <span
-                            className="gathering-origin-skill-card__xp-capsule-percent"
-                            aria-hidden="true"
-                          >
-                            {skillProgressPercent}%
+                      <div className="gathering-origin-map-context__chips">
+                        {currentMap?.tier ? (
+                          <span className="gathering-origin-map-context__chip gathering-origin-map-context__chip--tier">
+                            Tier {currentMap.tier}
                           </span>
-                        </span>
+                        ) : null}
+
+                        {currentMapLevelRangeLabel ? (
+                          <span className="gathering-origin-map-context__chip gathering-origin-map-context__chip--level">
+                            {currentMapLevelRangeLabel}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
-                  ) : null}
+                  </div>
+                </section>
+
+                <div className="gathering-card__title-group gathering-origin-materials-panel__title-group">
+                  <span className="gathering-card__eyebrow">Materiais</span>
+                  <h2>Materiais deste mapa</h2>
                 </div>
-              </section>
-            </aside>
-          </div>
+              </header>
+
+              {isLoading ? (
+                <div className="gathering-loading">
+                  <span className="gathering-loading__spinner" />
+                  <p>Carregando materiais...</p>
+                </div>
+              ) : (
+                <GatheringMaterialList
+                  materials={materials}
+                  gatheringSkill={gatheringSkill}
+                  fallbackRatePerHour={fallbackRatePerHour}
+                  selectedMaterialId={selectedMaterial?.id ?? null}
+                  activeMaterialId={
+                    isCurrentOriginActive ? activeMaterialId : null
+                  }
+                  isBusy={isBusy}
+                  onSelectMaterial={handleSelectMaterial}
+                  onStartMaterial={handleStartMaterial}
+                  onViewMaterialUsage={handleViewMaterialUsage}
+                />
+              )}
+            </section>
+          </main>
+
+          <aside className="gathering-origin-premium-card">
+            <div
+              className="gathering-origin-premium-card__badge"
+              aria-hidden="true"
+            >
+              i
+            </div>
+
+            <div>
+              <h2>Benefícios premium</h2>
+              <p>
+                Fila, bônus de produção e notificações avançadas para expedições
+                futuras.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="gathering-origin-premium-card__button"
+            >
+              Ver benefícios
+            </button>
+          </aside>
 
           <GatheringUsageModal
             isOpen={Boolean(usageMaterial)}
