@@ -1,11 +1,14 @@
 /* =========================================================
    GATHERING ORIGIN — LAYOUT
-   Sequência principal: Lore/NPC, Atividade atual, Proficiência, Materiais.
+   Sequência: Lore/NPC, Mapa, Premium, grid com Materiais + Status.
    ========================================================= */
 
 .gathering-origin-intro-grid,
-.gathering-origin-flow-grid,
-.gathering-origin-main {
+.gathering-origin-map-context--standalone,
+.gathering-origin-premium-card,
+.gathering-origin-content-grid,
+.gathering-origin-main,
+.gathering-origin-side {
   width: 100%;
   min-width: 0;
 }
@@ -17,44 +20,73 @@
   gap: 0.75rem;
 }
 
-.gathering-origin-flow-grid {
+.gathering-origin-content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
-  align-items: stretch;
-  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.85fr);
+  align-items: start;
+  gap: 1rem;
 }
 
 .gathering-origin-main {
   display: flex;
   flex-direction: column;
   gap: 0.86rem;
-}
-
-.gathering-origin-content-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: 0.9rem;
+  order: 1;
 }
 
 .gathering-origin-side {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+  order: 2;
 }
 
 .gathering-origin-side--stacked {
-  gap: 0.78rem;
+  gap: 1rem;
+}
+
+.gathering-origin-side-section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.46rem;
+}
+
+.gathering-origin-side-section--progress {
+  margin-top: 0.08rem;
+  padding-top: 0.1rem;
 }
 
 .gathering-origin-materials-panel {
   min-height: 0;
+  border-color: rgba(231, 227, 216, 0.1) !important;
+  background:
+    radial-gradient(
+      circle at 12% 0%,
+      rgba(232, 184, 78, 0.06),
+      transparent 18rem
+    ),
+    radial-gradient(
+      circle at 100% 18%,
+      rgba(110, 159, 67, 0.065),
+      transparent 16rem
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.01)
+    ),
+    rgba(5, 10, 8, 0.84) !important;
 }
 
 .gathering-origin-materials-panel__header {
-  display: grid;
-  grid-template-columns: minmax(300px, 0.42fr) minmax(0, 1fr);
-  align-items: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 0.82rem;
-  margin-bottom: 0.95rem;
+  margin-bottom: 0.82rem;
+  padding-bottom: 0.68rem;
+  border-bottom: 1px solid rgba(231, 227, 216, 0.075);
 }
 
 .gathering-origin-materials-panel__title-group {
@@ -62,7 +94,7 @@
   min-width: 0;
   flex-direction: column;
   justify-content: center;
-  padding: 0.42rem 0.1rem;
+  padding: 0;
 }
 
 .gathering-origin-materials-panel .gathering-card__eyebrow {
