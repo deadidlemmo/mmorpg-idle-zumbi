@@ -1788,7 +1788,7 @@ function buildIncursionItemFromOverview(params: {
     primaryMetric: isCompleted
       ? "Entregue"
       : formatRemainingTime(remainingSeconds),
-    secondaryMetric: `${toSafeNumber(session.goldCostPaid, 0).toLocaleString("pt-BR")} gold pago`,
+    secondaryMetric: `Mapa ${mapName} • Tier ${incursion?.tier ?? "—"}`,
     indicatorMetric: isCompleted
       ? "Fim"
       : `${Math.max(0, Math.floor(progressPercent))}%`,
@@ -1798,7 +1798,9 @@ function buildIncursionItemFromOverview(params: {
     href: `/dashboard/${characterId}/incursions`,
     monsterMetaLabel: `${mapName} • Tier ${incursion?.tier ?? "—"}`,
     combatMetric: isCompleted ? "Final" : "Idle",
-    killsMetric: `${toSafeNumber(session.goldCostPaid, 0).toLocaleString("pt-BR")} gold`,
+    killsMetric: isCompleted
+      ? "100%"
+      : `${Math.max(0, Math.floor(progressPercent))}%`,
     xpMetric: isCompleted
       ? "Automático"
       : formatRemainingTime(remainingSeconds),

@@ -694,21 +694,6 @@ export function IncursionsPage() {
                       </div>
                     </div>
 
-                    <div className="incursions-current-card__meta">
-                      <span>
-                        Status
-                        <strong>
-                          {activeSession.status === "ACTIVE"
-                            ? "Em andamento"
-                            : "Recompensa automática"}
-                        </strong>
-                      </span>
-                      <span>
-                        Custo pago
-                        <GoldAmount value={activeSession.goldCostPaid} />
-                      </span>
-                    </div>
-
                     <div className="incursions-current-card__progress">
                       <div>
                         <span>Progresso</span>
