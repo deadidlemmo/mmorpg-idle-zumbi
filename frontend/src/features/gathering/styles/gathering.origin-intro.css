@@ -113,45 +113,101 @@
 .gathering-origin-lore-card__portrait {
   position: relative;
   z-index: 1;
+  isolation: isolate;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  width: clamp(74px, 6vw, 88px);
-  height: clamp(74px, 6vw, 88px);
-  overflow: visible;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
+  width: clamp(92px, 7.4vw, 118px);
+  height: clamp(104px, 8vw, 126px);
+  min-width: clamp(92px, 7.4vw, 118px);
+  overflow: hidden;
+  padding: 0.34rem 0.3rem 0;
+  border: 1px solid rgba(198, 215, 139, 0.2);
+  border-radius: 0.95rem;
+  background:
+    radial-gradient(circle at 50% 22%, rgba(232, 184, 78, 0.2), transparent 39%),
+    radial-gradient(circle at 50% 74%, rgba(110, 159, 67, 0.28), transparent 62%),
+    linear-gradient(180deg, rgba(29, 42, 20, 0.92), rgba(8, 18, 13, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 246, 205, 0.1),
+    inset 0 -22px 34px rgba(0, 0, 0, 0.34),
+    0 12px 28px rgba(0, 0, 0, 0.22),
+    0 0 22px rgba(132, 174, 78, 0.1);
+}
+
+.gathering-origin-npc__portrait::before,
+.gathering-origin-lore-card__portrait::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(180, 220, 112, 0.22), transparent 48%),
+    linear-gradient(90deg, transparent 0 18%, rgba(255, 246, 205, 0.045) 48%, transparent 80%),
+    repeating-linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.035) 0 1px,
+      transparent 1px 10px
+    );
+  opacity: 0.78;
+}
+
+.gathering-origin-npc__portrait::after,
+.gathering-origin-lore-card__portrait::after {
+  content: '';
+  position: absolute;
+  right: 0.42rem;
+  bottom: 0;
+  left: 0.42rem;
+  z-index: 1;
+  height: 28%;
+  pointer-events: none;
+  border-radius: 999px 999px 0 0;
+  background:
+    radial-gradient(ellipse at center, rgba(232, 184, 78, 0.2), transparent 66%),
+    linear-gradient(180deg, rgba(127, 151, 73, 0.18), rgba(0, 0, 0, 0.22));
+  box-shadow:
+    0 -8px 18px rgba(232, 184, 78, 0.06),
+    inset 0 1px 0 rgba(255, 238, 174, 0.08);
 }
 
 .gathering-origin-npc__portrait img,
 .gathering-origin-lore-card__portrait img {
+  position: relative;
+  z-index: 2;
   display: block;
-  width: 100%;
+  width: min(100%, 104px);
   height: 100%;
+  max-width: 100%;
   object-fit: contain;
   object-position: center bottom;
-  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.36));
+  filter:
+    drop-shadow(0 12px 12px rgba(0, 0, 0, 0.46))
+    drop-shadow(0 0 12px rgba(185, 214, 110, 0.1));
 }
 
 .gathering-origin-npc__portrait span,
 .gathering-origin-lore-card__portrait span {
+  position: relative;
+  z-index: 2;
   display: grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 0.72rem;
   color: #ffe59b;
   font-family: var(--font-title);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.045em;
-  border: 1px solid rgba(232, 184, 78, 0.15);
-  border-radius: 0.8rem;
+  border: 1px solid rgba(232, 184, 78, 0.22);
+  border-radius: 0.82rem;
   background:
-    radial-gradient(circle at 50% 35%, rgba(232, 184, 78, 0.15), transparent 68%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.052), transparent),
-    rgba(5, 9, 8, 0.55);
+    radial-gradient(circle at 50% 35%, rgba(232, 184, 78, 0.2), transparent 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.072), transparent),
+    rgba(5, 9, 8, 0.62);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
 }
 
 .gathering-origin-npc__content,
