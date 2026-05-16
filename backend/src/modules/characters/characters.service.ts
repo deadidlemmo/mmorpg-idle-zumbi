@@ -960,12 +960,7 @@ export class CharactersService {
       this.prisma.characterIncursionSession.findFirst({
         where: {
           characterId: character.id,
-          status: {
-            in: [
-              IncursionSessionStatus.ACTIVE,
-              IncursionSessionStatus.COMPLETED,
-            ],
-          },
+          status: IncursionSessionStatus.ACTIVE,
         },
         orderBy: {
           startedAt: 'desc',
@@ -1284,7 +1279,7 @@ export class CharactersService {
         0,
         Math.ceil((session.endsAt.getTime() - now.getTime()) / 1000),
       ),
-      canClaim: effectiveStatus === IncursionSessionStatus.COMPLETED,
+      canClaim: false,
     };
   }
 

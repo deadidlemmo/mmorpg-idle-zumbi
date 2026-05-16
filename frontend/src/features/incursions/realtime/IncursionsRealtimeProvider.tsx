@@ -61,6 +61,7 @@ const INCURSION_STATUS_EVENTS = [
   "incursion:started",
   "incursion:progress",
   "incursion:completed",
+  "incursion:rewarded",
   "incursion:claimed",
   "incursion:cancelled",
 ] as const;
@@ -106,28 +107,25 @@ function extractApiError(error: unknown) {
   return "Não foi possível atualizar as incursões.";
 }
 
-function getPayloadSession(payload: unknown) {
-  const record = payload as IncursionSocketPayload | null | undefined;
-
-  return record?.activeSession ?? record?.session ?? null;
-}
-
 function buildStatusFromPayload(
   payload: unknown,
 ): IncursionStatusResponse | null {
-  const session = getPayloadSession(payload);
+  const record = payload as IncursionSocketPayload | null | undefined;
 
-  if (!session) {
-    const record = payload as IncursionSocketPayload | null | undefined;
+  if (!record) return null;
 
-    if (record && "activeSession" in record) {
-      return { activeSession: null };
-    }
-
-    return null;
+  if ("activeSession" in record) {
+    return {
+      activeSession: record.activeSession ?? null,
+      rewardedSession: record.rewardedSession ?? null,
+    };
   }
 
-  return { activeSession: session };
+  if (record.session) {
+    return { activeSession: record.session };
+  }
+
+  return null;
 }
 
 function getLiveSession(session: IncursionSession | null, nowMs: number) {
@@ -150,7 +148,7 @@ function getLiveSession(session: IncursionSession | null, nowMs: number) {
       session.status === "ACTIVE" && isCompleted ? "COMPLETED" : session.status,
     remainingSeconds: Math.max(0, Math.ceil((endsAtMs - nowMs) / 1000)),
     progressPercent: Math.round((elapsedMs / totalMs) * 100),
-    canClaim: session.canClaim || isCompleted,
+    canClaim: false,
   } satisfies IncursionSession;
 }
 

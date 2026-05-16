@@ -77,30 +77,38 @@ export class IncursionsService {
 
   async listAvailable(userId: string, characterId: string) {
     const character = await this.getCharacterOrThrow(userId, characterId);
-    const [incursions, activeSession, activityState] = await Promise.all([
+    const now = new Date();
+    const sessionState = await this.resolveOpenSession(characterId, now);
+    const refreshedCharacter = sessionState.rewardedSession
+      ? await this.getCharacterOrThrow(userId, characterId)
+      : character;
+
+    const [incursions, activityState] = await Promise.all([
       this.prisma.incursion.findMany({
         where: {
           isActive: true,
-          mapId: character.mapId ?? '__sem-mapa-atual__',
+          mapId: refreshedCharacter.mapId ?? '__sem-mapa-atual__',
         },
         orderBy: [{ tier: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
         include: incursionInclude,
       }),
-      this.getActiveOrCompletedSession(characterId),
       this.activityGuard.getCharacterActivityState({ characterId, userId }),
     ]);
 
     return {
-      character: this.formatCharacterWallet(character),
-      currentMap: character.map,
-      activeSession: activeSession
-        ? this.formatSession(activeSession, new Date())
+      character: this.formatCharacterWallet(refreshedCharacter),
+      currentMap: refreshedCharacter.map,
+      activeSession: sessionState.activeSession
+        ? this.formatSession(sessionState.activeSession, now)
+        : null,
+      rewardedSession: sessionState.rewardedSession
+        ? this.formatSession(sessionState.rewardedSession, now)
         : null,
       incursions: incursions.map((incursion) =>
         this.formatAvailableIncursion(
           incursion,
-          character,
-          activeSession,
+          refreshedCharacter,
+          sessionState.activeSession,
           activityState,
         ),
       ),
@@ -110,20 +118,29 @@ export class IncursionsService {
   async getStatus(userId: string, characterId: string) {
     await this.getCharacterOrThrow(userId, characterId);
 
-    const session = await this.getActiveOrCompletedSession(characterId);
+    const now = new Date();
+    const sessionState = await this.resolveOpenSession(characterId, now);
 
     return {
-      activeSession: session ? this.formatSession(session, new Date()) : null,
+      activeSession: sessionState.activeSession
+        ? this.formatSession(sessionState.activeSession, now)
+        : null,
+      rewardedSession: sessionState.rewardedSession
+        ? this.formatSession(sessionState.rewardedSession, now)
+        : null,
     };
   }
 
   async start(userId: string, dto: StartIncursionDto) {
-    const character = await this.getCharacterOrThrow(userId, dto.characterId);
+    await this.getCharacterOrThrow(userId, dto.characterId);
+    await this.resolveOpenSession(dto.characterId, new Date());
 
     await this.activityGuard.ensureCanStartIncursion({
       characterId: dto.characterId,
       userId,
     });
+
+    const character = await this.getCharacterOrThrow(userId, dto.characterId);
 
     const incursion = await this.prisma.incursion.findUnique({
       where: { id: dto.incursionId },
@@ -161,7 +178,7 @@ export class IncursionsService {
 
       if (activeIncursion) {
         throw new ConflictException(
-          'Este personagem já possui uma incursão ativa ou pendente de coleta.',
+          'Este personagem já possui uma incursão ativa.',
         );
       }
 
@@ -205,153 +222,23 @@ export class IncursionsService {
   async claim(userId: string, dto: ClaimIncursionDto) {
     await this.getCharacterOrThrow(userId, dto.characterId);
     const now = new Date();
-
-    const result = await this.prisma.$transaction(async (tx) => {
-      const session = await tx.characterIncursionSession.findFirst({
-        where: {
-          id: dto.sessionId,
-          characterId: dto.characterId,
-        },
-        include: this.sessionInclude(),
-      });
-
-      if (!session) {
-        throw new NotFoundException('Sessão de incursão não encontrada.');
-      }
-
-      if (session.status === IncursionSessionStatus.CLAIMED) {
-        throw new ConflictException(
-          'As recompensas desta incursão já foram coletadas.',
-        );
-      }
-
-      if (
-        session.status !== IncursionSessionStatus.ACTIVE &&
-        session.status !== IncursionSessionStatus.COMPLETED
-      ) {
-        throw new BadRequestException(
-          'Esta incursão não está disponível para coleta.',
-        );
-      }
-
-      if (session.endsAt.getTime() > now.getTime()) {
-        throw new BadRequestException('A incursão ainda não terminou.');
-      }
-
-      const rewards = this.rollRewards(session.incursion.lootTable);
-      const xpReward = rewards
-        .filter((reward) => reward.rewardType === IncursionRewardType.XP)
-        .reduce((total, reward) => total + reward.quantity, 0);
-      const goldReward = rewards
-        .filter((reward) => reward.rewardType === IncursionRewardType.GOLD)
-        .reduce((total, reward) => total + reward.quantity, 0);
-
-      const claim = await tx.characterIncursionSession.updateMany({
-        where: {
-          id: session.id,
-          characterId: dto.characterId,
-          status: {
-            in: [
-              IncursionSessionStatus.ACTIVE,
-              IncursionSessionStatus.COMPLETED,
-            ],
-          },
-          claimedAt: null,
-        },
-        data: {
-          status: IncursionSessionStatus.CLAIMED,
-          completedAt: session.completedAt ?? now,
-          claimedAt: now,
-          xpReward,
-          goldReward,
-          generatedRewardsJson: rewards,
-        },
-      });
-
-      if (claim.count <= 0) {
-        throw new ConflictException(
-          'Esta incursão já foi coletada ou atualizada por outra ação.',
-        );
-      }
-
-      const character = await tx.character.findUniqueOrThrow({
-        where: { id: dto.characterId },
-        select: { level: true, xp: true },
-      });
-
-      const levelProgress = calculateLevelProgress(
-        character.level,
-        character.xp,
-        xpReward,
-      );
-
-      await tx.character.update({
-        where: { id: dto.characterId },
-        data: {
-          level: levelProgress.newLevel,
-          xp: levelProgress.totalXp,
-          gold: { increment: goldReward },
-        },
-      });
-
-      for (const reward of rewards) {
-        await tx.incursionSessionReward.create({
-          data: {
-            sessionId: session.id,
-            rewardType: reward.rewardType,
-            itemId: reward.itemId,
-            quantity: reward.quantity,
-            rarity: reward.rarity,
-          },
-        });
-
-        if (reward.itemId && reward.quantity > 0) {
-          await tx.inventoryItem.upsert({
-            where: {
-              characterId_itemId: {
-                characterId: dto.characterId,
-                itemId: reward.itemId,
-              },
-            },
-            update: {
-              quantity: { increment: reward.quantity },
-              type: reward.inventoryType,
-            },
-            create: {
-              characterId: dto.characterId,
-              itemId: reward.itemId,
-              quantity: reward.quantity,
-              type: reward.inventoryType,
-            },
-          });
-        }
-      }
-
-      const updatedSession =
-        await tx.characterIncursionSession.findUniqueOrThrow({
-          where: { id: session.id },
-          include: this.sessionInclude(),
-        });
-
-      return { session: updatedSession, rewards, levelProgress };
-    });
-
-    return {
-      message: 'Recompensas da incursão coletadas.',
-      session: this.formatSession(result.session, now),
-      xpGained: result.levelProgress.gainedXp,
-      goldGained: result.session.goldReward,
-      goldSpent: result.session.goldCostPaid,
-      levelUp: {
-        leveledUp: result.levelProgress.leveledUp,
-        levelsGained: result.levelProgress.levelsGained,
-        oldLevel: result.levelProgress.oldLevel,
-        newLevel: result.levelProgress.newLevel,
+    const result = await this.rewardSession(
+      dto.sessionId,
+      dto.characterId,
+      now,
+      {
+        requireFinished: true,
+        notFoundMessage: 'Sessão de incursão não encontrada.',
+        alreadyRewardedMessage:
+          'As recompensas desta incursão já foram entregues.',
       },
-      rewards: result.rewards.map((reward) =>
-        this.formatGeneratedReward(reward),
-      ),
-    };
+    );
+
+    return this.formatRewardResult(
+      result,
+      now,
+      'Recompensas da incursão entregues.',
+    );
   }
 
   async cancel(userId: string, characterId: string) {
@@ -419,7 +306,7 @@ export class IncursionsService {
     return character;
   }
 
-  private async getActiveOrCompletedSession(characterId: string) {
+  private async resolveOpenSession(characterId: string, now = new Date()) {
     const session = await this.prisma.characterIncursionSession.findFirst({
       where: {
         characterId,
@@ -431,22 +318,199 @@ export class IncursionsService {
       include: this.sessionInclude(),
     });
 
-    if (
-      !session ||
-      session.status !== IncursionSessionStatus.ACTIVE ||
-      session.endsAt.getTime() > Date.now()
-    ) {
-      return session;
+    if (!session) {
+      return { activeSession: null, rewardedSession: null };
     }
 
-    return this.prisma.characterIncursionSession.update({
-      where: { id: session.id },
-      data: {
-        status: IncursionSessionStatus.COMPLETED,
-        completedAt: session.endsAt,
-      },
-      include: this.sessionInclude(),
+    const hasFinished = session.endsAt.getTime() <= now.getTime();
+    const mustAutoReward =
+      (session.status === IncursionSessionStatus.ACTIVE && hasFinished) ||
+      session.status === IncursionSessionStatus.COMPLETED;
+
+    if (!mustAutoReward) {
+      return { activeSession: session, rewardedSession: null };
+    }
+
+    const result = await this.rewardSession(session.id, characterId, now, {
+      requireFinished: false,
     });
+
+    return { activeSession: null, rewardedSession: result.session };
+  }
+
+  private async rewardSession(
+    sessionId: string,
+    characterId: string,
+    now: Date,
+    options: {
+      requireFinished?: boolean;
+      notFoundMessage?: string;
+      alreadyRewardedMessage?: string;
+    } = {},
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const session = await tx.characterIncursionSession.findFirst({
+        where: {
+          id: sessionId,
+          characterId,
+        },
+        include: this.sessionInclude(),
+      });
+
+      if (!session) {
+        throw new NotFoundException(
+          options.notFoundMessage ?? 'Sessão de incursão não encontrada.',
+        );
+      }
+
+      if (session.status === IncursionSessionStatus.CLAIMED) {
+        throw new ConflictException(
+          options.alreadyRewardedMessage ??
+            'As recompensas desta incursão já foram entregues.',
+        );
+      }
+
+      if (
+        session.status !== IncursionSessionStatus.ACTIVE &&
+        session.status !== IncursionSessionStatus.COMPLETED
+      ) {
+        throw new BadRequestException(
+          'Esta incursão não está disponível para recompensa.',
+        );
+      }
+
+      if (
+        options.requireFinished !== false &&
+        session.endsAt.getTime() > now.getTime()
+      ) {
+        throw new BadRequestException('A incursão ainda não terminou.');
+      }
+
+      const effectiveCompletedAt = session.completedAt ?? session.endsAt;
+      const rewards = this.rollRewards(session.incursion.lootTable);
+      const xpReward = rewards
+        .filter((reward) => reward.rewardType === IncursionRewardType.XP)
+        .reduce((total, reward) => total + reward.quantity, 0);
+      const goldReward = rewards
+        .filter((reward) => reward.rewardType === IncursionRewardType.GOLD)
+        .reduce((total, reward) => total + reward.quantity, 0);
+
+      const claim = await tx.characterIncursionSession.updateMany({
+        where: {
+          id: session.id,
+          characterId,
+          status: {
+            in: [
+              IncursionSessionStatus.ACTIVE,
+              IncursionSessionStatus.COMPLETED,
+            ],
+          },
+          claimedAt: null,
+        },
+        data: {
+          status: IncursionSessionStatus.CLAIMED,
+          completedAt: effectiveCompletedAt,
+          claimedAt: now,
+          xpReward,
+          goldReward,
+          generatedRewardsJson: rewards,
+        },
+      });
+
+      if (claim.count <= 0) {
+        throw new ConflictException(
+          'Esta incursão já foi recompensada ou atualizada por outra ação.',
+        );
+      }
+
+      const character = await tx.character.findUniqueOrThrow({
+        where: { id: characterId },
+        select: { level: true, xp: true },
+      });
+
+      const levelProgress = calculateLevelProgress(
+        character.level,
+        character.xp,
+        xpReward,
+      );
+
+      await tx.character.update({
+        where: { id: characterId },
+        data: {
+          level: levelProgress.newLevel,
+          xp: levelProgress.totalXp,
+          gold: { increment: goldReward },
+        },
+      });
+
+      for (const reward of rewards) {
+        await tx.incursionSessionReward.create({
+          data: {
+            sessionId: session.id,
+            rewardType: reward.rewardType,
+            itemId: reward.itemId,
+            quantity: reward.quantity,
+            rarity: reward.rarity,
+          },
+        });
+
+        if (reward.itemId && reward.quantity > 0) {
+          await tx.inventoryItem.upsert({
+            where: {
+              characterId_itemId: {
+                characterId,
+                itemId: reward.itemId,
+              },
+            },
+            update: {
+              quantity: { increment: reward.quantity },
+              type: reward.inventoryType,
+            },
+            create: {
+              characterId,
+              itemId: reward.itemId,
+              quantity: reward.quantity,
+              type: reward.inventoryType,
+            },
+          });
+        }
+      }
+
+      const updatedSession =
+        await tx.characterIncursionSession.findUniqueOrThrow({
+          where: { id: session.id },
+          include: this.sessionInclude(),
+        });
+
+      return { session: updatedSession, rewards, levelProgress };
+    });
+  }
+
+  private formatRewardResult(
+    result: {
+      session: any;
+      rewards: ReturnType<IncursionsService['rollRewards']>;
+      levelProgress: ReturnType<typeof calculateLevelProgress>;
+    },
+    now: Date,
+    message: string,
+  ) {
+    return {
+      message,
+      session: this.formatSession(result.session, now),
+      xpGained: result.levelProgress.gainedXp,
+      goldGained: result.session.goldReward,
+      goldSpent: result.session.goldCostPaid,
+      levelUp: {
+        leveledUp: result.levelProgress.leveledUp,
+        levelsGained: result.levelProgress.levelsGained,
+        oldLevel: result.levelProgress.oldLevel,
+        newLevel: result.levelProgress.newLevel,
+      },
+      rewards: result.rewards.map((reward) =>
+        this.formatGeneratedReward(reward),
+      ),
+    };
   }
 
   private sessionInclude() {
@@ -625,7 +689,7 @@ export class IncursionsService {
     if (character.gold < incursion.goldCost)
       lockedReasons.push('Gold insuficiente');
     if (activeSession || activityState?.hasActiveIncursion)
-      lockedReasons.push('Já existe incursão ativa ou pendente');
+      lockedReasons.push('Já existe incursão ativa');
     if (activityState?.hasActiveAutoCombat)
       lockedReasons.push('Auto-combate em andamento');
     if (activityState?.hasActiveGathering)
@@ -686,7 +750,7 @@ export class IncursionsService {
         0,
         Math.ceil((session.endsAt.getTime() - now.getTime()) / 1000),
       ),
-      canClaim: effectiveStatus === IncursionSessionStatus.COMPLETED,
+      canClaim: false,
       incursion: this.formatIncursion(session.incursion),
       rewards: (session.rewards ?? []).map((reward: any) => ({
         id: reward.id,

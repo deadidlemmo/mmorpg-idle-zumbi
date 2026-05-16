@@ -1,22 +1,24 @@
 import { isAxiosError } from "axios";
 import {
   ArrowRight,
-  CheckCircle2,
   Clock,
   Coins,
   Lock,
-  MapPin,
   PackageOpen,
-  Radar,
   ShieldAlert,
   Sparkles,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { normalizeClassName } from "../../characters/api/characters.api";
+import {
+  buildMapVisualStyle,
+  getMapImageByName,
+} from "../../auto-combat/assets/auto-combat-map-assets";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import "../../dashboard/dashboard.css";
+import "../../gathering/styles/gathering.css";
 import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
@@ -25,7 +27,6 @@ import { getAvailableIncursions } from "../api/incursions.api";
 import { useIncursionsRealtime } from "../realtime/useIncursionsRealtime";
 import "../styles/incursions.css";
 import type {
-  ClaimIncursionResponse,
   Incursion,
   IncursionLootPreview,
   IncursionsAvailableResponse,
@@ -91,6 +92,33 @@ function formatReward(loot: IncursionLootPreview) {
   return `${loot.item?.name ?? loot.rewardType} x${quantity} • ${chance}`;
 }
 
+function formatMapLevelRange(
+  map?: { minLevel?: number | null; maxLevel?: number | null } | null,
+): string | null {
+  const minLevel = Number(map?.minLevel);
+  const maxLevel = Number(map?.maxLevel);
+  const hasMinLevel = Number.isFinite(minLevel) && minLevel > 0;
+  const hasMaxLevel = Number.isFinite(maxLevel) && maxLevel > 0;
+
+  if (hasMinLevel && hasMaxLevel) return `Nv. ${minLevel}–${maxLevel}`;
+  if (hasMinLevel) return `A partir do Nv. ${minLevel}`;
+  if (hasMaxLevel) return `Até Nv. ${maxLevel}`;
+
+  return null;
+}
+
+function getMapTierClassName(tier?: number | null): string {
+  const safeTier = Number(tier);
+
+  if (!Number.isFinite(safeTier)) return "gathering-map-tier--common";
+  if (safeTier >= 9) return "gathering-map-tier--legendary";
+  if (safeTier >= 7) return "gathering-map-tier--epic";
+  if (safeTier >= 5) return "gathering-map-tier--rare";
+  if (safeTier >= 3) return "gathering-map-tier--uncommon";
+
+  return "gathering-map-tier--common";
+}
+
 function getDifficultyLabel(difficulty: string) {
   const labels: Record<string, string> = {
     LOW: "Baixa",
@@ -129,12 +157,7 @@ function getIncursionStatusLabel(params: {
 
 export function IncursionsPage() {
   const { characterId } = useParams();
-  const {
-    state: realtimeState,
-    start,
-    claim,
-    refresh,
-  } = useIncursionsRealtime();
+  const { state: realtimeState, start } = useIncursionsRealtime();
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
@@ -146,8 +169,6 @@ export function IncursionsPage() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [claimSummary, setClaimSummary] =
-    useState<ClaimIncursionResponse | null>(null);
 
   const loadData = useCallback(async () => {
     if (!characterId) return;
@@ -182,6 +203,16 @@ export function IncursionsPage() {
     void load();
   }, [characterId, loadData]);
 
+  useEffect(() => {
+    if (!characterId || !data?.activeSession || realtimeState.session) return;
+
+    const timeoutId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [characterId, data?.activeSession, loadData, realtimeState.session]);
+
   const activeSession = realtimeState.session ?? data?.activeSession ?? null;
   const incursions = data?.incursions ?? [];
   const selectedIncursion =
@@ -193,7 +224,11 @@ export function IncursionsPage() {
     selectedIncursion?.map ??
     activeSession?.incursion.map ??
     null;
-  const gold = data?.character.gold ?? 0;
+  const currentMapName = currentMap?.name ?? "Mapa não definido";
+  const currentMapImage = getMapImageByName(currentMapName);
+  const currentMapVisualStyle = buildMapVisualStyle(currentMapImage);
+  const currentMapTierClassName = getMapTierClassName(currentMap?.tier);
+  const currentMapLevelRangeLabel = formatMapLevelRange(currentMap);
   const hasBlockingActivity = incursions.some((incursion) =>
     (incursion.lockedReasons ?? []).some((reason) =>
       /auto-combate|gathering|atividade/i.test(reason),
@@ -218,31 +253,11 @@ export function IncursionsPage() {
     setActionId(incursionId);
     setErrorMessage(null);
     setSuccessMessage(null);
-    setClaimSummary(null);
 
     try {
       const response = await start(incursionId);
       if (response?.message) setSuccessMessage(response.message);
       await loadData();
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-    } finally {
-      setActionId(null);
-    }
-  }
-
-  async function handleClaim(sessionId: string) {
-    setActionId(sessionId);
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
-    try {
-      const response = await claim(sessionId);
-      if (response) {
-        setClaimSummary(response);
-        setSuccessMessage(response.message);
-      }
-      await Promise.all([loadData(), refresh()]);
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -264,32 +279,52 @@ export function IncursionsPage() {
               acompanhe tudo pela Activity Bar global em tempo real.
             </p>
           </div>
-
-          <div className="incursions-hero__status">
-            <div className="incursions-wallet">
-              <Coins size={18} />
-              <span>Gold</span>
-              <strong>{gold.toLocaleString("pt-BR")}</strong>
-            </div>
-            <div
-              className="incursions-socket-pill"
-              data-online={realtimeState.isSocketConnected}
-            >
-              <Radar size={16} />
-              {realtimeState.isSocketConnected
-                ? "Realtime conectado"
-                : "Fallback por status"}
-            </div>
-          </div>
         </section>
 
-        <section className="incursions-current-map">
-          <MapPin size={20} />
-          <div>
-            <span>Mapa atual</span>
-            <strong>{currentMap?.name ?? "Mapa não definido"}</strong>
+        <section
+          className={[
+            "gathering-origin-map-context",
+            "gathering-origin-map-context--standalone",
+            currentMapTierClassName,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          aria-label={`Mapa atual: ${currentMapName}`}
+        >
+          <div
+            className="gathering-origin-map-context__media"
+            style={currentMapVisualStyle}
+          >
+            {!currentMapImage ? (
+              <span aria-hidden="true">
+                {currentMapName.slice(0, 2).toUpperCase()}
+              </span>
+            ) : null}
           </div>
-          <em>Tier {currentMap?.tier ?? "—"}</em>
+
+          <div className="gathering-origin-map-context__body">
+            <span className="gathering-origin-map-context__eyebrow">
+              Mapa atual
+            </span>
+
+            <div className="gathering-origin-map-context__title-row">
+              <h2>{currentMapName}</h2>
+
+              <div className="gathering-origin-map-context__chips">
+                {currentMap?.tier ? (
+                  <span className="gathering-origin-map-context__chip gathering-origin-map-context__chip--tier">
+                    Tier {currentMap.tier}
+                  </span>
+                ) : null}
+
+                {currentMapLevelRangeLabel ? (
+                  <span className="gathering-origin-map-context__chip gathering-origin-map-context__chip--level">
+                    {currentMapLevelRangeLabel}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </div>
         </section>
 
         {errorMessage || realtimeState.errorMessage ? (
@@ -312,17 +347,13 @@ export function IncursionsPage() {
         {activeSession ? (
           <section className="incursions-active">
             <div className="incursions-active__icon">
-              {activeSession.canClaim ? (
-                <CheckCircle2 size={26} />
-              ) : (
-                <ShieldAlert size={26} />
-              )}
+              <ShieldAlert size={26} />
             </div>
             <div>
               <span>
-                {activeSession.canClaim
-                  ? "Coleta disponível"
-                  : "Incursão ativa"}
+                {activeSession.status === "ACTIVE"
+                  ? "Incursão ativa"
+                  : "Finalizando recompensas"}
               </span>
               <h2>{activeSession.incursion.name}</h2>
               <p>
@@ -339,39 +370,10 @@ export function IncursionsPage() {
             </div>
             <div className="incursions-active__actions">
               <strong>
-                {activeSession.canClaim
-                  ? "Recompensas pendentes"
-                  : `Termina em ${formatRemaining(activeSession.remainingSeconds)}`}
+                {activeSession.status === "ACTIVE"
+                  ? `Termina em ${formatRemaining(activeSession.remainingSeconds)}`
+                  : "Entregando automaticamente"}
               </strong>
-              <button
-                type="button"
-                disabled={
-                  !activeSession.canClaim || actionId === activeSession.id
-                }
-                onClick={() => void handleClaim(activeSession.id)}
-              >
-                {actionId === activeSession.id
-                  ? "Coletando..."
-                  : "Coletar recompensas"}
-              </button>
-            </div>
-          </section>
-        ) : null}
-
-        {claimSummary ? (
-          <section className="incursions-claim-summary">
-            <h2>Resumo da coleta</h2>
-            <p>
-              EXP: {claimSummary.xpGained.toLocaleString("pt-BR")} • Gold:{" "}
-              {claimSummary.goldGained.toLocaleString("pt-BR")}
-            </p>
-            <div>
-              {claimSummary.rewards.map((reward, index) => (
-                <span key={`${reward.rewardType}-${reward.itemId ?? index}`}>
-                  {reward.itemName ?? reward.item?.name ?? reward.rewardType} x
-                  {reward.quantity}
-                </span>
-              ))}
             </div>
           </section>
         ) : null}

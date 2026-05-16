@@ -1774,28 +1774,30 @@ function buildIncursionItemFromOverview(params: {
     icon: "⌬",
     title,
     description: isCompleted
-      ? "Incursão concluída. Recompensas pendentes de coleta."
+      ? "Incursão concluída. Recompensas entregues automaticamente."
       : `${mapName} • termina em ${formatRemainingTime(remainingSeconds)}`,
-    progressLabel: isCompleted ? "Coleta disponível" : "Tempo restante",
+    progressLabel: isCompleted ? "Concluída" : "Tempo restante",
     progressPercent: isCompleted ? 100 : progressPercent,
     progressValueLabel: isCompleted
-      ? "Pronta"
+      ? "Finalizada"
       : formatRemainingTime(remainingSeconds),
     primaryMetric: isCompleted
-      ? "Coletar"
+      ? "Entregue"
       : formatRemainingTime(remainingSeconds),
     secondaryMetric: `${toSafeNumber(session.goldCostPaid, 0).toLocaleString("pt-BR")} gold pago`,
     indicatorMetric: isCompleted
-      ? "Pronta"
+      ? "Fim"
       : `${Math.max(0, Math.floor(progressPercent))}%`,
     indicatorLabel: isCompleted
-      ? "Incursão pronta para coleta"
+      ? "Incursão concluída"
       : "Progresso da incursão",
     href: `/dashboard/${characterId}/incursions`,
     monsterMetaLabel: `${mapName} • Tier ${incursion?.tier ?? "—"}`,
-    combatMetric: isCompleted ? "Coleta" : "Idle",
+    combatMetric: isCompleted ? "Final" : "Idle",
     killsMetric: `${toSafeNumber(session.goldCostPaid, 0).toLocaleString("pt-BR")} gold`,
-    xpMetric: isCompleted ? "Pendente" : formatRemainingTime(remainingSeconds),
+    xpMetric: isCompleted
+      ? "Automático"
+      : formatRemainingTime(remainingSeconds),
   };
 }
 
