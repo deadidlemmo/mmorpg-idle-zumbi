@@ -67,7 +67,7 @@
 
 .incursions-hero__eyebrow,
 .incursions-current-card span,
-.incursions-modal__title-group span {
+.incursions-modal__eyebrow {
   color: #9eab94;
   font-size: 0.76rem;
   letter-spacing: 0.08em;
@@ -518,6 +518,14 @@
     opacity 160ms ease;
 }
 
+.incursions-button-label {
+  display: inline-flex;
+}
+
+.incursions-button-label--mobile {
+  display: none;
+}
+
 .incursions-primary-button {
   border: 0;
   background: linear-gradient(135deg, #7da04e, #c7a24b);
@@ -600,11 +608,8 @@
 }
 
 .incursions-modal__hero {
-  display: grid;
-  grid-template-columns: minmax(220px, 0.44fr) minmax(0, 1fr) auto;
-  gap: clamp(0.9rem, 2vw, 1.25rem);
-  align-items: stretch;
-  padding: clamp(0.9rem, 2vw, 1.18rem);
+  position: relative;
+  padding: clamp(0.72rem, 1.8vw, 1rem);
   border-bottom: 1px solid rgba(231, 227, 216, 0.08);
   background:
     radial-gradient(
@@ -615,36 +620,129 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent);
 }
 
-.incursions-modal__hero .incursion-art {
-  min-height: clamp(12rem, 26vw, 16rem);
+.incursions-modal__banner {
+  position: relative;
+  display: grid;
+  min-height: clamp(18rem, 38vw, 25rem);
+  overflow: hidden;
   border: 1px solid
     color-mix(
       in srgb,
-      var(--incursion-tier-color, #d9d8d1) 32%,
+      var(--incursion-tier-color, #d9d8d1) 34%,
       rgba(255, 255, 255, 0.1)
     );
-  border-radius: 1.08rem;
+  border-radius: 1.12rem;
+  background-color: rgba(10, 14, 12, 0.94);
+  background-position: center;
+  background-size: cover;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    0 18px 42px rgba(0, 0, 0, 0.26),
-    0 0 24px var(--incursion-tier-glow, rgba(217, 216, 209, 0.1));
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 20px 50px rgba(0, 0, 0, 0.32),
+    0 0 26px var(--incursion-tier-glow, rgba(217, 216, 209, 0.1));
 }
 
-.incursions-modal__title-group {
-  display: grid;
-  align-content: center;
-  gap: 0.5rem;
+.incursions-modal__banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at 82% 8%,
+      var(--incursion-tier-glow, rgba(217, 216, 209, 0.18)),
+      transparent 15rem
+    ),
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.1) 0%,
+      rgba(0, 0, 0, 0.38) 42%,
+      rgba(0, 0, 0, 0.86) 100%
+    ),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.76), transparent 58%);
+  pointer-events: none;
 }
 
-.incursions-modal__title-group h2 {
+.incursions-modal__banner-overlay {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.64rem;
+  padding: clamp(1rem, 3vw, 1.45rem);
+}
+
+.incursions-modal__banner-fallback {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  color: rgba(255, 248, 232, 0.18);
   font-family: var(--font-title);
-  font-size: clamp(1.55rem, 3.4vw, 2.45rem);
+  font-size: clamp(4rem, 14vw, 8rem);
   font-weight: 950;
-  line-height: 1.02;
+  letter-spacing: 0.04em;
+  transform: translate(-50%, -50%);
+}
+
+.incursions-modal__eyebrow {
+  color: color-mix(in srgb, var(--incursion-tier-color, #d9d8d1) 76%, #ffffff);
+  font-weight: 950;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.74);
+}
+
+.incursions-modal__banner h2 {
+  max-width: 13ch;
+  font-family: var(--font-title);
+  font-size: clamp(2.05rem, 5vw, 4.2rem);
+  font-weight: 950;
+  line-height: 0.94;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.82);
   text-wrap: balance;
 }
 
+.incursions-modal__hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.46rem;
+}
+
+.incursions-modal__hero-chips > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 1.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  background: rgba(0, 0, 0, 0.42);
+  color: #fff8e8;
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(8px);
+}
+
+.incursions-modal__hero-chip--tier {
+  border-color: color-mix(
+    in srgb,
+    var(--incursion-tier-color, #d9d8d1) 44%,
+    rgba(255, 255, 255, 0.14)
+  ) !important;
+  background:
+    var(--incursion-tier-bg, rgba(217, 216, 209, 0.08)), rgba(0, 0, 0, 0.46) !important;
+  color: color-mix(
+    in srgb,
+    var(--incursion-tier-color, #d9d8d1) 88%,
+    #ffffff
+  ) !important;
+}
+
 .incursions-modal__close {
+  position: absolute;
+  top: clamp(1rem, 2.4vw, 1.3rem);
+  right: clamp(1rem, 2.4vw, 1.3rem);
+  z-index: 2;
   width: 2.25rem;
   height: 2.25rem;
   display: grid;
@@ -1016,21 +1114,21 @@
   }
 
   .incursions-modal__hero {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.72rem;
-    padding: 0.78rem;
+    padding: 0.52rem;
   }
 
-  .incursions-modal__hero .incursion-art {
-    grid-column: 1 / -1;
-    min-height: clamp(9.5rem, 34vw, 13.5rem);
+  .incursions-modal__banner {
+    min-height: clamp(16rem, 58vw, 21rem);
+    border-radius: 0.98rem;
   }
 
-  .incursions-modal__hero .incursion-art__sigil {
-    width: 4rem;
-    height: 4rem;
-    border-radius: 1rem;
-    font-size: 1.05rem;
+  .incursions-modal__banner h2 {
+    max-width: 11ch;
+    font-size: clamp(2rem, 10vw, 3.35rem);
+  }
+
+  .incursions-modal__close {
+    display: none;
   }
 
   .incursions-modal__stats,
@@ -1063,13 +1161,25 @@
 
   .incursions-modal__actions {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.54rem;
+    padding: 0.72rem;
   }
 
   .incursions-primary-button,
   .incursions-secondary-button,
   .incursions-danger-button {
     width: 100%;
+    min-height: 2.8rem;
+    padding-inline: 0.72rem;
+  }
+
+  .incursions-button-label--desktop {
+    display: none;
+  }
+
+  .incursions-button-label--mobile {
+    display: inline-flex;
   }
 }
 
@@ -1087,6 +1197,12 @@
   .incursions-modal__rewards {
     padding: 0.72rem;
   }
+
+  .incursions-modal__hero-chips > span {
+    min-height: 1.62rem;
+    padding: 0.22rem 0.5rem;
+    font-size: 0.68rem;
+  }
 }
 
 @media (max-width: 380px) {
@@ -1101,5 +1217,9 @@
 
   .incursion-loot-card__meta {
     grid-column: 2;
+  }
+
+  .incursions-modal__actions {
+    grid-template-columns: 1fr;
   }
 }

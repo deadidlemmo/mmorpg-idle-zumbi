@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-redundant-type-constituents */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-redundant-type-constituents */
 import {
   BadRequestException,
   ConflictException,
@@ -586,12 +586,6 @@ export class IncursionsService {
       );
     }
 
-    if (character.level > incursion.maxLevel) {
-      throw new ForbiddenException(
-        `Esta incursão é recomendada até o nível ${incursion.maxLevel}.`,
-      );
-    }
-
     if (incursion.map.minLevel > character.level) {
       throw new ForbiddenException(
         'Mapa da incursão ainda não liberado para este personagem.',
@@ -718,8 +712,6 @@ export class IncursionsService {
 
     if (character.level < incursion.minLevel)
       lockedReasons.push(`Disponível no nível ${incursion.minLevel}`);
-    if (character.level > incursion.maxLevel)
-      lockedReasons.push(`Recomendado até o nível ${incursion.maxLevel}`);
     if (character.gold < incursion.goldCost)
       lockedReasons.push('Gold insuficiente');
     if (activeSession || activityState?.hasActiveIncursion)

@@ -331,6 +331,50 @@ function GoldAmount({ value }: { value: number }) {
   );
 }
 
+function IncursionModalHero({ incursion }: { incursion: Incursion }) {
+  const mapImage = getMapImageByName(incursion.map.name);
+  const mapVisualStyle = buildMapVisualStyle(mapImage);
+
+  return (
+    <div
+      className={`incursions-modal__banner ${getIncursionTierClassName(incursion.tier)}`}
+      style={mapVisualStyle}
+    >
+      {!mapImage ? (
+        <span className="incursions-modal__banner-fallback" aria-hidden="true">
+          {incursion.name.slice(0, 2).toUpperCase()}
+        </span>
+      ) : null}
+
+      <div className="incursions-modal__banner-overlay">
+        <span className="incursions-modal__eyebrow">Detalhes da operação</span>
+        <h2 id="incursions-modal-title">{incursion.name}</h2>
+
+        <div
+          className="incursions-modal__hero-chips"
+          aria-label="Resumo da incursão"
+        >
+          <span>{incursion.map.name}</span>
+          <span
+            className={`incursions-modal__hero-chip--tier ${getIncursionTierClassName(incursion.tier)}`}
+          >
+            Tier {incursion.tier}
+          </span>
+          <span>
+            Nv. {incursion.minLevel}–{incursion.maxLevel}
+          </span>
+          <span>
+            <Clock size={13} /> {formatDuration(incursion.durationSeconds)}
+          </span>
+          <span>
+            <GoldAmount value={incursion.goldCost} />
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function IncursionArt({ incursion }: { incursion: Incursion }) {
   return (
     <span
@@ -788,12 +832,7 @@ export function IncursionsPage() {
               aria-labelledby="incursions-modal-title"
             >
               <header className="incursions-modal__hero">
-                <IncursionArt incursion={modalIncursion} />
-
-                <div className="incursions-modal__title-group">
-                  <span>Detalhes da operação</span>
-                  <h2 id="incursions-modal-title">{modalIncursion.name}</h2>
-                </div>
+                <IncursionModalHero incursion={modalIncursion} />
 
                 <button
                   className="incursions-modal__close"
@@ -899,13 +938,22 @@ export function IncursionsPage() {
                     }
                     onClick={() => void handleStart(modalIncursion.id)}
                   >
-                    {actionId === modalIncursion.id || realtimeState.isBusy
-                      ? "Iniciando..."
-                      : activeSession
-                        ? "Atividade em andamento"
-                        : modalIncursion.canStart
-                          ? "Iniciar incursão"
-                          : "Incursão bloqueada"}
+                    {actionId === modalIncursion.id || realtimeState.isBusy ? (
+                      "Iniciando..."
+                    ) : activeSession ? (
+                      "Atividade em andamento"
+                    ) : modalIncursion.canStart ? (
+                      <>
+                        <span className="incursions-button-label incursions-button-label--desktop">
+                          Iniciar incursão
+                        </span>
+                        <span className="incursions-button-label incursions-button-label--mobile">
+                          Iniciar
+                        </span>
+                      </>
+                    ) : (
+                      "Incursão bloqueada"
+                    )}
                     <ArrowRight size={16} />
                   </button>
                 )}
