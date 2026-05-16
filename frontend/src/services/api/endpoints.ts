@@ -11,6 +11,8 @@ export const API_ENDPOINTS = {
     byId: (characterId: string) => `/characters/${characterId}`,
     status: (characterId: string) => `/characters/${characterId}/status`,
     overview: (characterId: string) => `/characters/${characterId}/overview`,
+    currentMap: (characterId: string) =>
+      `/characters/${characterId}/current-map`,
   },
 
   maps: {

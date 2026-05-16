@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -11,6 +12,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CharactersService } from './characters.service';
 import { CreateCharacterDto } from './dto/create-character.dto';
+import { UpdateCurrentMapDto } from './dto/update-current-map.dto';
 
 @Controller('characters')
 @UseGuards(JwtAuthGuard)
@@ -35,6 +37,19 @@ export class CharactersController {
   @Get(':id/overview')
   getOverview(@Req() request: any, @Param('id') id: string) {
     return this.charactersService.getOverview(request.user.id, id);
+  }
+
+  @Patch(':id/current-map')
+  updateCurrentMap(
+    @Req() request: any,
+    @Param('id') id: string,
+    @Body() updateCurrentMapDto: UpdateCurrentMapDto,
+  ) {
+    return this.charactersService.updateCurrentMap(
+      request.user.id,
+      id,
+      updateCurrentMapDto.mapId,
+    );
   }
 
   @Get(':id')
