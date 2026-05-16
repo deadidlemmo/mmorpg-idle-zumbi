@@ -1,10 +1,11 @@
-import { API_ENDPOINTS } from '../../../services/api/endpoints';
-import { apiClient } from '../../../services/api/apiClient';
+import { API_ENDPOINTS } from "../../../services/api/endpoints";
+import { apiClient } from "../../../services/api/apiClient";
 import type {
   ClaimIncursionResponse,
   IncursionStatusResponse,
   IncursionsAvailableResponse,
-} from '../types/incursions.types';
+  StartIncursionResponse,
+} from "../types/incursions.types";
 
 export async function getAvailableIncursions(characterId: string) {
   const response = await apiClient.get<IncursionsAvailableResponse>(
@@ -21,7 +22,7 @@ export async function getIncursionStatus(characterId: string) {
 }
 
 export async function startIncursion(characterId: string, incursionId: string) {
-  const response = await apiClient.post<{ message: string; session: IncursionStatusResponse['activeSession'] }>(
+  const response = await apiClient.post<StartIncursionResponse>(
     API_ENDPOINTS.incursions.start,
     { characterId, incursionId },
   );

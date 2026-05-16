@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -6,21 +6,22 @@ import {
   Route,
   Routes,
   useParams,
-} from 'react-router-dom';
-import { AuthPage } from '../features/auth/pages/AuthPage';
-import { AutoCombatPage } from '../features/auto-combat/pages/AutoCombatPage';
-import { AutoCombatRealtimeProvider } from '../features/auto-combat/realtime/AutoCombatRealtimeProvider';
-import { CharacterSelectPage } from '../features/characters/pages/CharacterSelectPage';
-import { DashboardOverviewPage } from '../features/dashboard/pages/DashboardOverviewPage';
-import { DashboardPlaceholderPage } from '../features/dashboard/pages/DashboardPlaceholderPage';
-import { GatheringHubPage } from '../features/gathering/pages/GatheringHubPage';
-import { GatheringOriginPage } from '../features/gathering/pages/GatheringOriginPage';
-import { GatheringRealtimeProvider } from '../features/gathering/realtime/GatheringRealtimeProvider';
-import { IncursionsPage } from '../features/incursions/pages/IncursionsPage';
-import { InventoryPage } from '../features/inventory/pages/InventoryPage';
-import { MapsSelectionPage } from '../features/maps/pages/MapsSelectionPage';
-import { LootNotificationProvider } from '../features/loot-notifications/LootNotificationProvider';
-import { useAuthStore } from '../store/auth.store';
+} from "react-router-dom";
+import { AuthPage } from "../features/auth/pages/AuthPage";
+import { AutoCombatPage } from "../features/auto-combat/pages/AutoCombatPage";
+import { AutoCombatRealtimeProvider } from "../features/auto-combat/realtime/AutoCombatRealtimeProvider";
+import { CharacterSelectPage } from "../features/characters/pages/CharacterSelectPage";
+import { DashboardOverviewPage } from "../features/dashboard/pages/DashboardOverviewPage";
+import { DashboardPlaceholderPage } from "../features/dashboard/pages/DashboardPlaceholderPage";
+import { GatheringHubPage } from "../features/gathering/pages/GatheringHubPage";
+import { GatheringOriginPage } from "../features/gathering/pages/GatheringOriginPage";
+import { GatheringRealtimeProvider } from "../features/gathering/realtime/GatheringRealtimeProvider";
+import { IncursionsPage } from "../features/incursions/pages/IncursionsPage";
+import { IncursionsRealtimeProvider } from "../features/incursions/realtime/IncursionsRealtimeProvider";
+import { InventoryPage } from "../features/inventory/pages/InventoryPage";
+import { MapsSelectionPage } from "../features/maps/pages/MapsSelectionPage";
+import { LootNotificationProvider } from "../features/loot-notifications/LootNotificationProvider";
+import { useAuthStore } from "../store/auth.store";
 
 interface RouteGuardProps {
   children: ReactNode;
@@ -68,7 +69,15 @@ function DashboardRealtimeRoute() {
           refreshMs={5000}
           tickMs={1000}
         >
-          <Outlet />
+          <IncursionsRealtimeProvider
+            key={`incursions-${characterId}`}
+            characterId={characterId}
+            autoLoad
+            refreshMs={5000}
+            tickMs={1000}
+          >
+            <Outlet />
+          </IncursionsRealtimeProvider>
         </GatheringRealtimeProvider>
       </AutoCombatRealtimeProvider>
     </LootNotificationProvider>

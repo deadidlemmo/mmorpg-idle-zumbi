@@ -1,20 +1,22 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
-import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Link } from "react-router-dom";
+import { useAutoCombatRealtimeState } from "../../auto-combat/realtime/useAutoCombatRealtime";
 import type {
   AutoCombatRealtimeEvent,
   AutoCombatStatusResponse,
-} from '../../auto-combat/types/auto-combat.types';
-import { getMobPortraitImage } from '../../auto-combat/utils/mobAssets';
-import type { GatheringRealtimeState } from '../../gathering/realtime/GatheringRealtimeProvider';
-import { useGatheringRealtimeState } from '../../gathering/realtime/useGatheringRealtime';
-import { getCharacterOverview } from '../api/dashboard.api';
+} from "../../auto-combat/types/auto-combat.types";
+import { getMobPortraitImage } from "../../auto-combat/utils/mobAssets";
+import type { GatheringRealtimeState } from "../../gathering/realtime/GatheringRealtimeProvider";
+import { useGatheringRealtimeState } from "../../gathering/realtime/useGatheringRealtime";
+import type { IncursionsRealtimeState } from "../../incursions/realtime/IncursionsRealtimeProvider";
+import { useIncursionsRealtimeState } from "../../incursions/realtime/useIncursionsRealtime";
+import { getCharacterOverview } from "../api/dashboard.api";
 import type {
   CharacterOverviewResponse,
   DashboardAutoCombatSessionViewModel,
   DashboardGatheringSessionViewModel,
   DashboardIncursionSessionViewModel,
-} from '../types/dashboard.types';
+} from "../types/dashboard.types";
 
 interface DashboardActivityBarProps {
   characterId: string;
@@ -23,7 +25,7 @@ interface DashboardActivityBarProps {
 
 type ActivityBarItem = {
   key: string;
-  type: 'auto-combat' | 'gathering' | 'incursion';
+  type: "auto-combat" | "gathering" | "incursion";
   icon: string;
   title: string;
   description: string;
@@ -321,7 +323,7 @@ type DashboardGatheringSessionLoose = DashboardGatheringSessionViewModel & {
 };
 
 function toSafeNumber(value: unknown, fallback = 0) {
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     return fallback;
   }
 
@@ -332,7 +334,7 @@ function toSafeNumber(value: unknown, fallback = 0) {
 
 function getFirstValidNumber(...values: unknown[]) {
   for (const value of values) {
-    if (value === null || value === undefined || value === '') {
+    if (value === null || value === undefined || value === "") {
       continue;
     }
 
@@ -372,38 +374,39 @@ function calculateHpPercent(currentHp?: number | null, maxHp?: number | null) {
 }
 
 function normalizeStatus(status?: string | null) {
-  return String(status ?? '').trim().toUpperCase();
+  return String(status ?? "")
+    .trim()
+    .toUpperCase();
 }
 
 function isActiveStatus(status?: string | null) {
-  return normalizeStatus(status) === 'ACTIVE';
+  return normalizeStatus(status) === "ACTIVE";
 }
 
 function isTerminalStatus(status?: string | null) {
   const normalizedStatus = normalizeStatus(status);
 
   return (
-    normalizedStatus === 'FINISHED' ||
-    normalizedStatus === 'STOPPED' ||
-    normalizedStatus === 'DEFEATED' ||
-    normalizedStatus === 'FAILED' ||
-    normalizedStatus === 'CANCELLED'
+    normalizedStatus === "FINISHED" ||
+    normalizedStatus === "STOPPED" ||
+    normalizedStatus === "DEFEATED" ||
+    normalizedStatus === "FAILED" ||
+    normalizedStatus === "CANCELLED"
   );
 }
 
-
 function formatOrigin(origin?: string | null) {
-  if (!origin) return 'Expedição';
+  if (!origin) return "Expedição";
 
   const labels: Record<string, string> = {
-    DESMANCHE: 'Desmanche',
-    COLETA: 'Coleta',
-    PATRULHA: 'Patrulha',
-    ARSENAL: 'Arsenal',
-    TECNOVARREDURA: 'Tecnovarredura',
-    CONTENCAO: 'Contenção',
-    CONTENÇÃO: 'Contenção',
-    DROP_MOBS: 'Saque de monstros',
+    DESMANCHE: "Desmanche",
+    COLETA: "Coleta",
+    PATRULHA: "Patrulha",
+    ARSENAL: "Arsenal",
+    TECNOVARREDURA: "Tecnovarredura",
+    CONTENCAO: "Contenção",
+    CONTENÇÃO: "Contenção",
+    DROP_MOBS: "Saque de monstros",
   };
 
   return labels[origin] ?? origin;
@@ -413,16 +416,16 @@ function getGatheringOriginSlug(origin?: string | null) {
   const normalizedOrigin = normalizeStatus(origin);
 
   const slugs: Record<string, string> = {
-    DESMANCHE: 'desmanche',
-    COLETA: 'coleta',
-    PATRULHA: 'patrulha',
-    ARSENAL: 'arsenal',
-    TECNOVARREDURA: 'tecnovarredura',
-    CONTENCAO: 'contencao',
-    CONTENÇÃO: 'contencao',
+    DESMANCHE: "desmanche",
+    COLETA: "coleta",
+    PATRULHA: "patrulha",
+    ARSENAL: "arsenal",
+    TECNOVARREDURA: "tecnovarredura",
+    CONTENCAO: "contencao",
+    CONTENÇÃO: "contencao",
   };
 
-  return slugs[normalizedOrigin] ?? 'gathering';
+  return slugs[normalizedOrigin] ?? "gathering";
 }
 
 function formatCurrentCombatLabel(value: unknown) {
@@ -434,7 +437,7 @@ function formatCurrentCombatLabel(value: unknown) {
 function formatKillCount(value: unknown) {
   const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
 
-  return `${amount} ${amount === 1 ? 'monstro morto' : 'monstros mortos'}`;
+  return `${amount} ${amount === 1 ? "monstro morto" : "monstros mortos"}`;
 }
 
 function formatXp(value: unknown) {
@@ -460,14 +463,14 @@ function formatCompactNumber(value: unknown) {
 function formatSessionCountIndicator(value: unknown) {
   const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
 
-  return amount.toLocaleString('pt-BR');
+  return amount.toLocaleString("pt-BR");
 }
 
 function formatMonsterCounter(value: unknown) {
   const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
-  const formattedAmount = amount.toLocaleString('pt-BR');
+  const formattedAmount = amount.toLocaleString("pt-BR");
 
-  return `${formattedAmount} ${amount === 1 ? 'monstro' : 'monstros'}`;
+  return `${formattedAmount} ${amount === 1 ? "monstro" : "monstros"}`;
 }
 
 function formatPercentLabel(value: unknown) {
@@ -478,7 +481,7 @@ function formatGatheringCollectedQuantity(value: unknown) {
   const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
 
   if (amount === 1) {
-    return '1 coletado';
+    return "1 coletado";
   }
 
   return `${formatCompactNumber(amount)} coletados`;
@@ -488,7 +491,7 @@ function formatGatheringRate(value: unknown) {
   const rate = getFirstValidNumber(value);
 
   if (rate === undefined || rate <= 0) {
-    return '—/h';
+    return "—/h";
   }
 
   const roundedRate = Number.isInteger(rate) ? rate : Number(rate.toFixed(1));
@@ -532,7 +535,7 @@ function clampFraction(value: unknown) {
 }
 
 function getActivityMobPortraitUrl(mobName?: string | null) {
-  if (!mobName || mobName === 'Combate automático') {
+  if (!mobName || mobName === "Combate automático") {
     return null;
   }
 
@@ -545,7 +548,7 @@ function getGatheringMaterialIconUrl(material?: GatheringMaterialLike | null) {
   const possibleIcon =
     material.iconUrl ?? material.imageUrl ?? material.iconPath ?? material.icon;
 
-  if (typeof possibleIcon !== 'string') {
+  if (typeof possibleIcon !== "string") {
     return null;
   }
 
@@ -554,12 +557,19 @@ function getGatheringMaterialIconUrl(material?: GatheringMaterialLike | null) {
   return trimmedIcon.length > 0 ? trimmedIcon : null;
 }
 
-function formatCharacterHpLabel(currentHp?: number | null, maxHp?: number | null) {
+function formatCharacterHpLabel(
+  currentHp?: number | null,
+  maxHp?: number | null,
+) {
   const safeCurrentHp = getFirstValidNumber(currentHp);
   const safeMaxHp = getFirstValidNumber(maxHp);
 
-  if (safeCurrentHp === undefined || safeMaxHp === undefined || safeMaxHp <= 0) {
-    return 'HP —';
+  if (
+    safeCurrentHp === undefined ||
+    safeMaxHp === undefined ||
+    safeMaxHp <= 0
+  ) {
+    return "HP —";
   }
 
   return `HP ${Math.max(0, Math.floor(safeCurrentHp))}/${Math.max(
@@ -637,10 +647,13 @@ function getStatusCharacter(status: AutoCombatStatusResponse | null) {
 }
 
 function getOverviewCharacter(overview: CharacterOverviewResponse | null) {
-  return (overview?.character ?? null) as AutoCombatRealtimeCharacterLike | null;
+  return (overview?.character ??
+    null) as AutoCombatRealtimeCharacterLike | null;
 }
 
-function getAutoCombatSessionFromStatus(status: AutoCombatStatusResponse | null) {
+function getAutoCombatSessionFromStatus(
+  status: AutoCombatStatusResponse | null,
+) {
   const looseStatus = getLooseStatus(status);
 
   return (
@@ -667,7 +680,7 @@ function getStatusLocationLabel(status: AutoCombatStatusResponse | null) {
     return `${mapName} • ${subMapName}`;
   }
 
-  return subMapName ?? mapName ?? 'Combate em andamento';
+  return subMapName ?? mapName ?? "Combate em andamento";
 }
 
 function isSameSessionScope(
@@ -719,10 +732,12 @@ function shouldUseRealtimeEvent(
   return !event.characterId || event.characterId === characterId;
 }
 
-function buildCharacterXpSnapshot(character: AutoCombatRealtimeCharacterLike | null) {
+function buildCharacterXpSnapshot(
+  character: AutoCombatRealtimeCharacterLike | null,
+) {
   if (!character) {
     return {
-      label: 'EXP —',
+      label: "EXP —",
       percent: 0,
     };
   }
@@ -766,11 +781,13 @@ function buildCharacterXpSnapshot(character: AutoCombatRealtimeCharacterLike | n
     levelProgress?.progressPercent,
   );
 
-  const isAtLevelCap = Boolean(character.isAtLevelCap ?? levelProgress?.isAtLevelCap);
+  const isAtLevelCap = Boolean(
+    character.isAtLevelCap ?? levelProgress?.isAtLevelCap,
+  );
 
   if (isAtLevelCap) {
     return {
-      label: 'EXP máx.',
+      label: "EXP máx.",
       percent: 100,
     };
   }
@@ -793,7 +810,11 @@ function buildCharacterXpSnapshot(character: AutoCombatRealtimeCharacterLike | n
     };
   }
 
-  if (explicitCurrentXp !== undefined && explicitNextXp !== undefined && explicitNextXp > 0) {
+  if (
+    explicitCurrentXp !== undefined &&
+    explicitNextXp !== undefined &&
+    explicitNextXp > 0
+  ) {
     return {
       label: `EXP ${formatCompactNumber(explicitCurrentXp)}/${formatCompactNumber(explicitNextXp)}`,
       percent: calculateHpPercent(explicitCurrentXp, explicitNextXp),
@@ -802,7 +823,8 @@ function buildCharacterXpSnapshot(character: AutoCombatRealtimeCharacterLike | n
 
   if (explicitPercent !== undefined) {
     return {
-      label: totalXp !== undefined ? `EXP ${formatCompactNumber(totalXp)}` : 'EXP',
+      label:
+        totalXp !== undefined ? `EXP ${formatCompactNumber(totalXp)}` : "EXP",
       percent: clampPercent(explicitPercent),
     };
   }
@@ -815,7 +837,7 @@ function buildCharacterXpSnapshot(character: AutoCombatRealtimeCharacterLike | n
   }
 
   return {
-    label: 'EXP —',
+    label: "EXP —",
     percent: 0,
   };
 }
@@ -837,7 +859,7 @@ function buildCharacterActivitySnapshot(params: {
     realtimeCharacter?.name ??
     statusCharacter?.name ??
     overviewCharacter?.name ??
-    'Personagem';
+    "Personagem";
 
   const level = getFirstValidNumber(
     realtimeCharacter?.level,
@@ -952,7 +974,10 @@ function getRealtimeCombat(
     mobId: mob?.id ?? null,
     mobName: mob?.name ?? null,
     mobCurrentHp:
-      mob?.currentHp ?? session?.currentMobHp ?? session?.currentMob?.currentHp ?? null,
+      mob?.currentHp ??
+      session?.currentMobHp ??
+      session?.currentMob?.currentHp ??
+      null,
     mobMaxHp:
       mob?.maxHp ??
       session?.currentMobMaxHp ??
@@ -1026,9 +1051,12 @@ function buildTotalsFromStatusFallback(params: {
     return total + toSafeNumber(mob.kills, 0);
   }, 0);
 
-  const rewardsLootTotal = looseStatus?.rewards?.loots?.reduce((total, loot) => {
-    return total + toSafeNumber(loot.quantity, 0);
-  }, 0);
+  const rewardsLootTotal = looseStatus?.rewards?.loots?.reduce(
+    (total, loot) => {
+      return total + toSafeNumber(loot.quantity, 0);
+    },
+    0,
+  );
 
   const totalKills =
     getFirstValidNumber(
@@ -1149,7 +1177,9 @@ function buildAutoCombatTotalsFromOverview(
     };
 
   const overviewMobKillsTotal = (
-    looseSession.mobSummaries ?? looseSession.mobSummary ?? []
+    looseSession.mobSummaries ??
+    looseSession.mobSummary ??
+    []
   ).reduce((total, summary) => {
     return total + toSafeNumber(summary.kills, 0);
   }, 0);
@@ -1287,7 +1317,7 @@ function buildAutoCombatItemFromRealtime(params: {
     displayedEvent?.mobName ??
     realtimeCombat?.mobName ??
     statusCurrentMob?.name ??
-    'Combate automático';
+    "Combate automático";
 
   const monsterHp = buildMonsterHpSnapshot({
     event: displayedEvent,
@@ -1319,12 +1349,12 @@ function buildAutoCombatItemFromRealtime(params: {
   });
 
   return {
-    key: `auto-combat-${session.id ?? 'active'}`,
-    type: 'auto-combat',
-    icon: '⚔',
+    key: `auto-combat-${session.id ?? "active"}`,
+    type: "auto-combat",
+    icon: "⚔",
     title: mobName,
     description,
-    progressLabel: 'HP do monstro',
+    progressLabel: "HP do monstro",
     progressPercent: monsterHp.hpPercent,
     progressValueLabel: monsterHp.label,
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
@@ -1401,7 +1431,7 @@ function buildAutoCombatItemFromOverview(params: {
   const locationLabel =
     mapName && subMapName
       ? `${mapName} • ${subMapName}`
-      : subMapName ?? mapName ?? 'Combate em andamento';
+      : (subMapName ?? mapName ?? "Combate em andamento");
 
   const totalKills = visualTotals?.totalKills ?? 0;
   const totalXpGained = visualTotals?.totalXpGained ?? 0;
@@ -1419,12 +1449,12 @@ function buildAutoCombatItemFromOverview(params: {
   });
 
   return {
-    key: `auto-combat-${session.id ?? 'active'}`,
-    type: 'auto-combat',
-    icon: '⚔',
-    title: currentMob?.name ?? 'Combate automático',
+    key: `auto-combat-${session.id ?? "active"}`,
+    type: "auto-combat",
+    icon: "⚔",
+    title: currentMob?.name ?? "Combate automático",
     description: session.combatPreview?.label ?? locationLabel,
-    progressLabel: 'HP do monstro',
+    progressLabel: "HP do monstro",
     progressPercent: monsterHp.hpPercent,
     progressValueLabel: monsterHp.label,
     primaryMetric: formatCurrentCombatLabel(currentCombatIndex),
@@ -1434,7 +1464,7 @@ function buildAutoCombatItemFromOverview(params: {
     href: `/dashboard/${characterId}/auto-combat`,
 
     imageUrl: getActivityMobPortraitUrl(currentMob?.name),
-    imageAlt: currentMob?.name ?? 'Combate automático',
+    imageAlt: currentMob?.name ?? "Combate automático",
 
     characterName: playerSnapshot.name,
     characterLevelLabel: playerSnapshot.levelLabel,
@@ -1456,7 +1486,11 @@ function buildGatheringProductionSnapshot(params: {
 }) {
   const { session, nowMs } = params;
   const preview = session.productionPreview ?? null;
-  const material = session.targetMaterial ?? preview?.targetMaterial ?? preview?.material ?? null;
+  const material =
+    session.targetMaterial ??
+    preview?.targetMaterial ??
+    preview?.material ??
+    null;
 
   const ratePerHour =
     getFirstValidNumber(
@@ -1547,8 +1581,8 @@ function buildGatheringItemFromRealtime(params: {
   const originLabel = formatOrigin(session.origin);
   const originSlug = getGatheringOriginSlug(session.origin);
 
-  const materialName = material?.name ?? 'Material em coleta';
-  const mapName = session.map?.name ?? preview?.map?.name ?? 'Mapa atual';
+  const materialName = material?.name ?? "Material em coleta";
+  const mapName = session.map?.name ?? preview?.map?.name ?? "Mapa atual";
 
   const progressPercent = clampPercent(
     gatheringState.liveProduction.progressPercent,
@@ -1586,18 +1620,19 @@ function buildGatheringItemFromRealtime(params: {
   const ratePerHour = gatheringState.liveProduction.ratePerHour ?? null;
 
   const href =
-    originSlug === 'gathering'
+    originSlug === "gathering"
       ? `/dashboard/${characterId}/gathering`
       : `/dashboard/${characterId}/gathering/${originSlug}`;
 
   return {
-    key: `gathering-${session.id ?? 'active'}`,
-    type: 'gathering',
-    icon: '⛏',
+    key: `gathering-${session.id ?? "active"}`,
+    type: "gathering",
+    icon: "⛏",
     title: materialName,
     description:
-      preview?.label ?? `${originLabel} em ${mapName}. Produzindo ${materialName}.`,
-    progressLabel: 'Próxima unidade',
+      preview?.label ??
+      `${originLabel} em ${mapName}. Produzindo ${materialName}.`,
+    progressLabel: "Próxima unidade",
     progressPercent,
     progressValueLabel: `${progressPercentLabel}%`,
     primaryMetric: `${progressPercentLabel}%`,
@@ -1616,7 +1651,10 @@ function buildGatheringItemFromRealtime(params: {
     monsterMetaLabel: `${originLabel} • ${mapName}`,
     combatMetric: `${progressPercentLabel}%`,
     killsMetric: formatGatheringCollectedQuantity(collectedQuantity),
-    xpMetric: collectedXp > 0 ? formatXp(collectedXp) : formatGatheringRate(ratePerHour),
+    xpMetric:
+      collectedXp > 0
+        ? formatXp(collectedXp)
+        : formatGatheringRate(ratePerHour),
   };
 }
 
@@ -1638,10 +1676,10 @@ function buildGatheringItemFromOverview(params: {
   const originLabel = formatOrigin(session.origin);
   const originSlug = getGatheringOriginSlug(session.origin);
 
-  const materialName = material?.name ?? 'Material em coleta';
+  const materialName = material?.name ?? "Material em coleta";
 
   const mapName =
-    session.map?.name ?? productionPreview?.map?.name ?? 'Mapa atual';
+    session.map?.name ?? productionPreview?.map?.name ?? "Mapa atual";
 
   const productionSnapshot = buildGatheringProductionSnapshot({
     session,
@@ -1663,19 +1701,19 @@ function buildGatheringItemFromOverview(params: {
   const ratePerHour = productionSnapshot.ratePerHour;
 
   const href =
-    originSlug === 'gathering'
+    originSlug === "gathering"
       ? `/dashboard/${characterId}/gathering`
       : `/dashboard/${characterId}/gathering/${originSlug}`;
 
   return {
-    key: `gathering-${session.id ?? 'active'}`,
-    type: 'gathering',
-    icon: '⛏',
+    key: `gathering-${session.id ?? "active"}`,
+    type: "gathering",
+    icon: "⛏",
     title: materialName,
     description:
       productionPreview?.label ??
       `${originLabel} em ${mapName}. Produzindo ${materialName}.`,
-    progressLabel: 'Próxima unidade',
+    progressLabel: "Próxima unidade",
     progressPercent,
     progressValueLabel: `${progressPercentLabel}%`,
     primaryMetric: `${progressPercentLabel}%`,
@@ -1694,10 +1732,12 @@ function buildGatheringItemFromOverview(params: {
     monsterMetaLabel: `${originLabel} • ${mapName}`,
     combatMetric: `${progressPercentLabel}%`,
     killsMetric: formatGatheringCollectedQuantity(collectedQuantity),
-    xpMetric: collectedXp > 0 ? formatXp(collectedXp) : formatGatheringRate(ratePerHour),
+    xpMetric:
+      collectedXp > 0
+        ? formatXp(collectedXp)
+        : formatGatheringRate(ratePerHour),
   };
 }
-
 
 function formatRemainingTime(seconds: unknown) {
   const safeSeconds = Math.max(0, Math.ceil(toSafeNumber(seconds, 0)));
@@ -1721,32 +1761,41 @@ function buildIncursionItemFromOverview(params: {
   const totalMs = Math.max(1, endsAtMs - startedAtMs);
   const elapsedMs = Math.max(0, Math.min(totalMs, nowMs - startedAtMs));
   const remainingSeconds = Math.max(0, Math.ceil((endsAtMs - nowMs) / 1000));
-  const isCompleted = remainingSeconds <= 0 || normalizeStatus(session.status) === 'COMPLETED';
+  const isCompleted =
+    remainingSeconds <= 0 || normalizeStatus(session.status) === "COMPLETED";
   const progressPercent = Math.round((elapsedMs / totalMs) * 100);
   const incursion = session.incursion;
-  const mapName = incursion?.map?.name ?? 'Mapa desconhecido';
-  const title = incursion?.name ?? 'Incursão ativa';
+  const mapName = incursion?.map?.name ?? "Mapa desconhecido";
+  const title = incursion?.name ?? "Incursão ativa";
 
   return {
     key: `incursion-${session.id}`,
-    type: 'incursion',
-    icon: '⌬',
+    type: "incursion",
+    icon: "⌬",
     title,
     description: isCompleted
-      ? 'Incursão concluída. Recompensas pendentes de coleta.'
+      ? "Incursão concluída. Recompensas pendentes de coleta."
       : `${mapName} • termina em ${formatRemainingTime(remainingSeconds)}`,
-    progressLabel: isCompleted ? 'Coleta disponível' : 'Tempo restante',
+    progressLabel: isCompleted ? "Coleta disponível" : "Tempo restante",
     progressPercent: isCompleted ? 100 : progressPercent,
-    progressValueLabel: isCompleted ? 'Pronta' : formatRemainingTime(remainingSeconds),
-    primaryMetric: isCompleted ? 'Coletar' : formatRemainingTime(remainingSeconds),
-    secondaryMetric: `${toSafeNumber(session.goldCostPaid, 0).toLocaleString('pt-BR')} gold pago`,
-    indicatorMetric: isCompleted ? 'Pronta' : `${Math.max(0, Math.floor(progressPercent))}%`,
-    indicatorLabel: isCompleted ? 'Incursão pronta para coleta' : 'Progresso da incursão',
+    progressValueLabel: isCompleted
+      ? "Pronta"
+      : formatRemainingTime(remainingSeconds),
+    primaryMetric: isCompleted
+      ? "Coletar"
+      : formatRemainingTime(remainingSeconds),
+    secondaryMetric: `${toSafeNumber(session.goldCostPaid, 0).toLocaleString("pt-BR")} gold pago`,
+    indicatorMetric: isCompleted
+      ? "Pronta"
+      : `${Math.max(0, Math.floor(progressPercent))}%`,
+    indicatorLabel: isCompleted
+      ? "Incursão pronta para coleta"
+      : "Progresso da incursão",
     href: `/dashboard/${characterId}/incursions`,
-    monsterMetaLabel: `${mapName} • Tier ${incursion?.tier ?? '—'}`,
-    combatMetric: isCompleted ? 'Coleta' : 'Idle',
-    killsMetric: `${toSafeNumber(session.goldCostPaid, 0).toLocaleString('pt-BR')} gold`,
-    xpMetric: isCompleted ? 'Pendente' : formatRemainingTime(remainingSeconds),
+    monsterMetaLabel: `${mapName} • Tier ${incursion?.tier ?? "—"}`,
+    combatMetric: isCompleted ? "Coleta" : "Idle",
+    killsMetric: `${toSafeNumber(session.goldCostPaid, 0).toLocaleString("pt-BR")} gold`,
+    xpMetric: isCompleted ? "Pendente" : formatRemainingTime(remainingSeconds),
   };
 }
 
@@ -1755,9 +1804,17 @@ function buildActivityItems(params: {
   overview: CharacterOverviewResponse | null;
   realtimeState: AutoCombatRealtimeStateLoose;
   gatheringState: GatheringRealtimeState;
+  incursionsState: IncursionsRealtimeState;
   nowMs: number;
 }) {
-  const { characterId, overview, realtimeState, gatheringState, nowMs } = params;
+  const {
+    characterId,
+    overview,
+    realtimeState,
+    gatheringState,
+    incursionsState,
+    nowMs,
+  } = params;
 
   const items: ActivityBarItem[] = [];
 
@@ -1775,15 +1832,23 @@ function buildActivityItems(params: {
       | (DashboardAutoCombatSessionViewModel & AutoCombatSessionLike)
       | null;
 
-    const activeAutoCombatIsActive = isActiveStatus(activeAutoCombatSession?.status);
-    const activeAutoCombatIsTerminal = isTerminalStatus(activeAutoCombatSession?.status);
+    const activeAutoCombatIsActive = isActiveStatus(
+      activeAutoCombatSession?.status,
+    );
+    const activeAutoCombatIsTerminal = isTerminalStatus(
+      activeAutoCombatSession?.status,
+    );
 
     const hasActiveAutoCombat =
       activeAutoCombatIsActive ||
       (Boolean(overview.activity.hasActiveAutoCombat) &&
         !activeAutoCombatIsTerminal);
 
-    if (hasActiveAutoCombat && activeAutoCombat && !activeAutoCombatIsTerminal) {
+    if (
+      hasActiveAutoCombat &&
+      activeAutoCombat &&
+      !activeAutoCombatIsTerminal
+    ) {
       items.push(
         buildAutoCombatItemFromOverview({
           characterId,
@@ -1807,7 +1872,9 @@ function buildActivityItems(params: {
       | (DashboardGatheringSessionViewModel & { status?: string | null })
       | null;
 
-    const activeGatheringIsTerminal = isTerminalStatus(activeGatheringSession?.status);
+    const activeGatheringIsTerminal = isTerminalStatus(
+      activeGatheringSession?.status,
+    );
 
     const hasActiveGathering =
       !activeGatheringIsTerminal &&
@@ -1825,16 +1892,26 @@ function buildActivityItems(params: {
     }
   }
 
-
-
-  if (overview?.activity) {
+  if (incursionsState.session) {
+    items.push(
+      buildIncursionItemFromOverview({
+        characterId,
+        session:
+          incursionsState.session as unknown as DashboardIncursionSessionViewModel,
+        nowMs,
+      }),
+    );
+  } else if (overview?.activity) {
     const activeIncursion = overview.activity.activeIncursionSession ?? null;
-    const activeIncursionSession = activeIncursion as DashboardIncursionSessionViewModel | null;
-    const activeIncursionStatus = normalizeStatus(activeIncursionSession?.status);
+    const activeIncursionSession =
+      activeIncursion as DashboardIncursionSessionViewModel | null;
+    const activeIncursionStatus = normalizeStatus(
+      activeIncursionSession?.status,
+    );
     const hasActiveIncursion =
       Boolean(overview.activity.hasActiveIncursion) ||
-      activeIncursionStatus === 'ACTIVE' ||
-      activeIncursionStatus === 'COMPLETED';
+      activeIncursionStatus === "ACTIVE" ||
+      activeIncursionStatus === "COMPLETED";
 
     if (hasActiveIncursion && activeIncursionSession) {
       items.push(
@@ -1862,6 +1939,7 @@ export function DashboardActivityBar({
     useAutoCombatRealtimeState() as AutoCombatRealtimeStateLoose;
 
   const gatheringState = useGatheringRealtimeState();
+  const incursionsState = useIncursionsRealtimeState();
 
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
@@ -1921,9 +1999,17 @@ export function DashboardActivityBar({
       overview,
       realtimeState,
       gatheringState,
+      incursionsState,
       nowMs,
     });
-  }, [characterId, gatheringState, nowMs, overview, realtimeState]);
+  }, [
+    characterId,
+    gatheringState,
+    incursionsState,
+    nowMs,
+    overview,
+    realtimeState,
+  ]);
 
   if (!hasLoadedOnce || activityItems.length <= 0) {
     return null;
@@ -1932,14 +2018,14 @@ export function DashboardActivityBar({
   return (
     <section
       className={[
-        'dashboard-activity-bar',
+        "dashboard-activity-bar",
         isMinimized
-          ? 'dashboard-activity-bar--minimized'
-          : 'dashboard-activity-bar--expanded',
-        activityItems.length > 1 ? 'dashboard-activity-bar--multiple' : '',
+          ? "dashboard-activity-bar--minimized"
+          : "dashboard-activity-bar--expanded",
+        activityItems.length > 1 ? "dashboard-activity-bar--multiple" : "",
       ]
         .filter(Boolean)
-        .join(' ')}
+        .join(" ")}
       aria-label="Atividades em andamento"
     >
       {activityItems.map((item, index) => {
@@ -1948,45 +2034,45 @@ export function DashboardActivityBar({
         const progressValueLabel =
           item.progressValueLabel ?? `${progressPercentLabel}%`;
         const progressHeaderLabel =
-          item.type === 'auto-combat'
+          item.type === "auto-combat"
             ? `${item.progressLabel} • ${progressValueLabel}`
             : item.progressLabel;
-        const shouldShowProgressValue = item.type !== 'auto-combat';
+        const shouldShowProgressValue = item.type !== "auto-combat";
         const progressStyle = {
           width: `${progressPercent}%`,
         };
         const itemStyle =
-          item.type === 'auto-combat'
+          item.type === "auto-combat"
             ? ({
-                '--dashboard-activity-monster-hp-percent': `${progressPercent}%`,
-                '--dashboard-activity-monster-hp-scale': progressPercent / 100,
+                "--dashboard-activity-monster-hp-percent": `${progressPercent}%`,
+                "--dashboard-activity-monster-hp-scale": progressPercent / 100,
               } as CSSProperties)
             : undefined;
         const progressTrackClassName = [
-          item.type === 'auto-combat'
-            ? 'dashboard-activity-bar__track dashboard-activity-bar__track--monster-hp'
-            : 'dashboard-activity-bar__track',
-        ].join(' ');
+          item.type === "auto-combat"
+            ? "dashboard-activity-bar__track dashboard-activity-bar__track--monster-hp"
+            : "dashboard-activity-bar__track",
+        ].join(" ");
         const compactProgressTrackClassName = [
-          item.type === 'auto-combat'
-            ? 'dashboard-activity-bar__compact-track dashboard-activity-bar__compact-track--monster-hp'
-            : 'dashboard-activity-bar__compact-track',
-        ].join(' ');
+          item.type === "auto-combat"
+            ? "dashboard-activity-bar__compact-track dashboard-activity-bar__compact-track--monster-hp"
+            : "dashboard-activity-bar__compact-track",
+        ].join(" ");
         const isFirstItem = index === 0;
 
         return (
           <article
             key={item.key}
             className={[
-              'dashboard-activity-bar__item',
+              "dashboard-activity-bar__item",
               `dashboard-activity-bar__item--${item.type}`,
-              isFirstItem ? 'dashboard-activity-bar__item--has-toggle' : '',
+              isFirstItem ? "dashboard-activity-bar__item--has-toggle" : "",
             ]
               .filter(Boolean)
-              .join(' ')}
+              .join(" ")}
             style={itemStyle}
           >
-            {item.type === 'auto-combat' ? (
+            {item.type === "auto-combat" ? (
               <span
                 className="dashboard-activity-bar__monster-hp-backdrop"
                 aria-hidden="true"
@@ -2002,8 +2088,8 @@ export function DashboardActivityBar({
                 aria-pressed={isMinimized}
                 onClick={() => setIsMinimized((current) => !current)}
               >
-                <strong>{isMinimized ? '+' : '−'}</strong>
-                <span>{isMinimized ? 'Expandir' : 'Minimizar'}</span>
+                <strong>{isMinimized ? "+" : "−"}</strong>
+                <span>{isMinimized ? "Expandir" : "Minimizar"}</span>
               </button>
             ) : null}
 
@@ -2014,11 +2100,11 @@ export function DashboardActivityBar({
             >
               <span
                 className={[
-                  'dashboard-activity-bar__icon',
-                  item.imageUrl ? 'dashboard-activity-bar__icon--portrait' : '',
+                  "dashboard-activity-bar__icon",
+                  item.imageUrl ? "dashboard-activity-bar__icon--portrait" : "",
                 ]
                   .filter(Boolean)
-                  .join(' ')}
+                  .join(" ")}
                 aria-hidden="true"
               >
                 {item.imageUrl ? (
@@ -2028,16 +2114,16 @@ export function DashboardActivityBar({
                     className="dashboard-activity-bar__icon-portrait"
                     loading="lazy"
                     style={{
-                      position: 'relative',
+                      position: "relative",
                       zIndex: 1,
-                      display: 'block',
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      objectPosition: 'center',
-                      borderRadius: 'inherit',
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      objectPosition: "center",
+                      borderRadius: "inherit",
                       filter:
-                        'brightness(1.08) contrast(1.06) saturate(1.04) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.36))',
+                        "brightness(1.08) contrast(1.06) saturate(1.04) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.36))",
                     }}
                   />
                 ) : (
@@ -2051,11 +2137,11 @@ export function DashboardActivityBar({
                 <div className="dashboard-activity-bar__top">
                   <div className="dashboard-activity-bar__title-block">
                     <span className="dashboard-activity-bar__eyebrow">
-                      {item.type === 'auto-combat'
-                        ? 'Sessão ativa'
-                        : item.type === 'incursion'
-                          ? 'Incursão ativa'
-                          : 'Expedição ativa'}
+                      {item.type === "auto-combat"
+                        ? "Sessão ativa"
+                        : item.type === "incursion"
+                          ? "Incursão ativa"
+                          : "Expedição ativa"}
                     </span>
 
                     <strong>{item.title}</strong>
@@ -2078,7 +2164,7 @@ export function DashboardActivityBar({
                   ) : null}
                 </div>
 
-                {item.type === 'auto-combat' && item.characterName ? (
+                {item.type === "auto-combat" && item.characterName ? (
                   <div className="dashboard-activity-bar__character-strip">
                     <div className="dashboard-activity-bar__character-main">
                       <strong>{item.characterName}</strong>
@@ -2142,7 +2228,7 @@ export function DashboardActivityBar({
               </div>
 
               <div className="dashboard-activity-bar__metrics">
-                {item.type === 'auto-combat' ? (
+                {item.type === "auto-combat" ? (
                   <>
                     <span className="dashboard-activity-bar__metric dashboard-activity-bar__metric--xp">
                       <small>EXP</small>
@@ -2177,11 +2263,11 @@ export function DashboardActivityBar({
               <div className="dashboard-activity-bar__compact">
                 <div className="dashboard-activity-bar__compact-main">
                   <span>
-                    {item.type === 'auto-combat'
-                      ? 'Sessão ativa'
-                      : item.type === 'incursion'
-                        ? 'Incursão ativa'
-                        : 'Expedição ativa'}
+                    {item.type === "auto-combat"
+                      ? "Sessão ativa"
+                      : item.type === "incursion"
+                        ? "Incursão ativa"
+                        : "Expedição ativa"}
                   </span>
                   <strong>{item.title}</strong>
 
@@ -2210,7 +2296,7 @@ export function DashboardActivityBar({
                 </div>
 
                 <div className="dashboard-activity-bar__compact-stats">
-                  {item.type === 'auto-combat' ? (
+                  {item.type === "auto-combat" ? (
                     <>
                       <span className="dashboard-activity-bar__compact-stat dashboard-activity-bar__compact-stat--xp">
                         <small>EXP</small>
@@ -2219,12 +2305,16 @@ export function DashboardActivityBar({
 
                       <span className="dashboard-activity-bar__compact-stat dashboard-activity-bar__compact-stat--kills">
                         <small>Monstros</small>
-                        <strong>{item.killsMetric ?? formatKillCount(0)}</strong>
+                        <strong>
+                          {item.killsMetric ?? formatKillCount(0)}
+                        </strong>
                       </span>
 
                       <span className="dashboard-activity-bar__compact-stat dashboard-activity-bar__compact-stat--combat dashboard-activity-bar__compact-stat--optional">
                         <small>Combate</small>
-                        <strong>{item.combatMetric ?? item.primaryMetric}</strong>
+                        <strong>
+                          {item.combatMetric ?? item.primaryMetric}
+                        </strong>
                       </span>
                     </>
                   ) : (

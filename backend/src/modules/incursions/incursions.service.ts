@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-redundant-type-constituents */
 import {
   BadRequestException,
   ConflictException,
@@ -6,7 +6,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
 import {
   CharacterStatus,
   IncursionRewardType,
@@ -14,6 +13,7 @@ import {
   InventoryItemType,
   ItemSlot,
 } from '@prisma/client';
+import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { calculateLevelProgress } from '../../common/utils/level.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ClaimIncursionDto } from './dto/claim-incursion.dto';
@@ -54,7 +54,10 @@ const incursionInclude = {
 
 @Injectable()
 export class IncursionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityGuard: ActivityGuardService,
+  ) {}
 
   async listAll() {
     const incursions = await this.prisma.incursion.findMany({
@@ -74,24 +77,32 @@ export class IncursionsService {
 
   async listAvailable(userId: string, characterId: string) {
     const character = await this.getCharacterOrThrow(userId, characterId);
-    const [incursions, activeSession] = await Promise.all([
+    const [incursions, activeSession, activityState] = await Promise.all([
       this.prisma.incursion.findMany({
         where: {
           isActive: true,
+          mapId: character.mapId ?? '__sem-mapa-atual__',
         },
         orderBy: [{ tier: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
         include: incursionInclude,
       }),
       this.getActiveOrCompletedSession(characterId),
+      this.activityGuard.getCharacterActivityState({ characterId, userId }),
     ]);
 
     return {
       character: this.formatCharacterWallet(character),
+      currentMap: character.map,
       activeSession: activeSession
         ? this.formatSession(activeSession, new Date())
         : null,
       incursions: incursions.map((incursion) =>
-        this.formatAvailableIncursion(incursion, character, activeSession),
+        this.formatAvailableIncursion(
+          incursion,
+          character,
+          activeSession,
+          activityState,
+        ),
       ),
     };
   }
@@ -109,17 +120,10 @@ export class IncursionsService {
   async start(userId: string, dto: StartIncursionDto) {
     const character = await this.getCharacterOrThrow(userId, dto.characterId);
 
-    if (character.status !== CharacterStatus.ACTIVE) {
-      throw new BadRequestException(
-        'Apenas personagens ativos podem iniciar incursões.',
-      );
-    }
-
-    if ((character.currentHp ?? character.maxHp ?? 0) <= 0) {
-      throw new BadRequestException(
-        'Personagens derrotados não podem iniciar incursões.',
-      );
-    }
+    await this.activityGuard.ensureCanStartIncursion({
+      characterId: dto.characterId,
+      userId,
+    });
 
     const incursion = await this.prisma.incursion.findUnique({
       where: { id: dto.incursionId },
@@ -142,41 +146,18 @@ export class IncursionsService {
     const endsAt = new Date(now.getTime() + incursion.durationSeconds * 1000);
 
     const session = await this.prisma.$transaction(async (tx) => {
-      const [activeAutoCombat, activeGathering, activeIncursion] =
-        await Promise.all([
-          tx.autoCombatSession.findFirst({
-            where: { characterId: character.id, status: 'ACTIVE' },
-            select: { id: true },
-          }),
-          tx.gatheringSession.findFirst({
-            where: { characterId: character.id, status: 'ACTIVE' },
-            select: { id: true },
-          }),
-          tx.characterIncursionSession.findFirst({
-            where: {
-              characterId: character.id,
-              status: {
-                in: [
-                  IncursionSessionStatus.ACTIVE,
-                  IncursionSessionStatus.COMPLETED,
-                ],
-              },
-            },
-            select: { id: true, status: true },
-          }),
-        ]);
-
-      if (activeAutoCombat) {
-        throw new ConflictException(
-          'Encerre o auto-combate antes de iniciar uma incursão.',
-        );
-      }
-
-      if (activeGathering) {
-        throw new ConflictException(
-          'Encerre a expedição antes de iniciar uma incursão.',
-        );
-      }
+      const activeIncursion = await tx.characterIncursionSession.findFirst({
+        where: {
+          characterId: character.id,
+          status: {
+            in: [
+              IncursionSessionStatus.ACTIVE,
+              IncursionSessionStatus.COMPLETED,
+            ],
+          },
+        },
+        select: { id: true, status: true },
+      });
 
       if (activeIncursion) {
         throw new ConflictException(
@@ -418,6 +399,16 @@ export class IncursionsService {
         currentHp: true,
         maxHp: true,
         mapId: true,
+        map: {
+          select: {
+            id: true,
+            name: true,
+            tier: true,
+            minLevel: true,
+            maxLevel: true,
+            description: true,
+          },
+        },
       },
     });
 
@@ -485,6 +476,12 @@ export class IncursionsService {
     character: { level: number; gold: number; mapId: string | null },
     incursion: any,
   ) {
+    if (!character.mapId || incursion.mapId !== character.mapId) {
+      throw new ForbiddenException(
+        'Esta incursão não pertence ao mapa atual do personagem.',
+      );
+    }
+
     if (character.level < incursion.minLevel) {
       throw new ForbiddenException(
         `Disponível a partir do nível ${incursion.minLevel}.`,
@@ -613,6 +610,11 @@ export class IncursionsService {
     incursion: any,
     character: any,
     activeSession: any | null,
+    activityState?: {
+      hasActiveAutoCombat?: boolean;
+      hasActiveGathering?: boolean;
+      hasActiveIncursion?: boolean;
+    },
   ) {
     const lockedReasons: string[] = [];
 
@@ -622,8 +624,12 @@ export class IncursionsService {
       lockedReasons.push(`Recomendado até o nível ${incursion.maxLevel}`);
     if (character.gold < incursion.goldCost)
       lockedReasons.push('Gold insuficiente');
-    if (activeSession)
+    if (activeSession || activityState?.hasActiveIncursion)
       lockedReasons.push('Já existe incursão ativa ou pendente');
+    if (activityState?.hasActiveAutoCombat)
+      lockedReasons.push('Auto-combate em andamento');
+    if (activityState?.hasActiveGathering)
+      lockedReasons.push('Gathering em andamento');
 
     return {
       ...this.formatIncursion(incursion),

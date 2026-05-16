@@ -1,6 +1,17 @@
-export type IncursionRewardType = 'XP' | 'GOLD' | 'MATERIAL' | 'CONSUMABLE' | 'EQUIPMENT' | 'ITEM';
-export type IncursionSessionStatus = 'ACTIVE' | 'COMPLETED' | 'CLAIMED' | 'FAILED' | 'CANCELLED';
-export type IncursionDifficulty = 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
+export type IncursionRewardType =
+  | "XP"
+  | "GOLD"
+  | "MATERIAL"
+  | "CONSUMABLE"
+  | "EQUIPMENT"
+  | "ITEM";
+export type IncursionSessionStatus =
+  | "ACTIVE"
+  | "COMPLETED"
+  | "CLAIMED"
+  | "FAILED"
+  | "CANCELLED";
+export type IncursionDifficulty = "LOW" | "MEDIUM" | "HIGH" | "EXTREME";
 
 export interface IncursionMapSummary {
   id: string;
@@ -75,7 +86,7 @@ export interface IncursionSession {
     id?: string;
     rewardType: IncursionRewardType;
     itemId?: string | null;
-    item?: IncursionLootPreview['item'];
+    item?: IncursionLootPreview["item"];
     itemName?: string | null;
     quantity: number;
     rarity?: string | null;
@@ -91,12 +102,18 @@ export interface IncursionsAvailableResponse {
     cash: number;
     wallet?: { gold: number; cash: number };
   };
+  currentMap?: IncursionMapSummary | null;
   activeSession?: IncursionSession | null;
   incursions: Incursion[];
 }
 
 export interface IncursionStatusResponse {
   activeSession?: IncursionSession | null;
+}
+
+export interface StartIncursionResponse {
+  message: string;
+  session: IncursionSession | null;
 }
 
 export interface ClaimIncursionResponse {
@@ -111,5 +128,5 @@ export interface ClaimIncursionResponse {
     oldLevel: number;
     newLevel: number;
   };
-  rewards: NonNullable<IncursionSession['rewards']>;
+  rewards: NonNullable<IncursionSession["rewards"]>;
 }
