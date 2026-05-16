@@ -9,7 +9,7 @@ import {
   Skull,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { getAutoCombatMaps } from '../../auto-combat/api/auto-combat.api';
 import {
   buildMapVisualStyle,
@@ -164,7 +164,6 @@ function getApiErrorMessage(error: unknown) {
 
 export function MapsSelectionPage() {
   const { characterId } = useParams();
-  const navigate = useNavigate();
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(null);
   const [maps, setMaps] = useState<AutoCombatMapViewModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -234,12 +233,7 @@ export function MapsSelectionPage() {
       return;
     }
 
-    const autoCombatPath = `/dashboard/${characterId}/auto-combat?mapId=${encodeURIComponent(
-      map.id,
-    )}`;
-
     if (map.id === currentMapId) {
-      navigate(autoCombatPath);
       return;
     }
 
@@ -250,7 +244,6 @@ export function MapsSelectionPage() {
       const updatedOverview = await updateCharacterCurrentMap(characterId, map.id);
 
       setOverview(updatedOverview);
-      navigate(autoCombatPath);
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error));
     } finally {
@@ -380,13 +373,6 @@ export function MapsSelectionPage() {
                       )}
                     </div>
 
-                    {isCurrentMap ? (
-                      <div className="maps-selection-card__current-badge">
-                        <MapPin size={14} aria-hidden="true" />
-                        Mapa atual
-                      </div>
-                    ) : null}
-
                     <div className="maps-selection-card__level-pill">
                       <span>Faixa recomendada</span>
                       <strong>Nv. {minLevel}-{maxLevel}</strong>
@@ -406,8 +392,8 @@ export function MapsSelectionPage() {
                           disabled={Boolean(updatingMapId)}
                           aria-label={
                             isCurrentMap
-                              ? `Abrir auto-combate em ${map.name}, seu mapa atual`
-                              : `Definir ${map.name} como mapa atual e abrir auto-combate`
+                              ? `${map.name} já é o mapa atual`
+                              : `Definir ${map.name} como mapa atual`
                           }
                         >
                           {isCurrentMap ? (

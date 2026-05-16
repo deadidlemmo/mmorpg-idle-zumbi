@@ -184,3 +184,14 @@
   flex-direction: column;
   gap: 0.82rem;
 }
+
+/* Separação explícita entre Mapa, Premium e o grid principal. */
+.gathering-origin-map-context--standalone,
+.gathering-origin-premium-card,
+.gathering-origin-content-grid {
+  flex: 0 0 auto;
+}
+
+.gathering-origin-content-grid {
+  margin-top: 0.08rem;
+}
