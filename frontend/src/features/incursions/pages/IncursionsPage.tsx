@@ -2,15 +2,16 @@ import { isAxiosError } from "axios";
 import {
   ArrowRight,
   Clock,
-  Coins,
   Lock,
   PackageOpen,
   ShieldAlert,
   Sparkles,
+  X,
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
+import goldIcon from "../../../assets/images/coins/gold.png";
 import { normalizeClassName } from "../../characters/api/characters.api";
 import {
   buildMapVisualStyle,
@@ -30,6 +31,7 @@ import "../styles/incursions.css";
 import type {
   Incursion,
   IncursionLootPreview,
+  IncursionSession,
   IncursionsAvailableResponse,
 } from "../types/incursions.types";
 
@@ -149,11 +151,48 @@ function getErrorMessage(error: unknown) {
 
 function getIncursionStatusLabel(params: {
   incursion: Incursion;
-  activeIncursionId?: string | null;
+  activeSession?: IncursionSession | null;
+  rewardedSession?: IncursionSession | null;
 }) {
-  if (params.activeIncursionId === params.incursion.id) return "Em andamento";
+  if (params.activeSession?.incursionId === params.incursion.id) {
+    return params.activeSession.status === "ACTIVE"
+      ? "Em andamento"
+      : "Finalizando";
+  }
+
+  if (params.rewardedSession?.incursionId === params.incursion.id) {
+    return "Recompensada";
+  }
+
   if (!params.incursion.canStart) return "Bloqueada";
   return "Disponível";
+}
+
+function getStatusTone(statusLabel: string) {
+  if (/andamento|finalizando/i.test(statusLabel)) return "running";
+  if (/bloqueada/i.test(statusLabel)) return "locked";
+  if (/recompensada|conclu/i.test(statusLabel)) return "done";
+  return "available";
+}
+
+function GoldAmount({ value }: { value: number }) {
+  return (
+    <span className="incursions-gold-amount">
+      <img src={goldIcon} alt="" aria-hidden="true" />
+      <strong>{value.toLocaleString("pt-BR")}</strong>
+    </span>
+  );
+}
+
+function IncursionArt({ incursion }: { incursion: Incursion }) {
+  return (
+    <span className="incursion-art" aria-hidden="true">
+      <span className="incursion-art__sigil">
+        {incursion.name.slice(0, 2).toUpperCase()}
+      </span>
+      <Sparkles size={20} />
+    </span>
+  );
 }
 
 export function IncursionsPage() {
@@ -163,9 +202,7 @@ export function IncursionsPage() {
     null,
   );
   const [data, setData] = useState<IncursionsAvailableResponse | null>(null);
-  const [selectedIncursionId, setSelectedIncursionId] = useState<string | null>(
-    null,
-  );
+  const [modalIncursionId, setModalIncursionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -181,11 +218,7 @@ export function IncursionsPage() {
 
     setOverview(overviewResponse);
     setData(incursionsResponse);
-
-    if (!selectedIncursionId && incursionsResponse.incursions[0]) {
-      setSelectedIncursionId(incursionsResponse.incursions[0].id);
-    }
-  }, [characterId, selectedIncursionId]);
+  }, [characterId]);
 
   useEffect(() => {
     if (!characterId) return;
@@ -205,6 +238,22 @@ export function IncursionsPage() {
   }, [characterId, loadData]);
 
   useEffect(() => {
+    if (!modalIncursionId) return undefined;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setModalIncursionId(null);
+    };
+
+    document.body.classList.add("incursions-modal-open");
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.classList.remove("incursions-modal-open");
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [modalIncursionId]);
+
+  useEffect(() => {
     if (!characterId || !data?.activeSession || realtimeState.session) return;
 
     const timeoutId = window.setTimeout(() => {
@@ -215,16 +264,12 @@ export function IncursionsPage() {
   }, [characterId, data?.activeSession, loadData, realtimeState.session]);
 
   const activeSession = realtimeState.session ?? data?.activeSession ?? null;
+  const rewardedSession = data?.rewardedSession ?? null;
   const incursions = data?.incursions ?? [];
-  const selectedIncursion =
-    incursions.find((incursion) => incursion.id === selectedIncursionId) ??
-    incursions[0] ??
-    null;
+  const modalIncursion =
+    incursions.find((incursion) => incursion.id === modalIncursionId) ?? null;
   const currentMap =
-    data?.currentMap ??
-    selectedIncursion?.map ??
-    activeSession?.incursion.map ??
-    null;
+    data?.currentMap ?? activeSession?.incursion.map ?? incursions[0]?.map ?? null;
   const currentMapName = currentMap?.name ?? "Mapa não definido";
   const currentMapImage = getMapImageByName(currentMapName);
   const currentMapVisualStyle = buildMapVisualStyle(currentMapImage);
@@ -258,6 +303,7 @@ export function IncursionsPage() {
     try {
       const response = await start(incursionId);
       if (response?.message) setSuccessMessage(response.message);
+      if (response?.session) setModalIncursionId(null);
       await loadData();
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
@@ -276,6 +322,7 @@ export function IncursionsPage() {
     try {
       const response = await cancel();
       if (response?.message) setSuccessMessage(response.message);
+      setModalIncursionId(null);
       await loadData();
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
@@ -294,8 +341,9 @@ export function IncursionsPage() {
             </span>
             <h1>Incursões</h1>
             <p>
-              Escolha uma operação temporizada, pague o custo em gold e
-              acompanhe tudo pela Activity Bar global em tempo real.
+              Operações temporizadas do mapa atual. Escolha uma incursão, pague
+              o custo em gold e acompanhe a operação pela Activity Bar global em
+              tempo real.
             </p>
           </div>
         </section>
@@ -346,6 +394,27 @@ export function IncursionsPage() {
           </div>
         </section>
 
+        <aside className="gathering-origin-premium-card incursions-premium-card">
+          <div
+            className="gathering-origin-premium-card__badge"
+            aria-hidden="true"
+          >
+            i
+          </div>
+
+          <div>
+            <h2>Benefícios premium</h2>
+            <p>
+              Alertas avançados, priorização visual e relatórios compactos para
+              operações idle de alto risco.
+            </p>
+          </div>
+
+          <button type="button" className="gathering-origin-premium-card__button">
+            Ver benefícios
+          </button>
+        </aside>
+
         {errorMessage || realtimeState.errorMessage ? (
           <div className="incursions-alert incursions-alert--error">
             {errorMessage ?? realtimeState.errorMessage}
@@ -358,183 +427,366 @@ export function IncursionsPage() {
         ) : null}
         {hasBlockingActivity && !activeSession ? (
           <div className="incursions-alert incursions-alert--warning">
-            Este personagem já está em outra atividade principal. Encerre ou
-            colete a atividade atual antes de iniciar uma incursão.
+            Este personagem já está em outra atividade principal. Encerre a
+            atividade atual antes de iniciar uma incursão.
           </div>
         ) : null}
 
-        {activeSession ? (
-          <section className="incursions-active">
-            <div className="incursions-active__icon">
-              <ShieldAlert size={26} />
-            </div>
-            <div>
-              <span>
-                {activeSession.status === "ACTIVE"
-                  ? "Incursão ativa"
-                  : "Finalizando recompensas"}
-              </span>
-              <h2>{activeSession.incursion.name}</h2>
-              <p>
-                {activeSession.incursion.map.name} • custo pago:{" "}
-                {activeSession.goldCostPaid.toLocaleString("pt-BR")} gold
-              </p>
-              <div className="incursions-active__progress">
-                <i
-                  style={{
-                    width: `${Math.min(100, Math.max(0, activeSession.progressPercent))}%`,
-                  }}
-                />
-              </div>
-            </div>
-            <div className="incursions-active__actions">
-              <strong>
-                {activeSession.status === "ACTIVE"
-                  ? `Termina em ${formatRemaining(activeSession.remainingSeconds)}`
-                  : "Entregando automaticamente"}
-              </strong>
-
-              {activeSession.status === "ACTIVE" ? (
-                <button
-                  className="incursions-active__cancel"
-                  type="button"
-                  disabled={
-                    actionId === "cancel-incursion" || realtimeState.isBusy
-                  }
-                  onClick={() => void handleCancel()}
-                >
-                  <XCircle size={15} />
-                  {actionId === "cancel-incursion" || realtimeState.isBusy
-                    ? "Cancelando..."
-                    : "Cancelar incursão"}
-                </button>
-              ) : null}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="incursions-board">
-          <div className="incursions-grid" aria-label="Incursões do mapa atual">
-            {incursions.map((incursion) => {
-              const lockedReasons = incursion.lockedReasons ?? [];
-              const isLocked = !incursion.canStart;
-              const isRunningThis = activeSession?.incursionId === incursion.id;
-              const statusLabel = getIncursionStatusLabel({
-                incursion,
-                activeIncursionId: activeSession?.incursionId,
-              });
-
-              return (
-                <button
-                  className={`incursion-card ${isLocked ? "is-locked" : ""} ${selectedIncursion?.id === incursion.id ? "is-selected" : ""}`}
-                  key={incursion.id}
-                  type="button"
-                  onClick={() => setSelectedIncursionId(incursion.id)}
-                >
-                  <span className="incursion-card__art" aria-hidden="true">
-                    <Sparkles size={22} />
-                  </span>
-                  <span className="incursion-card__content">
-                    <span className="incursion-card__top">
-                      <em>Tier {incursion.tier}</em>
-                      <strong>{statusLabel}</strong>
-                    </span>
-                    <span className="incursion-card__name">
-                      {incursion.name}
-                    </span>
-                    <span className="incursion-card__meta">
-                      <span>
-                        <Clock size={14} />{" "}
-                        {formatDuration(incursion.durationSeconds)}
-                      </span>
-                      <span>
-                        <Coins size={14} />{" "}
-                        {incursion.goldCost.toLocaleString("pt-BR")}
-                      </span>
-                    </span>
-                    {isRunningThis ? (
-                      <small>Esta é a incursão em andamento.</small>
-                    ) : null}
-                    {isLocked && lockedReasons[0] ? (
-                      <small>
-                        <Lock size={13} /> {lockedReasons[0]}
-                      </small>
-                    ) : null}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <aside className="incursions-detail">
-            {selectedIncursion ? (
-              <>
-                <div className="incursions-detail__header">
-                  <span>Detalhes da operação</span>
-                  <h2>{selectedIncursion.name}</h2>
-                  <p>{selectedIncursion.description}</p>
+        <section
+          className="incursions-content-grid"
+          aria-label="Incursões e atividade atual"
+        >
+          <main className="incursions-main-column">
+            <section className="gathering-card gathering-card--compact incursions-list-panel">
+              <header className="incursions-list-panel__header">
+                <div className="gathering-card__title-group incursions-list-panel__title-group">
+                  <span className="gathering-card__eyebrow">Operações</span>
+                  <h2>Incursões deste mapa</h2>
                 </div>
+              </header>
 
-                <div className="incursions-detail__stats">
-                  <span>
-                    Dificuldade:{" "}
-                    {getDifficultyLabel(selectedIncursion.difficulty)}
-                  </span>
-                  <span>Risco {selectedIncursion.riskLevel}/10</span>
-                  <span>
-                    Nível {selectedIncursion.minLevel}–
-                    {selectedIncursion.maxLevel}
-                  </span>
-                  <span>
-                    {formatDuration(selectedIncursion.durationSeconds)}
-                  </span>
+              {isLoading ? (
+                <div className="incursions-empty incursions-empty--inline">
+                  <span className="gathering-loading__spinner" />
+                  <p>Carregando incursões...</p>
                 </div>
+              ) : incursions.length > 0 ? (
+                <div
+                  className="incursions-grid"
+                  aria-label="Incursões do mapa atual"
+                >
+                  {incursions.map((incursion) => {
+                    const lockedReasons = incursion.lockedReasons ?? [];
+                    const isLocked = !incursion.canStart;
+                    const isRunningThis =
+                      activeSession?.incursionId === incursion.id;
+                    const statusLabel = getIncursionStatusLabel({
+                      incursion,
+                      activeSession,
+                      rewardedSession,
+                    });
+                    const statusTone = getStatusTone(statusLabel);
 
-                <div className="incursions-detail__rewards">
-                  <strong>
-                    <PackageOpen size={16} /> Loot possível
-                  </strong>
-                  <ul>
-                    {selectedIncursion.rewardsPreview.map((loot) => (
-                      <li
-                        key={loot.id ?? `${loot.rewardType}-${loot.sortOrder}`}
+                    return (
+                      <button
+                        className={[
+                          "incursion-card",
+                          isLocked ? "is-locked" : "",
+                          isRunningThis ? "is-running" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        key={incursion.id}
+                        type="button"
+                        onClick={() => setModalIncursionId(incursion.id)}
                       >
-                        <Sparkles size={13} /> {formatReward(loot)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                        <IncursionArt incursion={incursion} />
 
-                <button
-                  className="incursions-detail__action"
-                  type="button"
-                  disabled={
-                    !selectedIncursion.canStart ||
-                    Boolean(activeSession) ||
-                    actionId === selectedIncursion.id ||
-                    realtimeState.isBusy
-                  }
-                  onClick={() => void handleStart(selectedIncursion.id)}
-                >
-                  {actionId === selectedIncursion.id || realtimeState.isBusy
-                    ? "Iniciando..."
-                    : activeSession
-                      ? "Atividade em andamento"
-                      : selectedIncursion.canStart
-                        ? "Iniciar incursão"
-                        : "Incursão bloqueada"}
-                  <ArrowRight size={16} />
-                </button>
-              </>
-            ) : (
-              <div className="incursions-empty">
-                <PackageOpen size={24} />
-                <h2>Nenhuma incursão neste mapa</h2>
-                <p>Troque de mapa para encontrar novas operações.</p>
+                        <span className="incursion-card__content">
+                          <span className="incursion-card__top">
+                            <em>Tier {incursion.tier}</em>
+                            <strong
+                              className={`incursion-card__status incursion-card__status--${statusTone}`}
+                            >
+                              {statusLabel}
+                            </strong>
+                          </span>
+
+                          <span className="incursion-card__name">
+                            {incursion.name}
+                          </span>
+
+                          <span className="incursion-card__meta">
+                            <span>
+                              <Clock size={14} />
+                              {formatDuration(incursion.durationSeconds)}
+                            </span>
+                            <GoldAmount value={incursion.goldCost} />
+                          </span>
+
+                          <span className="incursion-card__difficulty">
+                            {getDifficultyLabel(incursion.difficulty)} • Risco{" "}
+                            {incursion.riskLevel}/10
+                          </span>
+
+                          {isRunningThis ? (
+                            <small>Esta operação está em andamento.</small>
+                          ) : null}
+                          {isLocked && lockedReasons[0] ? (
+                            <small>
+                              <Lock size={13} /> {lockedReasons[0]}
+                            </small>
+                          ) : null}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="incursions-empty incursions-empty--inline">
+                  <PackageOpen size={24} />
+                  <h2>Nenhuma incursão neste mapa</h2>
+                  <p>Troque de mapa para encontrar novas operações.</p>
+                </div>
+              )}
+            </section>
+          </main>
+
+          <aside className="incursions-side-column">
+            <section className="gathering-origin-side-section gathering-origin-side-section--current">
+              <div className="gathering-origin-section-divider">
+                <span>Atividade atual</span>
               </div>
-            )}
+
+              <div className="gathering-card gathering-card--active incursions-current-card">
+                {activeSession ? (
+                  <div className="incursions-current-card__content">
+                    <div className="incursions-current-card__head">
+                      <div className="incursions-current-card__icon">
+                        <ShieldAlert size={22} />
+                      </div>
+
+                      <div>
+                        <span>
+                          {activeSession.status === "ACTIVE"
+                            ? "Incursão ativa"
+                            : "Finalizando recompensas"}
+                        </span>
+                        <h2>{activeSession.incursion.name}</h2>
+                        <p>{activeSession.incursion.map.name}</p>
+                      </div>
+                    </div>
+
+                    <div className="incursions-current-card__meta">
+                      <span>
+                        Status
+                        <strong>
+                          {activeSession.status === "ACTIVE"
+                            ? "Em andamento"
+                            : "Recompensa automática"}
+                        </strong>
+                      </span>
+                      <span>
+                        Custo pago
+                        <GoldAmount value={activeSession.goldCostPaid} />
+                      </span>
+                    </div>
+
+                    <div className="incursions-current-card__progress">
+                      <div>
+                        <span>Progresso</span>
+                        <strong>
+                          {Math.min(
+                            100,
+                            Math.max(0, activeSession.progressPercent),
+                          )}
+                          %
+                        </strong>
+                      </div>
+                      <i>
+                        <em
+                          style={{
+                            width: `${Math.min(
+                              100,
+                              Math.max(0, activeSession.progressPercent),
+                            )}%`,
+                          }}
+                        />
+                      </i>
+                    </div>
+
+                    <strong className="incursions-current-card__timer">
+                      {activeSession.status === "ACTIVE"
+                        ? `Termina em ${formatRemaining(activeSession.remainingSeconds)}`
+                        : "Entregando automaticamente"}
+                    </strong>
+
+                    {activeSession.status === "ACTIVE" ? (
+                      <button
+                        className="incursions-danger-button"
+                        type="button"
+                        disabled={
+                          actionId === "cancel-incursion" ||
+                          realtimeState.isBusy
+                        }
+                        onClick={() => void handleCancel()}
+                      >
+                        <XCircle size={15} />
+                        {actionId === "cancel-incursion" ||
+                        realtimeState.isBusy
+                          ? "Cancelando..."
+                          : "Cancelar incursão"}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="incursions-current-card__empty">
+                    <ShieldAlert size={24} />
+                    <h2>Nenhuma incursão ativa</h2>
+                    <p>Escolha uma incursão para iniciar uma operação.</p>
+                  </div>
+                )}
+              </div>
+            </section>
           </aside>
         </section>
+
+        {modalIncursion ? (
+          <div
+            className="incursions-modal-backdrop"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setModalIncursionId(null);
+              }
+            }}
+          >
+            <section
+              className="incursions-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="incursions-modal-title"
+            >
+              <header className="incursions-modal__hero">
+                <IncursionArt incursion={modalIncursion} />
+
+                <div className="incursions-modal__title-group">
+                  <span>Detalhes da operação</span>
+                  <h2 id="incursions-modal-title">{modalIncursion.name}</h2>
+                  <p>{modalIncursion.description}</p>
+                </div>
+
+                <button
+                  className="incursions-modal__close"
+                  type="button"
+                  aria-label="Fechar detalhes da incursão"
+                  onClick={() => setModalIncursionId(null)}
+                >
+                  <X size={18} />
+                </button>
+              </header>
+
+              <div className="incursions-modal__body">
+                <div className="incursions-modal__stats">
+                  <span>
+                    Mapa
+                    <strong>{modalIncursion.map.name}</strong>
+                  </span>
+                  <span>
+                    Tier
+                    <strong>{modalIncursion.tier}</strong>
+                  </span>
+                  <span>
+                    Nível recomendado
+                    <strong>
+                      {modalIncursion.minLevel}–{modalIncursion.maxLevel}
+                    </strong>
+                  </span>
+                  <span>
+                    Duração
+                    <strong>
+                      {formatDuration(modalIncursion.durationSeconds)}
+                    </strong>
+                  </span>
+                  <span>
+                    Custo
+                    <GoldAmount value={modalIncursion.goldCost} />
+                  </span>
+                  <span>
+                    Dificuldade
+                    <strong>{getDifficultyLabel(modalIncursion.difficulty)}</strong>
+                  </span>
+                  <span>
+                    Risco
+                    <strong>{modalIncursion.riskLevel}/10</strong>
+                  </span>
+                  <span>
+                    Status
+                    <strong>
+                      {getIncursionStatusLabel({
+                        incursion: modalIncursion,
+                        activeSession,
+                        rewardedSession,
+                      })}
+                    </strong>
+                  </span>
+                </div>
+
+                <section className="incursions-modal__rewards">
+                  <strong>
+                    <PackageOpen size={16} /> Loot e EXP possíveis
+                  </strong>
+
+                  {modalIncursion.rewardsPreview.length > 0 ? (
+                    <ul>
+                      {modalIncursion.rewardsPreview.map((loot) => (
+                        <li key={loot.id ?? `${loot.rewardType}-${loot.sortOrder}`}>
+                          <Sparkles size={13} /> {formatReward(loot)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>As recompensas desta operação ainda são desconhecidas.</p>
+                  )}
+                </section>
+
+                {modalIncursion.lockedReasons?.length ? (
+                  <div className="incursions-modal__lock-message">
+                    <Lock size={15} /> {modalIncursion.lockedReasons[0]}
+                  </div>
+                ) : null}
+              </div>
+
+              <footer className="incursions-modal__actions">
+                {activeSession?.incursionId === modalIncursion.id &&
+                activeSession.status === "ACTIVE" ? (
+                  <button
+                    className="incursions-danger-button"
+                    type="button"
+                    disabled={
+                      actionId === "cancel-incursion" || realtimeState.isBusy
+                    }
+                    onClick={() => void handleCancel()}
+                  >
+                    <XCircle size={15} />
+                    {actionId === "cancel-incursion" || realtimeState.isBusy
+                      ? "Cancelando..."
+                      : "Cancelar incursão"}
+                  </button>
+                ) : (
+                  <button
+                    className="incursions-primary-button"
+                    type="button"
+                    disabled={
+                      !modalIncursion.canStart ||
+                      Boolean(activeSession) ||
+                      actionId === modalIncursion.id ||
+                      realtimeState.isBusy
+                    }
+                    onClick={() => void handleStart(modalIncursion.id)}
+                  >
+                    {actionId === modalIncursion.id || realtimeState.isBusy
+                      ? "Iniciando..."
+                      : activeSession
+                        ? "Atividade em andamento"
+                        : modalIncursion.canStart
+                          ? "Iniciar incursão"
+                          : "Incursão bloqueada"}
+                    <ArrowRight size={16} />
+                  </button>
+                )}
+
+                <button
+                  className="incursions-secondary-button"
+                  type="button"
+                  onClick={() => setModalIncursionId(null)}
+                >
+                  Fechar
+                </button>
+              </footer>
+            </section>
+          </div>
+        ) : null}
       </main>
     </DashboardLayout>
   );
