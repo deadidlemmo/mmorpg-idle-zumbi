@@ -22,10 +22,10 @@ export function useIncursionsRealtimeState(): IncursionsRealtimeState {
 }
 
 export function useIncursionsRealtimeActions() {
-  const { refresh, start, claim, clearError } = useIncursionsRealtime();
+  const { refresh, start, claim, cancel, clearError } = useIncursionsRealtime();
 
   return useMemo(
-    () => ({ refresh, start, claim, clearError }),
-    [claim, clearError, refresh, start],
+    () => ({ refresh, start, claim, cancel, clearError }),
+    [cancel, claim, clearError, refresh, start],
   );
 }

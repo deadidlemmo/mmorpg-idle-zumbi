@@ -1,6 +1,8 @@
 import { useMemo, type ReactNode } from 'react';
 import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import { useGatheringRealtimeState } from '../../gathering/realtime/useGatheringRealtime';
+import type { IncursionsRealtimeState } from '../../incursions/realtime/IncursionsRealtimeProvider';
+import { useIncursionsRealtimeState } from '../../incursions/realtime/useIncursionsRealtime';
 import type { GatheringMaterialViewModel } from '../../gathering/types/gathering.types';
 import '../styles/dashboard-topbar.css';
 
@@ -34,7 +36,7 @@ interface DashboardTopBarProps {
 type LooseRecord = Record<string, unknown>;
 
 interface DashboardTopBarActivityViewModel {
-  kind: 'idle' | 'gathering' | 'auto-combat';
+  kind: 'idle' | 'gathering' | 'auto-combat' | 'incursion';
   title: string;
   subtitle: string;
   icon: ReactNode;
@@ -97,6 +99,7 @@ function isTerminalStatus(value: unknown): boolean {
     'COMPLETED',
     'DEFEATED',
     'EXPIRED',
+    'CLAIMED',
     'CANCELLED',
     'CANCELED',
   ].includes(status);
@@ -447,6 +450,42 @@ function buildGatheringActivity(
   };
 }
 
+function buildIncursionActivity(
+  incursionsState: IncursionsRealtimeState,
+): DashboardTopBarActivityViewModel | null {
+  const session = incursionsState.session;
+
+  if (
+    !session ||
+    session.status === 'CANCELLED' ||
+    session.status === 'CLAIMED' ||
+    session.status === 'FAILED'
+  ) {
+    return null;
+  }
+
+  const incursionName = session.incursion?.name ?? 'Incursão ativa';
+  const mapName = session.incursion?.map?.name ?? 'Mapa desconhecido';
+  const remainingSeconds = Number(session.remainingSeconds ?? 0);
+  const progressPercent = clampPercent(session.progressPercent ?? 0);
+  const isCompleted =
+    session.status === 'COMPLETED' || remainingSeconds <= 0 || session.canClaim;
+
+  return {
+    kind: 'incursion',
+    title: incursionName,
+    subtitle: isCompleted
+      ? 'Recompensa automática'
+      : `${mapName} · ${formatCompactDuration(remainingSeconds)}`,
+    icon: '⌬',
+    progressPercent: isCompleted ? 100 : progressPercent,
+    badge: isCompleted ? 'Fim' : `${Math.floor(progressPercent)}%`,
+    titleText: isCompleted
+      ? 'Incursão concluída, recompensas automáticas em processamento'
+      : `Incursão ativa em ${mapName}`,
+  };
+}
+
 function buildIdleActivity(): DashboardTopBarActivityViewModel {
   return {
     kind: 'idle',
@@ -533,14 +572,16 @@ export function DashboardTopBar({
 }: DashboardTopBarProps) {
   const autoCombatState = useAutoCombatRealtimeState();
   const gatheringState = useGatheringRealtimeState();
+  const incursionsState = useIncursionsRealtimeState();
 
   const activity = useMemo(() => {
     return (
       buildAutoCombatActivity(autoCombatState) ??
       buildGatheringActivity(gatheringState) ??
+      buildIncursionActivity(incursionsState) ??
       buildIdleActivity()
     );
-  }, [autoCombatState, gatheringState]);
+  }, [autoCombatState, gatheringState, incursionsState]);
 
   const visibleResources = useMemo(() => {
     return buildVisibleResources(resources);

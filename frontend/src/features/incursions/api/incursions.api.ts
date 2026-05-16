@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from "../../../services/api/endpoints";
 import { apiClient } from "../../../services/api/apiClient";
 import type {
+  CancelIncursionResponse,
   ClaimIncursionResponse,
   IncursionStatusResponse,
   IncursionsAvailableResponse,
@@ -38,7 +39,7 @@ export async function claimIncursion(characterId: string, sessionId: string) {
 }
 
 export async function cancelIncursion(characterId: string) {
-  const response = await apiClient.post(
+  const response = await apiClient.post<CancelIncursionResponse>(
     API_ENDPOINTS.incursions.cancel(characterId),
   );
   return response.data;

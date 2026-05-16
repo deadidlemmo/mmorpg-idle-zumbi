@@ -118,6 +118,11 @@ export interface StartIncursionResponse {
   session: IncursionSession | null;
 }
 
+export interface CancelIncursionResponse {
+  message: string;
+  session: IncursionSession;
+}
+
 export interface ClaimIncursionResponse {
   message: string;
   session: IncursionSession;

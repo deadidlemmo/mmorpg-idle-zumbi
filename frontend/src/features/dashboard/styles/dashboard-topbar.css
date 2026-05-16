@@ -25,6 +25,7 @@
   --dashboard-topbar-gold-rgb: 232, 184, 78;
   --dashboard-topbar-blue-rgb: 72, 144, 214;
   --dashboard-topbar-red-rgb: 176, 66, 58;
+  --dashboard-topbar-incursion-rgb: 216, 181, 86;
   --dashboard-topbar-white-rgb: 231, 227, 216;
   --dashboard-topbar-border-rgb: var(--dashboard-topbar-green-rgb);
 
@@ -74,6 +75,10 @@
 
 .dashboard-topbar--auto-combat {
   --dashboard-topbar-border-rgb: var(--dashboard-topbar-red-rgb);
+}
+
+.dashboard-topbar--incursion {
+  --dashboard-topbar-border-rgb: var(--dashboard-topbar-incursion-rgb);
 }
 
 .dashboard-topbar--idle {
@@ -235,6 +240,32 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     inset -1px 0 0 rgba(255, 255, 255, 0.07),
     0 0 10px rgba(var(--dashboard-topbar-red-rgb), 0.16);
+}
+
+.dashboard-topbar--incursion .dashboard-topbar__activity {
+  border-color: rgba(var(--dashboard-topbar-incursion-rgb), 0.32);
+}
+
+.dashboard-topbar--incursion .dashboard-topbar__activity-progress {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(0, 0, 0, 0.12)),
+    rgb(35, 31, 23);
+}
+
+.dashboard-topbar--incursion .dashboard-topbar__activity-progress span {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 48%, rgba(0, 0, 0, 0.15)),
+    linear-gradient(
+      90deg,
+      rgba(116, 87, 35, 0.94),
+      rgba(194, 145, 55, 0.94) 58%,
+      rgba(236, 196, 91, 0.92)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 0 10px rgba(var(--dashboard-topbar-incursion-rgb), 0.16);
 }
 
 .dashboard-topbar--idle .dashboard-topbar__activity {
@@ -481,6 +512,13 @@
     radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.1), transparent 42%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
     rgb(88, 30, 27);
+}
+
+.dashboard-topbar--incursion .dashboard-topbar__activity-status-core {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgb(83, 61, 28);
 }
 
 .dashboard-topbar--idle .dashboard-topbar__activity-status-ring {

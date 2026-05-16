@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-redundant-type-constituents */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-redundant-type-constituents */
 import {
   BadRequestException,
   ConflictException,
@@ -244,27 +244,61 @@ export class IncursionsService {
   async cancel(userId: string, characterId: string) {
     await this.getCharacterOrThrow(userId, characterId);
 
-    const session = await this.prisma.characterIncursionSession.findFirst({
-      where: {
-        characterId,
-        status: IncursionSessionStatus.ACTIVE,
-      },
-      orderBy: { startedAt: 'desc' },
-    });
+    const now = new Date();
 
-    if (!session) {
-      throw new NotFoundException('Nenhuma incursão ativa encontrada.');
-    }
+    const cancelled = await this.prisma.$transaction(async (tx) => {
+      const session = await tx.characterIncursionSession.findFirst({
+        where: {
+          characterId,
+          status: IncursionSessionStatus.ACTIVE,
+        },
+        orderBy: { startedAt: 'desc' },
+        select: {
+          id: true,
+          endsAt: true,
+          claimedAt: true,
+        },
+      });
 
-    const cancelled = await this.prisma.characterIncursionSession.update({
-      where: { id: session.id },
-      data: { status: IncursionSessionStatus.CANCELLED },
-      include: this.sessionInclude(),
+      if (!session) {
+        throw new NotFoundException('Nenhuma incursão ativa encontrada.');
+      }
+
+      if (session.claimedAt || session.endsAt.getTime() <= now.getTime()) {
+        throw new ConflictException(
+          'Esta incursão já terminou ou já foi recompensada e não pode ser cancelada.',
+        );
+      }
+
+      const update = await tx.characterIncursionSession.updateMany({
+        where: {
+          id: session.id,
+          characterId,
+          status: IncursionSessionStatus.ACTIVE,
+          claimedAt: null,
+          endsAt: { gt: now },
+        },
+        data: {
+          status: IncursionSessionStatus.CANCELLED,
+          completedAt: null,
+        },
+      });
+
+      if (update.count <= 0) {
+        throw new ConflictException(
+          'Esta incursão já foi finalizada por outra ação e não pode ser cancelada.',
+        );
+      }
+
+      return tx.characterIncursionSession.findUniqueOrThrow({
+        where: { id: session.id },
+        include: this.sessionInclude(),
+      });
     });
 
     return {
       message: 'Incursão cancelada. O custo em gold não é reembolsado.',
-      session: this.formatSession(cancelled, new Date()),
+      session: this.formatSession(cancelled, now),
     };
   }
 
