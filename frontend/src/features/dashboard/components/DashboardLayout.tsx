@@ -314,6 +314,23 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   },
 ];
 
+const DASHBOARD_MAIN_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter((item) =>
+  ['', 'auto-combat'].includes(item.path),
+);
+
+const DASHBOARD_MANAGEMENT_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter(
+  (item) => !['', 'auto-combat', 'gathering'].includes(item.path),
+);
+
+const DASHBOARD_GATHERING_NAV_ITEM = DASHBOARD_NAV_ITEMS.find(
+  (item) => item.path === 'gathering',
+);
+
+const DASHBOARD_SOCIAL_STATUS = {
+  onlineLabel: 'Online em breve',
+  shelterLabel: 'Abrigo estável',
+};
+
 const DASHBOARD_GATHERING_ITEMS: DashboardGatheringSidebarItem[] = [
   {
     label: 'Desmanche',
@@ -1169,118 +1186,216 @@ function DashboardLayoutContent({
           <strong>Abrigo de Sobreviventes</strong>
         </div>
 
-        <div className="dashboard-sidebar__character" style={classStyle}>
-          <div className="dashboard-sidebar__avatar">
-            {avatarImage ? (
-              <img src={avatarImage} alt={heroCharacter.name} />
-            ) : (
-              <span>{getCharacterInitials(heroCharacter.name)}</span>
-            )}
-          </div>
+        <section
+          className="dashboard-sidebar__section dashboard-sidebar__section--social"
+          aria-label="Comunidade e status do abrigo"
+        >
+          <div className="dashboard-sidebar__social-row">
+            <button
+              type="button"
+              className="dashboard-sidebar__discord"
+              aria-label="Discord da comunidade ainda não configurado"
+              title="Link do Discord ainda não configurado"
+            >
+              <span aria-hidden="true">◈</span>
+              Discord
+            </button>
 
-          <div>
-            <strong>{heroCharacter.name}</strong>
-            <span>
-              Nível {heroCharacter.level} • {classData.label}
+            <span
+              className="dashboard-sidebar__online-pill"
+              title="Indicador visual preparado para integração futura"
+            >
+              <span aria-hidden="true" />
+              {DASHBOARD_SOCIAL_STATUS.onlineLabel}
             </span>
           </div>
-        </div>
+
+          <div className="dashboard-sidebar__shelter-status">
+            <span>Ambiente</span>
+            <strong>{DASHBOARD_SOCIAL_STATUS.shelterLabel}</strong>
+          </div>
+        </section>
+
+        <section
+          className="dashboard-sidebar__section"
+          aria-label="Personagem ativo"
+        >
+          <span className="dashboard-sidebar__section-label">
+            Sobrevivente ativo
+          </span>
+
+          <button
+            type="button"
+            className="dashboard-sidebar__character"
+            style={classStyle}
+            onClick={() => {
+              closeSidebar();
+              navigate('/characters');
+            }}
+            aria-label={`Trocar personagem atual: ${heroCharacter.name}`}
+          >
+            <div className="dashboard-sidebar__avatar">
+              {avatarImage ? (
+                <img src={avatarImage} alt={heroCharacter.name} />
+              ) : (
+                <span>{getCharacterInitials(heroCharacter.name)}</span>
+              )}
+            </div>
+
+            <div className="dashboard-sidebar__character-body">
+              <span className="dashboard-sidebar__character-kicker">
+                Clique para trocar
+              </span>
+              <strong>{heroCharacter.name}</strong>
+              <span>
+                Nível {heroCharacter.level} • {classData.label}
+              </span>
+            </div>
+
+            <span
+              className="dashboard-sidebar__character-chevron"
+              aria-hidden="true"
+            />
+          </button>
+        </section>
 
         <nav className="dashboard-sidebar__nav" aria-label="Menu do painel">
-          {DASHBOARD_NAV_ITEMS.map((item) => {
-            const to = item.path
-              ? `${dashboardBasePath}/${item.path}`
-              : dashboardBasePath;
+          <section
+            className="dashboard-sidebar__nav-section"
+            aria-label="Navegação principal"
+          >
+            <span className="dashboard-sidebar__section-label">Principal</span>
 
-            if (item.path === 'gathering') {
+            {DASHBOARD_MAIN_NAV_ITEMS.map((item) => {
+              const to = item.path
+                ? `${dashboardBasePath}/${item.path}`
+                : dashboardBasePath;
+
               return (
-                <div
+                <NavLink
                   key={item.label}
-                  className="dashboard-sidebar__nav-group dashboard-sidebar__nav-group--gathering"
+                  to={to}
+                  end={!item.path}
+                  onClick={closeSidebar}
+                  className={({ isActive }) =>
+                    `dashboard-sidebar__link ${isActive ? 'is-active' : ''}`
+                  }
                 >
-                  <button
-                    type="button"
-                    className={[
-                      'dashboard-sidebar__link',
-                      'dashboard-sidebar__link--toggle',
-                      isGatheringRoute ? 'is-active' : '',
-                      isGatheringMenuOpen ? 'is-expanded' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    onClick={handleToggleGatheringMenu}
-                    aria-expanded={isGatheringMenuOpen}
-                    aria-controls="dashboard-gathering-subnav"
-                  >
-                    <span aria-hidden="true">{item.icon}</span>
-                    <strong>{item.label}</strong>
-                    <em
-                      className="dashboard-sidebar__link-chevron"
-                      aria-hidden="true"
-                    />
-                  </button>
-
-                  {isGatheringMenuOpen ? (
-                    <div
-                      id="dashboard-gathering-subnav"
-                      className="dashboard-sidebar__subnav"
-                    >
-                      {DASHBOARD_GATHERING_ITEMS.map((gatheringItem) => {
-                        const gatheringTo = `${gatheringBasePath}/${gatheringItem.slug}`;
-
-                        return (
-                          <NavLink
-                            key={gatheringItem.origin}
-                            to={gatheringTo}
-                            onClick={closeSidebar}
-                            className={({ isActive }) =>
-                              `dashboard-sidebar__subitem ${
-                                isActive ? 'is-active' : ''
-                              }`
-                            }
-                          >
-                            <span
-                              className="dashboard-sidebar__subitem-icon"
-                              aria-hidden="true"
-                            >
-                              {gatheringItem.icon}
-                            </span>
-
-                            <strong>{gatheringItem.label}</strong>
-
-                            <span className="dashboard-sidebar__subitem-level">
-                              {getGatheringSkillLevelLabel(
-                                heroCharacter,
-                                gatheringItem.origin,
-                              )}
-                            </span>
-                          </NavLink>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
+                  <span aria-hidden="true">{item.icon}</span>
+                  <strong>{item.label}</strong>
+                </NavLink>
               );
-            }
+            })}
+          </section>
 
-            return (
-              <NavLink
-                key={item.label}
-                to={to}
-                end={!item.path}
-                onClick={closeSidebar}
-                className={({ isActive }) =>
-                  `dashboard-sidebar__link ${isActive ? 'is-active' : ''}`
-                }
-              >
-                <span aria-hidden="true">{item.icon}</span>
-                <strong>{item.label}</strong>
-              </NavLink>
-            );
-          })}
+          {DASHBOARD_GATHERING_NAV_ITEM ? (
+            <section
+              className="dashboard-sidebar__nav-section"
+              aria-label="Expedições idle"
+            >
+              <span className="dashboard-sidebar__section-label">
+                Expedições
+              </span>
+
+              <div className="dashboard-sidebar__nav-group dashboard-sidebar__nav-group--gathering">
+                <button
+                  type="button"
+                  className={[
+                    'dashboard-sidebar__link',
+                    'dashboard-sidebar__link--toggle',
+                    isGatheringRoute ? 'is-active' : '',
+                    isGatheringMenuOpen ? 'is-expanded' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={handleToggleGatheringMenu}
+                  aria-expanded={isGatheringMenuOpen}
+                  aria-controls="dashboard-gathering-subnav"
+                >
+                  <span aria-hidden="true">
+                    {DASHBOARD_GATHERING_NAV_ITEM.icon}
+                  </span>
+                  <strong>{DASHBOARD_GATHERING_NAV_ITEM.label}</strong>
+                  <em
+                    className="dashboard-sidebar__link-chevron"
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {isGatheringMenuOpen ? (
+                  <div
+                    id="dashboard-gathering-subnav"
+                    className="dashboard-sidebar__subnav"
+                  >
+                    {DASHBOARD_GATHERING_ITEMS.map((gatheringItem) => {
+                      const gatheringTo = `${gatheringBasePath}/${
+                        gatheringItem.slug
+                      }`;
+
+                      return (
+                        <NavLink
+                          key={gatheringItem.origin}
+                          to={gatheringTo}
+                          onClick={closeSidebar}
+                          className={({ isActive }) =>
+                            `dashboard-sidebar__subitem ${
+                              isActive ? 'is-active' : ''
+                            }`
+                          }
+                        >
+                          <span
+                            className="dashboard-sidebar__subitem-icon"
+                            aria-hidden="true"
+                          >
+                            {gatheringItem.icon}
+                          </span>
+
+                          <strong>{gatheringItem.label}</strong>
+
+                          <span className="dashboard-sidebar__subitem-level">
+                            {getGatheringSkillLevelLabel(
+                              heroCharacter,
+                              gatheringItem.origin,
+                            )}
+                          </span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          <section
+            className="dashboard-sidebar__nav-section"
+            aria-label="Gestão do personagem"
+          >
+            <span className="dashboard-sidebar__section-label">Gestão</span>
+
+            {DASHBOARD_MANAGEMENT_NAV_ITEMS.map((item) => {
+              const to = `${dashboardBasePath}/${item.path}`;
+
+              return (
+                <NavLink
+                  key={item.label}
+                  to={to}
+                  onClick={closeSidebar}
+                  className={({ isActive }) =>
+                    `dashboard-sidebar__link ${isActive ? 'is-active' : ''}`
+                  }
+                >
+                  <span aria-hidden="true">{item.icon}</span>
+                  <strong>{item.label}</strong>
+                </NavLink>
+              );
+            })}
+          </section>
         </nav>
 
         <div className="dashboard-sidebar__bottom">
+          <span className="dashboard-sidebar__section-label">Conta</span>
+
           <button
             type="button"
             className="dashboard-sidebar__secondary"
