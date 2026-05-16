@@ -94,6 +94,30 @@ enum CraftIngredientRole {
   RARE_MOB_DROP
 }
 
+enum IncursionDifficulty {
+  LOW
+  MEDIUM
+  HIGH
+  EXTREME
+}
+
+enum IncursionRewardType {
+  XP
+  GOLD
+  MATERIAL
+  CONSUMABLE
+  EQUIPMENT
+  ITEM
+}
+
+enum IncursionSessionStatus {
+  ACTIVE
+  COMPLETED
+  CLAIMED
+  FAILED
+  CANCELLED
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -145,6 +169,7 @@ model GameMap {
   items             Item[]
   subMaps           SubMap[]
   gatheringSessions GatheringSession[]
+  incursions        Incursion[]
 
   @@index([tier])
   @@index([minLevel, maxLevel])
@@ -207,6 +232,9 @@ model Character {
   level Int @default(1)
   xp    Int @default(0)
 
+  gold Int @default(0)
+  cash Int @default(0)
+
   currentHp Int?
   maxHp     Int?
 
@@ -231,6 +259,7 @@ model Character {
   autoCombatSessions      AutoCombatSession[]
   autoCombatSessionEvents AutoCombatSessionEvent[]
   gatheringSessions       GatheringSession[]
+  incursionSessions       CharacterIncursionSession[]
 
   gatheringSkills CharacterGatheringSkill[]
 
@@ -358,8 +387,10 @@ model Item {
   pantsUsers    Equipment[] @relation("PantsItem")
   bootsUsers    Equipment[] @relation("BootsItem")
 
-  mobDrops        MobDrop[]
-  autoCombatLoots AutoCombatSessionLoot[]
+  mobDrops                MobDrop[]
+  autoCombatLoots         AutoCombatSessionLoot[]
+  incursionLootTables     IncursionLootTable[]
+  incursionSessionRewards IncursionSessionReward[]
 
   potionConfigs CharacterPotionConfig[] @relation("PotionConfigItem")
 
@@ -744,4 +775,131 @@ model AutoCombatSessionEvent {
   @@index([sessionId, createdAt])
   @@index([characterId, createdAt])
   @@map("auto_combat_session_events")
+}
+
+model Incursion {
+  id String @id @default(uuid())
+
+  name        String
+  slug        String  @unique
+  description String?
+
+  mapId String
+
+  tier     Int
+  minLevel Int
+  maxLevel Int
+
+  goldCost        Int
+  durationSeconds Int
+
+  difficulty IncursionDifficulty @default(LOW)
+  riskLevel  Int                 @default(1)
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  map GameMap @relation(fields: [mapId], references: [id], onDelete: Cascade)
+
+  lootTable IncursionLootTable[]
+  sessions  CharacterIncursionSession[]
+
+  @@index([mapId])
+  @@index([tier])
+  @@index([minLevel, maxLevel])
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("incursions")
+}
+
+model IncursionLootTable {
+  id String @id @default(uuid())
+
+  incursionId String
+  rewardType  IncursionRewardType
+
+  itemId String?
+
+  chance Int @default(100)
+
+  minQuantity Int @default(1)
+  maxQuantity Int @default(1)
+
+  guaranteed Boolean @default(false)
+  rarity     Rarity?
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  incursion Incursion @relation(fields: [incursionId], references: [id], onDelete: Cascade)
+  item      Item?     @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([incursionId])
+  @@index([rewardType])
+  @@index([itemId])
+  @@index([sortOrder])
+  @@map("incursion_loot_tables")
+}
+
+model CharacterIncursionSession {
+  id String @id @default(uuid())
+
+  characterId String
+  incursionId String
+
+  status IncursionSessionStatus @default(ACTIVE)
+
+  startedAt   DateTime  @default(now())
+  endsAt      DateTime
+  completedAt DateTime?
+  claimedAt   DateTime?
+
+  goldCostPaid Int @default(0)
+  xpReward     Int @default(0)
+  goldReward   Int @default(0)
+
+  generatedRewardsJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  incursion Incursion @relation(fields: [incursionId], references: [id])
+
+  rewards IncursionSessionReward[]
+
+  @@index([characterId])
+  @@index([incursionId])
+  @@index([status])
+  @@index([characterId, status])
+  @@index([startedAt])
+  @@index([endsAt])
+  @@map("character_incursion_sessions")
+}
+
+model IncursionSessionReward {
+  id String @id @default(uuid())
+
+  sessionId String
+
+  rewardType IncursionRewardType
+  itemId     String?
+
+  quantity Int     @default(0)
+  rarity   Rarity?
+
+  createdAt DateTime @default(now())
+
+  session CharacterIncursionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  item    Item?                     @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@index([rewardType])
+  @@index([itemId])
+  @@map("incursion_session_rewards")
 }

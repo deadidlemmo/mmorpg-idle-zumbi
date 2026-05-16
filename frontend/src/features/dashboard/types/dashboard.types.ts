@@ -582,6 +582,11 @@ export interface DashboardCharacterViewModel {
 
   status?: DashboardCharacterStatus;
 
+  gold?: number | null;
+  cash?: number | null;
+  wallet?: { gold?: number | null; cash?: number | null } | null;
+  currencies?: { gold?: number | null; cash?: number | null } | null;
+
   classId?: string;
   className?: string;
 
@@ -629,6 +634,37 @@ export interface DashboardCharacterViewModel {
   updatedAt?: string;
 }
 
+
+export interface DashboardIncursionSessionViewModel {
+  id: string;
+  characterId?: string | null;
+  incursionId: string;
+  status: DashboardActivityStatus;
+  startedAt: string;
+  endsAt: string;
+  completedAt?: string | null;
+  claimedAt?: string | null;
+  goldCostPaid?: number | null;
+  xpReward?: number | null;
+  goldReward?: number | null;
+  progressPercent?: number | null;
+  remainingSeconds?: number | null;
+  canClaim?: boolean | null;
+  incursion?: {
+    id: string;
+    name: string;
+    slug?: string | null;
+    tier?: number | null;
+    minLevel?: number | null;
+    maxLevel?: number | null;
+    goldCost?: number | null;
+    durationSeconds?: number | null;
+    difficulty?: string | null;
+    riskLevel?: number | null;
+    map?: DashboardMapViewModel | null;
+  } | null;
+}
+
 export interface CharacterOverviewResponse {
   character: DashboardCharacterViewModel;
 
@@ -639,8 +675,10 @@ export interface CharacterOverviewResponse {
   activity?: {
     hasActiveAutoCombat?: boolean;
     hasActiveGathering?: boolean;
+    hasActiveIncursion?: boolean;
     activeAutoCombatSession?: DashboardAutoCombatSessionViewModel | null;
     activeGatheringSession?: DashboardGatheringSessionViewModel | null;
+    activeIncursionSession?: DashboardIncursionSessionViewModel | null;
   };
 
   progression?: {

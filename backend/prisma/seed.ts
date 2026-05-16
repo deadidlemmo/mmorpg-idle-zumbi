@@ -14,6 +14,7 @@ import {
   mobDropDefinitions,
 } from './seed-data/encounters.seed-data';
 import { gatheringDefinitions } from './seed-data/gathering.seed-data';
+import { incursionDefinitions } from './seed-data/incursions.seed-data';
 import {
   equipmentDefinitions,
   materialDefinitions,
@@ -25,6 +26,7 @@ import { recipeDefinitions } from './seed-data/recipes.seed-data';
 import type {
   ConsumableSeedData,
   CraftingRecipeSeedData,
+  IncursionSeedData,
   EquipmentSeedData,
   GameClassSeedData,
   MapDefinition,
@@ -336,6 +338,93 @@ async function upsertSubMapEncounter(params: {
       isActive: data.isActive ?? true,
     },
   });
+}
+
+
+async function upsertIncursion(params: {
+  data: IncursionSeedData;
+  mapId: string;
+}) {
+  const { data, mapId } = params;
+
+  if (data.durationSeconds < 1800) {
+    throw new Error(
+      `Incursão ${data.name} possui duração menor que 1800 segundos.`,
+    );
+  }
+
+  const incursion = await prisma.incursion.upsert({
+    where: {
+      slug: data.slug,
+    },
+    update: {
+      name: data.name,
+      description: data.description,
+      mapId,
+      tier: data.tier,
+      minLevel: data.minLevel,
+      maxLevel: data.maxLevel,
+      goldCost: data.goldCost,
+      durationSeconds: data.durationSeconds,
+      difficulty: data.difficulty,
+      riskLevel: data.riskLevel,
+      isActive: data.isActive ?? true,
+      sortOrder: data.sortOrder ?? 0,
+    },
+    create: {
+      name: data.name,
+      slug: data.slug,
+      description: data.description,
+      mapId,
+      tier: data.tier,
+      minLevel: data.minLevel,
+      maxLevel: data.maxLevel,
+      goldCost: data.goldCost,
+      durationSeconds: data.durationSeconds,
+      difficulty: data.difficulty,
+      riskLevel: data.riskLevel,
+      isActive: data.isActive ?? true,
+      sortOrder: data.sortOrder ?? 0,
+    },
+  });
+
+  await prisma.incursionLootTable.deleteMany({
+    where: {
+      incursionId: incursion.id,
+    },
+  });
+
+  for (const [index, loot] of data.lootTable.entries()) {
+    const item = loot.itemName ? await prisma.item.findUnique({ where: { name: loot.itemName } }) : null;
+
+    if (loot.itemName && !item) {
+      throw new Error(
+        `Item de loot ${loot.itemName} não encontrado para incursão ${data.name}.`,
+      );
+    }
+
+    if (loot.minQuantity > loot.maxQuantity) {
+      throw new Error(
+        `Loot inválido em ${data.name}: minQuantity maior que maxQuantity.`,
+      );
+    }
+
+    await prisma.incursionLootTable.create({
+      data: {
+        incursionId: incursion.id,
+        rewardType: loot.rewardType,
+        itemId: item?.id ?? null,
+        chance: Math.max(0, Math.min(100, loot.chance)),
+        minQuantity: Math.max(0, loot.minQuantity),
+        maxQuantity: Math.max(0, loot.maxQuantity),
+        guaranteed: loot.guaranteed ?? false,
+        rarity: loot.rarity ?? null,
+        sortOrder: loot.sortOrder ?? index,
+      },
+    });
+  }
+
+  return incursion;
 }
 
 async function deactivateOtherSubMapEncounters(params: {
@@ -792,6 +881,18 @@ async function main() {
     });
   }
 
+
+  console.log('Criando/atualizando incursões e loot tables...');
+
+  for (const incursionDefinition of incursionDefinitions) {
+    const gameMap = getRequiredMap(mapsByName, incursionDefinition.mapName);
+
+    await upsertIncursion({
+      data: incursionDefinition,
+      mapId: gameMap.id,
+    });
+  }
+
   console.log(
     'Limpando drops antigos dos mobs oficiais cadastrados neste seed...',
   );
@@ -881,6 +982,7 @@ async function main() {
     receitasRegistradas: recipeDefinitions.length,
     encountersRegistrados: encounterDefinitions.length,
     dropsRegistrados: mobDropDefinitions.length,
+    incursionsRegistradas: incursionDefinitions.length,
     gatheringDocumentado: gatheringDefinitions.map((definition) => ({
       key: definition.key,
       label: definition.label,
