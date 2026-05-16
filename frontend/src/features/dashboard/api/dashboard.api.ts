@@ -23,3 +23,16 @@ export async function updateCharacterCurrentMap(
 
   return response.data;
 }
+
+export interface OnlinePlayersStatusResponse {
+  onlinePlayers: number;
+  updatedAt: string;
+}
+
+export async function getOnlinePlayersStatus(): Promise<OnlinePlayersStatusResponse> {
+  const response = await apiClient.get<OnlinePlayersStatusResponse>(
+    API_ENDPOINTS.autoCombat.onlineCount,
+  );
+
+  return response.data;
+}

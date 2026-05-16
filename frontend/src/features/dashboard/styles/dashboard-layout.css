@@ -124,64 +124,119 @@
 }
 
 .dashboard-sidebar__section--social {
-  gap: 0.48rem;
+  gap: 0.42rem;
 }
 
-.dashboard-sidebar__social-row {
+.dashboard-sidebar__status-row {
   display: grid;
-  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.76fr) minmax(0, 1.24fr);
   gap: 0.46rem;
 }
 
-.dashboard-sidebar__discord,
-.dashboard-sidebar__online-pill,
-.dashboard-sidebar__shelter-status {
+.dashboard-sidebar__community {
   min-width: 0;
+  min-height: 34px;
   border: 1px solid rgba(231, 227, 216, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 10px 22px rgba(0, 0, 0, 0.16);
 }
 
 .dashboard-sidebar__discord {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.34rem;
-  min-height: 34px;
-  padding: 0 0.62rem;
-  color: #f1edff;
+  gap: 0.4rem;
+  padding: 0 0.68rem;
+  overflow: hidden;
+  color: #f4f2ff;
   font-family: var(--font-title);
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.045em;
+  text-decoration: none;
   background:
+    radial-gradient(circle at 22% 14%, rgba(255, 255, 255, 0.25), transparent 34%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent),
-    rgba(86, 75, 191, 0.8);
-  border-color: rgba(160, 150, 255, 0.24);
-  border-radius: 0.72rem;
-  cursor: default;
+    linear-gradient(135deg, rgba(88, 101, 242, 0.95), rgba(65, 55, 152, 0.84));
+  border-color: rgba(181, 184, 255, 0.28);
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    filter var(--transition-fast);
 }
 
-.dashboard-sidebar__discord span {
-  font-size: 0.68rem;
+.dashboard-sidebar__discord:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(211, 214, 255, 0.44);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 14px 24px rgba(0, 0, 0, 0.22),
+    0 0 18px rgba(88, 101, 242, 0.22);
+  filter: saturate(1.08);
+}
+
+.dashboard-sidebar__discord:disabled {
+  cursor: default;
+  opacity: 0.88;
+}
+
+.dashboard-sidebar__discord:focus-visible {
+  outline: 2px solid rgba(181, 184, 255, 0.72);
+  outline-offset: 2px;
+}
+
+.dashboard-sidebar__discord-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
   filter: drop-shadow(0 0 8px rgba(198, 190, 255, 0.28));
 }
 
-.dashboard-sidebar__online-pill {
+.dashboard-sidebar__discord-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.dashboard-sidebar__discord-icon path:last-child {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.25;
+}
+
+.dashboard-sidebar__discord span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-sidebar__online {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.42rem;
-  min-height: 34px;
-  padding: 0 0.66rem;
-  color: rgba(231, 227, 216, 0.78);
+  padding: 0 0.7rem;
+  color: rgba(231, 227, 216, 0.86);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 850;
   white-space: nowrap;
-  background: rgba(5, 9, 8, 0.48);
-  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(5, 9, 8, 0.58);
 }
 
-.dashboard-sidebar__online-pill span {
+.dashboard-sidebar__online-dot {
+  position: relative;
   width: 0.48rem;
   height: 0.48rem;
   flex: 0 0 auto;
@@ -189,36 +244,22 @@
   background: #7bc46d;
   box-shadow:
     0 0 0 3px rgba(123, 196, 109, 0.1),
-    0 0 10px rgba(123, 196, 109, 0.38);
+    0 0 12px rgba(123, 196, 109, 0.42);
 }
 
-.dashboard-sidebar__shelter-status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.65rem;
-  min-height: 34px;
-  padding: 0.42rem 0.62rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
-    rgba(16, 24, 21, 0.7);
-  border-radius: 0.72rem;
+.dashboard-sidebar__online-dot::after {
+  content: '';
+  position: absolute;
+  inset: -0.28rem;
+  border-radius: inherit;
+  border: 1px solid rgba(123, 196, 109, 0.2);
+  opacity: 0.8;
 }
 
-.dashboard-sidebar__shelter-status span {
-  color: rgba(231, 227, 216, 0.48);
-  font-size: 0.64rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.dashboard-sidebar__shelter-status strong {
-  color: #d6f6b4;
-  font-family: var(--font-title);
-  font-size: 0.72rem;
-  font-weight: 900;
-  white-space: nowrap;
+.dashboard-sidebar__online-count {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dashboard-sidebar__character {

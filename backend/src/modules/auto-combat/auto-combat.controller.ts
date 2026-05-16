@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AutoCombatGateway } from './auto-combat.gateway';
 import { AutoCombatService } from './auto-combat.service';
 import { PreviewAutoCombatDto } from './dto/preview-auto-combat.dto';
 import { StartAutoCombatDto } from './dto/start-auto-combat.dto';
@@ -15,7 +16,18 @@ import { StartAutoCombatDto } from './dto/start-auto-combat.dto';
 @Controller('auto-combat')
 @UseGuards(JwtAuthGuard)
 export class AutoCombatController {
-  constructor(private readonly autoCombatService: AutoCombatService) {}
+  constructor(
+    private readonly autoCombatService: AutoCombatService,
+    private readonly autoCombatGateway: AutoCombatGateway,
+  ) {}
+
+  @Get('online-count')
+  getOnlineCount() {
+    return {
+      onlinePlayers: this.autoCombatGateway.getOnlinePlayersCount(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
 
   @Post('start')
   start(@Req() request: any, @Body() startAutoCombatDto: StartAutoCombatDto) {

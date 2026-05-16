@@ -137,7 +137,7 @@
     transition: transform var(--transition-fast);
   }
 
-  .dashboard-sidebar__social-row {
+  .dashboard-sidebar__status-row {
     grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
   }
 
@@ -1134,13 +1134,11 @@
     padding-bottom: 0.82rem;
   }
 
-  .dashboard-sidebar__social-row {
+  .dashboard-sidebar__status-row {
     grid-template-columns: 1fr;
   }
 
-  .dashboard-sidebar__discord,
-  .dashboard-sidebar__online-pill,
-  .dashboard-sidebar__shelter-status {
+  .dashboard-sidebar__community {
     min-height: 32px;
   }
 

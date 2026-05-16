@@ -4,6 +4,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import cashIcon from '../../../assets/images/coins/cash.png';
 import goldIcon from '../../../assets/images/coins/gold.png';
 import { removeAuthToken } from '../../../services/api/authToken';
+import { getOnlinePlayersStatus } from '../api/dashboard.api';
 import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import { normalizeClassName } from '../../characters/api/characters.api';
 import { getAvatarImage } from '../../characters/constants/avatar-options';
@@ -326,10 +327,37 @@ const DASHBOARD_GATHERING_NAV_ITEM = DASHBOARD_NAV_ITEMS.find(
   (item) => item.path === 'gathering',
 );
 
-const DASHBOARD_SOCIAL_STATUS = {
-  onlineLabel: 'Online em breve',
-  shelterLabel: 'Abrigo estável',
-};
+const DASHBOARD_DISCORD_URL = import.meta.env.VITE_DISCORD_URL as
+  | string
+  | undefined;
+
+const ONLINE_PLAYERS_REFRESH_MS = 30_000;
+
+function formatOnlinePlayersLabel(onlinePlayers: number | null) {
+  if (onlinePlayers === null) {
+    return 'Online agora';
+  }
+
+  if (onlinePlayers === 1) {
+    return '1 sobrevivente online';
+  }
+
+  return `${onlinePlayers} sobreviventes online`;
+}
+
+function DiscordMark() {
+  return (
+    <span className="dashboard-sidebar__discord-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M8.1 8.7c1.1-.5 2.1-.8 3.9-.8s2.8.3 3.9.8c.5.2.9.7 1 1.2l.6 4.1c.1.6-.2 1.2-.7 1.5-1.4.8-2.7 1.2-4.8 1.2s-3.4-.4-4.8-1.2c-.5-.3-.8-.9-.7-1.5l.6-4.1c.1-.5.4-1 .9-1.2Z" />
+        <path d="M9.2 7.2 8.7 5.9c1-.5 2.1-.8 3.3-.8s2.3.3 3.3.8l-.5 1.3" />
+        <circle cx="9.7" cy="12.2" r="1" />
+        <circle cx="14.3" cy="12.2" r="1" />
+        <path d="M10.3 14.2c.5.4 1 .6 1.7.6s1.2-.2 1.7-.6" />
+      </svg>
+    </span>
+  );
+}
 
 const DASHBOARD_GATHERING_ITEMS: DashboardGatheringSidebarItem[] = [
   {
@@ -1053,6 +1081,49 @@ function DashboardLayoutContent({
   const [isGatheringMenuOpen, setIsGatheringMenuOpen] = useState(
     getInitialGatheringSubnavState,
   );
+  const [onlinePlayers, setOnlinePlayers] = useState<number | null>(null);
+  const [onlinePlayersUpdatedAt, setOnlinePlayersUpdatedAt] = useState<
+    string | null
+  >(null);
+  const [onlinePlayersError, setOnlinePlayersError] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOnlinePlayers() {
+      try {
+        const status = await getOnlinePlayersStatus();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setOnlinePlayers(status.onlinePlayers);
+        setOnlinePlayersUpdatedAt(status.updatedAt ?? null);
+        setOnlinePlayersError(false);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setOnlinePlayers(null);
+        setOnlinePlayersUpdatedAt(null);
+        setOnlinePlayersError(true);
+      }
+    }
+
+    void loadOnlinePlayers();
+
+    const refreshId = window.setInterval(
+      () => void loadOnlinePlayers(),
+      ONLINE_PLAYERS_REFRESH_MS,
+    );
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(refreshId);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1105,6 +1176,13 @@ function DashboardLayoutContent({
   const walletDisplay = useMemo(() => {
     return buildWalletDisplay(heroCharacter);
   }, [heroCharacter]);
+
+  const onlinePlayersLabel = formatOnlinePlayersLabel(onlinePlayers);
+  const onlinePlayersTitle = onlinePlayersError
+    ? 'Não foi possível atualizar a presença agora.'
+    : onlinePlayersUpdatedAt
+      ? `Presença baseada em usuários conectados via WebSocket. Atualizado em ${new Date(onlinePlayersUpdatedAt).toLocaleTimeString('pt-BR')}.`
+      : 'Presença baseada em usuários conectados via WebSocket.';
 
   const topBarResources = useMemo<DashboardTopBarResource[]>(
     () => [
@@ -1190,29 +1268,44 @@ function DashboardLayoutContent({
           className="dashboard-sidebar__section dashboard-sidebar__section--social"
           aria-label="Comunidade e status do abrigo"
         >
-          <div className="dashboard-sidebar__social-row">
-            <button
-              type="button"
-              className="dashboard-sidebar__discord"
-              aria-label="Discord da comunidade ainda não configurado"
-              title="Link do Discord ainda não configurado"
-            >
-              <span aria-hidden="true">◈</span>
-              Discord
-            </button>
+          <div className="dashboard-sidebar__status-row">
+            {DASHBOARD_DISCORD_URL ? (
+              <a
+                className="dashboard-sidebar__community dashboard-sidebar__discord"
+                href={DASHBOARD_DISCORD_URL}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Abrir Discord da comunidade"
+                title="Abrir Discord da comunidade"
+              >
+                <DiscordMark />
+                <span>Discord</span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="dashboard-sidebar__community dashboard-sidebar__discord"
+                aria-label="Discord da comunidade ainda não configurado"
+                title="Configure VITE_DISCORD_URL para ativar o link do Discord"
+                disabled
+              >
+                <DiscordMark />
+                <span>Discord</span>
+              </button>
+            )}
 
             <span
-              className="dashboard-sidebar__online-pill"
-              title="Indicador visual preparado para integração futura"
+              className="dashboard-sidebar__community dashboard-sidebar__online"
+              title={onlinePlayersTitle}
             >
-              <span aria-hidden="true" />
-              {DASHBOARD_SOCIAL_STATUS.onlineLabel}
+              <span
+                className="dashboard-sidebar__online-dot"
+                aria-hidden="true"
+              />
+              <span className="dashboard-sidebar__online-count">
+                {onlinePlayersLabel}
+              </span>
             </span>
-          </div>
-
-          <div className="dashboard-sidebar__shelter-status">
-            <span>Ambiente</span>
-            <strong>{DASHBOARD_SOCIAL_STATUS.shelterLabel}</strong>
           </div>
         </section>
 
