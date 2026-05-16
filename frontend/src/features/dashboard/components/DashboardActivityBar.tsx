@@ -1,25 +1,13 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type CSSProperties,
-} from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import {
-  useAutoCombatRealtime,
-  useAutoCombatRealtimeState,
-} from "../../auto-combat/realtime/useAutoCombatRealtime";
+import { useAutoCombatRealtimeState } from "../../auto-combat/realtime/useAutoCombatRealtime";
 import type {
   AutoCombatRealtimeEvent,
   AutoCombatStatusResponse,
 } from "../../auto-combat/types/auto-combat.types";
 import { getMobPortraitImage } from "../../auto-combat/utils/mobAssets";
 import type { GatheringRealtimeState } from "../../gathering/realtime/GatheringRealtimeProvider";
-import {
-  useGatheringRealtimeActions,
-  useGatheringRealtimeState,
-} from "../../gathering/realtime/useGatheringRealtime";
+import { useGatheringRealtimeState } from "../../gathering/realtime/useGatheringRealtime";
 import type { IncursionsRealtimeState } from "../../incursions/realtime/IncursionsRealtimeProvider";
 import {
   useIncursionsRealtimeActions,
@@ -52,9 +40,6 @@ type ActivityBarItem = {
   indicatorMetric?: string | null;
   indicatorLabel?: string | null;
   href: string;
-  actionLabel?: string | null;
-  actionBusyLabel?: string | null;
-  actionAriaLabel?: string | null;
 
   imageUrl?: string | null;
   imageAlt?: string | null;
@@ -1381,9 +1366,6 @@ function buildAutoCombatItemFromRealtime(params: {
     indicatorMetric: formatMonsterCounter(totalKills),
     indicatorLabel: `Monstros mortos na sessão: ${formatSessionCountIndicator(totalKills)}`,
     href: `/dashboard/${characterId}/auto-combat`,
-    actionLabel: "Parar",
-    actionBusyLabel: "Parando...",
-    actionAriaLabel: "Parar combate automático",
 
     imageUrl: getActivityMobPortraitUrl(mobName),
     imageAlt: mobName,
@@ -1484,9 +1466,6 @@ function buildAutoCombatItemFromOverview(params: {
     indicatorMetric: formatMonsterCounter(totalKills),
     indicatorLabel: `Monstros mortos na sessão: ${formatSessionCountIndicator(totalKills)}`,
     href: `/dashboard/${characterId}/auto-combat`,
-    actionLabel: "Parar",
-    actionBusyLabel: "Parando...",
-    actionAriaLabel: "Parar combate automático",
 
     imageUrl: getActivityMobPortraitUrl(currentMob?.name),
     imageAlt: currentMob?.name ?? "Combate automático",
@@ -1669,9 +1648,6 @@ function buildGatheringItemFromRealtime(params: {
     indicatorMetric: formatSessionCountIndicator(collectedQuantity),
     indicatorLabel: `Coletados na sessão: ${formatSessionCountIndicator(collectedQuantity)}`,
     href,
-    actionLabel: "Encerrar",
-    actionBusyLabel: "Encerrando...",
-    actionAriaLabel: "Encerrar expedição",
 
     imageUrl: getGatheringMaterialIconUrl(material),
     imageAlt: materialName,
@@ -1753,9 +1729,6 @@ function buildGatheringItemFromOverview(params: {
     indicatorMetric: formatSessionCountIndicator(collectedQuantity),
     indicatorLabel: `Coletados na sessão: ${formatSessionCountIndicator(collectedQuantity)}`,
     href,
-    actionLabel: "Encerrar",
-    actionBusyLabel: "Encerrando...",
-    actionAriaLabel: "Encerrar expedição",
 
     imageUrl: getGatheringMaterialIconUrl(material),
     imageAlt: materialName,
@@ -1823,9 +1796,6 @@ function buildIncursionItemFromOverview(params: {
       ? "Incursão concluída"
       : "Progresso da incursão",
     href: `/dashboard/${characterId}/incursions`,
-    actionLabel: isCompleted ? null : "Cancelar",
-    actionBusyLabel: "Cancelando...",
-    actionAriaLabel: "Cancelar incursão",
     monsterMetaLabel: `${mapName} • Tier ${incursion?.tier ?? "—"}`,
     combatMetric: isCompleted ? "Final" : "Idle",
     killsMetric: isCompleted
@@ -1973,12 +1943,10 @@ export function DashboardActivityBar({
   characterId,
   refreshMs = 5000,
 }: DashboardActivityBarProps) {
-  const autoCombatRealtime = useAutoCombatRealtime();
   const realtimeState =
     useAutoCombatRealtimeState() as AutoCombatRealtimeStateLoose;
 
   const gatheringState = useGatheringRealtimeState();
-  const { stop: stopGatheringActivity } = useGatheringRealtimeActions();
   const incursionsState = useIncursionsRealtimeState();
   const { cancel: cancelIncursionActivity } = useIncursionsRealtimeActions();
 
@@ -1989,10 +1957,6 @@ export function DashboardActivityBar({
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isMinimized, setIsMinimized] = useState(getInitialMinimizedState);
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const [activeActionKey, setActiveActionKey] = useState<string | null>(null);
-  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(
-    null,
-  );
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -2004,41 +1968,31 @@ export function DashboardActivityBar({
     };
   }, []);
 
-  const loadActivityOverview = useCallback(
-    async (options?: { markLoaded?: boolean }) => {
-      if (!characterId) return null;
-
-      try {
-        const data = await getCharacterOverview(characterId);
-
-        setOverview(data);
-        setNowMs(Date.now());
-        if (options?.markLoaded ?? true) setHasLoadedOnce(true);
-
-        return data;
-      } catch {
-        if (options?.markLoaded ?? true) setHasLoadedOnce(true);
-
-        return null;
-      }
-    },
-    [characterId],
-  );
-
   useEffect(() => {
     if (!characterId) return;
 
     let isDisposed = false;
 
     async function loadActivity() {
-      if (isDisposed) return;
-      await loadActivityOverview();
+      try {
+        const data = await getCharacterOverview(characterId);
+
+        if (isDisposed) return;
+
+        setOverview(data);
+        setNowMs(Date.now());
+        setHasLoadedOnce(true);
+      } catch {
+        if (isDisposed) return;
+
+        setHasLoadedOnce(true);
+      }
     }
 
-    void loadActivity();
+    loadActivity();
 
     const intervalId = window.setInterval(() => {
-      if (!isDisposed) void loadActivityOverview();
+      loadActivity();
     }, refreshMs);
 
     return () => {
@@ -2046,7 +2000,7 @@ export function DashboardActivityBar({
 
       window.clearInterval(intervalId);
     };
-  }, [characterId, loadActivityOverview, refreshMs]);
+  }, [characterId, refreshMs]);
 
   const activityItems = useMemo(() => {
     return buildActivityItems({
@@ -2070,52 +2024,8 @@ export function DashboardActivityBar({
     return null;
   }
 
-  async function handleStopActivity(item: ActivityBarItem) {
-    if (!item.actionLabel || activeActionKey) return;
-
-    setActiveActionKey(item.key);
-    setActionErrorMessage(null);
-
-    try {
-      if (item.type === "auto-combat") {
-        await autoCombatRealtime.stop();
-      } else if (item.type === "gathering") {
-        const response = await stopGatheringActivity();
-
-        if (!response) {
-          throw new Error(
-            gatheringState.errorMessage ??
-              "Não foi possível encerrar a expedição agora.",
-          );
-        }
-      } else if (item.type === "incursion") {
-        const response = await cancelIncursionActivity();
-
-        if (!response) {
-          throw new Error(
-            incursionsState.errorMessage ??
-              "Não foi possível cancelar a incursão agora.",
-          );
-        }
-      }
-
-      await loadActivityOverview({ markLoaded: false });
-    } catch (error) {
-      const fallbackMessage =
-        item.type === "auto-combat"
-          ? "Não foi possível parar o AutoCombate agora."
-          : item.type === "gathering"
-            ? "Não foi possível encerrar a expedição agora."
-            : "Não foi possível cancelar a incursão agora.";
-
-      setActionErrorMessage(
-        error instanceof Error && error.message.trim().length > 0
-          ? error.message
-          : fallbackMessage,
-      );
-    } finally {
-      setActiveActionKey(null);
-    }
+  async function handleCancelIncursionActivity() {
+    await cancelIncursionActivity();
   }
 
   return (
@@ -2131,12 +2041,6 @@ export function DashboardActivityBar({
         .join(" ")}
       aria-label="Atividades em andamento"
     >
-      {actionErrorMessage ? (
-        <div className="dashboard-activity-bar__feedback" role="alert">
-          {actionErrorMessage}
-        </div>
-      ) : null}
-
       {activityItems.map((item, index) => {
         const progressPercent = clampPercent(item.progressPercent);
         const progressPercentLabel = floorPercent(progressPercent);
@@ -2176,9 +2080,6 @@ export function DashboardActivityBar({
               "dashboard-activity-bar__item",
               `dashboard-activity-bar__item--${item.type}`,
               isFirstItem ? "dashboard-activity-bar__item--has-toggle" : "",
-              item.actionLabel
-                ? "dashboard-activity-bar__item--has-action"
-                : "",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -2446,26 +2347,14 @@ export function DashboardActivityBar({
               </div>
             </Link>
 
-            {item.actionLabel ? (
+            {item.type === "incursion" && incursionsState.isActive ? (
               <button
                 type="button"
                 className="dashboard-activity-bar__quick-cancel"
-                disabled={activeActionKey !== null}
-                aria-label={item.actionAriaLabel ?? item.actionLabel}
-                title={item.actionAriaLabel ?? item.actionLabel}
-                onClick={() => void handleStopActivity(item)}
+                disabled={incursionsState.isBusy}
+                onClick={() => void handleCancelIncursionActivity()}
               >
-                <span
-                  className="dashboard-activity-bar__quick-cancel-icon"
-                  aria-hidden="true"
-                >
-                  ×
-                </span>
-                <span className="dashboard-activity-bar__quick-cancel-label">
-                  {activeActionKey === item.key
-                    ? (item.actionBusyLabel ?? "Aguarde...")
-                    : item.actionLabel}
-                </span>
+                {incursionsState.isBusy ? "Cancelando..." : "Cancelar"}
               </button>
             ) : null}
           </article>
