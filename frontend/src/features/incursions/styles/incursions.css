@@ -1,6 +1,6 @@
 .incursions-page {
   display: grid;
-  gap: 1.25rem;
+  gap: 1rem;
   padding: clamp(1rem, 2vw, 1.5rem);
   color: #f4f4ed;
 }
@@ -11,13 +11,14 @@
 }
 
 .incursions-hero,
+.incursions-current-map,
 .incursions-active,
 .incursions-claim-summary,
-.incursions-map-group,
+.incursions-detail,
 .incursion-card {
   border: 1px solid rgba(172, 210, 132, 0.16);
   background:
-    radial-gradient(circle at 10% 0%, rgba(105, 132, 75, 0.18), transparent 32rem),
+    radial-gradient(circle at 12% 0%, rgba(105, 132, 75, 0.2), transparent 28rem),
     linear-gradient(135deg, rgba(19, 27, 22, 0.96), rgba(10, 13, 12, 0.94));
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
 }
@@ -29,53 +30,104 @@
   align-items: stretch;
   border-radius: 1.4rem;
   padding: clamp(1.1rem, 3vw, 1.75rem);
+  overflow: hidden;
 }
 
 .incursions-hero__eyebrow,
+.incursions-current-map span,
 .incursions-active span,
 .incursions-wallet span,
-.incursions-map-group header span {
+.incursions-detail__header span {
   color: #9eab94;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .incursions-hero h1,
 .incursions-active h2,
-.incursions-map-group h2,
-.incursion-card h3 {
+.incursions-detail h2,
+.incursions-empty h2 {
   margin: 0;
   color: #f8f6df;
 }
 
 .incursions-hero h1 {
-  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-size: clamp(2rem, 4vw, 3rem);
 }
 
 .incursions-hero p,
 .incursions-active p,
-.incursion-card p {
-  max-width: 72ch;
+.incursions-detail p,
+.incursions-empty p {
+  max-width: 68ch;
   color: #c5c9b8;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
-.incursions-wallet {
-  min-width: 12rem;
+.incursions-hero__status {
+  min-width: min(18rem, 100%);
   display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 0.3rem;
-  border-radius: 1.1rem;
-  padding: 1rem;
-  background: rgba(232, 184, 78, 0.1);
+  gap: 0.7rem;
+}
+
+.incursions-wallet,
+.incursions-socket-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
   border: 1px solid rgba(232, 184, 78, 0.2);
+  background: rgba(232, 184, 78, 0.1);
   color: #f1c763;
 }
 
 .incursions-wallet strong {
-  font-size: 1.8rem;
+  font-size: 1.45rem;
+}
+
+.incursions-socket-pill {
+  justify-content: flex-start;
+  border-color: rgba(132, 182, 91, 0.22);
+  background: rgba(101, 148, 71, 0.12);
+  color: #bddf88;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.incursions-socket-pill[data-online='false'] {
+  border-color: rgba(212, 174, 98, 0.24);
+  background: rgba(160, 113, 52, 0.12);
+  color: #e8c77f;
+}
+
+.incursions-current-map {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.85rem;
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.incursions-current-map svg {
+  color: #bddf88;
+}
+
+.incursions-current-map strong {
+  display: block;
+  color: #f3f4d6;
+  font-size: 1.05rem;
+}
+
+.incursions-current-map em {
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #d8ddc7;
+  font-style: normal;
 }
 
 .incursions-alert {
@@ -94,6 +146,12 @@
   color: #def8c7;
   background: rgba(57, 105, 51, 0.24);
   border-color: rgba(158, 219, 115, 0.28);
+}
+
+.incursions-alert--warning {
+  color: #ffe3ad;
+  background: rgba(130, 92, 35, 0.24);
+  border-color: rgba(232, 184, 78, 0.28);
 }
 
 .incursions-active {
@@ -136,7 +194,7 @@
 }
 
 .incursions-active button,
-.incursion-card button {
+.incursions-detail__action {
   border: 0;
   border-radius: 0.85rem;
   padding: 0.75rem 1rem;
@@ -147,7 +205,7 @@
 }
 
 .incursions-active button:disabled,
-.incursion-card button:disabled {
+.incursions-detail__action:disabled {
   cursor: not-allowed;
   filter: grayscale(0.7);
   opacity: 0.58;
@@ -171,21 +229,11 @@
   color: #e7eac8;
 }
 
-.incursions-map-list {
+.incursions-board {
   display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(20rem, 0.65fr);
   gap: 1rem;
-}
-
-.incursions-map-group {
-  border-radius: 1.2rem;
-  padding: 1rem;
-}
-
-.incursions-map-group header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  align-items: start;
 }
 
 .incursions-grid {
@@ -195,91 +243,178 @@
 }
 
 .incursion-card {
+  width: 100%;
+  min-height: 15.5rem;
   display: grid;
-  gap: 0.85rem;
-  border-radius: 1rem;
-  padding: 1rem;
+  align-content: end;
+  overflow: hidden;
+  border-radius: 1.15rem;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.incursion-card:hover,
+.incursion-card.is-selected {
+  transform: translateY(-2px);
+  border-color: rgba(190, 220, 132, 0.38);
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.36);
 }
 
 .incursion-card.is-locked {
   opacity: 0.78;
 }
 
+.incursion-card__art {
+  min-height: 8.5rem;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(199, 162, 75, 0.26), transparent 28%),
+    radial-gradient(circle at 80% 0%, rgba(93, 126, 72, 0.34), transparent 34%),
+    linear-gradient(135deg, rgba(30, 43, 35, 0.95), rgba(8, 11, 10, 0.95));
+  color: #d8d979;
+}
+
+.incursion-card__content {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.9rem;
+}
+
 .incursion-card__top,
-.incursion-card__meta,
-.incursion-card__rewards strong,
-.incursion-card__locked {
+.incursion-card__meta {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.incursion-card__top {
-  justify-content: space-between;
-}
-
-.incursion-card__tier,
-.incursion-card__difficulty,
-.incursion-card__level,
-.incursion-card__locked {
-  width: fit-content;
+.incursion-card__top em,
+.incursion-card__top strong {
   border-radius: 999px;
-  padding: 0.35rem 0.6rem;
+  padding: 0.32rem 0.6rem;
   background: rgba(255, 255, 255, 0.08);
   color: #d8ddc7;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
+  font-style: normal;
 }
 
-.incursion-card__difficulty--high,
-.incursion-card__difficulty--extreme {
-  color: #ffd2bd;
-  background: rgba(209, 84, 50, 0.16);
+.incursion-card__top strong {
+  color: #bddf88;
 }
 
-.incursion-card__meta span {
+.incursion-card__name {
+  color: #f8f6df;
+  font-size: 1.08rem;
+  font-weight: 900;
+}
+
+.incursion-card__meta span,
+.incursion-card small {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  color: #d2d8c2;
-  font-size: 0.9rem;
+  color: #c8d0bb;
+  font-size: 0.86rem;
 }
 
-.incursion-card__rewards {
-  border-radius: 0.9rem;
-  padding: 0.75rem;
+.incursion-card small {
+  color: #e8c77f;
+}
+
+.incursions-detail {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 1rem;
+  border-radius: 1.2rem;
+  padding: 1rem;
+}
+
+.incursions-detail__header {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.incursions-detail__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.incursions-detail__stats span {
+  border-radius: 999px;
+  padding: 0.38rem 0.62rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #d8ddc7;
+  font-size: 0.84rem;
+}
+
+.incursions-detail__rewards {
+  border-radius: 0.95rem;
+  padding: 0.85rem;
   background: rgba(0, 0, 0, 0.2);
 }
 
-.incursion-card__rewards ul {
-  list-style: none;
-  margin: 0.55rem 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.4rem;
-  color: #cbd2bf;
-  font-size: 0.88rem;
-}
-
-.incursion-card__rewards li {
+.incursions-detail__rewards strong,
+.incursions-detail__rewards li {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
-.incursion-card__locked {
-  color: #ffd6d6;
-  background: rgba(129, 35, 35, 0.18);
+.incursions-detail__rewards ul {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+  color: #cbd2bf;
+  font-size: 0.9rem;
 }
 
-@media (max-width: 860px) {
+.incursions-detail__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.incursions-empty {
+  display: grid;
+  gap: 0.5rem;
+  place-items: center;
+  min-height: 16rem;
+  text-align: center;
+  color: #c5c9b8;
+}
+
+@media (max-width: 1080px) {
+  .incursions-board {
+    grid-template-columns: 1fr;
+  }
+
+  .incursions-detail {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
   .incursions-hero,
-  .incursions-active {
+  .incursions-active,
+  .incursions-current-map {
     grid-template-columns: 1fr;
     display: grid;
   }
 
-  .incursions-wallet,
+  .incursions-hero__status,
   .incursions-active__actions {
     justify-items: stretch;
     width: 100%;
@@ -287,5 +422,9 @@
 
   .incursions-grid {
     grid-template-columns: 1fr;
+  }
+
+  .incursion-card {
+    min-height: 13.5rem;
   }
 }

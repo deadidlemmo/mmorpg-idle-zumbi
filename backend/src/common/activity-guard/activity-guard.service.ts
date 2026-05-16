@@ -1,12 +1,14 @@
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents, @typescript-eslint/no-unsafe-assignment */
 import {
-    BadRequestException,
-    Injectable,
-    NotFoundException,
+  BadRequestException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import {
-    ActivityStatus,
-    AutoCombatSessionStatus,
-    CharacterStatus,
+  ActivityStatus,
+  AutoCombatSessionStatus,
+  CharacterStatus,
+  IncursionSessionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -27,8 +29,10 @@ type CharacterActivityState = {
   currentHp: number;
   activeAutoCombatSession: any | null;
   activeGatheringSession: any | null;
+  activeIncursionSession: any | null;
   hasActiveAutoCombat: boolean;
   hasActiveGathering: boolean;
+  hasActiveIncursion: boolean;
 };
 
 @Injectable()
@@ -57,71 +61,110 @@ export class ActivityGuardService {
       throw new NotFoundException('Personagem não encontrado.');
     }
 
-    const [activeAutoCombatSession, activeGatheringSession] =
-      await Promise.all([
-        this.prisma.autoCombatSession.findFirst({
-          where: {
-            characterId: character.id,
-            status: AutoCombatSessionStatus.ACTIVE,
-          },
-          orderBy: {
-            startedAt: 'desc',
-          },
-          select: {
-            id: true,
-            status: true,
-            startedAt: true,
-            endsAt: true,
-            lastProcessedAt: true,
-            subMap: {
-              select: {
-                id: true,
-                name: true,
-                tier: true,
-                map: {
-                  select: {
-                    id: true,
-                    name: true,
-                    tier: true,
-                  },
+    const [
+      activeAutoCombatSession,
+      activeGatheringSession,
+      activeIncursionSession,
+    ] = await Promise.all([
+      this.prisma.autoCombatSession.findFirst({
+        where: {
+          characterId: character.id,
+          status: AutoCombatSessionStatus.ACTIVE,
+        },
+        orderBy: {
+          startedAt: 'desc',
+        },
+        select: {
+          id: true,
+          status: true,
+          startedAt: true,
+          endsAt: true,
+          lastProcessedAt: true,
+          subMap: {
+            select: {
+              id: true,
+              name: true,
+              tier: true,
+              map: {
+                select: {
+                  id: true,
+                  name: true,
+                  tier: true,
                 },
               },
             },
           },
-        }),
+        },
+      }),
 
-        this.prisma.gatheringSession.findFirst({
-          where: {
-            characterId: character.id,
-            status: ActivityStatus.ACTIVE,
-          },
-          orderBy: {
-            startedAt: 'desc',
-          },
-          select: {
-            id: true,
-            status: true,
-            origin: true,
-            startedAt: true,
-            lastResolvedAt: true,
-            targetMaterial: {
-              select: {
-                id: true,
-                name: true,
-                tier: true,
-                materialOrigin: true,
-              },
-            },
-            map: {
-              select: {
-                id: true,
-                name: true,
-                tier: true,
-              },
+      this.prisma.gatheringSession.findFirst({
+        where: {
+          characterId: character.id,
+          status: ActivityStatus.ACTIVE,
+        },
+        orderBy: {
+          startedAt: 'desc',
+        },
+        select: {
+          id: true,
+          status: true,
+          origin: true,
+          startedAt: true,
+          lastResolvedAt: true,
+          targetMaterial: {
+            select: {
+              id: true,
+              name: true,
+              tier: true,
+              materialOrigin: true,
             },
           },
-        }),
-      ]);
+          map: {
+            select: {
+              id: true,
+              name: true,
+              tier: true,
+            },
+          },
+        },
+      }),
+
+      this.prisma.characterIncursionSession.findFirst({
+        where: {
+          characterId: character.id,
+          status: {
+            in: [
+              IncursionSessionStatus.ACTIVE,
+              IncursionSessionStatus.COMPLETED,
+            ],
+          },
+        },
+        orderBy: {
+          startedAt: 'desc',
+        },
+        select: {
+          id: true,
+          status: true,
+          startedAt: true,
+          endsAt: true,
+          completedAt: true,
+          incursion: {
+            select: {
+              id: true,
+              name: true,
+              tier: true,
+              map: {
+                select: {
+                  id: true,
+                  name: true,
+                  tier: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
 
     const currentHp = this.resolveCurrentHp(character);
 
@@ -130,8 +173,10 @@ export class ActivityGuardService {
       currentHp,
       activeAutoCombatSession,
       activeGatheringSession,
+      activeIncursionSession,
       hasActiveAutoCombat: Boolean(activeAutoCombatSession),
       hasActiveGathering: Boolean(activeGatheringSession),
+      hasActiveIncursion: Boolean(activeIncursionSession),
     };
   }
 
@@ -152,6 +197,14 @@ export class ActivityGuardService {
       throw new BadRequestException({
         message: 'Este personagem já possui um gathering ativo.',
         activeGathering: state.activeGatheringSession,
+      });
+    }
+
+    if (state.hasActiveIncursion) {
+      throw new BadRequestException({
+        message:
+          'Este personagem já está em uma incursão. Encerre ou colete a atividade atual antes de iniciar outra.',
+        activeIncursion: state.activeIncursionSession,
       });
     }
 
@@ -203,11 +256,59 @@ export class ActivityGuardService {
       });
     }
 
+    if (state.hasActiveIncursion) {
+      throw new BadRequestException({
+        message:
+          'Este personagem já está em uma incursão. Encerre ou colete a atividade atual antes de iniciar outra.',
+        activeIncursion: state.activeIncursionSession,
+      });
+    }
+
     if (state.hasActiveAutoCombat) {
       throw new BadRequestException({
         message:
           'Este personagem já possui uma sessão de combate automático ativa.',
         activeAutoCombat: state.activeAutoCombatSession,
+      });
+    }
+
+    return state;
+  }
+
+  async ensureCanStartIncursion(params: ActivityGuardParams) {
+    const state = await this.getCharacterActivityState(params);
+
+    this.ensureCharacterIsActive(
+      state.character.status,
+      'Apenas personagens ativos podem iniciar incursões.',
+    );
+
+    this.ensureCharacterHasHp(
+      state.currentHp,
+      'Personagens derrotados ou com 0 de HP não podem iniciar incursões. Cure o personagem antes.',
+    );
+
+    if (state.hasActiveIncursion) {
+      throw new BadRequestException({
+        message:
+          'Este personagem já possui uma incursão ativa ou pendente de coleta.',
+        activeIncursion: state.activeIncursionSession,
+      });
+    }
+
+    if (state.hasActiveAutoCombat) {
+      throw new BadRequestException({
+        message:
+          'Este personagem está em auto-combate. Pare o auto-combate antes de iniciar uma incursão.',
+        activeAutoCombat: state.activeAutoCombatSession,
+      });
+    }
+
+    if (state.hasActiveGathering) {
+      throw new BadRequestException({
+        message:
+          'Este personagem está em gathering. Encerre o gathering antes de iniciar uma incursão.',
+        activeGathering: state.activeGatheringSession,
       });
     }
 
