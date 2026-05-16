@@ -9,7 +9,10 @@ import { getMobPortraitImage } from "../../auto-combat/utils/mobAssets";
 import type { GatheringRealtimeState } from "../../gathering/realtime/GatheringRealtimeProvider";
 import { useGatheringRealtimeState } from "../../gathering/realtime/useGatheringRealtime";
 import type { IncursionsRealtimeState } from "../../incursions/realtime/IncursionsRealtimeProvider";
-import { useIncursionsRealtimeState } from "../../incursions/realtime/useIncursionsRealtime";
+import {
+  useIncursionsRealtimeActions,
+  useIncursionsRealtimeState,
+} from "../../incursions/realtime/useIncursionsRealtime";
 import { getCharacterOverview } from "../api/dashboard.api";
 import type {
   CharacterOverviewResponse,
@@ -1943,6 +1946,7 @@ export function DashboardActivityBar({
 
   const gatheringState = useGatheringRealtimeState();
   const incursionsState = useIncursionsRealtimeState();
+  const { cancel: cancelIncursionActivity } = useIncursionsRealtimeActions();
 
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
@@ -2016,6 +2020,10 @@ export function DashboardActivityBar({
 
   if (!hasLoadedOnce || activityItems.length <= 0) {
     return null;
+  }
+
+  async function handleCancelIncursionActivity() {
+    await cancelIncursionActivity();
   }
 
   return (
@@ -2336,6 +2344,17 @@ export function DashboardActivityBar({
                 </div>
               </div>
             </Link>
+
+            {item.type === "incursion" && incursionsState.isActive ? (
+              <button
+                type="button"
+                className="dashboard-activity-bar__quick-cancel"
+                disabled={incursionsState.isBusy}
+                onClick={() => void handleCancelIncursionActivity()}
+              >
+                {incursionsState.isBusy ? "Cancelando..." : "Cancelar"}
+              </button>
+            ) : null}
           </article>
         );
       })}

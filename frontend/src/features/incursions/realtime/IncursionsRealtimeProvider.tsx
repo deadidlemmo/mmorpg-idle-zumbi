@@ -176,6 +176,7 @@ export function IncursionsRealtimeProvider({
   const statusRef = useRef<IncursionStatusResponse | null>(null);
   const isRefreshingRef = useRef(false);
   const mountedRef = useRef(false);
+  const completionRefreshSessionIdRef = useRef<string | null>(null);
 
   const applyStatus = useCallback((nextStatus: IncursionStatusResponse) => {
     statusRef.current = nextStatus;
@@ -407,6 +408,19 @@ export function IncursionsRealtimeProvider({
     () => getLiveSession(status?.activeSession ?? null, nowMs),
     [nowMs, status?.activeSession],
   );
+
+  useEffect(() => {
+    if (!enabled || !characterId || !liveSession) {
+      completionRefreshSessionIdRef.current = null;
+      return;
+    }
+
+    if (liveSession.status !== "COMPLETED") return;
+    if (completionRefreshSessionIdRef.current === liveSession.id) return;
+
+    completionRefreshSessionIdRef.current = liveSession.id;
+    void refresh();
+  }, [characterId, enabled, liveSession, refresh]);
 
   const state = useMemo<IncursionsRealtimeState>(
     () => ({

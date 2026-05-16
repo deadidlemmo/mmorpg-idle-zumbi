@@ -1757,3 +1757,80 @@
   }
 }
 
+
+.dashboard-activity-bar__item--incursion {
+  --activity-rgb: 232, 184, 78;
+}
+
+.dashboard-activity-bar--expanded .dashboard-activity-bar__item--incursion {
+  grid-template-columns: 56px minmax(0, 1fr) minmax(168px, 0.25fr) auto;
+}
+
+.dashboard-activity-bar__quick-cancel {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  border: 1px solid rgba(255, 116, 96, 0.34);
+  border-radius: 999px;
+  padding: 0.5rem 0.78rem;
+  background: linear-gradient(135deg, rgba(118, 32, 32, 0.34), rgba(45, 18, 18, 0.88));
+  color: #ffd8cf;
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.dashboard-activity-bar__quick-cancel:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(255, 148, 122, 0.58);
+  background: linear-gradient(135deg, rgba(147, 42, 38, 0.48), rgba(61, 22, 20, 0.94));
+}
+
+.dashboard-activity-bar__quick-cancel:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.dashboard-activity-bar--minimized .dashboard-activity-bar__quick-cancel,
+.dashboard-activity-bar--collapsed .dashboard-activity-bar__quick-cancel {
+  position: absolute;
+  right: 0.72rem;
+  bottom: 0.62rem;
+  min-height: 1.9rem;
+  padding: 0.36rem 0.62rem;
+  font-size: 0.58rem;
+}
+
+@media (max-width: 900px) {
+  .dashboard-activity-bar--expanded .dashboard-activity-bar__item--incursion {
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+  }
+
+  .dashboard-activity-bar--expanded .dashboard-activity-bar__item--incursion .dashboard-activity-bar__metrics {
+    grid-column: 2 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-activity-bar__quick-cancel,
+  .dashboard-activity-bar--minimized .dashboard-activity-bar__quick-cancel,
+  .dashboard-activity-bar--collapsed .dashboard-activity-bar__quick-cancel {
+    position: absolute;
+    right: 0.58rem;
+    bottom: 0.54rem;
+    min-height: 1.75rem;
+    padding: 0.3rem 0.52rem;
+    font-size: 0.54rem;
+  }
+}
