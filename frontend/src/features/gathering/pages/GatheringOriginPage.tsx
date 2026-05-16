@@ -13,7 +13,11 @@ import {
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
 import '../../dashboard/dashboard.css';
-import type { DashboardCharacterViewModel } from '../../dashboard/types/dashboard.types';
+import type {
+  CharacterOverviewResponse,
+  DashboardCharacterViewModel,
+  DashboardMapViewModel,
+} from '../../dashboard/types/dashboard.types';
 import {
   extractGatheringApiError,
   listGatheringMaterialsRequest,
@@ -348,12 +352,31 @@ function getActionResponseGatheringSkill(params: {
   return null;
 }
 
-function getStatusMapId(status?: GatheringStatusResponse | null): string {
-  if (status?.active && status.session.map?.id) {
-    return status.session.map.id;
+function getOverviewCurrentMap(
+  overview?: CharacterOverviewResponse | null,
+): DashboardMapViewModel | null {
+  return (
+    overview?.character.currentMap ??
+    overview?.character.map ??
+    overview?.progression?.currentMap ??
+    null
+  );
+}
+
+function getStatusMapId(params: {
+  status?: GatheringStatusResponse | null;
+  overview?: CharacterOverviewResponse | null;
+  currentMap?: DashboardMapViewModel | null;
+}): string {
+  if (params.status?.active && params.status.session.map?.id) {
+    return params.status.session.map.id;
   }
 
-  return DEFAULT_MAP_ID;
+  return (
+    params.currentMap?.id ??
+    getOverviewCurrentMap(params.overview)?.id ??
+    DEFAULT_MAP_ID
+  );
 }
 
 function getActiveMaterialId(
@@ -687,7 +710,10 @@ export function GatheringOriginPage() {
         refreshGathering(),
       ]);
 
-      const mapId = getStatusMapId(statusResponse);
+      const mapId = getStatusMapId({
+        status: statusResponse,
+        overview: overviewResponse,
+      });
 
       const availableMaterialsResponse = await listGatheringMaterialsRequest({
         mapId,
@@ -749,7 +775,11 @@ export function GatheringOriginPage() {
     setFeedback(null);
 
     try {
-      const mapId = currentMap?.id ?? getStatusMapId(status);
+      const mapId = getStatusMapId({
+        status,
+        currentMap:
+          currentMap ?? character?.currentMap ?? character?.map ?? null,
+      });
 
       const response = await startGathering({
         mapId,

@@ -398,26 +398,6 @@
   filter: drop-shadow(0 0 10px rgba(var(--map-tier-rgb), 0.34));
 }
 
-.maps-selection-card__current-badge {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  gap: 0.34rem;
-  padding: 0.34rem 0.62rem;
-  color: var(--map-tier-hex);
-  font-family: var(--font-title);
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
-    rgba(var(--map-tier-rgb), 0.13);
-  border: 1px solid rgba(var(--map-tier-rgb), 0.34);
-  border-radius: var(--radius-pill);
-  box-shadow: 0 0 18px rgba(var(--map-tier-rgb), 0.12);
-}
-
 .maps-selection-card__level-pill {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -684,12 +664,6 @@
   .maps-selection-card__footer {
     padding-top: 0.02rem;
   }
-
-  .maps-selection-card__current-badge {
-    padding: 0.3rem 0.54rem;
-    font-size: 0.62rem;
-  }
-
   .maps-selection-card__action {
     min-height: 40px;
     gap: 0.38rem;
