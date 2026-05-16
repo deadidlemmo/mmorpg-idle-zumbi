@@ -77,6 +77,8 @@ export class AutoCombatGateway
     string
   >();
 
+  private readonly socketIdsByUserId = new Map<string, Set<string>>();
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
@@ -95,9 +97,8 @@ export class AutoCombatGateway
         return;
       }
 
-      const payload = await this.jwtService.verifyAsync<JwtSocketPayload>(
-        token,
-      );
+      const payload =
+        await this.jwtService.verifyAsync<JwtSocketPayload>(token);
 
       if (!payload?.sub) {
         client.emit('auto-combat:error', {
@@ -131,6 +132,8 @@ export class AutoCombatGateway
       client.data.email = user.email;
       client.data.joinedCharacterRooms = new Set<string>();
 
+      this.registerPresence(user.id, client.id);
+
       await client.join(this.getUserRoom(user.id));
 
       client.emit('auto-combat:connected', {
@@ -149,9 +152,41 @@ export class AutoCombatGateway
   }
 
   handleDisconnect(client: AuthenticatedSocket) {
+    if (client.data.userId) {
+      this.unregisterPresence(client.data.userId, client.id);
+    }
+
     client.data.joinedCharacterRooms?.clear();
 
     this.logger.log(`Socket desconectado: ${client.id}`);
+  }
+
+  getOnlinePlayersCount() {
+    return this.socketIdsByUserId.size;
+  }
+
+  private registerPresence(userId: string, socketId: string) {
+    const socketIds = this.socketIdsByUserId.get(userId) ?? new Set<string>();
+
+    socketIds.add(socketId);
+    this.socketIdsByUserId.set(userId, socketIds);
+  }
+
+  private unregisterPresence(userId: string, socketId: string) {
+    const socketIds = this.socketIdsByUserId.get(userId);
+
+    if (!socketIds) {
+      return;
+    }
+
+    socketIds.delete(socketId);
+
+    if (socketIds.size > 0) {
+      this.socketIdsByUserId.set(userId, socketIds);
+      return;
+    }
+
+    this.socketIdsByUserId.delete(userId);
   }
 
   @SubscribeMessage('auto-combat:join')
@@ -289,7 +324,9 @@ export class AutoCombatGateway
       return;
     }
 
-    if (this.shouldSuppressDuplicateInactiveStatus(normalizedCharacterId, payload)) {
+    if (
+      this.shouldSuppressDuplicateInactiveStatus(normalizedCharacterId, payload)
+    ) {
       return;
     }
 
@@ -383,7 +420,11 @@ export class AutoCombatGateway
     this.emitToCharacter(characterId, 'auto-combat:event', payload);
   }
 
-  private emitToCharacter(characterId: string, event: string, payload: unknown) {
+  private emitToCharacter(
+    characterId: string,
+    event: string,
+    payload: unknown,
+  ) {
     if (!this.server) {
       return;
     }
@@ -475,7 +516,9 @@ export class AutoCombatGateway
 
     const typedPayload = payload as RealtimePayloadLike;
 
-    return String(typedPayload.type ?? '').trim().toUpperCase();
+    return String(typedPayload.type ?? '')
+      .trim()
+      .toUpperCase();
   }
 
   private extractToken(client: Socket) {
