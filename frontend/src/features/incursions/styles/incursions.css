@@ -394,32 +394,6 @@
   font-size: 0.75rem;
 }
 
-.incursions-current-card__meta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.52rem;
-}
-
-.incursions-current-card__meta > span {
-  display: grid;
-  gap: 0.22rem;
-  border: 1px solid rgba(231, 227, 216, 0.08);
-  border-radius: 0.76rem;
-  padding: 0.56rem;
-  background: rgba(0, 0, 0, 0.18);
-  color: rgba(231, 227, 216, 0.56);
-  font-size: 0.64rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.incursions-current-card__meta strong {
-  color: #fff8e8;
-  font-size: 0.8rem;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
 .incursions-current-card__progress {
   display: grid;
   gap: 0.38rem;
@@ -951,7 +925,6 @@
 }
 
 @media (max-width: 520px) {
-  .incursions-current-card__meta,
   .incursions-modal__stats {
     grid-template-columns: 1fr;
   }
