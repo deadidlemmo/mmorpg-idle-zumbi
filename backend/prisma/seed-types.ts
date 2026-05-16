@@ -1,5 +1,7 @@
 import type {
   CraftIngredientRole,
+  IncursionDifficulty,
+  IncursionRewardType,
   ItemSlot,
   MaterialOrigin,
   Rarity,
@@ -118,4 +120,33 @@ export type GatheringSeedData = {
   description: string;
   materialOrigin: MaterialOrigin;
   statBonus: string;
+};
+
+
+export type IncursionLootSeedData = {
+  rewardType: IncursionRewardType;
+  itemName?: string;
+  chance: number;
+  minQuantity: number;
+  maxQuantity: number;
+  guaranteed?: boolean;
+  rarity?: Rarity;
+  sortOrder?: number;
+};
+
+export type IncursionSeedData = {
+  name: string;
+  slug: string;
+  description: string;
+  mapName: string;
+  tier: number;
+  minLevel: number;
+  maxLevel: number;
+  goldCost: number;
+  durationSeconds: number;
+  difficulty: IncursionDifficulty;
+  riskLevel: number;
+  isActive?: boolean;
+  sortOrder?: number;
+  lootTable: IncursionLootSeedData[];
 };

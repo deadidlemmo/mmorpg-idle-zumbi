@@ -314,6 +314,11 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     path: 'maps',
     icon: '◇',
   },
+  {
+    label: 'Incursões',
+    path: 'incursions',
+    icon: '⌬',
+  },
 ];
 
 const DASHBOARD_MAIN_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter((item) =>

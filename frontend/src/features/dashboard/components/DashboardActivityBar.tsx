@@ -13,6 +13,7 @@ import type {
   CharacterOverviewResponse,
   DashboardAutoCombatSessionViewModel,
   DashboardGatheringSessionViewModel,
+  DashboardIncursionSessionViewModel,
 } from '../types/dashboard.types';
 
 interface DashboardActivityBarProps {
@@ -22,7 +23,7 @@ interface DashboardActivityBarProps {
 
 type ActivityBarItem = {
   key: string;
-  type: 'auto-combat' | 'gathering';
+  type: 'auto-combat' | 'gathering' | 'incursion';
   icon: string;
   title: string;
   description: string;
@@ -1697,6 +1698,58 @@ function buildGatheringItemFromOverview(params: {
   };
 }
 
+
+function formatRemainingTime(seconds: unknown) {
+  const safeSeconds = Math.max(0, Math.ceil(toSafeNumber(seconds, 0)));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const secs = safeSeconds % 60;
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${secs}s`;
+  return `${secs}s`;
+}
+
+function buildIncursionItemFromOverview(params: {
+  characterId: string;
+  session: DashboardIncursionSessionViewModel;
+  nowMs: number;
+}): ActivityBarItem {
+  const { characterId, session, nowMs } = params;
+  const startedAtMs = getParsedDateMs(session.startedAt) ?? nowMs;
+  const endsAtMs = getParsedDateMs(session.endsAt) ?? nowMs;
+  const totalMs = Math.max(1, endsAtMs - startedAtMs);
+  const elapsedMs = Math.max(0, Math.min(totalMs, nowMs - startedAtMs));
+  const remainingSeconds = Math.max(0, Math.ceil((endsAtMs - nowMs) / 1000));
+  const isCompleted = remainingSeconds <= 0 || normalizeStatus(session.status) === 'COMPLETED';
+  const progressPercent = Math.round((elapsedMs / totalMs) * 100);
+  const incursion = session.incursion;
+  const mapName = incursion?.map?.name ?? 'Mapa desconhecido';
+  const title = incursion?.name ?? 'Incursão ativa';
+
+  return {
+    key: `incursion-${session.id}`,
+    type: 'incursion',
+    icon: '⌬',
+    title,
+    description: isCompleted
+      ? 'Incursão concluída. Recompensas pendentes de coleta.'
+      : `${mapName} • termina em ${formatRemainingTime(remainingSeconds)}`,
+    progressLabel: isCompleted ? 'Coleta disponível' : 'Tempo restante',
+    progressPercent: isCompleted ? 100 : progressPercent,
+    progressValueLabel: isCompleted ? 'Pronta' : formatRemainingTime(remainingSeconds),
+    primaryMetric: isCompleted ? 'Coletar' : formatRemainingTime(remainingSeconds),
+    secondaryMetric: `${toSafeNumber(session.goldCostPaid, 0).toLocaleString('pt-BR')} gold pago`,
+    indicatorMetric: isCompleted ? 'Pronta' : `${Math.max(0, Math.floor(progressPercent))}%`,
+    indicatorLabel: isCompleted ? 'Incursão pronta para coleta' : 'Progresso da incursão',
+    href: `/dashboard/${characterId}/incursions`,
+    monsterMetaLabel: `${mapName} • Tier ${incursion?.tier ?? '—'}`,
+    combatMetric: isCompleted ? 'Coleta' : 'Idle',
+    killsMetric: `${toSafeNumber(session.goldCostPaid, 0).toLocaleString('pt-BR')} gold`,
+    xpMetric: isCompleted ? 'Pendente' : formatRemainingTime(remainingSeconds),
+  };
+}
+
 function buildActivityItems(params: {
   characterId: string;
   overview: CharacterOverviewResponse | null;
@@ -1766,6 +1819,28 @@ function buildActivityItems(params: {
         buildGatheringItemFromOverview({
           characterId,
           session: activeGathering,
+          nowMs,
+        }),
+      );
+    }
+  }
+
+
+
+  if (overview?.activity) {
+    const activeIncursion = overview.activity.activeIncursionSession ?? null;
+    const activeIncursionSession = activeIncursion as DashboardIncursionSessionViewModel | null;
+    const activeIncursionStatus = normalizeStatus(activeIncursionSession?.status);
+    const hasActiveIncursion =
+      Boolean(overview.activity.hasActiveIncursion) ||
+      activeIncursionStatus === 'ACTIVE' ||
+      activeIncursionStatus === 'COMPLETED';
+
+    if (hasActiveIncursion && activeIncursionSession) {
+      items.push(
+        buildIncursionItemFromOverview({
+          characterId,
+          session: activeIncursionSession,
           nowMs,
         }),
       );
@@ -1978,7 +2053,9 @@ export function DashboardActivityBar({
                     <span className="dashboard-activity-bar__eyebrow">
                       {item.type === 'auto-combat'
                         ? 'Sessão ativa'
-                        : 'Expedição ativa'}
+                        : item.type === 'incursion'
+                          ? 'Incursão ativa'
+                          : 'Expedição ativa'}
                     </span>
 
                     <strong>{item.title}</strong>
@@ -2102,7 +2179,9 @@ export function DashboardActivityBar({
                   <span>
                     {item.type === 'auto-combat'
                       ? 'Sessão ativa'
-                      : 'Expedição ativa'}
+                      : item.type === 'incursion'
+                        ? 'Incursão ativa'
+                        : 'Expedição ativa'}
                   </span>
                   <strong>{item.title}</strong>
 

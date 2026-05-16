@@ -39,4 +39,13 @@ export const API_ENDPOINTS = {
   inventory: {
     byCharacter: (characterId: string) => `/inventory/${characterId}`,
   },
+
+  incursions: {
+    list: '/incursions',
+    available: (characterId: string) => `/incursions/${characterId}/available`,
+    status: (characterId: string) => `/incursions/${characterId}/status`,
+    start: '/incursions/start',
+    claim: '/incursions/claim',
+    cancel: (characterId: string) => `/incursions/${characterId}/cancel`,
+  },
 } as const;

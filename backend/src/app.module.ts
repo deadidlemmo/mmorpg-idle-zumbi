@@ -12,6 +12,7 @@ import { EquipmentModule } from './modules/equipment/equipment.module';
 import { GameClassesModule } from './modules/game-classes/game-classes.module';
 import { GatheringModule } from './modules/gathering/gathering.module';
 import { InfirmaryModule } from './modules/infirmary/infirmary.module';
+import { IncursionsModule } from './modules/incursions/incursions.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { ItemsModule } from './modules/items/items.module';
 import { MapsModule } from './modules/maps/maps.module';
@@ -46,6 +47,7 @@ import { PrismaModule } from './prisma/prisma.module';
 
     CraftingModule,
     GatheringModule,
+    IncursionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

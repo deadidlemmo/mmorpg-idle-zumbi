@@ -16,6 +16,7 @@ import { DashboardPlaceholderPage } from '../features/dashboard/pages/DashboardP
 import { GatheringHubPage } from '../features/gathering/pages/GatheringHubPage';
 import { GatheringOriginPage } from '../features/gathering/pages/GatheringOriginPage';
 import { GatheringRealtimeProvider } from '../features/gathering/realtime/GatheringRealtimeProvider';
+import { IncursionsPage } from '../features/incursions/pages/IncursionsPage';
 import { InventoryPage } from '../features/inventory/pages/InventoryPage';
 import { MapsSelectionPage } from '../features/maps/pages/MapsSelectionPage';
 import { LootNotificationProvider } from '../features/loot-notifications/LootNotificationProvider';
@@ -145,6 +146,8 @@ export function AppRoutes() {
           />
 
           <Route path="maps" element={<MapsSelectionPage />} />
+
+          <Route path="incursions" element={<IncursionsPage />} />
 
           <Route path="*" element={<Navigate to="" replace />} />
         </Route>

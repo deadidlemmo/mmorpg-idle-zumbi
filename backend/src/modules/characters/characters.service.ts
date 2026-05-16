@@ -9,6 +9,7 @@ import {
   ActivityStatus,
   AutoCombatSessionStatus,
   CharacterStatus,
+  IncursionSessionStatus,
   InventoryItemType,
   ItemSlot,
   MaterialOrigin,
@@ -21,6 +22,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCharacterDto } from './dto/create-character.dto';
 
 const MAX_CHARACTERS_PER_USER = 2;
+const INITIAL_CHARACTER_GOLD = 250;
+const INITIAL_CHARACTER_CASH = 0;
 
 const GATHERING_LEVEL_CAP = 50;
 const GATHERING_STAT_BONUS_PER_LEVEL = 2;
@@ -85,7 +88,13 @@ type XpProgressSnapshot = {
 const ORIGIN_STAT_INFO: Record<
   ValidGatheringOrigin,
   {
-    stat: 'strength' | 'vitality' | 'agility' | 'precision' | 'technique' | 'willpower';
+    stat:
+      | 'strength'
+      | 'vitality'
+      | 'agility'
+      | 'precision'
+      | 'technique'
+      | 'willpower';
     label: string;
   }
 > = {
@@ -282,6 +291,8 @@ export class CharactersService {
           mapId: initialMap.id,
           status: CharacterStatus.ACTIVE,
           level: initialLevel,
+          gold: INITIAL_CHARACTER_GOLD,
+          cash: INITIAL_CHARACTER_CASH,
           currentHp: initialMaxHp,
           maxHp: initialMaxHp,
           avatarKey,
@@ -484,11 +495,10 @@ export class CharactersService {
           character.inventoryItems,
         );
 
-        const gatheringSkills =
-          await this.getCharacterGatheringSkillsViewModel(
-            character.id,
-            character.class.name,
-          );
+        const gatheringSkills = await this.getCharacterGatheringSkillsViewModel(
+          character.id,
+          character.class.name,
+        );
 
         return {
           ...character,
@@ -829,6 +839,7 @@ export class CharactersService {
     const [
       activeAutoCombatSession,
       activeGatheringSession,
+      activeIncursionSession,
       availableMaps,
       recommendedMapByLevelRange,
       fallbackRecommendedMap,
@@ -946,6 +957,53 @@ export class CharactersService {
         },
       }),
 
+      this.prisma.characterIncursionSession.findFirst({
+        where: {
+          characterId: character.id,
+          status: {
+            in: [
+              IncursionSessionStatus.ACTIVE,
+              IncursionSessionStatus.COMPLETED,
+            ],
+          },
+        },
+        orderBy: {
+          startedAt: 'desc',
+        },
+        select: {
+          id: true,
+          status: true,
+          startedAt: true,
+          endsAt: true,
+          completedAt: true,
+          claimedAt: true,
+          goldCostPaid: true,
+          xpReward: true,
+          goldReward: true,
+          incursion: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              tier: true,
+              minLevel: true,
+              maxLevel: true,
+              goldCost: true,
+              durationSeconds: true,
+              difficulty: true,
+              riskLevel: true,
+              map: {
+                select: {
+                  id: true,
+                  name: true,
+                  tier: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+
       this.prisma.gameMap.findMany({
         where: {
           minLevel: {
@@ -1048,6 +1106,7 @@ export class CharactersService {
 
     const hasActiveAutoCombat = Boolean(activeAutoCombatSession);
     const hasActiveGathering = Boolean(activeGatheringSession);
+    const hasActiveIncursion = Boolean(activeIncursionSession);
 
     const formattedActiveAutoCombatSession = activeAutoCombatSession
       ? this.formatActiveAutoCombatSession(activeAutoCombatSession)
@@ -1059,7 +1118,7 @@ export class CharactersService {
 
     const activeGatheringSkill =
       activeGatheringSession && activeGatheringSession.origin
-        ? gatheringSkills.byOrigin[activeGatheringSession.origin] ?? null
+        ? (gatheringSkills.byOrigin[activeGatheringSession.origin] ?? null)
         : null;
 
     const gatheringProductionPreview = activeGatheringSession
@@ -1075,11 +1134,13 @@ export class CharactersService {
       characterIsActive &&
       currentHp > 0 &&
       !hasActiveAutoCombat &&
-      !hasActiveGathering;
+      !hasActiveGathering &&
+      !hasActiveIncursion;
 
     const canUseInfirmary =
       !hasActiveAutoCombat &&
       !hasActiveGathering &&
+      !hasActiveIncursion &&
       character.status !== CharacterStatus.BLOCKED &&
       missingHp > 0;
 
@@ -1096,6 +1157,16 @@ export class CharactersService {
         level: character.level,
         xp: character.xp,
         status: character.status,
+        gold: character.gold,
+        cash: character.cash,
+        wallet: {
+          gold: character.gold,
+          cash: character.cash,
+        },
+        currencies: {
+          gold: character.gold,
+          cash: character.cash,
+        },
         currentHp,
         maxHp: calculatedMaxHp,
         avatarKey: this.getCharacterAvatarKey(character),
@@ -1152,6 +1223,7 @@ export class CharactersService {
       activity: {
         hasActiveAutoCombat,
         hasActiveGathering,
+        hasActiveIncursion,
 
         activeAutoCombatSession: formattedActiveAutoCombatSession
           ? {
@@ -1167,6 +1239,10 @@ export class CharactersService {
               productionPreview: gatheringProductionPreview,
             }
           : null,
+
+        activeIncursionSession: activeIncursionSession
+          ? this.formatActiveIncursionSession(activeIncursionSession)
+          : null,
       },
 
       progression: {
@@ -1181,6 +1257,34 @@ export class CharactersService {
         canStartGathering,
         hasCraftableRecipes,
       },
+    };
+  }
+
+  private formatActiveIncursionSession(session: any) {
+    const now = new Date();
+    const totalMs = Math.max(
+      1,
+      session.endsAt.getTime() - session.startedAt.getTime(),
+    );
+    const elapsedMs = Math.max(
+      0,
+      Math.min(totalMs, now.getTime() - session.startedAt.getTime()),
+    );
+    const effectiveStatus =
+      session.status === IncursionSessionStatus.ACTIVE &&
+      session.endsAt.getTime() <= now.getTime()
+        ? IncursionSessionStatus.COMPLETED
+        : session.status;
+
+    return {
+      ...session,
+      status: effectiveStatus,
+      progressPercent: Math.round((elapsedMs / totalMs) * 100),
+      remainingSeconds: Math.max(
+        0,
+        Math.ceil((session.endsAt.getTime() - now.getTime()) / 1000),
+      ),
+      canClaim: effectiveStatus === IncursionSessionStatus.COMPLETED,
     };
   }
 
@@ -1775,7 +1879,8 @@ export class CharactersService {
         : defaultRatePerHour;
 
     const skillMultiplier =
-      gatheringSkill?.productionMultiplier && gatheringSkill.productionMultiplier > 0
+      gatheringSkill?.productionMultiplier &&
+      gatheringSkill.productionMultiplier > 0
         ? gatheringSkill.productionMultiplier
         : 1;
 
@@ -1936,23 +2041,7 @@ export class CharactersService {
         base: stats.basePrimaryStats,
         levelBonus: stats.levelBonusStats,
         equipmentBonus: stats.equipmentBonusStats,
-        gatheringBonus:
-          gatheringBonus ?? {
-            strength: 0,
-            vitality: 0,
-            agility: 0,
-            precision: 0,
-            technique: 0,
-            willpower: 0,
-          },
-        total: stats.totalPrimaryStats,
-      },
-      combat: stats.derivedCombatStats,
-      basePrimaryStats: stats.basePrimaryStats,
-      levelBonusStats: stats.levelBonusStats,
-      equipmentBonusStats: stats.equipmentBonusStats,
-      gatheringBonusStats:
-        gatheringBonus ?? {
+        gatheringBonus: gatheringBonus ?? {
           strength: 0,
           vitality: 0,
           agility: 0,
@@ -1960,6 +2049,20 @@ export class CharactersService {
           technique: 0,
           willpower: 0,
         },
+        total: stats.totalPrimaryStats,
+      },
+      combat: stats.derivedCombatStats,
+      basePrimaryStats: stats.basePrimaryStats,
+      levelBonusStats: stats.levelBonusStats,
+      equipmentBonusStats: stats.equipmentBonusStats,
+      gatheringBonusStats: gatheringBonus ?? {
+        strength: 0,
+        vitality: 0,
+        agility: 0,
+        precision: 0,
+        technique: 0,
+        willpower: 0,
+      },
       totalPrimaryStats: stats.totalPrimaryStats,
       derivedCombatStats: stats.derivedCombatStats,
     };
