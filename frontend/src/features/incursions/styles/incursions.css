@@ -959,9 +959,10 @@
 }
 
 .incursion-loot-card__meta {
-  display: grid;
-  justify-items: end;
-  gap: 0.28rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.42rem;
   min-width: max-content;
 }
 
@@ -971,6 +972,7 @@
   font-size: 1rem;
   font-weight: 900;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .incursion-loot-card__chance {
@@ -984,6 +986,7 @@
   color: #cbd2bf;
   font-size: 0.68rem;
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .incursion-loot-card__chance--guaranteed {
@@ -1044,23 +1047,29 @@
   }
 
   .incursions-modal-backdrop {
-    align-items: end;
-    padding: 0.5rem;
+    min-height: 100dvh;
+    place-items: center;
+    padding: calc(0.75rem + env(safe-area-inset-top))
+      calc(0.75rem + env(safe-area-inset-right))
+      calc(0.75rem + env(safe-area-inset-bottom))
+      calc(0.75rem + env(safe-area-inset-left));
   }
 
   .incursions-modal {
-    width: 100%;
-    max-height: 94svh;
-    border-radius: 1.12rem 1.12rem 0.72rem 0.72rem;
+    width: min(100%, 42rem);
+    max-height: calc(
+      100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+    );
+    border-radius: 1.12rem;
   }
 
   .incursions-modal__hero {
-    padding: 0.46rem;
+    padding: 0.5rem;
   }
 
   .incursions-modal__banner {
-    min-height: clamp(13rem, 54vw, 16.5rem);
-    border-radius: 0.98rem;
+    min-height: clamp(14.5rem, 62vw, 18rem);
+    border-radius: 1rem;
   }
 
   .incursions-modal__banner h2 {
@@ -1089,9 +1098,9 @@
 
   .incursion-loot-card__meta {
     grid-column: 1 / -1;
-    grid-template-columns: auto auto;
-    justify-content: start;
-    justify-items: start;
+    justify-content: space-between;
+    gap: 0.54rem;
+    width: 100%;
     min-width: 0;
   }
 
@@ -1143,6 +1152,10 @@
 
   .incursion-loot-card__meta {
     grid-column: 2;
+  }
+
+  .incursion-loot-card__chance {
+    padding-inline: 0.42rem;
   }
 
   .incursions-modal__actions {
