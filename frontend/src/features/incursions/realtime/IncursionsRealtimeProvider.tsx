@@ -5,11 +5,13 @@ import { io, type Socket } from "socket.io-client";
 import { IncursionsRealtimeContext } from "./incursionsRealtimeContext";
 import { getAuthToken } from "../../../services/api/authToken";
 import {
+  cancelIncursion,
   claimIncursion,
   getIncursionStatus,
   startIncursion,
 } from "../api/incursions.api";
 import type {
+  CancelIncursionResponse,
   ClaimIncursionResponse,
   IncursionSession,
   IncursionStatusResponse,
@@ -45,6 +47,7 @@ export interface IncursionsRealtimeContextValue {
   refresh: () => Promise<IncursionStatusResponse | null>;
   start: (incursionId: string) => Promise<StartIncursionResponse | null>;
   claim: (sessionId: string) => Promise<ClaimIncursionResponse | null>;
+  cancel: () => Promise<CancelIncursionResponse | null>;
   clearError: () => void;
 }
 
@@ -268,6 +271,28 @@ export function IncursionsRealtimeProvider({
     [applyStatus, characterId, enabled, refresh, requestSocketSnapshot],
   );
 
+  const cancel = useCallback(async () => {
+    if (!enabled || !characterId) return null;
+
+    setIsBusy(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await cancelIncursion(characterId);
+      applyStatus({ activeSession: null, rewardedSession: null });
+      requestSocketSnapshot();
+
+      if (!socketRef.current?.connected) await refresh();
+
+      return response;
+    } catch (error) {
+      if (mountedRef.current) setErrorMessage(extractApiError(error));
+      return null;
+    } finally {
+      if (mountedRef.current) setIsBusy(false);
+    }
+  }, [applyStatus, characterId, enabled, refresh, requestSocketSnapshot]);
+
   const clearError = useCallback(() => setErrorMessage(null), []);
 
   useEffect(() => {
@@ -414,8 +439,8 @@ export function IncursionsRealtimeProvider({
   );
 
   const value = useMemo<IncursionsRealtimeContextValue>(
-    () => ({ state, refresh, start, claim, clearError }),
-    [claim, clearError, refresh, start, state],
+    () => ({ state, refresh, start, claim, cancel, clearError }),
+    [cancel, claim, clearError, refresh, start, state],
   );
 
   return (

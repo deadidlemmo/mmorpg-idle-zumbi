@@ -7,6 +7,7 @@ import {
   PackageOpen,
   ShieldAlert,
   Sparkles,
+  XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
@@ -157,7 +158,7 @@ function getIncursionStatusLabel(params: {
 
 export function IncursionsPage() {
   const { characterId } = useParams();
-  const { state: realtimeState, start } = useIncursionsRealtime();
+  const { state: realtimeState, start, cancel } = useIncursionsRealtime();
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
@@ -256,6 +257,24 @@ export function IncursionsPage() {
 
     try {
       const response = await start(incursionId);
+      if (response?.message) setSuccessMessage(response.message);
+      await loadData();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  async function handleCancel() {
+    if (!activeSession || activeSession.status !== "ACTIVE") return;
+
+    setActionId("cancel-incursion");
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await cancel();
       if (response?.message) setSuccessMessage(response.message);
       await loadData();
     } catch (error) {
@@ -374,6 +393,22 @@ export function IncursionsPage() {
                   ? `Termina em ${formatRemaining(activeSession.remainingSeconds)}`
                   : "Entregando automaticamente"}
               </strong>
+
+              {activeSession.status === "ACTIVE" ? (
+                <button
+                  className="incursions-active__cancel"
+                  type="button"
+                  disabled={
+                    actionId === "cancel-incursion" || realtimeState.isBusy
+                  }
+                  onClick={() => void handleCancel()}
+                >
+                  <XCircle size={15} />
+                  {actionId === "cancel-incursion" || realtimeState.isBusy
+                    ? "Cancelando..."
+                    : "Cancelar incursão"}
+                </button>
+              ) : null}
             </div>
           </section>
         ) : null}

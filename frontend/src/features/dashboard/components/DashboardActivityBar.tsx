@@ -391,6 +391,7 @@ function isTerminalStatus(status?: string | null) {
     normalizedStatus === "STOPPED" ||
     normalizedStatus === "DEFEATED" ||
     normalizedStatus === "FAILED" ||
+    normalizedStatus === "CLAIMED" ||
     normalizedStatus === "CANCELLED"
   );
 }
