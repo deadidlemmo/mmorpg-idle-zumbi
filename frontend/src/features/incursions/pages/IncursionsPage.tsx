@@ -212,7 +212,9 @@ function LootRewardCard({ loot }: { loot: IncursionLootPreview }) {
         </span>
         <strong>{name}</strong>
         {loot.item?.rarity ? (
-          <span className="incursion-loot-card__rarity">{loot.item.rarity}</span>
+          <span className="incursion-loot-card__rarity">
+            {loot.item.rarity}
+          </span>
         ) : null}
       </div>
 
@@ -247,16 +249,24 @@ function formatMapLevelRange(
   return null;
 }
 
-function getMapTierClassName(tier?: number | null): string {
+function getTierRarity(tier?: number | null): string {
   const safeTier = Number(tier);
 
-  if (!Number.isFinite(safeTier)) return "gathering-map-tier--common";
-  if (safeTier >= 9) return "gathering-map-tier--legendary";
-  if (safeTier >= 7) return "gathering-map-tier--epic";
-  if (safeTier >= 5) return "gathering-map-tier--rare";
-  if (safeTier >= 3) return "gathering-map-tier--uncommon";
+  if (!Number.isFinite(safeTier)) return "common";
+  if (safeTier >= 9) return "legendary";
+  if (safeTier >= 7) return "epic";
+  if (safeTier >= 5) return "rare";
+  if (safeTier >= 3) return "uncommon";
 
-  return "gathering-map-tier--common";
+  return "common";
+}
+
+function getMapTierClassName(tier?: number | null): string {
+  return `gathering-map-tier--${getTierRarity(tier)}`;
+}
+
+function getIncursionTierClassName(tier?: number | null): string {
+  return `incursions-tier--${getTierRarity(tier)}`;
 }
 
 function getDifficultyLabel(difficulty: string) {
@@ -323,7 +333,10 @@ function GoldAmount({ value }: { value: number }) {
 
 function IncursionArt({ incursion }: { incursion: Incursion }) {
   return (
-    <span className="incursion-art" aria-hidden="true">
+    <span
+      className={`incursion-art ${getIncursionTierClassName(incursion.tier)}`}
+      aria-hidden="true"
+    >
       <span className="incursion-art__sigil">
         {incursion.name.slice(0, 2).toUpperCase()}
       </span>
@@ -406,7 +419,10 @@ export function IncursionsPage() {
   const modalIncursion =
     incursions.find((incursion) => incursion.id === modalIncursionId) ?? null;
   const currentMap =
-    data?.currentMap ?? activeSession?.incursion.map ?? incursions[0]?.map ?? null;
+    data?.currentMap ??
+    activeSession?.incursion.map ??
+    incursions[0]?.map ??
+    null;
   const currentMapName = currentMap?.name ?? "Mapa não definido";
   const currentMapImage = getMapImageByName(currentMapName);
   const currentMapVisualStyle = buildMapVisualStyle(currentMapImage);
@@ -547,7 +563,10 @@ export function IncursionsPage() {
             </p>
           </div>
 
-          <button type="button" className="gathering-origin-premium-card__button">
+          <button
+            type="button"
+            className="gathering-origin-premium-card__button"
+          >
             Ver benefícios
           </button>
         </aside>
@@ -734,8 +753,7 @@ export function IncursionsPage() {
                         onClick={() => void handleCancel()}
                       >
                         <XCircle size={15} />
-                        {actionId === "cancel-incursion" ||
-                        realtimeState.isBusy
+                        {actionId === "cancel-incursion" || realtimeState.isBusy
                           ? "Cancelando..."
                           : "Cancelar incursão"}
                       </button>
@@ -764,7 +782,7 @@ export function IncursionsPage() {
             }}
           >
             <section
-              className="incursions-modal"
+              className={`incursions-modal ${getIncursionTierClassName(modalIncursion.tier)}`}
               role="dialog"
               aria-modal="true"
               aria-labelledby="incursions-modal-title"
@@ -775,7 +793,6 @@ export function IncursionsPage() {
                 <div className="incursions-modal__title-group">
                   <span>Detalhes da operação</span>
                   <h2 id="incursions-modal-title">{modalIncursion.name}</h2>
-                  <p>{modalIncursion.description}</p>
                 </div>
 
                 <button
@@ -790,33 +807,37 @@ export function IncursionsPage() {
 
               <div className="incursions-modal__body">
                 <div className="incursions-modal__stats">
-                  <span>
+                  <span className="incursions-modal__stat incursions-modal__stat--map">
                     Mapa
                     <strong>{modalIncursion.map.name}</strong>
                   </span>
-                  <span>
+                  <span
+                    className={`incursions-modal__stat incursions-modal__stat--tier ${getIncursionTierClassName(modalIncursion.tier)}`}
+                  >
                     Tier
-                    <strong>{modalIncursion.tier}</strong>
+                    <strong>Tier {modalIncursion.tier}</strong>
                   </span>
-                  <span>
+                  <span className="incursions-modal__stat">
                     Nível recomendado
                     <strong>
                       {modalIncursion.minLevel}–{modalIncursion.maxLevel}
                     </strong>
                   </span>
-                  <span>
+                  <span className="incursions-modal__stat">
                     Duração
                     <strong>
                       {formatDuration(modalIncursion.durationSeconds)}
                     </strong>
                   </span>
-                  <span>
+                  <span className="incursions-modal__stat">
                     Custo
                     <GoldAmount value={modalIncursion.goldCost} />
                   </span>
-                  <span>
+                  <span className="incursions-modal__stat">
                     Dificuldade
-                    <strong>{getDifficultyLabel(modalIncursion.difficulty)}</strong>
+                    <strong>
+                      {getDifficultyLabel(modalIncursion.difficulty)}
+                    </strong>
                   </span>
                 </div>
 
@@ -829,13 +850,17 @@ export function IncursionsPage() {
                     <div className="incursions-modal__loot-grid">
                       {modalIncursion.rewardsPreview.map((loot) => (
                         <LootRewardCard
-                          key={loot.id ?? `${loot.rewardType}-${loot.sortOrder}`}
+                          key={
+                            loot.id ?? `${loot.rewardType}-${loot.sortOrder}`
+                          }
                           loot={loot}
                         />
                       ))}
                     </div>
                   ) : (
-                    <p>As recompensas desta operação ainda são desconhecidas.</p>
+                    <p>
+                      As recompensas desta operação ainda são desconhecidas.
+                    </p>
                   )}
                 </section>
 
