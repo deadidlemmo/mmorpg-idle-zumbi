@@ -132,12 +132,7 @@ export class ActivityGuardService {
       this.prisma.characterIncursionSession.findFirst({
         where: {
           characterId: character.id,
-          status: {
-            in: [
-              IncursionSessionStatus.ACTIVE,
-              IncursionSessionStatus.COMPLETED,
-            ],
-          },
+          status: IncursionSessionStatus.ACTIVE,
         },
         orderBy: {
           startedAt: 'desc',
@@ -203,7 +198,7 @@ export class ActivityGuardService {
     if (state.hasActiveIncursion) {
       throw new BadRequestException({
         message:
-          'Este personagem já está em uma incursão. Encerre ou colete a atividade atual antes de iniciar outra.',
+          'Este personagem já está em uma incursão ativa. Aguarde finalizar antes de iniciar outra atividade.',
         activeIncursion: state.activeIncursionSession,
       });
     }
@@ -259,7 +254,7 @@ export class ActivityGuardService {
     if (state.hasActiveIncursion) {
       throw new BadRequestException({
         message:
-          'Este personagem já está em uma incursão. Encerre ou colete a atividade atual antes de iniciar outra.',
+          'Este personagem já está em uma incursão ativa. Aguarde finalizar antes de iniciar outra atividade.',
         activeIncursion: state.activeIncursionSession,
       });
     }
@@ -290,8 +285,7 @@ export class ActivityGuardService {
 
     if (state.hasActiveIncursion) {
       throw new BadRequestException({
-        message:
-          'Este personagem já possui uma incursão ativa ou pendente de coleta.',
+        message: 'Este personagem já possui uma incursão ativa.',
         activeIncursion: state.activeIncursionSession,
       });
     }

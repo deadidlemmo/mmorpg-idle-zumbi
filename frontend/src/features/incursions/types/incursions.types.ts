@@ -104,11 +104,13 @@ export interface IncursionsAvailableResponse {
   };
   currentMap?: IncursionMapSummary | null;
   activeSession?: IncursionSession | null;
+  rewardedSession?: IncursionSession | null;
   incursions: Incursion[];
 }
 
 export interface IncursionStatusResponse {
   activeSession?: IncursionSession | null;
+  rewardedSession?: IncursionSession | null;
 }
 
 export interface StartIncursionResponse {

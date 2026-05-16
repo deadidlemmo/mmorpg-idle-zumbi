@@ -181,9 +181,14 @@ export class IncursionsGateway
     this.emitToCharacter(characterId, 'incursion:completed', payload);
   }
 
-  emitClaimed(characterId: string, payload: unknown) {
+  emitRewarded(characterId: string, payload: unknown) {
+    this.emitToCharacter(characterId, 'incursion:rewarded', payload);
     this.emitToCharacter(characterId, 'incursion:claimed', payload);
     this.clearCharacterInterval(characterId);
+  }
+
+  emitClaimed(characterId: string, payload: unknown) {
+    this.emitRewarded(characterId, payload);
   }
 
   emitCancelled(characterId: string, payload: unknown) {
@@ -328,13 +333,20 @@ export class IncursionsGateway
     if (!status) return null;
 
     const activeSession = status.activeSession;
-    const effectiveEventName =
-      activeSession?.status === 'COMPLETED' &&
-      eventName === 'incursion:progress'
+    const rewardedSession = (status as { rewardedSession?: unknown | null })
+      .rewardedSession;
+    const effectiveEventName = rewardedSession
+      ? 'incursion:rewarded'
+      : activeSession?.status === 'COMPLETED' &&
+          eventName === 'incursion:progress'
         ? 'incursion:completed'
         : eventName;
 
     this.emitToCharacter(characterId, effectiveEventName, status);
+
+    if (rewardedSession) {
+      this.emitToCharacter(characterId, 'incursion:completed', status);
+    }
 
     if (!activeSession || activeSession.status !== 'ACTIVE') {
       this.clearCharacterInterval(characterId);

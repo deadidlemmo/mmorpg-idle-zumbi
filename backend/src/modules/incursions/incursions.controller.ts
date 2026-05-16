@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
 import {
   Body,
   Controller,
@@ -44,7 +44,13 @@ export class IncursionsController {
       request.user.id,
       characterId,
     );
-    this.incursionsGateway.emitProgress(characterId, status);
+
+    if (status.rewardedSession) {
+      this.incursionsGateway.emitRewarded(characterId, status);
+    } else {
+      this.incursionsGateway.emitProgress(characterId, status);
+    }
+
     return status;
   }
 
@@ -62,7 +68,7 @@ export class IncursionsController {
   @Post('claim')
   async claim(@Req() request: any, @Body() dto: ClaimIncursionDto) {
     const response = await this.incursionsService.claim(request.user.id, dto);
-    this.incursionsGateway.emitClaimed(dto.characterId, {
+    this.incursionsGateway.emitRewarded(dto.characterId, {
       activeSession: null,
       session: response.session,
       message: response.message,
