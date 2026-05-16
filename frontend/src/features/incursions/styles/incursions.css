@@ -630,22 +630,218 @@
   background: rgba(0, 0, 0, 0.2);
 }
 
-.incursions-modal__rewards strong,
-.incursions-modal__rewards li,
+.incursions-modal__rewards-title,
 .incursions-modal__lock-message {
   display: flex;
   align-items: center;
   gap: 0.4rem;
 }
 
-.incursions-modal__rewards ul {
+.incursions-modal__loot-grid {
   display: grid;
-  gap: 0.45rem;
-  margin: 0.65rem 0 0;
-  padding: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.68rem;
+  margin-top: 0.78rem;
+}
+
+.incursion-loot-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.72rem;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(172, 210, 132, 0.14);
+  border-radius: 0.9rem;
+  padding: 0.68rem;
+  background:
+    radial-gradient(
+      circle at 0% 0%,
+      color-mix(
+        in srgb,
+        var(--incursion-loot-rarity-color, #6e9f43) 18%,
+        transparent
+      ),
+      transparent 8rem
+    ),
+    linear-gradient(135deg, rgba(20, 31, 23, 0.92), rgba(6, 10, 9, 0.72));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 12px 30px rgba(0, 0, 0, 0.18);
+}
+
+.incursion-loot-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--incursion-loot-rarity-color, #6e9f43);
+  opacity: 0.72;
+}
+
+.incursion-loot-card--xp {
+  --incursion-loot-rarity-color: #83d6ff;
+}
+
+.incursion-loot-card--gold {
+  --incursion-loot-rarity-color: #f0c95f;
+}
+
+.incursion-loot-card--rarity-common {
+  --incursion-loot-rarity-color: #a9b0aa;
+}
+
+.incursion-loot-card--rarity-uncommon {
+  --incursion-loot-rarity-color: #77b85a;
+}
+
+.incursion-loot-card--rarity-rare {
+  --incursion-loot-rarity-color: #4ea3ff;
+}
+
+.incursion-loot-card--rarity-epic {
+  --incursion-loot-rarity-color: #b879ff;
+}
+
+.incursion-loot-card--rarity-legendary {
+  --incursion-loot-rarity-color: #ffb84e;
+}
+
+.incursion-loot-card__icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.2rem;
+  height: 3.2rem;
+  overflow: hidden;
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--incursion-loot-rarity-color, #6e9f43) 36%,
+      rgba(255, 255, 255, 0.08)
+    );
+  border-radius: 0.78rem;
+  background:
+    radial-gradient(
+      circle at 50% 25%,
+      color-mix(
+        in srgb,
+        var(--incursion-loot-rarity-color, #6e9f43) 30%,
+        transparent
+      ),
+      transparent 68%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(8, 15, 13, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.incursion-loot-card__icon img {
+  position: relative;
+  z-index: 2;
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+}
+
+.incursion-loot-card__fallback-glyph,
+.incursion-loot-card__icon strong {
+  position: absolute;
+  z-index: 1;
+}
+
+.incursion-loot-card__fallback-glyph {
+  color: color-mix(
+    in srgb,
+    var(--incursion-loot-rarity-color, #6e9f43) 76%,
+    #ffffff
+  );
+  font-size: 1.28rem;
+  opacity: 0.72;
+}
+
+.incursion-loot-card__icon strong {
+  color: #f8f6df;
+  font-family: var(--font-title);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+.incursion-loot-card--gold .incursion-loot-card__icon strong {
+  display: none;
+}
+
+.incursion-loot-card__content {
+  display: grid;
+  min-width: 0;
+  gap: 0.14rem;
+}
+
+.incursion-loot-card__content strong {
+  overflow: hidden;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.92rem;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.incursion-loot-card__type,
+.incursion-loot-card__rarity {
+  overflow: hidden;
+  color: #97a58f;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.incursion-loot-card__rarity {
+  color: color-mix(
+    in srgb,
+    var(--incursion-loot-rarity-color, #6e9f43) 82%,
+    #ffffff
+  );
+}
+
+.incursion-loot-card__meta {
+  display: grid;
+  justify-items: end;
+  gap: 0.28rem;
+  min-width: max-content;
+}
+
+.incursion-loot-card__quantity {
+  color: #ffffff;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.incursion-loot-card__chance {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  border: 1px solid rgba(231, 227, 216, 0.1);
+  border-radius: 999px;
+  padding: 0.16rem 0.48rem;
+  background: rgba(255, 255, 255, 0.055);
   color: #cbd2bf;
-  font-size: 0.9rem;
-  list-style: none;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.incursion-loot-card__chance--guaranteed {
+  border-color: rgba(180, 214, 112, 0.34);
+  background: rgba(93, 127, 52, 0.2);
+  color: #dff6b7;
 }
 
 .incursions-modal__lock-message {
@@ -738,6 +934,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .incursions-modal__loot-grid {
+    grid-template-columns: 1fr;
+  }
+
   .incursions-modal__actions {
     display: grid;
     grid-template-columns: 1fr;
@@ -762,5 +962,17 @@
 
   .incursions-modal__hero .incursion-art {
     grid-column: 1 / -1;
+  }
+
+  .incursion-loot-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .incursion-loot-card__meta {
+    grid-column: 2;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    justify-items: start;
+    min-width: 0;
   }
 }
