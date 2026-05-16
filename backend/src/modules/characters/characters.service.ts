@@ -587,6 +587,63 @@ export class CharactersService {
     };
   }
 
+  async updateCurrentMap(userId: string, characterId: string, mapId: string) {
+    const character = await this.prisma.character.findFirst({
+      where: {
+        id: characterId,
+        userId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        level: true,
+        status: true,
+      },
+    });
+
+    if (!character) {
+      throw new NotFoundException('Personagem não encontrado.');
+    }
+
+    if (character.status !== CharacterStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Apenas personagens ativos podem trocar de mapa.',
+      );
+    }
+
+    const gameMap = await this.prisma.gameMap.findUnique({
+      where: {
+        id: mapId,
+      },
+      select: {
+        id: true,
+        name: true,
+        minLevel: true,
+      },
+    });
+
+    if (!gameMap) {
+      throw new NotFoundException('Mapa não encontrado.');
+    }
+
+    if (character.level < gameMap.minLevel) {
+      throw new BadRequestException(
+        `Mapa bloqueado. ${gameMap.name} requer nível ${gameMap.minLevel}.`,
+      );
+    }
+
+    await this.prisma.character.update({
+      where: {
+        id: character.id,
+      },
+      data: {
+        mapId: gameMap.id,
+      },
+    });
+
+    return this.getOverview(userId, characterId);
+  }
+
   async getStatus(userId: string, characterId: string) {
     const character = await this.prisma.character.findFirst({
       where: {
