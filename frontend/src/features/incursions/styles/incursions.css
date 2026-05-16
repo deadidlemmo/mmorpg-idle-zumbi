@@ -2,7 +2,38 @@
   display: grid;
   gap: 1rem;
   padding: clamp(1rem, 2vw, 1.5rem);
-  color: #f4f4ed;
+  color: var(--text-primary, #f4f4ed);
+  font-family: var(--font-body);
+}
+
+.incursions-tier--common {
+  --incursion-tier-color: var(--rarity-common, #d9d8d1);
+  --incursion-tier-bg: var(--rarity-common-bg, rgba(217, 216, 209, 0.08));
+  --incursion-tier-glow: var(--rarity-common-glow, rgba(217, 216, 209, 0.16));
+}
+
+.incursions-tier--uncommon {
+  --incursion-tier-color: var(--rarity-uncommon, #d7b341);
+  --incursion-tier-bg: var(--rarity-uncommon-bg, rgba(215, 179, 65, 0.1));
+  --incursion-tier-glow: var(--rarity-uncommon-glow, rgba(215, 179, 65, 0.22));
+}
+
+.incursions-tier--rare {
+  --incursion-tier-color: var(--rarity-rare, #4fb463);
+  --incursion-tier-bg: var(--rarity-rare-bg, rgba(79, 180, 99, 0.1));
+  --incursion-tier-glow: var(--rarity-rare-glow, rgba(79, 180, 99, 0.24));
+}
+
+.incursions-tier--epic {
+  --incursion-tier-color: var(--rarity-epic, #8d5bd4);
+  --incursion-tier-bg: var(--rarity-epic-bg, rgba(141, 91, 212, 0.12));
+  --incursion-tier-glow: var(--rarity-epic-glow, rgba(141, 91, 212, 0.3));
+}
+
+.incursions-tier--legendary {
+  --incursion-tier-color: var(--rarity-legendary, #c7433c);
+  --incursion-tier-bg: var(--rarity-legendary-bg, rgba(199, 67, 60, 0.13));
+  --incursion-tier-glow: var(--rarity-legendary-glow, rgba(199, 67, 60, 0.36));
 }
 
 .incursions-page--loading {
@@ -128,9 +159,21 @@
   min-height: 0;
   border-color: rgba(231, 227, 216, 0.1) !important;
   background:
-    radial-gradient(circle at 12% 0%, rgba(232, 184, 78, 0.06), transparent 18rem),
-    radial-gradient(circle at 100% 18%, rgba(110, 159, 67, 0.065), transparent 16rem),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+    radial-gradient(
+      circle at 12% 0%,
+      rgba(232, 184, 78, 0.06),
+      transparent 18rem
+    ),
+    radial-gradient(
+      circle at 100% 18%,
+      rgba(110, 159, 67, 0.065),
+      transparent 16rem
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.01)
+    ),
     rgba(5, 10, 8, 0.84) !important;
 }
 
@@ -216,10 +259,14 @@
   place-items: center;
   overflow: hidden;
   background:
-    radial-gradient(circle at 20% 10%, rgba(199, 162, 75, 0.26), transparent 28%),
-    radial-gradient(circle at 80% 0%, rgba(93, 126, 72, 0.34), transparent 34%),
+    radial-gradient(
+      circle at 20% 10%,
+      var(--incursion-tier-glow, rgba(199, 162, 75, 0.2)),
+      transparent 32%
+    ),
+    radial-gradient(circle at 80% 0%, rgba(93, 126, 72, 0.34), transparent 36%),
     linear-gradient(135deg, rgba(30, 43, 35, 0.95), rgba(8, 11, 10, 0.95));
-  color: #d8d979;
+  color: color-mix(in srgb, var(--incursion-tier-color, #d8d979) 80%, #ffffff);
 }
 
 .incursion-art::before {
@@ -228,8 +275,17 @@
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(115deg, transparent 0 32%, rgba(255, 255, 255, 0.08) 44%, transparent 58%),
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 9px);
+    linear-gradient(
+      115deg,
+      transparent 0 32%,
+      rgba(255, 255, 255, 0.08) 44%,
+      transparent 58%
+    ),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.022) 0 1px,
+      transparent 1px 9px
+    );
 }
 
 .incursion-art__sigil {
@@ -237,10 +293,15 @@
   height: 4.2rem;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(232, 184, 78, 0.28);
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--incursion-tier-color, #e8b84e) 42%,
+      rgba(255, 255, 255, 0.1)
+    );
   border-radius: 1.1rem;
   background: rgba(0, 0, 0, 0.28);
-  color: #fff2c4;
+  color: color-mix(in srgb, var(--incursion-tier-color, #fff2c4) 64%, #ffffff);
   font-family: var(--font-title);
   font-size: 1.15rem;
   font-weight: 950;
@@ -342,8 +403,16 @@
   border-color: rgba(110, 159, 67, 0.26);
   border-radius: 1.05rem;
   background:
-    radial-gradient(circle at 18% 0%, rgba(110, 159, 67, 0.1), transparent 17rem),
-    linear-gradient(180deg, rgba(110, 159, 67, 0.045), rgba(255, 255, 255, 0.01)),
+    radial-gradient(
+      circle at 18% 0%,
+      rgba(110, 159, 67, 0.1),
+      transparent 17rem
+    ),
+    linear-gradient(
+      180deg,
+      rgba(110, 159, 67, 0.045),
+      rgba(255, 255, 255, 0.01)
+    ),
     rgba(5, 15, 9, 0.86);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.035),
@@ -463,7 +532,11 @@
 
 .incursions-danger-button {
   border: 1px solid rgba(255, 116, 96, 0.34);
-  background: linear-gradient(135deg, rgba(118, 32, 32, 0.34), rgba(45, 18, 18, 0.88));
+  background: linear-gradient(
+    135deg,
+    rgba(118, 32, 32, 0.34),
+    rgba(45, 18, 18, 0.88)
+  );
   color: #ffd8cf;
 }
 
@@ -510,42 +583,65 @@
 }
 
 .incursions-modal {
-  width: min(100%, 780px);
-  max-height: min(88vh, 820px);
+  width: min(100%, 860px);
+  max-height: min(90vh, 860px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
-  border-radius: 1.25rem;
+  border-color: color-mix(
+    in srgb,
+    var(--incursion-tier-color, var(--rarity-common)) 24%,
+    rgba(172, 210, 132, 0.16)
+  );
+  border-radius: 1.35rem;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.48),
+    0 0 34px var(--incursion-tier-glow, rgba(217, 216, 209, 0.12));
 }
 
 .incursions-modal__hero {
   display: grid;
-  grid-template-columns: 132px minmax(0, 1fr) auto;
-  gap: 1rem;
+  grid-template-columns: minmax(220px, 0.44fr) minmax(0, 1fr) auto;
+  gap: clamp(0.9rem, 2vw, 1.25rem);
   align-items: stretch;
-  padding: 1rem;
+  padding: clamp(0.9rem, 2vw, 1.18rem);
   border-bottom: 1px solid rgba(231, 227, 216, 0.08);
+  background:
+    radial-gradient(
+      circle at 20% 0%,
+      var(--incursion-tier-glow, rgba(217, 216, 209, 0.12)),
+      transparent 20rem
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent);
 }
 
 .incursions-modal__hero .incursion-art {
-  min-height: 9rem;
-  border-radius: 1rem;
+  min-height: clamp(12rem, 26vw, 16rem);
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--incursion-tier-color, #d9d8d1) 32%,
+      rgba(255, 255, 255, 0.1)
+    );
+  border-radius: 1.08rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 18px 42px rgba(0, 0, 0, 0.26),
+    0 0 24px var(--incursion-tier-glow, rgba(217, 216, 209, 0.1));
 }
 
 .incursions-modal__title-group {
   display: grid;
   align-content: center;
-  gap: 0.38rem;
+  gap: 0.5rem;
 }
 
 .incursions-modal__title-group h2 {
-  font-size: clamp(1.35rem, 3vw, 2rem);
-  line-height: 1.05;
-}
-
-.incursions-modal__title-group p {
-  margin: 0;
-  font-size: 0.92rem;
+  font-family: var(--font-title);
+  font-size: clamp(1.55rem, 3.4vw, 2.45rem);
+  font-weight: 950;
+  line-height: 1.02;
+  text-wrap: balance;
 }
 
 .incursions-modal__close {
@@ -569,31 +665,63 @@
 
 .incursions-modal__stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.62rem;
 }
 
-.incursions-modal__stats > span {
+.incursions-modal__stat {
   display: grid;
-  gap: 0.22rem;
-  min-height: 4.2rem;
+  gap: 0.26rem;
+  min-height: 4.25rem;
   align-content: center;
-  border: 1px solid rgba(231, 227, 216, 0.08);
-  border-radius: 0.86rem;
-  padding: 0.68rem;
-  background: rgba(0, 0, 0, 0.18);
-  color: rgba(231, 227, 216, 0.58);
-  font-size: 0.67rem;
-  font-weight: 850;
+  min-width: 0;
+  border: 1px solid rgba(231, 227, 216, 0.09);
+  border-radius: 0.9rem;
+  padding: 0.72rem;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.035),
+      rgba(255, 255, 255, 0.012)
+    ),
+    rgba(0, 0, 0, 0.2);
+  color: rgba(231, 227, 216, 0.62);
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.incursions-modal__stats strong {
+.incursions-modal__stat strong,
+.incursions-modal__stat .incursions-gold-amount {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: #fff8e8;
-  font-size: 0.86rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 850;
   letter-spacing: 0;
   text-transform: none;
+}
+
+.incursions-modal__stat--tier {
+  border-color: color-mix(
+    in srgb,
+    var(--incursion-tier-color, #d9d8d1) 34%,
+    rgba(255, 255, 255, 0.08)
+  );
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      var(--incursion-tier-glow, rgba(217, 216, 209, 0.14)),
+      transparent 6.5rem
+    ),
+    var(--incursion-tier-bg, rgba(217, 216, 209, 0.08)), rgba(0, 0, 0, 0.2);
+}
+
+.incursions-modal__stat--tier strong {
+  color: color-mix(in srgb, var(--incursion-tier-color, #d9d8d1) 88%, #ffffff);
 }
 
 .incursions-modal__rewards,
@@ -609,6 +737,13 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+.incursions-modal__rewards-title {
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.95rem;
+  font-weight: 950;
 }
 
 .incursions-modal__loot-grid {
@@ -881,35 +1016,49 @@
   }
 
   .incursions-modal__hero {
-    grid-template-columns: 84px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.72rem;
     padding: 0.78rem;
   }
 
   .incursions-modal__hero .incursion-art {
-    min-height: 6rem;
+    grid-column: 1 / -1;
+    min-height: clamp(9.5rem, 34vw, 13.5rem);
   }
 
   .incursions-modal__hero .incursion-art__sigil {
-    width: 3.1rem;
-    height: 3.1rem;
-    border-radius: 0.88rem;
-    font-size: 0.9rem;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 1rem;
+    font-size: 1.05rem;
   }
 
-  .incursions-modal__title-group p {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-  }
-
-  .incursions-modal__stats {
+  .incursions-modal__stats,
+  .incursions-modal__loot-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .incursions-modal__loot-grid {
-    grid-template-columns: 1fr;
+  .incursions-modal__stat--map {
+    grid-column: span 2;
+  }
+
+  .incursion-loot-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.58rem;
+    padding: 0.62rem;
+  }
+
+  .incursion-loot-card__icon {
+    width: 2.82rem;
+    height: 2.82rem;
+  }
+
+  .incursion-loot-card__meta {
+    grid-column: 1 / -1;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    justify-items: start;
+    min-width: 0;
   }
 
   .incursions-modal__actions {
@@ -925,27 +1074,32 @@
 }
 
 @media (max-width: 520px) {
-  .incursions-modal__stats {
+  .incursions-modal__body {
+    gap: 0.78rem;
+    padding: 0.78rem;
+  }
+
+  .incursions-modal__stat {
+    min-height: 3.9rem;
+    padding: 0.62rem;
+  }
+
+  .incursions-modal__rewards {
+    padding: 0.72rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .incursions-modal__stats,
+  .incursions-modal__loot-grid {
     grid-template-columns: 1fr;
   }
 
-  .incursions-modal__hero {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .incursions-modal__hero .incursion-art {
-    grid-column: 1 / -1;
-  }
-
-  .incursion-loot-card {
-    grid-template-columns: auto minmax(0, 1fr);
+  .incursions-modal__stat--map {
+    grid-column: auto;
   }
 
   .incursion-loot-card__meta {
     grid-column: 2;
-    grid-template-columns: auto auto;
-    justify-content: start;
-    justify-items: start;
-    min-width: 0;
   }
 }
