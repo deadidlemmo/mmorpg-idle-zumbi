@@ -538,8 +538,9 @@ export function IncursionsPage() {
             </span>
             <h1>Incursões</h1>
             <p>
-              Operações de risco no mapa atual, com custo em gold e recompensas
-              automáticas.
+              Operações temporizadas do mapa atual. Escolha uma incursão, pague
+              o custo em gold e acompanhe a operação pela Activity Bar global em
+              tempo real.
             </p>
           </div>
         </section>
