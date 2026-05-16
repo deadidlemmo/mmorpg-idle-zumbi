@@ -129,14 +129,16 @@
 
 .dashboard-sidebar__status-row {
   display: grid;
-  grid-template-columns: 42px minmax(max-content, 1fr);
+  grid-template-columns: 38px minmax(0, 1fr);
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.54rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .dashboard-sidebar__community {
   min-width: 0;
-  min-height: 34px;
+  min-height: 36px;
   border: 1px solid rgba(231, 227, 216, 0.08);
   border-radius: 999px;
   box-shadow:
@@ -148,17 +150,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  min-width: 42px;
+  width: 38px;
+  min-width: 38px;
+  height: 36px;
   padding: 0;
   overflow: hidden;
   color: #f4f2ff;
   text-decoration: none;
   background:
-    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.24), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent),
-    linear-gradient(135deg, rgba(88, 101, 242, 0.95), rgba(65, 55, 152, 0.84));
-  border-color: rgba(181, 184, 255, 0.28);
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.26), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent),
+    linear-gradient(135deg, rgba(88, 101, 242, 0.98), rgba(65, 55, 152, 0.88));
+  border-color: rgba(181, 184, 255, 0.3);
   cursor: pointer;
   transition:
     transform var(--transition-fast),
@@ -189,28 +192,32 @@
 
 .dashboard-sidebar__discord-icon {
   display: block;
-  width: 21px;
-  height: 21px;
+  width: 24px;
+  height: 24px;
   flex: 0 0 auto;
   object-fit: contain;
-  filter: drop-shadow(0 0 8px rgba(198, 190, 255, 0.28));
+  filter: drop-shadow(0 0 8px rgba(198, 190, 255, 0.3));
 }
 
 .dashboard-sidebar__online {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.42rem;
   width: 100%;
-  padding: 0 0.74rem;
-  color: rgba(231, 227, 216, 0.9);
-  font-size: 0.74rem;
+  min-width: 0;
+  height: 36px;
+  padding: 0 0.72rem;
+  overflow: visible;
+  color: rgba(231, 227, 216, 0.92);
+  font-size: 0.72rem;
   font-weight: 850;
   line-height: 1;
   white-space: nowrap;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
-    rgba(5, 9, 8, 0.58);
+    radial-gradient(circle at 8% 50%, rgba(123, 196, 109, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgba(5, 9, 8, 0.62);
 }
 
 .dashboard-sidebar__online-dot {
@@ -235,8 +242,15 @@
 }
 
 .dashboard-sidebar__online-count {
-  flex: 0 0 auto;
-  min-width: max-content;
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: visible;
+  text-align: center;
+}
+
+.dashboard-sidebar__online-count--short {
+  display: none;
 }
 
 .dashboard-sidebar__character {

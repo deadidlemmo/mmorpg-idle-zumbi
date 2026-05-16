@@ -328,18 +328,24 @@ const DASHBOARD_GATHERING_NAV_ITEM = DASHBOARD_NAV_ITEMS.find(
   (item) => item.path === 'gathering',
 );
 
-const DASHBOARD_DISCORD_URL = import.meta.env.VITE_DISCORD_URL as
-  | string
-  | undefined;
+const DASHBOARD_DISCORD_URL = 'https://discord.gg/dXSZCj3sA';
 
 const ONLINE_PLAYERS_REFRESH_MS = 30_000;
 
 function formatOnlinePlayersLabel(onlinePlayers: number | null) {
   if (onlinePlayers === null) {
-    return 'Online agora';
+    return {
+      full: 'Online agora',
+      short: 'Online',
+    };
   }
 
-  return `${onlinePlayers} online`;
+  return {
+    full: `${onlinePlayers} ${
+      onlinePlayers === 1 ? 'sobrevivente' : 'sobreviventes'
+    }`,
+    short: `${onlinePlayers} online`,
+  };
 }
 
 function DiscordMark() {
@@ -1263,28 +1269,16 @@ function DashboardLayoutContent({
           aria-label="Comunidade e status do abrigo"
         >
           <div className="dashboard-sidebar__status-row">
-            {DASHBOARD_DISCORD_URL ? (
-              <a
-                className="dashboard-sidebar__community dashboard-sidebar__discord"
-                href={DASHBOARD_DISCORD_URL}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Abrir Discord da comunidade"
-                title="Abrir Discord da comunidade"
-              >
-                <DiscordMark />
-              </a>
-            ) : (
-              <button
-                type="button"
-                className="dashboard-sidebar__community dashboard-sidebar__discord"
-                aria-label="Discord da comunidade ainda não configurado"
-                title="Configure VITE_DISCORD_URL para ativar o link do Discord"
-                disabled
-              >
-                <DiscordMark />
-              </button>
-            )}
+            <a
+              className="dashboard-sidebar__community dashboard-sidebar__discord"
+              href={DASHBOARD_DISCORD_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Entrar no Discord"
+              title="Entrar no Discord"
+            >
+              <DiscordMark />
+            </a>
 
             <span
               className="dashboard-sidebar__community dashboard-sidebar__online"
@@ -1294,8 +1288,17 @@ function DashboardLayoutContent({
                 className="dashboard-sidebar__online-dot"
                 aria-hidden="true"
               />
-              <span className="dashboard-sidebar__online-count">
-                {onlinePlayersLabel}
+              <span
+                className="dashboard-sidebar__online-count dashboard-sidebar__online-count--full"
+                aria-label={onlinePlayersLabel.full}
+              >
+                {onlinePlayersLabel.full}
+              </span>
+              <span
+                className="dashboard-sidebar__online-count dashboard-sidebar__online-count--short"
+                aria-hidden="true"
+              >
+                {onlinePlayersLabel.short}
               </span>
             </span>
           </div>

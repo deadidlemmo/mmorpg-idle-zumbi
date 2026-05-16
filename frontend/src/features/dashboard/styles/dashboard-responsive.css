@@ -1135,11 +1135,37 @@
   }
 
   .dashboard-sidebar__status-row {
-    grid-template-columns: 42px minmax(max-content, 1fr);
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 0.46rem;
   }
 
   .dashboard-sidebar__community {
     min-height: 32px;
+  }
+
+  .dashboard-sidebar__discord {
+    width: 34px;
+    min-width: 34px;
+    height: 32px;
+  }
+
+  .dashboard-sidebar__discord-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .dashboard-sidebar__online {
+    height: 32px;
+    padding-inline: 0.58rem;
+    font-size: 0.7rem;
+  }
+
+  .dashboard-sidebar__online-count--full {
+    display: none;
+  }
+
+  .dashboard-sidebar__online-count--short {
+    display: block;
   }
 
   .dashboard-sidebar__section-label {
