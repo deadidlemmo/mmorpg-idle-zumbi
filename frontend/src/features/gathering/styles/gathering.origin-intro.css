@@ -1,66 +1,54 @@
 /* =========================================================
    GATHERING ORIGIN — INTRO
-   Banner de lore/NPC, contexto do mapa e aviso premium.
-
-   Ordem visual esperada:
-   1. Lore / NPC
-   2. Mapa atual
-   3. Benefícios
-   ========================================================= */
-
-/* =========================================================
-   BASE — CARDS DA INTRO
+   Banner premium de diálogo do NPC, faixa compacta de mapa e aviso premium.
    ========================================================= */
 
 .gathering-origin-lore-card,
 .gathering-origin-map-context,
 .gathering-origin-premium-card {
   position: relative;
-  grid-column: 1 / -1;
   width: 100%;
   min-width: 0;
   overflow: hidden;
-  border-radius: 1rem;
   border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 1.08rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.035),
-    0 14px 28px rgba(0, 0, 0, 0.18);
+    0 16px 32px rgba(0, 0, 0, 0.2);
 }
 
 /* =========================================================
-   LORE / NPC
+   LORE / NPC — CAIXA DE DIÁLOGO
    ========================================================= */
 
 .gathering-origin-lore-card,
 .gathering-origin-lore-card.gathering-origin-lore-card--npc,
 .gathering-origin-lore-card--npc {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 0.9rem;
-  min-height: auto;
-  max-height: none;
-  padding: 0.74rem 1rem;
-  border-color: rgba(150, 200, 90, 0.18);
-  border-radius: 1rem;
+  grid-template-columns: minmax(150px, 0.26fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0;
+  min-height: 188px;
+  padding: 0;
+  isolation: isolate;
+  border-color: rgba(150, 200, 90, 0.2);
   background:
-    radial-gradient(circle at left, rgba(160, 210, 90, 0.12), transparent 34%),
-    radial-gradient(circle at 86% 48%, rgba(232, 184, 78, 0.08), transparent 18rem),
+    radial-gradient(
+      circle at 11% 38%,
+      rgba(174, 218, 120, 0.18),
+      transparent 16rem
+    ),
+    radial-gradient(
+      circle at 86% 14%,
+      rgba(232, 184, 78, 0.1),
+      transparent 20rem
+    ),
     linear-gradient(
-      90deg,
-      rgba(95, 76, 25, 0.22),
-      rgba(8, 20, 14, 0.92) 44%,
-      rgba(5, 12, 10, 0.98)
+      110deg,
+      rgba(39, 45, 20, 0.96),
+      rgba(8, 21, 14, 0.95) 38%,
+      rgba(5, 11, 9, 0.98)
     );
-}
-
-.gathering-origin-lore-card.gathering-origin-lore-card--npc,
-.gathering-origin-lore-card--npc {
-  overflow: hidden;
-}
-
-.gathering-origin-npc {
-  overflow: hidden;
 }
 
 .gathering-origin-lore-card::before,
@@ -68,108 +56,156 @@
   content: '';
   position: absolute;
   inset: 0;
+  z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 4.6rem 56%, rgba(174, 218, 120, 0.16), transparent 5.8rem),
-    linear-gradient(90deg, rgba(232, 184, 78, 0.06), transparent 42%),
-    radial-gradient(ellipse at 92% 48%, rgba(110, 159, 67, 0.11), transparent 18rem),
+    linear-gradient(90deg, rgba(232, 184, 78, 0.07), transparent 35%),
+    radial-gradient(
+      ellipse at 18% 100%,
+      rgba(110, 159, 67, 0.24),
+      transparent 18rem
+    ),
     repeating-linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.012) 0 1px,
-      transparent 1px 9px
+      rgba(255, 255, 255, 0.014) 0 1px,
+      transparent 1px 10px
     );
-  opacity: 0.9;
+  opacity: 0.92;
 }
 
 .gathering-origin-lore-card::after,
 .gathering-origin-lore-card--npc::after {
   content: '';
   position: absolute;
-  right: 0.9rem;
-  top: 0.45rem;
-  bottom: 0.45rem;
-  width: min(30%, 260px);
+  top: 0.72rem;
+  right: 1rem;
+  bottom: 0.72rem;
+  z-index: 0;
+  width: min(32%, 320px);
   pointer-events: none;
-  opacity: 0.14;
-  border-radius: 0.9rem;
-  transform: skewX(-7deg);
+  border-radius: 1rem;
   background:
     linear-gradient(90deg, transparent, rgba(174, 218, 120, 0.08)),
     repeating-linear-gradient(
       90deg,
-      transparent 0 20px,
-      rgba(232, 184, 78, 0.24) 20px 22px,
-      transparent 22px 38px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      transparent 0 16px,
-      rgba(110, 159, 67, 0.2) 16px 18px,
-      transparent 18px 34px
+      transparent 0 18px,
+      rgba(232, 184, 78, 0.18) 18px 20px,
+      transparent 20px 36px
     );
+  opacity: 0.16;
+  transform: skewX(-7deg);
+}
+
+.gathering-origin-npc__stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  min-width: 0;
+  min-height: 188px;
+  padding: 0.6rem 0.8rem 0;
+  overflow: visible;
+}
+
+.gathering-origin-npc__stage::before {
+  content: '';
+  position: absolute;
+  inset: 0.25rem 0.25rem 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at 50% 30%,
+      rgba(232, 184, 78, 0.23),
+      transparent 42%
+    ),
+    radial-gradient(
+      ellipse at 50% 76%,
+      rgba(110, 159, 67, 0.38),
+      transparent 58%
+    ),
+    linear-gradient(90deg, transparent, rgba(255, 246, 205, 0.045), transparent);
+  filter: blur(0.1px);
+  opacity: 0.92;
+}
+
+.gathering-origin-npc__stage::after {
+  content: '';
+  position: absolute;
+  right: 1.25rem;
+  bottom: 0.36rem;
+  left: 1.25rem;
+  z-index: 1;
+  height: 18px;
+  pointer-events: none;
+  border-radius: 999px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.58),
+    transparent 70%
+  );
+  filter: blur(3px);
+  opacity: 0.86;
 }
 
 .gathering-origin-npc__portrait,
 .gathering-origin-lore-card__portrait {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   isolation: isolate;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  width: clamp(92px, 7.4vw, 118px);
-  height: clamp(104px, 8vw, 126px);
-  min-width: clamp(92px, 7.4vw, 118px);
-  overflow: hidden;
-  padding: 0.34rem 0.3rem 0;
-  border: 1px solid rgba(198, 215, 139, 0.2);
-  border-radius: 0.95rem;
-  background:
-    radial-gradient(circle at 50% 22%, rgba(232, 184, 78, 0.2), transparent 39%),
-    radial-gradient(circle at 50% 74%, rgba(110, 159, 67, 0.28), transparent 62%),
-    linear-gradient(180deg, rgba(29, 42, 20, 0.92), rgba(8, 18, 13, 0.98));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 246, 205, 0.1),
-    inset 0 -22px 34px rgba(0, 0, 0, 0.34),
-    0 12px 28px rgba(0, 0, 0, 0.22),
-    0 0 22px rgba(132, 174, 78, 0.1);
+  width: clamp(128px, 12vw, 172px);
+  min-width: clamp(128px, 12vw, 172px);
+  height: clamp(166px, 16vw, 220px);
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .gathering-origin-npc__portrait::before,
 .gathering-origin-lore-card__portrait::before {
   content: '';
   position: absolute;
-  inset: 0;
-  z-index: 0;
+  right: 5%;
+  bottom: 4%;
+  left: 5%;
+  z-index: -1;
+  height: 62%;
   pointer-events: none;
+  border-radius: 999px 999px 30% 30%;
   background:
-    radial-gradient(ellipse at 50% 42%, rgba(180, 220, 112, 0.22), transparent 48%),
-    linear-gradient(90deg, transparent 0 18%, rgba(255, 246, 205, 0.045) 48%, transparent 80%),
-    repeating-linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.035) 0 1px,
-      transparent 1px 10px
-    );
-  opacity: 0.78;
+    radial-gradient(
+      ellipse at 50% 38%,
+      rgba(174, 218, 120, 0.28),
+      transparent 64%
+    ),
+    linear-gradient(180deg, rgba(232, 184, 78, 0.1), rgba(0, 0, 0, 0.08));
+  filter: blur(1px);
 }
 
 .gathering-origin-npc__portrait::after,
 .gathering-origin-lore-card__portrait::after {
   content: '';
   position: absolute;
-  right: 0.42rem;
+  right: 8%;
   bottom: 0;
-  left: 0.42rem;
-  z-index: 1;
-  height: 28%;
+  left: 8%;
+  z-index: -1;
+  height: 18px;
   pointer-events: none;
-  border-radius: 999px 999px 0 0;
-  background:
-    radial-gradient(ellipse at center, rgba(232, 184, 78, 0.2), transparent 66%),
-    linear-gradient(180deg, rgba(127, 151, 73, 0.18), rgba(0, 0, 0, 0.22));
-  box-shadow:
-    0 -8px 18px rgba(232, 184, 78, 0.06),
-    inset 0 1px 0 rgba(255, 238, 174, 0.08);
+  border-radius: 999px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(232, 184, 78, 0.24),
+    transparent 68%
+  );
+  opacity: 0.9;
 }
 
 .gathering-origin-npc__portrait img,
@@ -177,14 +213,13 @@
   position: relative;
   z-index: 2;
   display: block;
-  width: min(100%, 104px);
+  width: 100%;
   height: 100%;
   max-width: 100%;
   object-fit: contain;
   object-position: center bottom;
-  filter:
-    drop-shadow(0 12px 12px rgba(0, 0, 0, 0.46))
-    drop-shadow(0 0 12px rgba(185, 214, 110, 0.1));
+  filter: drop-shadow(0 18px 14px rgba(0, 0, 0, 0.5))
+    drop-shadow(0 0 16px rgba(185, 214, 110, 0.13));
 }
 
 .gathering-origin-npc__portrait span,
@@ -193,21 +228,23 @@
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
-  margin-bottom: 0.72rem;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 2.1rem;
   color: #ffe59b;
   font-family: var(--font-title);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 950;
   letter-spacing: 0.045em;
   border: 1px solid rgba(232, 184, 78, 0.22);
-  border-radius: 0.82rem;
+  border-radius: 0.92rem;
   background:
-    radial-gradient(circle at 50% 35%, rgba(232, 184, 78, 0.2), transparent 68%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.072), transparent),
+    radial-gradient(
+      circle at 50% 35%,
+      rgba(232, 184, 78, 0.22),
+      transparent 68%
+    ),
     rgba(5, 9, 8, 0.62);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
 }
 
 .gathering-origin-npc__content,
@@ -218,17 +255,17 @@
   min-width: 0;
   flex-direction: column;
   justify-content: center;
-  gap: 0.34rem;
+  gap: 0.48rem;
+  padding: 1.2rem 1.35rem 1.18rem 0.4rem;
 }
 
 .gathering-origin-npc__meta,
 .gathering-origin-lore-card__meta {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
   flex-wrap: wrap;
+  gap: 0.54rem;
   min-width: 0;
-  margin: 0;
 }
 
 .gathering-origin-npc__name,
@@ -236,74 +273,121 @@
   display: inline-flex;
   min-width: 0;
   margin: 0;
-  overflow: hidden;
-  color: var(--hero-accent, #aeda78);
+  color: #d7ff9f;
   font-family: var(--font-title);
-  font-size: 0.66rem;
+  font-size: clamp(0.82rem, 1.1vw, 1rem);
   font-weight: 950;
   line-height: 1.05;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.75),
+    0 0 12px rgba(110, 159, 67, 0.18);
 }
 
 .gathering-origin-npc__role,
 .gathering-origin-lore-card__role {
   display: inline-flex;
   align-items: center;
-  min-height: 18px;
-  padding: 0.12rem 0.38rem;
+  min-height: 22px;
+  padding: 0.18rem 0.5rem;
   color: #f6d98d;
   font-family: var(--font-title);
-  font-size: 0.52rem;
+  font-size: 0.56rem;
   font-weight: 950;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   white-space: nowrap;
-  border: 1px solid rgba(230, 190, 90, 0.22);
+  border: 1px solid rgba(230, 190, 90, 0.26);
   border-radius: 999px;
-  background: rgba(230, 190, 90, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    rgba(230, 190, 90, 0.14);
 }
 
-.gathering-origin-lore-card h2,
-.gathering-origin-lore-card p {
-  display: none;
+.gathering-origin-lore-card h2 {
+  display: block;
+  margin: 0;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: clamp(1.42rem, 2.25vw, 2.25rem);
+  font-weight: 950;
+  line-height: 0.98;
+  letter-spacing: -0.025em;
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.46);
 }
 
 .gathering-origin-lore-card blockquote {
   display: block;
   max-width: min(920px, 100%);
   margin: 0;
-  overflow: hidden;
-  color: #fff8e8;
+  color: #fff2c3;
   font-family: var(--font-title);
-  font-size: clamp(1rem, 1.35vw, 1.28rem);
+  font-size: clamp(1rem, 1.3vw, 1.22rem);
   font-style: normal;
   font-weight: 850;
   line-height: 1.18;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.28);
 }
 
+.gathering-origin-lore-card p {
+  display: block;
+  max-width: 840px;
+  margin: 0;
+  color: rgba(231, 227, 216, 0.74);
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
+.gathering-origin-npc__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+  margin-top: 0.1rem;
+}
+
+.gathering-origin-npc__chips span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0.2rem 0.52rem;
+  color: rgba(246, 255, 230, 0.9);
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.045em;
+  border: 1px solid rgba(110, 159, 67, 0.22);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.16), transparent),
+    rgba(5, 10, 8, 0.42);
+}
+
 /* =========================================================
-   MAPA ATUAL
+   MAPA ATUAL — INTEGRADO A MATERIAIS
    ========================================================= */
 
 .gathering-origin-map-context {
   display: grid;
-  grid-template-columns: minmax(180px, 0.24fr) minmax(0, 1fr);
+  grid-template-columns: minmax(116px, 0.34fr) minmax(0, 1fr);
   align-items: stretch;
-  gap: 1rem;
-  min-height: 122px;
-  padding: 0.82rem;
+  gap: 0.72rem;
+  min-height: 104px;
+  padding: 0.58rem;
   border-color: rgba(110, 159, 67, 0.22);
   background:
-    radial-gradient(circle at 0% 50%, rgba(110, 159, 67, 0.14), transparent 14rem),
-    radial-gradient(circle at 92% 0%, rgba(232, 184, 78, 0.07), transparent 16rem),
-    linear-gradient(135deg, rgba(9, 18, 12, 0.94), rgba(5, 11, 8, 0.92)),
-    rgba(5, 9, 8, 0.92);
+    radial-gradient(
+      circle at 0% 50%,
+      rgba(110, 159, 67, 0.14),
+      transparent 12rem
+    ),
+    radial-gradient(
+      circle at 92% 0%,
+      rgba(232, 184, 78, 0.07),
+      transparent 14rem
+    ),
+    linear-gradient(135deg, rgba(9, 18, 12, 0.94), rgba(5, 11, 8, 0.92));
 }
 
 .gathering-origin-map-context::before {
@@ -325,14 +409,20 @@
   position: relative;
   z-index: 1;
   display: grid;
-  min-height: 104px;
+  min-height: 88px;
   overflow: hidden;
   place-items: center;
   border: 1px solid rgba(231, 227, 216, 0.09);
   border-radius: 0.82rem;
   background:
-    radial-gradient(circle at 50% 20%, rgba(110, 159, 67, 0.18), transparent 10rem),
+    radial-gradient(
+      circle at 50% 20%,
+      rgba(110, 159, 67, 0.18),
+      transparent 10rem
+    ),
     linear-gradient(145deg, rgba(16, 24, 22, 0.98), rgba(5, 8, 8, 0.98));
+  background-position: center;
+  background-size: cover;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.035),
     0 10px 20px rgba(0, 0, 0, 0.18);
@@ -343,7 +433,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, transparent 38%, rgba(5, 8, 8, 0.74));
+  background: linear-gradient(180deg, transparent 32%, rgba(5, 8, 8, 0.76));
 }
 
 .gathering-origin-map-context__media span {
@@ -351,15 +441,15 @@
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
   color: rgba(244, 248, 220, 0.82);
   font-family: var(--font-title);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 950;
   letter-spacing: 0.04em;
   border: 1px solid rgba(231, 227, 216, 0.12);
-  border-radius: 0.9rem;
+  border-radius: 0.82rem;
   background: rgba(5, 9, 8, 0.46);
 }
 
@@ -374,10 +464,10 @@
 
 .gathering-origin-map-context__eyebrow {
   display: inline-flex;
-  margin-bottom: 0.22rem;
+  margin-bottom: 0.18rem;
   color: rgba(174, 218, 120, 0.9);
   font-family: var(--font-title);
-  font-size: 0.58rem;
+  font-size: 0.54rem;
   font-weight: 950;
   letter-spacing: 0.15em;
   line-height: 1;
@@ -386,21 +476,22 @@
 
 .gathering-origin-map-context__title-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 0.85rem;
+  gap: 0.65rem;
   min-width: 0;
 }
 
-.gathering-origin-map-context__title-row h2 {
+.gathering-origin-map-context__title-row h2,
+.gathering-origin-map-context h2 {
   min-width: 0;
   margin: 0;
   color: #fff8e8;
   font-family: var(--font-title);
-  font-size: clamp(1.45rem, 2.5vw, 2rem);
+  font-size: clamp(1rem, 1.55vw, 1.28rem);
   font-weight: 950;
-  line-height: 1.02;
-  letter-spacing: -0.025em;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
   text-shadow:
     0 2px 5px rgba(0, 0, 0, 0.64),
     0 0 16px rgba(110, 159, 67, 0.08);
@@ -409,10 +500,10 @@
 .gathering-origin-map-context__chips {
   display: inline-flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.36rem;
 }
 
 .gathering-origin-map-context__chip,
@@ -420,12 +511,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
-  padding: 0.2rem 0.62rem;
+  min-height: 24px;
+  padding: 0.17rem 0.52rem;
   font-family: var(--font-title);
-  font-size: 0.64rem;
+  font-size: 0.56rem;
   font-weight: 950;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.055em;
   line-height: 1;
   border-radius: var(--radius-pill);
   white-space: nowrap;
@@ -439,17 +530,11 @@
       var(--gathering-map-tier-rgb, 231, 227, 216),
       var(--gathering-map-tier-soft-alpha, 0.1)
     );
-  border: 1px solid rgba(
-    var(--gathering-map-tier-rgb, 231, 227, 216),
-    var(--gathering-map-tier-border-alpha, 0.22)
-  );
-  box-shadow:
-    0 0 14px rgba(
+  border: 1px solid
+    rgba(
       var(--gathering-map-tier-rgb, 231, 227, 216),
-      var(--gathering-map-tier-glow-alpha, 0.08)
-    ),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.48);
+      var(--gathering-map-tier-border-alpha, 0.22)
+    );
 }
 
 .gathering-origin-map-context__chip--level {
@@ -460,31 +545,28 @@
   border: 1px solid rgba(231, 227, 216, 0.1);
 }
 
-.gathering-origin-map-context__body > p {
-  display: none;
-}
-
 /* =========================================================
-   BENEFÍCIOS / PREMIUM
+   BENEFÍCIOS / PREMIUM — COMPACTO E PÓS-MATERIAIS
    ========================================================= */
 
 .gathering-origin-premium-card {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.68rem;
-  min-height: 58px;
-  padding: 0.58rem 0.72rem;
-  border-color: rgba(93, 178, 198, 0.28);
+  gap: 0.62rem;
+  min-height: 54px;
+  padding: 0.5rem 0.66rem;
+  border-color: rgba(93, 178, 198, 0.24);
   background:
-    radial-gradient(circle at 3% 50%, rgba(70, 180, 196, 0.16), transparent 12rem),
-    radial-gradient(circle at 92% 0%, rgba(110, 159, 67, 0.07), transparent 16rem),
-    linear-gradient(135deg, rgba(10, 34, 39, 0.94), rgba(7, 18, 25, 0.92)),
-    rgba(7, 18, 25, 0.92);
+    radial-gradient(
+      circle at 3% 50%,
+      rgba(70, 180, 196, 0.14),
+      transparent 12rem
+    ),
+    linear-gradient(135deg, rgba(10, 34, 39, 0.9), rgba(7, 18, 25, 0.88));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.045),
-    0 10px 22px rgba(0, 0, 0, 0.16),
-    0 0 20px rgba(70, 180, 196, 0.04);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 20px rgba(0, 0, 0, 0.14);
 }
 
 .gathering-origin-premium-card::before {
@@ -493,13 +575,13 @@
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(92, 198, 214, 0.08), transparent 66%),
+    linear-gradient(90deg, rgba(92, 198, 214, 0.07), transparent 66%),
     repeating-linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.014) 0 1px,
+      rgba(255, 255, 255, 0.012) 0 1px,
       transparent 1px 8px
     );
-  opacity: 0.86;
+  opacity: 0.82;
 }
 
 .gathering-origin-premium-card__badge {
@@ -507,27 +589,16 @@
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  padding: 0;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
   color: rgba(233, 253, 255, 0.9);
   font-family: var(--font-title);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 950;
-  line-height: 1;
   border: 1px solid rgba(122, 219, 230, 0.28);
   border-radius: 999px;
-  background:
-    radial-gradient(circle at 50% 42%, rgba(122, 219, 230, 0.22), transparent 58%),
-    rgba(19, 70, 80, 0.52);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 0 12px rgba(88, 190, 204, 0.08);
-}
-
-.gathering-origin-premium-card__badge::before {
-  display: none;
+  background: rgba(19, 70, 80, 0.52);
 }
 
 .gathering-origin-premium-card div:not(.gathering-origin-premium-card__badge) {
@@ -540,43 +611,38 @@
   margin: 0;
   color: rgba(239, 255, 255, 0.95);
   font-family: var(--font-title);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 950;
   line-height: 1.1;
-  letter-spacing: 0.005em;
 }
 
 .gathering-origin-premium-card p {
-  margin: 0.16rem 0 0;
-  color: rgba(220, 245, 245, 0.78);
-  font-family: var(--font-body);
-  font-size: 0.72rem;
+  margin: 0.12rem 0 0;
+  color: rgba(220, 245, 245, 0.74);
+  font-size: 0.68rem;
   font-weight: 680;
-  line-height: 1.28;
+  line-height: 1.24;
 }
 
 .gathering-origin-premium-card__button {
   position: relative;
   z-index: 1;
-  min-width: 112px;
-  min-height: 34px;
-  padding: 0.38rem 0.76rem;
+  min-width: 104px;
+  min-height: 30px;
+  padding: 0.34rem 0.68rem;
   color: rgba(239, 255, 255, 0.94);
   font-family: var(--font-title);
-  font-size: 0.54rem;
+  font-size: 0.52rem;
   font-weight: 950;
   line-height: 1;
   letter-spacing: 0.055em;
   text-transform: uppercase;
-  border: 1px solid rgba(122, 219, 230, 0.26);
-  border-radius: 0.62rem;
+  border: 1px solid rgba(122, 219, 230, 0.24);
+  border-radius: 0.58rem;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent),
-    rgba(12, 58, 68, 0.58);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), transparent),
+    rgba(12, 58, 68, 0.54);
   cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 6px 12px rgba(0, 0, 0, 0.13);
 }
 
 .gathering-origin-premium-card__button:hover {
@@ -585,157 +651,4 @@
   background:
     linear-gradient(180deg, rgba(122, 219, 230, 0.14), transparent),
     rgba(12, 58, 68, 0.72);
-}
-
-/* =========================================================
-   RESPONSIVO
-   ========================================================= */
-
-@media (max-width: 980px) {
-  .gathering-origin-map-context {
-    grid-template-columns: 180px minmax(0, 1fr);
-  }
-
-  .gathering-origin-map-context__title-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.55rem;
-  }
-
-  .gathering-origin-map-context__chips {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 720px) {
-  .gathering-origin-lore-card,
-  .gathering-origin-lore-card.gathering-origin-lore-card--npc,
-  .gathering-origin-lore-card--npc {
-    grid-template-columns: 72px minmax(0, 1fr);
-    min-height: 88px;
-    max-height: none;
-    gap: 0.75rem;
-    padding: 0.68rem 0.78rem;
-  }
-
-  .gathering-origin-lore-card::after,
-  .gathering-origin-lore-card--npc::after {
-    display: none;
-  }
-
-  .gathering-origin-lore-card__portrait {
-    width: 72px;
-    height: 72px;
-    border-radius: 0.85rem;
-  }
-
-  .gathering-origin-lore-card__portrait span {
-    width: 58px;
-    height: 58px;
-    font-size: 0.62rem;
-  }
-
-  .gathering-origin-lore-card__meta {
-    gap: 0.34rem;
-  }
-
-  .gathering-origin-lore-card__npc {
-    font-size: 0.48rem;
-  }
-
-  .gathering-origin-lore-card__role {
-    min-height: 17px;
-    padding: 0.04rem 0.32rem;
-    font-size: 0.42rem;
-  }
-
-  .gathering-origin-lore-card blockquote {
-    display: -webkit-box;
-    font-size: 0.72rem;
-    line-height: 1.22;
-    white-space: normal;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-
-  .gathering-origin-map-context {
-    grid-template-columns: 1fr;
-    gap: 0.72rem;
-    padding: 0.68rem;
-  }
-
-  .gathering-origin-map-context__media {
-    min-height: 148px;
-  }
-
-  .gathering-origin-map-context__eyebrow {
-    font-size: 0.52rem;
-  }
-
-  .gathering-origin-map-context__title-row h2 {
-    font-size: 1.32rem;
-  }
-
-  .gathering-origin-map-context__chip,
-  .gathering-origin-map-context__chips span {
-    min-height: 26px;
-    padding: 0.18rem 0.56rem;
-    font-size: 0.58rem;
-  }
-
-  .gathering-origin-premium-card {
-    grid-template-columns: 28px minmax(0, 1fr);
-    gap: 0.58rem;
-    padding: 0.62rem 0.68rem;
-  }
-
-  .gathering-origin-premium-card__button {
-    grid-column: 1 / -1;
-    width: 100%;
-    min-height: 34px;
-  }
-
-  .gathering-origin-premium-card h2 {
-    font-size: 0.76rem;
-  }
-
-  .gathering-origin-premium-card p {
-    font-size: 0.68rem;
-  }
-}
-
-@media (max-width: 420px) {
-  .gathering-origin-lore-card,
-  .gathering-origin-lore-card.gathering-origin-lore-card--npc,
-  .gathering-origin-lore-card--npc {
-    grid-template-columns: 62px minmax(0, 1fr);
-    padding: 0.56rem 0.62rem;
-  }
-
-  .gathering-origin-lore-card__portrait {
-    width: 58px;
-    height: 58px;
-  }
-
-  .gathering-origin-lore-card__portrait span {
-    width: 34px;
-    height: 34px;
-    font-size: 0.56rem;
-  }
-
-  .gathering-origin-lore-card__role {
-    display: none;
-  }
-
-  .gathering-origin-lore-card blockquote {
-    font-size: 0.68rem;
-  }
-
-  .gathering-origin-map-context__media {
-    min-height: 132px;
-  }
-
-  .gathering-origin-map-context__title-row h2 {
-    font-size: 1.16rem;
-  }
 }
