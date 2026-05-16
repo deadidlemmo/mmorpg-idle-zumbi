@@ -138,7 +138,7 @@
   }
 
   .dashboard-sidebar__status-row {
-    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+    grid-template-columns: 42px minmax(max-content, 1fr);
   }
 
   .dashboard-sidebar__character {
@@ -1135,7 +1135,7 @@
   }
 
   .dashboard-sidebar__status-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 42px minmax(max-content, 1fr);
   }
 
   .dashboard-sidebar__community {

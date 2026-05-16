@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import discordIcon from '../../../assets/images/brand/discord.png';
 import cashIcon from '../../../assets/images/coins/cash.png';
 import goldIcon from '../../../assets/images/coins/gold.png';
 import { removeAuthToken } from '../../../services/api/authToken';
@@ -338,24 +339,17 @@ function formatOnlinePlayersLabel(onlinePlayers: number | null) {
     return 'Online agora';
   }
 
-  if (onlinePlayers === 1) {
-    return '1 sobrevivente online';
-  }
-
-  return `${onlinePlayers} sobreviventes online`;
+  return `${onlinePlayers} online`;
 }
 
 function DiscordMark() {
   return (
-    <span className="dashboard-sidebar__discord-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" focusable="false">
-        <path d="M8.1 8.7c1.1-.5 2.1-.8 3.9-.8s2.8.3 3.9.8c.5.2.9.7 1 1.2l.6 4.1c.1.6-.2 1.2-.7 1.5-1.4.8-2.7 1.2-4.8 1.2s-3.4-.4-4.8-1.2c-.5-.3-.8-.9-.7-1.5l.6-4.1c.1-.5.4-1 .9-1.2Z" />
-        <path d="M9.2 7.2 8.7 5.9c1-.5 2.1-.8 3.3-.8s2.3.3 3.3.8l-.5 1.3" />
-        <circle cx="9.7" cy="12.2" r="1" />
-        <circle cx="14.3" cy="12.2" r="1" />
-        <path d="M10.3 14.2c.5.4 1 .6 1.7.6s1.2-.2 1.7-.6" />
-      </svg>
-    </span>
+    <img
+      src={discordIcon}
+      alt=""
+      aria-hidden="true"
+      className="dashboard-sidebar__discord-icon"
+    />
   );
 }
 
@@ -1279,7 +1273,6 @@ function DashboardLayoutContent({
                 title="Abrir Discord da comunidade"
               >
                 <DiscordMark />
-                <span>Discord</span>
               </a>
             ) : (
               <button
@@ -1290,7 +1283,6 @@ function DashboardLayoutContent({
                 disabled
               >
                 <DiscordMark />
-                <span>Discord</span>
               </button>
             )}
 
