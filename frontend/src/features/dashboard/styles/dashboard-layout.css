@@ -129,8 +129,9 @@
 
 .dashboard-sidebar__status-row {
   display: grid;
-  grid-template-columns: minmax(0, 0.76fr) minmax(0, 1.24fr);
-  gap: 0.46rem;
+  grid-template-columns: 42px minmax(max-content, 1fr);
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .dashboard-sidebar__community {
@@ -147,18 +148,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0 0.68rem;
+  width: 42px;
+  min-width: 42px;
+  padding: 0;
   overflow: hidden;
   color: #f4f2ff;
-  font-family: var(--font-title);
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.045em;
   text-decoration: none;
   background:
-    radial-gradient(circle at 22% 14%, rgba(255, 255, 255, 0.25), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent),
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.24), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent),
     linear-gradient(135deg, rgba(88, 101, 242, 0.95), rgba(65, 55, 152, 0.84));
   border-color: rgba(181, 184, 255, 0.28);
   cursor: pointer;
@@ -190,45 +188,25 @@
 }
 
 .dashboard-sidebar__discord-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
+  display: block;
+  width: 21px;
+  height: 21px;
   flex: 0 0 auto;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  object-fit: contain;
   filter: drop-shadow(0 0 8px rgba(198, 190, 255, 0.28));
-}
-
-.dashboard-sidebar__discord-icon svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
-}
-
-.dashboard-sidebar__discord-icon path:last-child {
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-width: 1.25;
-}
-
-.dashboard-sidebar__discord span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .dashboard-sidebar__online {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 0.42rem;
-  padding: 0 0.7rem;
-  color: rgba(231, 227, 216, 0.86);
-  font-size: 0.72rem;
+  width: 100%;
+  padding: 0 0.74rem;
+  color: rgba(231, 227, 216, 0.9);
+  font-size: 0.74rem;
   font-weight: 850;
+  line-height: 1;
   white-space: nowrap;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
@@ -257,9 +235,8 @@
 }
 
 .dashboard-sidebar__online-count {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 0 0 auto;
+  min-width: max-content;
 }
 
 .dashboard-sidebar__character {
