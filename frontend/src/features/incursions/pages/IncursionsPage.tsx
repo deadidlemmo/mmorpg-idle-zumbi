@@ -33,6 +33,15 @@ import type {
   IncursionsAvailableResponse,
 } from "../types/incursions.types";
 
+const coinIconUrls = import.meta.glob("../../../assets/images/coins/*.png", {
+  eager: true,
+  import: "default",
+  query: "?url",
+}) as Record<string, string>;
+
+const EXP_ICON_URL =
+  coinIconUrls["../../../assets/images/coins/exp.png"] ?? null;
+
 function buildCharacterViewModel(
   overview: CharacterOverviewResponse,
 ): DashboardCharacterViewModel {
@@ -79,8 +88,6 @@ function formatRemaining(seconds: number) {
   if (minutes > 0) return `${minutes}m ${secs}s`;
   return `${secs}s`;
 }
-
-const EXP_ICON_URL: string | null = null;
 
 function normalizeRewardRarityClass(rarity?: string | null) {
   return String(rarity ?? "COMMON")
@@ -131,11 +138,26 @@ function getLootName(loot: IncursionLootPreview) {
   return loot.item?.name?.trim() || getRewardTypeLabel(loot.rewardType);
 }
 
+function getLootSubtitle(loot: IncursionLootPreview) {
+  const rarity = loot.item?.rarity ?? loot.rarity;
+
+  if (rarity) return rarity;
+  if (loot.rewardType === "XP" || loot.rewardType === "GOLD") return null;
+
+  const typeLabel = getRewardTypeLabel(loot.rewardType);
+  const name = getLootName(loot);
+
+  return typeLabel.toLocaleLowerCase("pt-BR") ===
+    name.toLocaleLowerCase("pt-BR")
+    ? null
+    : typeLabel;
+}
+
 function getLootImageUrl(loot: IncursionLootPreview) {
-  if (loot.rewardType === "GOLD") return goldIcon;
   if (loot.rewardType === "XP") {
-    return loot.iconUrl ?? loot.imageUrl ?? EXP_ICON_URL;
+    return EXP_ICON_URL ?? loot.iconUrl ?? loot.imageUrl ?? null;
   }
+  if (loot.rewardType === "GOLD") return goldIcon;
 
   return (
     loot.iconUrl ??
@@ -177,6 +199,7 @@ function LootRewardCard({ loot }: { loot: IncursionLootPreview }) {
   const quantity = formatLootQuantity(loot);
   const chance = formatLootChance(loot);
   const imageUrl = getLootImageUrl(loot);
+  const subtitle = getLootSubtitle(loot);
   const rarityClass = normalizeRewardRarityClass(
     loot.rarity ?? loot.item?.rarity ?? null,
   );
@@ -205,28 +228,23 @@ function LootRewardCard({ loot }: { loot: IncursionLootPreview }) {
       </div>
 
       <div className="incursion-loot-card__content">
-        <span className="incursion-loot-card__type">
-          {getRewardTypeLabel(loot.rewardType)}
-        </span>
-        <strong>{name}</strong>
-        {loot.item?.rarity ? (
-          <span className="incursion-loot-card__rarity">
-            {loot.item.rarity}
-          </span>
+        <strong className="incursion-loot-card__name">{name}</strong>
+        {subtitle ? (
+          <span className="incursion-loot-card__subtitle">{subtitle}</span>
         ) : null}
-      </div>
 
-      <div className="incursion-loot-card__meta">
-        <span className="incursion-loot-card__quantity">{quantity}</span>
-        <span
-          className={
-            chance === "Garantido"
-              ? "incursion-loot-card__chance incursion-loot-card__chance--guaranteed"
-              : "incursion-loot-card__chance"
-          }
-        >
-          {chance}
-        </span>
+        <div className="incursion-loot-card__meta">
+          <span className="incursion-loot-card__quantity">{quantity}</span>
+          <span
+            className={
+              chance === "Garantido"
+                ? "incursion-loot-card__chance incursion-loot-card__chance--guaranteed"
+                : "incursion-loot-card__chance"
+            }
+          >
+            {chance}
+          </span>
+        </div>
       </div>
     </article>
   );
