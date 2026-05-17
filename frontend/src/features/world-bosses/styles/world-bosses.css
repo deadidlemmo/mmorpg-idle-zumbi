@@ -1,21 +1,20 @@
+.world-bosses-loading,
 .world-bosses-page {
-  display: grid;
-  gap: 1.25rem;
-  color: #f4efe8;
-  font-family: var(--font-body, system-ui, sans-serif);
+  width: min(1180px, 100%);
+  margin: 0 auto;
 }
 
-.world-bosses-loading {
-  min-height: 100vh;
+.world-bosses-page {
   display: grid;
-  place-items: center;
-  background: #07090c;
-  color: #f4efe8;
+  gap: 1rem;
+  color: #d7dde6;
 }
 
 .world-bosses-hero,
 .world-bosses-card,
-.world-bosses-map-card {
+.world-bosses-map-card,
+.world-bosses-premium-card,
+.world-bosses-activity-panel {
   border: 1px solid rgba(163, 177, 122, 0.2);
   background:
     radial-gradient(
@@ -38,7 +37,10 @@
 .world-bosses-eyebrow,
 .world-bosses-section-head span,
 .world-bosses-map-card span,
-.world-bosses-rewards__head span {
+.world-bosses-premium-card span,
+.world-bosses-rewards__head span,
+.world-bosses-activity-panel header span,
+.world-bosses-activity-boss span {
   color: #c8b16a;
   text-transform: uppercase;
   letter-spacing: 0.16em;
@@ -49,7 +51,10 @@
 .world-bosses-hero h1,
 .world-bosses-section-head h2,
 .world-bosses-map-card h2,
+.world-bosses-premium-card h2,
 .world-bosses-rewards h2,
+.world-bosses-activity-panel h2,
+.world-bosses-activity-boss h3,
 .world-bosses-modal h2 {
   font-family: var(--font-title, inherit);
   color: #fff9e8;
@@ -61,8 +66,10 @@
 }
 
 .world-bosses-hero p,
-.world-bosses-boss__header p,
 .world-bosses-map-card p,
+.world-bosses-premium-card p,
+.world-bosses-activity-empty p,
+.world-bosses-activity-boss p,
 .world-bosses-modal p {
   max-width: 780px;
   color: #b9c3ad;
@@ -84,8 +91,7 @@
 }
 
 .world-bosses-hero__signal i,
-.world-bosses-state i,
-.world-bosses-live-indicator {
+.world-bosses-state i {
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 50%;
@@ -127,6 +133,53 @@
   font-size: 2rem;
 }
 
+.world-bosses-map-card h2,
+.world-bosses-premium-card h2,
+.world-bosses-section-head h2,
+.world-bosses-rewards h2,
+.world-bosses-activity-panel h2,
+.world-bosses-activity-boss h3 {
+  margin: 0.25rem 0 0;
+}
+
+.world-bosses-premium-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  background:
+    linear-gradient(90deg, rgba(124, 98, 40, 0.3), rgba(18, 24, 20, 0.96)),
+    linear-gradient(135deg, rgba(18, 24, 20, 0.96), rgba(8, 11, 10, 0.98));
+}
+
+.world-bosses-premium-card p {
+  margin: 0.35rem 0 0;
+}
+
+.world-bosses-premium-card button {
+  border: 1px solid rgba(255, 225, 137, 0.32);
+  border-radius: 999px;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 225, 137, 0.1);
+  color: #ffe189;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.world-bosses-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  gap: 1rem;
+  align-items: start;
+}
+
+.world-bosses-list-panel {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
 .world-bosses-section-head {
   display: flex;
   justify-content: space-between;
@@ -134,14 +187,9 @@
   align-items: end;
 }
 
-.world-bosses-section-head h2,
-.world-bosses-map-card h2,
-.world-bosses-rewards h2 {
-  margin: 0.25rem 0 0;
-}
-
 .world-bosses-section-head small {
   color: #82917e;
+  text-align: right;
 }
 
 .world-bosses-empty {
@@ -154,85 +202,214 @@
   text-align: center;
 }
 
-.world-bosses-empty strong {
-  font-size: 1.25rem;
+.world-bosses-empty strong,
+.world-bosses-activity-empty strong {
+  font-size: 1.15rem;
   color: #fff9e8;
 }
 
-.world-bosses-boss {
+.world-bosses-list {
   display: grid;
-  grid-template-columns: minmax(180px, 280px) 1fr;
-  gap: 1.25rem;
-  padding: 1.25rem;
+  gap: 0.85rem;
 }
 
-.world-bosses-boss--locked {
+.world-bosses-boss-card {
+  position: relative;
+  padding: 0.8rem;
+}
+
+.world-bosses-boss-card--locked {
   filter: saturate(0.82);
 }
 
-.world-bosses-boss__portrait {
-  position: relative;
-  min-height: 340px;
-  border-radius: 22px;
+.world-bosses-boss-card__button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 128px 1fr;
+  gap: 1rem;
+  align-items: stretch;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.world-bosses-boss-card__portrait,
+.world-bosses-activity-boss__icon,
+.world-bosses-modal__portrait {
   display: grid;
   place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(163, 177, 122, 0.22);
   background: radial-gradient(
     circle at 50% 30%,
     rgba(116, 132, 71, 0.42),
     rgba(17, 24, 20, 0.95) 62%
   );
-  border: 1px solid rgba(163, 177, 122, 0.22);
-  overflow: hidden;
 }
 
-.world-bosses-boss__portrait span {
-  font-size: 5rem;
+.world-bosses-boss-card__portrait {
+  min-height: 150px;
+  border-radius: 20px;
+}
+
+.world-bosses-boss-card__portrait span,
+.world-bosses-activity-boss__icon,
+.world-bosses-modal__portrait span {
   color: #c8b16a;
   filter: drop-shadow(0 0 30px rgba(200, 177, 106, 0.45));
+  font-size: 3.2rem;
 }
 
-.world-bosses-boss__portrait img {
+.world-bosses-boss-card__portrait img,
+.world-bosses-activity-boss__icon img,
+.world-bosses-modal__portrait img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.world-bosses-live-indicator {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: #b7d66d;
+.world-bosses-boss-card__content {
+  display: grid;
+  gap: 0.7rem;
+  align-content: center;
 }
 
-.world-bosses-boss__content {
+.world-bosses-boss-card__topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.world-bosses-boss-card__topline span,
+.world-bosses-boss-card__topline strong,
+.world-bosses-boss-card__cta {
+  color: #e6d6a2;
+  font-weight: 900;
+}
+
+.world-bosses-boss-card__topline strong,
+.world-bosses-boss-card__cta {
+  border: 1px solid rgba(200, 177, 106, 0.28);
+  border-radius: 999px;
+  padding: 0.4rem 0.65rem;
+  background: rgba(74, 83, 45, 0.24);
+  white-space: nowrap;
+}
+
+.world-bosses-boss-card h3 {
+  margin: 0;
+  color: #fff9e8;
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.world-bosses-boss-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.world-bosses-boss-card dl div,
+.world-bosses-activity-metrics span,
+.world-bosses-modal__stats span,
+.world-bosses-reward {
+  border: 1px solid rgba(163, 177, 122, 0.16);
+  border-radius: 16px;
+  background: rgba(11, 16, 13, 0.58);
+  padding: 0.8rem;
+}
+
+.world-bosses-boss-card dt,
+.world-bosses-boss-card dd {
+  margin: 0;
+}
+
+.world-bosses-boss-card dt,
+.world-bosses-activity-metrics small,
+.world-bosses-modal__stats small,
+.world-bosses-reward small {
+  color: #82917e;
+  font-size: 0.76rem;
+}
+
+.world-bosses-boss-card dd,
+.world-bosses-activity-metrics strong,
+.world-bosses-modal__stats strong,
+.world-bosses-reward strong {
+  display: block;
+  color: #fff9e8;
+  font-weight: 950;
+  margin-top: 0.2rem;
+}
+
+.world-bosses-boss-card__cta {
+  justify-self: start;
+}
+
+.world-bosses-boss-card__quick-action {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  background: linear-gradient(135deg, #718040, #c8a84f);
+  color: #10140f;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.world-bosses-activity-panel {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.world-bosses-activity-empty {
+  display: grid;
+  gap: 0.35rem;
+  place-items: center;
+  min-height: 260px;
+  text-align: center;
+}
+
+.world-bosses-activity-content {
   display: grid;
   gap: 1rem;
 }
 
-.world-bosses-boss__header {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+.world-bosses-activity-boss {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 0.85rem;
+  align-items: center;
 }
 
-.world-bosses-boss__header span {
-  color: #c8b16a;
-  font-weight: 900;
+.world-bosses-activity-boss__icon {
+  width: 78px;
+  height: 78px;
+  border-radius: 20px;
+  font-size: 2rem;
 }
 
-.world-bosses-boss__header h2 {
-  margin: 0.25rem 0;
-  color: #fff9e8;
-  font-size: clamp(1.8rem, 3vw, 2.8rem);
+.world-bosses-activity-boss p {
+  margin: 0.2rem 0 0;
 }
 
 .world-bosses-state {
   height: max-content;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.55rem;
   border-radius: 999px;
-  padding: 0.55rem 0.8rem;
+  padding: 0.65rem 0.8rem;
   background: rgba(74, 83, 45, 0.24);
   color: #e6d6a2;
   border: 1px solid rgba(200, 177, 106, 0.28);
@@ -262,40 +439,21 @@
 .world-bosses-hp__track i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #5d1916, #b43a28, #d08f3a);
-  box-shadow: 0 0 28px rgba(180, 58, 40, 0.42);
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7f1d1d, #f59e0b, #d9f99d);
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.22);
+  transition: width 220ms ease;
 }
 
-.world-bosses-hp small,
-.world-bosses-metrics small,
-.world-bosses-rewards small,
-.world-bosses-modal__stats small {
-  color: #8f9b8d;
+.world-bosses-hp small {
+  color: #82917e;
 }
 
-.world-bosses-metrics,
+.world-bosses-activity-metrics,
 .world-bosses-modal__stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.8rem;
-}
-
-.world-bosses-metrics span,
-.world-bosses-modal__stats span,
-.world-bosses-reward {
-  border: 1px solid rgba(163, 177, 122, 0.16);
-  border-radius: 18px;
-  background: rgba(11, 16, 13, 0.58);
-  padding: 1rem;
-}
-
-.world-bosses-metrics strong,
-.world-bosses-rewards strong,
-.world-bosses-modal__stats strong {
-  display: block;
-  color: #fff9e8;
-  font-size: 1.15rem;
-  margin-top: 0.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
 }
 
 .world-bosses-actions {
@@ -315,7 +473,8 @@
   cursor: pointer;
 }
 
-.world-bosses-actions button:disabled {
+.world-bosses-actions button:disabled,
+.world-bosses-boss-card__quick-action:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -390,7 +549,9 @@
 
 .world-bosses-modal__panel {
   position: relative;
-  width: min(720px, 100%);
+  width: min(780px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
   border: 1px solid rgba(200, 177, 106, 0.28);
   border-radius: 26px;
   padding: 1.35rem;
@@ -415,6 +576,19 @@
   background: rgba(10, 14, 12, 0.88);
   color: #ead8a3;
   cursor: pointer;
+}
+
+.world-bosses-modal__hero {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding-right: 2.5rem;
+}
+
+.world-bosses-modal__portrait {
+  min-height: 180px;
+  border-radius: 22px;
 }
 
 .world-bosses-modal__stats {
@@ -455,45 +629,66 @@
 
 @media (prefers-reduced-motion: reduce) {
   .world-bosses-hero__signal i,
-  .world-bosses-state i,
-  .world-bosses-live-indicator {
+  .world-bosses-state i {
     animation: none;
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
+  .world-bosses-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .world-bosses-activity-panel {
+    position: static;
+    order: -1;
+  }
+
+  .world-bosses-section-head,
   .world-bosses-hero,
-  .world-bosses-boss__header,
-  .world-bosses-section-head {
+  .world-bosses-premium-card {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .world-bosses-boss {
-    grid-template-columns: 1fr;
+  .world-bosses-section-head small {
+    text-align: left;
   }
 
-  .world-bosses-boss__portrait {
-    min-height: 220px;
-  }
-
-  .world-bosses-metrics,
   .world-bosses-rewards__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 560px) {
-  .world-bosses-metrics,
-  .world-bosses-rewards__grid,
-  .world-bosses-modal__stats,
+@media (max-width: 680px) {
+  .world-bosses-boss-card__button,
+  .world-bosses-modal__hero,
   .world-bosses-map-card {
     grid-template-columns: 1fr;
+  }
+
+  .world-bosses-boss-card__portrait {
+    min-height: 210px;
+  }
+
+  .world-bosses-boss-card dl,
+  .world-bosses-activity-metrics,
+  .world-bosses-rewards__grid,
+  .world-bosses-modal__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .world-bosses-boss-card__quick-action {
+    position: static;
+    margin-top: 0.85rem;
+    width: 100%;
   }
 
   .world-bosses-hero,
   .world-bosses-card,
   .world-bosses-map-card,
+  .world-bosses-premium-card,
+  .world-bosses-activity-panel,
   .world-bosses-modal__panel {
     border-radius: 18px;
   }
