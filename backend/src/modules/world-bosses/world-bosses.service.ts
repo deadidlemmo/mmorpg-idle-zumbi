@@ -63,6 +63,30 @@ const eventInclude = {
 type Tx = Prisma.TransactionClient;
 
 const WORLD_BOSS_LOBBY_SECONDS = 10 * 60;
+// Temporario para QA: manter bosses liberados sem travas de horario ou nivel.
+const WORLD_BOSS_TEST_UNLOCK_ENABLED = true;
+const WORLD_BOSS_TEST_LOBBY_LEAD_SECONDS = 10 * 60;
+const WORLD_BOSS_SHORT_RESPAWN_SECONDS = 6 * 60 * 60;
+const WORLD_BOSS_LONG_RESPAWN_SECONDS = 12 * 60 * 60;
+const WORLD_BOSS_VISIBLE_STATUSES: WorldBossEventStatus[] = [
+  WorldBossEventStatus.SCHEDULED,
+  WorldBossEventStatus.LOBBY_OPEN,
+  WorldBossEventStatus.ACTIVE,
+  WorldBossEventStatus.DEFEATED,
+  WorldBossEventStatus.EXPIRED,
+  WorldBossEventStatus.REWARDED,
+];
+const WORLD_BOSS_OPEN_STATUSES: WorldBossEventStatus[] = [
+  WorldBossEventStatus.SCHEDULED,
+  WorldBossEventStatus.LOBBY_OPEN,
+  WorldBossEventStatus.ACTIVE,
+];
+const WORLD_BOSS_TERMINAL_STATUSES: WorldBossEventStatus[] = [
+  WorldBossEventStatus.DEFEATED,
+  WorldBossEventStatus.EXPIRED,
+  WorldBossEventStatus.REWARDED,
+  WorldBossEventStatus.CANCELLED,
+];
 
 @Injectable()
 export class WorldBossesService {
@@ -91,23 +115,10 @@ export class WorldBossesService {
     }
 
     const now = new Date();
-    const events = await this.prisma.worldBossEvent.findMany({
-      where: {
-        mapId: character.mapId,
-        status: {
-          in: [
-            WorldBossEventStatus.SCHEDULED,
-            WorldBossEventStatus.LOBBY_OPEN,
-            WorldBossEventStatus.ACTIVE,
-            WorldBossEventStatus.DEFEATED,
-            WorldBossEventStatus.EXPIRED,
-          ],
-        },
-        endsAt: { gt: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
-      },
-      orderBy: [{ startsAt: 'asc' }, { worldBoss: { sortOrder: 'asc' } }],
-      include: eventInclude,
-    });
+    const bosses = await this.findCanonicalBossesForMap(character);
+    const events = await Promise.all(
+      bosses.map((boss) => this.ensureDisplayEventForBoss(boss, now)),
+    );
 
     const statuses = await Promise.all(
       events.map(async (event) => {
@@ -337,6 +348,189 @@ export class WorldBossesService {
         eligibleForReward: p.eligibleForReward,
       })),
     };
+  }
+
+  private async findCanonicalBossesForMap(character: any) {
+    const mapTier = character.map?.tier;
+    const bosses = await this.prisma.worldBoss.findMany({
+      where: {
+        mapId: character.mapId,
+        tier: mapTier,
+        isActive: true,
+      },
+      orderBy: [{ sortOrder: 'asc' }, { minLevel: 'asc' }],
+      include: worldBossInclude,
+    });
+
+    const bySlot = new Map<number, any>();
+    for (const boss of bosses) {
+      const slot = this.getBossSlotIndex(boss);
+      if ((slot === 0 || slot === 1) && !bySlot.has(slot)) {
+        bySlot.set(slot, boss);
+      }
+    }
+
+    const selected = [bySlot.get(0), bySlot.get(1)].filter(Boolean);
+    if (selected.length < 2) {
+      for (const boss of bosses) {
+        if (selected.some((item) => item.id === boss.id)) continue;
+        selected.push(boss);
+        if (selected.length === 2) break;
+      }
+    }
+
+    return selected
+      .sort((a, b) => this.getBossLevel(a) - this.getBossLevel(b))
+      .slice(0, 2);
+  }
+
+  private async ensureDisplayEventForBoss(boss: any, now: Date) {
+    let event = await this.prisma.worldBossEvent.findFirst({
+      where: {
+        worldBossId: boss.id,
+        mapId: boss.mapId,
+        tier: boss.tier,
+        status: { in: WORLD_BOSS_OPEN_STATUSES },
+      },
+      orderBy: [{ startsAt: 'desc' }, { createdAt: 'desc' }],
+      include: eventInclude,
+    });
+
+    event ??= await this.prisma.worldBossEvent.findFirst({
+      where: {
+        worldBossId: boss.id,
+        mapId: boss.mapId,
+        tier: boss.tier,
+        status: { in: WORLD_BOSS_VISIBLE_STATUSES },
+      },
+      orderBy: [{ startsAt: 'desc' }, { createdAt: 'desc' }],
+      include: eventInclude,
+    });
+
+    if (
+      !event ||
+      (WORLD_BOSS_TEST_UNLOCK_ENABLED &&
+        (WORLD_BOSS_TERMINAL_STATUSES.includes(event.status) ||
+          event.endsAt.getTime() <= now.getTime() ||
+          event.currentHp <= 0))
+    ) {
+      event = await this.createWorldBossEventForBoss(boss, now);
+    } else if (!WORLD_BOSS_TEST_UNLOCK_ENABLED) {
+      event = await this.ensureNextCycleEvent(event, boss, now);
+    }
+
+    if (WORLD_BOSS_TEST_UNLOCK_ENABLED) {
+      event = await this.ensureEventAvailableForTest(event, boss, now);
+    } else {
+      event = await this.advanceEventState(event);
+    }
+
+    if (!event) throw new NotFoundException('Ameaça Global não encontrada.');
+
+    await this.cancelDuplicateOpenEvents(boss.id, event.id);
+    return event;
+  }
+
+  private async createWorldBossEventForBoss(
+    boss: any,
+    now: Date,
+    startsAt = new Date(
+      now.getTime() + WORLD_BOSS_TEST_LOBBY_LEAD_SECONDS * 1000,
+    ),
+  ) {
+    const status =
+      startsAt.getTime() - WORLD_BOSS_LOBBY_SECONDS * 1000 <= now.getTime()
+        ? WorldBossEventStatus.LOBBY_OPEN
+        : WorldBossEventStatus.SCHEDULED;
+    return this.prisma.worldBossEvent.create({
+      data: {
+        worldBossId: boss.id,
+        mapId: boss.mapId,
+        tier: boss.tier,
+        status,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + boss.durationSeconds * 1000),
+        maxHp: boss.baseHp,
+        currentHp: boss.baseHp,
+      },
+      include: eventInclude,
+    });
+  }
+
+  private async ensureNextCycleEvent(event: any, boss: any, now: Date) {
+    if (!WORLD_BOSS_TERMINAL_STATUSES.includes(event.status)) return event;
+
+    const closedAt = event.defeatedAt ?? event.endsAt;
+    const nextStartsAt = new Date(
+      closedAt.getTime() + this.getBossRespawnIntervalSeconds(boss) * 1000,
+    );
+
+    if (nextStartsAt.getTime() > now.getTime()) return event;
+
+    return this.createWorldBossEventForBoss(boss, now, nextStartsAt);
+  }
+
+  private async ensureEventAvailableForTest(event: any, boss: any, now: Date) {
+    if (
+      event.status === WorldBossEventStatus.LOBBY_OPEN &&
+      event.startsAt.getTime() > now.getTime() &&
+      event.endsAt.getTime() > now.getTime() &&
+      event.currentHp > 0
+    ) {
+      return event;
+    }
+
+    const startsAt = new Date(
+      now.getTime() + WORLD_BOSS_TEST_LOBBY_LEAD_SECONDS * 1000,
+    );
+    return this.prisma.worldBossEvent.update({
+      where: { id: event.id },
+      data: {
+        status: WorldBossEventStatus.LOBBY_OPEN,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + boss.durationSeconds * 1000),
+        maxHp: boss.baseHp,
+        currentHp: boss.baseHp,
+        totalDamage: 0,
+        defeatedAt: null,
+        rewardedAt: null,
+        hpLockedAt: null,
+      },
+      include: eventInclude,
+    });
+  }
+
+  private async cancelDuplicateOpenEvents(
+    worldBossId: string,
+    keepEventId: string,
+  ) {
+    await this.prisma.worldBossEvent.updateMany({
+      where: {
+        worldBossId,
+        id: { not: keepEventId },
+        status: { in: WORLD_BOSS_OPEN_STATUSES },
+      },
+      data: { status: WorldBossEventStatus.CANCELLED },
+    });
+  }
+
+  private getBossSlotIndex(boss: any) {
+    const sortSlot = Number(boss.sortOrder) % 10;
+    if (sortSlot === 0 || sortSlot === 1) return sortSlot;
+
+    const tier = Math.max(1, Number(boss.tier) || 1);
+    return Number(boss.minLevel) >= tier * 10 ? 1 : 0;
+  }
+
+  private getBossLevel(boss: any) {
+    const tier = Math.max(1, Number(boss.tier) || 1);
+    return this.getBossSlotIndex(boss) === 0 ? tier * 10 - 5 : tier * 10;
+  }
+
+  private getBossRespawnIntervalSeconds(boss: any) {
+    return this.getBossSlotIndex(boss) === 0
+      ? WORLD_BOSS_SHORT_RESPAWN_SECONDS
+      : WORLD_BOSS_LONG_RESPAWN_SECONDS;
   }
 
   private async resolveEventAndContribution(params: {
@@ -777,29 +971,41 @@ export class WorldBossesService {
   private async findActiveEventForCharacter(character: any) {
     if (!character.mapId) return null;
     const now = new Date();
-    const event = await this.prisma.worldBossEvent.findFirst({
+    const joinedEvent = await this.prisma.worldBossParticipant.findFirst({
       where: {
-        mapId: character.mapId,
-        status: {
-          in: [
-            WorldBossEventStatus.SCHEDULED,
-            WorldBossEventStatus.LOBBY_OPEN,
-            WorldBossEventStatus.ACTIVE,
-            WorldBossEventStatus.DEFEATED,
-            WorldBossEventStatus.EXPIRED,
-          ],
+        characterId: character.id,
+        leftAt: null,
+        event: {
+          mapId: character.mapId,
+          status: { in: WORLD_BOSS_OPEN_STATUSES },
         },
-        endsAt: { gt: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
       },
-      orderBy: [{ startsAt: 'desc' }],
-      include: eventInclude,
+      orderBy: { joinedAt: 'desc' },
+      select: { eventId: true },
     });
 
-    return event ? this.advanceEventState(event) : null;
+    if (joinedEvent) {
+      const event = await this.prisma.worldBossEvent.findUnique({
+        where: { id: joinedEvent.eventId },
+        include: eventInclude,
+      });
+      if (event) return this.advanceEventState(event);
+    }
+
+    const bosses = await this.findCanonicalBossesForMap(character);
+    const events = await Promise.all(
+      bosses.map((boss) => this.ensureDisplayEventForBoss(boss, now)),
+    );
+
+    return events[0] ?? null;
   }
 
   private async advanceEventState(event: any) {
     const now = new Date();
+    if (WORLD_BOSS_TEST_UNLOCK_ENABLED) {
+      return this.ensureEventAvailableForTest(event, event.worldBoss, now);
+    }
+
     let nextStatus = event.status as WorldBossEventStatus;
 
     if (
@@ -849,6 +1055,8 @@ export class WorldBossesService {
   }
 
   private ensureEventJoinable(event: any) {
+    if (WORLD_BOSS_TEST_UNLOCK_ENABLED) return;
+
     const now = new Date();
     if (
       event.status !== WorldBossEventStatus.LOBBY_OPEN ||
@@ -867,6 +1075,8 @@ export class WorldBossesService {
       throw new ForbiddenException(
         'Personagem precisa estar no mapa da Ameaça Global.',
       );
+    if (WORLD_BOSS_TEST_UNLOCK_ENABLED) return;
+
     if (character.level < boss.minLevel)
       throw new ForbiddenException(
         `Nível mínimo ${boss.minLevel} necessário para participar desta Ameaça Global.`,
@@ -876,6 +1086,16 @@ export class WorldBossesService {
   private getEligibility(character: any, event: any | null) {
     if (!event) return { canJoin: false, reason: 'Nenhuma ameaça ativa.' };
     const boss = event.worldBoss;
+    const visibleBossMapId = boss.mapId ?? boss.map?.id;
+    if (!character.mapId || character.mapId !== visibleBossMapId)
+      return {
+        canJoin: false,
+        reason: 'Personagem não está no mapa desta ameaça.',
+      };
+    if (WORLD_BOSS_TEST_UNLOCK_ENABLED) {
+      return { canJoin: true, reason: 'Liberado para teste.' };
+    }
+
     if (event.status !== WorldBossEventStatus.LOBBY_OPEN)
       return {
         canJoin: false,
@@ -928,6 +1148,23 @@ export class WorldBossesService {
       event.maxHp > 0
         ? Math.max(0, Math.min(100, (event.currentHp / event.maxHp) * 100))
         : 0;
+    const respawnIntervalSeconds = this.getBossRespawnIntervalSeconds(
+      event.worldBoss,
+    );
+    const closedAt = event.defeatedAt ?? event.endsAt;
+    const nextRespawnSeconds = WORLD_BOSS_TERMINAL_STATUSES.includes(
+      event.status,
+    )
+      ? Math.max(
+          0,
+          Math.floor(
+            (closedAt.getTime() +
+              respawnIntervalSeconds * 1000 -
+              now.getTime()) /
+              1000,
+          ),
+        )
+      : respawnIntervalSeconds;
     return {
       message,
       event: {
@@ -938,6 +1175,8 @@ export class WorldBossesService {
         remainingSeconds,
         remainingSecondsToStart,
         remainingSecondsToEnd: remainingSeconds,
+        nextRespawnSeconds,
+        respawnIntervalSeconds,
         currentHp: event.currentHp,
         maxHp: event.maxHp,
         hpPercent,
@@ -961,8 +1200,10 @@ export class WorldBossesService {
       slug: boss.slug,
       description: boss.description,
       tier: boss.tier,
+      bossLevel: this.getBossLevel(boss),
       minLevel: boss.minLevel,
       maxLevel: boss.maxLevel,
+      respawnIntervalSeconds: this.getBossRespawnIntervalSeconds(boss),
       durationSeconds: boss.durationSeconds,
       difficulty: boss.difficulty,
       riskLevel: boss.riskLevel,

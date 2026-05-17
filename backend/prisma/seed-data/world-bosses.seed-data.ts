@@ -80,41 +80,44 @@ function buildLootTable(tier: number) {
 export const worldBossDefinitions: WorldBossSeedData[] = bossNamesByTier.flatMap(
   ([mapName, names], tierIndex) => {
     const tier = tierIndex + 1;
-    const minLevel = (tier - 1) * 10 + 1;
-    const maxLevel = tier * 10;
+    const bossLevels = [tier * 10 - 5, tier * 10];
     const baseHp = 120_000 * tier * tier;
 
-    return names.map((name, index) => ({
-      name,
-      slug: slugify(`${mapName}-${name}`),
-      description: `${name} concentra uma horda mutante em ${mapName}. Sobreviventes do tier ${tier} precisam conter a ameaça antes que ela se espalhe.`,
-      mapName,
-      tier,
-      minLevel,
-      maxLevel,
-      baseHp: Math.floor(baseHp * (index === 0 ? 1 : 1.16)),
-      maxHp: Math.floor(baseHp * 5.5),
-      hpPerParticipant: 24_000 * tier,
-      powerScalingFactor: 120 * tier,
-      scalingFactor: index === 0 ? 1 : 1.08,
-      minParticipantsExpected: 3,
-      maxScalingCap: 3.2,
-      scalingWindowSeconds: SCALING_WINDOW_SECONDS,
-      attackPower: 45 * tier + index * 12,
-      defense: 18 * tier + index * 6,
-      resistance: 10 * tier + index * 5,
-      mutationLevel: tier + index,
-      damageReduction: Math.min(0.35, 0.04 + tier * 0.018 + index * 0.01),
-      enrageMultiplier: 1.1 + tier * 0.025,
-      durationSeconds: EVENT_DURATION_SECONDS,
-      difficulty: index === 0 ? 'CONTENCAO' : 'EXTERMINIO',
-      riskLevel: Math.min(10, tier + index + 1),
-      minParticipationSeconds: 5 * 60,
-      minParticipationDamage: 800 * tier,
-      assetKey: slugify(name),
-      isActive: true,
-      sortOrder: tier * 10 + index,
-      lootTable: buildLootTable(tier),
-    }));
+    return names.map((name, index) => {
+      const bossLevel = bossLevels[index];
+
+      return {
+        name,
+        slug: slugify(`${mapName}-${name}`),
+        description: `${name} concentra uma horda mutante em ${mapName}. Sobreviventes do tier ${tier} precisam conter a ameaça antes que ela se espalhe.`,
+        mapName,
+        tier,
+        minLevel: bossLevel,
+        maxLevel: bossLevel,
+        baseHp: Math.floor(baseHp * (index === 0 ? 1 : 1.16)),
+        maxHp: Math.floor(baseHp * 5.5),
+        hpPerParticipant: 24_000 * tier,
+        powerScalingFactor: 120 * tier,
+        scalingFactor: index === 0 ? 1 : 1.08,
+        minParticipantsExpected: 3,
+        maxScalingCap: 3.2,
+        scalingWindowSeconds: SCALING_WINDOW_SECONDS,
+        attackPower: 45 * tier + index * 12,
+        defense: 18 * tier + index * 6,
+        resistance: 10 * tier + index * 5,
+        mutationLevel: tier + index,
+        damageReduction: Math.min(0.35, 0.04 + tier * 0.018 + index * 0.01),
+        enrageMultiplier: 1.1 + tier * 0.025,
+        durationSeconds: EVENT_DURATION_SECONDS,
+        difficulty: index === 0 ? 'CONTENCAO' : 'EXTERMINIO',
+        riskLevel: Math.min(10, tier + index + 1),
+        minParticipationSeconds: 5 * 60,
+        minParticipationDamage: 800 * tier,
+        assetKey: slugify(name),
+        isActive: true,
+        sortOrder: tier * 10 + index,
+        lootTable: buildLootTable(tier),
+      };
+    });
   },
 );

@@ -41,8 +41,10 @@ export interface WorldBossSummary {
   slug: string;
   description?: string | null;
   tier: number;
+  bossLevel?: number;
   minLevel: number;
   maxLevel: number;
+  respawnIntervalSeconds?: number;
   durationSeconds: number;
   difficulty: string;
   riskLevel: number;
@@ -70,6 +72,8 @@ export interface WorldBossEventSummary {
   remainingSeconds: number;
   remainingSecondsToStart?: number;
   remainingSecondsToEnd?: number;
+  nextRespawnSeconds?: number;
+  respawnIntervalSeconds?: number;
   currentHp: number;
   maxHp: number;
   hpPercent: number;
