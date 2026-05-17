@@ -9,6 +9,7 @@ import {
   AutoCombatSessionStatus,
   CharacterStatus,
   IncursionSessionStatus,
+  WorldBossEventStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -30,9 +31,11 @@ type CharacterActivityState = {
   activeAutoCombatSession: any | null;
   activeGatheringSession: any | null;
   activeIncursionSession: any | null;
+  activeWorldBossParticipation: any | null;
   hasActiveAutoCombat: boolean;
   hasActiveGathering: boolean;
   hasActiveIncursion: boolean;
+  hasActiveWorldBoss: boolean;
 };
 
 @Injectable()
@@ -65,6 +68,7 @@ export class ActivityGuardService {
       activeAutoCombatSession,
       activeGatheringSession,
       activeIncursionSession,
+      activeWorldBossParticipation,
     ] = await Promise.all([
       this.prisma.autoCombatSession.findFirst({
         where: {
@@ -159,6 +163,40 @@ export class ActivityGuardService {
           },
         },
       }),
+
+      this.prisma.worldBossParticipant.findFirst({
+        where: {
+          characterId: character.id,
+          event: {
+            status: WorldBossEventStatus.ACTIVE,
+            endsAt: { gt: new Date() },
+          },
+        },
+        orderBy: {
+          joinedAt: 'desc',
+        },
+        select: {
+          id: true,
+          damageDealt: true,
+          contributionPercent: true,
+          joinedAt: true,
+          activeSeconds: true,
+          event: {
+            select: {
+              id: true,
+              status: true,
+              endsAt: true,
+              worldBoss: {
+                select: {
+                  id: true,
+                  name: true,
+                  tier: true,
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
 
     const currentHp = this.resolveCurrentHp(character);
@@ -169,9 +207,11 @@ export class ActivityGuardService {
       activeAutoCombatSession,
       activeGatheringSession,
       activeIncursionSession,
+      activeWorldBossParticipation,
       hasActiveAutoCombat: Boolean(activeAutoCombatSession),
       hasActiveGathering: Boolean(activeGatheringSession),
       hasActiveIncursion: Boolean(activeIncursionSession),
+      hasActiveWorldBoss: Boolean(activeWorldBossParticipation),
     };
   }
 
@@ -208,6 +248,14 @@ export class ActivityGuardService {
         message:
           'Este personagem está em auto-combate. Pare o auto-combate antes de iniciar gathering.',
         activeAutoCombat: state.activeAutoCombatSession,
+      });
+    }
+
+    if (state.hasActiveWorldBoss) {
+      throw new BadRequestException({
+        message:
+          'Este personagem está em uma Ameaça Global. Saia da atividade antes de iniciar gathering.',
+        activeWorldBoss: state.activeWorldBossParticipation,
       });
     }
 
@@ -267,6 +315,14 @@ export class ActivityGuardService {
       });
     }
 
+    if (state.hasActiveWorldBoss) {
+      throw new BadRequestException({
+        message:
+          'Este personagem está em uma Ameaça Global. Saia da atividade antes de iniciar auto-combate.',
+        activeWorldBoss: state.activeWorldBossParticipation,
+      });
+    }
+
     return state;
   }
 
@@ -303,6 +359,14 @@ export class ActivityGuardService {
         message:
           'Este personagem está em gathering. Encerre o gathering antes de iniciar uma incursão.',
         activeGathering: state.activeGatheringSession,
+      });
+    }
+
+    if (state.hasActiveWorldBoss) {
+      throw new BadRequestException({
+        message:
+          'Este personagem está em uma Ameaça Global. Saia da atividade antes de iniciar uma incursão.',
+        activeWorldBoss: state.activeWorldBossParticipation,
       });
     }
 

@@ -118,6 +118,25 @@ enum IncursionSessionStatus {
   CANCELLED
 }
 
+enum WorldBossEventStatus {
+  SCHEDULED
+  ACTIVE
+  DEFEATED
+  EXPIRED
+  REWARDED
+  CANCELLED
+}
+
+enum WorldBossRewardType {
+  XP
+  GOLD
+  MATERIAL
+  CONSUMABLE
+  EQUIPMENT
+  ITEM
+  PET_EGG
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -170,6 +189,8 @@ model GameMap {
   subMaps           SubMap[]
   gatheringSessions GatheringSession[]
   incursions        Incursion[]
+  worldBosses       WorldBoss[]
+  worldBossEvents   WorldBossEvent[]
 
   @@index([tier])
   @@index([minLevel, maxLevel])
@@ -260,6 +281,7 @@ model Character {
   autoCombatSessionEvents AutoCombatSessionEvent[]
   gatheringSessions       GatheringSession[]
   incursionSessions       CharacterIncursionSession[]
+  worldBossParticipations WorldBossParticipant[]
 
   gatheringSkills CharacterGatheringSkill[]
 
@@ -391,6 +413,8 @@ model Item {
   autoCombatLoots         AutoCombatSessionLoot[]
   incursionLootTables     IncursionLootTable[]
   incursionSessionRewards IncursionSessionReward[]
+  worldBossRewards        WorldBossReward[]
+  worldBossGrantedRewards WorldBossGrantedReward[]
 
   potionConfigs CharacterPotionConfig[] @relation("PotionConfigItem")
 
@@ -902,4 +926,191 @@ model IncursionSessionReward {
   @@index([rewardType])
   @@index([itemId])
   @@map("incursion_session_rewards")
+}
+
+model WorldBoss {
+  id String @id @default(uuid())
+
+  name        String
+  slug        String  @unique
+  description String?
+
+  mapId String
+  tier  Int
+
+  minLevel Int
+  maxLevel Int
+
+  baseHp                  Int
+  maxHp                   Int?
+  hpPerParticipant        Int   @default(0)
+  powerScalingFactor      Float @default(0)
+  scalingFactor           Float @default(1)
+  minParticipantsExpected Int   @default(1)
+  maxScalingCap           Float @default(3)
+  scalingWindowSeconds    Int   @default(600)
+
+  attackPower      Int   @default(0)
+  defense          Int   @default(0)
+  resistance       Int   @default(0)
+  mutationLevel    Int   @default(1)
+  damageReduction  Float @default(0)
+  enrageMultiplier Float @default(1)
+
+  durationSeconds Int
+  difficulty      String @default("NORMAL")
+  riskLevel       Int    @default(1)
+
+  minParticipationSeconds Int @default(300)
+  minParticipationDamage  Int @default(1)
+
+  imageUrl String?
+  assetKey String?
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  map GameMap @relation(fields: [mapId], references: [id], onDelete: Cascade)
+
+  rewards WorldBossReward[]
+  events  WorldBossEvent[]
+
+  @@index([mapId])
+  @@index([tier])
+  @@index([minLevel, maxLevel])
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("world_bosses")
+}
+
+model WorldBossEvent {
+  id String @id @default(uuid())
+
+  worldBossId String
+  mapId       String
+  tier        Int
+
+  status WorldBossEventStatus @default(SCHEDULED)
+
+  startsAt DateTime
+  endsAt   DateTime
+
+  maxHp     Int
+  currentHp Int
+
+  totalDamage      Int @default(0)
+  participantCount Int @default(0)
+
+  hpLockedAt DateTime?
+  defeatedAt DateTime?
+  rewardedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  worldBoss WorldBoss @relation(fields: [worldBossId], references: [id], onDelete: Cascade)
+  map       GameMap   @relation(fields: [mapId], references: [id], onDelete: Cascade)
+
+  participants WorldBossParticipant[]
+
+  @@index([worldBossId])
+  @@index([mapId])
+  @@index([tier])
+  @@index([status])
+  @@index([startsAt])
+  @@index([endsAt])
+  @@map("world_boss_events")
+}
+
+model WorldBossParticipant {
+  id String @id @default(uuid())
+
+  eventId     String
+  characterId String
+
+  damageDealt         Int   @default(0)
+  contributionPercent Float @default(0)
+
+  joinedAt           DateTime @default(now())
+  lastContributionAt DateTime @default(now())
+  activeSeconds      Int      @default(0)
+
+  rewardGranted   Boolean   @default(false)
+  rewardGrantedAt DateTime?
+
+  rank              Int?
+  eligibleForReward Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event     WorldBossEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  character Character      @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  rewards WorldBossGrantedReward[]
+
+  @@unique([eventId, characterId])
+  @@index([eventId])
+  @@index([characterId])
+  @@index([rewardGranted])
+  @@index([eligibleForReward])
+  @@map("world_boss_participants")
+}
+
+model WorldBossReward {
+  id String @id @default(uuid())
+
+  worldBossId String
+  rewardType  WorldBossRewardType
+
+  itemId String?
+
+  minQuantity Int @default(1)
+  maxQuantity Int @default(1)
+
+  chance                   Float   @default(100)
+  guaranteed               Boolean @default(false)
+  onlyIfDefeated           Boolean @default(false)
+  requiresMinParticipation Boolean @default(true)
+
+  minContributionPercent Float   @default(0)
+  minRankPercent         Float?
+  rarity                 Rarity?
+  sortOrder              Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  worldBoss WorldBoss @relation(fields: [worldBossId], references: [id], onDelete: Cascade)
+  item      Item?     @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([worldBossId])
+  @@index([rewardType])
+  @@index([itemId])
+  @@index([sortOrder])
+  @@map("world_boss_rewards")
+}
+
+model WorldBossGrantedReward {
+  id String @id @default(uuid())
+
+  participantId String
+  itemId        String?
+
+  rewardType WorldBossRewardType
+  quantity   Int                 @default(0)
+  rarity     Rarity?
+
+  createdAt DateTime @default(now())
+
+  participant WorldBossParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  item        Item?                @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([participantId])
+  @@index([rewardType])
+  @@index([itemId])
+  @@map("world_boss_granted_rewards")
 }

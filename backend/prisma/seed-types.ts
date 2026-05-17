@@ -2,6 +2,7 @@ import type {
   CraftIngredientRole,
   IncursionDifficulty,
   IncursionRewardType,
+  WorldBossRewardType,
   ItemSlot,
   MaterialOrigin,
   Rarity,
@@ -149,4 +150,54 @@ export type IncursionSeedData = {
   isActive?: boolean;
   sortOrder?: number;
   lootTable: IncursionLootSeedData[];
+};
+
+
+export type WorldBossRewardSeedData = {
+  rewardType: WorldBossRewardType;
+  itemName?: string;
+  minQuantity: number;
+  maxQuantity: number;
+  chance: number;
+  guaranteed?: boolean;
+  onlyIfDefeated?: boolean;
+  requiresMinParticipation?: boolean;
+  minContributionPercent?: number;
+  minRankPercent?: number | null;
+  rarity?: Rarity;
+  sortOrder?: number;
+};
+
+export type WorldBossSeedData = {
+  name: string;
+  slug: string;
+  description: string;
+  mapName: string;
+  tier: number;
+  minLevel: number;
+  maxLevel: number;
+  baseHp: number;
+  maxHp?: number | null;
+  hpPerParticipant: number;
+  powerScalingFactor: number;
+  scalingFactor?: number;
+  minParticipantsExpected?: number;
+  maxScalingCap?: number;
+  scalingWindowSeconds?: number;
+  attackPower: number;
+  defense: number;
+  resistance: number;
+  mutationLevel?: number;
+  damageReduction?: number;
+  enrageMultiplier?: number;
+  durationSeconds: number;
+  difficulty: string;
+  riskLevel: number;
+  minParticipationSeconds?: number;
+  minParticipationDamage?: number;
+  imageUrl?: string | null;
+  assetKey?: string | null;
+  isActive?: boolean;
+  sortOrder?: number;
+  lootTable: WorldBossRewardSeedData[];
 };

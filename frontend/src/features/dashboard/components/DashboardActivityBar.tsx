@@ -13,6 +13,8 @@ import {
   useIncursionsRealtimeActions,
   useIncursionsRealtimeState,
 } from "../../incursions/realtime/useIncursionsRealtime";
+import { getWorldBossStatus } from "../../world-bosses/api/world-bosses.api";
+import type { WorldBossStatusResponse } from "../../world-bosses/types/world-bosses.types";
 import { getCharacterOverview } from "../api/dashboard.api";
 import type {
   CharacterOverviewResponse,
@@ -28,7 +30,7 @@ interface DashboardActivityBarProps {
 
 type ActivityBarItem = {
   key: string;
-  type: "auto-combat" | "gathering" | "incursion";
+  type: "auto-combat" | "gathering" | "incursion" | "world-boss";
   icon: string;
   title: string;
   description: string;
@@ -1813,6 +1815,7 @@ function buildActivityItems(params: {
   realtimeState: AutoCombatRealtimeStateLoose;
   gatheringState: GatheringRealtimeState;
   incursionsState: IncursionsRealtimeState;
+  worldBossStatus: WorldBossStatusResponse | null;
   nowMs: number;
 }) {
   const {
@@ -1821,6 +1824,7 @@ function buildActivityItems(params: {
     realtimeState,
     gatheringState,
     incursionsState,
+    worldBossStatus,
     nowMs,
   } = params;
 
@@ -1932,6 +1936,31 @@ function buildActivityItems(params: {
     }
   }
 
+
+  if (worldBossStatus?.event && worldBossStatus.participant && worldBossStatus.event.status === "ACTIVE") {
+    const event = worldBossStatus.event;
+    const participant = worldBossStatus.participant;
+    items.push({
+      key: `world-boss-${event.id}`,
+      type: "world-boss",
+      icon: "☣",
+      title: event.worldBoss.name,
+      description: `${event.worldBoss.map.name} • HP ${formatCompactNumber(event.currentHp)}/${formatCompactNumber(event.maxHp)} • resta ${formatRemainingTime(event.remainingSeconds)}`,
+      progressLabel: "HP global",
+      progressPercent: event.hpPercent,
+      progressValueLabel: `${Math.floor(event.hpPercent)}%`,
+      primaryMetric: formatRemainingTime(event.remainingSeconds),
+      secondaryMetric: `${formatCompactNumber(participant.damageDealt)} dano`,
+      indicatorMetric: `${Math.floor(event.progressPercent)}%`,
+      indicatorLabel: "Progresso coletivo",
+      href: `/dashboard/${characterId}/world-bosses`,
+      monsterMetaLabel: `${event.worldBoss.map.name} • Tier ${event.worldBoss.tier}`,
+      combatMetric: participant.eligibleForReward ? "Elegível" : "Contribuindo",
+      killsMetric: `${(participant.contributionPercent ?? 0).toFixed(1)}%`,
+      xpMetric: formatRemainingTime(event.remainingSeconds),
+    });
+  }
+
   return items;
 }
 
@@ -1953,6 +1982,7 @@ export function DashboardActivityBar({
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
+  const [worldBossStatus, setWorldBossStatus] = useState<WorldBossStatusResponse | null>(null);
 
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isMinimized, setIsMinimized] = useState(getInitialMinimizedState);
@@ -1975,11 +2005,15 @@ export function DashboardActivityBar({
 
     async function loadActivity() {
       try {
-        const data = await getCharacterOverview(characterId);
+        const [data, worldBossData] = await Promise.all([
+          getCharacterOverview(characterId),
+          getWorldBossStatus(characterId).catch(() => null),
+        ]);
 
         if (isDisposed) return;
 
         setOverview(data);
+        setWorldBossStatus(worldBossData);
         setNowMs(Date.now());
         setHasLoadedOnce(true);
       } catch {
@@ -2009,12 +2043,14 @@ export function DashboardActivityBar({
       realtimeState,
       gatheringState,
       incursionsState,
+      worldBossStatus,
       nowMs,
     });
   }, [
     characterId,
     gatheringState,
     incursionsState,
+    worldBossStatus,
     nowMs,
     overview,
     realtimeState,
@@ -2154,7 +2190,9 @@ export function DashboardActivityBar({
                         ? "Sessão ativa"
                         : item.type === "incursion"
                           ? "Incursão ativa"
-                          : "Expedição ativa"}
+                          : item.type === "world-boss"
+                            ? "Ameaça Global"
+                            : "Expedição ativa"}
                     </span>
 
                     <strong>{item.title}</strong>
@@ -2280,7 +2318,9 @@ export function DashboardActivityBar({
                       ? "Sessão ativa"
                       : item.type === "incursion"
                         ? "Incursão ativa"
-                        : "Expedição ativa"}
+                        : item.type === "world-boss"
+                          ? "Ameaça Global"
+                          : "Expedição ativa"}
                   </span>
                   <strong>{item.title}</strong>
 

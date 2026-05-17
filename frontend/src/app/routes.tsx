@@ -20,6 +20,7 @@ import { IncursionsPage } from "../features/incursions/pages/IncursionsPage";
 import { IncursionsRealtimeProvider } from "../features/incursions/realtime/IncursionsRealtimeProvider";
 import { InventoryPage } from "../features/inventory/pages/InventoryPage";
 import { MapsSelectionPage } from "../features/maps/pages/MapsSelectionPage";
+import { WorldBossesPage } from "../features/world-bosses/pages/WorldBossesPage";
 import { LootNotificationProvider } from "../features/loot-notifications/LootNotificationProvider";
 import { useAuthStore } from "../store/auth.store";
 
@@ -157,6 +158,8 @@ export function AppRoutes() {
           <Route path="maps" element={<MapsSelectionPage />} />
 
           <Route path="incursions" element={<IncursionsPage />} />
+
+          <Route path="world-bosses" element={<WorldBossesPage />} />
 
           <Route path="*" element={<Navigate to="" replace />} />
         </Route>
