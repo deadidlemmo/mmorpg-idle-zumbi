@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Biohazard, ShieldAlert, XCircle } from "lucide-react";
+import { ArrowRight, Biohazard, ShieldAlert, X, XCircle } from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
 import {
   buildMapVisualStyle,
@@ -129,11 +129,11 @@ function getCardStatusTone(status: WorldBossStatusResponse) {
 }
 
 function getRewardIcon(reward: WorldBossRewardPreview) {
-  if (reward.rewardType === "GOLD") return "◉";
-  if (reward.rewardType === "XP") return "✦";
-  if (reward.rewardType === "PET_EGG") return "◈";
-  if (reward.rewardType === "EQUIPMENT") return "◇";
-  return "◆";
+  if (reward.rewardType === "GOLD") return "G";
+  if (reward.rewardType === "XP") return "XP";
+  if (reward.rewardType === "PET_EGG") return "PET";
+  if (reward.rewardType === "EQUIPMENT") return "EQ";
+  return "IT";
 }
 
 function getQuantityLabel(reward: WorldBossRewardPreview) {
@@ -418,6 +418,7 @@ export function WorldBossesPage() {
     character.map ??
     bossStatuses[0]?.event?.worldBoss.map ??
     null;
+  const currentContextLabel = currentMap ? "Mapa atual" : "Evento global";
   const currentMapName = currentMap?.name ?? "Área de contenção global";
   const currentMapImage = getMapImageByName(currentMapName);
   const currentMapVisualStyle = buildMapVisualStyle(currentMapImage);
@@ -446,6 +447,7 @@ export function WorldBossesPage() {
   return (
     <DashboardLayout character={character} hideHero>
       <main className="incursions-page gathering-page--origin world-bosses-page">
+        <div className="gathering-origin-shell world-bosses-shell">
         <section className="incursions-hero world-bosses-hero">
           <div>
             <span className="incursions-hero__eyebrow">
@@ -453,8 +455,8 @@ export function WorldBossesPage() {
             </span>
             <h1>Ameaças Globais</h1>
             <p>
-              Enfrente ameaças globais, entre no lobby e acompanhe a contenção
-              coletiva em tempo real.
+              Enfrente ameaças globais, entre no lobby e acompanhe a batalha em
+              tempo real.
             </p>
           </div>
         </section>
@@ -474,7 +476,7 @@ export function WorldBossesPage() {
           ]
             .filter(Boolean)
             .join(" ")}
-          aria-label={`Mapa atual: ${currentMapName}`}
+          aria-label={`${currentContextLabel}: ${currentMapName}`}
         >
           <div
             className="gathering-origin-map-context__media"
@@ -488,7 +490,7 @@ export function WorldBossesPage() {
           </div>
           <div className="gathering-origin-map-context__body">
             <span className="gathering-origin-map-context__eyebrow">
-              Mapa atual
+              {currentContextLabel}
             </span>
             <div className="gathering-origin-map-context__title-row">
               <h2>{currentMapName}</h2>
@@ -519,7 +521,7 @@ export function WorldBossesPage() {
             <h2>Benefícios premium</h2>
             <p>
               Alertas avançados, leitura compacta do lobby e preparação visual
-              para eventos de contenção.
+              para eventos de contenção global.
             </p>
           </div>
           <button
@@ -589,41 +591,41 @@ export function WorldBossesPage() {
                       >
                         <button
                           type="button"
-                          className="world-bosses-boss-card__button"
+                          className="world-bosses-boss-card__details"
                           onClick={() => setDetailsEventId(bossEvent.id)}
                         >
                           <div
-                            className="world-bosses-boss-card__portrait"
+                            className="world-bosses-boss-card__art"
                             aria-hidden="true"
                           >
+                            <span className="world-bosses-boss-card__tier">
+                              Tier {cardBoss.tier}
+                            </span>
+                            <span className="world-bosses-boss-card__status">
+                              {getCardStatusLabel(bossStatus)}
+                            </span>
                             {cardBoss.imageUrl ? (
                               <img src={cardBoss.imageUrl} alt="" />
                             ) : (
-                              <span>
-                                <Biohazard size={30} />
+                              <span className="world-bosses-boss-card__glyph">
+                                <Biohazard size={42} />
                               </span>
                             )}
+                            <span className="world-bosses-boss-card__summary">
+                              <span>{formatRemaining(cardTimerSeconds)}</span>
+                              <span>Nv. {cardBoss.minLevel}+</span>
+                              <span>{cardLobbyCount} no lobby</span>
+                            </span>
                           </div>
                           <div className="world-bosses-boss-card__content">
-                            <div className="world-bosses-boss-card__topline">
-                              <span>Tier {cardBoss.tier}</span>
-                              <strong>{getCardStatusLabel(bossStatus)}</strong>
-                            </div>
-                            <h3>{cardBoss.name}</h3>
-                            <dl>
-                              <div>
-                                <dt>{getEventTimerLabel(bossEvent.status)}</dt>
-                                <dd>{formatRemaining(cardTimerSeconds)}</dd>
-                              </div>
-                              <div>
-                                <dt>Requisito</dt>
-                                <dd>Nível {cardBoss.minLevel}+</dd>
-                              </div>
-                              <div>
-                                <dt>Lobby</dt>
-                                <dd>{cardLobbyCount} sobreviventes</dd>
-                              </div>
-                            </dl>
+                            <span className="world-bosses-boss-card__header">
+                              <span className="world-bosses-boss-card__name">
+                                {cardBoss.name}
+                              </span>
+                            </span>
+                            <span className="world-bosses-boss-card__meta">
+                              {getEventTimerLabel(bossEvent.status)}
+                            </span>
                             <span className="world-bosses-boss-card__cta">
                               Ver detalhes
                               <ArrowRight size={14} />
@@ -651,7 +653,7 @@ export function WorldBossesPage() {
           <aside className="incursions-side-column world-bosses-side-column">
             <section className="gathering-origin-side-section gathering-origin-side-section--current">
               <div className="gathering-origin-section-divider">
-                <span>Lobby / batalha</span>
+                <span>Atividade atual</span>
               </div>
 
               <div
@@ -664,16 +666,16 @@ export function WorldBossesPage() {
                 ].join(" ")}
               >
                 {!panelEvent || !panelBoss ? (
-                  <div className="world-bosses-activity-empty">
+                  <div className="incursions-current-card__empty world-bosses-activity-empty">
                     <ShieldAlert size={24} />
-                    <strong>Nenhum lobby ativo</strong>
-                    <p>Escolha um World Boss para entrar no lobby.</p>
+                    <h2>Nenhum lobby ativo</h2>
+                    <p>Escolha uma ameaça global para entrar no lobby.</p>
                   </div>
                 ) : (
-                  <div className="world-bosses-activity-content">
-                    <div className="world-bosses-activity-boss">
+                  <div className="incursions-current-card__content world-bosses-activity-content">
+                    <div className="incursions-current-card__head world-bosses-activity-boss">
                       <div
-                        className="world-bosses-activity-boss__icon"
+                        className="incursions-current-card__icon world-bosses-activity-boss__icon"
                         aria-hidden="true"
                       >
                         {panelBoss.imageUrl ? (
@@ -684,7 +686,7 @@ export function WorldBossesPage() {
                       </div>
                       <div>
                         <span>{panelBoss.map.name}</span>
-                        <h3>{panelBoss.name}</h3>
+                        <h2>{panelBoss.name}</h2>
                         <p>{getStatusLabel(panelEvent.status)}</p>
                       </div>
                     </div>
@@ -698,16 +700,16 @@ export function WorldBossesPage() {
                       </strong>
                     </div>
 
-                    <div className="world-bosses-hp">
-                      <div className="world-bosses-hp__top">
+                    <div className="incursions-current-card__progress world-bosses-hp">
+                      <div>
                         <span>HP global</span>
                         <strong>
                           {formatNumber(panelEvent.currentHp)} /{" "}
                           {formatNumber(panelEvent.maxHp)}
                         </strong>
                       </div>
-                      <div className="world-bosses-hp__track">
-                        <i
+                      <i>
+                        <em
                           style={{
                             width: `${Math.max(
                               0,
@@ -715,7 +717,7 @@ export function WorldBossesPage() {
                             )}%`,
                           }}
                         />
-                      </div>
+                      </i>
                       <small>
                         {Math.floor(panelEvent.progressPercent)}% de progresso
                         coletivo
@@ -818,7 +820,7 @@ export function WorldBossesPage() {
                 onClick={() => setDetailsEventId(null)}
                 aria-label="Fechar detalhes do World Boss"
               >
-                ×
+                <X size={18} />
               </button>
               <div className="world-bosses-modal__hero">
                 <div
@@ -903,6 +905,7 @@ export function WorldBossesPage() {
             </section>
           </div>
         ) : null}
+        </div>
       </main>
     </DashboardLayout>
   );
