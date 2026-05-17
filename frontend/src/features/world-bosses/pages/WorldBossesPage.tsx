@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Biohazard, ShieldAlert, X, XCircle } from "lucide-react";
+import {
+  Biohazard,
+  Eye,
+  ShieldAlert,
+  Swords,
+  X,
+  XCircle,
+} from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
 import {
   buildMapVisualStyle,
@@ -198,10 +205,6 @@ function getRespawnIntervalSeconds(boss?: WorldBossSummary | null) {
   );
 }
 
-function formatRespawnInterval(seconds: number) {
-  return seconds >= LONG_RESPAWN_SECONDS ? "12h" : "6h";
-}
-
 function formatDifficultyLabel(difficulty: string) {
   const labels: Record<string, string> = {
     CONTENCAO: "Contenção",
@@ -243,13 +246,10 @@ function getEventTimerInfo(
   if (!event) return { label: "Status", seconds: 0, text: "Indisponível" };
 
   if (WORLD_BOSSES_TEST_UNLOCKED && !status?.participant) {
-    const interval = formatRespawnInterval(
-      getRespawnIntervalSeconds(event.worldBoss),
-    );
     return {
       label: "Status",
       seconds: 0,
-      text: `Disponível agora · reaparece a cada ${interval}`,
+      text: "Disponível agora",
     };
   }
 
@@ -747,21 +747,19 @@ export function WorldBossesPage() {
                           .filter(Boolean)
                           .join(" ")}
                       >
-                        <button
-                          type="button"
-                          className="world-bosses-boss-card__details"
-                          onClick={() => setDetailsEventId(bossEvent.id)}
-                        >
-                          <div
-                            className="world-bosses-boss-card__art"
-                            aria-hidden="true"
-                          >
-                            <span className="world-bosses-boss-card__tier">
-                              Tier {cardBoss.tier}
-                            </span>
-                            <span className="world-bosses-boss-card__status">
-                              {getCardStatusLabel(bossStatus)}
-                            </span>
+                        <div className="world-bosses-boss-card__details">
+                          <div className="world-bosses-boss-card__art">
+                            <div className="world-bosses-boss-card__badges">
+                              <span className="world-bosses-boss-card__tier">
+                                Tier {cardBoss.tier}
+                              </span>
+                              <span className="world-bosses-boss-card__status">
+                                {getCardStatusLabel(bossStatus)}
+                              </span>
+                              <span className="world-bosses-boss-card__level">
+                                Level {getBossLevel(cardBoss)}
+                              </span>
+                            </div>
                             {cardBoss.imageUrl ? (
                               <img src={cardBoss.imageUrl} alt="" />
                             ) : (
@@ -769,43 +767,40 @@ export function WorldBossesPage() {
                                 <Biohazard size={42} />
                               </span>
                             )}
-                            <span className="world-bosses-boss-card__summary">
-                              <span>{cardTimer.text}</span>
-                              <span>Level {getBossLevel(cardBoss)}</span>
-                              <span>
-                                A cada{" "}
-                                {formatRespawnInterval(
-                                  getRespawnIntervalSeconds(cardBoss),
-                                )}
-                              </span>
-                              <span>{cardLobbyCount} no lobby</span>
-                            </span>
                           </div>
                           <div className="world-bosses-boss-card__content">
-                            <span className="world-bosses-boss-card__header">
-                              <span className="world-bosses-boss-card__name">
-                                {cardBoss.name}
-                              </span>
-                            </span>
-                            <span className="world-bosses-boss-card__meta">
-                              {cardTimer.text}
-                            </span>
-                            <span className="world-bosses-boss-card__cta">
-                              Ver detalhes
-                              <ArrowRight size={14} />
-                            </span>
+                            <h3 className="world-bosses-boss-card__name">
+                              {cardBoss.name}
+                            </h3>
+                            <div className="world-bosses-boss-card__meta">
+                              <span>{cardTimer.text}</span>
+                              {cardLobbyCount > 0 ? (
+                                <small>{cardLobbyCount} no lobby</small>
+                              ) : null}
+                            </div>
+                            <div className="world-bosses-boss-card__actions">
+                              <button
+                                type="button"
+                                className="world-bosses-boss-card__secondary-action"
+                                onClick={() => setDetailsEventId(bossEvent.id)}
+                              >
+                                <Eye size={15} />
+                                Ver detalhes
+                              </button>
+                              {cardCanJoin ? (
+                                <button
+                                  type="button"
+                                  className="incursions-primary-button world-bosses-boss-card__primary-action"
+                                  onClick={() => void handleJoin(bossEvent.id)}
+                                  disabled={isBusy}
+                                >
+                                  <Swords size={15} />
+                                  Entrar no combate
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
-                        </button>
-                        {cardCanJoin ? (
-                          <button
-                            type="button"
-                            className="incursions-primary-button world-bosses-boss-card__quick-action"
-                            onClick={() => void handleJoin(bossEvent.id)}
-                            disabled={isBusy}
-                          >
-                            Entrar no combate
-                          </button>
-                        ) : null}
+                        </div>
                       </article>
                     );
                   })}
@@ -1045,14 +1040,31 @@ export function WorldBossesPage() {
                   <strong>Não é possível entrar após o combate começar</strong>
                 </span>
               </div>
-              <div className="world-bosses-modal__rewards">
-                {detailsBoss.rewards.map((reward) => (
-                  <span key={reward.id}>
-                    {getRewardIcon(reward)}{" "}
-                    {reward.item?.name ?? reward.rewardType} ·{" "}
-                    {getQuantityLabel(reward)}
-                  </span>
-                ))}
+              <div className="world-bosses-modal__rewards-section">
+                <div className="world-bosses-modal__section-head">
+                  <span>Recompensas</span>
+                  <h3>Drops possíveis</h3>
+                </div>
+                <div className="world-bosses-modal__rewards">
+                  {detailsBoss.rewards.map((reward) => {
+                    const rewardName = reward.item?.name ?? reward.rewardType;
+
+                    return (
+                      <div className="world-bosses-reward-card" key={reward.id}>
+                        <span
+                          className="world-bosses-reward-card__icon"
+                          aria-hidden="true"
+                        >
+                          {getRewardIcon(reward)}
+                        </span>
+                        <span className="world-bosses-reward-card__body">
+                          <strong>{rewardName}</strong>
+                          <small>{getQuantityLabel(reward)}</small>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
               <div className="world-bosses-actions">
                 <button
@@ -1061,6 +1073,7 @@ export function WorldBossesPage() {
                   onClick={() => void handleJoin(detailsEvent.id)}
                   disabled={isBusy || Boolean(detailsParticipant)}
                 >
+                  {!detailsParticipant ? <Swords size={15} /> : null}
                   {detailsParticipant
                     ? "Já está no lobby"
                     : "Entrar no combate"}
