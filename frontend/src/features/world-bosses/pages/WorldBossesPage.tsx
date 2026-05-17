@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, Biohazard, ShieldAlert, XCircle } from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
-import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
+import {
+  buildMapVisualStyle,
+  getMapImageByName,
+} from "../../auto-combat/assets/auto-combat-map-assets";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
+import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
@@ -11,7 +16,7 @@ import {
   type WorldBossSocket,
 } from "../../../services/websocket/socketClient";
 import {
-  getActiveWorldBoss,
+  getAvailableWorldBosses,
   joinWorldBoss,
   leaveWorldBoss,
 } from "../api/world-bosses.api";
@@ -20,7 +25,15 @@ import type {
   WorldBossRewardPreview,
   WorldBossStatusResponse,
 } from "../types/world-bosses.types";
+import "../../dashboard/dashboard.css";
+import "../../gathering/styles/gathering.css";
+import "../../incursions/styles/incursions.css";
 import "../styles/world-bosses.css";
+
+const ACTIVE_PANEL_STATUSES = new Set<WorldBossEventStatus>([
+  "LOBBY_OPEN",
+  "ACTIVE",
+]);
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("pt-BR").format(Math.max(0, Math.floor(value)));
@@ -90,6 +103,31 @@ function getCompactStatusLabel(status: WorldBossEventStatus) {
   return labels[status];
 }
 
+function getCardStatusLabel(status: WorldBossStatusResponse) {
+  const event = status.event;
+  if (!event) return "Indisponível";
+  if (status.participant && event.status === "LOBBY_OPEN") return "No lobby";
+  if (status.participant && event.status === "ACTIVE") return "Em batalha";
+  if (event.status === "LOBBY_OPEN" && !status.eligible?.canJoin)
+    return "Bloqueado";
+  return getCompactStatusLabel(event.status);
+}
+
+function getCardStatusTone(status: WorldBossStatusResponse) {
+  const event = status.event;
+  if (!event) return "locked";
+  if (status.participant && event.status === "ACTIVE") return "battle";
+  if (status.participant && event.status === "LOBBY_OPEN") return "lobby";
+  if (event.status === "LOBBY_OPEN" && status.eligible?.canJoin)
+    return "available";
+  if (event.status === "ACTIVE") return "battle";
+  if (event.status === "DEFEATED" || event.status === "REWARDED")
+    return "completed";
+  if (event.status === "EXPIRED" || event.status === "CANCELLED")
+    return "locked";
+  return "scheduled";
+}
+
 function getRewardIcon(reward: WorldBossRewardPreview) {
   if (reward.rewardType === "GOLD") return "◉";
   if (reward.rewardType === "XP") return "✦";
@@ -102,6 +140,41 @@ function getQuantityLabel(reward: WorldBossRewardPreview) {
   return reward.minQuantity === reward.maxQuantity
     ? formatNumber(reward.minQuantity)
     : `${formatNumber(reward.minQuantity)}–${formatNumber(reward.maxQuantity)}`;
+}
+
+function formatMapLevelRange(
+  map?: { minLevel?: number | null; maxLevel?: number | null } | null,
+): string | null {
+  const minLevel = Number(map?.minLevel);
+  const maxLevel = Number(map?.maxLevel);
+  const hasMinLevel = Number.isFinite(minLevel) && minLevel > 0;
+  const hasMaxLevel = Number.isFinite(maxLevel) && maxLevel > 0;
+
+  if (hasMinLevel && hasMaxLevel) return `Nv. ${minLevel}–${maxLevel}`;
+  if (hasMinLevel) return `A partir do Nv. ${minLevel}`;
+  if (hasMaxLevel) return `Até Nv. ${maxLevel}`;
+
+  return null;
+}
+
+function getTierRarity(tier?: number | null): string {
+  const safeTier = Number(tier);
+
+  if (!Number.isFinite(safeTier)) return "common";
+  if (safeTier >= 9) return "legendary";
+  if (safeTier >= 7) return "epic";
+  if (safeTier >= 5) return "rare";
+  if (safeTier >= 3) return "uncommon";
+
+  return "common";
+}
+
+function getMapTierClassName(tier?: number | null): string {
+  return `gathering-map-tier--${getTierRarity(tier)}`;
+}
+
+function getWorldBossTierClassName(tier?: number | null): string {
+  return `world-bosses-tier--${getTierRarity(tier)}`;
 }
 
 function getEventTimerLabel(eventStatus: WorldBossEventStatus) {
@@ -119,17 +192,46 @@ function getEventRemainingSeconds(status: WorldBossStatusResponse | null) {
   return event.remainingSecondsToEnd ?? event.remainingSeconds;
 }
 
-function applyRealtimeStatus(
+function mergeWorldBossStatus(
   previous: WorldBossStatusResponse | null,
   next: WorldBossStatusResponse,
 ) {
   if (!next.event) return previous;
-  if (previous?.event && previous.event.id !== next.event.id) return previous;
   return {
     ...next,
-    participant: next.participant ?? previous?.participant ?? null,
     eligible: next.eligible ?? previous?.eligible,
   };
+}
+
+function upsertWorldBossStatus(
+  previous: WorldBossStatusResponse[],
+  next: WorldBossStatusResponse,
+) {
+  if (!next.event) return previous;
+  let wasUpdated = false;
+  const updated = previous.map((item) => {
+    if (item.event?.id !== next.event?.id) return item;
+    wasUpdated = true;
+    return mergeWorldBossStatus(item, next) ?? item;
+  });
+  return wasUpdated ? updated : [...previous, next];
+}
+
+function getPanelStatus(statuses: WorldBossStatusResponse[]) {
+  const joined = statuses.find(
+    (status) =>
+      status.event &&
+      status.participant &&
+      status.event.status !== "CANCELLED" &&
+      status.event.status !== "REWARDED",
+  );
+  if (joined) return joined;
+  return (
+    statuses.find(
+      (status) =>
+        status.event && ACTIVE_PANEL_STATUSES.has(status.event.status),
+    ) ?? null
+  );
 }
 
 export function WorldBossesPage() {
@@ -137,8 +239,10 @@ export function WorldBossesPage() {
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
-  const [status, setStatus] = useState<WorldBossStatusResponse | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [bossStatuses, setBossStatuses] = useState<WorldBossStatusResponse[]>(
+    [],
+  );
+  const [detailsEventId, setDetailsEventId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
@@ -149,13 +253,13 @@ export function WorldBossesPage() {
 
     async function load() {
       try {
-        const [overviewResponse, bossResponse] = await Promise.all([
+        const [overviewResponse, bossesResponse] = await Promise.all([
           getCharacterOverview(characterId!),
-          getActiveWorldBoss(characterId!),
+          getAvailableWorldBosses(characterId!),
         ]);
         if (disposed) return;
         setOverview(overviewResponse);
-        setStatus(bossResponse);
+        setBossStatuses(bossesResponse.events);
         setError(null);
       } catch (err) {
         if (disposed) return;
@@ -177,13 +281,24 @@ export function WorldBossesPage() {
     };
   }, [characterId]);
 
+  const realtimeEventIdsKey = useMemo(
+    () =>
+      bossStatuses
+        .map((status) => status.event?.id)
+        .filter((eventId): eventId is string => Boolean(eventId))
+        .sort()
+        .join("|"),
+    [bossStatuses],
+  );
+
   useEffect(() => {
-    const eventId = status?.event?.id;
-    if (!eventId) return;
+    if (!realtimeEventIdsKey) return;
+    const eventIds = realtimeEventIdsKey.split("|").filter(Boolean);
+    if (eventIds.length === 0) return;
 
     const socket: WorldBossSocket = connectWorldBossSocket();
     const update = (payload: WorldBossStatusResponse) => {
-      setStatus((current) => applyRealtimeStatus(current, payload));
+      setBossStatuses((current) => upsertWorldBossStatus(current, payload));
     };
     const fail = (payload: { message?: string }) => {
       setError(payload.message ?? "Falha no WebSocket da Ameaça Global.");
@@ -203,10 +318,14 @@ export function WorldBossesPage() {
     socket.on("worldBoss:error", fail);
 
     if (!socket.connected) socket.connect();
-    socket.emit("worldBoss:join", { eventId });
+    eventIds.forEach((eventId) => {
+      socket.emit("worldBoss:join", { eventId });
+    });
 
     return () => {
-      socket.emit("worldBoss:leave", { eventId });
+      eventIds.forEach((eventId) => {
+        socket.emit("worldBoss:leave", { eventId });
+      });
       socket.off("worldBoss:lobbyOpened", update);
       socket.off("worldBoss:joinedLobby", update);
       socket.off("worldBoss:leftLobby", update);
@@ -220,7 +339,23 @@ export function WorldBossesPage() {
       socket.off("worldBoss:left", update);
       socket.off("worldBoss:error", fail);
     };
-  }, [status?.event?.id]);
+  }, [realtimeEventIdsKey]);
+
+  useEffect(() => {
+    if (!detailsEventId) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDetailsEventId(null);
+    };
+
+    document.body.classList.add("world-bosses-modal-open");
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.classList.remove("world-bosses-modal-open");
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [detailsEventId]);
 
   const character = useMemo(
     () => (overview ? buildCharacterViewModel(overview) : null),
@@ -229,14 +364,13 @@ export function WorldBossesPage() {
 
   if (!characterId) return <Navigate to="/characters" replace />;
 
-  async function handleJoin(eventId?: string) {
-    const targetEventId = eventId ?? status?.event?.id;
-    if (!characterId || !targetEventId) return;
+  async function handleJoin(eventId: string) {
+    if (!characterId) return;
     setIsBusy(true);
     try {
-      const next = await joinWorldBoss(characterId, targetEventId);
-      setStatus(next);
-      setSelectedEventId(null);
+      const next = await joinWorldBoss(characterId, eventId);
+      setBossStatuses((current) => upsertWorldBossStatus(current, next));
+      setDetailsEventId(null);
       setError(null);
     } catch (err) {
       setError(
@@ -249,13 +383,13 @@ export function WorldBossesPage() {
     }
   }
 
-  async function handleLeave() {
-    if (!characterId || !status?.event) return;
+  async function handleLeave(eventId: string) {
+    if (!characterId) return;
     setIsBusy(true);
     try {
-      const next = await leaveWorldBoss(characterId, status.event.id);
-      setStatus(next);
-      setSelectedEventId(null);
+      const next = await leaveWorldBoss(characterId, eventId);
+      setBossStatuses((current) => upsertWorldBossStatus(current, next));
+      setDetailsEventId(null);
       setError(null);
     } catch (err) {
       setError(
@@ -268,338 +402,420 @@ export function WorldBossesPage() {
 
   if (!character) {
     return (
-      <main className="world-bosses-loading">
+      <main className="incursions-page incursions-page--loading world-bosses-loading">
         Carregando Ameaças Globais...
       </main>
     );
   }
 
-  const event = status?.event ?? null;
-  const boss = event?.worldBoss ?? null;
-  const participant = status?.participant ?? null;
-  const currentMap = character.currentMap ?? character.map ?? boss?.map ?? null;
-  const canOpenLobby = Boolean(event && boss && status?.eligible?.canJoin);
-  const canJoin = Boolean(canOpenLobby && !participant);
-  const isJoined = Boolean(participant);
-  const isBattleActive = event?.status === "ACTIVE";
-  const isLobbyOpen = event?.status === "LOBBY_OPEN";
-  const lobbyCount = event?.lobbyCount ?? event?.participantCount ?? 0;
-  const bossCards = event && boss ? [event] : [];
-  const modalStatus = selectedEventId === event?.id ? status : null;
-  const modalEvent = modalStatus?.event ?? null;
-  const modalBoss = modalEvent?.worldBoss ?? null;
-  const currentTimerSeconds = getEventRemainingSeconds(status);
+  const panelStatus = getPanelStatus(bossStatuses);
+  const panelEvent = panelStatus?.event ?? null;
+  const panelBoss = panelEvent?.worldBoss ?? null;
+  const panelTierClassName = getWorldBossTierClassName(panelBoss?.tier);
+  const panelParticipant = panelStatus?.participant ?? null;
+  const currentMap =
+    character.currentMap ??
+    character.map ??
+    bossStatuses[0]?.event?.worldBoss.map ??
+    null;
+  const currentMapName = currentMap?.name ?? "Área de contenção global";
+  const currentMapImage = getMapImageByName(currentMapName);
+  const currentMapVisualStyle = buildMapVisualStyle(currentMapImage);
+  const currentMapTierClassName = getMapTierClassName(currentMap?.tier);
+  const currentMapLevelRange = formatMapLevelRange(currentMap);
+  const canJoinPanel = Boolean(
+    panelStatus?.eligible?.canJoin && !panelParticipant && panelEvent,
+  );
+  const isJoinedPanel = Boolean(panelParticipant);
+  const isBattleActive = panelEvent?.status === "ACTIVE";
+  const isLobbyOpen = panelEvent?.status === "LOBBY_OPEN";
+  const lobbyCount =
+    panelEvent?.lobbyCount ?? panelEvent?.participantCount ?? 0;
+  const panelTimerSeconds = getEventRemainingSeconds(panelStatus ?? null);
+  const detailsStatus = detailsEventId
+    ? (bossStatuses.find((status) => status.event?.id === detailsEventId) ??
+      null)
+    : null;
+  const detailsEvent = detailsStatus?.event ?? null;
+  const detailsBoss = detailsEvent?.worldBoss ?? null;
+  const detailsParticipant = detailsStatus?.participant ?? null;
+  const detailsTimerSeconds = getEventRemainingSeconds(detailsStatus);
+  const detailsTierClassName = getWorldBossTierClassName(detailsBoss?.tier);
+  const bossCards = bossStatuses.filter((status) => status.event);
 
   return (
     <DashboardLayout character={character} hideHero>
-      <main className="world-bosses-page">
-        <section className="world-bosses-hero">
+      <main className="incursions-page gathering-page--origin world-bosses-page">
+        <section className="incursions-hero world-bosses-hero">
           <div>
-            <span className="world-bosses-eyebrow">
-              Alerta de contenção coletiva
+            <span className="incursions-hero__eyebrow">
+              Evento global do mapa atual
             </span>
             <h1>Ameaças Globais</h1>
             <p>
-              Entre no lobby quando uma ameaça do mapa atual for detectada. Ao
-              fim da contagem, todos os sobreviventes inscritos iniciam a
-              batalha juntos e compartilham o progresso em tempo real.
+              Enfrente ameaças globais, entre no lobby e acompanhe a contenção
+              coletiva em tempo real.
             </p>
           </div>
+        </section>
+
+        {error ? (
+          <div className="incursions-alert incursions-alert--error world-bosses-alert">
+            {error}
+          </div>
+        ) : null}
+
+        <section
+          className={[
+            "gathering-origin-map-context",
+            "gathering-origin-map-context--standalone",
+            "world-bosses-map-context",
+            currentMapTierClassName,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          aria-label={`Mapa atual: ${currentMapName}`}
+        >
           <div
-            className="world-bosses-hero__signal"
-            aria-label="Sinal de alerta ativo"
+            className="gathering-origin-map-context__media"
+            style={currentMapVisualStyle}
           >
-            <i />
-            <span>Rádio de contenção</span>
+            {!currentMapImage ? (
+              <span aria-hidden="true">
+                {currentMapName.slice(0, 2).toUpperCase()}
+              </span>
+            ) : null}
           </div>
-        </section>
-
-        {error ? <div className="world-bosses-alert">{error}</div> : null}
-
-        <section className="world-bosses-map-card">
-          <div className="world-bosses-map-card__image" aria-hidden="true">
-            ▧
-          </div>
-          <div>
-            <span>Mapa atual</span>
-            <h2>{currentMap?.name ?? "Zona de ameaça global"}</h2>
-            <p>
-              Tier {currentMap?.tier ?? boss?.tier ?? "—"} • Níveis{" "}
-              {currentMap?.minLevel ?? boss?.minLevel ?? "—"}–
-              {currentMap?.maxLevel ?? boss?.maxLevel ?? "—"}
-            </p>
-          </div>
-        </section>
-
-        <section className="world-bosses-premium-card">
-          <div>
-            <span>Benefícios premium</span>
-            <h2>Resposta prioritária de contenção</h2>
-            <p>
-              Assinantes recebem alertas avançados, bônus de preparação e mais
-              clareza sobre recompensas sem alterar a dificuldade coletiva.
-            </p>
-          </div>
-          <button type="button" disabled>
-            Em breve
-          </button>
-        </section>
-
-        <section className="world-bosses-main-grid">
-          <div className="world-bosses-list-panel">
-            <header className="world-bosses-section-head">
-              <div>
-                <span>Ameaças detectadas</span>
-                <h2>World Bosses do mapa</h2>
+          <div className="gathering-origin-map-context__body">
+            <span className="gathering-origin-map-context__eyebrow">
+              Mapa atual
+            </span>
+            <div className="gathering-origin-map-context__title-row">
+              <h2>{currentMapName}</h2>
+              <div className="gathering-origin-map-context__chips">
+                {currentMap?.tier ? (
+                  <span className="gathering-origin-map-context__chip gathering-origin-map-context__chip--tier">
+                    Tier {currentMap.tier}
+                  </span>
+                ) : null}
+                {currentMapLevelRange ? (
+                  <span className="gathering-origin-map-context__chip gathering-origin-map-context__chip--level">
+                    {currentMapLevelRange}
+                  </span>
+                ) : null}
               </div>
-              {event ? (
-                <small>Sala realtime: world-boss:{event.id}</small>
-              ) : null}
-            </header>
+            </div>
+          </div>
+        </section>
 
-            {isLoading ? (
-              <section className="world-bosses-card world-bosses-empty">
-                Sincronizando sinais da zona...
-              </section>
-            ) : bossCards.length === 0 ? (
-              <section className="world-bosses-card world-bosses-empty">
-                <strong>Nenhuma ameaça global disponível neste mapa.</strong>
-                <span>Aguarde o próximo alerta de contenção.</span>
-              </section>
-            ) : (
-              <div className="world-bosses-list">
-                {bossCards.map((bossEvent) => {
-                  const cardBoss = bossEvent.worldBoss;
-                  const cardCanJoin = Boolean(
-                    status?.eligible?.canJoin && !participant,
-                  );
-                  const cardIsLocked =
-                    !status?.eligible?.canJoin && !participant;
+        <aside className="gathering-origin-premium-card incursions-premium-card world-bosses-premium-card">
+          <div
+            className="gathering-origin-premium-card__badge"
+            aria-hidden="true"
+          >
+            i
+          </div>
+          <div>
+            <h2>Benefícios premium</h2>
+            <p>
+              Alertas avançados, leitura compacta do lobby e preparação visual
+              para eventos de contenção.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="gathering-origin-premium-card__button"
+          >
+            Ver benefícios
+          </button>
+        </aside>
 
-                  return (
-                    <article
-                      key={bossEvent.id}
-                      className={`world-bosses-card world-bosses-boss-card ${cardIsLocked ? "world-bosses-boss-card--locked" : ""}`}
-                    >
-                      <button
-                        type="button"
-                        className="world-bosses-boss-card__button"
-                        onClick={() => setSelectedEventId(bossEvent.id)}
+        <section
+          className="incursions-content-grid world-bosses-content-grid"
+          aria-label="World Bosses e lobby atual"
+        >
+          <main className="incursions-main-column world-bosses-main-column">
+            <section className="gathering-card gathering-card--compact incursions-list-panel world-bosses-list-panel">
+              <header className="incursions-list-panel__header">
+                <div className="gathering-card__title-group incursions-list-panel__title-group">
+                  <span className="gathering-card__eyebrow">
+                    Ameaças detectadas
+                  </span>
+                  <h2>World Bosses deste mapa</h2>
+                </div>
+              </header>
+
+              {isLoading ? (
+                <div className="incursions-empty incursions-empty--inline world-bosses-empty">
+                  <span className="gathering-loading__spinner" />
+                  <p>Sincronizando sinais da zona...</p>
+                </div>
+              ) : bossCards.length === 0 ? (
+                <div className="incursions-empty incursions-empty--inline world-bosses-empty">
+                  <ShieldAlert size={24} />
+                  <strong>Nenhuma ameaça global disponível neste mapa.</strong>
+                  <p>Aguarde o próximo alerta de contenção.</p>
+                </div>
+              ) : (
+                <div className="world-bosses-list">
+                  {bossCards.map((bossStatus) => {
+                    const bossEvent = bossStatus.event!;
+                    const cardBoss = bossEvent.worldBoss;
+                    const cardCanJoin = Boolean(
+                      bossStatus.eligible?.canJoin && !bossStatus.participant,
+                    );
+                    const cardIsLocked =
+                      !bossStatus.eligible?.canJoin && !bossStatus.participant;
+                    const cardLobbyCount =
+                      bossEvent.lobbyCount ?? bossEvent.participantCount ?? 0;
+                    const cardTimerSeconds =
+                      getEventRemainingSeconds(bossStatus);
+                    const cardTone = getCardStatusTone(bossStatus);
+                    const bossTierClassName = getWorldBossTierClassName(
+                      cardBoss.tier,
+                    );
+
+                    return (
+                      <article
+                        key={bossEvent.id}
+                        className={[
+                          "world-bosses-boss-card",
+                          bossTierClassName,
+                          `world-bosses-boss-card--${cardTone}`,
+                          cardIsLocked ? "world-bosses-boss-card--locked" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
                       >
-                        <div
-                          className="world-bosses-boss-card__portrait"
-                          aria-hidden="true"
-                        >
-                          {cardBoss.imageUrl ? (
-                            <img src={cardBoss.imageUrl} alt="" />
-                          ) : (
-                            <span>☣</span>
-                          )}
-                        </div>
-                        <div className="world-bosses-boss-card__content">
-                          <div className="world-bosses-boss-card__topline">
-                            <span>Tier {cardBoss.tier}</span>
-                            <strong>
-                              {getCompactStatusLabel(bossEvent.status)}
-                            </strong>
-                          </div>
-                          <h3>{cardBoss.name}</h3>
-                          <dl>
-                            <div>
-                              <dt>{getEventTimerLabel(bossEvent.status)}</dt>
-                              <dd>{formatRemaining(currentTimerSeconds)}</dd>
-                            </div>
-                            <div>
-                              <dt>Requisito</dt>
-                              <dd>Nível {cardBoss.minLevel}+</dd>
-                            </div>
-                            <div>
-                              <dt>Lobby</dt>
-                              <dd>{lobbyCount} sobreviventes</dd>
-                            </div>
-                          </dl>
-                          <span className="world-bosses-boss-card__cta">
-                            Ver detalhes
-                          </span>
-                        </div>
-                      </button>
-                      {cardCanJoin ? (
                         <button
                           type="button"
-                          className="world-bosses-boss-card__quick-action"
-                          onClick={() => setSelectedEventId(bossEvent.id)}
+                          className="world-bosses-boss-card__button"
+                          onClick={() => setDetailsEventId(bossEvent.id)}
+                        >
+                          <div
+                            className="world-bosses-boss-card__portrait"
+                            aria-hidden="true"
+                          >
+                            {cardBoss.imageUrl ? (
+                              <img src={cardBoss.imageUrl} alt="" />
+                            ) : (
+                              <span>
+                                <Biohazard size={30} />
+                              </span>
+                            )}
+                          </div>
+                          <div className="world-bosses-boss-card__content">
+                            <div className="world-bosses-boss-card__topline">
+                              <span>Tier {cardBoss.tier}</span>
+                              <strong>{getCardStatusLabel(bossStatus)}</strong>
+                            </div>
+                            <h3>{cardBoss.name}</h3>
+                            <dl>
+                              <div>
+                                <dt>{getEventTimerLabel(bossEvent.status)}</dt>
+                                <dd>{formatRemaining(cardTimerSeconds)}</dd>
+                              </div>
+                              <div>
+                                <dt>Requisito</dt>
+                                <dd>Nível {cardBoss.minLevel}+</dd>
+                              </div>
+                              <div>
+                                <dt>Lobby</dt>
+                                <dd>{cardLobbyCount} sobreviventes</dd>
+                              </div>
+                            </dl>
+                            <span className="world-bosses-boss-card__cta">
+                              Ver detalhes
+                              <ArrowRight size={14} />
+                            </span>
+                          </div>
+                        </button>
+                        {cardCanJoin ? (
+                          <button
+                            type="button"
+                            className="incursions-primary-button world-bosses-boss-card__quick-action"
+                            onClick={() => void handleJoin(bossEvent.id)}
+                            disabled={isBusy}
+                          >
+                            Entrar no lobby
+                          </button>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </main>
+
+          <aside className="incursions-side-column world-bosses-side-column">
+            <section className="gathering-origin-side-section gathering-origin-side-section--current">
+              <div className="gathering-origin-section-divider">
+                <span>Lobby / batalha</span>
+              </div>
+
+              <div
+                className={[
+                  "gathering-card",
+                  "gathering-card--active",
+                  "incursions-current-card",
+                  "world-bosses-current-card",
+                  panelTierClassName,
+                ].join(" ")}
+              >
+                {!panelEvent || !panelBoss ? (
+                  <div className="world-bosses-activity-empty">
+                    <ShieldAlert size={24} />
+                    <strong>Nenhum lobby ativo</strong>
+                    <p>Escolha um World Boss para entrar no lobby.</p>
+                  </div>
+                ) : (
+                  <div className="world-bosses-activity-content">
+                    <div className="world-bosses-activity-boss">
+                      <div
+                        className="world-bosses-activity-boss__icon"
+                        aria-hidden="true"
+                      >
+                        {panelBoss.imageUrl ? (
+                          <img src={panelBoss.imageUrl} alt="" />
+                        ) : (
+                          <Biohazard size={24} />
+                        )}
+                      </div>
+                      <div>
+                        <span>{panelBoss.map.name}</span>
+                        <h3>{panelBoss.name}</h3>
+                        <p>{getStatusLabel(panelEvent.status)}</p>
+                      </div>
+                    </div>
+
+                    <div className="world-bosses-state">
+                      {isBattleActive ? <i aria-hidden="true" /> : null}
+                      <strong>
+                        {isLobbyOpen
+                          ? "Aguardando no lobby"
+                          : getStatusLabel(panelEvent.status)}
+                      </strong>
+                    </div>
+
+                    <div className="world-bosses-hp">
+                      <div className="world-bosses-hp__top">
+                        <span>HP global</span>
+                        <strong>
+                          {formatNumber(panelEvent.currentHp)} /{" "}
+                          {formatNumber(panelEvent.maxHp)}
+                        </strong>
+                      </div>
+                      <div className="world-bosses-hp__track">
+                        <i
+                          style={{
+                            width: `${Math.max(
+                              0,
+                              Math.min(100, panelEvent.hpPercent),
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                      <small>
+                        {Math.floor(panelEvent.progressPercent)}% de progresso
+                        coletivo
+                      </small>
+                    </div>
+
+                    <div className="world-bosses-activity-metrics">
+                      <span>
+                        <small>{getEventTimerLabel(panelEvent.status)}</small>
+                        <strong>{formatRemaining(panelTimerSeconds)}</strong>
+                      </span>
+                      <span>
+                        <small>
+                          {isLobbyOpen ? "No lobby" : "Participantes"}
+                        </small>
+                        <strong>{lobbyCount}</strong>
+                      </span>
+                      <span>
+                        <small>Seu dano</small>
+                        <strong>
+                          {formatNumber(panelParticipant?.damageDealt ?? 0)}
+                        </strong>
+                      </span>
+                      <span>
+                        <small>Sua contribuição</small>
+                        <strong>
+                          {(panelParticipant?.contributionPercent ?? 0).toFixed(
+                            2,
+                          )}
+                          %
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className="world-bosses-actions">
+                      {canJoinPanel ? (
+                        <button
+                          type="button"
+                          className="incursions-primary-button"
+                          onClick={() => void handleJoin(panelEvent.id)}
                           disabled={isBusy}
                         >
-                          Join Lobby
+                          Entrar no lobby
                         </button>
                       ) : null}
-                    </article>
-                  );
-                })}
+                      {isJoinedPanel &&
+                      (panelEvent.status === "LOBBY_OPEN" ||
+                        panelEvent.status === "ACTIVE") ? (
+                        <button
+                          type="button"
+                          className="incursions-danger-button"
+                          onClick={() => void handleLeave(panelEvent.id)}
+                          disabled={isBusy}
+                        >
+                          <XCircle size={15} />
+                          Sair da sala
+                        </button>
+                      ) : null}
+                      {!canJoinPanel && !isJoinedPanel ? (
+                        <span className="world-bosses-eligible world-bosses-eligible--pending">
+                          {panelStatus?.eligible?.reason ?? "Indisponível"}
+                        </span>
+                      ) : null}
+                      {panelParticipant?.eligibleForReward ? (
+                        <span className="world-bosses-eligible">
+                          Participação mínima atingida
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-
-          <aside className="world-bosses-activity-panel">
-            <header>
-              <span>Lobby / batalha</span>
-              <h2>Status da contenção</h2>
-            </header>
-
-            {!event || !boss ? (
-              <div className="world-bosses-activity-empty">
-                <strong>Nenhum lobby ativo</strong>
-                <p>Escolha um World Boss para entrar no lobby.</p>
-              </div>
-            ) : (
-              <div className="world-bosses-activity-content">
-                <div className="world-bosses-activity-boss">
-                  <div
-                    className="world-bosses-activity-boss__icon"
-                    aria-hidden="true"
-                  >
-                    {boss.imageUrl ? <img src={boss.imageUrl} alt="" /> : "☣"}
-                  </div>
-                  <div>
-                    <span>{boss.map.name}</span>
-                    <h3>{boss.name}</h3>
-                    <p>{getStatusLabel(event.status)}</p>
-                  </div>
-                </div>
-
-                <div className="world-bosses-state">
-                  {isBattleActive ? <i aria-hidden="true" /> : null}
-                  <strong>
-                    {isLobbyOpen
-                      ? "Aguardando no lobby"
-                      : getStatusLabel(event.status)}
-                  </strong>
-                </div>
-
-                <div className="world-bosses-hp">
-                  <div className="world-bosses-hp__top">
-                    <span>HP global</span>
-                    <strong>
-                      {formatNumber(event.currentHp)} /{" "}
-                      {formatNumber(event.maxHp)}
-                    </strong>
-                  </div>
-                  <div className="world-bosses-hp__track">
-                    <i
-                      style={{
-                        width: `${Math.max(0, Math.min(100, event.hpPercent))}%`,
-                      }}
-                    />
-                  </div>
-                  <small>
-                    {Math.floor(event.progressPercent)}% de progresso coletivo
-                  </small>
-                </div>
-
-                <div className="world-bosses-activity-metrics">
-                  <span>
-                    <small>{getEventTimerLabel(event.status)}</small>
-                    <strong>{formatRemaining(currentTimerSeconds)}</strong>
-                  </span>
-                  <span>
-                    <small>{isLobbyOpen ? "No lobby" : "Participantes"}</small>
-                    <strong>{lobbyCount}</strong>
-                  </span>
-                  <span>
-                    <small>Seu dano</small>
-                    <strong>
-                      {formatNumber(participant?.damageDealt ?? 0)}
-                    </strong>
-                  </span>
-                  <span>
-                    <small>Sua contribuição</small>
-                    <strong>
-                      {(participant?.contributionPercent ?? 0).toFixed(2)}%
-                    </strong>
-                  </span>
-                </div>
-
-                <div className="world-bosses-actions">
-                  {canJoin ? (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedEventId(event.id)}
-                      disabled={isBusy}
-                    >
-                      Ver detalhes e entrar
-                    </button>
-                  ) : null}
-                  {isJoined &&
-                  (event.status === "LOBBY_OPEN" ||
-                    event.status === "ACTIVE") ? (
-                    <button
-                      type="button"
-                      className="world-bosses-actions__ghost"
-                      onClick={handleLeave}
-                      disabled={isBusy}
-                    >
-                      Sair da sala
-                    </button>
-                  ) : null}
-                  {!canOpenLobby && !isJoined ? (
-                    <span className="world-bosses-eligible world-bosses-eligible--pending">
-                      {status?.eligible?.reason ?? "Indisponível"}
-                    </span>
-                  ) : null}
-                  {participant?.eligibleForReward ? (
-                    <span className="world-bosses-eligible">
-                      Participação mínima atingida
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            )}
+            </section>
           </aside>
         </section>
 
-        {boss ? (
-          <section className="world-bosses-card world-bosses-rewards">
-            <div className="world-bosses-rewards__head">
-              <span>Loot de contenção</span>
-              <h2>Recompensas possíveis</h2>
-            </div>
-            <div className="world-bosses-rewards__grid">
-              {boss.rewards.map((reward) => (
-                <article
-                  key={reward.id}
-                  className={`world-bosses-reward world-bosses-reward--${(reward.rarity ?? reward.item?.rarity ?? "common").toLowerCase()}`}
-                >
-                  <div className="world-bosses-reward__icon" aria-hidden="true">
-                    {getRewardIcon(reward)}
-                  </div>
-                  <div>
-                    <strong>{reward.item?.name ?? reward.rewardType}</strong>
-                    <span>{getQuantityLabel(reward)}</span>
-                    <small>
-                      {reward.guaranteed
-                        ? "Garantido"
-                        : `${reward.chance}% de chance`}
-                      {reward.onlyIfDefeated ? " • só se derrotar" : ""}
-                    </small>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {modalEvent && modalBoss ? (
+        {detailsEvent && detailsBoss ? (
           <div
-            className="world-bosses-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="world-boss-lobby-title"
+            className="incursions-modal-backdrop world-bosses-modal"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setDetailsEventId(null);
+              }
+            }}
           >
-            <div className="world-bosses-modal__panel">
+            <section
+              className={[
+                "incursions-modal",
+                "world-bosses-modal__panel",
+                detailsTierClassName,
+              ].join(" ")}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="world-boss-lobby-title"
+            >
               <button
                 type="button"
                 className="world-bosses-modal__close"
-                onClick={() => setSelectedEventId(null)}
+                onClick={() => setDetailsEventId(null)}
                 aria-label="Fechar detalhes do World Boss"
               >
                 ×
@@ -609,40 +825,44 @@ export function WorldBossesPage() {
                   className="world-bosses-modal__portrait"
                   aria-hidden="true"
                 >
-                  {modalBoss.imageUrl ? (
-                    <img src={modalBoss.imageUrl} alt="" />
+                  {detailsBoss.imageUrl ? (
+                    <img src={detailsBoss.imageUrl} alt="" />
                   ) : (
-                    <span>☣</span>
+                    <span>
+                      <Biohazard size={34} />
+                    </span>
                   )}
                 </div>
                 <div>
-                  <span className="world-bosses-eyebrow">
+                  <span className="incursions-modal__eyebrow">
                     Detalhes do World Boss
                   </span>
-                  <h2 id="world-boss-lobby-title">{modalBoss.name}</h2>
-                  <p>{modalBoss.description}</p>
+                  <h2 id="world-boss-lobby-title">{detailsBoss.name}</h2>
+                  <p>{detailsBoss.description}</p>
                 </div>
               </div>
               <div className="world-bosses-modal__stats">
                 <span>
                   <small>Status</small>
-                  <strong>{getStatusLabel(modalEvent.status)}</strong>
+                  <strong>{getStatusLabel(detailsEvent.status)}</strong>
                 </span>
                 <span>
-                  <small>{getEventTimerLabel(modalEvent.status)}</small>
-                  <strong>{formatRemaining(currentTimerSeconds)}</strong>
+                  <small>{getEventTimerLabel(detailsEvent.status)}</small>
+                  <strong>{formatRemaining(detailsTimerSeconds)}</strong>
                 </span>
                 <span>
                   <small>Requisito</small>
-                  <strong>Nível {modalBoss.minLevel}+</strong>
+                  <strong>Nível {detailsBoss.minLevel}+</strong>
                 </span>
                 <span>
                   <small>Sobreviventes</small>
-                  <strong>{lobbyCount}</strong>
+                  <strong>
+                    {detailsEvent.lobbyCount ?? detailsEvent.participantCount}
+                  </strong>
                 </span>
                 <span>
                   <small>Dificuldade</small>
-                  <strong>{modalBoss.difficulty}</strong>
+                  <strong>{detailsBoss.difficulty}</strong>
                 </span>
                 <span>
                   <small>Regra</small>
@@ -650,32 +870,37 @@ export function WorldBossesPage() {
                 </span>
               </div>
               <div className="world-bosses-modal__rewards">
-                {modalBoss.rewards.slice(0, 4).map((reward) => (
+                {detailsBoss.rewards.map((reward) => (
                   <span key={reward.id}>
                     {getRewardIcon(reward)}{" "}
-                    {reward.item?.name ?? reward.rewardType}
+                    {reward.item?.name ?? reward.rewardType} ·{" "}
+                    {getQuantityLabel(reward)}
                   </span>
                 ))}
               </div>
               <div className="world-bosses-actions">
                 <button
+                  className="incursions-primary-button"
                   type="button"
-                  onClick={() => void handleJoin(modalEvent.id)}
+                  onClick={() => void handleJoin(detailsEvent.id)}
                   disabled={
-                    isBusy || modalEvent.status !== "LOBBY_OPEN" || isJoined
+                    isBusy ||
+                    detailsEvent.status !== "LOBBY_OPEN" ||
+                    Boolean(detailsParticipant) ||
+                    !detailsStatus?.eligible?.canJoin
                   }
                 >
-                  {isJoined ? "Já está no lobby" : "Entrar no lobby"}
+                  {detailsParticipant ? "Já está no lobby" : "Entrar no lobby"}
                 </button>
                 <button
                   type="button"
-                  className="world-bosses-actions__ghost"
-                  onClick={() => setSelectedEventId(null)}
+                  className="incursions-secondary-button"
+                  onClick={() => setDetailsEventId(null)}
                 >
                   Fechar
                 </button>
               </div>
-            </div>
+            </section>
           </div>
         ) : null}
       </main>

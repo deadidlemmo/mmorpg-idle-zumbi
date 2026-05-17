@@ -1,6 +1,9 @@
 import { apiClient } from "../../../services/api/apiClient";
 import { API_ENDPOINTS } from "../../../services/api/endpoints";
-import type { WorldBossStatusResponse } from "../types/world-bosses.types";
+import type {
+  WorldBossAvailableResponse,
+  WorldBossStatusResponse,
+} from "../types/world-bosses.types";
 
 export async function getWorldBossStatus(characterId: string) {
   const response = await apiClient.get<WorldBossStatusResponse>(
@@ -12,6 +15,13 @@ export async function getWorldBossStatus(characterId: string) {
 export async function getActiveWorldBoss(characterId: string) {
   const response = await apiClient.get<WorldBossStatusResponse>(
     API_ENDPOINTS.worldBosses.active(characterId),
+  );
+  return response.data;
+}
+
+export async function getAvailableWorldBosses(characterId: string) {
+  const response = await apiClient.get<WorldBossAvailableResponse>(
+    API_ENDPOINTS.worldBosses.available(characterId),
   );
   return response.data;
 }

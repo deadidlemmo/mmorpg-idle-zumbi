@@ -80,6 +80,87 @@ export class WorldBossesService {
     };
   }
 
+  async getAvailable(userId: string, characterId: string) {
+    const character = await this.getCharacterOrThrow(userId, characterId);
+
+    if (!character.mapId) {
+      return {
+        events: [],
+        message: 'Personagem sem mapa atual para Ameaças Globais.',
+      };
+    }
+
+    const now = new Date();
+    const events = await this.prisma.worldBossEvent.findMany({
+      where: {
+        mapId: character.mapId,
+        status: {
+          in: [
+            WorldBossEventStatus.SCHEDULED,
+            WorldBossEventStatus.LOBBY_OPEN,
+            WorldBossEventStatus.ACTIVE,
+            WorldBossEventStatus.DEFEATED,
+            WorldBossEventStatus.EXPIRED,
+          ],
+        },
+        endsAt: { gt: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
+      },
+      orderBy: [{ startsAt: 'asc' }, { worldBoss: { sortOrder: 'asc' } }],
+      include: eventInclude,
+    });
+
+    const statuses = await Promise.all(
+      events.map(async (event) => {
+        const availableEvent = await this.advanceEventState(event);
+        const participant = await this.prisma.worldBossParticipant.findUnique({
+          where: {
+            eventId_characterId: {
+              eventId: availableEvent.id,
+              characterId,
+            },
+          },
+          include: { rewards: { include: { item: true } } },
+        });
+        const activeParticipant = participant?.leftAt ? null : participant;
+
+        if (
+          activeParticipant &&
+          (availableEvent.status === WorldBossEventStatus.ACTIVE ||
+            availableEvent.status === WorldBossEventStatus.DEFEATED ||
+            availableEvent.status === WorldBossEventStatus.EXPIRED)
+        ) {
+          const resolved = await this.resolveEventAndContribution({
+            userId,
+            characterId,
+            eventId: availableEvent.id,
+          });
+
+          return {
+            ...this.formatStatus(
+              resolved.event,
+              resolved.participant,
+              new Date(),
+              resolved.rewards,
+            ),
+            eligible: this.getEligibility(character, resolved.event),
+          };
+        }
+
+        return {
+          ...this.formatStatus(availableEvent, activeParticipant, now),
+          eligible: this.getEligibility(character, availableEvent),
+        };
+      }),
+    );
+
+    return {
+      events: statuses,
+      message: statuses.length
+        ? null
+        : 'Nenhuma ameaça global ativa neste mapa.',
+    };
+  }
+
   async getStatus(userId: string, characterId: string) {
     const character = await this.getCharacterOrThrow(userId, characterId);
     const event = await this.findActiveEventForCharacter(character);
@@ -175,17 +256,20 @@ export class WorldBossesService {
       return { event: updatedEvent, participant };
     });
 
-    return this.formatStatus(
-      result.event,
-      result.participant,
-      now,
-      null,
-      'Você entrou na Ameaça Global.',
-    );
+    return {
+      ...this.formatStatus(
+        result.event,
+        result.participant,
+        now,
+        null,
+        'Você entrou na Ameaça Global.',
+      ),
+      eligible: this.getEligibility(character, result.event),
+    };
   }
 
   async leave(userId: string, dto: LeaveWorldBossDto) {
-    await this.getCharacterOrThrow(userId, dto.characterId);
+    const character = await this.getCharacterOrThrow(userId, dto.characterId);
     const resolved = await this.resolveEventAndContribution({
       userId,
       characterId: dto.characterId,
@@ -224,13 +308,16 @@ export class WorldBossesService {
       });
     });
 
-    return this.formatStatus(
-      result,
-      null,
-      now,
-      resolved.rewards,
-      'Você saiu da sala. Sua contribuição já registrada foi preservada.',
-    );
+    return {
+      ...this.formatStatus(
+        result,
+        null,
+        now,
+        resolved.rewards,
+        'Você saiu da sala. Sua contribuição já registrada foi preservada.',
+      ),
+      eligible: this.getEligibility(character, result),
+    };
   }
 
   async getRanking(userId: string, eventId: string) {

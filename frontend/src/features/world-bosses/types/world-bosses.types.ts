@@ -109,3 +109,8 @@ export interface WorldBossStatusResponse {
   rewardsGranted?: unknown[] | null;
   eligible?: { canJoin: boolean; reason?: string | null };
 }
+
+export interface WorldBossAvailableResponse {
+  message?: string | null;
+  events: WorldBossStatusResponse[];
+}

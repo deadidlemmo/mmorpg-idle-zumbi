@@ -22,6 +22,11 @@ export class WorldBossesController {
     private readonly worldBossesGateway: WorldBossesGateway,
   ) {}
 
+  @Get(':characterId/available')
+  getAvailable(@Req() request: any, @Param('characterId') characterId: string) {
+    return this.worldBossesService.getAvailable(request.user.id, characterId);
+  }
+
   @Get(':characterId/active')
   async getActive(
     @Req() request: any,

@@ -50,6 +50,8 @@ export const API_ENDPOINTS = {
   },
 
   worldBosses: {
+    available: (characterId: string) =>
+      `/world-bosses/${characterId}/available`,
     active: (characterId: string) => `/world-bosses/${characterId}/active`,
     status: (characterId: string) => `/world-bosses/${characterId}/status`,
     join: "/world-bosses/join",
