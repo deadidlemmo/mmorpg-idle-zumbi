@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 import { UsePipes, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -111,7 +112,32 @@ export class WorldBossesGateway {
   emitJoined(eventId: string, payload: unknown) {
     this.server
       .to(this.getEventRoom(eventId))
-      .emit('worldBoss:joined', payload);
+      .emit('worldBoss:joinedLobby', payload);
+    this.server
+      .to(this.getEventRoom(eventId))
+      .emit('worldBoss:lobbyUpdated', payload);
+  }
+
+  emitLeft(eventId: string, payload: unknown) {
+    this.server
+      .to(this.getEventRoom(eventId))
+      .emit('worldBoss:leftLobby', payload);
+    this.server
+      .to(this.getEventRoom(eventId))
+      .emit('worldBoss:lobbyUpdated', payload);
+    this.server.to(this.getEventRoom(eventId)).emit('worldBoss:left', payload);
+  }
+
+  emitBattleStarted(eventId: string, payload: unknown) {
+    this.server
+      .to(this.getEventRoom(eventId))
+      .emit('worldBoss:battleStarted', payload);
+  }
+
+  emitDamage(eventId: string, payload: unknown) {
+    this.server
+      .to(this.getEventRoom(eventId))
+      .emit('worldBoss:damage', payload);
   }
 
   emitDefeated(eventId: string, payload: unknown) {

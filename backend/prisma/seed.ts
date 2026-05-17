@@ -6,7 +6,13 @@ import type {
   Prisma,
   SubMap,
 } from '@prisma/client';
-import { ItemSlot, MaterialOrigin, PrismaClient, Rarity, WorldBossRewardType } from '@prisma/client';
+import {
+  ItemSlot,
+  MaterialOrigin,
+  PrismaClient,
+  Rarity,
+  WorldBossRewardType,
+} from '@prisma/client';
 import { classDefinitions } from './seed-data/classes.seed-data';
 import { consumableDefinitions } from './seed-data/consumables.seed-data';
 import {
@@ -342,7 +348,6 @@ async function upsertSubMapEncounter(params: {
   });
 }
 
-
 async function upsertIncursion(params: {
   data: IncursionSeedData;
   mapId: string;
@@ -397,7 +402,9 @@ async function upsertIncursion(params: {
   });
 
   for (const [index, loot] of data.lootTable.entries()) {
-    const item = loot.itemName ? await prisma.item.findUnique({ where: { name: loot.itemName } }) : null;
+    const item = loot.itemName
+      ? await prisma.item.findUnique({ where: { name: loot.itemName } })
+      : null;
 
     if (loot.itemName && !item) {
       throw new Error(
@@ -597,7 +604,7 @@ async function upsertWorldBoss(params: {
   const activeEvent = await prisma.worldBossEvent.findFirst({
     where: {
       worldBossId: worldBoss.id,
-      status: 'ACTIVE',
+      status: { in: ['SCHEDULED', 'LOBBY_OPEN', 'ACTIVE'] },
     },
   });
 
@@ -608,9 +615,11 @@ async function upsertWorldBoss(params: {
         worldBossId: worldBoss.id,
         mapId,
         tier: data.tier,
-        status: 'ACTIVE',
-        startsAt: now,
-        endsAt: new Date(now.getTime() + data.durationSeconds * 1000),
+        status: 'LOBBY_OPEN',
+        startsAt: new Date(now.getTime() + 10 * 60 * 1000),
+        endsAt: new Date(
+          now.getTime() + (10 * 60 + data.durationSeconds) * 1000,
+        ),
         maxHp: data.baseHp,
         currentHp: data.baseHp,
       },
@@ -1073,7 +1082,6 @@ async function main() {
       ingredients,
     });
   }
-
 
   console.log('Criando/atualizando Ameaças Globais e loot tables...');
 

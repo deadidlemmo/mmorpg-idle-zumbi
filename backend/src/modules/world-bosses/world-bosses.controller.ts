@@ -31,8 +31,11 @@ export class WorldBossesController {
       request.user.id,
       characterId,
     );
-    if (status.event)
+    if (status.event) {
+      if (status.event.status === 'ACTIVE')
+        this.worldBossesGateway.emitBattleStarted(status.event.id, status);
       this.worldBossesGateway.emitProgress(status.event.id, status);
+    }
     return status;
   }
 
@@ -50,7 +53,11 @@ export class WorldBossesController {
         this.worldBossesGateway.emitDefeated(status.event.id, status);
       else if (status.event.status === 'EXPIRED')
         this.worldBossesGateway.emitExpired(status.event.id, status);
-      else this.worldBossesGateway.emitProgress(status.event.id, status);
+      else {
+        if (status.event.status === 'ACTIVE')
+          this.worldBossesGateway.emitDamage(status.event.id, status);
+        this.worldBossesGateway.emitProgress(status.event.id, status);
+      }
       if (status.rewardsGranted?.length)
         this.worldBossesGateway.emitRewarded(status.event.id, status);
     }
@@ -67,7 +74,23 @@ export class WorldBossesController {
   @Post('leave')
   async leave(@Req() request: any, @Body() dto: LeaveWorldBossDto) {
     const status = await this.worldBossesService.leave(request.user.id, dto);
+    this.worldBossesGateway.emitLeft(dto.eventId, status);
     this.worldBossesGateway.emitProgress(dto.eventId, status);
+    return status;
+  }
+
+  @Post(':eventId/leave')
+  async leaveByEvent(
+    @Req() request: any,
+    @Param('eventId') eventId: string,
+    @Body() dto: Omit<LeaveWorldBossDto, 'eventId'>,
+  ) {
+    const status = await this.worldBossesService.leave(request.user.id, {
+      ...dto,
+      eventId,
+    });
+    this.worldBossesGateway.emitLeft(eventId, status);
+    this.worldBossesGateway.emitProgress(eventId, status);
     return status;
   }
 

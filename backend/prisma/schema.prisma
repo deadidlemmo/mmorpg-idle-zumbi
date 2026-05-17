@@ -120,6 +120,7 @@ enum IncursionSessionStatus {
 
 enum WorldBossEventStatus {
   SCHEDULED
+  LOBBY_OPEN
   ACTIVE
   DEFEATED
   EXPIRED
@@ -1034,9 +1035,10 @@ model WorldBossParticipant {
   damageDealt         Int   @default(0)
   contributionPercent Float @default(0)
 
-  joinedAt           DateTime @default(now())
-  lastContributionAt DateTime @default(now())
-  activeSeconds      Int      @default(0)
+  joinedAt           DateTime  @default(now())
+  lastContributionAt DateTime  @default(now())
+  leftAt             DateTime?
+  activeSeconds      Int       @default(0)
 
   rewardGranted   Boolean   @default(false)
   rewardGrantedAt DateTime?
@@ -1055,6 +1057,7 @@ model WorldBossParticipant {
   @@unique([eventId, characterId])
   @@index([eventId])
   @@index([characterId])
+  @@index([leftAt])
   @@index([rewardGranted])
   @@index([eligibleForReward])
   @@map("world_boss_participants")

@@ -167,8 +167,14 @@ export class ActivityGuardService {
       this.prisma.worldBossParticipant.findFirst({
         where: {
           characterId: character.id,
+          leftAt: null,
           event: {
-            status: WorldBossEventStatus.ACTIVE,
+            status: {
+              in: [
+                WorldBossEventStatus.LOBBY_OPEN,
+                WorldBossEventStatus.ACTIVE,
+              ],
+            },
             endsAt: { gt: new Date() },
           },
         },

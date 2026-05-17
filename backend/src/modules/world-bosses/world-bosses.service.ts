@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-redundant-type-constituents */
 import {
   BadRequestException,
   ConflictException,
@@ -62,6 +62,8 @@ const eventInclude = {
 
 type Tx = Prisma.TransactionClient;
 
+const WORLD_BOSS_LOBBY_SECONDS = 10 * 60;
+
 @Injectable()
 export class WorldBossesService {
   constructor(
@@ -74,7 +76,7 @@ export class WorldBossesService {
     const status = await this.getStatus(userId, characterId);
     return {
       ...status,
-      eligible: this.getEligibility(character, status.event?.worldBoss ?? null),
+      eligible: this.getEligibility(character, status.event ?? null),
     };
   }
 
@@ -114,8 +116,9 @@ export class WorldBossesService {
     });
 
     if (!event) throw new NotFoundException('Ameaça Global não encontrada.');
-    this.ensureEventActive(event);
-    this.ensureEligible(character, event.worldBoss);
+    const availableEvent = await this.advanceEventState(event);
+    this.ensureEventJoinable(availableEvent);
+    this.ensureEligible(character, availableEvent.worldBoss);
 
     const activityState = await this.activityGuard.getCharacterActivityState({
       characterId: dto.characterId,
@@ -133,21 +136,34 @@ export class WorldBossesService {
 
     const now = new Date();
     const result = await this.prisma.$transaction(async (tx) => {
-      const participant = await tx.worldBossParticipant.upsert({
+      const existingParticipant = await tx.worldBossParticipant.findUnique({
         where: {
           eventId_characterId: {
             eventId: dto.eventId,
             characterId: dto.characterId,
           },
         },
-        update: { lastContributionAt: now },
-        create: {
-          eventId: dto.eventId,
-          characterId: dto.characterId,
-          joinedAt: now,
-          lastContributionAt: now,
-        },
       });
+
+      if (existingParticipant && !existingParticipant.leftAt) {
+        throw new ConflictException(
+          'Personagem já está no lobby desta Ameaça Global.',
+        );
+      }
+
+      const participant = existingParticipant
+        ? await tx.worldBossParticipant.update({
+            where: { id: existingParticipant.id },
+            data: { leftAt: null, lastContributionAt: now },
+          })
+        : await tx.worldBossParticipant.create({
+            data: {
+              eventId: dto.eventId,
+              characterId: dto.characterId,
+              joinedAt: now,
+              lastContributionAt: now,
+            },
+          });
 
       await this.recalculateScaling(tx, dto.eventId, now);
       await this.recalculateParticipantCount(tx, dto.eventId);
@@ -177,12 +193,43 @@ export class WorldBossesService {
     });
     if (!resolved.participant)
       throw new NotFoundException('Participação não encontrada.');
+
+    const now = new Date();
+    const participant = resolved.participant;
+    const result = await this.prisma.$transaction(async (tx) => {
+      const event = await tx.worldBossEvent.findUniqueOrThrow({
+        where: { id: dto.eventId },
+        include: eventInclude,
+      });
+
+      if (event.status === WorldBossEventStatus.LOBBY_OPEN) {
+        await tx.worldBossParticipant.delete({
+          where: { id: participant.id },
+        });
+      } else if (event.status === WorldBossEventStatus.ACTIVE) {
+        await tx.worldBossParticipant.update({
+          where: { id: participant.id },
+          data: { leftAt: now, lastContributionAt: now },
+        });
+      } else {
+        throw new ConflictException(
+          'Não é possível sair desta Ameaça Global neste estado.',
+        );
+      }
+
+      await this.recalculateParticipantCount(tx, dto.eventId);
+      return tx.worldBossEvent.findUniqueOrThrow({
+        where: { id: dto.eventId },
+        include: eventInclude,
+      });
+    });
+
     return this.formatStatus(
-      resolved.event,
-      resolved.participant,
-      new Date(),
+      result,
+      null,
+      now,
       resolved.rewards,
-      'Você saiu da sala, mas sua contribuição permanece registrada.',
+      'Você saiu da sala. Sua contribuição já registrada foi preservada.',
     );
   }
 
@@ -232,6 +279,7 @@ export class WorldBossesService {
 
           if (
             participant &&
+            !participant.leftAt &&
             event.currentHp > 0 &&
             event.endsAt.getTime() > now.getTime()
           ) {
@@ -239,7 +287,12 @@ export class WorldBossesService {
               tx,
               params.characterId,
               event.worldBoss,
-              participant.lastContributionAt,
+              new Date(
+                Math.max(
+                  participant.lastContributionAt.getTime(),
+                  event.startsAt.getTime(),
+                ),
+              ),
               now,
             );
             if (damage > 0) {
@@ -301,6 +354,7 @@ export class WorldBossesService {
           },
           include: { rewards: { include: { item: true } } },
         });
+        if (participant?.leftAt) participant = null;
 
         if (
           participant &&
@@ -395,6 +449,7 @@ export class WorldBossesService {
       include: {
         worldBoss: true,
         participants: {
+          where: { leftAt: null },
           include: {
             character: {
               include: {
@@ -476,7 +531,9 @@ export class WorldBossesService {
   }
 
   private async recalculateParticipantCount(tx: Tx, eventId: string) {
-    const count = await tx.worldBossParticipant.count({ where: { eventId } });
+    const count = await tx.worldBossParticipant.count({
+      where: { eventId, leftAt: null },
+    });
     await tx.worldBossEvent.update({
       where: { id: eventId },
       data: { participantCount: count },
@@ -632,19 +689,61 @@ export class WorldBossesService {
 
   private async findActiveEventForCharacter(character: any) {
     if (!character.mapId) return null;
-    return this.prisma.worldBossEvent.findFirst({
+    const now = new Date();
+    const event = await this.prisma.worldBossEvent.findFirst({
       where: {
         mapId: character.mapId,
         status: {
           in: [
+            WorldBossEventStatus.SCHEDULED,
+            WorldBossEventStatus.LOBBY_OPEN,
             WorldBossEventStatus.ACTIVE,
             WorldBossEventStatus.DEFEATED,
             WorldBossEventStatus.EXPIRED,
           ],
         },
-        startsAt: { lte: new Date() },
+        endsAt: { gt: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
       },
-      orderBy: [{ status: 'asc' }, { startsAt: 'desc' }],
+      orderBy: [{ startsAt: 'desc' }],
+      include: eventInclude,
+    });
+
+    return event ? this.advanceEventState(event) : null;
+  }
+
+  private async advanceEventState(event: any) {
+    const now = new Date();
+    let nextStatus = event.status as WorldBossEventStatus;
+
+    if (
+      event.status === WorldBossEventStatus.SCHEDULED &&
+      event.startsAt.getTime() - WORLD_BOSS_LOBBY_SECONDS * 1000 <=
+        now.getTime()
+    ) {
+      nextStatus = WorldBossEventStatus.LOBBY_OPEN;
+    }
+
+    if (
+      (nextStatus === WorldBossEventStatus.SCHEDULED ||
+        nextStatus === WorldBossEventStatus.LOBBY_OPEN) &&
+      event.startsAt.getTime() <= now.getTime()
+    ) {
+      nextStatus = WorldBossEventStatus.ACTIVE;
+    }
+
+    if (
+      nextStatus === WorldBossEventStatus.ACTIVE &&
+      event.endsAt.getTime() <= now.getTime() &&
+      event.currentHp > 0
+    ) {
+      nextStatus = WorldBossEventStatus.EXPIRED;
+    }
+
+    if (nextStatus === event.status) return event;
+
+    return this.prisma.worldBossEvent.update({
+      where: { id: event.id },
+      data: { status: nextStatus },
       include: eventInclude,
     });
   }
@@ -662,14 +761,18 @@ export class WorldBossesService {
     return character;
   }
 
-  private ensureEventActive(event: any) {
+  private ensureEventJoinable(event: any) {
     const now = new Date();
     if (
-      event.status !== WorldBossEventStatus.ACTIVE ||
-      event.startsAt > now ||
+      event.status !== WorldBossEventStatus.LOBBY_OPEN ||
+      event.startsAt <= now ||
       event.endsAt <= now
     )
-      throw new ConflictException('Esta Ameaça Global não está ativa.');
+      throw new ConflictException(
+        event.status === WorldBossEventStatus.ACTIVE
+          ? 'A batalha já começou. O lobby desta Ameaça Global foi encerrado.'
+          : 'Esta Ameaça Global ainda não está disponível para lobby.',
+      );
   }
 
   private ensureEligible(character: any, boss: any) {
@@ -683,9 +786,19 @@ export class WorldBossesService {
       );
   }
 
-  private getEligibility(character: any, boss: any | null) {
-    if (!boss) return { canJoin: false, reason: 'Nenhuma ameaça ativa.' };
-    if (!character.mapId || character.mapId !== boss.mapId)
+  private getEligibility(character: any, event: any | null) {
+    if (!event) return { canJoin: false, reason: 'Nenhuma ameaça ativa.' };
+    const boss = event.worldBoss;
+    if (event.status !== WorldBossEventStatus.LOBBY_OPEN)
+      return {
+        canJoin: false,
+        reason:
+          event.status === WorldBossEventStatus.ACTIVE
+            ? 'Lobby encerrado: a batalha já começou.'
+            : 'Aguardando abertura do lobby.',
+      };
+    const bossMapId = boss.mapId ?? boss.map?.id;
+    if (!character.mapId || character.mapId !== bossMapId)
       return {
         canJoin: false,
         reason: 'Personagem não está no mapa desta ameaça.',
@@ -720,6 +833,10 @@ export class WorldBossesService {
       0,
       Math.floor((event.endsAt.getTime() - now.getTime()) / 1000),
     );
+    const remainingSecondsToStart = Math.max(
+      0,
+      Math.floor((event.startsAt.getTime() - now.getTime()) / 1000),
+    );
     const hpPercent =
       event.maxHp > 0
         ? Math.max(0, Math.min(100, (event.currentHp / event.maxHp) * 100))
@@ -732,12 +849,15 @@ export class WorldBossesService {
         startsAt: event.startsAt,
         endsAt: event.endsAt,
         remainingSeconds,
+        remainingSecondsToStart,
+        remainingSecondsToEnd: remainingSeconds,
         currentHp: event.currentHp,
         maxHp: event.maxHp,
         hpPercent,
         progressPercent: 100 - hpPercent,
         totalDamage: event.totalDamage,
         participantCount: event.participantCount,
+        lobbyCount: event.participantCount,
         defeatedAt: event.defeatedAt,
         rewardedAt: event.rewardedAt,
         worldBoss: this.formatBoss(event.worldBoss),
