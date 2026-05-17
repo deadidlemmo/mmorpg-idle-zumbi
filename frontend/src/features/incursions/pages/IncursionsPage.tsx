@@ -280,6 +280,17 @@ function getDifficultyLabel(difficulty: string) {
   return labels[difficulty] ?? difficulty;
 }
 
+function getRiskLabel(riskLevel?: number | null) {
+  const safeRiskLevel = Number(riskLevel);
+
+  if (!Number.isFinite(safeRiskLevel)) return "Baixo";
+  if (safeRiskLevel >= 9) return "Extremo";
+  if (safeRiskLevel >= 6) return "Alto";
+  if (safeRiskLevel >= 3) return "Médio";
+
+  return "Baixo";
+}
+
 function getErrorMessage(error: unknown) {
   if (isAxiosError(error)) {
     const data = error.response?.data as
@@ -375,15 +386,48 @@ function IncursionModalHero({ incursion }: { incursion: Incursion }) {
   );
 }
 
-function IncursionArt({ incursion }: { incursion: Incursion }) {
+function IncursionArt({
+  incursion,
+  isLocked,
+  statusLabel,
+}: {
+  incursion: Incursion;
+  isLocked: boolean;
+  statusLabel: string;
+}) {
+  const mapImage = getMapImageByName(incursion.map.name);
+  const mapVisualStyle = buildMapVisualStyle(mapImage);
+
   return (
     <span
       className={`incursion-art ${getIncursionTierClassName(incursion.tier)}`}
+      style={mapVisualStyle}
       aria-hidden="true"
     >
-      <span className="incursion-art__sigil">
-        {incursion.name.slice(0, 2).toUpperCase()}
+      {!mapImage ? (
+        <span className="incursion-art__sigil">
+          {incursion.name.slice(0, 2).toUpperCase()}
+        </span>
+      ) : null}
+
+      <span className="incursion-art__tier">Tier {incursion.tier}</span>
+      <span className="incursion-art__status">{statusLabel}</span>
+
+      <span className="incursion-art__summary">
+        <span>
+          <Clock size={13} /> {formatDuration(incursion.durationSeconds)}
+        </span>
+        <span>
+          <GoldAmount value={incursion.goldCost} />
+        </span>
       </span>
+
+      {isLocked ? (
+        <span className="incursion-art__lock">
+          <Lock size={22} />
+        </span>
+      ) : null}
+
       <Sparkles size={20} />
     </span>
   );
@@ -671,6 +715,7 @@ export function IncursionsPage() {
                       <button
                         className={[
                           "incursion-card",
+                          getIncursionTierClassName(incursion.tier),
                           isLocked ? "is-locked" : "",
                           isRunningThis ? "is-running" : "",
                         ]
@@ -680,20 +725,22 @@ export function IncursionsPage() {
                         type="button"
                         onClick={() => setModalIncursionId(incursion.id)}
                       >
-                        <IncursionArt incursion={incursion} />
+                        <IncursionArt
+                          incursion={incursion}
+                          isLocked={isLocked}
+                          statusLabel={statusLabel}
+                        />
 
                         <span className="incursion-card__content">
-                          <span className="incursion-card__top">
-                            <em>Tier {incursion.tier}</em>
+                          <span className="incursion-card__header">
+                            <span className="incursion-card__name">
+                              {incursion.name}
+                            </span>
                             <strong
                               className={`incursion-card__status incursion-card__status--${statusTone}`}
                             >
                               {statusLabel}
                             </strong>
-                          </span>
-
-                          <span className="incursion-card__name">
-                            {incursion.name}
                           </span>
 
                           <span className="incursion-card__meta">
@@ -705,8 +752,9 @@ export function IncursionsPage() {
                           </span>
 
                           <span className="incursion-card__difficulty">
-                            {getDifficultyLabel(incursion.difficulty)} • Risco{" "}
-                            {incursion.riskLevel}/10
+                            Dificuldade: {getDifficultyLabel(incursion.difficulty)}
+                            <span aria-hidden="true">•</span> Risco:{" "}
+                            {getRiskLabel(incursion.riskLevel)}
                           </span>
 
                           {isRunningThis ? (
@@ -717,6 +765,14 @@ export function IncursionsPage() {
                               <Lock size={13} /> {lockedReasons[0]}
                             </small>
                           ) : null}
+
+                          <span
+                            className="incursion-card__action"
+                            aria-hidden="true"
+                          >
+                            {isLocked ? "Indisponível" : "Ver detalhes"}
+                            <ArrowRight size={14} />
+                          </span>
                         </span>
                       </button>
                     );
