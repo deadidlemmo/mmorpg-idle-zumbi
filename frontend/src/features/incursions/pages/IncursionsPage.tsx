@@ -298,7 +298,7 @@ function getIncursionStatusLabel(params: {
   incursion: Incursion;
   activeSession?: IncursionSession | null;
   rewardedSession?: IncursionSession | null;
-}) {
+}): string | null {
   if (params.activeSession?.incursionId === params.incursion.id) {
     return params.activeSession.status === "ACTIVE"
       ? "Em andamento"
@@ -310,10 +310,11 @@ function getIncursionStatusLabel(params: {
   }
 
   if (!params.incursion.canStart) return "Bloqueada";
-  return "Disponível";
+  return null;
 }
 
-function getStatusTone(statusLabel: string) {
+function getStatusTone(statusLabel: string | null) {
+  if (!statusLabel) return "available";
   if (/andamento|finalizando/i.test(statusLabel)) return "running";
   if (/bloqueada/i.test(statusLabel)) return "locked";
   if (/recompensada|conclu/i.test(statusLabel)) return "done";
@@ -364,9 +365,7 @@ function IncursionModalHero({ incursion }: { incursion: Incursion }) {
           <span>
             <Clock size={13} /> {formatDuration(incursion.durationSeconds)}
           </span>
-          <span>
-            <GoldAmount value={incursion.goldCost} />
-          </span>
+          <GoldAmount value={incursion.goldCost} />
         </div>
       </div>
     </div>
@@ -391,12 +390,6 @@ function IncursionArt({
       style={mapVisualStyle}
       aria-hidden="true"
     >
-      {!mapImage ? (
-        <span className="incursion-art__sigil">
-          {incursion.name.slice(0, 2).toUpperCase()}
-        </span>
-      ) : null}
-
       <span className="incursion-art__tier">Tier {incursion.tier}</span>
       {statusLabel ? (
         <span className="incursion-art__status">{statusLabel}</span>
@@ -407,6 +400,7 @@ function IncursionArt({
           <Clock size={13} /> {formatDuration(incursion.durationSeconds)}
         </span>
         <GoldAmount value={incursion.goldCost} />
+        <span>Risco: {getRiskLabel(incursion.riskLevel)}</span>
       </span>
 
       {isLocked ? (
@@ -723,25 +717,13 @@ export function IncursionsPage() {
                             <span className="incursion-card__name">
                               {incursion.name}
                             </span>
-                            {statusTone !== "available" ? (
+                            {statusLabel ? (
                               <strong
                                 className={`incursion-card__status incursion-card__status--${statusTone}`}
                               >
                                 {statusLabel}
                               </strong>
                             ) : null}
-                          </span>
-
-                          <span className="incursion-card__meta">
-                            <span>
-                              <Clock size={14} />
-                              {formatDuration(incursion.durationSeconds)}
-                            </span>
-                            <GoldAmount value={incursion.goldCost} />
-                          </span>
-
-                          <span className="incursion-card__risk">
-                            Risco: {getRiskLabel(incursion.riskLevel)}
                           </span>
 
                           {isRunningThis ? (

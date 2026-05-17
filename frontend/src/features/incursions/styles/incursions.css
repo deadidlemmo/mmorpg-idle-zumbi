@@ -219,9 +219,9 @@
 .incursion-card {
   position: relative;
   width: 100%;
-  min-height: 23rem;
+  min-height: 22.5rem;
   display: grid;
-  grid-template-rows: minmax(13.8rem, auto) 1fr;
+  grid-template-rows: minmax(16rem, auto) auto;
   overflow: hidden;
   border-color: color-mix(
     in srgb,
@@ -308,7 +308,7 @@
   position: relative;
   z-index: 3;
   isolation: isolate;
-  min-height: 13.8rem;
+  min-height: 16rem;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -375,31 +375,6 @@
   opacity: 0.34;
 }
 
-.incursion-art__sigil {
-  position: relative;
-  z-index: 2;
-  width: 5rem;
-  height: 5rem;
-  display: grid;
-  place-items: center;
-  border: 1px solid
-    color-mix(
-      in srgb,
-      var(--incursion-tier-color, #e8b84e) 42%,
-      rgba(255, 255, 255, 0.1)
-    );
-  border-radius: 1.2rem;
-  background: rgba(0, 0, 0, 0.34);
-  color: color-mix(in srgb, var(--incursion-tier-color, #fff2c4) 64%, #ffffff);
-  font-family: var(--font-title);
-  font-size: 1.24rem;
-  font-weight: 950;
-  letter-spacing: 0.08em;
-  box-shadow:
-    0 16px 32px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
 .incursion-art__tier,
 .incursion-art__status,
 .incursion-art__summary span {
@@ -460,7 +435,7 @@
   flex-wrap: wrap;
   gap: 0.42rem;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .incursion-art__summary span {
@@ -504,9 +479,9 @@
   position: relative;
   z-index: 3;
   display: grid;
-  gap: 0.64rem;
+  gap: 0.7rem;
   align-content: start;
-  padding: 0.94rem;
+  padding: 0.86rem 0.94rem 0.94rem;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
     rgba(5, 8, 8, 0.58);
@@ -519,8 +494,6 @@
 }
 
 .incursion-card__header,
-.incursion-card__meta,
-.incursion-card__risk,
 .incursion-card__action {
   display: flex;
   align-items: center;
@@ -544,11 +517,6 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
-}
-
-.incursion-card__status--available {
-  border-color: rgba(189, 223, 136, 0.18);
-  color: #bddf88 !important;
 }
 
 .incursion-card__status--running {
@@ -575,22 +543,12 @@
   line-height: 1.08;
 }
 
-.incursion-card__meta span,
-.incursion-card small,
-.incursion-card__risk {
+.incursion-card small {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  color: #c8d0bb;
-  font-size: 0.84rem;
-}
-
-.incursion-card small {
   color: #e8c77f;
-}
-
-.incursion-card__risk {
-  color: rgba(231, 227, 216, 0.68);
+  font-size: 0.84rem;
 }
 
 .incursion-card__action {
@@ -1267,12 +1225,12 @@
   }
 
   .incursion-card {
-    min-height: 21rem;
-    grid-template-rows: minmax(12.5rem, auto) 1fr;
+    min-height: 20.5rem;
+    grid-template-rows: minmax(14.2rem, auto) auto;
   }
 
   .incursion-art {
-    min-height: 12.5rem;
+    min-height: 14.2rem;
   }
 
   .incursion-art__status {
