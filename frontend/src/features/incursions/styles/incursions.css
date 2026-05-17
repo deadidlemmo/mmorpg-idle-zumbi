@@ -330,7 +330,12 @@
   content: "";
   background:
     linear-gradient(180deg, rgba(4, 7, 7, 0.12), rgba(4, 7, 7, 0.78)),
-    radial-gradient(circle at 50% 28%, transparent 0 18%, rgba(0, 0, 0, 0.18) 48%, rgba(0, 0, 0, 0.48) 100%),
+    radial-gradient(
+      circle at 50% 28%,
+      transparent 0 18%,
+      rgba(0, 0, 0, 0.18) 48%,
+      rgba(0, 0, 0, 0.48) 100%
+    ),
     repeating-linear-gradient(
       135deg,
       rgba(255, 255, 255, 0.018) 0 1px,
@@ -482,22 +487,17 @@
   height: 70px;
   color: rgba(244, 248, 220, 0.92);
   background:
-    radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.08), transparent 58%),
+    radial-gradient(
+      circle at 50% 30%,
+      rgba(255, 255, 255, 0.08),
+      transparent 58%
+    ),
     rgba(3, 6, 6, 0.84);
   border: 1px solid rgba(231, 227, 216, 0.18);
   border-radius: 999px;
   box-shadow:
     0 14px 32px rgba(0, 0, 0, 0.48),
     0 0 0 7px rgba(0, 0, 0, 0.2);
-}
-
-.incursion-art > svg {
-  position: absolute;
-  z-index: 3;
-  right: 0.95rem;
-  top: 3.15rem;
-  opacity: 0.42;
-  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.38));
 }
 
 .incursion-card__content {
@@ -520,7 +520,7 @@
 
 .incursion-card__header,
 .incursion-card__meta,
-.incursion-card__difficulty,
+.incursion-card__risk,
 .incursion-card__action {
   display: flex;
   align-items: center;
@@ -577,7 +577,7 @@
 
 .incursion-card__meta span,
 .incursion-card small,
-.incursion-card__difficulty {
+.incursion-card__risk {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -589,7 +589,7 @@
   color: #e8c77f;
 }
 
-.incursion-card__difficulty {
+.incursion-card__risk {
   color: rgba(231, 227, 216, 0.68);
 }
 
@@ -603,7 +603,11 @@
   border-radius: 999px;
   padding: 0.48rem 0.78rem;
   background:
-    linear-gradient(135deg, var(--incursion-tier-bg), rgba(255, 255, 255, 0.035)),
+    linear-gradient(
+      135deg,
+      var(--incursion-tier-bg),
+      rgba(255, 255, 255, 0.035)
+    ),
     rgba(255, 255, 255, 0.045);
   color: color-mix(in srgb, var(--incursion-tier-color, #dff6b7) 74%, #ffffff);
   font-size: 0.8rem;
@@ -974,22 +978,6 @@
   ) !important;
 }
 
-.incursions-modal__close {
-  position: absolute;
-  top: clamp(1rem, 2.4vw, 1.3rem);
-  right: clamp(1rem, 2.4vw, 1.3rem);
-  z-index: 2;
-  width: 2.25rem;
-  height: 2.25rem;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(231, 227, 216, 0.12);
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.22);
-  color: #f8f6df;
-  cursor: pointer;
-}
-
 .incursions-modal__body {
   display: grid;
   gap: 0.72rem;
@@ -1334,10 +1322,6 @@
   .incursions-modal__banner h2 {
     max-width: 12ch;
     font-size: clamp(1.65rem, 8vw, 2.55rem);
-  }
-
-  .incursions-modal__close {
-    display: none;
   }
 
   .incursions-modal__loot-grid {

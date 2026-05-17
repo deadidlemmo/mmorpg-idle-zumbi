@@ -5,8 +5,6 @@ import {
   Lock,
   PackageOpen,
   ShieldAlert,
-  Sparkles,
-  X,
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -269,17 +267,6 @@ function getIncursionTierClassName(tier?: number | null): string {
   return `incursions-tier--${getTierRarity(tier)}`;
 }
 
-function getDifficultyLabel(difficulty: string) {
-  const labels: Record<string, string> = {
-    LOW: "Baixa",
-    MEDIUM: "Média",
-    HIGH: "Alta",
-    EXTREME: "Extrema",
-  };
-
-  return labels[difficulty] ?? difficulty;
-}
-
 function getRiskLabel(riskLevel?: number | null) {
   const safeRiskLevel = Number(riskLevel);
 
@@ -393,7 +380,7 @@ function IncursionArt({
 }: {
   incursion: Incursion;
   isLocked: boolean;
-  statusLabel: string;
+  statusLabel: string | null;
 }) {
   const mapImage = getMapImageByName(incursion.map.name);
   const mapVisualStyle = buildMapVisualStyle(mapImage);
@@ -411,15 +398,15 @@ function IncursionArt({
       ) : null}
 
       <span className="incursion-art__tier">Tier {incursion.tier}</span>
-      <span className="incursion-art__status">{statusLabel}</span>
+      {statusLabel ? (
+        <span className="incursion-art__status">{statusLabel}</span>
+      ) : null}
 
       <span className="incursion-art__summary">
         <span>
           <Clock size={13} /> {formatDuration(incursion.durationSeconds)}
         </span>
-        <span>
-          <GoldAmount value={incursion.goldCost} />
-        </span>
+        <GoldAmount value={incursion.goldCost} />
       </span>
 
       {isLocked ? (
@@ -427,8 +414,6 @@ function IncursionArt({
           <Lock size={22} />
         </span>
       ) : null}
-
-      <Sparkles size={20} />
     </span>
   );
 }
@@ -728,7 +713,9 @@ export function IncursionsPage() {
                         <IncursionArt
                           incursion={incursion}
                           isLocked={isLocked}
-                          statusLabel={statusLabel}
+                          statusLabel={
+                            statusTone === "available" ? null : statusLabel
+                          }
                         />
 
                         <span className="incursion-card__content">
@@ -736,11 +723,13 @@ export function IncursionsPage() {
                             <span className="incursion-card__name">
                               {incursion.name}
                             </span>
-                            <strong
-                              className={`incursion-card__status incursion-card__status--${statusTone}`}
-                            >
-                              {statusLabel}
-                            </strong>
+                            {statusTone !== "available" ? (
+                              <strong
+                                className={`incursion-card__status incursion-card__status--${statusTone}`}
+                              >
+                                {statusLabel}
+                              </strong>
+                            ) : null}
                           </span>
 
                           <span className="incursion-card__meta">
@@ -751,10 +740,8 @@ export function IncursionsPage() {
                             <GoldAmount value={incursion.goldCost} />
                           </span>
 
-                          <span className="incursion-card__difficulty">
-                            Dificuldade: {getDifficultyLabel(incursion.difficulty)}
-                            <span aria-hidden="true">•</span> Risco:{" "}
-                            {getRiskLabel(incursion.riskLevel)}
+                          <span className="incursion-card__risk">
+                            Risco: {getRiskLabel(incursion.riskLevel)}
                           </span>
 
                           {isRunningThis ? (
@@ -889,15 +876,6 @@ export function IncursionsPage() {
             >
               <header className="incursions-modal__hero">
                 <IncursionModalHero incursion={modalIncursion} />
-
-                <button
-                  className="incursions-modal__close"
-                  type="button"
-                  aria-label="Fechar detalhes da incursão"
-                  onClick={() => setModalIncursionId(null)}
-                >
-                  <X size={18} />
-                </button>
               </header>
 
               <div className="incursions-modal__body">
