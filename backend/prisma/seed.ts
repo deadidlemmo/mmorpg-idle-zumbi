@@ -6,7 +6,7 @@ import type {
   Prisma,
   SubMap,
 } from '@prisma/client';
-import { ItemSlot, MaterialOrigin, PrismaClient, Rarity } from '@prisma/client';
+import { ItemSlot, MaterialOrigin, PrismaClient, Rarity, WorldBossRewardType } from '@prisma/client';
 import { classDefinitions } from './seed-data/classes.seed-data';
 import { consumableDefinitions } from './seed-data/consumables.seed-data';
 import {
@@ -23,10 +23,12 @@ import {
 import { mapDefinitions } from './seed-data/maps.seed-data';
 import { mobDefinitions } from './seed-data/mobs.seed-data';
 import { recipeDefinitions } from './seed-data/recipes.seed-data';
+import { worldBossDefinitions } from './seed-data/world-bosses.seed-data';
 import type {
   ConsumableSeedData,
   CraftingRecipeSeedData,
   IncursionSeedData,
+  WorldBossSeedData,
   EquipmentSeedData,
   GameClassSeedData,
   MapDefinition,
@@ -425,6 +427,197 @@ async function upsertIncursion(params: {
   }
 
   return incursion;
+}
+
+async function ensureWorldBossSeedItem(params: {
+  name: string;
+  tier: number;
+  rarity?: Rarity | null;
+  rewardType: WorldBossRewardType;
+  mapId: string;
+}): Promise<Item> {
+  const family =
+    params.rewardType === WorldBossRewardType.PET_EGG
+      ? 'Casulo Infectado'
+      : 'Material de Ameaça Global';
+
+  return upsertItemByName({
+    name: params.name,
+    slug: params.name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, ''),
+    description:
+      params.rewardType === WorldBossRewardType.PET_EGG
+        ? 'Casulo biológico raro obtido em Ameaças Globais. Futuramente poderá originar um companheiro infectado controlado.'
+        : 'Fragmento mutante coletado após conter uma Ameaça Global.',
+    tier: params.tier,
+    rarity: params.rarity ?? getRarityByTier(params.tier),
+    slot: ItemSlot.MATERIAL,
+    family,
+    classId: null,
+    mapId: params.mapId,
+    materialOrigin: MaterialOrigin.DROP_MOBS,
+    materialSlot: null,
+    isGatheringMaterial: false,
+    requiredGatheringLevel: 1,
+    gatheringXpPerUnit: 0,
+    baseGatheringRatePerHour: null,
+    strengthBonus: 0,
+    vitalityBonus: 0,
+    agilityBonus: 0,
+    precisionBonus: 0,
+    techniqueBonus: 0,
+    willpowerBonus: 0,
+    healFlat: 0,
+    healPercent: 0,
+    usableInCombat: false,
+    usableOutOfCombat: false,
+    minTier: null,
+    maxTier: null,
+    isCraftable: false,
+  });
+}
+
+async function upsertWorldBoss(params: {
+  data: WorldBossSeedData;
+  mapId: string;
+}) {
+  const { data, mapId } = params;
+
+  const worldBoss = await prisma.worldBoss.upsert({
+    where: { slug: data.slug },
+    update: {
+      name: data.name,
+      description: data.description,
+      mapId,
+      tier: data.tier,
+      minLevel: data.minLevel,
+      maxLevel: data.maxLevel,
+      baseHp: data.baseHp,
+      maxHp: data.maxHp ?? null,
+      hpPerParticipant: data.hpPerParticipant,
+      powerScalingFactor: data.powerScalingFactor,
+      scalingFactor: data.scalingFactor ?? 1,
+      minParticipantsExpected: data.minParticipantsExpected ?? 1,
+      maxScalingCap: data.maxScalingCap ?? 3,
+      scalingWindowSeconds: data.scalingWindowSeconds ?? 600,
+      attackPower: data.attackPower,
+      defense: data.defense,
+      resistance: data.resistance,
+      mutationLevel: data.mutationLevel ?? 1,
+      damageReduction: data.damageReduction ?? 0,
+      enrageMultiplier: data.enrageMultiplier ?? 1,
+      durationSeconds: data.durationSeconds,
+      difficulty: data.difficulty,
+      riskLevel: data.riskLevel,
+      minParticipationSeconds: data.minParticipationSeconds ?? 300,
+      minParticipationDamage: data.minParticipationDamage ?? 1,
+      imageUrl: data.imageUrl ?? null,
+      assetKey: data.assetKey ?? null,
+      isActive: data.isActive ?? true,
+      sortOrder: data.sortOrder ?? 0,
+    },
+    create: {
+      name: data.name,
+      slug: data.slug,
+      description: data.description,
+      mapId,
+      tier: data.tier,
+      minLevel: data.minLevel,
+      maxLevel: data.maxLevel,
+      baseHp: data.baseHp,
+      maxHp: data.maxHp ?? null,
+      hpPerParticipant: data.hpPerParticipant,
+      powerScalingFactor: data.powerScalingFactor,
+      scalingFactor: data.scalingFactor ?? 1,
+      minParticipantsExpected: data.minParticipantsExpected ?? 1,
+      maxScalingCap: data.maxScalingCap ?? 3,
+      scalingWindowSeconds: data.scalingWindowSeconds ?? 600,
+      attackPower: data.attackPower,
+      defense: data.defense,
+      resistance: data.resistance,
+      mutationLevel: data.mutationLevel ?? 1,
+      damageReduction: data.damageReduction ?? 0,
+      enrageMultiplier: data.enrageMultiplier ?? 1,
+      durationSeconds: data.durationSeconds,
+      difficulty: data.difficulty,
+      riskLevel: data.riskLevel,
+      minParticipationSeconds: data.minParticipationSeconds ?? 300,
+      minParticipationDamage: data.minParticipationDamage ?? 1,
+      imageUrl: data.imageUrl ?? null,
+      assetKey: data.assetKey ?? null,
+      isActive: data.isActive ?? true,
+      sortOrder: data.sortOrder ?? 0,
+    },
+  });
+
+  await prisma.worldBossReward.deleteMany({
+    where: { worldBossId: worldBoss.id },
+  });
+
+  for (const [index, reward] of data.lootTable.entries()) {
+    const item = reward.itemName
+      ? await ensureWorldBossSeedItem({
+          name: reward.itemName,
+          tier: data.tier,
+          rarity: reward.rarity,
+          rewardType: reward.rewardType,
+          mapId,
+        })
+      : null;
+
+    if (reward.minQuantity > reward.maxQuantity) {
+      throw new Error(
+        `Loot inválido em ${data.name}: minQuantity maior que maxQuantity.`,
+      );
+    }
+
+    await prisma.worldBossReward.create({
+      data: {
+        worldBossId: worldBoss.id,
+        rewardType: reward.rewardType,
+        itemId: item?.id ?? null,
+        minQuantity: Math.max(0, reward.minQuantity),
+        maxQuantity: Math.max(0, reward.maxQuantity),
+        chance: Math.max(0, Math.min(100, reward.chance)),
+        guaranteed: reward.guaranteed ?? false,
+        onlyIfDefeated: reward.onlyIfDefeated ?? false,
+        requiresMinParticipation: reward.requiresMinParticipation ?? true,
+        minContributionPercent: reward.minContributionPercent ?? 0,
+        minRankPercent: reward.minRankPercent ?? null,
+        rarity: reward.rarity ?? null,
+        sortOrder: reward.sortOrder ?? index,
+      },
+    });
+  }
+
+  const activeEvent = await prisma.worldBossEvent.findFirst({
+    where: {
+      worldBossId: worldBoss.id,
+      status: 'ACTIVE',
+    },
+  });
+
+  if (!activeEvent) {
+    const now = new Date();
+    await prisma.worldBossEvent.create({
+      data: {
+        worldBossId: worldBoss.id,
+        mapId,
+        tier: data.tier,
+        status: 'ACTIVE',
+        startsAt: now,
+        endsAt: new Date(now.getTime() + data.durationSeconds * 1000),
+        maxHp: data.baseHp,
+        currentHp: data.baseHp,
+      },
+    });
+  }
+
+  return worldBoss;
 }
 
 async function deactivateOtherSubMapEncounters(params: {
@@ -882,6 +1075,17 @@ async function main() {
   }
 
 
+  console.log('Criando/atualizando Ameaças Globais e loot tables...');
+
+  for (const worldBossDefinition of worldBossDefinitions) {
+    const gameMap = getRequiredMap(mapsByName, worldBossDefinition.mapName);
+
+    await upsertWorldBoss({
+      data: worldBossDefinition,
+      mapId: gameMap.id,
+    });
+  }
+
   console.log('Criando/atualizando incursões e loot tables...');
 
   for (const incursionDefinition of incursionDefinitions) {
@@ -982,6 +1186,7 @@ async function main() {
     receitasRegistradas: recipeDefinitions.length,
     encountersRegistrados: encounterDefinitions.length,
     dropsRegistrados: mobDropDefinitions.length,
+    ameacasGlobaisRegistradas: worldBossDefinitions.length,
     incursionsRegistradas: incursionDefinitions.length,
     gatheringDocumentado: gatheringDefinitions.map((definition) => ({
       key: definition.key,

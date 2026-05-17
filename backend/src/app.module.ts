@@ -18,6 +18,7 @@ import { ItemsModule } from './modules/items/items.module';
 import { MapsModule } from './modules/maps/maps.module';
 import { MobsModule } from './modules/mobs/mobs.module';
 import { UsersModule } from './modules/users/users.module';
+import { WorldBossesModule } from './modules/world-bosses/world-bosses.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -48,6 +49,7 @@ import { PrismaModule } from './prisma/prisma.module';
     CraftingModule,
     GatheringModule,
     IncursionsModule,
+    WorldBossesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

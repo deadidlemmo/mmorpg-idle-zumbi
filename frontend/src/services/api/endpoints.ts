@@ -48,4 +48,12 @@ export const API_ENDPOINTS = {
     claim: '/incursions/claim',
     cancel: (characterId: string) => `/incursions/${characterId}/cancel`,
   },
+
+  worldBosses: {
+    active: (characterId: string) => `/world-bosses/${characterId}/active`,
+    status: (characterId: string) => `/world-bosses/${characterId}/status`,
+    join: '/world-bosses/join',
+    leave: '/world-bosses/leave',
+    ranking: (eventId: string) => `/world-bosses/${eventId}/ranking`,
+  },
 } as const;

@@ -319,6 +319,11 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     path: 'incursions',
     icon: '⌬',
   },
+  {
+    label: 'Ameaças Globais',
+    path: 'world-bosses',
+    icon: '☣',
+  },
 ];
 
 const DASHBOARD_MAIN_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter((item) =>
