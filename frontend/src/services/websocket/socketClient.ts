@@ -121,6 +121,7 @@ export type WorldBossServerToClientEvents = {
   "worldBoss:joinedRoom": (payload: WorldBossSocketRoomPayload) => void;
   "worldBoss:leftRoom": (payload: WorldBossSocketRoomPayload) => void;
   "worldBoss:error": (payload: WorldBossSocketError) => void;
+  "worldBoss:statusUpdated": (payload: WorldBossStatusResponse) => void;
   "worldBoss:lobbyOpened": (payload: WorldBossStatusResponse) => void;
   "worldBoss:joinedLobby": (payload: WorldBossStatusResponse) => void;
   "worldBoss:leftLobby": (payload: WorldBossStatusResponse) => void;
@@ -134,7 +135,10 @@ export type WorldBossServerToClientEvents = {
   "worldBoss:left": (payload: WorldBossStatusResponse) => void;
 };
 export type WorldBossClientToServerEvents = {
-  "worldBoss:join": (payload: { eventId: string }) => void;
+  "worldBoss:join": (payload: {
+    eventId: string;
+    characterId?: string;
+  }) => void;
   "worldBoss:leave": (payload: { eventId: string }) => void;
 };
 export type WorldBossSocket = Socket<

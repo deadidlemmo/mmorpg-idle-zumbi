@@ -288,8 +288,8 @@ function getEventRemainingSeconds(
 
 function getEventStatusPriority(status: WorldBossStatusResponse) {
   const eventStatus = status.event?.status;
-  if (eventStatus === "LOBBY_OPEN") return 6;
-  if (eventStatus === "ACTIVE") return 5;
+  if (eventStatus === "ACTIVE") return 6;
+  if (eventStatus === "LOBBY_OPEN") return 5;
   if (eventStatus === "SCHEDULED") return 4;
   if (eventStatus === "DEFEATED" || eventStatus === "REWARDED") return 3;
   if (eventStatus === "EXPIRED") return 2;
@@ -443,7 +443,7 @@ export function WorldBossesPage() {
   );
 
   useEffect(() => {
-    if (!realtimeEventIdsKey) return;
+    if (!realtimeEventIdsKey || !characterId) return;
     const eventIds = realtimeEventIdsKey.split("|").filter(Boolean);
     if (eventIds.length === 0) return;
 
@@ -456,6 +456,7 @@ export function WorldBossesPage() {
     };
 
     socket.on("worldBoss:lobbyOpened", update);
+    socket.on("worldBoss:statusUpdated", update);
     socket.on("worldBoss:joinedLobby", update);
     socket.on("worldBoss:leftLobby", update);
     socket.on("worldBoss:lobbyUpdated", update);
@@ -470,7 +471,7 @@ export function WorldBossesPage() {
 
     if (!socket.connected) socket.connect();
     eventIds.forEach((eventId) => {
-      socket.emit("worldBoss:join", { eventId });
+      socket.emit("worldBoss:join", { eventId, characterId });
     });
 
     return () => {
@@ -478,6 +479,7 @@ export function WorldBossesPage() {
         socket.emit("worldBoss:leave", { eventId });
       });
       socket.off("worldBoss:lobbyOpened", update);
+      socket.off("worldBoss:statusUpdated", update);
       socket.off("worldBoss:joinedLobby", update);
       socket.off("worldBoss:leftLobby", update);
       socket.off("worldBoss:lobbyUpdated", update);
@@ -490,7 +492,7 @@ export function WorldBossesPage() {
       socket.off("worldBoss:left", update);
       socket.off("worldBoss:error", fail);
     };
-  }, [realtimeEventIdsKey]);
+  }, [characterId, realtimeEventIdsKey]);
 
   useEffect(() => {
     if (!detailsEventId) return;

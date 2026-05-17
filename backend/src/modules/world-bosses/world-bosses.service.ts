@@ -350,6 +350,59 @@ export class WorldBossesService {
     };
   }
 
+  async getEventStatus(userId: string, characterId: string, eventId: string) {
+    const character = await this.getCharacterOrThrow(userId, characterId);
+    const event = await this.prisma.worldBossEvent.findUnique({
+      where: { id: eventId },
+      include: eventInclude,
+    });
+
+    if (!event) throw new NotFoundException('Ameaça Global não encontrada.');
+    if (event.mapId !== character.mapId)
+      throw new ForbiddenException('Personagem não está no mapa desta ameaça.');
+
+    const advancedEvent = await this.advanceEventState(event);
+    const participant = await this.prisma.worldBossParticipant.findUnique({
+      where: {
+        eventId_characterId: {
+          eventId,
+          characterId,
+        },
+      },
+      include: { rewards: { include: { item: true } } },
+    });
+    const activeParticipant = participant?.leftAt ? null : participant;
+
+    if (
+      activeParticipant &&
+      (advancedEvent.status === WorldBossEventStatus.ACTIVE ||
+        advancedEvent.status === WorldBossEventStatus.DEFEATED ||
+        advancedEvent.status === WorldBossEventStatus.EXPIRED)
+    ) {
+      const resolved = await this.resolveEventAndContribution({
+        userId,
+        characterId,
+        eventId,
+        emitDamage: true,
+      });
+
+      return {
+        ...this.formatStatus(
+          resolved.event,
+          resolved.participant,
+          new Date(),
+          resolved.rewards,
+        ),
+        eligible: this.getEligibility(character, resolved.event),
+      };
+    }
+
+    return {
+      ...this.formatStatus(advancedEvent, activeParticipant, new Date()),
+      eligible: this.getEligibility(character, advancedEvent),
+    };
+  }
+
   private async findCanonicalBossesForMap(character: any) {
     const mapTier = character.map?.tier;
     const bosses = await this.prisma.worldBoss.findMany({
@@ -396,6 +449,8 @@ export class WorldBossesService {
       include: eventInclude,
     });
 
+    if (event) event = await this.advanceEventState(event);
+
     event ??= await this.prisma.worldBossEvent.findFirst({
       where: {
         worldBossId: boss.id,
@@ -407,15 +462,11 @@ export class WorldBossesService {
       include: eventInclude,
     });
 
-    if (
-      !event ||
-      (WORLD_BOSS_TEST_UNLOCK_ENABLED &&
-        (WORLD_BOSS_TERMINAL_STATUSES.includes(event.status) ||
-          event.endsAt.getTime() <= now.getTime() ||
-          event.currentHp <= 0))
-    ) {
+    if (event) event = await this.advanceEventState(event);
+
+    if (!event) {
       event = await this.createWorldBossEventForBoss(boss, now);
-    } else if (!WORLD_BOSS_TEST_UNLOCK_ENABLED) {
+    } else if (WORLD_BOSS_TERMINAL_STATUSES.includes(event.status)) {
       event = await this.ensureNextCycleEvent(event, boss, now);
     }
 
@@ -471,13 +522,15 @@ export class WorldBossesService {
   }
 
   private async ensureEventAvailableForTest(event: any, boss: any, now: Date) {
+    const currentEvent = await this.advanceEventState(event);
+
     if (
-      event.status === WorldBossEventStatus.LOBBY_OPEN &&
-      event.startsAt.getTime() > now.getTime() &&
-      event.endsAt.getTime() > now.getTime() &&
-      event.currentHp > 0
+      currentEvent.status === WorldBossEventStatus.SCHEDULED ||
+      currentEvent.status === WorldBossEventStatus.LOBBY_OPEN ||
+      currentEvent.status === WorldBossEventStatus.ACTIVE ||
+      WORLD_BOSS_TERMINAL_STATUSES.includes(currentEvent.status)
     ) {
-      return event;
+      return currentEvent;
     }
 
     const startsAt = new Date(
@@ -1002,10 +1055,6 @@ export class WorldBossesService {
 
   private async advanceEventState(event: any) {
     const now = new Date();
-    if (WORLD_BOSS_TEST_UNLOCK_ENABLED) {
-      return this.ensureEventAvailableForTest(event, event.worldBoss, now);
-    }
-
     let nextStatus = event.status as WorldBossEventStatus;
 
     if (
@@ -1034,9 +1083,18 @@ export class WorldBossesService {
 
     if (nextStatus === event.status) return event;
 
+    const data: Prisma.WorldBossEventUpdateInput = { status: nextStatus };
+    if (
+      nextStatus === WorldBossEventStatus.ACTIVE &&
+      event.status !== WorldBossEventStatus.ACTIVE &&
+      !event.hpLockedAt
+    ) {
+      data.hpLockedAt = now;
+    }
+
     return this.prisma.worldBossEvent.update({
       where: { id: event.id },
-      data: { status: nextStatus },
+      data,
       include: eventInclude,
     });
   }

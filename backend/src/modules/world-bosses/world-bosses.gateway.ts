@@ -8,12 +8,24 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { WorldBossEventStatus } from '@prisma/client';
 import type { Server, Socket } from 'socket.io';
+import { WorldBossesService } from './world-bosses.service';
+
+const WORLD_BOSS_STATUS_TICK_MS = 1000;
+
+type WorldBossSocketSubscription = {
+  eventId: string;
+  characterId: string;
+  lastStatus?: WorldBossEventStatus | null;
+};
 
 type WorldBossSocket = Socket & {
   data: {
     userId?: string;
     joinedWorldBossRooms?: Set<string>;
+    worldBossSubscriptions?: Map<string, WorldBossSocketSubscription>;
+    worldBossStatusInterval?: NodeJS.Timeout;
   };
 };
 
@@ -26,7 +38,10 @@ export class WorldBossesGateway {
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly worldBossesService: WorldBossesService,
+  ) {}
 
   async handleConnection(client: WorldBossSocket) {
     try {
@@ -54,6 +69,7 @@ export class WorldBossesGateway {
 
       client.data.userId = payload.sub;
       client.data.joinedWorldBossRooms = new Set<string>();
+      client.data.worldBossSubscriptions = new Map();
       client.emit('worldBoss:connected', {
         socketId: client.id,
         userId: payload.sub,
@@ -68,12 +84,14 @@ export class WorldBossesGateway {
 
   handleDisconnect(client: WorldBossSocket) {
     client.data.joinedWorldBossRooms?.clear();
+    client.data.worldBossSubscriptions?.clear();
+    this.clearStatusInterval(client);
   }
 
   @SubscribeMessage('worldBoss:join')
   async handleJoin(
     @ConnectedSocket() client: WorldBossSocket,
-    @MessageBody() payload: { eventId?: string },
+    @MessageBody() payload: { eventId?: string; characterId?: string },
   ) {
     const eventId = this.normalizeId(payload?.eventId);
     if (!eventId) {
@@ -86,6 +104,15 @@ export class WorldBossesGateway {
     await client.join(room);
     client.data.joinedWorldBossRooms?.add(room);
     client.emit('worldBoss:joinedRoom', { eventId, room });
+
+    const characterId = this.normalizeId(payload?.characterId);
+    if (characterId) {
+      client.data.worldBossSubscriptions ??= new Map();
+      client.data.worldBossSubscriptions.set(eventId, { eventId, characterId });
+      await this.emitStatusToClient(client, eventId, characterId);
+      this.ensureStatusInterval(client);
+    }
+
     return { ok: true, eventId, room };
   }
 
@@ -99,6 +126,8 @@ export class WorldBossesGateway {
     const room = this.getEventRoom(eventId);
     await client.leave(room);
     client.data.joinedWorldBossRooms?.delete(room);
+    client.data.worldBossSubscriptions?.delete(eventId);
+    this.clearStatusIntervalIfIdle(client);
     client.emit('worldBoss:leftRoom', { eventId, room });
     return { ok: true, eventId, room };
   }
@@ -156,6 +185,95 @@ export class WorldBossesGateway {
     this.server
       .to(this.getEventRoom(eventId))
       .emit('worldBoss:rewarded', payload);
+  }
+
+  private ensureStatusInterval(client: WorldBossSocket) {
+    if (client.data.worldBossStatusInterval) return;
+
+    client.data.worldBossStatusInterval = setInterval(() => {
+      void this.emitSubscribedStatuses(client);
+    }, WORLD_BOSS_STATUS_TICK_MS);
+  }
+
+  private clearStatusIntervalIfIdle(client: WorldBossSocket) {
+    if ((client.data.worldBossSubscriptions?.size ?? 0) > 0) return;
+    this.clearStatusInterval(client);
+  }
+
+  private clearStatusInterval(client: WorldBossSocket) {
+    const interval = client.data.worldBossStatusInterval;
+    if (!interval) return;
+
+    clearInterval(interval);
+    client.data.worldBossStatusInterval = undefined;
+  }
+
+  private async emitSubscribedStatuses(client: WorldBossSocket) {
+    const subscriptions: WorldBossSocketSubscription[] = client.data
+      .worldBossSubscriptions
+      ? Array.from(client.data.worldBossSubscriptions.values())
+      : [];
+
+    await Promise.all(
+      subscriptions.map((subscription) =>
+        this.emitStatusToClient(
+          client,
+          subscription.eventId,
+          subscription.characterId,
+          subscription,
+        ),
+      ),
+    );
+  }
+
+  private async emitStatusToClient(
+    client: WorldBossSocket,
+    eventId: string,
+    characterId: string,
+    subscription = client.data.worldBossSubscriptions?.get(eventId),
+  ) {
+    const userId = client.data.userId;
+    if (!userId) {
+      client.emit('worldBoss:error', { message: 'Socket não autenticado.' });
+      return null;
+    }
+
+    try {
+      const status = await this.worldBossesService.getEventStatus(
+        userId,
+        characterId,
+        eventId,
+      );
+      const nextStatus = status.event?.status ?? null;
+      const previousStatus = subscription?.lastStatus;
+
+      client.emit('worldBoss:statusUpdated', status);
+
+      if (nextStatus && previousStatus && previousStatus !== nextStatus) {
+        client.emit(this.getStatusEventName(nextStatus), status);
+      }
+
+      if (subscription) subscription.lastStatus = nextStatus;
+      return status;
+    } catch (error) {
+      client.emit('worldBoss:error', {
+        message: this.extractErrorMessage(error),
+      });
+      client.data.worldBossSubscriptions?.delete(eventId);
+      this.clearStatusIntervalIfIdle(client);
+      return null;
+    }
+  }
+
+  private getStatusEventName(status: WorldBossEventStatus) {
+    if (status === WorldBossEventStatus.LOBBY_OPEN)
+      return 'worldBoss:lobbyUpdated';
+    if (status === WorldBossEventStatus.ACTIVE)
+      return 'worldBoss:battleStarted';
+    if (status === WorldBossEventStatus.DEFEATED) return 'worldBoss:defeated';
+    if (status === WorldBossEventStatus.EXPIRED) return 'worldBoss:expired';
+    if (status === WorldBossEventStatus.REWARDED) return 'worldBoss:rewarded';
+    return 'worldBoss:statusUpdated';
   }
 
   private getEventRoom(eventId: string) {
