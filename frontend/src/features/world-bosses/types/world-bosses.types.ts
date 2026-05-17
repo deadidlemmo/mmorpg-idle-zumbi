@@ -1,19 +1,20 @@
 export type WorldBossEventStatus =
-  | 'SCHEDULED'
-  | 'ACTIVE'
-  | 'DEFEATED'
-  | 'EXPIRED'
-  | 'REWARDED'
-  | 'CANCELLED';
+  | "SCHEDULED"
+  | "LOBBY_OPEN"
+  | "ACTIVE"
+  | "DEFEATED"
+  | "EXPIRED"
+  | "REWARDED"
+  | "CANCELLED";
 
 export type WorldBossRewardType =
-  | 'XP'
-  | 'GOLD'
-  | 'MATERIAL'
-  | 'CONSUMABLE'
-  | 'EQUIPMENT'
-  | 'ITEM'
-  | 'PET_EGG';
+  | "XP"
+  | "GOLD"
+  | "MATERIAL"
+  | "CONSUMABLE"
+  | "EQUIPMENT"
+  | "ITEM"
+  | "PET_EGG";
 
 export interface WorldBossRewardPreview {
   id: string;
@@ -67,12 +68,15 @@ export interface WorldBossEventSummary {
   startsAt: string;
   endsAt: string;
   remainingSeconds: number;
+  remainingSecondsToStart?: number;
+  remainingSecondsToEnd?: number;
   currentHp: number;
   maxHp: number;
   hpPercent: number;
   progressPercent: number;
   totalDamage: number;
   participantCount: number;
+  lobbyCount?: number;
   defeatedAt?: string | null;
   rewardedAt?: string | null;
   worldBoss: WorldBossSummary;

@@ -1936,8 +1936,11 @@ function buildActivityItems(params: {
     }
   }
 
-
-  if (worldBossStatus?.event && worldBossStatus.participant && worldBossStatus.event.status === "ACTIVE") {
+  if (
+    worldBossStatus?.event &&
+    worldBossStatus.participant &&
+    ["LOBBY_OPEN", "ACTIVE"].includes(worldBossStatus.event.status)
+  ) {
     const event = worldBossStatus.event;
     const participant = worldBossStatus.participant;
     items.push({
@@ -1945,17 +1948,29 @@ function buildActivityItems(params: {
       type: "world-boss",
       icon: "☣",
       title: event.worldBoss.name,
-      description: `${event.worldBoss.map.name} • HP ${formatCompactNumber(event.currentHp)}/${formatCompactNumber(event.maxHp)} • resta ${formatRemainingTime(event.remainingSeconds)}`,
+      description:
+        event.status === "LOBBY_OPEN"
+          ? `${event.worldBoss.map.name} • aguardando ameaça global • inicia em ${formatRemainingTime(event.remainingSecondsToStart ?? 0)}`
+          : `${event.worldBoss.map.name} • HP ${formatCompactNumber(event.currentHp)}/${formatCompactNumber(event.maxHp)} • resta ${formatRemainingTime(event.remainingSeconds)}`,
       progressLabel: "HP global",
       progressPercent: event.hpPercent,
       progressValueLabel: `${Math.floor(event.hpPercent)}%`,
-      primaryMetric: formatRemainingTime(event.remainingSeconds),
+      primaryMetric: formatRemainingTime(
+        event.status === "LOBBY_OPEN"
+          ? (event.remainingSecondsToStart ?? 0)
+          : event.remainingSeconds,
+      ),
       secondaryMetric: `${formatCompactNumber(participant.damageDealt)} dano`,
       indicatorMetric: `${Math.floor(event.progressPercent)}%`,
       indicatorLabel: "Progresso coletivo",
       href: `/dashboard/${characterId}/world-bosses`,
       monsterMetaLabel: `${event.worldBoss.map.name} • Tier ${event.worldBoss.tier}`,
-      combatMetric: participant.eligibleForReward ? "Elegível" : "Contribuindo",
+      combatMetric:
+        event.status === "LOBBY_OPEN"
+          ? "No lobby"
+          : participant.eligibleForReward
+            ? "Elegível"
+            : "Contribuindo",
       killsMetric: `${(participant.contributionPercent ?? 0).toFixed(1)}%`,
       xpMetric: formatRemainingTime(event.remainingSeconds),
     });
@@ -1982,7 +1997,8 @@ export function DashboardActivityBar({
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
-  const [worldBossStatus, setWorldBossStatus] = useState<WorldBossStatusResponse | null>(null);
+  const [worldBossStatus, setWorldBossStatus] =
+    useState<WorldBossStatusResponse | null>(null);
 
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isMinimized, setIsMinimized] = useState(getInitialMinimizedState);
