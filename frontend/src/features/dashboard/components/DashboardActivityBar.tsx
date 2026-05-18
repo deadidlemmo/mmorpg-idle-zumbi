@@ -1939,24 +1939,26 @@ function buildActivityItems(params: {
   if (
     worldBossStatus?.event &&
     worldBossStatus.participant &&
-    ["LOBBY_OPEN", "ACTIVE"].includes(worldBossStatus.event.status)
+    ["SCHEDULED", "LOBBY_OPEN", "ACTIVE"].includes(worldBossStatus.event.status)
   ) {
     const event = worldBossStatus.event;
     const participant = worldBossStatus.participant;
+    const isWorldBossWaiting =
+      event.status === "SCHEDULED" || event.status === "LOBBY_OPEN";
     items.push({
       key: `world-boss-${event.id}`,
       type: "world-boss",
       icon: "☣",
       title: event.worldBoss.name,
       description:
-        event.status === "LOBBY_OPEN"
+        isWorldBossWaiting
           ? `${event.worldBoss.map.name} • aguardando ameaça global • inicia em ${formatRemainingTime(event.remainingSecondsToStart ?? 0)}`
           : `${event.worldBoss.map.name} • HP ${formatCompactNumber(event.currentHp)}/${formatCompactNumber(event.maxHp)} • resta ${formatRemainingTime(event.remainingSeconds)}`,
       progressLabel: "HP global",
       progressPercent: event.hpPercent,
       progressValueLabel: `${Math.floor(event.hpPercent)}%`,
       primaryMetric: formatRemainingTime(
-        event.status === "LOBBY_OPEN"
+        isWorldBossWaiting
           ? (event.remainingSecondsToStart ?? 0)
           : event.remainingSeconds,
       ),
@@ -1966,7 +1968,7 @@ function buildActivityItems(params: {
       href: `/dashboard/${characterId}/world-bosses`,
       monsterMetaLabel: `${event.worldBoss.map.name} • Tier ${event.worldBoss.tier}`,
       combatMetric:
-        event.status === "LOBBY_OPEN"
+        isWorldBossWaiting
           ? "No lobby"
           : participant.eligibleForReward
             ? "Elegível"

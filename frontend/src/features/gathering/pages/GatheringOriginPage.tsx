@@ -56,6 +56,9 @@ const GATHERING_ORIGIN_BY_SLUG = {
   contencao: 'CONTENCAO',
 } as const satisfies Record<string, GatheringAllowedOrigin>;
 
+const WORLD_BOSS_ACTIVITY_LOCK_MESSAGE =
+  'Você está aguardando ou participando de um World Boss. Saia do lobby para iniciar gathering.';
+
 type GatheringOriginSlug = keyof typeof GATHERING_ORIGIN_BY_SLUG;
 
 type GatheringSkillLoose = Partial<GatheringSkillViewModel> & {
@@ -610,6 +613,7 @@ export function GatheringOriginPage() {
     useState<GatheringSkillViewModel | null>(null);
   const [lastKnownGatheringSkill, setLastKnownGatheringSkill] =
     useState<GatheringSkillViewModel | null>(null);
+  const [hasActiveWorldBoss, setHasActiveWorldBoss] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isPageBusy, setIsPageBusy] = useState(false);
@@ -728,6 +732,9 @@ export function GatheringOriginPage() {
       const activeSkill = getStatusGatheringSkill(statusResponse, originKey);
 
       setCharacter(buildGatheringDashboardCharacter(overviewResponse));
+      setHasActiveWorldBoss(
+        Boolean(overviewResponse.activity?.hasActiveWorldBoss),
+      );
       setOverviewGatheringSkill((currentSkill) =>
         areGatheringSkillsEquivalent(currentSkill, overviewSkill)
           ? currentSkill
@@ -769,6 +776,12 @@ export function GatheringOriginPage() {
 
   async function handleStartMaterial(material: GatheringMaterialViewModel) {
     if (isBusy || !safeCharacterId || !originKey) return;
+
+    if (hasActiveWorldBoss) {
+      setPageErrorMessage(WORLD_BOSS_ACTIVITY_LOCK_MESSAGE);
+      setFeedback(null);
+      return;
+    }
 
     setIsPageBusy(true);
     setPageErrorMessage(null);
@@ -967,6 +980,12 @@ export function GatheringOriginPage() {
             </div>
           ) : null}
 
+          {hasActiveWorldBoss ? (
+            <div className="gathering-feedback gathering-feedback--error">
+              {WORLD_BOSS_ACTIVITY_LOCK_MESSAGE}
+            </div>
+          ) : null}
+
           <section className="gathering-origin-intro-grid">
             <article
               className="gathering-origin-lore-card gathering-origin-lore-card--npc gathering-origin-npc"
@@ -1099,6 +1118,8 @@ export function GatheringOriginPage() {
                       isCurrentOriginActive ? activeMaterialId : null
                     }
                     isBusy={isBusy}
+                    isStartDisabled={hasActiveWorldBoss}
+                    startDisabledReason={WORLD_BOSS_ACTIVITY_LOCK_MESSAGE}
                     onSelectMaterial={handleSelectMaterial}
                     onStartMaterial={handleStartMaterial}
                     onViewMaterialUsage={handleViewMaterialUsage}
@@ -1238,6 +1259,8 @@ export function GatheringOriginPage() {
             gatheringSkill={gatheringSkill}
             fallbackRatePerHour={fallbackRatePerHour}
             isBusy={isBusy}
+            isStartDisabled={hasActiveWorldBoss}
+            startDisabledReason={WORLD_BOSS_ACTIVITY_LOCK_MESSAGE}
             onStart={handleStartMaterial}
             onClose={handleCloseUsageModal}
           />

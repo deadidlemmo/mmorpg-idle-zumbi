@@ -676,9 +676,11 @@ export interface CharacterOverviewResponse {
     hasActiveAutoCombat?: boolean;
     hasActiveGathering?: boolean;
     hasActiveIncursion?: boolean;
+    hasActiveWorldBoss?: boolean;
     activeAutoCombatSession?: DashboardAutoCombatSessionViewModel | null;
     activeGatheringSession?: DashboardGatheringSessionViewModel | null;
     activeIncursionSession?: DashboardIncursionSessionViewModel | null;
+    activeWorldBossParticipation?: unknown | null;
   };
 
   progression?: {

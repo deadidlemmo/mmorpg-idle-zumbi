@@ -9,6 +9,7 @@ import {
   InventoryItemType,
   ItemSlot,
 } from '@prisma/client';
+import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { calculateCombatHit } from '../../common/utils/combat-damage.util';
 import { calculateLevelProgress } from '../../common/utils/level.util';
 import { calculateFullStats } from '../../common/utils/stats.util';
@@ -79,9 +80,17 @@ type CombatSimulationResult = {
 
 @Injectable()
 export class CombatService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityGuard: ActivityGuardService,
+  ) {}
 
   async start(userId: string, startCombatDto: StartCombatDto) {
+    await this.activityGuard.ensureCanStartManualCombat({
+      characterId: startCombatDto.characterId,
+      userId,
+    });
+
     const character = await this.prisma.character.findFirst({
       where: {
         id: startCombatDto.characterId,
@@ -226,6 +235,13 @@ export class CombatService {
     }> = [];
 
     const result = await this.prisma.$transaction(async (tx) => {
+      await this.activityGuard.ensureCanStartManualCombat({
+        characterId: character.id,
+        userId,
+        client: tx,
+        lockCharacter: true,
+      });
+
       const combat = await tx.combat.create({
         data: {
           characterId: character.id,

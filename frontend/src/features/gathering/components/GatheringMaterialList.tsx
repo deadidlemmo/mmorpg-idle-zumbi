@@ -18,6 +18,8 @@ interface GatheringMaterialListProps {
   selectedMaterialId?: string | null;
   activeMaterialId?: string | null;
   isBusy?: boolean;
+  isStartDisabled?: boolean;
+  startDisabledReason?: string | null;
 
   onSelectMaterial?: (material: GatheringMaterialViewModel) => void;
   onStartMaterial?: (material: GatheringMaterialViewModel) => void | Promise<void>;
@@ -247,6 +249,8 @@ export function GatheringMaterialList({
   selectedMaterialId,
   activeMaterialId,
   isBusy = false,
+  isStartDisabled = false,
+  startDisabledReason,
   onSelectMaterial,
   onStartMaterial,
   onViewMaterialUsage,
@@ -282,6 +286,8 @@ export function GatheringMaterialList({
                 isSelected={selectedMaterialId === material.id}
                 isActive={activeMaterialId === material.id}
                 isBusy={isBusy}
+                isStartDisabled={isStartDisabled}
+                startDisabledReason={startDisabledReason}
                 onSelect={onSelectMaterial}
                 onStart={onStartMaterial}
                 onViewUsage={onViewMaterialUsage}

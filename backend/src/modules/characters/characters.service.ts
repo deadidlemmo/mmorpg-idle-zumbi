@@ -13,6 +13,7 @@ import {
   InventoryItemType,
   ItemSlot,
   MaterialOrigin,
+  WorldBossEventStatus,
 } from '@prisma/client';
 import { AUTO_COMBAT_ROUND_DURATION_SECONDS } from '../../common/config/auto-combat.config';
 import { calculateGatheringReward } from '../../common/utils/gathering.util';
@@ -840,6 +841,7 @@ export class CharactersService {
       activeAutoCombatSession,
       activeGatheringSession,
       activeIncursionSession,
+      activeWorldBossParticipation,
       availableMaps,
       recommendedMapByLevelRange,
       fallbackRecommendedMap,
@@ -999,6 +1001,53 @@ export class CharactersService {
         },
       }),
 
+      this.prisma.worldBossParticipant.findFirst({
+        where: {
+          characterId: character.id,
+          leftAt: null,
+          event: {
+            status: {
+              in: [
+                WorldBossEventStatus.SCHEDULED,
+                WorldBossEventStatus.LOBBY_OPEN,
+                WorldBossEventStatus.ACTIVE,
+              ],
+            },
+            endsAt: { gt: new Date() },
+          },
+        },
+        orderBy: { joinedAt: 'desc' },
+        select: {
+          id: true,
+          damageDealt: true,
+          contributionPercent: true,
+          joinedAt: true,
+          activeSeconds: true,
+          event: {
+            select: {
+              id: true,
+              status: true,
+              startsAt: true,
+              endsAt: true,
+              worldBoss: {
+                select: {
+                  id: true,
+                  name: true,
+                  tier: true,
+                  map: {
+                    select: {
+                      id: true,
+                      name: true,
+                      tier: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+
       this.prisma.gameMap.findMany({
         where: {
           minLevel: {
@@ -1102,6 +1151,7 @@ export class CharactersService {
     const hasActiveAutoCombat = Boolean(activeAutoCombatSession);
     const hasActiveGathering = Boolean(activeGatheringSession);
     const hasActiveIncursion = Boolean(activeIncursionSession);
+    const hasActiveWorldBoss = Boolean(activeWorldBossParticipation);
 
     const formattedActiveAutoCombatSession = activeAutoCombatSession
       ? this.formatActiveAutoCombatSession(activeAutoCombatSession)
@@ -1130,12 +1180,14 @@ export class CharactersService {
       currentHp > 0 &&
       !hasActiveAutoCombat &&
       !hasActiveGathering &&
-      !hasActiveIncursion;
+      !hasActiveIncursion &&
+      !hasActiveWorldBoss;
 
     const canUseInfirmary =
       !hasActiveAutoCombat &&
       !hasActiveGathering &&
       !hasActiveIncursion &&
+      !hasActiveWorldBoss &&
       character.status !== CharacterStatus.BLOCKED &&
       missingHp > 0;
 
@@ -1219,6 +1271,7 @@ export class CharactersService {
         hasActiveAutoCombat,
         hasActiveGathering,
         hasActiveIncursion,
+        hasActiveWorldBoss,
 
         activeAutoCombatSession: formattedActiveAutoCombatSession
           ? {
@@ -1238,6 +1291,8 @@ export class CharactersService {
         activeIncursionSession: activeIncursionSession
           ? this.formatActiveIncursionSession(activeIncursionSession)
           : null,
+
+        activeWorldBossParticipation: activeWorldBossParticipation ?? null,
       },
 
       progression: {

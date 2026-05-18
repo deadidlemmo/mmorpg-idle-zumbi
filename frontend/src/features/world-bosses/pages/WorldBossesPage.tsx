@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import {
   Biohazard,
   Eye,
@@ -88,19 +93,6 @@ function buildCharacterViewModel(
       overview.progression?.currentMap ??
       null,
   } as DashboardCharacterViewModel;
-}
-
-function getStatusLabel(status: WorldBossEventStatus) {
-  const labels: Record<WorldBossEventStatus, string> = {
-    SCHEDULED: "Aguardando aparição",
-    LOBBY_OPEN: "Entrada aberta",
-    ACTIVE: "Em andamento — entrada bloqueada",
-    DEFEATED: "Encerrado",
-    EXPIRED: "Encerrado",
-    REWARDED: "Encerrado",
-    CANCELLED: "Encerrado",
-  };
-  return labels[status];
 }
 
 function getCompactStatusLabel(status: WorldBossEventStatus) {
@@ -307,6 +299,65 @@ function getEventTimerInfo(
   };
 }
 
+function getSidePanelStatusInfo(
+  status: WorldBossStatusResponse | null,
+  nowMs: number,
+) {
+  const event = status?.event;
+  if (!event) {
+    return {
+      statusText: "Indisponível",
+      detailText: "Selecione uma ameaça global.",
+      timerLabel: "Timer",
+      timerText: "—",
+    };
+  }
+
+  if (event.status === "SCHEDULED") {
+    const seconds = getSecondsUntil(event.startsAt, nowMs);
+    return {
+      statusText: status.participant ? "No lobby" : "Aguardando aparição",
+      detailText: `Aparece em ${formatRemaining(seconds)}`,
+      timerLabel: "Aparece em",
+      timerText: formatRemaining(seconds),
+    };
+  }
+
+  if (event.status === "LOBBY_OPEN") {
+    const seconds = Math.max(
+      0,
+      Math.floor((getEntryWindowEndMs(event) - nowMs) / 1000),
+    );
+    const timerText = seconds ? formatRemaining(seconds) : "Iniciando";
+    return {
+      statusText: status.participant ? "No lobby" : "Entrada aberta",
+      detailText: status.participant
+        ? `Começa em ${timerText}`
+        : `Janela aberta por ${timerText}`,
+      timerLabel: status.participant ? "Começa em" : "Janela",
+      timerText,
+    };
+  }
+
+  if (event.status === "ACTIVE") {
+    const seconds = getSecondsUntil(event.endsAt, nowMs);
+    return {
+      statusText: "Em andamento",
+      detailText: "Entrada bloqueada",
+      timerLabel: "Tempo restante",
+      timerText: formatRemaining(seconds),
+    };
+  }
+
+  const seconds = getTerminalRespawnSeconds(status, nowMs);
+  return {
+    statusText: "Encerrado",
+    detailText: `Próxima aparição em ${formatRemaining(seconds)}`,
+    timerLabel: "Próxima aparição",
+    timerText: formatRemaining(seconds),
+  };
+}
+
 function getEventStatusPriority(status: WorldBossStatusResponse) {
   const eventStatus = status.event?.status;
   if (eventStatus === "ACTIVE") return 6;
@@ -331,6 +382,32 @@ function canLeaveWorldBossStatus(status: WorldBossStatusResponse) {
   return Boolean(
     status.participant &&
       (eventStatus === "SCHEDULED" || eventStatus === "LOBBY_OPEN"),
+  );
+}
+
+function isBlockingWorldBossStatus(status?: WorldBossStatusResponse | null) {
+  const eventStatus = status?.event?.status;
+  return Boolean(
+    status?.participant &&
+      (eventStatus === "SCHEDULED" ||
+        eventStatus === "LOBBY_OPEN" ||
+        eventStatus === "ACTIVE"),
+  );
+}
+
+function isBlockedByOtherWorldBoss(
+  status: WorldBossStatusResponse,
+  blockingEventId?: string | null,
+) {
+  const eventId = status.event?.id ?? null;
+  if (blockingEventId && eventId && blockingEventId !== eventId) return true;
+
+  return Boolean(
+    !status.participant &&
+      status.eligible?.reason &&
+      /outro World Boss|em um World Boss|Ameaça Global/i.test(
+        status.eligible.reason,
+      ),
   );
 }
 
@@ -420,6 +497,7 @@ export function WorldBossesPage() {
   const [bossStatuses, setBossStatuses] = useState<WorldBossStatusResponse[]>(
     [],
   );
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [detailsEventId, setDetailsEventId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -557,6 +635,7 @@ export function WorldBossesPage() {
 
   async function handleJoin(eventId: string) {
     if (!characterId) return;
+    setSelectedEventId(eventId);
     setIsBusy(true);
     try {
       const next = await joinWorldBoss(characterId, eventId);
@@ -576,6 +655,7 @@ export function WorldBossesPage() {
 
   async function handleLeave(eventId: string) {
     if (!characterId) return;
+    setSelectedEventId(eventId);
     setIsBusy(true);
     try {
       const next = await leaveWorldBoss(characterId, eventId);
@@ -591,6 +671,25 @@ export function WorldBossesPage() {
     }
   }
 
+  function handleSelectEvent(eventId: string) {
+    setSelectedEventId(eventId);
+  }
+
+  function handleOpenDetails(eventId: string) {
+    setSelectedEventId(eventId);
+    setDetailsEventId(eventId);
+  }
+
+  function handleCardKeyDown(
+    event: ReactKeyboardEvent<HTMLElement>,
+    eventId: string,
+  ) {
+    if (event.target !== event.currentTarget) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    handleSelectEvent(eventId);
+  }
+
   if (!character) {
     return (
       <main className="incursions-page incursions-page--loading world-bosses-loading">
@@ -599,11 +698,6 @@ export function WorldBossesPage() {
     );
   }
 
-  const panelStatus = getPanelStatus(bossStatuses);
-  const panelEvent = panelStatus?.event ?? null;
-  const panelBoss = panelEvent?.worldBoss ?? null;
-  const panelTierClassName = getWorldBossTierClassName(panelBoss?.tier);
-  const panelParticipant = panelStatus?.participant ?? null;
   const currentMap =
     character.currentMap ??
     character.map ??
@@ -615,8 +709,24 @@ export function WorldBossesPage() {
   const currentMapVisualStyle = buildMapVisualStyle(currentMapImage);
   const currentMapTierClassName = getMapTierClassName(currentMap?.tier);
   const currentMapLevelRange = formatMapLevelRange(currentMap);
+  const bossCards = getCanonicalBossCards(bossStatuses, currentMap?.tier);
+  const blockingWorldBossStatus =
+    bossStatuses.find(isBlockingWorldBossStatus) ?? null;
+  const blockingWorldBossEventId = blockingWorldBossStatus?.event?.id ?? null;
+  const selectedStatus = selectedEventId
+    ? (bossCards.find((status) => status.event?.id === selectedEventId) ??
+      null)
+    : null;
+  const panelStatus = selectedStatus ?? getPanelStatus(bossStatuses);
+  const panelEvent = panelStatus?.event ?? null;
+  const panelBoss = panelEvent?.worldBoss ?? null;
+  const panelTierClassName = getWorldBossTierClassName(panelBoss?.tier);
+  const panelParticipant = panelStatus?.participant ?? null;
+  const isPanelBlockedByOtherWorldBoss = panelStatus
+    ? isBlockedByOtherWorldBoss(panelStatus, blockingWorldBossEventId)
+    : false;
   const canJoinPanel = panelStatus
-    ? canJoinWorldBossStatus(panelStatus)
+    ? canJoinWorldBossStatus(panelStatus) && !isPanelBlockedByOtherWorldBoss
     : false;
   const canLeavePanel = panelStatus
     ? canLeaveWorldBossStatus(panelStatus)
@@ -626,7 +736,7 @@ export function WorldBossesPage() {
   const isLobbyOpen = panelEvent?.status === "LOBBY_OPEN";
   const lobbyCount =
     panelEvent?.lobbyCount ?? panelEvent?.participantCount ?? 0;
-  const panelTimer = getEventTimerInfo(panelStatus ?? null, nowMs);
+  const panelSideInfo = getSidePanelStatusInfo(panelStatus ?? null, nowMs);
   const detailsStatus = detailsEventId
     ? (bossStatuses.find((status) => status.event?.id === detailsEventId) ??
       null)
@@ -634,14 +744,17 @@ export function WorldBossesPage() {
   const detailsEvent = detailsStatus?.event ?? null;
   const detailsBoss = detailsEvent?.worldBoss ?? null;
   const detailsTimer = getEventTimerInfo(detailsStatus, nowMs);
+  const isDetailsBlockedByOtherWorldBoss = detailsStatus
+    ? isBlockedByOtherWorldBoss(detailsStatus, blockingWorldBossEventId)
+    : false;
   const canJoinDetails = detailsStatus
-    ? canJoinWorldBossStatus(detailsStatus)
+    ? canJoinWorldBossStatus(detailsStatus) && !isDetailsBlockedByOtherWorldBoss
     : false;
   const canLeaveDetails = detailsStatus
     ? canLeaveWorldBossStatus(detailsStatus)
     : false;
   const detailsTierClassName = getWorldBossTierClassName(detailsBoss?.tier);
-  const bossCards = getCanonicalBossCards(bossStatuses, currentMap?.tier);
+  const selectedPanelEventId = panelEvent?.id ?? null;
 
   return (
     <DashboardLayout character={character} hideHero>
@@ -762,7 +875,14 @@ export function WorldBossesPage() {
                   {bossCards.map((bossStatus) => {
                     const bossEvent = bossStatus.event!;
                     const cardBoss = bossEvent.worldBoss;
-                    const cardCanJoin = canJoinWorldBossStatus(bossStatus);
+                    const cardBlockedByOtherWorldBoss =
+                      isBlockedByOtherWorldBoss(
+                        bossStatus,
+                        blockingWorldBossEventId,
+                      );
+                    const cardCanJoin =
+                      canJoinWorldBossStatus(bossStatus) &&
+                      !cardBlockedByOtherWorldBoss;
                     const cardCanLeave = canLeaveWorldBossStatus(bossStatus);
                     const cardIsLocked =
                       !bossStatus.eligible?.canJoin &&
@@ -775,6 +895,12 @@ export function WorldBossesPage() {
                     const cardStatusLabel = getCardStatusLabel(bossStatus);
                     const showCardStatusBadge =
                       cardStatusLabel !== "Aguardando";
+                    const shouldShowBlockedJoin =
+                      cardBlockedByOtherWorldBoss &&
+                      !cardCanLeave &&
+                      bossEvent.status !== "ACTIVE";
+                    const isCardSelected =
+                      selectedPanelEventId === bossEvent.id;
                     const bossTierClassName = getWorldBossTierClassName(
                       cardBoss.tier,
                     );
@@ -786,10 +912,20 @@ export function WorldBossesPage() {
                           "world-bosses-boss-card",
                           bossTierClassName,
                           `world-bosses-boss-card--${cardTone}`,
+                          isCardSelected
+                            ? "world-bosses-boss-card--selected"
+                            : "",
                           cardIsLocked ? "world-bosses-boss-card--locked" : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
+                        tabIndex={0}
+                        aria-label={`Selecionar World Boss ${cardBoss.name}`}
+                        onClick={() => handleSelectEvent(bossEvent.id)}
+                        onDoubleClick={() => handleOpenDetails(bossEvent.id)}
+                        onKeyDown={(event) =>
+                          handleCardKeyDown(event, bossEvent.id)
+                        }
                       >
                         <div className="world-bosses-boss-card__details">
                           <div className="world-bosses-boss-card__art">
@@ -824,11 +960,19 @@ export function WorldBossesPage() {
                                 <small>{cardLobbyCount} no lobby</small>
                               ) : null}
                             </div>
-                            <div className="world-bosses-boss-card__actions">
+                            <div
+                              className="world-bosses-boss-card__actions"
+                              onDoubleClick={(event) =>
+                                event.stopPropagation()
+                              }
+                            >
                               <button
                                 type="button"
                                 className="world-bosses-boss-card__secondary-action"
-                                onClick={() => setDetailsEventId(bossEvent.id)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleOpenDetails(bossEvent.id);
+                                }}
                               >
                                 <Eye size={15} />
                                 Ver detalhes
@@ -837,8 +981,25 @@ export function WorldBossesPage() {
                                 <button
                                   type="button"
                                   className="incursions-primary-button world-bosses-boss-card__primary-action"
-                                  onClick={() => void handleJoin(bossEvent.id)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleJoin(bossEvent.id);
+                                  }}
                                   disabled={isBusy}
+                                >
+                                  <Swords size={15} />
+                                  Entrar
+                                </button>
+                              ) : shouldShowBlockedJoin ? (
+                                <button
+                                  type="button"
+                                  className="incursions-primary-button world-bosses-boss-card__primary-action"
+                                  onClick={(event) => event.stopPropagation()}
+                                  disabled
+                                  title={
+                                    bossStatus.eligible?.reason ??
+                                    "Você já está em outro World Boss."
+                                  }
                                 >
                                   <Swords size={15} />
                                   Entrar
@@ -848,7 +1009,10 @@ export function WorldBossesPage() {
                                 <button
                                   type="button"
                                   className="incursions-danger-button world-bosses-boss-card__primary-action"
-                                  onClick={() => void handleLeave(bossEvent.id)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleLeave(bossEvent.id);
+                                  }}
                                   disabled={isBusy}
                                 >
                                   <XCircle size={15} />
@@ -885,7 +1049,10 @@ export function WorldBossesPage() {
                   <div className="incursions-current-card__empty world-bosses-activity-empty">
                     <ShieldAlert size={24} />
                     <h2>Nenhum lobby ativo</h2>
-                    <p>Escolha uma ameaça global para entrar no lobby.</p>
+                    <p>
+                      Escolha uma ameaça global para ver os detalhes ou entrar
+                      no lobby.
+                    </p>
                   </div>
                 ) : (
                   <div className="incursions-current-card__content world-bosses-activity-content">
@@ -903,13 +1070,20 @@ export function WorldBossesPage() {
                       <div>
                         <span>{panelBoss.map.name}</span>
                         <h2>{panelBoss.name}</h2>
-                        <p>{getStatusLabel(panelEvent.status)}</p>
+                        <p>
+                          Tier {panelBoss.tier} · Level{" "}
+                          {getBossLevel(panelBoss)}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="world-bosses-state">
+                    <div className="world-bosses-state world-bosses-state--current">
                       {isBattleActive ? <i aria-hidden="true" /> : null}
-                      <strong>{panelTimer.text}</strong>
+                      <span className="world-bosses-state__copy">
+                        <small>Status atual</small>
+                        <strong>{panelSideInfo.statusText}</strong>
+                        <em>{panelSideInfo.detailText}</em>
+                      </span>
                     </div>
 
                     <div className="incursions-current-card__progress world-bosses-hp">
@@ -938,8 +1112,8 @@ export function WorldBossesPage() {
 
                     <div className="world-bosses-activity-metrics">
                       <span>
-                        <small>{panelTimer.label}</small>
-                        <strong>{panelTimer.text}</strong>
+                        <small>{panelSideInfo.timerLabel}</small>
+                        <strong>{panelSideInfo.timerText}</strong>
                       </span>
                       <span>
                         <small>
@@ -965,12 +1139,32 @@ export function WorldBossesPage() {
                     </div>
 
                     <div className="world-bosses-actions">
+                      <button
+                        type="button"
+                        className="incursions-secondary-button"
+                        onClick={() => handleOpenDetails(panelEvent.id)}
+                      >
+                        <Eye size={15} />
+                        Ver detalhes
+                      </button>
                       {canJoinPanel ? (
                         <button
                           type="button"
                           className="incursions-primary-button"
                           onClick={() => void handleJoin(panelEvent.id)}
                           disabled={isBusy}
+                        >
+                          Entrar
+                        </button>
+                      ) : isPanelBlockedByOtherWorldBoss ? (
+                        <button
+                          type="button"
+                          className="incursions-primary-button"
+                          disabled
+                          title={
+                            panelStatus?.eligible?.reason ??
+                            "Você já está em outro World Boss."
+                          }
                         >
                           Entrar
                         </button>
@@ -1112,6 +1306,19 @@ export function WorldBossesPage() {
                     type="button"
                     onClick={() => void handleJoin(detailsEvent.id)}
                     disabled={isBusy}
+                  >
+                    <Swords size={15} />
+                    Entrar
+                  </button>
+                ) : isDetailsBlockedByOtherWorldBoss ? (
+                  <button
+                    className="incursions-primary-button"
+                    type="button"
+                    disabled
+                    title={
+                      detailsStatus?.eligible?.reason ??
+                      "Você já está em outro World Boss."
+                    }
                   >
                     <Swords size={15} />
                     Entrar

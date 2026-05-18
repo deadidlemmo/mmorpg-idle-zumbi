@@ -1166,58 +1166,66 @@ export class GatheringService {
 
     const now = new Date();
 
-    const session = await this.prisma.gatheringSession.create({
-      data: {
+    const session = await this.prisma.$transaction(async (tx) => {
+      await this.activityGuard.ensureCanStartGathering({
         characterId: dto.characterId,
-        mapId: dto.mapId,
-        origin: dto.origin,
-        targetMaterialId: dto.targetMaterialId,
-        status: ActivityStatus.ACTIVE,
-        startedAt: now,
-        lastResolvedAt: now,
-        progressRemainder: 0,
-        collectedQuantity: 0,
-        collectedXp: 0,
-      },
-      include: {
-        character: {
-          select: {
-            id: true,
-            name: true,
-            level: true,
-            status: true,
-            currentHp: true,
-            maxHp: true,
-            class: {
-              select: {
-                id: true,
-                name: true,
+        client: tx,
+        lockCharacter: true,
+      });
+
+      return tx.gatheringSession.create({
+        data: {
+          characterId: dto.characterId,
+          mapId: dto.mapId,
+          origin: dto.origin,
+          targetMaterialId: dto.targetMaterialId,
+          status: ActivityStatus.ACTIVE,
+          startedAt: now,
+          lastResolvedAt: now,
+          progressRemainder: 0,
+          collectedQuantity: 0,
+          collectedXp: 0,
+        },
+        include: {
+          character: {
+            select: {
+              id: true,
+              name: true,
+              level: true,
+              status: true,
+              currentHp: true,
+              maxHp: true,
+              class: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
           },
-        },
-        map: {
-          select: {
-            id: true,
-            name: true,
-            tier: true,
+          map: {
+            select: {
+              id: true,
+              name: true,
+              tier: true,
+            },
+          },
+          targetMaterial: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              tier: true,
+              materialOrigin: true,
+              materialSlot: true,
+              isGatheringMaterial: true,
+              requiredGatheringLevel: true,
+              gatheringXpPerUnit: true,
+              baseGatheringRatePerHour: true,
+            },
           },
         },
-        targetMaterial: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            tier: true,
-            materialOrigin: true,
-            materialSlot: true,
-            isGatheringMaterial: true,
-            requiredGatheringLevel: true,
-            gatheringXpPerUnit: true,
-            baseGatheringRatePerHour: true,
-          },
-        },
-      },
+      });
     });
 
     return {

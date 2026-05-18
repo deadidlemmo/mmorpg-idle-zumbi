@@ -515,7 +515,7 @@ export function IncursionsPage() {
   const currentMapLevelRangeLabel = formatMapLevelRange(currentMap);
   const hasBlockingActivity = incursions.some((incursion) =>
     (incursion.lockedReasons ?? []).some((reason) =>
-      /auto-combate|gathering|atividade/i.test(reason),
+      /auto-combate|gathering|atividade|world boss/i.test(reason),
     ),
   );
 

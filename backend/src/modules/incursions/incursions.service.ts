@@ -163,6 +163,13 @@ export class IncursionsService {
     const endsAt = new Date(now.getTime() + incursion.durationSeconds * 1000);
 
     const session = await this.prisma.$transaction(async (tx) => {
+      await this.activityGuard.ensureCanStartIncursion({
+        characterId: dto.characterId,
+        userId,
+        client: tx,
+        lockCharacter: true,
+      });
+
       const activeIncursion = await tx.characterIncursionSession.findFirst({
         where: {
           characterId: character.id,
@@ -706,6 +713,7 @@ export class IncursionsService {
       hasActiveAutoCombat?: boolean;
       hasActiveGathering?: boolean;
       hasActiveIncursion?: boolean;
+      hasActiveWorldBoss?: boolean;
     },
   ) {
     const lockedReasons: string[] = [];
@@ -720,6 +728,8 @@ export class IncursionsService {
       lockedReasons.push('Auto-combate em andamento');
     if (activityState?.hasActiveGathering)
       lockedReasons.push('Gathering em andamento');
+    if (activityState?.hasActiveWorldBoss)
+      lockedReasons.push('Você já está em um World Boss');
 
     return {
       ...this.formatIncursion(incursion),

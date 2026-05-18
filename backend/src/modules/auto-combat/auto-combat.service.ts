@@ -739,6 +739,13 @@ export class AutoCombatService implements OnModuleDestroy {
 
     try {
       session = await this.prisma.$transaction(async (tx) => {
+        await this.activityGuard.ensureCanStartAutoCombat({
+          userId,
+          characterId: character.id,
+          client: tx,
+          lockCharacter: true,
+        });
+
         await tx.character.update({
           where: {
             id: character.id,

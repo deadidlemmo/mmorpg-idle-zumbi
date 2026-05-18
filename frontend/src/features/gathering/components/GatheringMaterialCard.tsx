@@ -30,6 +30,8 @@ interface GatheringMaterialCardProps {
   isSelected?: boolean;
   isActive?: boolean;
   isBusy?: boolean;
+  isStartDisabled?: boolean;
+  startDisabledReason?: string | null;
 
   onSelect?: (material: GatheringMaterialViewModel) => void;
   onStart?: (material: GatheringMaterialViewModel) => void | Promise<void>;
@@ -411,6 +413,8 @@ export function GatheringMaterialCard({
   isSelected = false,
   isActive = false,
   isBusy = false,
+  isStartDisabled = false,
+  startDisabledReason,
   onSelect,
   onStart,
   onViewUsage,
@@ -440,7 +444,8 @@ export function GatheringMaterialCard({
   const relatedSummary = getMaterialRelatedSummary(material, primaryRecipe);
   const usageTitle = getRecipeUsageTitle(material);
 
-  const canStart = Boolean(onStart) && isUnlocked && !isBusy && !isActive;
+  const canStart =
+    Boolean(onStart) && isUnlocked && !isBusy && !isActive && !isStartDisabled;
   const canViewUsage = Boolean(onViewUsage) && isUnlocked && !isBusy;
 
   const cardClassName = [
@@ -482,6 +487,7 @@ export function GatheringMaterialCard({
 
   function getStartButtonLabel() {
     if (isActive) return 'Coletando';
+    if (isStartDisabled) return 'Bloqueado';
     if (!isUnlocked) return `Req. Nv. ${requiredLevel}`;
     if (isBusy) return 'Aguarde';
     return 'Iniciar';
@@ -603,6 +609,7 @@ export function GatheringMaterialCard({
           className="gathering-material-card__start-button"
           onClick={handleStart}
           disabled={!canStart}
+          title={isStartDisabled ? (startDisabledReason ?? undefined) : undefined}
         >
           {getStartButtonLabel()}
         </button>

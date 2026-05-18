@@ -23,6 +23,8 @@ interface GatheringUsageModalProps {
   gatheringSkill?: GatheringSkillViewModel | null;
   fallbackRatePerHour?: number | null;
   isBusy?: boolean;
+  isStartDisabled?: boolean;
+  startDisabledReason?: string | null;
   onClose: () => void;
   onStart?: (material: GatheringMaterialViewModel) => void | Promise<void>;
 }
@@ -198,6 +200,8 @@ export function GatheringUsageModal({
   gatheringSkill,
   fallbackRatePerHour,
   isBusy = false,
+  isStartDisabled = false,
+  startDisabledReason,
   onClose,
   onStart,
 }: GatheringUsageModalProps) {
@@ -225,7 +229,9 @@ export function GatheringUsageModal({
 
   const timePerUnitLabel = formatGatheringTimePerUnitShort(ratePerHour);
   const iconUrl = getMaterialIconUrl(material);
-  const canStart = Boolean(material && onStart && isUnlocked && !isBusy);
+  const canStart = Boolean(
+    material && onStart && isUnlocked && !isBusy && !isStartDisabled,
+  );
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -349,17 +355,21 @@ export function GatheringUsageModal({
             onClick={() => void handleStartClick()}
             disabled={!canStart}
             title={
-              isUnlocked
-                ? undefined
-                : `Requer nível ${requiredLevel}. Seu nível atual é ${currentSkillLevel}.`
+              isStartDisabled
+                ? (startDisabledReason ?? undefined)
+                : isUnlocked
+                  ? undefined
+                  : `Requer nível ${requiredLevel}. Seu nível atual é ${currentSkillLevel}.`
             }
           >
-            {getStartButtonLabel({
-              isBusy,
-              isUnlocked,
-              requiredLevel,
-              hasStartAction: Boolean(onStart),
-            })}
+            {isStartDisabled
+              ? 'Bloqueado'
+              : getStartButtonLabel({
+                  isBusy,
+                  isUnlocked,
+                  requiredLevel,
+                  hasStartAction: Boolean(onStart),
+                })}
           </button>
         </div>
 

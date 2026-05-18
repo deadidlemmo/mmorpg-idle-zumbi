@@ -38,6 +38,10 @@ export class InfirmaryService {
       canHeal = false;
       reason =
         'Não é possível usar a enfermaria durante gathering. Encerre o gathering antes de curar.';
+    } else if (activityState.hasActiveWorldBoss) {
+      canHeal = false;
+      reason =
+        'Não é possível usar a enfermaria enquanto você está aguardando ou participando de um World Boss.';
     } else if (character.status === CharacterStatus.BLOCKED) {
       canHeal = false;
       reason = 'Personagem bloqueado não pode usar a enfermaria.';
@@ -64,8 +68,11 @@ export class InfirmaryService {
         missingHp,
         hasActiveAutoCombat: activityState.hasActiveAutoCombat,
         hasActiveGathering: activityState.hasActiveGathering,
+        hasActiveWorldBoss: activityState.hasActiveWorldBoss,
         activeAutoCombatSession: activityState.activeAutoCombatSession,
         activeGatheringSession: activityState.activeGatheringSession,
+        activeWorldBossParticipation:
+          activityState.activeWorldBossParticipation,
         cost: {
           type: 'FREE_MVP',
           amount: 0,

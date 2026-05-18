@@ -116,9 +116,17 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
   async getActive(userId: string, characterId: string) {
     const character = await this.getCharacterOrThrow(userId, characterId);
     const status = await this.getStatus(userId, characterId);
+    const activityState = await this.activityGuard.getCharacterActivityState({
+      characterId,
+      userId,
+    });
     return {
       ...status,
-      eligible: this.getEligibility(character, status.event ?? null),
+      eligible: this.getEligibility(
+        character,
+        status.event ?? null,
+        activityState.activeWorldBossParticipation,
+      ),
     };
   }
 
@@ -133,6 +141,10 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     }
 
     const now = new Date();
+    const activityState = await this.activityGuard.getCharacterActivityState({
+      characterId,
+      userId,
+    });
     const bosses = await this.findCanonicalBossesForMap(character);
     const events = await Promise.all(
       bosses.map((boss) => this.ensureDisplayEventForBoss(boss, now)),
@@ -171,13 +183,21 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
               new Date(),
               resolved.rewards,
             ),
-            eligible: this.getEligibility(character, resolved.event),
+            eligible: this.getEligibility(
+              character,
+              resolved.event,
+              activityState.activeWorldBossParticipation,
+            ),
           };
         }
 
         return {
           ...this.formatStatus(availableEvent, activeParticipant, now),
-          eligible: this.getEligibility(character, availableEvent),
+          eligible: this.getEligibility(
+            character,
+            availableEvent,
+            activityState.activeWorldBossParticipation,
+          ),
         };
       }),
     );
@@ -279,6 +299,12 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     this.ensureEventJoinable(availableEvent);
     this.ensureEligible(character, availableEvent.worldBoss);
 
+    await this.activityGuard.ensureCanStartWorldBoss({
+      characterId: dto.characterId,
+      userId,
+      worldBossEventId: dto.eventId,
+    });
+
     if (availableEvent.status !== WorldBossEventStatus.SCHEDULED) {
       const activityState = await this.activityGuard.getCharacterActivityState({
         characterId: dto.characterId,
@@ -297,6 +323,14 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
 
     const now = new Date();
     const result = await this.prisma.$transaction(async (tx) => {
+      await this.activityGuard.ensureCanStartWorldBoss({
+        characterId: dto.characterId,
+        userId,
+        worldBossEventId: dto.eventId,
+        client: tx,
+        lockCharacter: true,
+      });
+
       const existingParticipant = await tx.worldBossParticipant.findUnique({
         where: {
           eventId_characterId: {
@@ -435,6 +469,10 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       throw new ForbiddenException('Personagem não está no mapa desta ameaça.');
 
     const advancedEvent = await this.advanceEventState(event);
+    const activityState = await this.activityGuard.getCharacterActivityState({
+      characterId,
+      userId,
+    });
     const participant = await this.prisma.worldBossParticipant.findUnique({
       where: {
         eventId_characterId: {
@@ -466,13 +504,21 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
           new Date(),
           resolved.rewards,
         ),
-        eligible: this.getEligibility(character, resolved.event),
+        eligible: this.getEligibility(
+          character,
+          resolved.event,
+          activityState.activeWorldBossParticipation,
+        ),
       };
     }
 
     return {
       ...this.formatStatus(advancedEvent, activeParticipant, new Date()),
-      eligible: this.getEligibility(character, advancedEvent),
+      eligible: this.getEligibility(
+        character,
+        advancedEvent,
+        activityState.activeWorldBossParticipation,
+      ),
     };
   }
 
@@ -1240,8 +1286,21 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       );
   }
 
-  private getEligibility(character: any, event: any | null) {
+  private getEligibility(
+    character: any,
+    event: any | null,
+    activeWorldBossParticipation?: any | null,
+  ) {
     if (!event) return { canJoin: false, reason: 'Nenhuma ameaça ativa.' };
+    const activeWorldBossEventId =
+      activeWorldBossParticipation?.event?.id ?? null;
+    if (activeWorldBossEventId && activeWorldBossEventId !== event.id) {
+      return {
+        canJoin: false,
+        reason:
+          'Você já está aguardando outro World Boss. Saia do lobby atual antes de entrar em outro.',
+      };
+    }
     const boss = event.worldBoss;
     const now = new Date();
     const visibleBossMapId = boss.mapId ?? boss.map?.id;

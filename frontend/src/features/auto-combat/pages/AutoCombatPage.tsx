@@ -1245,6 +1245,7 @@ export function AutoCombatPage() {
   );
 
   const canStartHunt =
+    !overview?.activity?.hasActiveWorldBoss &&
     Boolean(selectedMap) &&
     Boolean(selectedSubMap) &&
     selectedMapIsUnlocked &&
@@ -1395,6 +1396,13 @@ export function AutoCombatPage() {
   }
 
   function handleStartHunt() {
+    if (overview?.activity?.hasActiveWorldBoss) {
+      setErrorMessage(
+        'Você está aguardando um World Boss. Saia do lobby antes de iniciar auto-combate.',
+      );
+      return;
+    }
+
     if (!characterHasHp) {
       setErrorMessage(
         'Este personagem está sem HP. Use a enfermaria ou uma cura antes de iniciar uma nova caça.',
@@ -1610,6 +1618,13 @@ export function AutoCombatPage() {
 
   async function handleStartAutoCombat() {
     if (!characterId || !selectedSubMapId || isActionLoading) return;
+
+    if (overview?.activity?.hasActiveWorldBoss) {
+      setErrorMessage(
+        'Você está aguardando um World Boss. Saia do lobby antes de iniciar auto-combate.',
+      );
+      return;
+    }
 
     if (!characterHasHp) {
       setErrorMessage(
@@ -1869,6 +1884,11 @@ export function AutoCombatPage() {
                           type="button"
                           className="auto-combat-primary-button"
                           disabled={!canStartHunt || isActionLoading}
+                          title={
+                            overview?.activity?.hasActiveWorldBoss
+                              ? 'Você já está em um World Boss.'
+                              : undefined
+                          }
                           onClick={handleStartHunt}
                         >
                           Iniciar caça

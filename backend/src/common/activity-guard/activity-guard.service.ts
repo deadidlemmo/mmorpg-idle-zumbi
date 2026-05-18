@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents, @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,6 +10,7 @@ import {
   AutoCombatSessionStatus,
   CharacterStatus,
   IncursionSessionStatus,
+  Prisma,
   WorldBossEventStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -16,6 +18,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 type ActivityGuardParams = {
   characterId: string;
   userId?: string;
+  client?: PrismaService | Prisma.TransactionClient;
+  lockCharacter?: boolean;
+  worldBossEventId?: string;
 };
 
 type CharacterActivityState = {
@@ -38,6 +43,12 @@ type CharacterActivityState = {
   hasActiveWorldBoss: boolean;
 };
 
+const ACTIVE_WORLD_BOSS_EVENT_STATUSES = [
+  WorldBossEventStatus.SCHEDULED,
+  WorldBossEventStatus.LOBBY_OPEN,
+  WorldBossEventStatus.ACTIVE,
+];
+
 @Injectable()
 export class ActivityGuardService {
   constructor(private readonly prisma: PrismaService) {}
@@ -45,7 +56,9 @@ export class ActivityGuardService {
   async getCharacterActivityState(
     params: ActivityGuardParams,
   ): Promise<CharacterActivityState> {
-    const character = await this.prisma.character.findFirst({
+    const client = params.client ?? this.prisma;
+
+    const character = await client.character.findFirst({
       where: {
         id: params.characterId,
         ...(params.userId ? { userId: params.userId } : {}),
@@ -64,13 +77,20 @@ export class ActivityGuardService {
       throw new NotFoundException('Personagem não encontrado.');
     }
 
+    if (params.lockCharacter) {
+      await client.character.update({
+        where: { id: character.id },
+        data: { updatedAt: new Date() },
+      });
+    }
+
     const [
       activeAutoCombatSession,
       activeGatheringSession,
       activeIncursionSession,
       activeWorldBossParticipation,
     ] = await Promise.all([
-      this.prisma.autoCombatSession.findFirst({
+      client.autoCombatSession.findFirst({
         where: {
           characterId: character.id,
           status: AutoCombatSessionStatus.ACTIVE,
@@ -101,7 +121,7 @@ export class ActivityGuardService {
         },
       }),
 
-      this.prisma.gatheringSession.findFirst({
+      client.gatheringSession.findFirst({
         where: {
           characterId: character.id,
           status: ActivityStatus.ACTIVE,
@@ -133,7 +153,7 @@ export class ActivityGuardService {
         },
       }),
 
-      this.prisma.characterIncursionSession.findFirst({
+      client.characterIncursionSession.findFirst({
         where: {
           characterId: character.id,
           status: IncursionSessionStatus.ACTIVE,
@@ -164,16 +184,13 @@ export class ActivityGuardService {
         },
       }),
 
-      this.prisma.worldBossParticipant.findFirst({
+      client.worldBossParticipant.findFirst({
         where: {
           characterId: character.id,
           leftAt: null,
           event: {
             status: {
-              in: [
-                WorldBossEventStatus.LOBBY_OPEN,
-                WorldBossEventStatus.ACTIVE,
-              ],
+              in: ACTIVE_WORLD_BOSS_EVENT_STATUSES,
             },
             endsAt: { gt: new Date() },
           },
@@ -191,6 +208,7 @@ export class ActivityGuardService {
             select: {
               id: true,
               status: true,
+              startsAt: true,
               endsAt: true,
               worldBoss: {
                 select: {
@@ -235,14 +253,14 @@ export class ActivityGuardService {
     );
 
     if (state.hasActiveGathering) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message: 'Este personagem já possui um gathering ativo.',
         activeGathering: state.activeGatheringSession,
       });
     }
 
     if (state.hasActiveIncursion) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message:
           'Este personagem já está em uma incursão ativa. Aguarde finalizar antes de iniciar outra atividade.',
         activeIncursion: state.activeIncursionSession,
@@ -250,7 +268,7 @@ export class ActivityGuardService {
     }
 
     if (state.hasActiveAutoCombat) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message:
           'Este personagem está em auto-combate. Pare o auto-combate antes de iniciar gathering.',
         activeAutoCombat: state.activeAutoCombatSession,
@@ -258,7 +276,7 @@ export class ActivityGuardService {
     }
 
     if (state.hasActiveWorldBoss) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message:
           'Este personagem está em uma Ameaça Global. Saia da atividade antes de iniciar gathering.',
         activeWorldBoss: state.activeWorldBossParticipation,
@@ -298,7 +316,7 @@ export class ActivityGuardService {
     );
 
     if (state.hasActiveGathering) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message:
           'Este personagem está em gathering. Encerre o gathering antes de iniciar auto-combate.',
         activeGathering: state.activeGatheringSession,
@@ -306,7 +324,7 @@ export class ActivityGuardService {
     }
 
     if (state.hasActiveIncursion) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message:
           'Este personagem já está em uma incursão ativa. Aguarde finalizar antes de iniciar outra atividade.',
         activeIncursion: state.activeIncursionSession,
@@ -314,7 +332,7 @@ export class ActivityGuardService {
     }
 
     if (state.hasActiveAutoCombat) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message:
           'Este personagem já possui uma sessão de combate automático ativa.',
         activeAutoCombat: state.activeAutoCombatSession,
@@ -322,7 +340,7 @@ export class ActivityGuardService {
     }
 
     if (state.hasActiveWorldBoss) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message:
           'Este personagem está em uma Ameaça Global. Saia da atividade antes de iniciar auto-combate.',
         activeWorldBoss: state.activeWorldBossParticipation,
@@ -346,14 +364,14 @@ export class ActivityGuardService {
     );
 
     if (state.hasActiveIncursion) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message: 'Este personagem já possui uma incursão ativa.',
         activeIncursion: state.activeIncursionSession,
       });
     }
 
     if (state.hasActiveAutoCombat) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message:
           'Este personagem está em auto-combate. Pare o auto-combate antes de iniciar uma incursão.',
         activeAutoCombat: state.activeAutoCombatSession,
@@ -361,7 +379,7 @@ export class ActivityGuardService {
     }
 
     if (state.hasActiveGathering) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message:
           'Este personagem está em gathering. Encerre o gathering antes de iniciar uma incursão.',
         activeGathering: state.activeGatheringSession,
@@ -369,9 +387,111 @@ export class ActivityGuardService {
     }
 
     if (state.hasActiveWorldBoss) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message:
           'Este personagem está em uma Ameaça Global. Saia da atividade antes de iniciar uma incursão.',
+        activeWorldBoss: state.activeWorldBossParticipation,
+      });
+    }
+
+    return state;
+  }
+
+  async ensureCanStartWorldBoss(params: ActivityGuardParams) {
+    const state = await this.getCharacterActivityState(params);
+
+    this.ensureCharacterIsActive(
+      state.character.status,
+      'Apenas personagens ativos podem entrar em World Boss.',
+    );
+
+    this.ensureCharacterHasHp(
+      state.currentHp,
+      'Personagens derrotados ou com 0 de HP não podem entrar em World Boss. Cure o personagem antes.',
+    );
+
+    if (state.hasActiveAutoCombat) {
+      throw new ConflictException({
+        message:
+          'Finalize ou pare o auto-combate antes de entrar em um World Boss.',
+        activeAutoCombat: state.activeAutoCombatSession,
+      });
+    }
+
+    if (state.hasActiveGathering) {
+      throw new ConflictException({
+        message:
+          'Finalize ou encerre o gathering antes de entrar em um World Boss.',
+        activeGathering: state.activeGatheringSession,
+      });
+    }
+
+    if (state.hasActiveIncursion) {
+      throw new ConflictException({
+        message:
+          'Finalize ou cancele a incursão antes de entrar em um World Boss.',
+        activeIncursion: state.activeIncursionSession,
+      });
+    }
+
+    const activeWorldBossEventId =
+      state.activeWorldBossParticipation?.event?.id ?? null;
+
+    if (
+      activeWorldBossEventId &&
+      activeWorldBossEventId !== params.worldBossEventId
+    ) {
+      throw new ConflictException({
+        message:
+          'Você já está aguardando outro World Boss. Saia do lobby atual antes de entrar em outro World Boss.',
+        activeWorldBoss: state.activeWorldBossParticipation,
+      });
+    }
+
+    return state;
+  }
+
+  async ensureCanStartManualCombat(params: ActivityGuardParams) {
+    const state = await this.getCharacterActivityState(params);
+
+    this.ensureCharacterIsActive(
+      state.character.status,
+      'Apenas personagens ativos podem iniciar combate.',
+    );
+
+    this.ensureCharacterHasHp(
+      state.currentHp,
+      'Personagens derrotados ou com 0 de HP não podem iniciar combate. Cure o personagem antes.',
+    );
+
+    if (state.hasActiveAutoCombat) {
+      throw new ConflictException({
+        message:
+          'Este personagem está em auto-combate. Pare o auto-combate antes de iniciar combate manual.',
+        activeAutoCombat: state.activeAutoCombatSession,
+      });
+    }
+
+    if (state.hasActiveGathering) {
+      throw new ConflictException({
+        message:
+          'Este personagem está em gathering. Encerre o gathering antes de iniciar combate manual.',
+        activeGathering: state.activeGatheringSession,
+      });
+    }
+
+    if (state.hasActiveIncursion) {
+      throw new ConflictException({
+        message:
+          'Este personagem está em uma incursão ativa. Aguarde finalizar antes de iniciar combate manual.',
+        activeIncursion: state.activeIncursionSession,
+      });
+    }
+
+    if (state.hasActiveWorldBoss) {
+      throw new ConflictException({
+        message:
+          'Este personagem está em uma Ameaça Global. Saia da atividade antes de iniciar combate manual.',
         activeWorldBoss: state.activeWorldBossParticipation,
       });
     }
@@ -383,17 +503,25 @@ export class ActivityGuardService {
     const state = await this.getCharacterActivityState(params);
 
     if (state.hasActiveAutoCombat) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message: 'Não é possível usar a enfermaria durante auto-combate ativo.',
         activeAutoCombatSession: state.activeAutoCombatSession,
       });
     }
 
     if (state.hasActiveGathering) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message:
           'Não é possível usar a enfermaria durante gathering. Encerre o gathering antes de curar.',
         activeGatheringSession: state.activeGatheringSession,
+      });
+    }
+
+    if (state.hasActiveWorldBoss) {
+      throw new ConflictException({
+        message:
+          'Não é possível usar a enfermaria enquanto você está aguardando ou participando de um World Boss.',
+        activeWorldBossSession: state.activeWorldBossParticipation,
       });
     }
 
