@@ -1,4 +1,4 @@
-import type { MobDropSeedData, SubMapEncounterSeedData } from '../seed-types';
+import type { SubMapEncounterSeedData } from '../seed-types';
 
 export const encounterDefinitions: SubMapEncounterSeedData[] = [
   {
@@ -64,5 +64,3 @@ export const encounterDefinitions: SubMapEncounterSeedData[] = [
     weight: 15,
   },
 ];
-
-export const mobDropDefinitions: MobDropSeedData[] = [];

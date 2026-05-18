@@ -15,10 +15,7 @@ import {
 } from '@prisma/client';
 import { classDefinitions } from './seed-data/classes.seed-data';
 import { consumableDefinitions } from './seed-data/consumables.seed-data';
-import {
-  encounterDefinitions,
-  mobDropDefinitions,
-} from './seed-data/encounters.seed-data';
+import { encounterDefinitions } from './seed-data/encounters.seed-data';
 import { gatheringDefinitions } from './seed-data/gathering.seed-data';
 import { incursionDefinitions } from './seed-data/incursions.seed-data';
 import {
@@ -27,6 +24,10 @@ import {
   starterEquipmentDefinitions,
 } from './seed-data/items.seed-data';
 import { mapDefinitions } from './seed-data/maps.seed-data';
+import {
+  mobDropItemDefinitions,
+  mobDropTables,
+} from './seed-data/mob-drops.seed-data';
 import { mobDefinitions } from './seed-data/mobs.seed-data';
 import { recipeDefinitions } from './seed-data/recipes.seed-data';
 import { worldBossDefinitions } from './seed-data/world-bosses.seed-data';
@@ -39,6 +40,7 @@ import type {
   GameClassSeedData,
   MapDefinition,
   MaterialSeedData,
+  MobDropItemSeedData,
   MobDropSeedData,
   SubMapEncounterSeedData,
 } from './seed-types';
@@ -259,6 +261,45 @@ async function upsertMaterialItem(params: {
     requiredGatheringLevel: data.requiredGatheringLevel ?? 1,
     gatheringXpPerUnit: data.gatheringXpPerUnit ?? (isMobDrop ? 0 : 1),
     baseGatheringRatePerHour: data.baseGatheringRatePerHour ?? null,
+
+    strengthBonus: 0,
+    vitalityBonus: 0,
+    agilityBonus: 0,
+    precisionBonus: 0,
+    techniqueBonus: 0,
+    willpowerBonus: 0,
+
+    healFlat: 0,
+    healPercent: 0,
+    usableInCombat: false,
+    usableOutOfCombat: false,
+    minTier: null,
+    maxTier: null,
+
+    isCraftable: false,
+  });
+}
+
+async function upsertMobDropMaterialItem(
+  data: MobDropItemSeedData,
+): Promise<Item> {
+  return upsertItemByName({
+    name: data.name,
+    slug: data.slug ?? null,
+    description: data.description,
+    tier: data.tier,
+    rarity: data.rarity,
+    slot: ItemSlot.MATERIAL,
+    family: data.family,
+    classId: null,
+    mapId: null,
+    materialOrigin: MaterialOrigin.DROP_MOBS,
+    materialSlot: null,
+    isGatheringMaterial: false,
+
+    requiredGatheringLevel: 1,
+    gatheringXpPerUnit: 0,
+    baseGatheringRatePerHour: null,
 
     strengthBonus: 0,
     vitalityBonus: 0,
@@ -686,6 +727,39 @@ async function upsertMobDrop(params: {
   });
 }
 
+function flattenMobDropTables(): MobDropSeedData[] {
+  return mobDropTables.flatMap((table) =>
+    table.drops.map((drop) => ({
+      mapName: table.mapName,
+      subMapName: table.subMapName,
+      mobName: table.mobName,
+      itemName: drop.itemName,
+      dropChance: drop.dropChance,
+      minQuantity: drop.minQuantity,
+      maxQuantity: drop.maxQuantity,
+    })),
+  );
+}
+
+function getMobDropMobKey(data: MobDropSeedData) {
+  return `${data.mapName ?? ''}::${data.mobName}`;
+}
+
+async function findMobForDrop(
+  data: MobDropSeedData,
+  mapsByName: Map<string, GameMap>,
+): Promise<Mob | null> {
+  const map = data.mapName ? mapsByName.get(data.mapName) : null;
+  if (data.mapName && !map) return null;
+
+  return prisma.mob.findFirst({
+    where: {
+      name: data.mobName,
+      ...(map ? { mapId: map.id } : {}),
+    },
+  });
+}
+
 async function upsertCraftingRecipe(params: {
   data: CraftingRecipeSeedData;
   outputItem: Item;
@@ -1017,7 +1091,7 @@ async function main() {
   }
 
   console.log(
-    'Seed de itens vazio: nenhum equipamento, material ou consumível antigo será criado/atualizado.',
+    'Criando/atualizando itens seguros do seed, incluindo materiais dropáveis de mobs...',
   );
 
   const itemsByName = new Map<string, Item>();
@@ -1051,6 +1125,11 @@ async function main() {
       mapId: gameMap.id,
     });
 
+    itemsByName.set(item.name, item);
+  }
+
+  for (const mobDropItemDefinition of mobDropItemDefinitions) {
+    const item = await upsertMobDropMaterialItem(mobDropItemDefinition);
     itemsByName.set(item.name, item);
   }
 
@@ -1105,24 +1184,42 @@ async function main() {
     });
   }
 
-  console.log(
-    'Limpando drops antigos dos mobs oficiais cadastrados neste seed...',
-  );
-
-  await prisma.mobDrop.deleteMany({
-    where: {
-      mobId: {
-        in: Array.from(mobsByName.values()).map((mob) => mob.id),
-      },
-    },
-  });
-
-  console.log(
-    'Seed de drops vazio: nenhum drop antigo será criado/atualizado.',
-  );
+  const mobDropDefinitions = flattenMobDropTables();
+  const mobsByDropKey = new Map<string, Mob>();
+  const skippedMobDropKeys = new Set<string>();
 
   for (const mobDropDefinition of mobDropDefinitions) {
-    const mob = getRequiredMob(mobsByName, mobDropDefinition.mobName);
+    const key = getMobDropMobKey(mobDropDefinition);
+    if (mobsByDropKey.has(key) || skippedMobDropKeys.has(key)) continue;
+
+    const mob = await findMobForDrop(mobDropDefinition, mapsByName);
+    if (mob) {
+      mobsByDropKey.set(key, mob);
+    } else {
+      skippedMobDropKeys.add(key);
+    }
+  }
+
+  if (mobsByDropKey.size > 0) {
+    console.log(
+      'Limpando drops antigos dos mobs cadastrados na tabela de drops...',
+    );
+
+    await prisma.mobDrop.deleteMany({
+      where: {
+        mobId: {
+          in: Array.from(mobsByDropKey.values()).map((mob) => mob.id),
+        },
+      },
+    });
+  }
+
+  let createdOrUpdatedMobDrops = 0;
+
+  for (const mobDropDefinition of mobDropDefinitions) {
+    const mob = mobsByDropKey.get(getMobDropMobKey(mobDropDefinition));
+    if (!mob) continue;
+
     const item = getRequiredItem(itemsByName, mobDropDefinition.itemName);
 
     await upsertMobDrop({
@@ -1130,6 +1227,14 @@ async function main() {
       mobId: mob.id,
       itemId: item.id,
     });
+    createdOrUpdatedMobDrops++;
+  }
+
+  if (skippedMobDropKeys.size > 0) {
+    const skippedExamples = Array.from(skippedMobDropKeys).slice(0, 12);
+    console.warn(
+      `Drops ignorados para ${skippedMobDropKeys.size} mobs ainda não cadastrados: ${skippedExamples.join(', ')}`,
+    );
   }
 
   await validateOfficialGatheringMaterials();
@@ -1193,7 +1298,10 @@ async function main() {
     })),
     receitasRegistradas: recipeDefinitions.length,
     encountersRegistrados: encounterDefinitions.length,
-    dropsRegistrados: mobDropDefinitions.length,
+    itensDropaveisDeMobsRegistrados: mobDropItemDefinitions.length,
+    dropsConfigurados: mobDropDefinitions.length,
+    dropsRegistrados: createdOrUpdatedMobDrops,
+    dropsIgnoradosPorMobAusente: skippedMobDropKeys.size,
     ameacasGlobaisRegistradas: worldBossDefinitions.length,
     incursionsRegistradas: incursionDefinitions.length,
     gatheringDocumentado: gatheringDefinitions.map((definition) => ({

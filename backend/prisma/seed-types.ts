@@ -50,11 +50,37 @@ export type SubMapEncounterSeedData = {
 };
 
 export type MobDropSeedData = {
+  mapName?: string;
+  subMapName?: string;
   mobName: string;
   itemName: string;
   dropChance: number;
   minQuantity: number;
   maxQuantity: number;
+};
+
+export type MobDropItemSeedData = {
+  name: string;
+  slug?: string;
+  description: string;
+  tier: number;
+  rarity: Rarity;
+  family: string;
+  dropType: string;
+  usage: string;
+};
+
+export type MobDropTableSeedData = {
+  tier: number;
+  mapName: string;
+  subMapName: string;
+  mobName: string;
+  drops: Array<{
+    itemName: string;
+    dropChance: number;
+    minQuantity: number;
+    maxQuantity: number;
+  }>;
 };
 
 export type EquipmentSeedData = {
@@ -123,7 +149,6 @@ export type GatheringSeedData = {
   statBonus: string;
 };
 
-
 export type IncursionLootSeedData = {
   rewardType: IncursionRewardType;
   itemName?: string;
@@ -151,7 +176,6 @@ export type IncursionSeedData = {
   sortOrder?: number;
   lootTable: IncursionLootSeedData[];
 };
-
 
 export type WorldBossRewardSeedData = {
   rewardType: WorldBossRewardType;
