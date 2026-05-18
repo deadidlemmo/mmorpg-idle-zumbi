@@ -728,6 +728,8 @@ async function upsertMobDrop(params: {
 }
 
 function flattenMobDropTables(): MobDropSeedData[] {
+  validateMobDropTables();
+
   return mobDropTables.flatMap((table) =>
     table.drops.map((drop) => ({
       mapName: table.mapName,
@@ -739,6 +741,36 @@ function flattenMobDropTables(): MobDropSeedData[] {
       maxQuantity: drop.maxQuantity,
     })),
   );
+}
+
+function validateMobDropTables() {
+  for (const table of mobDropTables) {
+    if (table.orderNoSubmap < 1) {
+      throw new Error(
+        `Drop inválido para ${table.mobName}: ordemNoSubmapa deve ser >= 1.`,
+      );
+    }
+
+    for (const drop of table.drops) {
+      if (drop.dropChance < 0 || drop.dropChance > 100) {
+        throw new Error(
+          `Drop inválido para ${table.mobName}/${drop.itemName}: chance deve ficar entre 0 e 100.`,
+        );
+      }
+
+      if (drop.minQuantity < 1) {
+        throw new Error(
+          `Drop inválido para ${table.mobName}/${drop.itemName}: minQuantity deve ser >= 1.`,
+        );
+      }
+
+      if (drop.maxQuantity < drop.minQuantity) {
+        throw new Error(
+          `Drop inválido para ${table.mobName}/${drop.itemName}: maxQuantity deve ser >= minQuantity.`,
+        );
+      }
+    }
+  }
 }
 
 function getMobDropMobKey(data: MobDropSeedData) {

@@ -66,7 +66,7 @@ export type MobDropItemSeedData = {
   tier: number;
   rarity: Rarity;
   family: string;
-  dropType: string;
+  dropType: 'RESIDUE' | 'BIOMATERIAL' | 'ELITE_CORE';
   usage: string;
 };
 
@@ -74,9 +74,13 @@ export type MobDropTableSeedData = {
   tier: number;
   mapName: string;
   subMapName: string;
+  orderNoSubmap: number;
+  mobType: 'MONSTER' | 'ELITE';
   mobName: string;
+  rarity: Rarity;
   drops: Array<{
     itemName: string;
+    dropType: 'RESIDUE' | 'BIOMATERIAL' | 'ELITE_CORE';
     dropChance: number;
     minQuantity: number;
     maxQuantity: number;
