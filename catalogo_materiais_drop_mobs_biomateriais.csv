@@ -1,0 +1,41 @@
+﻿itemName;tipoMaterial;familia;raridade;tierRange;materialOrigin;usoPrincipal
+Resíduo Infecto Pálido;Resíduo de mob;Resíduo Infecto;Comum;1-2;DROP_MOBS;Catalisador de crafting por faixa de tier
+Resíduo Infecto Amarelado;Resíduo de mob;Resíduo Infecto;Incomum;3-4;DROP_MOBS;Catalisador de crafting por faixa de tier
+Resíduo Infecto Tóxico;Resíduo de mob;Resíduo Infecto;Raro;5-6;DROP_MOBS;Catalisador de crafting por faixa de tier
+Resíduo Infecto Mutagênico;Resíduo de mob;Resíduo Infecto;Épico;7-8;DROP_MOBS;Catalisador de crafting por faixa de tier
+Resíduo Infecto Saturado;Resíduo de mob;Resíduo Infecto;Lendário;9-10;DROP_MOBS;Catalisador de crafting por faixa de tier
+Biomaterial Torácico Comum;Biomaterial de mob;Biomaterial Torácico;Comum;1-2;DROP_MOBS;Armadura / Colete / Jaqueta / Traje
+Biomaterial Articular Comum;Biomaterial de mob;Biomaterial Articular;Comum;1-2;DROP_MOBS;Pernas / Grevas / Calças / Cargueiras
+Biomaterial de Mobilidade Comum;Biomaterial de mob;Biomaterial de Mobilidade;Comum;1-2;DROP_MOBS;Pés / Botas / Sapatos / Sapatilhas / Coturnos
+Biomaterial Craniano Comum;Biomaterial de mob;Biomaterial Craniano;Comum;1-2;DROP_MOBS;Elmo / Capuz / Máscara / Viseira
+Biomaterial Cortante Comum;Biomaterial de mob;Biomaterial Cortante;Comum;1-2;DROP_MOBS;Main Hand / armas ofensivas
+Biomaterial Reativo Comum;Biomaterial de mob;Biomaterial Reativo;Comum;1-2;DROP_MOBS;Off Hand / escudos / bombas / injetores / carregadores
+Núcleo Infectado de Elite Comum;Biomaterial de mob;Núcleo Infectado de Elite;Comum;1-2;DROP_MOBS;Itens especiais / upgrades raros / elites
+Biomaterial Torácico Incomum;Biomaterial de mob;Biomaterial Torácico;Incomum;3-4;DROP_MOBS;Armadura / Colete / Jaqueta / Traje
+Biomaterial Articular Incomum;Biomaterial de mob;Biomaterial Articular;Incomum;3-4;DROP_MOBS;Pernas / Grevas / Calças / Cargueiras
+Biomaterial de Mobilidade Incomum;Biomaterial de mob;Biomaterial de Mobilidade;Incomum;3-4;DROP_MOBS;Pés / Botas / Sapatos / Sapatilhas / Coturnos
+Biomaterial Craniano Incomum;Biomaterial de mob;Biomaterial Craniano;Incomum;3-4;DROP_MOBS;Elmo / Capuz / Máscara / Viseira
+Biomaterial Cortante Incomum;Biomaterial de mob;Biomaterial Cortante;Incomum;3-4;DROP_MOBS;Main Hand / armas ofensivas
+Biomaterial Reativo Incomum;Biomaterial de mob;Biomaterial Reativo;Incomum;3-4;DROP_MOBS;Off Hand / escudos / bombas / injetores / carregadores
+Núcleo Infectado de Elite Incomum;Biomaterial de mob;Núcleo Infectado de Elite;Incomum;3-4;DROP_MOBS;Itens especiais / upgrades raros / elites
+Biomaterial Torácico Raro;Biomaterial de mob;Biomaterial Torácico;Raro;5-6;DROP_MOBS;Armadura / Colete / Jaqueta / Traje
+Biomaterial Articular Raro;Biomaterial de mob;Biomaterial Articular;Raro;5-6;DROP_MOBS;Pernas / Grevas / Calças / Cargueiras
+Biomaterial de Mobilidade Raro;Biomaterial de mob;Biomaterial de Mobilidade;Raro;5-6;DROP_MOBS;Pés / Botas / Sapatos / Sapatilhas / Coturnos
+Biomaterial Craniano Raro;Biomaterial de mob;Biomaterial Craniano;Raro;5-6;DROP_MOBS;Elmo / Capuz / Máscara / Viseira
+Biomaterial Cortante Raro;Biomaterial de mob;Biomaterial Cortante;Raro;5-6;DROP_MOBS;Main Hand / armas ofensivas
+Biomaterial Reativo Raro;Biomaterial de mob;Biomaterial Reativo;Raro;5-6;DROP_MOBS;Off Hand / escudos / bombas / injetores / carregadores
+Núcleo Infectado de Elite Raro;Biomaterial de mob;Núcleo Infectado de Elite;Raro;5-6;DROP_MOBS;Itens especiais / upgrades raros / elites
+Biomaterial Torácico Épico;Biomaterial de mob;Biomaterial Torácico;Épico;7-8;DROP_MOBS;Armadura / Colete / Jaqueta / Traje
+Biomaterial Articular Épico;Biomaterial de mob;Biomaterial Articular;Épico;7-8;DROP_MOBS;Pernas / Grevas / Calças / Cargueiras
+Biomaterial de Mobilidade Épico;Biomaterial de mob;Biomaterial de Mobilidade;Épico;7-8;DROP_MOBS;Pés / Botas / Sapatos / Sapatilhas / Coturnos
+Biomaterial Craniano Épico;Biomaterial de mob;Biomaterial Craniano;Épico;7-8;DROP_MOBS;Elmo / Capuz / Máscara / Viseira
+Biomaterial Cortante Épico;Biomaterial de mob;Biomaterial Cortante;Épico;7-8;DROP_MOBS;Main Hand / armas ofensivas
+Biomaterial Reativo Épico;Biomaterial de mob;Biomaterial Reativo;Épico;7-8;DROP_MOBS;Off Hand / escudos / bombas / injetores / carregadores
+Núcleo Infectado de Elite Épico;Biomaterial de mob;Núcleo Infectado de Elite;Épico;7-8;DROP_MOBS;Itens especiais / upgrades raros / elites
+Biomaterial Torácico Lendário;Biomaterial de mob;Biomaterial Torácico;Lendário;9-10;DROP_MOBS;Armadura / Colete / Jaqueta / Traje
+Biomaterial Articular Lendário;Biomaterial de mob;Biomaterial Articular;Lendário;9-10;DROP_MOBS;Pernas / Grevas / Calças / Cargueiras
+Biomaterial de Mobilidade Lendário;Biomaterial de mob;Biomaterial de Mobilidade;Lendário;9-10;DROP_MOBS;Pés / Botas / Sapatos / Sapatilhas / Coturnos
+Biomaterial Craniano Lendário;Biomaterial de mob;Biomaterial Craniano;Lendário;9-10;DROP_MOBS;Elmo / Capuz / Máscara / Viseira
+Biomaterial Cortante Lendário;Biomaterial de mob;Biomaterial Cortante;Lendário;9-10;DROP_MOBS;Main Hand / armas ofensivas
+Biomaterial Reativo Lendário;Biomaterial de mob;Biomaterial Reativo;Lendário;9-10;DROP_MOBS;Off Hand / escudos / bombas / injetores / carregadores
+Núcleo Infectado de Elite Lendário;Biomaterial de mob;Núcleo Infectado de Elite;Lendário;9-10;DROP_MOBS;Itens especiais / upgrades raros / elites

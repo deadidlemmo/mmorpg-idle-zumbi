@@ -300,7 +300,7 @@ function getEventTimerInfo(
     return {
       label: "Status",
       seconds,
-      text: `Em andamento — entrada bloqueada`,
+      text: "Em andamento",
     };
   }
 
@@ -853,7 +853,6 @@ export function WorldBossesPage() {
   const canLeavePanel = panelStatus
     ? canLeaveWorldBossStatus(panelStatus)
     : false;
-  const panelLeaveLabel = getLeaveWorldBossActionLabel(panelStatus ?? null);
   const isJoinedPanel = Boolean(panelParticipant);
   const isBattleActive = panelEvent?.status === "ACTIVE";
   const isLobbyOpen = panelEvent?.status === "LOBBY_OPEN";
@@ -882,7 +881,6 @@ export function WorldBossesPage() {
   const canLeaveDetails = detailsStatus
     ? canLeaveWorldBossStatus(detailsStatus)
     : false;
-  const detailsLeaveLabel = getLeaveWorldBossActionLabel(detailsStatus);
   const detailsTierClassName = getWorldBossTierClassName(detailsBoss?.tier);
   const selectedPanelEventId = panelEvent?.id ?? null;
   const topBarActivityOverride = buildWorldBossTopBarActivity(
@@ -1311,10 +1309,10 @@ export function WorldBossesPage() {
                       </span>
                     </div>
 
-                    <div className="world-bosses-actions">
+                    <div className="world-bosses-actions world-bosses-side-actions">
                       <button
                         type="button"
-                        className="incursions-secondary-button"
+                        className="incursions-secondary-button world-bosses-side-action world-bosses-side-action--secondary"
                         onClick={() => handleOpenDetails(panelEvent.id)}
                       >
                         <Eye size={15} />
@@ -1323,7 +1321,7 @@ export function WorldBossesPage() {
                       {canJoinPanel ? (
                         <button
                           type="button"
-                          className="incursions-primary-button"
+                          className="incursions-primary-button world-bosses-side-action world-bosses-side-action--primary"
                           onClick={() => void handleJoin(panelEvent.id)}
                           disabled={isBusy}
                         >
@@ -1332,7 +1330,7 @@ export function WorldBossesPage() {
                       ) : isPanelBlockedByOtherWorldBoss ? (
                         <button
                           type="button"
-                          className="incursions-primary-button"
+                          className="incursions-primary-button world-bosses-side-action world-bosses-side-action--primary"
                           disabled
                           title={
                             panelStatus?.eligible?.reason ??
@@ -1345,12 +1343,12 @@ export function WorldBossesPage() {
                       {canLeavePanel ? (
                         <button
                           type="button"
-                          className="incursions-danger-button"
+                          className="incursions-danger-button world-bosses-side-action world-bosses-side-action--danger"
                           onClick={() => void handleLeave(panelEvent.id)}
                           disabled={isBusy}
                         >
                           <XCircle size={15} />
-                          {panelLeaveLabel}
+                          Sair
                         </button>
                       ) : null}
                       {!canJoinPanel && !isJoinedPanel ? (
@@ -1444,7 +1442,7 @@ export function WorldBossesPage() {
               </div>
               <div className="world-bosses-modal__rewards-section">
                 <div className="world-bosses-modal__section-head">
-                  <h3>Loot</h3>
+                  <h3>Recompensas possíveis</h3>
                 </div>
                 <div className="world-bosses-modal__rewards">
                   {detailsBoss.rewards.map((reward) => {
@@ -1494,10 +1492,10 @@ export function WorldBossesPage() {
                   })}
                 </div>
               </div>
-              <div className="world-bosses-actions">
+              <div className="world-bosses-actions world-bosses-modal-actions">
                 {canJoinDetails ? (
                   <button
-                    className="incursions-primary-button"
+                    className="incursions-primary-button world-bosses-modal-action"
                     type="button"
                     onClick={() => void handleJoin(detailsEvent.id)}
                     disabled={isBusy}
@@ -1507,7 +1505,7 @@ export function WorldBossesPage() {
                   </button>
                 ) : isDetailsBlockedByOtherWorldBoss ? (
                   <button
-                    className="incursions-primary-button"
+                    className="incursions-primary-button world-bosses-modal-action"
                     type="button"
                     disabled
                     title={
@@ -1521,18 +1519,18 @@ export function WorldBossesPage() {
                 ) : null}
                 {canLeaveDetails ? (
                   <button
-                    className="incursions-danger-button"
+                    className="incursions-danger-button world-bosses-modal-action"
                     type="button"
                     onClick={() => void handleLeave(detailsEvent.id)}
                     disabled={isBusy}
                   >
                     <XCircle size={15} />
-                    {detailsLeaveLabel}
+                    Sair
                   </button>
                 ) : null}
                 <button
                   type="button"
-                  className="incursions-secondary-button"
+                  className="incursions-secondary-button world-bosses-modal-action"
                   onClick={handleCloseDetails}
                 >
                   Fechar

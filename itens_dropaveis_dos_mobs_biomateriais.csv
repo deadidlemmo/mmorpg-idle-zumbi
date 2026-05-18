@@ -1,0 +1,241 @@
+﻿tier;mapa;submapa;mobName;itemName;tipoDrop;familia;raridade;dropChance;minQuantity;maxQuantity;uso
+1;Subúrbio Silencioso;Rua das Cercas;Errante do Subúrbio;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Rua das Cercas;Errante do Subúrbio;Biomaterial Cortante Comum;BIOMATERIAL;Biomaterial Cortante;Comum;35;1;1;Crafting por família de slot
+1;Subúrbio Silencioso;Rua das Cercas;Rato de Lixeira Infectado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Rua das Cercas;Rato de Lixeira Infectado;Biomaterial de Mobilidade Comum;BIOMATERIAL;Biomaterial de Mobilidade;Comum;35;1;1;Crafting por família de slot
+1;Subúrbio Silencioso;Rua das Cercas;Cão de Rua Infectado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Rua das Cercas;Cão de Rua Infectado;Biomaterial de Mobilidade Comum;BIOMATERIAL;Biomaterial de Mobilidade;Comum;35;1;1;Crafting por família de slot
+1;Subúrbio Silencioso;Rua das Cercas;Gato de Telhado Contaminado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Rua das Cercas;Gato de Telhado Contaminado;Biomaterial Cortante Comum;BIOMATERIAL;Biomaterial Cortante;Comum;35;1;1;Crafting por família de slot
+1;Subúrbio Silencioso;Quintais Abandonados;Rastejante de Garagem;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Quintais Abandonados;Rastejante de Garagem;Biomaterial Articular Comum;BIOMATERIAL;Biomaterial Articular;Comum;35;1;1;Crafting por família de slot
+1;Subúrbio Silencioso;Quintais Abandonados;Morador do Quintal;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Quintais Abandonados;Morador do Quintal;Biomaterial Torácico Comum;BIOMATERIAL;Biomaterial Torácico;Comum;35;1;1;Crafting por família de slot
+1;Subúrbio Silencioso;Quintais Abandonados;Gambá de Entulho Contaminado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Quintais Abandonados;Gambá de Entulho Contaminado;Biomaterial Reativo Comum;BIOMATERIAL;Biomaterial Reativo;Comum;35;1;1;Crafting por família de slot
+1;Subúrbio Silencioso;Quintais Abandonados;Morcego de Caixa d’Água;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Quintais Abandonados;Morcego de Caixa d’Água;Biomaterial Craniano Comum;BIOMATERIAL;Biomaterial Craniano;Comum;35;1;1;Crafting por família de slot
+1;Subúrbio Silencioso;Bloco do Síndico;Porteiro Infectado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Bloco do Síndico;Porteiro Infectado;Biomaterial Reativo Comum;BIOMATERIAL;Biomaterial Reativo;Comum;35;1;1;Crafting por família de slot
+1;Subúrbio Silencioso;Bloco do Síndico;Inquilino Esticado do Bloco;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Bloco do Síndico;Inquilino Esticado do Bloco;Biomaterial Articular Comum;BIOMATERIAL;Biomaterial Articular;Comum;35;1;1;Crafting por família de slot
+1;Subúrbio Silencioso;Bloco do Síndico;Urubu Carniceiro Contaminado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Bloco do Síndico;Urubu Carniceiro Contaminado;Biomaterial Torácico Comum;BIOMATERIAL;Biomaterial Torácico;Comum;35;1;1;Crafting por família de slot
+1;Subúrbio Silencioso;Bloco do Síndico;Síndico Devorado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+1;Subúrbio Silencioso;Bloco do Síndico;Síndico Devorado;Núcleo Infectado de Elite Comum;NUCLEO_ELITE;Núcleo Infectado de Elite;Comum;25;1;1;Crafting raro / upgrades de elite
+2;Distrito da Ferrugem;Pátio de Carga;Carregador de Paletes Infectado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Pátio de Carga;Carregador de Paletes Infectado;Biomaterial Torácico Comum;BIOMATERIAL;Biomaterial Torácico;Comum;35;1;1;Crafting por família de slot
+2;Distrito da Ferrugem;Pátio de Carga;Barata de Depósito Oleosa;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Pátio de Carga;Barata de Depósito Oleosa;Biomaterial Torácico Comum;BIOMATERIAL;Biomaterial Torácico;Comum;35;1;1;Crafting por família de slot
+2;Distrito da Ferrugem;Pátio de Carga;Operador de Empilhadeira Infectado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Pátio de Carga;Operador de Empilhadeira Infectado;Biomaterial Reativo Comum;BIOMATERIAL;Biomaterial Reativo;Comum;35;1;1;Crafting por família de slot
+2;Distrito da Ferrugem;Pátio de Carga;Arrastador de Correntes;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Pátio de Carga;Arrastador de Correntes;Biomaterial Articular Comum;BIOMATERIAL;Biomaterial Articular;Comum;35;1;1;Crafting por família de slot
+2;Distrito da Ferrugem;Linha de Prensas;Operário Prensado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Linha de Prensas;Operário Prensado;Biomaterial Articular Comum;BIOMATERIAL;Biomaterial Articular;Comum;35;1;1;Crafting por família de slot
+2;Distrito da Ferrugem;Linha de Prensas;Pistoneiro Hidráulico;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Linha de Prensas;Pistoneiro Hidráulico;Biomaterial Reativo Comum;BIOMATERIAL;Biomaterial Reativo;Comum;35;1;1;Crafting por família de slot
+2;Distrito da Ferrugem;Linha de Prensas;Lacraia de Esteira Ferruginosa;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Linha de Prensas;Lacraia de Esteira Ferruginosa;Biomaterial Cortante Comum;BIOMATERIAL;Biomaterial Cortante;Comum;35;1;1;Crafting por família de slot
+2;Distrito da Ferrugem;Linha de Prensas;Esmagado da Prensa;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Linha de Prensas;Esmagado da Prensa;Biomaterial Craniano Comum;BIOMATERIAL;Biomaterial Craniano;Comum;35;1;1;Crafting por família de slot
+2;Distrito da Ferrugem;Galpão do Capataz;Vigia do Galpão Infectado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Galpão do Capataz;Vigia do Galpão Infectado;Biomaterial Craniano Comum;BIOMATERIAL;Biomaterial Craniano;Comum;35;1;1;Crafting por família de slot
+2;Distrito da Ferrugem;Galpão do Capataz;Soldador Mascarado Infectado;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Galpão do Capataz;Soldador Mascarado Infectado;Biomaterial Cortante Comum;BIOMATERIAL;Biomaterial Cortante;Comum;35;1;1;Crafting por família de slot
+2;Distrito da Ferrugem;Galpão do Capataz;Aranha de Viga Contaminada;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Galpão do Capataz;Aranha de Viga Contaminada;Biomaterial de Mobilidade Comum;BIOMATERIAL;Biomaterial de Mobilidade;Comum;35;1;1;Crafting por família de slot
+2;Distrito da Ferrugem;Galpão do Capataz;Capataz Ferrugento;Resíduo Infecto Pálido;RESIDUO;Resíduo Infecto;Comum;45;1;2;Crafting por faixa de tier
+2;Distrito da Ferrugem;Galpão do Capataz;Capataz Ferrugento;Núcleo Infectado de Elite Comum;NUCLEO_ELITE;Núcleo Infectado de Elite;Comum;25;1;1;Crafting raro / upgrades de elite
+3;Hospital Santa Ruína;Triagem Vazia;Paciente Febril Errante;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Triagem Vazia;Paciente Febril Errante;Biomaterial Torácico Incomum;BIOMATERIAL;Biomaterial Torácico;Incomum;35;1;1;Crafting por família de slot
+3;Hospital Santa Ruína;Triagem Vazia;Maqueiro Infectado;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Triagem Vazia;Maqueiro Infectado;Biomaterial Articular Incomum;BIOMATERIAL;Biomaterial Articular;Incomum;35;1;1;Crafting por família de slot
+3;Hospital Santa Ruína;Triagem Vazia;Entubado da Triagem;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Triagem Vazia;Entubado da Triagem;Biomaterial Craniano Incomum;BIOMATERIAL;Biomaterial Craniano;Incomum;35;1;1;Crafting por família de slot
+3;Hospital Santa Ruína;Triagem Vazia;Mosca de Ferida Contaminada;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Triagem Vazia;Mosca de Ferida Contaminada;Biomaterial de Mobilidade Incomum;BIOMATERIAL;Biomaterial de Mobilidade;Incomum;35;1;1;Crafting por família de slot
+3;Hospital Santa Ruína;Ala de Isolamento;Enfermeira de Isolamento Infectada;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Ala de Isolamento;Enfermeira de Isolamento Infectada;Biomaterial Craniano Incomum;BIOMATERIAL;Biomaterial Craniano;Incomum;35;1;1;Crafting por família de slot
+3;Hospital Santa Ruína;Ala de Isolamento;Técnico Selado de Descontaminação;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Ala de Isolamento;Técnico Selado de Descontaminação;Biomaterial Reativo Incomum;BIOMATERIAL;Biomaterial Reativo;Incomum;35;1;1;Crafting por família de slot
+3;Hospital Santa Ruína;Ala de Isolamento;Interno Retorcido do Isolamento;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Ala de Isolamento;Interno Retorcido do Isolamento;Biomaterial Articular Incomum;BIOMATERIAL;Biomaterial Articular;Incomum;35;1;1;Crafting por família de slot
+3;Hospital Santa Ruína;Ala de Isolamento;Centopeia de Tubulação Contaminada;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Ala de Isolamento;Centopeia de Tubulação Contaminada;Biomaterial Torácico Incomum;BIOMATERIAL;Biomaterial Torácico;Incomum;35;1;1;Crafting por família de slot
+3;Hospital Santa Ruína;Centro Cirúrgico;Instrumentador Cirúrgico Infectado;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Centro Cirúrgico;Instrumentador Cirúrgico Infectado;Biomaterial Cortante Incomum;BIOMATERIAL;Biomaterial Cortante;Incomum;35;1;1;Crafting por família de slot
+3;Hospital Santa Ruína;Centro Cirúrgico;Anestesista Colapsado;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Centro Cirúrgico;Anestesista Colapsado;Biomaterial Reativo Incomum;BIOMATERIAL;Biomaterial Reativo;Incomum;35;1;1;Crafting por família de slot
+3;Hospital Santa Ruína;Centro Cirúrgico;Sanguessuga de Bolsa Hemática;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Centro Cirúrgico;Sanguessuga de Bolsa Hemática;Biomaterial Reativo Incomum;BIOMATERIAL;Biomaterial Reativo;Incomum;35;1;1;Crafting por família de slot
+3;Hospital Santa Ruína;Centro Cirúrgico;Cirurgião-Chefe Necrosado;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+3;Hospital Santa Ruína;Centro Cirúrgico;Cirurgião-Chefe Necrosado;Núcleo Infectado de Elite Incomum;NUCLEO_ELITE;Núcleo Infectado de Elite;Incomum;25;1;1;Crafting raro / upgrades de elite
+4;Terminal dos Esquecidos;Saguão de Embarque;Amontoado de Bagagens Vivas;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Saguão de Embarque;Amontoado de Bagagens Vivas;Biomaterial Torácico Incomum;BIOMATERIAL;Biomaterial Torácico;Incomum;35;1;1;Crafting por família de slot
+4;Terminal dos Esquecidos;Saguão de Embarque;Mandibulado do Embarque;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Saguão de Embarque;Mandibulado do Embarque;Biomaterial Craniano Incomum;BIOMATERIAL;Biomaterial Craniano;Incomum;35;1;1;Crafting por família de slot
+4;Terminal dos Esquecidos;Saguão de Embarque;Farejador Mutado da Segurança;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Saguão de Embarque;Farejador Mutado da Segurança;Biomaterial Cortante Incomum;BIOMATERIAL;Biomaterial Cortante;Incomum;35;1;1;Crafting por família de slot
+4;Terminal dos Esquecidos;Saguão de Embarque;Enxame de Carrapatos Hemáticos;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Saguão de Embarque;Enxame de Carrapatos Hemáticos;Biomaterial Reativo Incomum;BIOMATERIAL;Biomaterial Reativo;Incomum;35;1;1;Crafting por família de slot
+4;Terminal dos Esquecidos;Plataformas Mortas;Sinaleiro Sem Rosto;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Plataformas Mortas;Sinaleiro Sem Rosto;Biomaterial Craniano Incomum;BIOMATERIAL;Biomaterial Craniano;Incomum;35;1;1;Crafting por família de slot
+4;Terminal dos Esquecidos;Plataformas Mortas;Corcunda do Bagageiro;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Plataformas Mortas;Corcunda do Bagageiro;Biomaterial Torácico Incomum;BIOMATERIAL;Biomaterial Torácico;Incomum;35;1;1;Crafting por família de slot
+4;Terminal dos Esquecidos;Plataformas Mortas;Verme de Escapamento Tóxico;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Plataformas Mortas;Verme de Escapamento Tóxico;Biomaterial Reativo Incomum;BIOMATERIAL;Biomaterial Reativo;Incomum;35;1;1;Crafting por família de slot
+4;Terminal dos Esquecidos;Plataformas Mortas;Casulo de Traças de Plataforma;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Plataformas Mortas;Casulo de Traças de Plataforma;Biomaterial de Mobilidade Incomum;BIOMATERIAL;Biomaterial de Mobilidade;Incomum;35;1;1;Crafting por família de slot
+4;Terminal dos Esquecidos;Cabine Final;Cobrador Fundido;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Cabine Final;Cobrador Fundido;Biomaterial Reativo Incomum;BIOMATERIAL;Biomaterial Reativo;Incomum;35;1;1;Crafting por família de slot
+4;Terminal dos Esquecidos;Cabine Final;Condutor Sem Mandíbula;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Cabine Final;Condutor Sem Mandíbula;Biomaterial Craniano Incomum;BIOMATERIAL;Biomaterial Craniano;Incomum;35;1;1;Crafting por família de slot
+4;Terminal dos Esquecidos;Cabine Final;Escorpião de Painel Elétrico;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Cabine Final;Escorpião de Painel Elétrico;Biomaterial Cortante Incomum;BIOMATERIAL;Biomaterial Cortante;Incomum;35;1;1;Crafting por família de slot
+4;Terminal dos Esquecidos;Cabine Final;Regente da Cabine Lacrada;Resíduo Infecto Amarelado;RESIDUO;Resíduo Infecto;Incomum;45;1;2;Crafting por faixa de tier
+4;Terminal dos Esquecidos;Cabine Final;Regente da Cabine Lacrada;Núcleo Infectado de Elite Incomum;NUCLEO_ELITE;Núcleo Infectado de Elite;Incomum;25;1;1;Crafting raro / upgrades de elite
+5;Zona de Quarentena 9;Triagem Externa;Isolado da Tenda Rasgada;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Triagem Externa;Isolado da Tenda Rasgada;Biomaterial Torácico Raro;BIOMATERIAL;Biomaterial Torácico;Raro;35;1;1;Crafting por família de slot
+5;Zona de Quarentena 9;Triagem Externa;Cadáver de Maca Quarentenado;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Triagem Externa;Cadáver de Maca Quarentenado;Biomaterial Articular Raro;BIOMATERIAL;Biomaterial Articular;Raro;35;1;1;Crafting por família de slot
+5;Zona de Quarentena 9;Triagem Externa;Portador de Máscara Fundida;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Triagem Externa;Portador de Máscara Fundida;Biomaterial Craniano Raro;BIOMATERIAL;Biomaterial Craniano;Raro;35;1;1;Crafting por família de slot
+5;Zona de Quarentena 9;Triagem Externa;Larva de Descarte Biológico;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Triagem Externa;Larva de Descarte Biológico;Biomaterial Reativo Raro;BIOMATERIAL;Biomaterial Reativo;Raro;35;1;1;Crafting por família de slot
+5;Zona de Quarentena 9;Cercas Internas;Arameiro de Contenção;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Cercas Internas;Arameiro de Contenção;Biomaterial Torácico Raro;BIOMATERIAL;Biomaterial Torácico;Raro;35;1;1;Crafting por família de slot
+5;Zona de Quarentena 9;Cercas Internas;Sentinela Eletrocutado;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Cercas Internas;Sentinela Eletrocutado;Biomaterial Craniano Raro;BIOMATERIAL;Biomaterial Craniano;Raro;35;1;1;Crafting por família de slot
+5;Zona de Quarentena 9;Cercas Internas;Vazador Tóxico de Grade;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Cercas Internas;Vazador Tóxico de Grade;Biomaterial Reativo Raro;BIOMATERIAL;Biomaterial Reativo;Raro;35;1;1;Crafting por família de slot
+5;Zona de Quarentena 9;Cercas Internas;Lesma de Canaleta Química;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Cercas Internas;Lesma de Canaleta Química;Biomaterial Reativo Raro;BIOMATERIAL;Biomaterial Reativo;Raro;35;1;1;Crafting por família de slot
+5;Zona de Quarentena 9;Posto de Comando;Operador de Rádio Infectado;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Posto de Comando;Operador de Rádio Infectado;Biomaterial Cortante Raro;BIOMATERIAL;Biomaterial Cortante;Raro;35;1;1;Crafting por família de slot
+5;Zona de Quarentena 9;Posto de Comando;Oficial de Contenção Necrosado;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Posto de Comando;Oficial de Contenção Necrosado;Biomaterial Articular Raro;BIOMATERIAL;Biomaterial Articular;Raro;35;1;1;Crafting por família de slot
+5;Zona de Quarentena 9;Posto de Comando;Parasita de Mesa Tática;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Posto de Comando;Parasita de Mesa Tática;Biomaterial Reativo Raro;BIOMATERIAL;Biomaterial Reativo;Raro;35;1;1;Crafting por família de slot
+5;Zona de Quarentena 9;Posto de Comando;Coronel Lacrado da Zona 9;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+5;Zona de Quarentena 9;Posto de Comando;Coronel Lacrado da Zona 9;Núcleo Infectado de Elite Raro;NUCLEO_ELITE;Núcleo Infectado de Elite;Raro;25;1;1;Crafting raro / upgrades de elite
+6;Refinaria do Pó Cinzento;Tanques Vazios;Homem-Tanque Rachado;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Tanques Vazios;Homem-Tanque Rachado;Biomaterial Torácico Raro;BIOMATERIAL;Biomaterial Torácico;Raro;35;1;1;Crafting por família de slot
+6;Refinaria do Pó Cinzento;Tanques Vazios;Afogado em Óleo Cinzento;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Tanques Vazios;Afogado em Óleo Cinzento;Biomaterial Reativo Raro;BIOMATERIAL;Biomaterial Reativo;Raro;35;1;1;Crafting por família de slot
+6;Refinaria do Pó Cinzento;Tanques Vazios;Salamandra de Borra Cinzenta;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Tanques Vazios;Salamandra de Borra Cinzenta;Biomaterial de Mobilidade Raro;BIOMATERIAL;Biomaterial de Mobilidade;Raro;35;1;1;Crafting por família de slot
+6;Refinaria do Pó Cinzento;Tanques Vazios;Respirador de Cinzas;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Tanques Vazios;Respirador de Cinzas;Biomaterial Craniano Raro;BIOMATERIAL;Biomaterial Craniano;Raro;35;1;1;Crafting por família de slot
+6;Refinaria do Pó Cinzento;Tubulação Quente;Operário Escaldado de Vapor;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Tubulação Quente;Operário Escaldado de Vapor;Biomaterial Cortante Raro;BIOMATERIAL;Biomaterial Cortante;Raro;35;1;1;Crafting por família de slot
+6;Refinaria do Pó Cinzento;Tubulação Quente;Queimado de Tubulação Viva;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Tubulação Quente;Queimado de Tubulação Viva;Biomaterial Craniano Raro;BIOMATERIAL;Biomaterial Craniano;Raro;35;1;1;Crafting por família de slot
+6;Refinaria do Pó Cinzento;Tubulação Quente;Aracnídeo de Canos Ferventes;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Tubulação Quente;Aracnídeo de Canos Ferventes;Biomaterial Cortante Raro;BIOMATERIAL;Biomaterial Cortante;Raro;35;1;1;Crafting por família de slot
+6;Refinaria do Pó Cinzento;Tubulação Quente;Pressurizado Sem Face;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Tubulação Quente;Pressurizado Sem Face;Biomaterial Craniano Raro;BIOMATERIAL;Biomaterial Craniano;Raro;35;1;1;Crafting por família de slot
+6;Refinaria do Pó Cinzento;Câmara da Fornalha;Forjado em Cinzas;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Câmara da Fornalha;Forjado em Cinzas;Biomaterial Cortante Raro;BIOMATERIAL;Biomaterial Cortante;Raro;35;1;1;Crafting por família de slot
+6;Refinaria do Pó Cinzento;Câmara da Fornalha;Carvoeiro Sem Pele;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Câmara da Fornalha;Carvoeiro Sem Pele;Biomaterial Craniano Raro;BIOMATERIAL;Biomaterial Craniano;Raro;35;1;1;Crafting por família de slot
+6;Refinaria do Pó Cinzento;Câmara da Fornalha;Besta da Escória Fervente;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Câmara da Fornalha;Besta da Escória Fervente;Biomaterial Reativo Raro;BIOMATERIAL;Biomaterial Reativo;Raro;35;1;1;Crafting por família de slot
+6;Refinaria do Pó Cinzento;Câmara da Fornalha;Guardião da Fornalha Morta;Resíduo Infecto Tóxico;RESIDUO;Resíduo Infecto;Raro;45;1;2;Crafting por faixa de tier
+6;Refinaria do Pó Cinzento;Câmara da Fornalha;Guardião da Fornalha Morta;Núcleo Infectado de Elite Raro;NUCLEO_ELITE;Núcleo Infectado de Elite;Raro;25;1;1;Crafting raro / upgrades de elite
+7;Avenida dos Caídos;Faixa Engarrafada;Motorista Fundido ao Volante;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Faixa Engarrafada;Motorista Fundido ao Volante;Biomaterial Torácico Épico;BIOMATERIAL;Biomaterial Torácico;Épico;35;1;1;Crafting por família de slot
+7;Avenida dos Caídos;Faixa Engarrafada;Buzinador Sem Cabeça;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Faixa Engarrafada;Buzinador Sem Cabeça;Biomaterial Reativo Épico;BIOMATERIAL;Biomaterial Reativo;Épico;35;1;1;Crafting por família de slot
+7;Avenida dos Caídos;Faixa Engarrafada;Cervídeo Atropelado Mutado;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Faixa Engarrafada;Cervídeo Atropelado Mutado;Biomaterial de Mobilidade Épico;BIOMATERIAL;Biomaterial de Mobilidade;Épico;35;1;1;Crafting por família de slot
+7;Avenida dos Caídos;Faixa Engarrafada;Colosso do Para-Choque;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Faixa Engarrafada;Colosso do Para-Choque;Biomaterial Torácico Épico;BIOMATERIAL;Biomaterial Torácico;Épico;35;1;1;Crafting por família de slot
+7;Avenida dos Caídos;Becos de Caça;Predador de Viela Cega;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Becos de Caça;Predador de Viela Cega;Biomaterial Cortante Épico;BIOMATERIAL;Biomaterial Cortante;Épico;35;1;1;Crafting por família de slot
+7;Avenida dos Caídos;Becos de Caça;Boca de Bueiro Faminta;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Becos de Caça;Boca de Bueiro Faminta;Biomaterial Craniano Épico;BIOMATERIAL;Biomaterial Craniano;Épico;35;1;1;Crafting por família de slot
+7;Avenida dos Caídos;Becos de Caça;Corpo-Parede dos Becos;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Becos de Caça;Corpo-Parede dos Becos;Biomaterial Torácico Épico;BIOMATERIAL;Biomaterial Torácico;Épico;35;1;1;Crafting por família de slot
+7;Avenida dos Caídos;Becos de Caça;Caçador de Neon Quebrado;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Becos de Caça;Caçador de Neon Quebrado;Biomaterial Craniano Épico;BIOMATERIAL;Biomaterial Craniano;Épico;35;1;1;Crafting por família de slot
+7;Avenida dos Caídos;Cruzamento Central;Semafórico de Carne Exposta;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Cruzamento Central;Semafórico de Carne Exposta;Biomaterial Craniano Épico;BIOMATERIAL;Biomaterial Craniano;Épico;35;1;1;Crafting por família de slot
+7;Avenida dos Caídos;Cruzamento Central;Fendido do Asfalto;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Cruzamento Central;Fendido do Asfalto;Biomaterial Articular Épico;BIOMATERIAL;Biomaterial Articular;Épico;35;1;1;Crafting por família de slot
+7;Avenida dos Caídos;Cruzamento Central;Trauma de Sirene Quebrada;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Cruzamento Central;Trauma de Sirene Quebrada;Biomaterial Reativo Épico;BIOMATERIAL;Biomaterial Reativo;Épico;35;1;1;Crafting por família de slot
+7;Avenida dos Caídos;Cruzamento Central;Tirano do Cruzamento Morto;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+7;Avenida dos Caídos;Cruzamento Central;Tirano do Cruzamento Morto;Núcleo Infectado de Elite Épico;NUCLEO_ELITE;Núcleo Infectado de Elite;Épico;25;1;1;Crafting raro / upgrades de elite
+8;Complexo Helix;Ala de Observação;Observado de Vidro Vivo;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Ala de Observação;Observado de Vidro Vivo;Biomaterial Craniano Épico;BIOMATERIAL;Biomaterial Craniano;Épico;35;1;1;Crafting por família de slot
+8;Complexo Helix;Ala de Observação;Técnico de Monitoração Fundido;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Ala de Observação;Técnico de Monitoração Fundido;Biomaterial Reativo Épico;BIOMATERIAL;Biomaterial Reativo;Épico;35;1;1;Crafting por família de slot
+8;Complexo Helix;Ala de Observação;Olho Helix Suspenso;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Ala de Observação;Olho Helix Suspenso;Biomaterial Craniano Épico;BIOMATERIAL;Biomaterial Craniano;Épico;35;1;1;Crafting por família de slot
+8;Complexo Helix;Ala de Observação;Réplica Neural Incompleta;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Ala de Observação;Réplica Neural Incompleta;Biomaterial Reativo Épico;BIOMATERIAL;Biomaterial Reativo;Épico;35;1;1;Crafting por família de slot
+8;Complexo Helix;Câmaras Seladas;Cobaia de Tanque Rompido;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Câmaras Seladas;Cobaia de Tanque Rompido;Biomaterial Torácico Épico;BIOMATERIAL;Biomaterial Torácico;Épico;35;1;1;Crafting por família de slot
+8;Complexo Helix;Câmaras Seladas;Gêmeos de Cápsula Fundida;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Câmaras Seladas;Gêmeos de Cápsula Fundida;Biomaterial Articular Épico;BIOMATERIAL;Biomaterial Articular;Épico;35;1;1;Crafting por família de slot
+8;Complexo Helix;Câmaras Seladas;Guardião de Acrílico Selado;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Câmaras Seladas;Guardião de Acrílico Selado;Biomaterial Torácico Épico;BIOMATERIAL;Biomaterial Torácico;Épico;35;1;1;Crafting por família de slot
+8;Complexo Helix;Câmaras Seladas;Larva de Amostra Helix;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Câmaras Seladas;Larva de Amostra Helix;Biomaterial de Mobilidade Épico;BIOMATERIAL;Biomaterial de Mobilidade;Épico;35;1;1;Crafting por família de slot
+8;Complexo Helix;Diretoria Helix;Executivo Parasitado;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Diretoria Helix;Executivo Parasitado;Biomaterial Craniano Épico;BIOMATERIAL;Biomaterial Craniano;Épico;35;1;1;Crafting por família de slot
+8;Complexo Helix;Diretoria Helix;Arquivo Vivo Helix;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Diretoria Helix;Arquivo Vivo Helix;Biomaterial Reativo Épico;BIOMATERIAL;Biomaterial Reativo;Épico;35;1;1;Crafting por família de slot
+8;Complexo Helix;Diretoria Helix;Assessor Biomecânico;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Diretoria Helix;Assessor Biomecânico;Biomaterial Cortante Épico;BIOMATERIAL;Biomaterial Cortante;Épico;35;1;1;Crafting por família de slot
+8;Complexo Helix;Diretoria Helix;Doutor Helix Primeiro Vetor;Resíduo Infecto Mutagênico;RESIDUO;Resíduo Infecto;Épico;45;1;2;Crafting por faixa de tier
+8;Complexo Helix;Diretoria Helix;Doutor Helix Primeiro Vetor;Núcleo Infectado de Elite Épico;NUCLEO_ELITE;Núcleo Infectado de Elite;Épico;25;1;1;Crafting raro / upgrades de elite
+9;Necrópole Industrial;Pátio de Escória;Fundido de Escória Humana;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Pátio de Escória;Fundido de Escória Humana;Biomaterial Torácico Lendário;BIOMATERIAL;Biomaterial Torácico;Lendário;35;1;1;Crafting por família de slot
+9;Necrópole Industrial;Pátio de Escória;Mutilado de Metal Derretido;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Pátio de Escória;Mutilado de Metal Derretido;Biomaterial Cortante Lendário;BIOMATERIAL;Biomaterial Cortante;Lendário;35;1;1;Crafting por família de slot
+9;Necrópole Industrial;Pátio de Escória;Besouro de Fornalha Necrosado;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Pátio de Escória;Besouro de Fornalha Necrosado;Biomaterial Torácico Lendário;BIOMATERIAL;Biomaterial Torácico;Lendário;35;1;1;Crafting por família de slot
+9;Necrópole Industrial;Pátio de Escória;Colosso de Fuligem Coagulada;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Pátio de Escória;Colosso de Fuligem Coagulada;Biomaterial Torácico Lendário;BIOMATERIAL;Biomaterial Torácico;Lendário;35;1;1;Crafting por família de slot
+9;Necrópole Industrial;Esteiras Mortas;Costurado da Esteira Morta;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Esteiras Mortas;Costurado da Esteira Morta;Biomaterial Articular Lendário;BIOMATERIAL;Biomaterial Articular;Lendário;35;1;1;Crafting por família de slot
+9;Necrópole Industrial;Esteiras Mortas;Triturador de Membros Rejeitados;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Esteiras Mortas;Triturador de Membros Rejeitados;Biomaterial Cortante Lendário;BIOMATERIAL;Biomaterial Cortante;Lendário;35;1;1;Crafting por família de slot
+9;Necrópole Industrial;Esteiras Mortas;Caranguejo de Sucata Orgânica;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Esteiras Mortas;Caranguejo de Sucata Orgânica;Biomaterial de Mobilidade Lendário;BIOMATERIAL;Biomaterial de Mobilidade;Lendário;35;1;1;Crafting por família de slot
+9;Necrópole Industrial;Esteiras Mortas;Boneco de Cabos Nervosos;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Esteiras Mortas;Boneco de Cabos Nervosos;Biomaterial Reativo Lendário;BIOMATERIAL;Biomaterial Reativo;Lendário;35;1;1;Crafting por família de slot
+9;Necrópole Industrial;Coração da Usina;Turbina de Carne Pulsante;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Coração da Usina;Turbina de Carne Pulsante;Biomaterial Reativo Lendário;BIOMATERIAL;Biomaterial Reativo;Lendário;35;1;1;Crafting por família de slot
+9;Necrópole Industrial;Coração da Usina;Forjado de Aço Necrosado;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Coração da Usina;Forjado de Aço Necrosado;Biomaterial Torácico Lendário;BIOMATERIAL;Biomaterial Torácico;Lendário;35;1;1;Crafting por família de slot
+9;Necrópole Industrial;Coração da Usina;Parasita de Caldeira Morta;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Coração da Usina;Parasita de Caldeira Morta;Biomaterial Reativo Lendário;BIOMATERIAL;Biomaterial Reativo;Lendário;35;1;1;Crafting por família de slot
+9;Necrópole Industrial;Coração da Usina;Soberano da Usina Morta;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+9;Necrópole Industrial;Coração da Usina;Soberano da Usina Morta;Núcleo Infectado de Elite Lendário;NUCLEO_ELITE;Núcleo Infectado de Elite;Lendário;25;1;1;Crafting raro / upgrades de elite
+10;Marco Zero;Anel Externo;Eco Humano Saturado;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Anel Externo;Eco Humano Saturado;Biomaterial Reativo Lendário;BIOMATERIAL;Biomaterial Reativo;Lendário;35;1;1;Crafting por família de slot
+10;Marco Zero;Anel Externo;Sentinela de Carne Cristalizada;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Anel Externo;Sentinela de Carne Cristalizada;Biomaterial Torácico Lendário;BIOMATERIAL;Biomaterial Torácico;Lendário;35;1;1;Crafting por família de slot
+10;Marco Zero;Anel Externo;Cervical Aberta do Marco;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Anel Externo;Cervical Aberta do Marco;Biomaterial Craniano Lendário;BIOMATERIAL;Biomaterial Craniano;Lendário;35;1;1;Crafting por família de slot
+10;Marco Zero;Anel Externo;Lacraia de Cinza Primária;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Anel Externo;Lacraia de Cinza Primária;Biomaterial de Mobilidade Lendário;BIOMATERIAL;Biomaterial de Mobilidade;Lendário;35;1;1;Crafting por família de slot
+10;Marco Zero;Zona de Saturação;Corpo Saturado de Mil Vozes;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Zona de Saturação;Corpo Saturado de Mil Vozes;Biomaterial Reativo Lendário;BIOMATERIAL;Biomaterial Reativo;Lendário;35;1;1;Crafting por família de slot
+10;Marco Zero;Zona de Saturação;Anjo de Pele Invertida;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Zona de Saturação;Anjo de Pele Invertida;Biomaterial Torácico Lendário;BIOMATERIAL;Biomaterial Torácico;Lendário;35;1;1;Crafting por família de slot
+10;Marco Zero;Zona de Saturação;Raiz Neural do Surto;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Zona de Saturação;Raiz Neural do Surto;Biomaterial Reativo Lendário;BIOMATERIAL;Biomaterial Reativo;Lendário;35;1;1;Crafting por família de slot
+10;Marco Zero;Zona de Saturação;Besta de Radiação Orgânica;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Zona de Saturação;Besta de Radiação Orgânica;Biomaterial Reativo Lendário;BIOMATERIAL;Biomaterial Reativo;Lendário;35;1;1;Crafting por família de slot
+10;Marco Zero;Núcleo do Colapso;Forma Primária do Surto;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Núcleo do Colapso;Forma Primária do Surto;Biomaterial Torácico Lendário;BIOMATERIAL;Biomaterial Torácico;Lendário;35;1;1;Crafting por família de slot
+10;Marco Zero;Núcleo do Colapso;Serafim do Colapso Biológico;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Núcleo do Colapso;Serafim do Colapso Biológico;Biomaterial Cortante Lendário;BIOMATERIAL;Biomaterial Cortante;Lendário;35;1;1;Crafting por família de slot
+10;Marco Zero;Núcleo do Colapso;Carcaça do Primeiro Paciente;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Núcleo do Colapso;Carcaça do Primeiro Paciente;Biomaterial Articular Lendário;BIOMATERIAL;Biomaterial Articular;Lendário;35;1;1;Crafting por família de slot
+10;Marco Zero;Núcleo do Colapso;Coração do Marco Zero;Resíduo Infecto Saturado;RESIDUO;Resíduo Infecto;Lendário;45;1;2;Crafting por faixa de tier
+10;Marco Zero;Núcleo do Colapso;Coração do Marco Zero;Núcleo Infectado de Elite Lendário;NUCLEO_ELITE;Núcleo Infectado de Elite;Lendário;25;1;1;Crafting raro / upgrades de elite
