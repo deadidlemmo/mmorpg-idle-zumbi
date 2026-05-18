@@ -3451,4 +3451,55 @@ export const mobDropTables: MobDropTableSeedData[] = [
       },
     ],
   },
+  // Registros legados inativos mantidos no banco por segurança do seed.
+  {
+    tier: 1,
+    mapName: 'Subúrbio Silencioso',
+    subMapName: 'Rua das Cercas',
+    orderNoSubmap: 2,
+    mobType: 'MONSTER',
+    mobName: 'Vizinho Infectado',
+    rarity: Rarity.COMMON,
+    drops: [
+      {
+        itemName: 'Resíduo Infecto Pálido',
+        dropType: 'RESIDUE',
+        dropChance: 45,
+        minQuantity: 1,
+        maxQuantity: 2,
+      },
+      {
+        itemName: 'Biomaterial Torácico Comum',
+        dropType: 'BIOMATERIAL',
+        dropChance: 35,
+        minQuantity: 1,
+        maxQuantity: 1,
+      },
+    ],
+  },
+  {
+    tier: 1,
+    mapName: 'Subúrbio Silencioso',
+    subMapName: 'Quintais Abandonados',
+    orderNoSubmap: 4,
+    mobType: 'MONSTER',
+    mobName: 'Uivador de Varanda',
+    rarity: Rarity.COMMON,
+    drops: [
+      {
+        itemName: 'Resíduo Infecto Pálido',
+        dropType: 'RESIDUE',
+        dropChance: 45,
+        minQuantity: 1,
+        maxQuantity: 2,
+      },
+      {
+        itemName: 'Biomaterial Craniano Comum',
+        dropType: 'BIOMATERIAL',
+        dropChance: 35,
+        minQuantity: 1,
+        maxQuantity: 1,
+      },
+    ],
+  },
 ];
