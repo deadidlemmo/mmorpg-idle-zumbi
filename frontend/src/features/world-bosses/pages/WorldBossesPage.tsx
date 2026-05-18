@@ -42,8 +42,7 @@ const ACTIVE_PANEL_STATUSES = new Set<WorldBossEventStatus>([
   "LOBBY_OPEN",
   "ACTIVE",
 ]);
-// Temporario para QA: todos os cards ficam liberados enquanto o ciclo final amadurece.
-const WORLD_BOSSES_TEST_UNLOCKED = true;
+const WORLD_BOSS_ENTRY_WINDOW_SECONDS = 5 * 60;
 const SHORT_RESPAWN_SECONDS = 6 * 60 * 60;
 const LONG_RESPAWN_SECONDS = 12 * 60 * 60;
 
@@ -93,9 +92,9 @@ function buildCharacterViewModel(
 
 function getStatusLabel(status: WorldBossEventStatus) {
   const labels: Record<WorldBossEventStatus, string> = {
-    SCHEDULED: "Aguardando início",
-    LOBBY_OPEN: "Disponível agora",
-    ACTIVE: "Em andamento",
+    SCHEDULED: "Aguardando aparição",
+    LOBBY_OPEN: "Entrada aberta",
+    ACTIVE: "Em andamento — entrada bloqueada",
     DEFEATED: "Encerrado",
     EXPIRED: "Encerrado",
     REWARDED: "Encerrado",
@@ -106,8 +105,8 @@ function getStatusLabel(status: WorldBossEventStatus) {
 
 function getCompactStatusLabel(status: WorldBossEventStatus) {
   const labels: Record<WorldBossEventStatus, string> = {
-    SCHEDULED: "Aguardando início",
-    LOBBY_OPEN: "Disponível agora",
+    SCHEDULED: "Aguardando",
+    LOBBY_OPEN: "Entrada aberta",
     ACTIVE: "Em andamento",
     DEFEATED: "Encerrado",
     EXPIRED: "Encerrado",
@@ -120,8 +119,7 @@ function getCompactStatusLabel(status: WorldBossEventStatus) {
 function getCardStatusLabel(status: WorldBossStatusResponse) {
   const event = status.event;
   if (!event) return "Indisponível";
-  if (WORLD_BOSSES_TEST_UNLOCKED && !status.participant)
-    return "Disponível agora";
+  if (status.participant && event.status === "SCHEDULED") return "No lobby";
   if (status.participant && event.status === "LOBBY_OPEN") return "No lobby";
   if (status.participant && event.status === "ACTIVE") return "Em andamento";
   return getCompactStatusLabel(event.status);
@@ -130,9 +128,14 @@ function getCardStatusLabel(status: WorldBossStatusResponse) {
 function getCardStatusTone(status: WorldBossStatusResponse) {
   const event = status.event;
   if (!event) return "locked";
-  if (WORLD_BOSSES_TEST_UNLOCKED && !status.participant) return "available";
   if (status.participant && event.status === "ACTIVE") return "battle";
-  if (status.participant && event.status === "LOBBY_OPEN") return "lobby";
+  if (
+    status.participant &&
+    (event.status === "SCHEDULED" || event.status === "LOBBY_OPEN")
+  )
+    return "lobby";
+  if (event.status === "SCHEDULED" && status.eligible?.canJoin)
+    return "available";
   if (event.status === "LOBBY_OPEN" && status.eligible?.canJoin)
     return "available";
   if (event.status === "ACTIVE") return "battle";
@@ -205,19 +208,22 @@ function getRespawnIntervalSeconds(boss?: WorldBossSummary | null) {
   );
 }
 
-function formatDifficultyLabel(difficulty: string) {
-  const labels: Record<string, string> = {
-    CONTENCAO: "Contenção",
-    EXTERMINIO: "Extermínio",
-  };
-  return labels[difficulty] ?? difficulty.toLowerCase();
-}
-
 function getSecondsUntil(value: string | Date | null | undefined, nowMs: number) {
   if (!value) return 0;
   const targetMs = new Date(value).getTime();
   if (!Number.isFinite(targetMs)) return 0;
   return Math.max(0, Math.floor((targetMs - nowMs) / 1000));
+}
+
+function getEntryWindowEndMs(event: WorldBossStatusResponse["event"]) {
+  if (!event) return 0;
+  const apiValueMs = event.entryWindowEndsAt
+    ? new Date(event.entryWindowEndsAt).getTime()
+    : Number.NaN;
+  if (Number.isFinite(apiValueMs)) return apiValueMs;
+  return (
+    new Date(event.startsAt).getTime() + WORLD_BOSS_ENTRY_WINDOW_SECONDS * 1000
+  );
 }
 
 function getTerminalRespawnSeconds(
@@ -245,45 +251,60 @@ function getEventTimerInfo(
   const event = status?.event;
   if (!event) return { label: "Status", seconds: 0, text: "Indisponível" };
 
-  if (WORLD_BOSSES_TEST_UNLOCKED && !status?.participant) {
+  if (event.status === "SCHEDULED") {
+    const seconds = getSecondsUntil(event.startsAt, nowMs);
+    if (status?.participant) {
+      return {
+        label: "Status",
+        seconds,
+        text: `Aguardando no lobby — aparece em ${formatRemaining(seconds)}`,
+      };
+    }
+
     return {
-      label: "Status",
-      seconds: 0,
-      text: "Disponível agora",
+      label: "Próxima aparição em",
+      seconds,
+      text: `Próxima aparição em: ${formatRemaining(seconds)}`,
     };
   }
 
-  if (event.status === "SCHEDULED" || event.status === "LOBBY_OPEN") {
-    const seconds = getSecondsUntil(event.startsAt, nowMs);
+  if (event.status === "LOBBY_OPEN") {
+    const seconds = Math.max(
+      0,
+      Math.floor((getEntryWindowEndMs(event) - nowMs) / 1000),
+    );
+    if (status?.participant) {
+      return {
+        label: "Status",
+        seconds,
+        text: seconds
+          ? `No lobby — começa em ${formatRemaining(seconds)}`
+          : "No lobby — iniciando",
+      };
+    }
+
     return {
-      label: "Inicia em",
+      label: "Entrada aberta",
       seconds,
-      text: `Inicia em: ${formatRemaining(seconds)}`,
+      text: `Entrada aberta — ${formatRemaining(seconds)}`,
     };
   }
 
   if (event.status === "ACTIVE") {
     const seconds = getSecondsUntil(event.endsAt, nowMs);
     return {
-      label: "Tempo restante",
+      label: "Status",
       seconds,
-      text: `Tempo restante: ${formatRemaining(seconds)}`,
+      text: `Em andamento — entrada bloqueada`,
     };
   }
 
   const seconds = getTerminalRespawnSeconds(status, nowMs);
   return {
-    label: "Próxima aparição em",
+    label: "Status",
     seconds,
-    text: `Próxima aparição em: ${formatRemaining(seconds)}`,
+    text: `Encerrado — próxima aparição em ${formatRemaining(seconds)}`,
   };
-}
-
-function getEventRemainingSeconds(
-  status: WorldBossStatusResponse | null,
-  nowMs: number,
-) {
-  return getEventTimerInfo(status, nowMs).seconds;
 }
 
 function getEventStatusPriority(status: WorldBossStatusResponse) {
@@ -294,6 +315,23 @@ function getEventStatusPriority(status: WorldBossStatusResponse) {
   if (eventStatus === "DEFEATED" || eventStatus === "REWARDED") return 3;
   if (eventStatus === "EXPIRED") return 2;
   return 1;
+}
+
+function canJoinWorldBossStatus(status: WorldBossStatusResponse) {
+  const eventStatus = status.event?.status;
+  return Boolean(
+    !status.participant &&
+      status.eligible?.canJoin &&
+      (eventStatus === "SCHEDULED" || eventStatus === "LOBBY_OPEN"),
+  );
+}
+
+function canLeaveWorldBossStatus(status: WorldBossStatusResponse) {
+  const eventStatus = status.event?.status;
+  return Boolean(
+    status.participant &&
+      (eventStatus === "SCHEDULED" || eventStatus === "LOBBY_OPEN"),
+  );
 }
 
 function getCanonicalBossCards(
@@ -577,27 +615,31 @@ export function WorldBossesPage() {
   const currentMapVisualStyle = buildMapVisualStyle(currentMapImage);
   const currentMapTierClassName = getMapTierClassName(currentMap?.tier);
   const currentMapLevelRange = formatMapLevelRange(currentMap);
-  const canJoinPanel = Boolean(
-    panelEvent &&
-      !panelParticipant &&
-      (WORLD_BOSSES_TEST_UNLOCKED || panelStatus?.eligible?.canJoin),
-  );
+  const canJoinPanel = panelStatus
+    ? canJoinWorldBossStatus(panelStatus)
+    : false;
+  const canLeavePanel = panelStatus
+    ? canLeaveWorldBossStatus(panelStatus)
+    : false;
   const isJoinedPanel = Boolean(panelParticipant);
   const isBattleActive = panelEvent?.status === "ACTIVE";
   const isLobbyOpen = panelEvent?.status === "LOBBY_OPEN";
   const lobbyCount =
     panelEvent?.lobbyCount ?? panelEvent?.participantCount ?? 0;
   const panelTimer = getEventTimerInfo(panelStatus ?? null, nowMs);
-  const panelTimerSeconds = getEventRemainingSeconds(panelStatus ?? null, nowMs);
   const detailsStatus = detailsEventId
     ? (bossStatuses.find((status) => status.event?.id === detailsEventId) ??
       null)
     : null;
   const detailsEvent = detailsStatus?.event ?? null;
   const detailsBoss = detailsEvent?.worldBoss ?? null;
-  const detailsParticipant = detailsStatus?.participant ?? null;
   const detailsTimer = getEventTimerInfo(detailsStatus, nowMs);
-  const detailsTimerSeconds = getEventRemainingSeconds(detailsStatus, nowMs);
+  const canJoinDetails = detailsStatus
+    ? canJoinWorldBossStatus(detailsStatus)
+    : false;
+  const canLeaveDetails = detailsStatus
+    ? canLeaveWorldBossStatus(detailsStatus)
+    : false;
   const detailsTierClassName = getWorldBossTierClassName(detailsBoss?.tier);
   const bossCards = getCanonicalBossCards(bossStatuses, currentMap?.tier);
 
@@ -720,19 +762,19 @@ export function WorldBossesPage() {
                   {bossCards.map((bossStatus) => {
                     const bossEvent = bossStatus.event!;
                     const cardBoss = bossEvent.worldBoss;
-                    const cardCanJoin = Boolean(
-                      !bossStatus.participant &&
-                        (WORLD_BOSSES_TEST_UNLOCKED ||
-                          bossStatus.eligible?.canJoin),
-                    );
+                    const cardCanJoin = canJoinWorldBossStatus(bossStatus);
+                    const cardCanLeave = canLeaveWorldBossStatus(bossStatus);
                     const cardIsLocked =
-                      !WORLD_BOSSES_TEST_UNLOCKED &&
                       !bossStatus.eligible?.canJoin &&
-                      !bossStatus.participant;
+                      !bossStatus.participant &&
+                      bossEvent.status !== "ACTIVE";
                     const cardLobbyCount =
                       bossEvent.lobbyCount ?? bossEvent.participantCount ?? 0;
                     const cardTimer = getEventTimerInfo(bossStatus, nowMs);
                     const cardTone = getCardStatusTone(bossStatus);
+                    const cardStatusLabel = getCardStatusLabel(bossStatus);
+                    const showCardStatusBadge =
+                      cardStatusLabel !== "Aguardando";
                     const bossTierClassName = getWorldBossTierClassName(
                       cardBoss.tier,
                     );
@@ -755,9 +797,11 @@ export function WorldBossesPage() {
                               <span className="world-bosses-boss-card__tier">
                                 Tier {cardBoss.tier}
                               </span>
-                              <span className="world-bosses-boss-card__status">
-                                {getCardStatusLabel(bossStatus)}
-                              </span>
+                              {showCardStatusBadge ? (
+                                <span className="world-bosses-boss-card__status">
+                                  {cardStatusLabel}
+                                </span>
+                              ) : null}
                               <span className="world-bosses-boss-card__level">
                                 Level {getBossLevel(cardBoss)}
                               </span>
@@ -797,7 +841,18 @@ export function WorldBossesPage() {
                                   disabled={isBusy}
                                 >
                                   <Swords size={15} />
-                                  Entrar no combate
+                                  Entrar
+                                </button>
+                              ) : null}
+                              {cardCanLeave ? (
+                                <button
+                                  type="button"
+                                  className="incursions-danger-button world-bosses-boss-card__primary-action"
+                                  onClick={() => void handleLeave(bossEvent.id)}
+                                  disabled={isBusy}
+                                >
+                                  <XCircle size={15} />
+                                  Sair do lobby
                                 </button>
                               ) : null}
                             </div>
@@ -854,13 +909,7 @@ export function WorldBossesPage() {
 
                     <div className="world-bosses-state">
                       {isBattleActive ? <i aria-hidden="true" /> : null}
-                      <strong>
-                        {WORLD_BOSSES_TEST_UNLOCKED && !panelParticipant
-                          ? "Disponível agora"
-                          : isLobbyOpen
-                            ? "Aguardando no lobby"
-                            : getStatusLabel(panelEvent.status)}
-                      </strong>
+                      <strong>{panelTimer.text}</strong>
                     </div>
 
                     <div className="incursions-current-card__progress world-bosses-hp">
@@ -890,11 +939,7 @@ export function WorldBossesPage() {
                     <div className="world-bosses-activity-metrics">
                       <span>
                         <small>{panelTimer.label}</small>
-                        <strong>
-                          {panelTimerSeconds > 0
-                            ? formatRemaining(panelTimerSeconds)
-                            : panelTimer.text}
-                        </strong>
+                        <strong>{panelTimer.text}</strong>
                       </span>
                       <span>
                         <small>
@@ -927,12 +972,10 @@ export function WorldBossesPage() {
                           onClick={() => void handleJoin(panelEvent.id)}
                           disabled={isBusy}
                         >
-                          Entrar no combate
+                          Entrar
                         </button>
                       ) : null}
-                      {isJoinedPanel &&
-                      (panelEvent.status === "LOBBY_OPEN" ||
-                        panelEvent.status === "ACTIVE") ? (
+                      {canLeavePanel ? (
                         <button
                           type="button"
                           className="incursions-danger-button"
@@ -940,7 +983,7 @@ export function WorldBossesPage() {
                           disabled={isBusy}
                         >
                           <XCircle size={15} />
-                          Sair da sala
+                          Sair do lobby
                         </button>
                       ) : null}
                       {!canJoinPanel && !isJoinedPanel ? (
@@ -1011,17 +1054,13 @@ export function WorldBossesPage() {
                 </div>
               </div>
               <div className="world-bosses-modal__stats">
-                <span>
+                <span className="world-bosses-modal__status-stat">
                   <small>Status</small>
-                  <strong>{getCardStatusLabel(detailsStatus!)}</strong>
+                  <strong>{detailsTimer.text}</strong>
                 </span>
                 <span>
-                  <small>{detailsTimer.label}</small>
-                  <strong>
-                    {detailsTimerSeconds > 0
-                      ? formatRemaining(detailsTimerSeconds)
-                      : detailsTimer.text}
-                  </strong>
+                  <small>Tier</small>
+                  <strong>{detailsBoss.tier}</strong>
                 </span>
                 <span>
                   <small>Level</small>
@@ -1034,18 +1073,16 @@ export function WorldBossesPage() {
                   </strong>
                 </span>
                 <span>
-                  <small>Dificuldade</small>
-                  <strong>{formatDifficultyLabel(detailsBoss.difficulty)}</strong>
-                </span>
-                <span>
-                  <small>Entrada</small>
-                  <strong>Não é possível entrar após o combate começar</strong>
+                  <small>HP global</small>
+                  <strong>
+                    {formatNumber(detailsEvent.currentHp)} /{" "}
+                    {formatNumber(detailsEvent.maxHp)}
+                  </strong>
                 </span>
               </div>
               <div className="world-bosses-modal__rewards-section">
                 <div className="world-bosses-modal__section-head">
-                  <span>Recompensas</span>
-                  <h3>Drops possíveis</h3>
+                  <h3>Recompensas possíveis:</h3>
                 </div>
                 <div className="world-bosses-modal__rewards">
                   {detailsBoss.rewards.map((reward) => {
@@ -1069,17 +1106,28 @@ export function WorldBossesPage() {
                 </div>
               </div>
               <div className="world-bosses-actions">
-                <button
-                  className="incursions-primary-button"
-                  type="button"
-                  onClick={() => void handleJoin(detailsEvent.id)}
-                  disabled={isBusy || Boolean(detailsParticipant)}
-                >
-                  {!detailsParticipant ? <Swords size={15} /> : null}
-                  {detailsParticipant
-                    ? "Já está no lobby"
-                    : "Entrar no combate"}
-                </button>
+                {canJoinDetails ? (
+                  <button
+                    className="incursions-primary-button"
+                    type="button"
+                    onClick={() => void handleJoin(detailsEvent.id)}
+                    disabled={isBusy}
+                  >
+                    <Swords size={15} />
+                    Entrar
+                  </button>
+                ) : null}
+                {canLeaveDetails ? (
+                  <button
+                    className="incursions-danger-button"
+                    type="button"
+                    onClick={() => void handleLeave(detailsEvent.id)}
+                    disabled={isBusy}
+                  >
+                    <XCircle size={15} />
+                    Sair do lobby
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="incursions-secondary-button"

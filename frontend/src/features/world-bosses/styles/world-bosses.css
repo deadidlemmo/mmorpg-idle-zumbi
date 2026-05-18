@@ -337,6 +337,10 @@
   line-height: 1.24;
 }
 
+.world-bosses-boss-card__meta span {
+  overflow-wrap: anywhere;
+}
+
 .world-bosses-boss-card__meta small {
   color: rgba(231, 227, 216, 0.62);
   font-size: 0.74rem;
@@ -354,18 +358,20 @@
 .world-bosses-boss-card__secondary-action,
 .world-bosses-boss-card__primary-action {
   display: inline-flex;
+  flex: 0 1 auto;
   align-items: center;
   justify-content: center;
   gap: 0.44rem;
   min-height: 2.42rem;
   border-radius: 999px;
-  padding: 0.56rem 0.84rem;
+  padding: 0.54rem 0.86rem;
   font-size: 0.8rem;
   font-weight: 950;
   white-space: nowrap;
 }
 
 .world-bosses-boss-card__secondary-action {
+  min-width: 8.25rem;
   border: 1px solid
     color-mix(in srgb, var(--world-boss-tier-color) 28%, transparent);
   color: color-mix(in srgb, var(--world-boss-tier-color) 74%, #ffffff);
@@ -403,8 +409,8 @@
 }
 
 .world-bosses-boss-card__primary-action {
-  flex: 1 1 12rem;
-  min-width: min(100%, 12rem);
+  min-width: 6.75rem;
+  padding-inline: 0.96rem;
   box-shadow:
     0 10px 22px rgba(0, 0, 0, 0.24),
     0 0 18px rgba(215, 179, 65, 0.18);
@@ -577,9 +583,9 @@
   position: relative;
   display: grid;
   grid-template-rows: auto auto auto auto;
-  gap: 0.78rem;
+  gap: 0.72rem;
   width: min(100%, 820px);
-  max-height: min(94svh, 760px);
+  max-height: min(94svh, 740px);
   overflow: auto;
   border-radius: 1.12rem;
   border-color: color-mix(
@@ -621,17 +627,17 @@
 
 .world-bosses-modal__hero {
   display: grid;
-  grid-template-columns: minmax(140px, 170px) minmax(0, 1fr);
-  gap: 0.86rem;
-  align-items: stretch;
-  padding: 1rem;
+  grid-template-columns: minmax(118px, 146px) minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.92rem 1rem 0.86rem;
   padding-right: 3rem;
   border-bottom: 1px solid rgba(231, 227, 216, 0.08);
 }
 
 .world-bosses-modal__portrait {
   display: grid;
-  min-height: 168px;
+  min-height: 138px;
   overflow: hidden;
   place-items: center;
   border: 1px solid
@@ -665,26 +671,38 @@
   min-width: 0;
   flex-direction: column;
   justify-content: center;
-  gap: 0.42rem;
+  gap: 0.38rem;
 }
 
 .world-bosses-modal__panel h2 {
   margin: 0;
   color: #fff8e8;
-  font-size: 2.1rem;
+  font-size: 1.9rem;
   font-weight: 950;
-  line-height: 0.98;
+  line-height: 1.02;
 }
 
 .world-bosses-modal__panel p {
   margin: 0;
   color: #c5c9b8;
-  line-height: 1.48;
+  line-height: 1.42;
 }
 
 .world-bosses-modal__stats {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 0 1rem;
+}
+
+.world-bosses-modal__stats span {
+  display: flex;
+  min-height: 3.72rem;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.62rem 0.68rem;
+}
+
+.world-bosses-modal__status-stat {
+  grid-column: span 2;
 }
 
 .world-bosses-modal__stats strong {
@@ -693,49 +711,39 @@
 
 .world-bosses-modal__rewards-section {
   display: grid;
-  gap: 0.64rem;
+  gap: 0.58rem;
   padding: 0 1rem 0.2rem;
 }
 
 .world-bosses-modal__section-head {
   display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 0.7rem;
-}
-
-.world-bosses-modal__section-head span {
-  color: #e8c77f;
-  font-size: 0.68rem;
-  font-weight: 950;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  align-items: center;
 }
 
 .world-bosses-modal__section-head h3 {
   margin: 0;
-  color: #fff8e8;
+  color: #ffe3a3;
   font-family: var(--font-title);
-  font-size: 1.06rem;
+  font-size: 1.02rem;
   font-weight: 950;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .world-bosses-modal__rewards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.8rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.8rem), 1fr));
   gap: 0.58rem;
 }
 
 .world-bosses-reward-card {
   display: grid;
-  grid-template-columns: 2.5rem minmax(0, 1fr);
+  grid-template-columns: 2.68rem minmax(0, 1fr);
   align-items: center;
-  gap: 0.62rem;
-  min-height: 4.25rem;
+  gap: 0.66rem;
+  min-height: 4.36rem;
   border: 1px solid rgba(231, 227, 216, 0.1);
   border-radius: 0.78rem;
-  padding: 0.62rem;
+  padding: 0.68rem;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
     rgba(4, 8, 7, 0.62);
@@ -744,8 +752,8 @@
 
 .world-bosses-reward-card__icon {
   display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.68rem;
+  height: 2.68rem;
   place-items: center;
   color: #ffe3a3;
   border: 1px solid rgba(232, 184, 78, 0.28);
@@ -758,7 +766,7 @@
 .world-bosses-reward-card__body {
   display: grid;
   min-width: 0;
-  gap: 0.16rem;
+  gap: 0.18rem;
 }
 
 .world-bosses-reward-card__body strong {
@@ -766,9 +774,8 @@
   color: #fff8e8;
   font-size: 0.82rem;
   font-weight: 950;
-  line-height: 1.08;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.16;
+  overflow-wrap: anywhere;
 }
 
 .world-bosses-reward-card__body small {
@@ -778,9 +785,14 @@
 }
 
 .world-bosses-modal__panel > .world-bosses-actions {
-  display: grid;
-  grid-template-columns: minmax(12rem, 1fr) minmax(8rem, auto);
+  justify-content: flex-end;
   padding: 0 1rem 1rem;
+}
+
+.world-bosses-modal__panel > .world-bosses-actions button {
+  flex: 0 1 auto;
+  min-width: 7.25rem;
+  padding-inline: 1rem;
 }
 
 @keyframes world-boss-pulse {
@@ -852,6 +864,10 @@
   .world-bosses-modal__stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .world-bosses-modal__status-stat {
+    grid-column: span 2;
+  }
 }
 
 @media (max-width: 680px) {
@@ -860,16 +876,8 @@
     grid-template-columns: 1fr;
   }
 
-  .world-bosses-boss-card__actions,
-  .world-bosses-boss-card__secondary-action,
-  .world-bosses-boss-card__primary-action,
-  .world-bosses-actions,
-  .world-bosses-actions button {
-    width: 100%;
-  }
-
-  .world-bosses-modal__panel > .world-bosses-actions {
-    grid-template-columns: 1fr;
+  .world-bosses-modal__status-stat {
+    grid-column: auto;
   }
 }
 
@@ -880,5 +888,15 @@
 
   .world-bosses-premium-card {
     margin-bottom: 0.04rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .world-bosses-boss-card__actions,
+  .world-bosses-boss-card__secondary-action,
+  .world-bosses-boss-card__primary-action,
+  .world-bosses-modal__panel > .world-bosses-actions,
+  .world-bosses-modal__panel > .world-bosses-actions button {
+    width: 100%;
   }
 }

@@ -72,6 +72,8 @@ export interface WorldBossEventSummary {
   remainingSeconds: number;
   remainingSecondsToStart?: number;
   remainingSecondsToEnd?: number;
+  remainingSecondsToEntryClose?: number;
+  entryWindowEndsAt?: string;
   nextRespawnSeconds?: number;
   respawnIntervalSeconds?: number;
   currentHp: number;
