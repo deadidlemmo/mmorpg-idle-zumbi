@@ -622,9 +622,17 @@ export function isSessionActive(
 }
 
 export function getActiveEncounters(subMap?: AutoCombatSubMapViewModel | null) {
-  return (subMap?.encounters ?? []).filter((encounter) => {
-    return encounter.isActive !== false && Boolean(encounter.mob);
-  });
+  return (subMap?.encounters ?? [])
+    .filter((encounter) => {
+      return encounter.isActive !== false && Boolean(encounter.mob);
+    })
+    .sort((a, b) => {
+      return (
+        toSafeNumber(a.mob?.level, 0) - toSafeNumber(b.mob?.level, 0) ||
+        toSafeNumber(a.mob?.tier, 0) - toSafeNumber(b.mob?.tier, 0) ||
+        (a.mob?.name ?? '').localeCompare(b.mob?.name ?? '')
+      );
+    });
 }
 
 export function getFallbackLevelRangeFromTier(tier?: number | null) {
@@ -1234,4 +1242,3 @@ export function getPotionEventKey(payload: AutoCombatRealtimeEvent) {
 export function getRealtimeActions(context: unknown): AutoCombatRealtimeActions {
   return context as AutoCombatRealtimeActions;
 }
-
