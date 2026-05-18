@@ -16,6 +16,7 @@ import {
 import type { DashboardCharacterViewModel } from '../types/dashboard.types';
 import {
   DashboardTopBar,
+  type DashboardTopBarActivityOverride,
   type DashboardTopBarResource,
 } from './DashboardTopBar';
 
@@ -24,6 +25,7 @@ interface DashboardLayoutProps {
   children: ReactNode;
   hideHero?: boolean;
   hideTopBar?: boolean;
+  topBarActivityOverride?: DashboardTopBarActivityOverride | null;
 }
 
 interface DashboardLayoutContentProps {
@@ -31,6 +33,7 @@ interface DashboardLayoutContentProps {
   children: ReactNode;
   hideHero?: boolean;
   hideTopBar?: boolean;
+  topBarActivityOverride?: DashboardTopBarActivityOverride | null;
 }
 
 interface DashboardNavItem {
@@ -1082,6 +1085,7 @@ function DashboardLayoutContent({
   children,
   hideHero = false,
   hideTopBar = false,
+  topBarActivityOverride,
 }: DashboardLayoutContentProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1539,6 +1543,7 @@ function DashboardLayoutContent({
               characterCurrentHp={heroCharacter.currentHp}
               characterMaxHp={heroCharacter.maxHp}
               resources={topBarResources}
+              activityOverride={topBarActivityOverride}
             />
           ) : null}
         </div>
@@ -1678,12 +1683,14 @@ export function DashboardLayout({
   children,
   hideHero = false,
   hideTopBar = false,
+  topBarActivityOverride,
 }: DashboardLayoutProps) {
   return (
     <DashboardLayoutContent
       character={character}
       hideHero={hideHero}
       hideTopBar={hideTopBar}
+      topBarActivityOverride={topBarActivityOverride}
     >
       {children}
     </DashboardLayoutContent>

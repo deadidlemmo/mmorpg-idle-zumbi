@@ -176,6 +176,29 @@
   filter: saturate(0.72) brightness(0.9);
 }
 
+.world-bosses-boss-card--blocked-by-current {
+  cursor: not-allowed;
+  filter: saturate(0.46) brightness(0.72);
+  opacity: 0.58;
+}
+
+.world-bosses-boss-card--blocked-by-current:hover,
+.world-bosses-boss-card--blocked-by-current:focus-within {
+  transform: none;
+  border-color: color-mix(
+    in srgb,
+    var(--world-boss-tier-color) 18%,
+    rgba(231, 227, 216, 0.08)
+  );
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.world-bosses-boss-card--blocked-by-current::before {
+  opacity: 0.06;
+}
+
 .world-bosses-boss-card--lobby {
   border-color: rgba(232, 184, 78, 0.42);
 }
@@ -345,9 +368,10 @@
 
 .world-bosses-boss-card__content {
   display: flex;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 0.56rem;
+  min-height: 10.85rem;
   padding: 0.92rem;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
@@ -356,6 +380,7 @@
 
 .world-bosses-boss-card__name {
   min-width: 0;
+  min-height: 2.75rem;
   margin: 0;
   color: #f8f6df;
   font-size: 1.2rem;
@@ -366,6 +391,7 @@
 .world-bosses-boss-card__meta {
   display: grid;
   gap: 0.28rem;
+  min-height: 2.72rem;
   color: #e8c77f;
   font-size: 0.86rem;
   font-weight: 850;
@@ -387,7 +413,8 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 0.56rem;
-  margin-top: 0.12rem;
+  min-height: 2.5rem;
+  margin-top: auto;
 }
 
 .world-bosses-boss-card__secondary-action,
@@ -449,6 +476,14 @@
   box-shadow:
     0 10px 22px rgba(0, 0, 0, 0.24),
     0 0 18px rgba(215, 179, 65, 0.18);
+}
+
+.world-bosses-boss-card__secondary-action:disabled,
+.world-bosses-boss-card__primary-action:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+  opacity: 0.62;
+  transform: none;
 }
 
 .world-bosses-current-card {

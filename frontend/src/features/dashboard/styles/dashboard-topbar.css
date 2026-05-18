@@ -81,6 +81,10 @@
   --dashboard-topbar-border-rgb: var(--dashboard-topbar-incursion-rgb);
 }
 
+.dashboard-topbar--world-boss {
+  --dashboard-topbar-border-rgb: var(--dashboard-topbar-gold-rgb);
+}
+
 .dashboard-topbar--idle {
   --dashboard-topbar-border-rgb: var(--dashboard-topbar-white-rgb);
 }
@@ -266,6 +270,32 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     inset -1px 0 0 rgba(255, 255, 255, 0.08),
     0 0 10px rgba(var(--dashboard-topbar-incursion-rgb), 0.16);
+}
+
+.dashboard-topbar--world-boss .dashboard-topbar__activity {
+  border-color: rgba(var(--dashboard-topbar-gold-rgb), 0.34);
+}
+
+.dashboard-topbar--world-boss .dashboard-topbar__activity-progress {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(0, 0, 0, 0.14)),
+    rgb(34, 24, 24);
+}
+
+.dashboard-topbar--world-boss .dashboard-topbar__activity-progress span {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 48%, rgba(0, 0, 0, 0.18)),
+    linear-gradient(
+      90deg,
+      rgba(117, 24, 29, 0.95),
+      rgba(196, 47, 48, 0.94) 58%,
+      rgba(245, 83, 76, 0.9)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset -1px 0 0 rgba(255, 255, 255, 0.07),
+    0 0 10px rgba(var(--dashboard-topbar-red-rgb), 0.18);
 }
 
 .dashboard-topbar--idle .dashboard-topbar__activity {
@@ -519,6 +549,13 @@
     radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.12), transparent 42%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
     rgb(83, 61, 28);
+}
+
+.dashboard-topbar--world-boss .dashboard-topbar__activity-status-core {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgb(83, 66, 31);
 }
 
 .dashboard-topbar--idle .dashboard-topbar__activity-status-ring {

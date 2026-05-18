@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAutoCombatRealtimeState } from "../../auto-combat/realtime/useAutoCombatRealtime";
 import type {
   AutoCombatRealtimeEvent,
@@ -13,6 +13,10 @@ import {
   useIncursionsRealtimeActions,
   useIncursionsRealtimeState,
 } from "../../incursions/realtime/useIncursionsRealtime";
+import {
+  connectWorldBossSocket,
+  type WorldBossSocket,
+} from "../../../services/websocket/socketClient";
 import { getWorldBossStatus } from "../../world-bosses/api/world-bosses.api";
 import type { WorldBossStatusResponse } from "../../world-bosses/types/world-bosses.types";
 import { getCharacterOverview } from "../api/dashboard.api";
@@ -37,8 +41,12 @@ type ActivityBarItem = {
   progressLabel: string;
   progressPercent: number;
   progressValueLabel?: string | null;
+  progressTone?: "default" | "monster-hp";
+  showProgressTrack?: boolean;
   primaryMetric: string;
+  primaryMetricLabel?: string | null;
   secondaryMetric: string;
+  secondaryMetricLabel?: string | null;
   indicatorMetric?: string | null;
   indicatorLabel?: string | null;
   href: string;
@@ -1756,6 +1764,12 @@ function formatRemainingTime(seconds: unknown) {
   return `${secs}s`;
 }
 
+function getRemainingSecondsUntil(value: string | null | undefined, nowMs: number) {
+  const targetMs = getParsedDateMs(value);
+  if (!targetMs) return 0;
+  return Math.max(0, Math.ceil((targetMs - nowMs) / 1000));
+}
+
 function buildIncursionItemFromOverview(params: {
   characterId: string;
   session: DashboardIncursionSessionViewModel;
@@ -1943,38 +1957,67 @@ function buildActivityItems(params: {
   ) {
     const event = worldBossStatus.event;
     const participant = worldBossStatus.participant;
-    const isWorldBossWaiting =
-      event.status === "SCHEDULED" || event.status === "LOBBY_OPEN";
+    const isWorldBossInCombat = event.status === "ACTIVE";
+    const timerSeconds =
+      event.status === "SCHEDULED"
+        ? getRemainingSecondsUntil(event.startsAt, nowMs)
+        : event.status === "LOBBY_OPEN"
+          ? Math.max(
+              0,
+              Math.ceil(
+                toSafeNumber(
+                  event.remainingSecondsToStart ??
+                    event.remainingSecondsToEntryClose ??
+                    event.remainingSeconds,
+                  0,
+                ),
+              ),
+            )
+          : Math.max(0, Math.ceil(toSafeNumber(event.remainingSeconds, 0)));
+    const timerLabel =
+      event.status === "SCHEDULED" ? "Aparece em" : "Começa em";
+    const timerText = formatRemainingTime(timerSeconds);
+    const participantCount = event.lobbyCount ?? event.participantCount ?? 0;
+    const hpLabel = `${formatCompactNumber(event.currentHp)}/${formatCompactNumber(event.maxHp)} HP`;
+
     items.push({
       key: `world-boss-${event.id}`,
       type: "world-boss",
       icon: "☣",
       title: event.worldBoss.name,
-      description:
-        isWorldBossWaiting
-          ? `${event.worldBoss.map.name} • aguardando ameaça global • inicia em ${formatRemainingTime(event.remainingSecondsToStart ?? 0)}`
-          : `${event.worldBoss.map.name} • HP ${formatCompactNumber(event.currentHp)}/${formatCompactNumber(event.maxHp)} • resta ${formatRemainingTime(event.remainingSeconds)}`,
-      progressLabel: "HP global",
-      progressPercent: event.hpPercent,
-      progressValueLabel: `${Math.floor(event.hpPercent)}%`,
-      primaryMetric: formatRemainingTime(
-        isWorldBossWaiting
-          ? (event.remainingSecondsToStart ?? 0)
-          : event.remainingSeconds,
-      ),
-      secondaryMetric: `${formatCompactNumber(participant.damageDealt)} dano`,
-      indicatorMetric: `${Math.floor(event.progressPercent)}%`,
-      indicatorLabel: "Progresso coletivo",
+      description: isWorldBossInCombat
+        ? `${event.worldBoss.map.name} • Em andamento • ${hpLabel} • resta ${formatRemainingTime(event.remainingSeconds)}`
+        : `${event.worldBoss.map.name} • No lobby • ${timerLabel.toLowerCase()} ${timerText}`,
+      progressLabel: isWorldBossInCombat ? "HP restante" : timerLabel,
+      progressPercent: isWorldBossInCombat ? event.hpPercent : 0,
+      progressValueLabel: isWorldBossInCombat
+        ? `${Math.floor(event.hpPercent)}%`
+        : timerText,
+      progressTone: isWorldBossInCombat ? "monster-hp" : "default",
+      showProgressTrack: isWorldBossInCombat,
+      primaryMetric: isWorldBossInCombat ? hpLabel : timerText,
+      primaryMetricLabel: isWorldBossInCombat ? "HP global" : timerLabel,
+      secondaryMetric: isWorldBossInCombat
+        ? `${formatCompactNumber(participant.damageDealt)} dano`
+        : `${participantCount} participantes`,
+      secondaryMetricLabel: isWorldBossInCombat ? "Seu dano" : "Lobby",
+      indicatorMetric: isWorldBossInCombat
+        ? `${Math.floor(event.hpPercent)}%`
+        : "Lobby",
+      indicatorLabel: isWorldBossInCombat
+        ? "HP restante do World Boss"
+        : "Você está no lobby do World Boss",
       href: `/dashboard/${characterId}/world-bosses`,
       monsterMetaLabel: `${event.worldBoss.map.name} • Tier ${event.worldBoss.tier}`,
-      combatMetric:
-        isWorldBossWaiting
-          ? "No lobby"
-          : participant.eligibleForReward
-            ? "Elegível"
-            : "Contribuindo",
+      combatMetric: isWorldBossInCombat
+        ? participant.eligibleForReward
+          ? "Elegível"
+          : "Em andamento"
+        : "No lobby",
       killsMetric: `${(participant.contributionPercent ?? 0).toFixed(1)}%`,
-      xpMetric: formatRemainingTime(event.remainingSeconds),
+      xpMetric: isWorldBossInCombat
+        ? `${Math.floor(event.hpPercent)}% HP`
+        : timerText,
     });
   }
 
@@ -1989,6 +2032,7 @@ export function DashboardActivityBar({
   characterId,
   refreshMs = 5000,
 }: DashboardActivityBarProps) {
+  const location = useLocation();
   const realtimeState =
     useAutoCombatRealtimeState() as AutoCombatRealtimeStateLoose;
 
@@ -2054,6 +2098,59 @@ export function DashboardActivityBar({
     };
   }, [characterId, refreshMs]);
 
+  useEffect(() => {
+    const eventId = worldBossStatus?.event?.id;
+    const isActiveWorldBossStatus = Boolean(
+      worldBossStatus?.participant &&
+        worldBossStatus.event &&
+        ["SCHEDULED", "LOBBY_OPEN", "ACTIVE"].includes(
+          worldBossStatus.event.status,
+        ),
+    );
+
+    if (!characterId || !eventId || !isActiveWorldBossStatus) return;
+
+    const socket: WorldBossSocket = connectWorldBossSocket();
+    const update = (payload: WorldBossStatusResponse) => {
+      if (payload.event?.id !== eventId) return;
+      setWorldBossStatus(payload);
+      setNowMs(Date.now());
+    };
+
+    socket.on("worldBoss:statusUpdated", update);
+    socket.on("worldBoss:lobbyUpdated", update);
+    socket.on("worldBoss:battleStarted", update);
+    socket.on("worldBoss:damage", update);
+    socket.on("worldBoss:progress", update);
+    socket.on("worldBoss:defeated", update);
+    socket.on("worldBoss:expired", update);
+    socket.on("worldBoss:rewarded", update);
+
+    if (!socket.connected) socket.connect();
+    socket.emit("worldBoss:join", { eventId, characterId });
+
+    return () => {
+      socket.off("worldBoss:statusUpdated", update);
+      socket.off("worldBoss:lobbyUpdated", update);
+      socket.off("worldBoss:battleStarted", update);
+      socket.off("worldBoss:damage", update);
+      socket.off("worldBoss:progress", update);
+      socket.off("worldBoss:defeated", update);
+      socket.off("worldBoss:expired", update);
+      socket.off("worldBoss:rewarded", update);
+
+      if (!location.pathname.includes("/world-bosses")) {
+        socket.emit("worldBoss:leave", { eventId });
+      }
+    };
+  }, [
+    characterId,
+    location.pathname,
+    worldBossStatus?.event?.id,
+    worldBossStatus?.event?.status,
+    worldBossStatus?.participant?.id,
+  ]);
+
   const activityItems = useMemo(() => {
     return buildActivityItems({
       characterId,
@@ -2100,28 +2197,32 @@ export function DashboardActivityBar({
         const progressPercentLabel = floorPercent(progressPercent);
         const progressValueLabel =
           item.progressValueLabel ?? `${progressPercentLabel}%`;
+        const shouldShowProgressTrack = item.showProgressTrack !== false;
         const progressHeaderLabel =
           item.type === "auto-combat"
             ? `${item.progressLabel} • ${progressValueLabel}`
             : item.progressLabel;
-        const shouldShowProgressValue = item.type !== "auto-combat";
+        const shouldShowProgressValue =
+          shouldShowProgressTrack && item.type !== "auto-combat";
+        const isMonsterHpTrack =
+          item.type === "auto-combat" || item.progressTone === "monster-hp";
         const progressStyle = {
           width: `${progressPercent}%`,
         };
         const itemStyle =
-          item.type === "auto-combat"
+          isMonsterHpTrack
             ? ({
                 "--dashboard-activity-monster-hp-percent": `${progressPercent}%`,
                 "--dashboard-activity-monster-hp-scale": progressPercent / 100,
               } as CSSProperties)
             : undefined;
         const progressTrackClassName = [
-          item.type === "auto-combat"
+          isMonsterHpTrack
             ? "dashboard-activity-bar__track dashboard-activity-bar__track--monster-hp"
             : "dashboard-activity-bar__track",
         ].join(" ");
         const compactProgressTrackClassName = [
-          item.type === "auto-combat"
+          isMonsterHpTrack
             ? "dashboard-activity-bar__compact-track dashboard-activity-bar__compact-track--monster-hp"
             : "dashboard-activity-bar__compact-track",
         ].join(" ");
@@ -2280,20 +2381,22 @@ export function DashboardActivityBar({
                   </p>
                 )}
 
-                <div className="dashboard-activity-bar__progress-block">
-                  <div className="dashboard-activity-bar__progress-header">
-                    <span>{progressHeaderLabel}</span>
-                    {shouldShowProgressValue ? (
-                      <strong>{progressValueLabel}</strong>
-                    ) : null}
-                  </div>
+                {shouldShowProgressTrack ? (
+                  <div className="dashboard-activity-bar__progress-block">
+                    <div className="dashboard-activity-bar__progress-header">
+                      <span>{progressHeaderLabel}</span>
+                      {shouldShowProgressValue ? (
+                        <strong>{progressValueLabel}</strong>
+                      ) : null}
+                    </div>
 
-                  <div className={progressTrackClassName}>
-                    <i style={progressStyle}>
-                      <em aria-hidden="true" />
-                    </i>
+                    <div className={progressTrackClassName}>
+                      <i style={progressStyle}>
+                        <em aria-hidden="true" />
+                      </i>
+                    </div>
                   </div>
-                </div>
+                ) : null}
               </div>
 
               <div className="dashboard-activity-bar__metrics">
@@ -2317,12 +2420,12 @@ export function DashboardActivityBar({
                 ) : (
                   <>
                     <span className="dashboard-activity-bar__metric dashboard-activity-bar__metric--xp">
-                      <small>{item.progressLabel}</small>
+                      <small>{item.primaryMetricLabel ?? item.progressLabel}</small>
                       <strong>{item.primaryMetric}</strong>
                     </span>
 
                     <span className="dashboard-activity-bar__metric dashboard-activity-bar__metric--combat">
-                      <small>Produção</small>
+                      <small>{item.secondaryMetricLabel ?? "Produção"}</small>
                       <strong>{item.secondaryMetric}</strong>
                     </span>
                   </>
@@ -2353,18 +2456,20 @@ export function DashboardActivityBar({
                   ) : null}
                 </div>
 
-                <div className="dashboard-activity-bar__compact-track-block">
-                  <div className="dashboard-activity-bar__compact-track-header">
-                    <span>{progressHeaderLabel}</span>
-                    {shouldShowProgressValue ? (
-                      <strong>{progressValueLabel}</strong>
-                    ) : null}
-                  </div>
+                {shouldShowProgressTrack ? (
+                  <div className="dashboard-activity-bar__compact-track-block">
+                    <div className="dashboard-activity-bar__compact-track-header">
+                      <span>{progressHeaderLabel}</span>
+                      {shouldShowProgressValue ? (
+                        <strong>{progressValueLabel}</strong>
+                      ) : null}
+                    </div>
 
-                  <div className={compactProgressTrackClassName}>
-                    <i style={progressStyle} />
+                    <div className={compactProgressTrackClassName}>
+                      <i style={progressStyle} />
+                    </div>
                   </div>
-                </div>
+                ) : null}
 
                 <div className="dashboard-activity-bar__compact-stats">
                   {item.type === "auto-combat" ? (
@@ -2391,12 +2496,14 @@ export function DashboardActivityBar({
                   ) : (
                     <>
                       <span className="dashboard-activity-bar__compact-stat dashboard-activity-bar__compact-stat--xp">
-                        <small>{item.progressLabel}</small>
+                        <small>
+                          {item.primaryMetricLabel ?? item.progressLabel}
+                        </small>
                         <strong>{item.primaryMetric}</strong>
                       </span>
 
                       <span className="dashboard-activity-bar__compact-stat dashboard-activity-bar__compact-stat--combat">
-                        <small>Produção</small>
+                        <small>{item.secondaryMetricLabel ?? "Produção"}</small>
                         <strong>{item.secondaryMetric}</strong>
                       </span>
                     </>

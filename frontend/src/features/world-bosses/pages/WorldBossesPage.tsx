@@ -19,6 +19,7 @@ import {
 } from "../../auto-combat/assets/auto-combat-map-assets";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
+import type { DashboardTopBarActivityOverride } from "../../dashboard/components/DashboardTopBar";
 import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
@@ -358,6 +359,69 @@ function getSidePanelStatusInfo(
   };
 }
 
+function buildWorldBossTopBarActivity(
+  status: WorldBossStatusResponse | null,
+  nowMs: number,
+): DashboardTopBarActivityOverride | null {
+  const event = status?.event;
+  const participant = status?.participant;
+
+  if (!event || !participant) return null;
+
+  const bossName = event.worldBoss.name;
+  const participantCount = event.lobbyCount ?? event.participantCount ?? 0;
+
+  if (event.status === "SCHEDULED") {
+    const seconds = getSecondsUntil(event.startsAt, nowMs);
+
+    return {
+      kind: "world-boss",
+      title: bossName,
+      subtitle: `No lobby - aparece em ${formatRemaining(seconds)}`,
+      icon: "WB",
+      badge: participantCount > 0 ? formatNumber(participantCount) : null,
+      titleText: `${bossName} - no lobby, aparece em ${formatRemaining(
+        seconds,
+      )}`,
+    };
+  }
+
+  if (event.status === "LOBBY_OPEN") {
+    const seconds = Math.max(
+      0,
+      Math.floor((getEntryWindowEndMs(event) - nowMs) / 1000),
+    );
+    const timerText = seconds ? formatRemaining(seconds) : "iniciando";
+
+    return {
+      kind: "world-boss",
+      title: bossName,
+      subtitle: `No lobby - comeca em ${timerText}`,
+      icon: "WB",
+      badge: participantCount > 0 ? formatNumber(participantCount) : null,
+      titleText: `${bossName} - no lobby, comeca em ${timerText}`,
+    };
+  }
+
+  if (event.status === "ACTIVE") {
+    const hpPercent = Math.max(0, Math.min(100, event.hpPercent));
+
+    return {
+      kind: "world-boss",
+      title: bossName,
+      subtitle: `Em andamento - ${formatNumber(event.currentHp)} HP`,
+      icon: "WB",
+      progressPercent: hpPercent,
+      badge: `${Math.floor(hpPercent)}%`,
+      titleText: `${bossName} - em andamento, ${formatNumber(
+        event.currentHp,
+      )} de ${formatNumber(event.maxHp)} HP`,
+    };
+  }
+
+  return null;
+}
+
 function getEventStatusPriority(status: WorldBossStatusResponse) {
   const eventStatus = status.event?.status;
   if (eventStatus === "ACTIVE") return 6;
@@ -393,6 +457,10 @@ function isBlockingWorldBossStatus(status?: WorldBossStatusResponse | null) {
         eventStatus === "LOBBY_OPEN" ||
         eventStatus === "ACTIVE"),
   );
+}
+
+function getBlockingWorldBossEventId(statuses: WorldBossStatusResponse[]) {
+  return statuses.find(isBlockingWorldBossStatus)?.event?.id ?? null;
 }
 
 function isBlockedByOtherWorldBoss(
@@ -487,6 +555,14 @@ function getPanelStatus(statuses: WorldBossStatusResponse[]) {
         status.event && ACTIVE_PANEL_STATUSES.has(status.event.status),
     ) ?? null
   );
+}
+
+function getStatusByEventId(
+  statuses: WorldBossStatusResponse[],
+  eventId?: string | null,
+) {
+  if (!eventId) return null;
+  return statuses.find((status) => status.event?.id === eventId) ?? null;
 }
 
 export function WorldBossesPage() {
@@ -635,6 +711,10 @@ export function WorldBossesPage() {
 
   async function handleJoin(eventId: string) {
     if (!characterId) return;
+    if (isEventBlockedByCurrentWorldBoss(eventId)) {
+      setError("Você já está em outro World Boss.");
+      return;
+    }
     setSelectedEventId(eventId);
     setIsBusy(true);
     try {
@@ -672,10 +752,12 @@ export function WorldBossesPage() {
   }
 
   function handleSelectEvent(eventId: string) {
+    if (isEventBlockedByCurrentWorldBoss(eventId)) return;
     setSelectedEventId(eventId);
   }
 
   function handleOpenDetails(eventId: string) {
+    if (isEventBlockedByCurrentWorldBoss(eventId)) return;
     setSelectedEventId(eventId);
     setDetailsEventId(eventId);
   }
@@ -687,7 +769,13 @@ export function WorldBossesPage() {
     if (event.target !== event.currentTarget) return;
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
+    if (isEventBlockedByCurrentWorldBoss(eventId)) return;
     handleSelectEvent(eventId);
+  }
+
+  function isEventBlockedByCurrentWorldBoss(eventId: string) {
+    const activeEventId = getBlockingWorldBossEventId(bossStatuses);
+    return Boolean(activeEventId && activeEventId !== eventId);
   }
 
   if (!character) {
@@ -713,10 +801,9 @@ export function WorldBossesPage() {
   const blockingWorldBossStatus =
     bossStatuses.find(isBlockingWorldBossStatus) ?? null;
   const blockingWorldBossEventId = blockingWorldBossStatus?.event?.id ?? null;
-  const selectedStatus = selectedEventId
-    ? (bossCards.find((status) => status.event?.id === selectedEventId) ??
-      null)
-    : null;
+  const selectedStatus =
+    blockingWorldBossStatus ??
+    (selectedEventId ? getStatusByEventId(bossCards, selectedEventId) : null);
   const panelStatus = selectedStatus ?? getPanelStatus(bossStatuses);
   const panelEvent = panelStatus?.event ?? null;
   const panelBoss = panelEvent?.worldBoss ?? null;
@@ -737,9 +824,15 @@ export function WorldBossesPage() {
   const lobbyCount =
     panelEvent?.lobbyCount ?? panelEvent?.participantCount ?? 0;
   const panelSideInfo = getSidePanelStatusInfo(panelStatus ?? null, nowMs);
-  const detailsStatus = detailsEventId
-    ? (bossStatuses.find((status) => status.event?.id === detailsEventId) ??
-      null)
+  const effectiveDetailsEventId =
+    detailsEventId &&
+    (!blockingWorldBossEventId || detailsEventId === blockingWorldBossEventId)
+      ? detailsEventId
+      : null;
+  const detailsStatus = effectiveDetailsEventId
+    ? (bossStatuses.find(
+        (status) => status.event?.id === effectiveDetailsEventId,
+      ) ?? null)
     : null;
   const detailsEvent = detailsStatus?.event ?? null;
   const detailsBoss = detailsEvent?.worldBoss ?? null;
@@ -755,9 +848,17 @@ export function WorldBossesPage() {
     : false;
   const detailsTierClassName = getWorldBossTierClassName(detailsBoss?.tier);
   const selectedPanelEventId = panelEvent?.id ?? null;
+  const topBarActivityOverride = buildWorldBossTopBarActivity(
+    blockingWorldBossStatus,
+    nowMs,
+  );
 
   return (
-    <DashboardLayout character={character} hideHero>
+    <DashboardLayout
+      character={character}
+      hideHero
+      topBarActivityOverride={topBarActivityOverride}
+    >
       <main className="incursions-page gathering-page--origin world-bosses-page">
         <div className="gathering-origin-shell world-bosses-shell">
         <section className="incursions-hero world-bosses-hero">
@@ -916,13 +1017,30 @@ export function WorldBossesPage() {
                             ? "world-bosses-boss-card--selected"
                             : "",
                           cardIsLocked ? "world-bosses-boss-card--locked" : "",
+                          cardBlockedByOtherWorldBoss
+                            ? "world-bosses-boss-card--blocked-by-current"
+                            : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
-                        tabIndex={0}
+                        tabIndex={cardBlockedByOtherWorldBoss ? -1 : 0}
                         aria-label={`Selecionar World Boss ${cardBoss.name}`}
-                        onClick={() => handleSelectEvent(bossEvent.id)}
-                        onDoubleClick={() => handleOpenDetails(bossEvent.id)}
+                        aria-disabled={cardBlockedByOtherWorldBoss || undefined}
+                        title={
+                          cardBlockedByOtherWorldBoss
+                            ? "Você já está em outro World Boss."
+                            : undefined
+                        }
+                        onClick={() => {
+                          if (!cardBlockedByOtherWorldBoss) {
+                            handleSelectEvent(bossEvent.id);
+                          }
+                        }}
+                        onDoubleClick={() => {
+                          if (!cardBlockedByOtherWorldBoss) {
+                            handleOpenDetails(bossEvent.id);
+                          }
+                        }}
                         onKeyDown={(event) =>
                           handleCardKeyDown(event, bossEvent.id)
                         }
@@ -973,6 +1091,12 @@ export function WorldBossesPage() {
                                   event.stopPropagation();
                                   handleOpenDetails(bossEvent.id);
                                 }}
+                                disabled={cardBlockedByOtherWorldBoss}
+                                title={
+                                  cardBlockedByOtherWorldBoss
+                                    ? "Você já está em outro World Boss."
+                                    : undefined
+                                }
                               >
                                 <Eye size={15} />
                                 Ver detalhes

@@ -1,9 +1,15 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  connectWorldBossSocket,
+  type WorldBossSocket,
+} from '../../../services/websocket/socketClient';
 import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import { useGatheringRealtimeState } from '../../gathering/realtime/useGatheringRealtime';
 import type { IncursionsRealtimeState } from '../../incursions/realtime/IncursionsRealtimeProvider';
 import { useIncursionsRealtimeState } from '../../incursions/realtime/useIncursionsRealtime';
 import type { GatheringMaterialViewModel } from '../../gathering/types/gathering.types';
+import { getWorldBossStatus } from '../../world-bosses/api/world-bosses.api';
+import type { WorldBossStatusResponse } from '../../world-bosses/types/world-bosses.types';
 import '../styles/dashboard-topbar.css';
 
 type DashboardTopBarResourceTone = 'default' | 'gold' | 'cash';
@@ -15,6 +21,24 @@ export interface DashboardTopBarResource {
   icon?: ReactNode;
   tone?: DashboardTopBarResourceTone;
   title?: string;
+}
+
+export type DashboardTopBarActivityKind =
+  | 'idle'
+  | 'gathering'
+  | 'auto-combat'
+  | 'incursion'
+  | 'world-boss';
+
+export interface DashboardTopBarActivityOverride {
+  kind: DashboardTopBarActivityKind;
+  title: string;
+  subtitle: string;
+  icon?: ReactNode;
+  imageUrl?: string | null;
+  progressPercent?: number | null;
+  badge?: string | null;
+  titleText?: string;
 }
 
 interface DashboardTopBarProps {
@@ -29,22 +53,24 @@ interface DashboardTopBarProps {
 
   isSidebarCollapsed?: boolean;
   className?: string;
+  activityOverride?: DashboardTopBarActivityOverride | null;
 
   onRefresh?: () => void | Promise<void>;
 }
 
 type LooseRecord = Record<string, unknown>;
 
-interface DashboardTopBarActivityViewModel {
-  kind: 'idle' | 'gathering' | 'auto-combat' | 'incursion';
-  title: string;
-  subtitle: string;
-  icon: ReactNode;
-  imageUrl?: string | null;
-  progressPercent?: number | null;
-  badge?: string | null;
-  titleText?: string;
-}
+type DashboardTopBarActivityViewModel = DashboardTopBarActivityOverride;
+
+const WORLD_BOSS_TOPBAR_REFRESH_MS = 3000;
+const WORLD_BOSS_ENTRY_WINDOW_SECONDS = 5 * 60;
+const WORLD_BOSS_ACTIVE_STATUSES = new Set([
+  'SCHEDULED',
+  'LOBBY_OPEN',
+  'ACTIVE',
+]);
+
+const worldBossStatusCache = new Map<string, WorldBossStatusResponse | null>();
 
 function isRecord(value: unknown): value is LooseRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -161,6 +187,126 @@ function formatCompactDuration(seconds?: number | null): string {
   }
 
   return `${remainingSeconds}s`;
+}
+
+function formatWorldBossDuration(seconds?: number | null): string {
+  if (seconds === null || seconds === undefined) return '0s';
+
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainingSeconds = safeSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(
+      remainingSeconds,
+    ).padStart(2, '0')}s`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}m ${String(remainingSeconds).padStart(2, '0')}s`;
+  }
+
+  return `${remainingSeconds}s`;
+}
+
+function getWorldBossSecondsUntil(
+  value?: string | Date | null,
+  nowMs = Date.now(),
+): number {
+  if (!value) return 0;
+
+  const targetMs = new Date(value).getTime();
+
+  if (!Number.isFinite(targetMs)) return 0;
+
+  return Math.max(0, Math.floor((targetMs - nowMs) / 1000));
+}
+
+function getWorldBossEntryWindowEndMs(
+  event: WorldBossStatusResponse['event'],
+): number {
+  if (!event) return 0;
+
+  const apiValueMs = event.entryWindowEndsAt
+    ? new Date(event.entryWindowEndsAt).getTime()
+    : Number.NaN;
+
+  if (Number.isFinite(apiValueMs)) return apiValueMs;
+
+  return (
+    new Date(event.startsAt).getTime() + WORLD_BOSS_ENTRY_WINDOW_SECONDS * 1000
+  );
+}
+
+function isActiveWorldBossStatus(
+  status?: WorldBossStatusResponse | null,
+): boolean {
+  return Boolean(
+    status?.participant &&
+      status.event &&
+      WORLD_BOSS_ACTIVE_STATUSES.has(status.event.status),
+  );
+}
+
+function buildWorldBossActivity(
+  status: WorldBossStatusResponse | null,
+  nowMs: number,
+): DashboardTopBarActivityViewModel | null {
+  const event = status?.event;
+  const participant = status?.participant;
+
+  if (!event || !participant || !WORLD_BOSS_ACTIVE_STATUSES.has(event.status)) {
+    return null;
+  }
+
+  const bossName = event.worldBoss.name;
+  const participantCount = event.lobbyCount ?? event.participantCount ?? 0;
+
+  if (event.status === 'SCHEDULED') {
+    const seconds = getWorldBossSecondsUntil(event.startsAt, nowMs);
+    const timerText = formatWorldBossDuration(seconds);
+
+    return {
+      kind: 'world-boss',
+      title: bossName,
+      subtitle: `No lobby - aparece em ${timerText}`,
+      icon: 'WB',
+      badge: participantCount > 0 ? formatNumber(participantCount) : null,
+      titleText: `${bossName} - no lobby, aparece em ${timerText}`,
+    };
+  }
+
+  if (event.status === 'LOBBY_OPEN') {
+    const seconds = Math.max(
+      0,
+      Math.floor((getWorldBossEntryWindowEndMs(event) - nowMs) / 1000),
+    );
+    const timerText = seconds ? formatWorldBossDuration(seconds) : 'iniciando';
+
+    return {
+      kind: 'world-boss',
+      title: bossName,
+      subtitle: `No lobby - comeca em ${timerText}`,
+      icon: 'WB',
+      badge: participantCount > 0 ? formatNumber(participantCount) : null,
+      titleText: `${bossName} - no lobby, comeca em ${timerText}`,
+    };
+  }
+
+  const hpPercent = clampPercent(event.hpPercent);
+
+  return {
+    kind: 'world-boss',
+    title: bossName,
+    subtitle: `Em andamento - ${formatNumber(event.currentHp)} HP`,
+    icon: 'WB',
+    progressPercent: hpPercent,
+    badge: `${Math.floor(hpPercent)}%`,
+    titleText: `${bossName} - em andamento, ${formatNumber(
+      event.currentHp,
+    )} de ${formatNumber(event.maxHp)} HP`,
+  };
 }
 
 function getMaterialInitials(materialName?: string | null): string {
@@ -568,20 +714,144 @@ export function DashboardTopBar({
   resources = [],
   isSidebarCollapsed = false,
   className,
+  activityOverride,
   onRefresh,
 }: DashboardTopBarProps) {
   const autoCombatState = useAutoCombatRealtimeState();
   const gatheringState = useGatheringRealtimeState();
   const incursionsState = useIncursionsRealtimeState();
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [worldBossStatus, setWorldBossStatus] =
+    useState<WorldBossStatusResponse | null>(() =>
+      characterId ? (worldBossStatusCache.get(characterId) ?? null) : null,
+    );
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!characterId) {
+      setWorldBossStatus(null);
+      return;
+    }
+
+    let isDisposed = false;
+    const safeCharacterId = characterId;
+
+    setWorldBossStatus(worldBossStatusCache.get(safeCharacterId) ?? null);
+
+    async function loadWorldBossStatus() {
+      try {
+        const status = await getWorldBossStatus(safeCharacterId);
+
+        if (isDisposed) return;
+
+        worldBossStatusCache.set(safeCharacterId, status);
+        setWorldBossStatus(status);
+        setNowMs(Date.now());
+      } catch {
+        if (isDisposed) return;
+
+        worldBossStatusCache.set(safeCharacterId, null);
+        setWorldBossStatus(null);
+      }
+    }
+
+    void loadWorldBossStatus();
+
+    const intervalId = window.setInterval(
+      () => void loadWorldBossStatus(),
+      WORLD_BOSS_TOPBAR_REFRESH_MS,
+    );
+
+    return () => {
+      isDisposed = true;
+      window.clearInterval(intervalId);
+    };
+  }, [characterId]);
+
+  const worldBossEventId = worldBossStatus?.event?.id ?? null;
+  const hasActiveWorldBossStatus = isActiveWorldBossStatus(worldBossStatus);
+
+  useEffect(() => {
+    const eventId = worldBossEventId;
+
+    if (!characterId || !eventId || !hasActiveWorldBossStatus) {
+      return;
+    }
+
+    const socket: WorldBossSocket = connectWorldBossSocket();
+    const update = (payload: WorldBossStatusResponse) => {
+      if (payload.event?.id !== eventId) return;
+
+      worldBossStatusCache.set(characterId, payload);
+      setWorldBossStatus(payload);
+      setNowMs(Date.now());
+    };
+
+    socket.on('worldBoss:lobbyOpened', update);
+    socket.on('worldBoss:statusUpdated', update);
+    socket.on('worldBoss:joinedLobby', update);
+    socket.on('worldBoss:leftLobby', update);
+    socket.on('worldBoss:lobbyUpdated', update);
+    socket.on('worldBoss:battleStarted', update);
+    socket.on('worldBoss:damage', update);
+    socket.on('worldBoss:progress', update);
+    socket.on('worldBoss:defeated', update);
+    socket.on('worldBoss:expired', update);
+    socket.on('worldBoss:rewarded', update);
+    socket.on('worldBoss:left', update);
+
+    if (!socket.connected) socket.connect();
+    socket.emit('worldBoss:join', { eventId, characterId });
+
+    return () => {
+      socket.off('worldBoss:lobbyOpened', update);
+      socket.off('worldBoss:statusUpdated', update);
+      socket.off('worldBoss:joinedLobby', update);
+      socket.off('worldBoss:leftLobby', update);
+      socket.off('worldBoss:lobbyUpdated', update);
+      socket.off('worldBoss:battleStarted', update);
+      socket.off('worldBoss:damage', update);
+      socket.off('worldBoss:progress', update);
+      socket.off('worldBoss:defeated', update);
+      socket.off('worldBoss:expired', update);
+      socket.off('worldBoss:rewarded', update);
+      socket.off('worldBoss:left', update);
+    };
+  }, [
+    characterId,
+    hasActiveWorldBossStatus,
+    worldBossEventId,
+  ]);
+
+  const worldBossActivity = useMemo(() => {
+    return buildWorldBossActivity(worldBossStatus, nowMs);
+  }, [nowMs, worldBossStatus]);
 
   const activity = useMemo(() => {
     return (
+      activityOverride ??
+      worldBossActivity ??
       buildAutoCombatActivity(autoCombatState) ??
       buildGatheringActivity(gatheringState) ??
       buildIncursionActivity(incursionsState) ??
       buildIdleActivity()
     );
-  }, [autoCombatState, gatheringState, incursionsState]);
+  }, [
+    activityOverride,
+    autoCombatState,
+    gatheringState,
+    incursionsState,
+    worldBossActivity,
+  ]);
 
   const visibleResources = useMemo(() => {
     return buildVisibleResources(resources);
