@@ -778,6 +778,7 @@ export function DashboardTopBar({
   }, [characterId]);
 
   const worldBossEventId = worldBossStatus?.event?.id ?? null;
+  const worldBossId = worldBossStatus?.event?.worldBoss.id ?? null;
   const hasActiveWorldBossStatus = isActiveWorldBossStatus(worldBossStatus);
 
   useEffect(() => {
@@ -789,7 +790,12 @@ export function DashboardTopBar({
 
     const socket: WorldBossSocket = connectWorldBossSocket();
     const update = (payload: WorldBossStatusResponse) => {
-      if (payload.event?.id !== eventId) return;
+      const payloadEventId = payload.event?.id ?? null;
+      const payloadWorldBossId = payload.event?.worldBoss.id ?? null;
+
+      if (payloadEventId !== eventId && payloadWorldBossId !== worldBossId) {
+        return;
+      }
 
       worldBossStatusCache.set(characterId, payload);
       setWorldBossStatus(payload);
@@ -830,6 +836,7 @@ export function DashboardTopBar({
     characterId,
     hasActiveWorldBossStatus,
     worldBossEventId,
+    worldBossId,
   ]);
 
   const worldBossActivity = useMemo(() => {

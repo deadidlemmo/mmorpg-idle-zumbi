@@ -69,6 +69,9 @@ const WORLD_BOSS_ENTRY_WINDOW_SECONDS = 5 * 60;
 const WORLD_BOSS_PROCESSING_TICK_MS = 1000;
 // Temporario para QA: manter bosses liberados sem travas de horario ou nivel.
 const WORLD_BOSS_TEST_UNLOCK_ENABLED = true;
+const WORLD_BOSS_ALWAYS_OPEN_TEST_TIER = 1;
+const WORLD_BOSS_ALWAYS_OPEN_TEST_SLOT = 0;
+const WORLD_BOSS_ALWAYS_OPEN_TEST_WINDOW_SECONDS = 24 * 60 * 60;
 const WORLD_BOSS_TEST_LOBBY_LEAD_SECONDS = 10 * 60;
 const WORLD_BOSS_SHORT_RESPAWN_SECONDS = 6 * 60 * 60;
 const WORLD_BOSS_LONG_RESPAWN_SECONDS = 12 * 60 * 60;
@@ -241,11 +244,14 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       for (const event of events) {
         const nextEvent = await this.advanceEventState(event);
         if (WORLD_BOSS_TERMINAL_STATUSES.includes(nextEvent.status)) {
-          await this.ensureNextCycleEvent(
+          const nextCycleEvent = await this.ensureNextCycleEvent(
             nextEvent,
             nextEvent.worldBoss,
             new Date(),
           );
+          if (WORLD_BOSS_TEST_UNLOCK_ENABLED) {
+            await this.ensureEventAvailableForTest(nextCycleEvent);
+          }
         }
       }
     } catch (error) {
@@ -385,16 +391,28 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
 
   async leave(userId: string, dto: LeaveWorldBossDto) {
     const character = await this.getCharacterOrThrow(userId, dto.characterId);
-    const resolved = await this.resolveEventAndContribution({
-      userId,
-      characterId: dto.characterId,
-      eventId: dto.eventId,
+    const event = await this.prisma.worldBossEvent.findUnique({
+      where: { id: dto.eventId },
+      include: eventInclude,
     });
-    if (!resolved.participant)
+
+    if (!event) throw new NotFoundException('Ameaça Global não encontrada.');
+
+    await this.advanceEventState(event);
+
+    const participant = await this.prisma.worldBossParticipant.findUnique({
+      where: {
+        eventId_characterId: {
+          eventId: dto.eventId,
+          characterId: dto.characterId,
+        },
+      },
+    });
+
+    if (!participant || participant.leftAt)
       throw new NotFoundException('Participação não encontrada.');
 
     const now = new Date();
-    const participant = resolved.participant;
     const result = await this.prisma.$transaction(async (tx) => {
       const event = await tx.worldBossEvent.findUniqueOrThrow({
         where: { id: dto.eventId },
@@ -408,33 +426,83 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         await tx.worldBossParticipant.delete({
           where: { id: participant.id },
         });
+        await this.recalculateParticipantCount(tx, dto.eventId);
+        const updatedEvent = await tx.worldBossEvent.findUniqueOrThrow({
+          where: { id: dto.eventId },
+          include: eventInclude,
+        });
+        return { event: updatedEvent, leftDuringBattle: false };
       } else if (event.status === WorldBossEventStatus.ACTIVE) {
         await tx.worldBossParticipant.update({
           where: { id: participant.id },
-          data: { leftAt: now, lastContributionAt: now },
+          data: {
+            leftAt: now,
+            lastContributionAt: now,
+            eligibleForReward: false,
+          },
         });
+
+        await this.recalculateParticipantCount(tx, dto.eventId);
+
+        const remainingParticipants = await tx.worldBossParticipant.count({
+          where: { eventId: dto.eventId, leftAt: null },
+        });
+
+        if (
+          remainingParticipants <= 0 &&
+          this.isAlwaysOpenTestBoss(event.worldBoss)
+        ) {
+          await tx.worldBossEvent.update({
+            where: { id: dto.eventId },
+            data: {
+              status: WorldBossEventStatus.CANCELLED,
+              endsAt: now,
+            },
+          });
+
+          const nextEvent = await tx.worldBossEvent.create({
+            data: {
+              worldBossId: event.worldBossId,
+              mapId: event.mapId,
+              tier: event.tier,
+              status: WorldBossEventStatus.LOBBY_OPEN,
+              startsAt: now,
+              endsAt: new Date(
+                now.getTime() + event.worldBoss.durationSeconds * 1000,
+              ),
+              maxHp: event.worldBoss.baseHp,
+              currentHp: event.worldBoss.baseHp,
+            },
+            include: eventInclude,
+          });
+
+          return { event: nextEvent, leftDuringBattle: true };
+        }
+
+        const updatedEvent = await tx.worldBossEvent.findUniqueOrThrow({
+          where: { id: dto.eventId },
+          include: eventInclude,
+        });
+        return { event: updatedEvent, leftDuringBattle: true };
       } else {
         throw new ConflictException(
           'Não é possível sair desta Ameaça Global neste estado.',
         );
       }
 
-      await this.recalculateParticipantCount(tx, dto.eventId);
-      return tx.worldBossEvent.findUniqueOrThrow({
-        where: { id: dto.eventId },
-        include: eventInclude,
-      });
     });
 
     return {
       ...this.formatStatus(
-        result,
+        result.event,
         null,
         now,
-        resolved.rewards,
-        'Você saiu da sala. Sua contribuição já registrada foi preservada.',
+        null,
+        result.leftDuringBattle
+          ? 'Você abandonou a batalha. Esta participação não receberá recompensas.'
+          : 'Você saiu do lobby da Ameaça Global.',
       ),
-      eligible: this.getEligibility(character, result),
+      eligible: this.getEligibility(character, result.event),
     };
   }
 
@@ -651,7 +719,42 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async ensureEventAvailableForTest(event: any) {
+    if (this.isAlwaysOpenTestBoss(event.worldBoss)) {
+      return this.ensureAlwaysOpenTestEvent(event);
+    }
+
     return this.advanceEventState(event);
+  }
+
+  private async ensureAlwaysOpenTestEvent(event: any) {
+    const now = new Date();
+
+    if (event.status === WorldBossEventStatus.ACTIVE) {
+      return this.advanceEventState(event);
+    }
+
+    if (event.status === WorldBossEventStatus.LOBBY_OPEN) {
+      return event;
+    }
+
+    return this.prisma.worldBossEvent.update({
+      where: { id: event.id },
+      data: {
+        status: WorldBossEventStatus.LOBBY_OPEN,
+        startsAt: now,
+        endsAt: new Date(
+          now.getTime() + event.worldBoss.durationSeconds * 1000,
+        ),
+        maxHp: event.worldBoss.baseHp,
+        currentHp: event.worldBoss.baseHp,
+        totalDamage: 0,
+        participantCount: 0,
+        hpLockedAt: null,
+        defeatedAt: null,
+        rewardedAt: null,
+      },
+      include: eventInclude,
+    });
   }
 
   private async cancelDuplicateOpenEvents(
@@ -687,7 +790,24 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       : WORLD_BOSS_LONG_RESPAWN_SECONDS;
   }
 
+  private isAlwaysOpenTestBoss(boss: any) {
+    return Boolean(
+      WORLD_BOSS_TEST_UNLOCK_ENABLED &&
+        Number(boss?.tier) === WORLD_BOSS_ALWAYS_OPEN_TEST_TIER &&
+        this.getBossSlotIndex(boss) === WORLD_BOSS_ALWAYS_OPEN_TEST_SLOT,
+    );
+  }
+
   private getEntryWindowEndsAt(event: any) {
+    if (
+      event.status === WorldBossEventStatus.LOBBY_OPEN &&
+      this.isAlwaysOpenTestBoss(event.worldBoss)
+    ) {
+      return new Date(
+        Date.now() + WORLD_BOSS_ALWAYS_OPEN_TEST_WINDOW_SECONDS * 1000,
+      );
+    }
+
     return new Date(
       event.startsAt.getTime() + WORLD_BOSS_ENTRY_WINDOW_SECONDS * 1000,
     );
@@ -995,6 +1115,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       where: { eventId },
       orderBy: [{ damageDealt: 'desc' }, { joinedAt: 'asc' }],
     });
+    const activeParticipantCount = participants.filter((p) => !p.leftAt).length;
     const totalDamage = participants.reduce(
       (total, p) => total + p.damageDealt,
       0,
@@ -1012,7 +1133,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     }
     await tx.worldBossEvent.update({
       where: { id: eventId },
-      data: { totalDamage, participantCount: participants.length },
+      data: { totalDamage, participantCount: activeParticipantCount },
     });
   }
 
@@ -1026,6 +1147,8 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     const participant = await tx.worldBossParticipant.findUniqueOrThrow({
       where: { id: participantId },
     });
+    if (participant.leftAt) return [];
+
     const progress =
       event.maxHp > 0 ? Math.min(1, event.totalDamage / event.maxHp) : 0;
     const collectiveMultiplier =

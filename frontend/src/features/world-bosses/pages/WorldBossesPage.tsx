@@ -153,6 +153,18 @@ function getQuantityLabel(reward: WorldBossRewardPreview) {
     : `${formatNumber(reward.minQuantity)}–${formatNumber(reward.maxQuantity)}`;
 }
 
+function getRewardChanceLabel(reward: WorldBossRewardPreview) {
+  if (reward.guaranteed) return "100%";
+
+  const chance = Number(reward.chance);
+  if (!Number.isFinite(chance) || chance <= 0) return null;
+
+  const roundedChance =
+    chance >= 10 ? Math.round(chance) : Math.round(chance * 10) / 10;
+
+  return `~${String(roundedChance).replace(".", ",")}%`;
+}
+
 function formatMapLevelRange(
   map?: { minLevel?: number | null; maxLevel?: number | null } | null,
 ): string | null {
@@ -344,7 +356,7 @@ function getSidePanelStatusInfo(
     const seconds = getSecondsUntil(event.endsAt, nowMs);
     return {
       statusText: "Em andamento",
-      detailText: "Entrada bloqueada",
+      detailText: null,
       timerLabel: "Tempo restante",
       timerText: formatRemaining(seconds),
     };
@@ -445,8 +457,16 @@ function canLeaveWorldBossStatus(status: WorldBossStatusResponse) {
   const eventStatus = status.event?.status;
   return Boolean(
     status.participant &&
-      (eventStatus === "SCHEDULED" || eventStatus === "LOBBY_OPEN"),
+      (eventStatus === "SCHEDULED" ||
+        eventStatus === "LOBBY_OPEN" ||
+        eventStatus === "ACTIVE"),
   );
+}
+
+function getLeaveWorldBossActionLabel(status: WorldBossStatusResponse | null) {
+  return status?.event?.status === "ACTIVE"
+    ? "Sair do combate"
+    : "Sair do lobby";
 }
 
 function isBlockingWorldBossStatus(status?: WorldBossStatusResponse | null) {
@@ -575,6 +595,7 @@ export function WorldBossesPage() {
   );
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [detailsEventId, setDetailsEventId] = useState<string | null>(null);
+  const [revealedRewardId, setRevealedRewardId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
@@ -690,7 +711,10 @@ export function WorldBossesPage() {
     if (!detailsEventId) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setDetailsEventId(null);
+      if (event.key === "Escape") {
+        setDetailsEventId(null);
+        setRevealedRewardId(null);
+      }
     };
 
     document.body.classList.add("world-bosses-modal-open");
@@ -709,6 +733,11 @@ export function WorldBossesPage() {
 
   if (!characterId) return <Navigate to="/characters" replace />;
 
+  function handleCloseDetails() {
+    setDetailsEventId(null);
+    setRevealedRewardId(null);
+  }
+
   async function handleJoin(eventId: string) {
     if (!characterId) return;
     if (isEventBlockedByCurrentWorldBoss(eventId)) {
@@ -720,7 +749,7 @@ export function WorldBossesPage() {
     try {
       const next = await joinWorldBoss(characterId, eventId);
       setBossStatuses((current) => upsertWorldBossStatus(current, next));
-      setDetailsEventId(null);
+      handleCloseDetails();
       setError(null);
     } catch (err) {
       setError(
@@ -739,8 +768,13 @@ export function WorldBossesPage() {
     setIsBusy(true);
     try {
       const next = await leaveWorldBoss(characterId, eventId);
-      setBossStatuses((current) => upsertWorldBossStatus(current, next));
-      setDetailsEventId(null);
+      setBossStatuses((current) =>
+        upsertWorldBossStatus(
+          current.filter((status) => status.event?.id !== eventId),
+          next,
+        ),
+      );
+      handleCloseDetails();
       setError(null);
     } catch (err) {
       setError(
@@ -759,6 +793,7 @@ export function WorldBossesPage() {
   function handleOpenDetails(eventId: string) {
     if (isEventBlockedByCurrentWorldBoss(eventId)) return;
     setSelectedEventId(eventId);
+    setRevealedRewardId(null);
     setDetailsEventId(eventId);
   }
 
@@ -818,6 +853,7 @@ export function WorldBossesPage() {
   const canLeavePanel = panelStatus
     ? canLeaveWorldBossStatus(panelStatus)
     : false;
+  const panelLeaveLabel = getLeaveWorldBossActionLabel(panelStatus ?? null);
   const isJoinedPanel = Boolean(panelParticipant);
   const isBattleActive = panelEvent?.status === "ACTIVE";
   const isLobbyOpen = panelEvent?.status === "LOBBY_OPEN";
@@ -846,6 +882,7 @@ export function WorldBossesPage() {
   const canLeaveDetails = detailsStatus
     ? canLeaveWorldBossStatus(detailsStatus)
     : false;
+  const detailsLeaveLabel = getLeaveWorldBossActionLabel(detailsStatus);
   const detailsTierClassName = getWorldBossTierClassName(detailsBoss?.tier);
   const selectedPanelEventId = panelEvent?.id ?? null;
   const topBarActivityOverride = buildWorldBossTopBarActivity(
@@ -985,6 +1022,8 @@ export function WorldBossesPage() {
                       canJoinWorldBossStatus(bossStatus) &&
                       !cardBlockedByOtherWorldBoss;
                     const cardCanLeave = canLeaveWorldBossStatus(bossStatus);
+                    const cardLeaveLabel =
+                      getLeaveWorldBossActionLabel(bossStatus);
                     const cardIsLocked =
                       !bossStatus.eligible?.canJoin &&
                       !bossStatus.participant &&
@@ -1140,7 +1179,7 @@ export function WorldBossesPage() {
                                   disabled={isBusy}
                                 >
                                   <XCircle size={15} />
-                                  Sair do lobby
+                                  {cardLeaveLabel}
                                 </button>
                               ) : null}
                             </div>
@@ -1201,12 +1240,22 @@ export function WorldBossesPage() {
                       </div>
                     </div>
 
-                    <div className="world-bosses-state world-bosses-state--current">
+                    <div
+                      className={[
+                        "world-bosses-state",
+                        "world-bosses-state--current",
+                        isBattleActive ? "world-bosses-state--battle" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
                       {isBattleActive ? <i aria-hidden="true" /> : null}
                       <span className="world-bosses-state__copy">
                         <small>Status atual</small>
                         <strong>{panelSideInfo.statusText}</strong>
-                        <em>{panelSideInfo.detailText}</em>
+                        {panelSideInfo.detailText ? (
+                          <em>{panelSideInfo.detailText}</em>
+                        ) : null}
                       </span>
                     </div>
 
@@ -1301,17 +1350,12 @@ export function WorldBossesPage() {
                           disabled={isBusy}
                         >
                           <XCircle size={15} />
-                          Sair do lobby
+                          {panelLeaveLabel}
                         </button>
                       ) : null}
                       {!canJoinPanel && !isJoinedPanel ? (
                         <span className="world-bosses-eligible world-bosses-eligible--pending">
                           {panelStatus?.eligible?.reason ?? "Indisponível"}
-                        </span>
-                      ) : null}
-                      {panelParticipant?.eligibleForReward ? (
-                        <span className="world-bosses-eligible">
-                          Participação mínima atingida
                         </span>
                       ) : null}
                     </div>
@@ -1328,7 +1372,7 @@ export function WorldBossesPage() {
             role="presentation"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) {
-                setDetailsEventId(null);
+                handleCloseDetails();
               }
             }}
           >
@@ -1345,7 +1389,7 @@ export function WorldBossesPage() {
               <button
                 type="button"
                 className="world-bosses-modal__close"
-                onClick={() => setDetailsEventId(null)}
+                onClick={handleCloseDetails}
                 aria-label="Fechar detalhes do World Boss"
               >
                 <X size={18} />
@@ -1400,25 +1444,52 @@ export function WorldBossesPage() {
               </div>
               <div className="world-bosses-modal__rewards-section">
                 <div className="world-bosses-modal__section-head">
-                  <h3>Recompensas possíveis:</h3>
+                  <h3>Loot</h3>
                 </div>
                 <div className="world-bosses-modal__rewards">
                   {detailsBoss.rewards.map((reward) => {
                     const rewardName = reward.item?.name ?? reward.rewardType;
+                    const rewardChance = getRewardChanceLabel(reward);
+                    const quantityLabel = getQuantityLabel(reward);
+                    const isRewardRevealed = revealedRewardId === reward.id;
 
                     return (
-                      <div className="world-bosses-reward-card" key={reward.id}>
+                      <button
+                        type="button"
+                        className={[
+                          "world-bosses-reward-card",
+                          isRewardRevealed
+                            ? "world-bosses-reward-card--revealed"
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        key={reward.id}
+                        onClick={() =>
+                          setRevealedRewardId((current) =>
+                            current === reward.id ? null : reward.id,
+                          )
+                        }
+                        aria-label={`${rewardName}. Quantidade ${quantityLabel}${
+                          rewardChance ? `. Chance ${rewardChance}` : ""
+                        }`}
+                      >
+                        {rewardChance ? (
+                          <span className="world-bosses-reward-card__chance">
+                            {rewardChance}
+                          </span>
+                        ) : null}
                         <span
                           className="world-bosses-reward-card__icon"
                           aria-hidden="true"
                         >
                           {getRewardIcon(reward)}
                         </span>
-                        <span className="world-bosses-reward-card__body">
+                        <span className="world-bosses-reward-card__reveal">
                           <strong>{rewardName}</strong>
                           <small>{getQuantityLabel(reward)}</small>
                         </span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -1456,13 +1527,13 @@ export function WorldBossesPage() {
                     disabled={isBusy}
                   >
                     <XCircle size={15} />
-                    Sair do lobby
+                    {detailsLeaveLabel}
                   </button>
                 ) : null}
                 <button
                   type="button"
                   className="incursions-secondary-button"
-                  onClick={() => setDetailsEventId(null)}
+                  onClick={handleCloseDetails}
                 >
                   Fechar
                 </button>
