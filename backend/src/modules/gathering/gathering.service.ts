@@ -929,6 +929,13 @@ export class GatheringService {
         slot: ItemSlot.MATERIAL,
         materialOrigin: origin,
         isGatheringMaterial: true,
+        craftingIngredients: {
+          some: {
+            recipe: {
+              isActive: true,
+            },
+          },
+        },
       },
       orderBy: [
         {
@@ -1080,6 +1087,17 @@ export class GatheringService {
         requiredGatheringLevel: true,
         gatheringXpPerUnit: true,
         baseGatheringRatePerHour: true,
+        _count: {
+          select: {
+            craftingIngredients: {
+              where: {
+                recipe: {
+                  isActive: true,
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -1094,6 +1112,12 @@ export class GatheringService {
     if (targetMaterial.materialOrigin === MaterialOrigin.DROP_MOBS) {
       throw new BadRequestException(
         'Materiais de DROP_MOBS vêm do auto-combate e não podem ser farmados por gathering.',
+      );
+    }
+
+    if (targetMaterial._count.craftingIngredients <= 0) {
+      throw new BadRequestException(
+        'Este material ainda não está vinculado a nenhuma receita ativa.',
       );
     }
 
