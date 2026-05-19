@@ -14,6 +14,17 @@ export type RecipeMainGatheringOverride = {
 export const balancedGatheringDemandPerOrigin = 140;
 export const balancedGatheringDemandPerClassOrigin = 70;
 
+export const recipeQuantityPolicy = {
+  outputQuantity: 1,
+  ingredientCount: 4,
+  totalInputQuantity: 5,
+  mainGatheringQuantity: 2,
+  secondaryGatheringQuantity: 1,
+  biomaterialDropQuantity: 1,
+  residueDropQuantity: 1,
+  rareMobDropTotalQuantity: 2,
+} as const;
+
 export const recipeMainGatheringOverrides: RecipeMainGatheringOverride[] = [
   { outputItemName: 'Armadura de Retalhos Pesados', targetMainOrigin: 'CONTENCAO' },
   { outputItemName: 'Armadura de Placas Oxidadas', targetMainOrigin: 'CONTENCAO' },
@@ -76,4 +87,3 @@ export const recipeMainGatheringOverrides: RecipeMainGatheringOverride[] = [
   { outputItemName: 'Jaqueta de Patrulha do Terminal', targetMainOrigin: 'DESMANCHE' },
   { outputItemName: 'Jaqueta de Quarentena Balística', targetMainOrigin: 'DESMANCHE' },
 ];
-

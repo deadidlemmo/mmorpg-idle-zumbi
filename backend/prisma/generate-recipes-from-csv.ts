@@ -6,6 +6,7 @@ import {
 } from './seed-data/items.seed-data';
 import { mobDropItemDefinitions } from './seed-data/mob-drops.seed-data';
 import {
+  recipeQuantityPolicy,
   recipeMainGatheringOverrides,
   type GatheringOriginCode,
 } from './seed-data/recipe-balance-overrides.seed-data';
@@ -104,6 +105,33 @@ function toNumber(value: string, fieldName: string, outputItemName: string) {
   }
 
   return numberValue;
+}
+
+function getPolicyQuantity(params: {
+  value: string;
+  fieldName: string;
+  outputItemName: string;
+  expectedQuantity: number;
+}) {
+  const quantity = toNumber(
+    params.value,
+    params.fieldName,
+    params.outputItemName,
+  );
+
+  if (quantity !== params.expectedQuantity) {
+    throw new Error(
+      [
+        `Quantidade fora da politica simetrica em ${params.outputItemName}.`,
+        `Campo: ${params.fieldName}`,
+        `Recebido: ${quantity}`,
+        `Esperado: ${params.expectedQuantity}`,
+        'Edite recipeQuantityPolicy se a regra economica global mudar.',
+      ].join(' | '),
+    );
+  }
+
+  return params.expectedQuantity;
 }
 
 const itemNames = new Set([
@@ -358,41 +386,45 @@ function buildRecipesFile(rows: CsvRow[]) {
     const ingredients = [
       {
         name: mainItemName,
-        quantity: toNumber(
-          row['Qtd Material Principal'],
-          'Qtd Material Principal',
+        quantity: getPolicyQuantity({
+          value: row['Qtd Material Principal'],
+          fieldName: 'Qtd Material Principal',
           outputItemName,
-        ),
+          expectedQuantity: recipeQuantityPolicy.mainGatheringQuantity,
+        }),
         role: 'MAIN_COMPONENT',
         origin: mainOrigin,
       },
       {
         name: resolvedSecondaryItemName,
-        quantity: toNumber(
-          row['Qtd Material Secundário'],
-          'Qtd Material Secundário',
+        quantity: getPolicyQuantity({
+          value: row['Qtd Material Secundário'],
+          fieldName: 'Qtd Material Secundário',
           outputItemName,
-        ),
+          expectedQuantity: recipeQuantityPolicy.secondaryGatheringQuantity,
+        }),
         role: 'SHARED_MATERIAL',
         origin: secondaryOrigin,
       },
       {
         name: row['Drop de mob'],
-        quantity: toNumber(
-          row['Qtd Drop de mob'],
-          'Qtd Drop de mob',
+        quantity: getPolicyQuantity({
+          value: row['Qtd Drop de mob'],
+          fieldName: 'Qtd Drop de mob',
           outputItemName,
-        ),
+          expectedQuantity: recipeQuantityPolicy.biomaterialDropQuantity,
+        }),
         role: 'RARE_MOB_DROP',
         origin: 'DROP_MOBS',
       },
       {
         name: row['Resíduo de mob'],
-        quantity: toNumber(
-          row['Qtd Resíduo de mob'],
-          'Qtd Resíduo de mob',
+        quantity: getPolicyQuantity({
+          value: row['Qtd Resíduo de mob'],
+          fieldName: 'Qtd Resíduo de mob',
           outputItemName,
-        ),
+          expectedQuantity: recipeQuantityPolicy.residueDropQuantity,
+        }),
         role: 'RARE_MOB_DROP',
         origin: 'DROP_MOBS',
       },
@@ -410,7 +442,7 @@ function buildRecipesFile(rows: CsvRow[]) {
     output.push('  {');
     output.push(`    outputItemName: ${toStringLiteral(outputItemName)},`);
     output.push(`    tier: ${tier},`);
-    output.push('    outputQuantity: 1,');
+    output.push(`    outputQuantity: ${recipeQuantityPolicy.outputQuantity},`);
     output.push('    ingredients: [');
 
     for (const ingredient of ingredients) {

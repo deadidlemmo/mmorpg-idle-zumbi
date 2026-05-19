@@ -10,6 +10,7 @@ import {
 import {
   balancedGatheringDemandPerClassOrigin,
   balancedGatheringDemandPerOrigin,
+  recipeQuantityPolicy,
   recipeMainGatheringOverrides,
   type GatheringOriginCode,
 } from './seed-data/recipe-balance-overrides.seed-data';
@@ -271,6 +272,179 @@ function summarizeDemand(values: Record<string, number>) {
     max: Math.max(...amounts),
     spread: Math.max(...amounts) - Math.min(...amounts),
     values,
+  };
+}
+
+function getMobDropCategory(params: {
+  itemName: string;
+  mobDropMetaByName: Map<string, { family: string }>;
+}) {
+  const family = params.mobDropMetaByName.get(params.itemName)?.family ?? '';
+
+  if (family === 'Resíduo Infecto') return 'RESIDUE';
+  if (family.startsWith('Biomaterial ')) return 'BIOMATERIAL';
+  if (family === 'Núcleo Infectado de Elite') return 'ELITE_CORE';
+
+  return 'UNKNOWN';
+}
+
+function buildRecipeQuantityShape(params: {
+  recipe: (typeof recipeDefinitions)[number];
+  mobDropMetaByName: Map<string, { family: string }>;
+}) {
+  const { recipe, mobDropMetaByName } = params;
+  const ingredients = recipe.ingredients;
+  const mainGathering = ingredients.filter(
+    (ingredient) => String(ingredient.role) === 'MAIN_COMPONENT',
+  );
+  const secondaryGathering = ingredients.filter(
+    (ingredient) => String(ingredient.role) === 'SHARED_MATERIAL',
+  );
+  const mobDropIngredients = ingredients.filter(
+    (ingredient) => String(ingredient.role) === 'RARE_MOB_DROP',
+  );
+  const biomaterials = mobDropIngredients.filter(
+    (ingredient) =>
+      getMobDropCategory({
+        itemName: ingredient.itemName,
+        mobDropMetaByName,
+      }) === 'BIOMATERIAL',
+  );
+  const residues = mobDropIngredients.filter(
+    (ingredient) =>
+      getMobDropCategory({
+        itemName: ingredient.itemName,
+        mobDropMetaByName,
+      }) === 'RESIDUE',
+  );
+
+  const sumQuantity = (
+    values: Array<{
+      quantity: number;
+    }>,
+  ) => values.reduce((total, value) => total + value.quantity, 0);
+
+  return [
+    `output:${recipe.outputQuantity ?? 1}`,
+    `ingredients:${ingredients.length}`,
+    `total:${sumQuantity(ingredients)}`,
+    `main:${mainGathering.length}/${sumQuantity(mainGathering)}`,
+    `secondary:${secondaryGathering.length}/${sumQuantity(secondaryGathering)}`,
+    `biomaterial:${biomaterials.length}/${sumQuantity(biomaterials)}`,
+    `residue:${residues.length}/${sumQuantity(residues)}`,
+  ].join('|');
+}
+
+function buildRecipeQuantityAudit(params: {
+  mobDropMetaByName: Map<string, { family: string }>;
+}) {
+  const shapeDistribution: Record<string, number> = {};
+  const invalidRecipes: unknown[] = [];
+
+  for (const recipe of recipeDefinitions) {
+    const shape = buildRecipeQuantityShape({
+      recipe,
+      mobDropMetaByName: params.mobDropMetaByName,
+    });
+    increment(shapeDistribution, shape);
+
+    const ingredients = recipe.ingredients;
+    const mainGathering = ingredients.filter(
+      (ingredient) => String(ingredient.role) === 'MAIN_COMPONENT',
+    );
+    const secondaryGathering = ingredients.filter(
+      (ingredient) => String(ingredient.role) === 'SHARED_MATERIAL',
+    );
+    const mobDropIngredients = ingredients.filter(
+      (ingredient) => String(ingredient.role) === 'RARE_MOB_DROP',
+    );
+    const biomaterials = mobDropIngredients.filter(
+      (ingredient) =>
+        getMobDropCategory({
+          itemName: ingredient.itemName,
+          mobDropMetaByName: params.mobDropMetaByName,
+        }) === 'BIOMATERIAL',
+    );
+    const residues = mobDropIngredients.filter(
+      (ingredient) =>
+        getMobDropCategory({
+          itemName: ingredient.itemName,
+          mobDropMetaByName: params.mobDropMetaByName,
+        }) === 'RESIDUE',
+    );
+    const totalInputQuantity = ingredients.reduce(
+      (total, ingredient) => total + ingredient.quantity,
+      0,
+    );
+
+    const issues: string[] = [];
+
+    if ((recipe.outputQuantity ?? 1) !== recipeQuantityPolicy.outputQuantity) {
+      issues.push('outputQuantity');
+    }
+
+    if (ingredients.length !== recipeQuantityPolicy.ingredientCount) {
+      issues.push('ingredientCount');
+    }
+
+    if (totalInputQuantity !== recipeQuantityPolicy.totalInputQuantity) {
+      issues.push('totalInputQuantity');
+    }
+
+    if (
+      mainGathering.length !== 1 ||
+      mainGathering[0]?.quantity !==
+        recipeQuantityPolicy.mainGatheringQuantity
+    ) {
+      issues.push('mainGatheringQuantity');
+    }
+
+    if (
+      secondaryGathering.length !== 1 ||
+      secondaryGathering[0]?.quantity !==
+        recipeQuantityPolicy.secondaryGatheringQuantity
+    ) {
+      issues.push('secondaryGatheringQuantity');
+    }
+
+    if (
+      biomaterials.length !== 1 ||
+      biomaterials[0]?.quantity !==
+        recipeQuantityPolicy.biomaterialDropQuantity
+    ) {
+      issues.push('biomaterialDropQuantity');
+    }
+
+    if (
+      residues.length !== 1 ||
+      residues[0]?.quantity !== recipeQuantityPolicy.residueDropQuantity
+    ) {
+      issues.push('residueDropQuantity');
+    }
+
+    if (
+      mobDropIngredients.reduce(
+        (total, ingredient) => total + ingredient.quantity,
+        0,
+      ) !== recipeQuantityPolicy.rareMobDropTotalQuantity
+    ) {
+      issues.push('rareMobDropTotalQuantity');
+    }
+
+    if (issues.length > 0) {
+      invalidRecipes.push({
+        outputItemName: recipe.outputItemName,
+        issues,
+        shape,
+      });
+    }
+  }
+
+  return {
+    policy: recipeQuantityPolicy,
+    shapeDistribution,
+    invalidRecipeCount: invalidRecipes.length,
+    invalidRecipes: invalidRecipes.slice(0, 20),
   };
 }
 
@@ -587,6 +761,7 @@ function main() {
       affinityViolationsCount: affinityViolations.length,
       affinityViolations: affinityViolations.slice(0, 20),
     },
+    recipeQuantitySymmetry: buildRecipeQuantityAudit({ mobDropMetaByName }),
     gatheringSymmetry: {
       targetDemandPerOrigin: balancedGatheringDemandPerOrigin,
       targetDemandPerClassOrigin: balancedGatheringDemandPerClassOrigin,

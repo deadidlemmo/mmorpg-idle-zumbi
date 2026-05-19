@@ -23,6 +23,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
     "prisma:audit:crafting-chain": "node node_modules/tsx/dist/cli.mjs prisma/audit-crafting-chain.ts",
+    "prisma:audit:economy-time": "node node_modules/tsx/dist/cli.mjs prisma/audit-economy-time.ts",
     "prisma:recipes:from-csv": "node node_modules/tsx/dist/cli.mjs prisma/generate-recipes-from-csv.ts",
     "test:grant-lutador-t1": "tsx prisma/grant-lutador-tier1-items.ts",
     "prisma:cleanup-items": "node node_modules/tsx/dist/cli.mjs prisma/cleanup-old-items.ts",
