@@ -10,10 +10,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Placa de Portão Leve',
+        itemName: 'Espuma Filtrante Suja',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Jaqueta Remendada',
@@ -41,10 +41,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Lataria Enferrujada',
+        itemName: 'Vedação de Oficina Sanitária',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Colete de Operário Gasto',
@@ -72,10 +72,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Estrutura de Maca Dobrada',
+        itemName: 'Placa de Isolamento Clínico',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Avental Hospitalar Grosso',
@@ -103,10 +103,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Painel de Bagageiro Amassado',
+        itemName: 'Lacre Sanitário de Cabine',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Forro de Assento Rasgado',
@@ -134,10 +134,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Painel de Barreira Selada',
+        itemName: 'Resina de Quarentena Verde',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Colete Antimordida Rasgado',
@@ -165,10 +165,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Placa de Caldeira Pesada',
+        itemName: 'Vedação de Vapor Cinzenta',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Manta Térmica Queimada',
@@ -196,10 +196,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Placa de Barricada de Aço',
+        itemName: 'Placa Cerâmica Roxa',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Colete Tático Rasgado (Coleta T7 Armadura)',
@@ -227,10 +227,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Carcaça Experimental Helix',
+        itemName: 'Célula Cerâmica de Contenção',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Revestimento de Polímero Helix (Coleta T8 Armadura)',
@@ -258,10 +258,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Couraça Titânica Industrial',
+        itemName: 'Câmara de Vedação Carmesim (Contenção T9 Armadura)',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Malha de Fibra Pesada (Coleta T9 Armadura)',
@@ -289,10 +289,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Placas Titânicas do Marco',
+        itemName: 'Núcleo Rubro de Quarentena',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Manta de Fibra Rubra (Coleta T10 Armadura)',
@@ -320,10 +320,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Talas de Madeira Partida',
+        itemName: 'Ampola Vazia Suja',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Retalho de Jeans Grosso',
@@ -351,10 +351,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Painel de Lataria Curvado',
+        itemName: 'Ampola Selante Oxidada',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Bainha de Uniforme Gasta (Coleta T2 Pernas)',
@@ -382,10 +382,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Tala Metálica Hospitalar',
+        itemName: 'Gel Condutor Vencido',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Acolchoado de Maca (Coleta T3 Pernas)',
@@ -413,10 +413,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Degrau de Escada Rolante',
+        itemName: 'Cartucho Sanitário de Cabine',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Tapete de Embarque Desfiado (Coleta T4 Pernas)',
@@ -444,10 +444,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Aro de Câmara de Desinfecção',
+        itemName: 'Ampola Selante Verde',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Acolchoado Antimordida (Coleta T5 Pernas)',
@@ -475,10 +475,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Segmento de Duto Pesado',
+        itemName: 'Cápsula Química Ressecada',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Avental de Borracha Carbonizado (Coleta T6 Pernas)',
@@ -506,10 +506,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Para-choque Blindado Recortado',
+        itemName: 'Cápsula Cerâmica Roxa',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Joelheira Tática Rasgada (Coleta T7 Pernas)',
@@ -537,10 +537,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Articulação Mecânica Helix',
+        itemName: 'Ampola Cerâmica Helix',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Revestimento de Polímero Articulado',
@@ -568,10 +568,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Placa Tibial Titânica',
+        itemName: 'Câmara de Vedação Carmesim (Contenção T9 Armadura)',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Trama de Fibra Pesada (Coleta T9 Pernas)',
@@ -599,10 +599,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Segmento Titânico de Exoesqueleto',
+        itemName: 'Célula Rubra de Impacto',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Fibra Rubra Articulada (Coleta T10 Pernas)',
@@ -940,10 +940,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Casco de Capacete Quebrado',
+        itemName: 'Bolsa de Curativo Rasgada',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.COLETA,
       },
       {
         itemName: 'Espuma Filtrante Suja',
@@ -971,10 +971,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Casco de Solda Enferrujado',
+        itemName: 'Bainha de Uniforme Gasta (Coleta T2 Pernas)',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.COLETA,
       },
       {
         itemName: 'Respirador de Oficina Oxidado',
@@ -1002,10 +1002,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Arco de Protetor Facial',
+        itemName: 'Acolchoado de Maca (Coleta T3 Pernas)',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.COLETA,
       },
       {
         itemName: 'Vedação de Máscara Clínica',
@@ -1033,10 +1033,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Casco de Segurança Amassado',
+        itemName: 'Alça de Bagagem',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.COLETA,
       },
       {
         itemName: 'Filtro de Cabine Queimado',
@@ -1064,10 +1064,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Casco de Contenção Pesada',
+        itemName: 'Acolchoado Antimordida (Coleta T5 Pernas)',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.COLETA,
       },
       {
         itemName: 'Válvula de Quarentena Verde',
@@ -1870,10 +1870,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Tampa Metálica Amassada',
+        itemName: 'Ampola Vazia Suja',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Pano Filtrante Sujo',
@@ -1901,10 +1901,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Painel de Portão Oxidado',
+        itemName: 'Ampola Selante Oxidada',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Rebite Selante Oxidado',
@@ -1932,10 +1932,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Estrutura de Maca Dobrável',
+        itemName: 'Lacre Estéril Amarelado',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Tela de Isolamento Clínico',
@@ -1963,10 +1963,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Painel de Embarque Quebrado',
+        itemName: 'Cartucho Sanitário de Cabine',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Manta Antifiação',
@@ -1994,10 +1994,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Painel de Barreira Verde',
+        itemName: 'Selante Bioquímico Verde',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.DESMANCHE,
+        origin: MaterialOrigin.CONTENCAO,
       },
       {
         itemName: 'Placa de Resina Verde',
@@ -3420,10 +3420,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Moletom Reforçado',
+        itemName: 'Bateria de Rádio Quebrada',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.TECNOVARREDURA,
       },
       {
         itemName: 'Placa de Walkie Quebrada',
@@ -3451,10 +3451,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Macacão de Oficina Escuro',
+        itemName: 'Bobina de Choque Oxidada',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.TECNOVARREDURA,
       },
       {
         itemName: 'Rádio de Oficina Quebrado',
@@ -3482,10 +3482,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Avental Clínico Escuro',
+        itemName: 'Cabo de Monitor Clínico',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.TECNOVARREDURA,
       },
       {
         itemName: 'Monitor Portátil Quebrado',
@@ -3513,10 +3513,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Jaqueta de Passageiro Gasta',
+        itemName: 'Capacitor de Cabine',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.TECNOVARREDURA,
       },
       {
         itemName: 'Leitor de Embarque Falho',
@@ -3544,10 +3544,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Colete Sanitário Escuro',
+        itemName: 'Atuador de Corte Sanitário',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.TECNOVARREDURA,
       },
       {
         itemName: 'Módulo de Alarme Verde',
@@ -3575,10 +3575,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Macacão Antióleo Rasgado',
+        itemName: 'Condensador de Choque Cinzento',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.TECNOVARREDURA,
       },
       {
         itemName: 'Medidor de Pressão Queimado',
@@ -3606,10 +3606,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Colete Tático Sombrio',
+        itemName: 'Emissor de Ruído Instável',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.TECNOVARREDURA,
       },
       {
         itemName: 'Placa de Sensor Roxa',
@@ -3637,10 +3637,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Camada de Polímero Silencioso',
+        itemName: 'Atuador de Dosagem Helix',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.TECNOVARREDURA,
       },
       {
         itemName: 'Interface de Camuflagem Helix',
@@ -3668,10 +3668,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Malha de Fibra Pesada (Patrulha T9 Armadura)',
+        itemName: 'Câmara de Movimento Carmesim',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.TECNOVARREDURA,
       },
       {
         itemName: 'Núcleo Necrótico Carmesim',
@@ -3699,10 +3699,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Manta de Fibra Escarlate',
+        itemName: 'Atuador Rubro de Dose Final',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.TECNOVARREDURA,
       },
       {
         itemName: 'Núcleo de Ocultação Final',
@@ -4970,10 +4970,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Seringa Pneumática Quebrada',
+        itemName: 'Bolsa de Curativo Rasgada',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.TECNOVARREDURA,
+        origin: MaterialOrigin.COLETA,
       },
       {
         itemName: 'Ampola Vazia Suja',
@@ -5001,10 +5001,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Pistão Pneumático Oxidado',
+        itemName: 'Bainha de Uniforme Gasta (Coleta T2 Pernas)',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.TECNOVARREDURA,
+        origin: MaterialOrigin.COLETA,
       },
       {
         itemName: 'Ampola Selante Oxidada',
@@ -5032,10 +5032,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Válvula Hipodérmica Clínica',
+        itemName: 'Acolchoado de Maca (Coleta T3 Pernas)',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.TECNOVARREDURA,
+        origin: MaterialOrigin.COLETA,
       },
       {
         itemName: 'Lacre Estéril Amarelado',
@@ -5063,10 +5063,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Módulo de Maleta DEA',
+        itemName: 'Alça de Bagagem',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.TECNOVARREDURA,
+        origin: MaterialOrigin.COLETA,
       },
       {
         itemName: 'Cartucho Sanitário de Cabine',
@@ -5094,10 +5094,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Pistão de Dose Sanitária',
+        itemName: 'Acolchoado Antimordida (Coleta T5 Pernas)',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.TECNOVARREDURA,
+        origin: MaterialOrigin.COLETA,
       },
       {
         itemName: 'Selante Bioquímico Verde',
@@ -7450,10 +7450,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Lente de Mira Quebrada',
+        itemName: 'Casco de Capacete Quebrado',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.ARSENAL,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Faixa de Boné Gasto',
@@ -7481,10 +7481,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Retículo Oxidado',
+        itemName: 'Casco de Solda Enferrujado',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.ARSENAL,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Tira de Avental de Oficina',
@@ -7512,10 +7512,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Sensor de Pulso Rachado',
+        itemName: 'Arco de Protetor Facial',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.ARSENAL,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Touca de Resgate Reforçada',
@@ -7543,10 +7543,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Lente de Segurança do Terminal',
+        itemName: 'Casco de Segurança Amassado',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.ARSENAL,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Tira de Bagageiro Acolchoada',
@@ -7574,10 +7574,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Retículo Sanitário Verde',
+        itemName: 'Casco de Contenção Pesada',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.ARSENAL,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Forro Antimordida Tático',
@@ -7605,10 +7605,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Lente Térmica Queimada',
+        itemName: 'Máscara de Solda Pesada',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.ARSENAL,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Gola de Borracha Queimada',
@@ -7636,10 +7636,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Microvisor Balístico Roxo',
+        itemName: 'Casco de Capacete de Motim',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.ARSENAL,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Acolchoado Tático Rasgado',
@@ -7667,10 +7667,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Módulo de Mira Helix',
+        itemName: 'Cúpula de Proteção Helix',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.ARSENAL,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Revestimento de Polímero Craniano',
@@ -7698,10 +7698,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Interface Ocular Carmesim (Arsenal T9 Elmo)',
+        itemName: 'Casco Titânico Industrial',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.ARSENAL,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Trama de Fibra Craniana',
@@ -7729,10 +7729,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Visor Rubro de Precisão',
+        itemName: 'Coroa Titânica do Marco',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.ARSENAL,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Forro de Fibra Escarlate',
@@ -7760,10 +7760,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Jaqueta de Couro Rasgada',
+        itemName: 'Placa de Portão Leve',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Placa de Porta Leve',
@@ -7791,10 +7791,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Macacão de Oficina Cortado',
+        itemName: 'Casco de Solda Enferrujado',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Lataria Enferrujada',
@@ -7822,10 +7822,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Avental de Resgate Grosso',
+        itemName: 'Arco de Protetor Facial',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Estrutura de Maca Dobrada',
@@ -7853,10 +7853,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Jaqueta de Passageiro Reforçada',
+        itemName: 'Casco de Segurança Amassado',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Painel de Bagageiro Amassado',
@@ -7884,10 +7884,10 @@ export const recipeDefinitions: CraftingRecipeSeedData[] = [
     outputQuantity: 1,
     ingredients: [
       {
-        itemName: 'Colete Sanitário Rasgado',
+        itemName: 'Aro de Câmara de Desinfecção',
         quantity: 2,
         role: CraftIngredientRole.MAIN_COMPONENT,
-        origin: MaterialOrigin.PATRULHA,
+        origin: MaterialOrigin.DESMANCHE,
       },
       {
         itemName: 'Painel de Barreira Selada',

@@ -840,7 +840,11 @@ async function upsertCraftingRecipe(params: {
 }
 
 async function validateOfficialGatheringMaterials() {
-  if (materialDefinitions.length === 0) {
+  const officialGatheringMaterialDefinitions = materialDefinitions.filter(
+    (material) => material.isGatheringMaterial,
+  );
+
+  if (officialGatheringMaterialDefinitions.length === 0) {
     console.log(
       'Validação de gathering ignorada: seed de materiais está vazio para reconstrução da base de itens.',
     );
@@ -848,10 +852,12 @@ async function validateOfficialGatheringMaterials() {
   }
 
   const expectedMaterialNames = new Set(
-    materialDefinitions.map((material) => material.name),
+    officialGatheringMaterialDefinitions.map((material) => material.name),
   );
 
-  if (expectedMaterialNames.size !== materialDefinitions.length) {
+  if (
+    expectedMaterialNames.size !== officialGatheringMaterialDefinitions.length
+  ) {
     throw new Error(
       'Validação de gathering falhou: existem materiais duplicados no seed.',
     );
@@ -887,7 +893,7 @@ async function validateOfficialGatheringMaterials() {
 
   const expectedTierCounts = new Map<number, number>();
 
-  for (const materialDefinition of materialDefinitions) {
+  for (const materialDefinition of officialGatheringMaterialDefinitions) {
     expectedTierCounts.set(
       materialDefinition.tier,
       (expectedTierCounts.get(materialDefinition.tier) ?? 0) + 1,
@@ -951,7 +957,7 @@ async function validateOfficialGatheringMaterials() {
 
   const expectedCombinationCounts = new Map<string, number>();
 
-  for (const materialDefinition of materialDefinitions) {
+  for (const materialDefinition of officialGatheringMaterialDefinitions) {
     const key = [
       materialDefinition.tier,
       materialDefinition.materialOrigin,

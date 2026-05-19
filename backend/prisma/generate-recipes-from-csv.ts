@@ -5,6 +5,10 @@ import {
   equipmentDefinitions,
 } from './seed-data/items.seed-data';
 import { mobDropItemDefinitions } from './seed-data/mob-drops.seed-data';
+import {
+  recipeMainGatheringOverrides,
+  type GatheringOriginCode,
+} from './seed-data/recipe-balance-overrides.seed-data';
 
 type CsvRow = Record<string, string>;
 
@@ -108,6 +112,13 @@ const itemNames = new Set([
   ...mobDropItemDefinitions.map((item) => item.name),
 ]);
 
+const mainGatheringOverrideByOutput = new Map(
+  recipeMainGatheringOverrides.map((override) => [
+    override.outputItemName,
+    override,
+  ]),
+);
+
 function resolveIngredientName(params: {
   name: string;
   origin: string;
@@ -115,7 +126,28 @@ function resolveIngredientName(params: {
   slot: string;
   outputItemName: string;
 }) {
-  if (itemNames.has(params.name)) return params.name;
+  if (params.origin === 'DROP_MOBS' && itemNames.has(params.name)) {
+    return params.name;
+  }
+
+  const exactMaterial = materialDefinitions.find(
+    (material) =>
+      material.name === params.name &&
+      material.materialOrigin === params.origin &&
+      material.tier === params.tier &&
+      material.materialSlot === params.slot,
+  );
+
+  if (exactMaterial) return exactMaterial.name;
+
+  const exactMaterialByOriginAndTier = materialDefinitions.find(
+    (material) =>
+      material.name === params.name &&
+      material.materialOrigin === params.origin &&
+      material.tier === params.tier,
+  );
+
+  if (exactMaterialByOriginAndTier) return exactMaterialByOriginAndTier.name;
 
   const candidates = materialDefinitions.filter(
     (material) =>
@@ -148,6 +180,110 @@ function resolveIngredientName(params: {
       `Candidatos: ${
         candidates.map((candidate) => candidate.name).join(', ') || 'nenhum'
       }`,
+    ].join(' | '),
+  );
+}
+
+function resolveGatheringMaterialForOrigin(params: {
+  name: string;
+  origin: string;
+  tier: number;
+  slot: string;
+}) {
+  const exact = materialDefinitions.find(
+    (material) =>
+      material.name === params.name &&
+      material.materialOrigin === params.origin &&
+      material.tier === params.tier &&
+      material.materialSlot === params.slot &&
+      material.isGatheringMaterial,
+  );
+
+  if (exact) return exact.name;
+
+  const candidates = materialDefinitions.filter(
+    (material) =>
+      stripDisambiguationSuffix(material.name) === params.name &&
+      material.materialOrigin === params.origin &&
+      material.tier === params.tier &&
+      material.materialSlot === params.slot &&
+      material.isGatheringMaterial,
+  );
+
+  if (candidates.length === 1) return candidates[0].name;
+
+  const candidatesByOriginAndTier = materialDefinitions.filter(
+    (material) =>
+      stripDisambiguationSuffix(material.name) === params.name &&
+      material.materialOrigin === params.origin &&
+      material.tier === params.tier &&
+      material.isGatheringMaterial,
+  );
+
+  if (candidatesByOriginAndTier.length === 1) {
+    return candidatesByOriginAndTier[0].name;
+  }
+
+  return null;
+}
+
+function chooseBalancedMainMaterial(params: {
+  row: CsvRow;
+  outputItemName: string;
+  targetOrigin: GatheringOriginCode;
+  tier: number;
+  slot: string;
+  secondaryItemName: string;
+}) {
+  const unusedOrigin = getRequiredOrigin(
+    params.row['Origem não usada'],
+    params.outputItemName,
+  );
+
+  if (unusedOrigin === params.targetOrigin) {
+    const resolvedUnused = resolveGatheringMaterialForOrigin({
+      name: params.row['Material não usado'],
+      origin: params.targetOrigin,
+      tier: params.tier,
+      slot: params.slot,
+    });
+
+    if (resolvedUnused && resolvedUnused !== params.secondaryItemName) {
+      return resolvedUnused;
+    }
+  }
+
+  const candidates = materialDefinitions
+    .filter(
+      (material) =>
+        material.materialOrigin === params.targetOrigin &&
+        material.tier === params.tier &&
+        material.materialSlot === params.slot &&
+        material.isGatheringMaterial &&
+        material.name !== params.secondaryItemName,
+    )
+    .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+
+  if (candidates.length > 0) return candidates[0].name;
+
+  const sameTierCandidates = materialDefinitions
+    .filter(
+      (material) =>
+        material.materialOrigin === params.targetOrigin &&
+        material.tier === params.tier &&
+        material.isGatheringMaterial &&
+        material.name !== params.secondaryItemName,
+    )
+    .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+
+  if (sameTierCandidates.length > 0) return sameTierCandidates[0].name;
+
+  throw new Error(
+    [
+      `Material principal balanceado não encontrado para ${params.outputItemName}`,
+      `Origem alvo: ${params.targetOrigin}`,
+      `Tier: ${params.tier}`,
+      `Slot: ${params.slot}`,
     ].join(' | '),
   );
 }
@@ -193,26 +329,52 @@ function buildRecipesFile(rows: CsvRow[]) {
       );
     }
 
+    const secondaryOrigin = getRequiredOrigin(
+      row['Gathering Secundário'],
+      outputItemName,
+    );
+    const resolvedSecondaryItemName = resolveIngredientName({
+      name: row['Material Secundário'],
+      origin: secondaryOrigin,
+      tier,
+      slot,
+      outputItemName,
+    });
+    const mainOverride = mainGatheringOverrideByOutput.get(outputItemName);
+    const mainOrigin =
+      mainOverride?.targetMainOrigin ??
+      getRequiredOrigin(row['Gathering Principal'], outputItemName);
+    const mainItemName = mainOverride
+      ? chooseBalancedMainMaterial({
+          row,
+          outputItemName,
+          targetOrigin: mainOverride.targetMainOrigin,
+          tier,
+          slot,
+          secondaryItemName: resolvedSecondaryItemName,
+        })
+      : row['Material Principal'];
+
     const ingredients = [
       {
-        name: row['Material Principal'],
+        name: mainItemName,
         quantity: toNumber(
           row['Qtd Material Principal'],
           'Qtd Material Principal',
           outputItemName,
         ),
         role: 'MAIN_COMPONENT',
-        origin: getRequiredOrigin(row['Gathering Principal'], outputItemName),
+        origin: mainOrigin,
       },
       {
-        name: row['Material Secundário'],
+        name: resolvedSecondaryItemName,
         quantity: toNumber(
           row['Qtd Material Secundário'],
           'Qtd Material Secundário',
           outputItemName,
         ),
         role: 'SHARED_MATERIAL',
-        origin: getRequiredOrigin(row['Gathering Secundário'], outputItemName),
+        origin: secondaryOrigin,
       },
       {
         name: row['Drop de mob'],
