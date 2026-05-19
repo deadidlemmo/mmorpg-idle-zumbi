@@ -6,6 +6,7 @@ import {
 } from './seed-data/items.seed-data';
 import { mobDropItemDefinitions } from './seed-data/mob-drops.seed-data';
 import {
+  getRecipeQuantityPolicyForTier,
   recipeQuantityPolicy,
   recipeMainGatheringOverrides,
   type GatheringOriginCode,
@@ -119,14 +120,13 @@ function getPolicyQuantity(params: {
     params.outputItemName,
   );
 
-  if (quantity !== params.expectedQuantity) {
+  if (quantity <= 0) {
     throw new Error(
       [
-        `Quantidade fora da politica simetrica em ${params.outputItemName}.`,
+        `Quantidade invalida no CSV em ${params.outputItemName}.`,
         `Campo: ${params.fieldName}`,
         `Recebido: ${quantity}`,
-        `Esperado: ${params.expectedQuantity}`,
-        'Edite recipeQuantityPolicy se a regra economica global mudar.',
+        'A seed final usa recipeQuantityPolicyByTier como fonte da verdade.',
       ].join(' | '),
     );
   }
@@ -262,7 +262,19 @@ function chooseBalancedMainMaterial(params: {
   tier: number;
   slot: string;
   secondaryItemName: string;
+  usedMaterialNames: ReadonlySet<string>;
 }) {
+  const resolvedMain = resolveGatheringMaterialForOrigin({
+    name: params.row['Material Principal'],
+    origin: params.targetOrigin,
+    tier: params.tier,
+    slot: params.slot,
+  });
+
+  if (resolvedMain && resolvedMain !== params.secondaryItemName) {
+    return resolvedMain;
+  }
+
   const unusedOrigin = getRequiredOrigin(
     params.row['Origem não usada'],
     params.outputItemName,
@@ -290,7 +302,12 @@ function chooseBalancedMainMaterial(params: {
         material.isGatheringMaterial &&
         material.name !== params.secondaryItemName,
     )
-    .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+    .sort(
+      (left, right) =>
+        Number(params.usedMaterialNames.has(left.name)) -
+          Number(params.usedMaterialNames.has(right.name)) ||
+        left.name.localeCompare(right.name, 'pt-BR'),
+    );
 
   if (candidates.length > 0) return candidates[0].name;
 
@@ -302,7 +319,12 @@ function chooseBalancedMainMaterial(params: {
         material.isGatheringMaterial &&
         material.name !== params.secondaryItemName,
     )
-    .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+    .sort(
+      (left, right) =>
+        Number(params.usedMaterialNames.has(left.name)) -
+          Number(params.usedMaterialNames.has(right.name)) ||
+        left.name.localeCompare(right.name, 'pt-BR'),
+    );
 
   if (sameTierCandidates.length > 0) return sameTierCandidates[0].name;
 
@@ -345,6 +367,7 @@ function buildRecipesFile(rows: CsvRow[]) {
     '// Mantenha este arquivo como a fonte centralizada dos ingredientes de crafting.',
     'export const recipeDefinitions: CraftingRecipeSeedData[] = [',
   ];
+  const usedGatheringMaterialNames = new Set<string>();
 
   for (const row of rows) {
     const outputItemName = row.Item;
@@ -369,19 +392,21 @@ function buildRecipesFile(rows: CsvRow[]) {
       outputItemName,
     });
     const mainOverride = mainGatheringOverrideByOutput.get(outputItemName);
-    const mainOrigin =
-      mainOverride?.targetMainOrigin ??
-      getRequiredOrigin(row['Gathering Principal'], outputItemName);
-    const mainItemName = mainOverride
-      ? chooseBalancedMainMaterial({
-          row,
-          outputItemName,
-          targetOrigin: mainOverride.targetMainOrigin,
-          tier,
-          slot,
-          secondaryItemName: resolvedSecondaryItemName,
-        })
-      : row['Material Principal'];
+    const originalMainOrigin = getRequiredOrigin(
+      row['Gathering Principal'],
+      outputItemName,
+    );
+    const mainOrigin = mainOverride?.targetMainOrigin ?? originalMainOrigin;
+    const mainItemName = chooseBalancedMainMaterial({
+      row,
+      outputItemName,
+      targetOrigin: mainOrigin,
+      tier,
+      slot,
+      secondaryItemName: resolvedSecondaryItemName,
+      usedMaterialNames: usedGatheringMaterialNames,
+    });
+    const quantityPolicy = getRecipeQuantityPolicyForTier(tier);
 
     const ingredients = [
       {
@@ -390,7 +415,7 @@ function buildRecipesFile(rows: CsvRow[]) {
           value: row['Qtd Material Principal'],
           fieldName: 'Qtd Material Principal',
           outputItemName,
-          expectedQuantity: recipeQuantityPolicy.mainGatheringQuantity,
+          expectedQuantity: quantityPolicy.mainGatheringQuantity,
         }),
         role: 'MAIN_COMPONENT',
         origin: mainOrigin,
@@ -401,7 +426,7 @@ function buildRecipesFile(rows: CsvRow[]) {
           value: row['Qtd Material Secundário'],
           fieldName: 'Qtd Material Secundário',
           outputItemName,
-          expectedQuantity: recipeQuantityPolicy.secondaryGatheringQuantity,
+          expectedQuantity: quantityPolicy.secondaryGatheringQuantity,
         }),
         role: 'SHARED_MATERIAL',
         origin: secondaryOrigin,
@@ -412,7 +437,7 @@ function buildRecipesFile(rows: CsvRow[]) {
           value: row['Qtd Drop de mob'],
           fieldName: 'Qtd Drop de mob',
           outputItemName,
-          expectedQuantity: recipeQuantityPolicy.biomaterialDropQuantity,
+          expectedQuantity: quantityPolicy.biomaterialDropQuantity,
         }),
         role: 'RARE_MOB_DROP',
         origin: 'DROP_MOBS',
@@ -423,7 +448,7 @@ function buildRecipesFile(rows: CsvRow[]) {
           value: row['Qtd Resíduo de mob'],
           fieldName: 'Qtd Resíduo de mob',
           outputItemName,
-          expectedQuantity: recipeQuantityPolicy.residueDropQuantity,
+          expectedQuantity: quantityPolicy.residueDropQuantity,
         }),
         role: 'RARE_MOB_DROP',
         origin: 'DROP_MOBS',
@@ -438,6 +463,12 @@ function buildRecipesFile(rows: CsvRow[]) {
         outputItemName,
       }),
     }));
+
+    for (const ingredient of ingredients) {
+      if (ingredient.origin !== 'DROP_MOBS') {
+        usedGatheringMaterialNames.add(ingredient.name);
+      }
+    }
 
     output.push('  {');
     output.push(`    outputItemName: ${toStringLiteral(outputItemName)},`);

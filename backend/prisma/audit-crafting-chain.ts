@@ -10,7 +10,9 @@ import {
 import {
   balancedGatheringDemandPerClassOrigin,
   balancedGatheringDemandPerOrigin,
+  getRecipeQuantityPolicyForTier,
   recipeQuantityPolicy,
+  recipeQuantityPolicyByTier,
   recipeMainGatheringOverrides,
   type GatheringOriginCode,
 } from './seed-data/recipe-balance-overrides.seed-data';
@@ -203,7 +205,30 @@ function resolveGatheringMaterialForOrigin(params: {
 
   if (exact) return exact.name;
 
-  return resolveGatheringMaterial(params);
+  const candidates = materialDefinitions.filter(
+    (material) =>
+      stripDisambiguationSuffix(material.name) === params.name &&
+      material.materialOrigin === params.origin &&
+      material.tier === params.tier &&
+      material.materialSlot === params.slot &&
+      material.isGatheringMaterial,
+  );
+
+  if (candidates.length === 1) return candidates[0].name;
+
+  const candidatesByOriginAndTier = materialDefinitions.filter(
+    (material) =>
+      stripDisambiguationSuffix(material.name) === params.name &&
+      material.materialOrigin === params.origin &&
+      material.tier === params.tier &&
+      material.isGatheringMaterial,
+  );
+
+  if (candidatesByOriginAndTier.length === 1) {
+    return candidatesByOriginAndTier[0].name;
+  }
+
+  return null;
 }
 
 function chooseBalancedMainMaterial(params: {
@@ -213,7 +238,22 @@ function chooseBalancedMainMaterial(params: {
   tier: number;
   slot: string;
   secondaryItemName: string | null;
+  usedMaterialNames: ReadonlySet<string>;
 }) {
+  const resolvedOriginalMain = resolveGatheringMaterialForOrigin({
+    name: params.row.materialprincipal,
+    origin: params.targetOrigin,
+    tier: params.tier,
+    slot: params.slot,
+  });
+
+  if (
+    resolvedOriginalMain &&
+    resolvedOriginalMain !== params.secondaryItemName
+  ) {
+    return resolvedOriginalMain;
+  }
+
   const unusedOrigin = ORIGIN_BY_LABEL[normalize(params.row.origemnaousada)];
 
   if (unusedOrigin === params.targetOrigin) {
@@ -238,7 +278,12 @@ function chooseBalancedMainMaterial(params: {
         material.isGatheringMaterial &&
         material.name !== params.secondaryItemName,
     )
-    .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+    .sort(
+      (left, right) =>
+        Number(params.usedMaterialNames.has(left.name)) -
+          Number(params.usedMaterialNames.has(right.name)) ||
+        left.name.localeCompare(right.name, 'pt-BR'),
+    );
 
   if (candidates[0]) return candidates[0].name;
 
@@ -250,7 +295,12 @@ function chooseBalancedMainMaterial(params: {
         material.isGatheringMaterial &&
         material.name !== params.secondaryItemName,
     )
-    .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+    .sort(
+      (left, right) =>
+        Number(params.usedMaterialNames.has(left.name)) -
+          Number(params.usedMaterialNames.has(right.name)) ||
+        left.name.localeCompare(right.name, 'pt-BR'),
+    );
 
   if (sameTierCandidates[0]) return sameTierCandidates[0].name;
 
@@ -342,6 +392,7 @@ function buildRecipeQuantityAudit(params: {
   const invalidRecipes: unknown[] = [];
 
   for (const recipe of recipeDefinitions) {
+    const quantityPolicy = getRecipeQuantityPolicyForTier(recipe.tier);
     const shape = buildRecipeQuantityShape({
       recipe,
       mobDropMetaByName: params.mobDropMetaByName,
@@ -379,22 +430,21 @@ function buildRecipeQuantityAudit(params: {
 
     const issues: string[] = [];
 
-    if ((recipe.outputQuantity ?? 1) !== recipeQuantityPolicy.outputQuantity) {
+    if ((recipe.outputQuantity ?? 1) !== quantityPolicy.outputQuantity) {
       issues.push('outputQuantity');
     }
 
-    if (ingredients.length !== recipeQuantityPolicy.ingredientCount) {
+    if (ingredients.length !== quantityPolicy.ingredientCount) {
       issues.push('ingredientCount');
     }
 
-    if (totalInputQuantity !== recipeQuantityPolicy.totalInputQuantity) {
+    if (totalInputQuantity !== quantityPolicy.totalInputQuantity) {
       issues.push('totalInputQuantity');
     }
 
     if (
       mainGathering.length !== 1 ||
-      mainGathering[0]?.quantity !==
-        recipeQuantityPolicy.mainGatheringQuantity
+      mainGathering[0]?.quantity !== quantityPolicy.mainGatheringQuantity
     ) {
       issues.push('mainGatheringQuantity');
     }
@@ -402,22 +452,21 @@ function buildRecipeQuantityAudit(params: {
     if (
       secondaryGathering.length !== 1 ||
       secondaryGathering[0]?.quantity !==
-        recipeQuantityPolicy.secondaryGatheringQuantity
+        quantityPolicy.secondaryGatheringQuantity
     ) {
       issues.push('secondaryGatheringQuantity');
     }
 
     if (
       biomaterials.length !== 1 ||
-      biomaterials[0]?.quantity !==
-        recipeQuantityPolicy.biomaterialDropQuantity
+      biomaterials[0]?.quantity !== quantityPolicy.biomaterialDropQuantity
     ) {
       issues.push('biomaterialDropQuantity');
     }
 
     if (
       residues.length !== 1 ||
-      residues[0]?.quantity !== recipeQuantityPolicy.residueDropQuantity
+      residues[0]?.quantity !== quantityPolicy.residueDropQuantity
     ) {
       issues.push('residueDropQuantity');
     }
@@ -426,7 +475,7 @@ function buildRecipeQuantityAudit(params: {
       mobDropIngredients.reduce(
         (total, ingredient) => total + ingredient.quantity,
         0,
-      ) !== recipeQuantityPolicy.rareMobDropTotalQuantity
+      ) !== quantityPolicy.rareMobDropTotalQuantity
     ) {
       issues.push('rareMobDropTotalQuantity');
     }
@@ -442,6 +491,7 @@ function buildRecipeQuantityAudit(params: {
 
   return {
     policy: recipeQuantityPolicy,
+    policyByTier: recipeQuantityPolicyByTier,
     shapeDistribution,
     invalidRecipeCount: invalidRecipes.length,
     invalidRecipes: invalidRecipes.slice(0, 20),
@@ -458,6 +508,7 @@ function main() {
   const recipesByOutput = new Map(
     recipeDefinitions.map((recipe) => [recipe.outputItemName, recipe]),
   );
+  const usedGatheringMaterialNames = new Set<string>();
   const mobDropMetaByName = new Map(
     mobDropItemDefinitions.map((item) => [item.name, item]),
   );
@@ -493,6 +544,7 @@ function main() {
   for (const row of rows) {
     const outputItemName = row.item;
     const tier = Number(row.tier);
+    const quantityPolicy = getRecipeQuantityPolicyForTier(tier);
     const slot = SLOT_BY_LABEL[normalize(row.slot)];
     const classKey = normalize(row.classe).toUpperCase();
 
@@ -513,30 +565,31 @@ function main() {
       slot,
     });
     const mainOverride = mainGatheringOverrideByOutput.get(outputItemName);
+    const originalMainOrigin = ORIGIN_BY_LABEL[
+      normalize(row.gatheringprincipal)
+    ] as GatheringOriginCode;
     const mainOrigin =
-      mainOverride?.targetMainOrigin ??
-      ORIGIN_BY_LABEL[normalize(row.gatheringprincipal)];
-    const mainMaterialName = mainOverride
-      ? chooseBalancedMainMaterial({
-          row,
-          outputItemName,
-          targetOrigin: mainOverride.targetMainOrigin,
-          tier,
-          slot,
-          secondaryItemName: resolvedSecondaryName,
-        })
-      : row.materialprincipal;
+      mainOverride?.targetMainOrigin ?? originalMainOrigin;
+    const mainMaterialName = chooseBalancedMainMaterial({
+      row,
+      outputItemName,
+      targetOrigin: mainOrigin,
+      tier,
+      slot,
+      secondaryItemName: resolvedSecondaryName,
+      usedMaterialNames: usedGatheringMaterialNames,
+    });
     const gatheringSpecs = [
       {
         name: mainMaterialName,
         origin: mainOrigin,
-        quantity: Number(row.qtdmaterialprincipal),
+        quantity: quantityPolicy.mainGatheringQuantity,
         role: 'main',
       },
       {
         name: row.materialsecundario,
         origin: secondaryOrigin,
-        quantity: Number(row.qtdmaterialsecundario),
+        quantity: quantityPolicy.secondaryGatheringQuantity,
         role: 'secondary',
       },
     ];
@@ -561,6 +614,10 @@ function main() {
       });
 
       expectedIngredients.push(resolvedName);
+
+      if (resolvedName) {
+        usedGatheringMaterialNames.add(resolvedName);
+      }
 
       if (!resolvedName) {
         unresolvedUsedGathering.push({
@@ -609,9 +666,10 @@ function main() {
     }
 
     for (const mobDropName of [row.dropdemob, row.residuodemob]) {
-      const quantity = Number(
-        mobDropName === row.dropdemob ? row.qtddropdemob : row.qtdresiduodemob,
-      );
+      const quantity =
+        mobDropName === row.dropdemob
+          ? quantityPolicy.biomaterialDropQuantity
+          : quantityPolicy.residueDropQuantity;
 
       expectedIngredients.push(mobDropName);
 
@@ -669,6 +727,33 @@ function main() {
         ),
     ),
   ];
+  const equipmentByName = new Map(
+    equipmentDefinitions.map((item) => [item.name, item]),
+  );
+  const seedGatheringDemandByOrigin = Object.fromEntries(
+    GATHERING_ORIGINS.map((origin) => [origin, 0]),
+  );
+  const seedGatheringDemandByClassOrigin: Record<string, number> = {};
+
+  for (const recipe of recipeDefinitions) {
+    const outputItem = equipmentByName.get(recipe.outputItemName);
+    const className = outputItem?.className ?? 'UNKNOWN';
+
+    for (const ingredient of recipe.ingredients) {
+      if (ingredient.origin === 'DROP_MOBS') continue;
+
+      increment(
+        seedGatheringDemandByOrigin,
+        String(ingredient.origin),
+        ingredient.quantity,
+      );
+      increment(
+        seedGatheringDemandByClassOrigin,
+        buildKey([className, String(ingredient.origin)]),
+        ingredient.quantity,
+      );
+    }
+  }
 
   const droppedItemNames = new Set<string>();
   const mobDropOccurrenceByItem: Record<string, number> = {};
@@ -767,10 +852,12 @@ function main() {
       targetDemandPerClassOrigin: balancedGatheringDemandPerClassOrigin,
       mainOriginOverrides: recipeMainGatheringOverrides.length,
       placementsByOrigin: gatheringPlacementsByOrigin,
-      totalDemandByOrigin: summarizeDemand(gatheringDemandByOrigin),
+      csvTotalDemandByOrigin: summarizeDemand(gatheringDemandByOrigin),
+      totalDemandByOrigin: summarizeDemand(seedGatheringDemandByOrigin),
       mainDemandByOrigin: gatheringMainDemandByOrigin,
       secondaryDemandByOrigin: gatheringSecondaryDemandByOrigin,
-      demandByClassOrigin: gatheringDemandByClassOrigin,
+      csvDemandByClassOrigin: gatheringDemandByClassOrigin,
+      demandByClassOrigin: seedGatheringDemandByClassOrigin,
     },
     mobDrops: {
       recipeMobDropItems: recipeMobDropIngredients.size,

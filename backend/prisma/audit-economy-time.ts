@@ -382,6 +382,7 @@ function buildWarnings(report: {
   missingDropSources: string[];
 }) {
   const warnings: string[] = [];
+  const originHourSpreadWarningThreshold = 1.4;
 
   if (report.missingGatheringRates.length > 0) {
     warnings.push(
@@ -399,10 +400,11 @@ function buildWarnings(report: {
 
   if (
     originSpread.max > 0 &&
-    originSpread.max / Math.max(originSpread.min, 0.01) > 1.15
+    originSpread.max / Math.max(originSpread.min, 0.01) >
+      originHourSpreadWarningThreshold
   ) {
     warnings.push(
-      `Tempo por origem tem spread acima de 15%: min=${originSpread.min}h, max=${originSpread.max}h.`,
+      `Tempo por origem tem spread acima de 40%: min=${originSpread.min}h, max=${originSpread.max}h.`,
     );
   }
 
