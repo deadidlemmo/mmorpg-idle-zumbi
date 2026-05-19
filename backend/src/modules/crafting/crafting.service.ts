@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,6 +10,15 @@ import {
   ItemSlot,
   MaterialOrigin,
 } from '@prisma/client';
+import type { CharacterCraftingSkill } from '@prisma/client';
+import {
+  CRAFTING_LEVEL_CAP,
+  getCraftingXpProgressPercent,
+  getCraftingXpRewardForTier,
+  getCraftingXpToNextLevel,
+  getRequiredCraftingLevelForTier,
+  getUnlockedCraftingTier,
+} from '../../common/config/crafting.config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CraftItemDto } from './dto/craft-item.dto';
 
@@ -31,17 +41,68 @@ type MissingByOriginGroup = {
   materials: MissingMaterial[];
 };
 
+type RecipeNextActionEndpoint = {
+  method: 'POST';
+  path: string;
+  body: Record<string, string | number>;
+};
+
+type RecipeNextActionMaterial = {
+  itemId: string;
+  name: string;
+  missing: number;
+  required: number;
+  available: number;
+  role: string;
+  family: string | null;
+  mapId: string | null;
+  canStartGathering?: boolean;
+  endpoint?: RecipeNextActionEndpoint | null;
+  startGatheringPayload?: Record<string, string> | null;
+};
+
+type RecipeNextAction = {
+  type: 'CRAFT' | 'AUTO_COMBAT' | 'GATHERING';
+  priority: number;
+  origin?: string;
+  label: string;
+  description: string;
+  endpoint?: RecipeNextActionEndpoint;
+  maxCraftableTimes?: number;
+  missingTotal?: number;
+  recommendedMapId?: string | null;
+  materials?: RecipeNextActionMaterial[];
+};
+
+type CraftingSkillSnapshot = Pick<
+  CharacterCraftingSkill,
+  'id' | 'characterId' | 'level' | 'xp' | 'totalXp'
+>;
+
+type CraftingProgressResult = {
+  xpGained: number;
+  previousLevel: number;
+  newLevel: number;
+  leveledUp: boolean;
+  levelsGained: number;
+  currentXp: number;
+  totalXp: number;
+  xpToNextLevel: number | null;
+  xpProgressPercent: number;
+};
+
 @Injectable()
 export class CraftingService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listCharacterRecipes(params: {
+    userId: string;
     characterId: string;
     tier?: number;
     slot?: ItemSlot;
     craftableOnly?: boolean;
   }) {
-    const { characterId, tier, slot, craftableOnly = false } = params;
+    const { userId, characterId, tier, slot, craftableOnly = false } = params;
 
     if (!characterId) {
       throw new BadRequestException('O characterId é obrigatório.');
@@ -66,10 +127,10 @@ export class CraftingService {
       },
       select: {
         id: true,
+        userId: true,
         name: true,
         level: true,
         status: true,
-        classId: true,
         class: {
           select: {
             id: true,
@@ -82,6 +143,14 @@ export class CraftingService {
     if (!character) {
       throw new NotFoundException('Personagem não encontrado.');
     }
+
+    if (character.userId !== userId) {
+      throw new ForbiddenException('Você não pode acessar este personagem.');
+    }
+
+    const craftingSkill = await this.getOrCreateCraftingSkill(characterId);
+    const craftingSkillViewModel =
+      this.buildCraftingSkillViewModel(craftingSkill);
 
     const inventoryItems = await this.prisma.inventoryItem.findMany({
       where: {
@@ -141,6 +210,21 @@ export class CraftingService {
             family: true,
             classId: true,
             mapId: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            map: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                minLevel: true,
+                maxLevel: true,
+              },
+            },
             isCraftable: true,
             strengthBonus: true,
             vitalityBonus: true,
@@ -162,6 +246,15 @@ export class CraftingService {
                 slot: true,
                 family: true,
                 mapId: true,
+                map: {
+                  select: {
+                    id: true,
+                    name: true,
+                    tier: true,
+                    minLevel: true,
+                    maxLevel: true,
+                  },
+                },
                 materialOrigin: true,
               },
             },
@@ -176,13 +269,6 @@ export class CraftingService {
     const filteredRecipes = recipes
       .filter((recipe) => recipe.outputItem.isCraftable)
       .filter((recipe) => recipe.outputItem.slot !== ItemSlot.MATERIAL)
-      .filter((recipe) => {
-        if (recipe.outputItem.classId === null) {
-          return true;
-        }
-
-        return recipe.outputItem.classId === character.classId;
-      })
       .filter((recipe) => {
         if (tier === undefined) {
           return true;
@@ -239,8 +325,16 @@ export class CraftingService {
         (ingredient) => ingredient.missing > 0,
       );
 
-      const canCraft =
+      const hasRequiredMaterials =
         ingredients.length > 0 && missingIngredients.length === 0;
+      const requiredCraftingLevel = getRequiredCraftingLevelForTier(
+        recipe.outputItem.tier,
+      );
+      const isUnlocked = craftingSkill.level >= requiredCraftingLevel;
+      const canCraft = hasRequiredMaterials && isUnlocked;
+      const craftingXpReward = getCraftingXpRewardForTier(
+        recipe.outputItem.tier,
+      );
 
       const totalRequired = ingredients.reduce(
         (total, ingredient) => total + ingredient.required,
@@ -299,7 +393,8 @@ export class CraftingService {
       }
 
       const missingByOrigin = Array.from(missingByOriginMap.values()).sort(
-        (a, b) => this.getOriginPriority(a.origin) - this.getOriginPriority(b.origin),
+        (a, b) =>
+          this.getOriginPriority(a.origin) - this.getOriginPriority(b.origin),
       );
 
       const maxCraftableTimes =
@@ -327,9 +422,18 @@ export class CraftingService {
         ownedQuantity,
         isEquipped,
 
+        isUnlocked,
+        requiredCraftingLevel,
+        requiredCharacterLevel: requiredCraftingLevel,
+        craftingXpReward,
+        lockReason: isUnlocked
+          ? null
+          : `Requer nível ${requiredCraftingLevel} de criação.`,
         canCraft,
-        maxCraftableTimes,
-        maxOutputQuantity: maxCraftableTimes * recipe.outputQuantity,
+        maxCraftableTimes: isUnlocked ? maxCraftableTimes : 0,
+        maxOutputQuantity: isUnlocked
+          ? maxCraftableTimes * recipe.outputQuantity
+          : 0,
 
         progress: {
           percent: progressPercent,
@@ -346,7 +450,7 @@ export class CraftingService {
           outputItemName: recipe.outputItem.name,
           outputItemMapId: recipe.outputItem.mapId,
           canCraft,
-          maxCraftableTimes,
+          maxCraftableTimes: isUnlocked ? maxCraftableTimes : 0,
           missingByOrigin,
         }),
 
@@ -360,6 +464,8 @@ export class CraftingService {
           family: recipe.outputItem.family,
           classId: recipe.outputItem.classId,
           mapId: recipe.outputItem.mapId,
+          class: recipe.outputItem.class,
+          map: recipe.outputItem.map,
           bonuses: {
             strength: recipe.outputItem.strengthBonus,
             vitality: recipe.outputItem.vitalityBonus,
@@ -384,6 +490,9 @@ export class CraftingService {
         id: character.id,
         name: character.name,
         level: character.level,
+        craftingLevel: craftingSkillViewModel.level,
+        unlockedTier: craftingSkillViewModel.unlockedTier,
+        craftingSkill: craftingSkillViewModel,
         status: character.status,
         class: character.class,
       },
@@ -391,7 +500,7 @@ export class CraftingService {
         tier: tier ?? null,
         slot: slot ?? null,
         craftableOnly,
-        classId: character.classId,
+        classId: null,
       },
       summary: {
         totalRecipes: visibleRecipes.length,
@@ -399,8 +508,9 @@ export class CraftingService {
           .length,
         blockedRecipes: visibleRecipes.filter((recipe) => !recipe.canCraft)
           .length,
-        ownedRecipes: visibleRecipes.filter((recipe) => recipe.ownedQuantity > 0)
-          .length,
+        ownedRecipes: visibleRecipes.filter(
+          (recipe) => recipe.ownedQuantity > 0,
+        ).length,
         equippedRecipes: visibleRecipes.filter((recipe) => recipe.isEquipped)
           .length,
       },
@@ -426,6 +536,21 @@ export class CraftingService {
             family: true,
             classId: true,
             mapId: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            map: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                minLevel: true,
+                maxLevel: true,
+              },
+            },
             isCraftable: true,
             strengthBonus: true,
             vitalityBonus: true,
@@ -447,6 +572,15 @@ export class CraftingService {
                 slot: true,
                 family: true,
                 mapId: true,
+                map: {
+                  select: {
+                    id: true,
+                    name: true,
+                    tier: true,
+                    minLevel: true,
+                    maxLevel: true,
+                  },
+                },
                 materialOrigin: true,
               },
             },
@@ -477,6 +611,8 @@ export class CraftingService {
         family: recipe.outputItem.family,
         classId: recipe.outputItem.classId,
         mapId: recipe.outputItem.mapId,
+        class: recipe.outputItem.class,
+        map: recipe.outputItem.map,
         isCraftable: recipe.outputItem.isCraftable,
         bonuses: {
           strength: recipe.outputItem.strengthBonus,
@@ -509,7 +645,7 @@ export class CraftingService {
     return this.getRecipeByOutputItemId(itemId);
   }
 
-  async craft(dto: CraftItemDto) {
+  async craft(userId: string, dto: CraftItemDto) {
     const craftQuantity = dto.quantity ?? 1;
 
     if (!Number.isInteger(craftQuantity) || craftQuantity <= 0) {
@@ -524,14 +660,20 @@ export class CraftingService {
       },
       select: {
         id: true,
+        userId: true,
         name: true,
-        level: true,
         status: true,
       },
     });
 
     if (!character) {
       throw new NotFoundException('Personagem não encontrado.');
+    }
+
+    if (character.userId !== userId) {
+      throw new ForbiddenException(
+        'Você não pode craftar com este personagem.',
+      );
     }
 
     if (character.status !== CharacterStatus.ACTIVE) {
@@ -564,6 +706,17 @@ export class CraftingService {
 
     if (!recipe.outputItem.isCraftable) {
       throw new BadRequestException('Este item não é craftável.');
+    }
+
+    const craftingSkill = await this.getOrCreateCraftingSkill(character.id);
+    const requiredCraftingLevel = getRequiredCraftingLevelForTier(
+      recipe.outputItem.tier,
+    );
+
+    if (craftingSkill.level < requiredCraftingLevel) {
+      throw new BadRequestException(
+        `Este item exige nível ${requiredCraftingLevel} de criação.`,
+      );
     }
 
     if (recipe.outputItem.slot === ItemSlot.MATERIAL) {
@@ -620,7 +773,26 @@ export class CraftingService {
       });
     }
 
-    const crafted = await this.prisma.$transaction(async (tx) => {
+    const craftingXpGained =
+      getCraftingXpRewardForTier(recipe.outputItem.tier) * craftQuantity;
+
+    const craftResult = await this.prisma.$transaction(async (tx) => {
+      const activeCraftingSkill = await tx.characterCraftingSkill.upsert({
+        where: {
+          characterId: dto.characterId,
+        },
+        update: {},
+        create: {
+          characterId: dto.characterId,
+        },
+      });
+
+      if (activeCraftingSkill.level < requiredCraftingLevel) {
+        throw new BadRequestException(
+          `Este item exige nível ${requiredCraftingLevel} de criação.`,
+        );
+      }
+
       for (const ingredient of recipe.ingredients) {
         await tx.inventoryItem.update({
           where: {
@@ -674,7 +846,27 @@ export class CraftingService {
         },
       });
 
-      return craftedInventoryItem;
+      const craftingProgress = this.applyCraftingXp({
+        skill: activeCraftingSkill,
+        xpGained: craftingXpGained,
+      });
+
+      const updatedCraftingSkill = await tx.characterCraftingSkill.update({
+        where: {
+          id: activeCraftingSkill.id,
+        },
+        data: {
+          level: craftingProgress.newLevel,
+          xp: craftingProgress.currentXp,
+          totalXp: craftingProgress.totalXp,
+        },
+      });
+
+      return {
+        inventoryItem: craftedInventoryItem,
+        craftingSkill: updatedCraftingSkill,
+        craftingProgress,
+      };
     });
 
     return {
@@ -700,7 +892,11 @@ export class CraftingService {
         role: ingredient.role,
         origin: ingredient.origin,
       })),
-      inventoryItem: crafted,
+      inventoryItem: craftResult.inventoryItem,
+      craftingSkill: this.buildCraftingSkillViewModel(
+        craftResult.craftingSkill,
+      ),
+      craftingProgress: craftResult.craftingProgress,
     };
   }
 
@@ -712,15 +908,16 @@ export class CraftingService {
     canCraft: boolean;
     maxCraftableTimes: number;
     missingByOrigin: MissingByOriginGroup[];
-  }) {
-    const actions: any[] = [];
+  }): RecipeNextAction[] {
+    const actions: RecipeNextAction[] = [];
 
     if (params.canCraft) {
       actions.push({
         type: 'CRAFT',
         priority: 1,
         label: `Craftar ${params.outputItemName}`,
-        description: 'Você possui materiais suficientes para craftar este item.',
+        description:
+          'Você possui materiais suficientes para craftar este item.',
         endpoint: {
           method: 'POST',
           path: '/crafting/craft',
@@ -864,5 +1061,75 @@ export class CraftingService {
     }
 
     return 99;
+  }
+
+  private async getOrCreateCraftingSkill(characterId: string) {
+    return this.prisma.characterCraftingSkill.upsert({
+      where: {
+        characterId,
+      },
+      update: {},
+      create: {
+        characterId,
+      },
+    });
+  }
+
+  private buildCraftingSkillViewModel(skill: CraftingSkillSnapshot) {
+    const xpToNextLevel = getCraftingXpToNextLevel(skill.level);
+
+    return {
+      id: skill.id,
+      characterId: skill.characterId,
+      level: skill.level,
+      xp: skill.xp,
+      totalXp: skill.totalXp,
+      xpToNextLevel,
+      xpProgressPercent: getCraftingXpProgressPercent(skill.xp, xpToNextLevel),
+      isAtLevelCap: skill.level >= CRAFTING_LEVEL_CAP,
+      unlockedTier: getUnlockedCraftingTier(skill.level),
+    };
+  }
+
+  private applyCraftingXp(params: {
+    skill: CraftingSkillSnapshot;
+    xpGained: number;
+  }): CraftingProgressResult {
+    const safeXpGained = Math.max(0, Math.floor(params.xpGained));
+    let level = Math.max(1, params.skill.level);
+    let currentXp = Math.max(0, params.skill.xp) + safeXpGained;
+    const totalXp = Math.max(0, params.skill.totalXp) + safeXpGained;
+    const previousLevel = level;
+
+    while (level < CRAFTING_LEVEL_CAP) {
+      const xpToNextLevel = getCraftingXpToNextLevel(level);
+
+      if (!xpToNextLevel || currentXp < xpToNextLevel) {
+        break;
+      }
+
+      currentXp -= xpToNextLevel;
+      level += 1;
+    }
+
+    if (level >= CRAFTING_LEVEL_CAP) {
+      level = CRAFTING_LEVEL_CAP;
+      currentXp = 0;
+    }
+
+    const levelsGained = Math.max(0, level - previousLevel);
+    const xpToNextLevel = getCraftingXpToNextLevel(level);
+
+    return {
+      xpGained: safeXpGained,
+      previousLevel,
+      newLevel: level,
+      leveledUp: levelsGained > 0,
+      levelsGained,
+      currentXp,
+      totalXp,
+      xpToNextLevel,
+      xpProgressPercent: getCraftingXpProgressPercent(currentXp, xpToNextLevel),
+    };
   }
 }

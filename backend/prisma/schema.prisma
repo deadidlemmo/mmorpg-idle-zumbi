@@ -285,6 +285,7 @@ model Character {
   worldBossParticipations WorldBossParticipant[]
 
   gatheringSkills CharacterGatheringSkill[]
+  craftingSkill   CharacterCraftingSkill?
 
   @@unique([userId, name])
   @@index([userId])
@@ -319,6 +320,25 @@ model CharacterGatheringSkill {
   @@index([level])
   @@index([characterId, level])
   @@map("character_gathering_skills")
+}
+
+model CharacterCraftingSkill {
+  id String @id @default(uuid())
+
+  characterId String @unique
+
+  level   Int @default(1)
+  xp      Int @default(0)
+  totalXp Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+  @@index([level])
+  @@map("character_crafting_skills")
 }
 
 model Mob {

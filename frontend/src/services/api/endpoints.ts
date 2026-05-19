@@ -40,6 +40,12 @@ export const API_ENDPOINTS = {
     byCharacter: (characterId: string) => `/inventory/${characterId}`,
   },
 
+  crafting: {
+    recipes: (characterId: string) =>
+      `/crafting/character/${characterId}/recipes`,
+    craft: "/crafting/craft",
+  },
+
   incursions: {
     list: "/incursions",
     available: (characterId: string) => `/incursions/${characterId}/available`,

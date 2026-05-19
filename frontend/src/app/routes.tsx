@@ -11,6 +11,7 @@ import { AuthPage } from "../features/auth/pages/AuthPage";
 import { AutoCombatPage } from "../features/auto-combat/pages/AutoCombatPage";
 import { AutoCombatRealtimeProvider } from "../features/auto-combat/realtime/AutoCombatRealtimeProvider";
 import { CharacterSelectPage } from "../features/characters/pages/CharacterSelectPage";
+import { CraftingPage } from "../features/crafting/pages/CraftingPage";
 import { DashboardOverviewPage } from "../features/dashboard/pages/DashboardOverviewPage";
 import { DashboardPlaceholderPage } from "../features/dashboard/pages/DashboardPlaceholderPage";
 import { GatheringHubPage } from "../features/gathering/pages/GatheringHubPage";
@@ -125,12 +126,7 @@ export function AppRoutes() {
 
           <Route
             path="crafting"
-            element={
-              <DashboardPlaceholderPage
-                title="Criação"
-                description="Tela futura para receitas, ingredientes, materiais e criação de equipamentos."
-              />
-            }
+            element={<CraftingPage />}
           />
 
           <Route path="inventory" element={<InventoryPage />} />
