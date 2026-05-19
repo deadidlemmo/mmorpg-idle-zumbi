@@ -290,6 +290,58 @@
 }
 
 /* =========================================================
+   MODAL — RESUMO DE USO
+   ========================================================= */
+
+.gathering-usage-modal__usage-overview {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.58rem;
+  padding: 0.86rem 1rem 0;
+}
+
+.gathering-usage-modal__usage-overview article {
+  display: flex;
+  min-width: 0;
+  min-height: 76px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.66rem 0.72rem;
+  border: 1px solid rgba(var(--equipment-rarity-rgb), 0.12);
+  border-radius: 0.78rem;
+  background:
+    radial-gradient(circle at 0% 50%, rgba(var(--equipment-rarity-rgb), 0.06), transparent 5rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(5, 9, 8, 0.48);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.028),
+    0 8px 14px rgba(0, 0, 0, 0.11);
+}
+
+.gathering-usage-modal__usage-overview span {
+  color: rgba(174, 218, 120, 0.72);
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gathering-usage-modal__usage-overview strong {
+  min-width: 0;
+  color: rgba(255, 248, 232, 0.9);
+  font-family: var(--font-title);
+  font-size: 0.82rem;
+  font-weight: 950;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
    MODAL — AÇÕES PRINCIPAIS
    ========================================================= */
 
@@ -673,6 +725,17 @@
     font-size: 0.58rem;
   }
 
+  .gathering-usage-modal__usage-overview {
+    grid-template-columns: 1fr;
+    gap: 0.46rem;
+    padding: 0.78rem 0.88rem 0;
+  }
+
+  .gathering-usage-modal__usage-overview article {
+    min-height: 62px;
+    padding: 0.58rem 0.64rem;
+  }
+
   .gathering-usage-modal__actions {
     gap: 0.5rem;
     padding: 0.84rem 0.88rem 0.92rem;
@@ -763,6 +826,11 @@
   .gathering-usage-modal__chips span {
     min-height: 25px;
     font-size: 0.56rem;
+  }
+
+  .gathering-usage-modal__usage-overview article {
+    align-items: center;
+    text-align: center;
   }
 
   .gathering-usage-modal__actions {

@@ -44,6 +44,134 @@
   font-weight: 950;
 }
 
+.gathering-material-class-filter {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0.82rem 0 0.96rem;
+  padding: 0.72rem;
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 0.9rem;
+  background:
+    radial-gradient(circle at 0% 50%, rgba(174, 218, 120, 0.06), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    rgba(4, 10, 8, 0.52);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 10px 18px rgba(0, 0, 0, 0.12);
+}
+
+.gathering-material-class-filter__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.24rem;
+}
+
+.gathering-material-class-filter__copy strong {
+  color: rgba(255, 248, 232, 0.9);
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.gathering-material-class-filter__copy span {
+  color: rgba(231, 227, 216, 0.62);
+  font-size: 0.78rem;
+  font-weight: 720;
+  line-height: 1.32;
+}
+
+.gathering-material-class-filter__options {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.42rem;
+}
+
+.gathering-material-class-filter__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  min-height: 32px;
+  padding: 0.26rem 0.58rem;
+  color: rgba(231, 227, 216, 0.74);
+  font-family: var(--font-title);
+  font-size: 0.64rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  border: 1px solid rgba(231, 227, 216, 0.1);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(5, 9, 8, 0.56);
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.gathering-material-class-filter__button em {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  min-height: 20px;
+  padding: 0 0.32rem;
+  color: rgba(255, 248, 232, 0.82);
+  font-style: normal;
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.gathering-material-class-filter__button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  color: #fff8e8;
+  border-color: rgba(174, 218, 120, 0.22);
+  background:
+    linear-gradient(180deg, rgba(174, 218, 120, 0.08), transparent),
+    rgba(5, 9, 8, 0.66);
+}
+
+.gathering-material-class-filter__button--active {
+  color: #11140e;
+  border-color: rgba(232, 184, 78, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0.08)),
+    linear-gradient(180deg, rgba(232, 184, 78, 0.95), rgba(131, 151, 80, 0.82));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 0 13px rgba(232, 184, 78, 0.13);
+}
+
+.gathering-material-class-filter__button--active em {
+  color: #11140e;
+  border-color: rgba(17, 20, 14, 0.16);
+  background: rgba(255, 248, 232, 0.38);
+}
+
+.gathering-material-class-filter__button--character:not(.gathering-material-class-filter__button--active) {
+  color: rgba(209, 241, 170, 0.9);
+  border-color: rgba(174, 218, 120, 0.2);
+}
+
+.gathering-material-class-filter__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
 /* =========================================================
    MATERIALS — GROUPS / DIVIDERS
    ========================================================= */
@@ -367,6 +495,73 @@
     0 0 10px rgba(var(--equipment-rarity-rgb), 0.045);
 }
 
+.gathering-material-card__craft-summary {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.16rem;
+  color: rgba(231, 227, 216, 0.76);
+  font-size: 0.76rem;
+  font-weight: 760;
+  line-height: 1.24;
+}
+
+.gathering-material-card__purpose-kicker {
+  color: rgba(174, 218, 120, 0.68);
+  font-family: var(--font-title);
+  font-size: 0.55rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.gathering-material-card__purpose-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gathering-material-card__class-tags {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+}
+
+.gathering-material-card__class-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0.12rem 0.42rem;
+  color: rgba(255, 232, 166, 0.9);
+  font-family: var(--font-title);
+  font-size: 0.55rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  border: 1px solid rgba(232, 184, 78, 0.18);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(232, 184, 78, 0.075), transparent),
+    rgba(5, 9, 8, 0.48);
+}
+
+.gathering-material-card__recipe-example {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(231, 227, 216, 0.56);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.22;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* =========================================================
    MATERIAL CARD — META MINIMALISTA / PILLS UNIFICADAS
    ========================================================= */
@@ -602,7 +797,6 @@
 .gathering-material-card__rarity-badge,
 .gathering-material-card__tier,
 .gathering-material-card__lock,
-.gathering-material-card__craft-summary,
 .gathering-material-card__selected-badge,
 .gathering-material-card__locked-layer,
 .gathering-material-card__locked-layer-icon,
@@ -704,6 +898,24 @@
     font-size: 0.74rem;
   }
 
+  .gathering-material-class-filter {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 0.62rem;
+    margin-top: 0.72rem;
+    padding: 0.66rem;
+  }
+
+  .gathering-material-class-filter__options {
+    justify-content: flex-start;
+  }
+
+  .gathering-material-class-filter__button {
+    min-height: 30px;
+    padding: 0.24rem 0.52rem;
+    font-size: 0.6rem;
+  }
+
   .gathering-material-groups {
     gap: 0.9rem;
   }
@@ -731,6 +943,8 @@
     grid-template-columns: 48px minmax(0, 1fr) auto;
     grid-template-areas:
       'icon body chevron'
+      'icon summary chevron'
+      'icon classes chevron'
       'icon meta chevron';
     align-items: center;
     gap: 0.3rem 0.56rem;
@@ -756,6 +970,29 @@
     grid-area: meta;
     align-self: start;
     gap: 0.28rem;
+  }
+
+  .gathering-material-card__craft-summary {
+    grid-area: summary;
+    align-self: start;
+    gap: 0.1rem;
+    font-size: 0.7rem;
+  }
+
+  .gathering-material-card__class-tags {
+    grid-area: classes;
+    align-self: start;
+    gap: 0.22rem;
+  }
+
+  .gathering-material-card__class-tags span {
+    min-height: 20px;
+    padding: 0.1rem 0.34rem;
+    font-size: 0.5rem;
+  }
+
+  .gathering-material-card__recipe-example {
+    display: none;
   }
 
   .gathering-material-card__chevron {

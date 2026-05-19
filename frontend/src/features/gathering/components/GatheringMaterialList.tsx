@@ -12,6 +12,9 @@ import { GatheringMaterialCard } from './GatheringMaterialCard';
 
 interface GatheringMaterialListProps {
   materials: GatheringMaterialViewModel[];
+  totalMaterialsCount?: number;
+  activeClassFilterLabel?: string;
+  isClassFiltered?: boolean;
   gatheringSkill?: GatheringSkillViewModel | null;
   fallbackRatePerHour?: number | null;
 
@@ -244,6 +247,9 @@ function groupMaterials(
 
 export function GatheringMaterialList({
   materials,
+  totalMaterialsCount,
+  activeClassFilterLabel = 'Todas',
+  isClassFiltered = false,
   gatheringSkill,
   fallbackRatePerHour,
   selectedMaterialId,
@@ -256,18 +262,44 @@ export function GatheringMaterialList({
   onViewMaterialUsage,
 }: GatheringMaterialListProps) {
   const groups = groupMaterials(materials);
+  const visibleMaterialsCount = materials.length;
+  const safeTotalMaterialsCount = totalMaterialsCount ?? visibleMaterialsCount;
 
   if (materials.length <= 0) {
     return (
       <div className="gathering-empty gathering-empty--compact">
-        <strong>Nenhum material encontrado.</strong>
-        <p>Não há materiais disponíveis para esta origem neste mapa.</p>
+        <strong>
+          {isClassFiltered
+            ? `Nenhum material para ${activeClassFilterLabel}.`
+            : 'Nenhum material encontrado.'}
+        </strong>
+        <p>
+          {isClassFiltered
+            ? 'Troque o filtro de classe ou escolha outra origem/mapa para ver materiais compatíveis.'
+            : 'Não há materiais disponíveis para esta origem neste mapa.'}
+        </p>
       </div>
     );
   }
 
   return (
     <div className="gathering-material-groups">
+      <div className="gathering-materials-toolbar gathering-materials-toolbar--compact">
+        <p className="gathering-materials-toolbar__summary">
+          {isClassFiltered ? (
+            <>
+              <strong>{visibleMaterialsCount}</strong> de{' '}
+              <strong>{safeTotalMaterialsCount}</strong> materiais para{' '}
+              <strong>{activeClassFilterLabel}</strong>
+            </>
+          ) : (
+            <>
+              <strong>{visibleMaterialsCount}</strong> materiais encontrados
+            </>
+          )}
+        </p>
+      </div>
+
       {groups.map((group) => (
         <section key={group.key} className="gathering-material-group">
           <header className="gathering-material-group__header">

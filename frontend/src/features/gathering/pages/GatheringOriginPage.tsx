@@ -40,6 +40,7 @@ import type {
 import {
   getGatheringOriginDescription,
   getGatheringOriginLabel,
+  getGatheringMaterialRelatedClasses,
   getGatheringOriginStatLabel,
 } from '../types/gathering.types';
 import { buildGatheringDashboardCharacter } from '../utils/gathering-dashboard-character';
@@ -60,6 +61,24 @@ const WORLD_BOSS_ACTIVITY_LOCK_MESSAGE =
   'Você está aguardando ou participando de um World Boss. Saia do lobby para iniciar gathering.';
 
 type GatheringOriginSlug = keyof typeof GATHERING_ORIGIN_BY_SLUG;
+
+type GatheringClassFilter =
+  | 'ALL'
+  | 'Lutador'
+  | 'Assassino'
+  | 'Atirador'
+  | 'Médico';
+
+const GATHERING_CLASS_FILTERS: Array<{
+  key: GatheringClassFilter;
+  label: string;
+}> = [
+  { key: 'ALL', label: 'Todas' },
+  { key: 'Lutador', label: 'Lutador' },
+  { key: 'Assassino', label: 'Assassino' },
+  { key: 'Atirador', label: 'Atirador' },
+  { key: 'Médico', label: 'Médico' },
+];
 
 type GatheringSkillLoose = Partial<GatheringSkillViewModel> & {
   key?: string | null;
@@ -581,6 +600,43 @@ function getNextGatheringSkillState(
   return areGatheringSkillsEquivalent(current, next) ? current : next;
 }
 
+function normalizeClassFilterValue(value?: string | null): string {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+}
+
+function materialMatchesClassFilter(
+  material: GatheringMaterialViewModel,
+  classFilter: GatheringClassFilter,
+): boolean {
+  if (classFilter === 'ALL') return true;
+
+  const targetClass = normalizeClassFilterValue(classFilter);
+
+  return getGatheringMaterialRelatedClasses(material).some(
+    (className) => normalizeClassFilterValue(className) === targetClass,
+  );
+}
+
+function countMaterialsByClass(materials: GatheringMaterialViewModel[]) {
+  return GATHERING_CLASS_FILTERS.reduce(
+    (accumulator, option) => {
+      accumulator[option.key] =
+        option.key === 'ALL'
+          ? materials.length
+          : materials.filter((material) =>
+              materialMatchesClassFilter(material, option.key),
+            ).length;
+
+      return accumulator;
+    },
+    {} as Record<GatheringClassFilter, number>,
+  );
+}
+
 export function GatheringOriginPage() {
   const { characterId, origin } = useParams();
 
@@ -608,6 +664,8 @@ export function GatheringOriginPage() {
   );
   const [usageMaterial, setUsageMaterial] =
     useState<GatheringMaterialViewModel | null>(null);
+  const [classFilter, setClassFilter] =
+    useState<GatheringClassFilter>('ALL');
 
   const [overviewGatheringSkill, setOverviewGatheringSkill] =
     useState<GatheringSkillViewModel | null>(null);
@@ -637,7 +695,24 @@ export function GatheringOriginPage() {
     'Toda expedição deixa alguma coisa para trás. O segredo é saber o que vale carregar.'
   }”`;
 
-  const materials = materialsResponse?.materials ?? [];
+  const materials = useMemo(
+    () => materialsResponse?.materials ?? [],
+    [materialsResponse?.materials],
+  );
+  const materialClassCounts = useMemo(
+    () => countMaterialsByClass(materials),
+    [materials],
+  );
+  const filteredMaterials = useMemo(
+    () =>
+      materials.filter((material) =>
+        materialMatchesClassFilter(material, classFilter),
+      ),
+    [classFilter, materials],
+  );
+  const activeClassFilterLabel =
+    GATHERING_CLASS_FILTERS.find((option) => option.key === classFilter)
+      ?.label ?? 'Todas';
   const currentMap = materialsResponse?.map ?? null;
   const currentMapName = currentMap?.name ?? 'Mapa não identificado';
   const currentMapImage = getMapImageByName(currentMap?.name);
@@ -694,10 +769,10 @@ export function GatheringOriginPage() {
 
   const selectedMaterial = useMemo(
     () =>
-      materials.find((material) => material.id === selectedMaterialId) ??
-      materials[0] ??
+      filteredMaterials.find((material) => material.id === selectedMaterialId) ??
+      filteredMaterials[0] ??
       null,
-    [materials, selectedMaterialId],
+    [filteredMaterials, selectedMaterialId],
   );
 
   const skillProgressPercent = getSkillProgressPercent(gatheringSkill);
@@ -1103,6 +1178,57 @@ export function GatheringOriginPage() {
                   </div>
                 </header>
 
+                <div
+                  className="gathering-material-class-filter"
+                  aria-label="Filtrar materiais por classe"
+                >
+                  <div className="gathering-material-class-filter__copy">
+                    <strong>Filtrar por classe</strong>
+                    <span>
+                      Veja apenas materiais que entram em receitas dessa classe.
+                    </span>
+                  </div>
+
+                  <div
+                    className="gathering-material-class-filter__options"
+                    role="group"
+                    aria-label="Classes de equipamento"
+                  >
+                    {GATHERING_CLASS_FILTERS.map((option) => {
+                      const count = materialClassCounts[option.key] ?? 0;
+                      const isActive = classFilter === option.key;
+                      const isCharacterClass =
+                        option.key !== 'ALL' &&
+                        normalizeClassFilterValue(character.className) ===
+                          normalizeClassFilterValue(option.key);
+
+                      return (
+                        <button
+                          key={option.key}
+                          type="button"
+                          className={[
+                            'gathering-material-class-filter__button',
+                            isActive
+                              ? 'gathering-material-class-filter__button--active'
+                              : '',
+                            isCharacterClass
+                              ? 'gathering-material-class-filter__button--character'
+                              : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          onClick={() => setClassFilter(option.key)}
+                          aria-pressed={isActive}
+                          disabled={option.key !== 'ALL' && count <= 0}
+                        >
+                          <span>{option.label}</span>
+                          <em>{count}</em>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {isLoading ? (
                   <div className="gathering-loading">
                     <span className="gathering-loading__spinner" />
@@ -1110,7 +1236,10 @@ export function GatheringOriginPage() {
                   </div>
                 ) : (
                   <GatheringMaterialList
-                    materials={materials}
+                    materials={filteredMaterials}
+                    totalMaterialsCount={materials.length}
+                    activeClassFilterLabel={activeClassFilterLabel}
+                    isClassFiltered={classFilter !== 'ALL'}
                     gatheringSkill={gatheringSkill}
                     fallbackRatePerHour={fallbackRatePerHour}
                     selectedMaterialId={selectedMaterial?.id ?? null}

@@ -146,16 +146,6 @@ function getMaterialIconUrl(material: GatheringMaterialViewModel): string | null
   return trimmedIcon.length > 0 ? trimmedIcon : null;
 }
 
-function getPrimaryRecipeSummary(
-  recipe?: GatheringMaterialRecipeUsageViewModel | null,
-): string {
-  if (!recipe) {
-    return 'Material';
-  }
-
-  return formatGatheringOutputItemSlot(recipe.outputItemSlot);
-}
-
 function getRecipeUsageTitle(material: GatheringMaterialViewModel): string {
   const recipes = material.usedInRecipes ?? [];
 
@@ -177,24 +167,72 @@ function getRecipeUsageTitle(material: GatheringMaterialViewModel): string {
   return `Usado em: ${displayedRecipes}`;
 }
 
-function getMaterialRelatedSummary(
+function getMaterialRoleLabel(role?: string | null): string {
+  switch (role) {
+    case 'MAIN_COMPONENT':
+      return 'Base principal';
+
+    case 'SHARED_MATERIAL':
+      return 'Material de apoio';
+
+    case 'RARE_MOB_DROP':
+      return 'Drop raro';
+
+    default:
+      return 'Ingrediente';
+  }
+}
+
+function getMaterialUsageSlots(material: GatheringMaterialViewModel): string[] {
+  const recipes = material.usedInRecipes ?? [];
+  const labels = recipes
+    .map((recipe) => formatGatheringOutputItemSlot(recipe.outputItemSlot))
+    .filter(Boolean);
+
+  return Array.from(new Set(labels));
+}
+
+function getMaterialPurposeLine(
   material: GatheringMaterialViewModel,
   primaryRecipe?: GatheringMaterialRecipeUsageViewModel | null,
 ): string {
-  const relatedClasses = getGatheringMaterialRelatedClasses(material);
-  const slotLabel = primaryRecipe
-    ? formatGatheringOutputItemSlot(primaryRecipe.outputItemSlot)
-    : getPrimaryRecipeSummary(primaryRecipe);
-
-  if (relatedClasses.length > 0 && slotLabel) {
-    return `${relatedClasses.join(' / ')} • ${slotLabel}`;
+  if (primaryRecipe) {
+    return `${getMaterialRoleLabel(primaryRecipe.role)} para ${formatGatheringOutputItemSlot(
+      primaryRecipe.outputItemSlot,
+    )}`;
   }
 
-  if (relatedClasses.length > 0) {
-    return relatedClasses.join(' / ');
+  const slots = getMaterialUsageSlots(material);
+
+  if (slots.length <= 0) {
+    return 'Sem receita vinculada';
   }
 
-  return slotLabel;
+  const visibleSlots = slots.slice(0, 2).join(' / ');
+  const hiddenCount = Math.max(0, slots.length - 2);
+
+  return hiddenCount > 0
+    ? `Ingrediente para ${visibleSlots} +${hiddenCount}`
+    : `Ingrediente para ${visibleSlots}`;
+}
+
+function getMaterialRecipeExampleLine(
+  material: GatheringMaterialViewModel,
+): string {
+  const recipes = material.usedInRecipes ?? [];
+
+  if (recipes.length <= 0) {
+    return 'Sem item craftável vinculado';
+  }
+
+  const firstRecipe = recipes[0];
+  const hiddenCount = Math.max(0, recipes.length - 1);
+
+  if (hiddenCount > 0) {
+    return `Ex.: ${firstRecipe.outputItemName} +${hiddenCount}`;
+  }
+
+  return `Ex.: ${firstRecipe.outputItemName}`;
 }
 
 function getPositiveNumber(value: unknown): number | null {
@@ -441,8 +479,10 @@ export function GatheringMaterialCard({
   const timePerUnitLabel = rateDisplayMeta.label;
   const timePerUnitTitle = rateDisplayMeta.title;
 
-  const relatedSummary = getMaterialRelatedSummary(material, primaryRecipe);
   const usageTitle = getRecipeUsageTitle(material);
+  const purposeLine = getMaterialPurposeLine(material, primaryRecipe);
+  const recipeExampleLine = getMaterialRecipeExampleLine(material);
+  const relatedClasses = getGatheringMaterialRelatedClasses(material);
 
   const canStart =
     Boolean(onStart) && isUnlocked && !isBusy && !isActive && !isStartDisabled;
@@ -555,7 +595,33 @@ export function GatheringMaterialCard({
             className="gathering-material-card__craft-summary"
             title={usageTitle}
           >
-            {relatedSummary}
+            <span className="gathering-material-card__purpose-kicker">
+              Serve para
+            </span>
+            <span className="gathering-material-card__purpose-text">
+              {purposeLine}
+            </span>
+          </span>
+
+          {relatedClasses.length > 0 ? (
+            <span
+              className="gathering-material-card__class-tags"
+              aria-label={`Classes: ${relatedClasses.join(', ')}`}
+            >
+              {relatedClasses.slice(0, 3).map((className) => (
+                <span key={className}>{className}</span>
+              ))}
+              {relatedClasses.length > 3 ? (
+                <span>+{relatedClasses.length - 3}</span>
+              ) : null}
+            </span>
+          ) : null}
+
+          <span
+            className="gathering-material-card__recipe-example"
+            title={usageTitle}
+          >
+            {recipeExampleLine}
           </span>
 
           <span className="gathering-material-card__meta">

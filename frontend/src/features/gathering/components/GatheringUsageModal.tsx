@@ -10,6 +10,7 @@ import {
     formatGatheringRecipeQuantity,
     formatGatheringTimePerUnitShort,
     getGatheringMaterialRatePerHour,
+    getGatheringMaterialRelatedClasses,
     getGatheringMaterialUsedInRecipes,
     getGatheringRequiredLevel,
     getGatheringSkillLevel,
@@ -181,6 +182,32 @@ function getRecipeSummary(recipes: GatheringMaterialRecipeUsageViewModel[]): str
   return `${recipes.length} receitas vinculadas`;
 }
 
+function getRelatedRecipeSlots(
+  recipes: GatheringMaterialRecipeUsageViewModel[],
+): string[] {
+  const slotLabels = recipes
+    .map((recipe) => formatGatheringOutputItemSlot(recipe.outputItemSlot))
+    .filter(Boolean);
+
+  return Array.from(new Set(slotLabels));
+}
+
+function getModalClassSummary(classes: string[]): string {
+  if (classes.length <= 0) {
+    return 'Sem classe vinculada';
+  }
+
+  return classes.join(' / ');
+}
+
+function getModalSlotSummary(slots: string[]): string {
+  if (slots.length <= 0) {
+    return 'Sem peça vinculada';
+  }
+
+  return slots.join(' / ');
+}
+
 function getStartButtonLabel(params: {
   isBusy: boolean;
   isUnlocked: boolean;
@@ -205,12 +232,22 @@ export function GatheringUsageModal({
   onClose,
   onStart,
 }: GatheringUsageModalProps) {
-  const [isInspecting, setIsInspecting] = useState(false);
+  const [inspectedMaterialId, setInspectedMaterialId] = useState<string | null>(
+    null,
+  );
 
   const recipes = useMemo(
     () => sortRecipes(getGatheringMaterialUsedInRecipes(material)),
     [material],
   );
+  const relatedClasses = useMemo(
+    () => getGatheringMaterialRelatedClasses(material),
+    [material],
+  );
+  const relatedSlots = useMemo(() => getRelatedRecipeSlots(recipes), [recipes]);
+  const primaryRecipeRoleLabel = recipes[0]
+    ? getRoleLabel(recipes[0].role)
+    : 'Ingrediente';
 
   const requiredLevel = material ? getGatheringRequiredLevel(material) : 1;
   const currentSkillLevel = getGatheringSkillLevel(gatheringSkill);
@@ -229,6 +266,9 @@ export function GatheringUsageModal({
 
   const timePerUnitLabel = formatGatheringTimePerUnitShort(ratePerHour);
   const iconUrl = getMaterialIconUrl(material);
+  const isInspecting = Boolean(
+    isOpen && material?.id && inspectedMaterialId === material.id,
+  );
   const canStart = Boolean(
     material && onStart && isUnlocked && !isBusy && !isStartDisabled,
   );
@@ -238,6 +278,7 @@ export function GatheringUsageModal({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
+        setInspectedMaterialId(null);
         onClose();
       }
     }
@@ -249,22 +290,19 @@ export function GatheringUsageModal({
     };
   }, [isOpen, onClose]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setIsInspecting(false);
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    setIsInspecting(false);
-  }, [material?.id]);
-
   if (!isOpen || !material) {
     return null;
   }
 
-  function handleBackdropClick() {
+  const currentMaterialId = material.id;
+
+  function handleClose() {
+    setInspectedMaterialId(null);
     onClose();
+  }
+
+  function handleBackdropClick() {
+    handleClose();
   }
 
   function handlePanelClick(event: MouseEvent<HTMLDivElement>) {
@@ -272,14 +310,16 @@ export function GatheringUsageModal({
   }
 
   function handleInspectClick() {
-    setIsInspecting((currentValue) => !currentValue);
+    setInspectedMaterialId((currentValue) =>
+      currentValue === currentMaterialId ? null : currentMaterialId,
+    );
   }
 
   async function handleStartClick() {
     if (!material || !canStart) return;
 
     await onStart?.(material);
-    onClose();
+    handleClose();
   }
 
   return (
@@ -304,7 +344,7 @@ export function GatheringUsageModal({
         <button
           type="button"
           className="gathering-usage-modal__close"
-          onClick={onClose}
+          onClick={handleClose}
           aria-label="Fechar detalhes do material"
         >
           ×
@@ -339,6 +379,26 @@ export function GatheringUsageModal({
             </div>
           </div>
         </header>
+
+        <section
+          className="gathering-usage-modal__usage-overview"
+          aria-label="Resumo de uso do material"
+        >
+          <article>
+            <span>Classes</span>
+            <strong>{getModalClassSummary(relatedClasses)}</strong>
+          </article>
+
+          <article>
+            <span>Usado em</span>
+            <strong>{getModalSlotSummary(relatedSlots)}</strong>
+          </article>
+
+          <article>
+            <span>Função</span>
+            <strong>{primaryRecipeRoleLabel}</strong>
+          </article>
+        </section>
 
         <div className="gathering-usage-modal__actions">
           <button
