@@ -23,6 +23,12 @@ type ActivityGuardParams = {
   worldBossEventId?: string;
 };
 
+type ActiveWorldBossParticipationSnapshot = {
+  event: {
+    id: string;
+  };
+};
+
 type CharacterActivityState = {
   character: {
     id: string;
@@ -35,10 +41,12 @@ type CharacterActivityState = {
   currentHp: number;
   activeAutoCombatSession: any | null;
   activeGatheringSession: any | null;
+  activeCraftingSession: any | null;
   activeIncursionSession: any | null;
-  activeWorldBossParticipation: any | null;
+  activeWorldBossParticipation: ActiveWorldBossParticipationSnapshot | null;
   hasActiveAutoCombat: boolean;
   hasActiveGathering: boolean;
+  hasActiveCrafting: boolean;
   hasActiveIncursion: boolean;
   hasActiveWorldBoss: boolean;
 };
@@ -84,9 +92,12 @@ export class ActivityGuardService {
       });
     }
 
+    const now = new Date();
+
     const [
       activeAutoCombatSession,
       activeGatheringSession,
+      activeCraftingSession,
       activeIncursionSession,
       activeWorldBossParticipation,
     ] = await Promise.all([
@@ -148,6 +159,35 @@ export class ActivityGuardService {
               id: true,
               name: true,
               tier: true,
+            },
+          },
+        },
+      }),
+
+      client.craftingSession.findFirst({
+        where: {
+          characterId: character.id,
+          status: ActivityStatus.ACTIVE,
+          completesAt: {
+            gt: now,
+          },
+        },
+        orderBy: {
+          startedAt: 'desc',
+        },
+        select: {
+          id: true,
+          status: true,
+          quantity: true,
+          outputQuantity: true,
+          startedAt: true,
+          completesAt: true,
+          outputItem: {
+            select: {
+              id: true,
+              name: true,
+              tier: true,
+              slot: true,
             },
           },
         },
@@ -230,10 +270,12 @@ export class ActivityGuardService {
       currentHp,
       activeAutoCombatSession,
       activeGatheringSession,
+      activeCraftingSession,
       activeIncursionSession,
       activeWorldBossParticipation,
       hasActiveAutoCombat: Boolean(activeAutoCombatSession),
       hasActiveGathering: Boolean(activeGatheringSession),
+      hasActiveCrafting: Boolean(activeCraftingSession),
       hasActiveIncursion: Boolean(activeIncursionSession),
       hasActiveWorldBoss: Boolean(activeWorldBossParticipation),
     };
@@ -256,6 +298,14 @@ export class ActivityGuardService {
       throw new ConflictException({
         message: 'Este personagem já possui um gathering ativo.',
         activeGathering: state.activeGatheringSession,
+      });
+    }
+
+    if (state.hasActiveCrafting) {
+      throw new ConflictException({
+        message:
+          'Este personagem está fabricando um item. Aguarde a criação finalizar antes de iniciar outra atividade.',
+        activeCrafting: state.activeCraftingSession,
       });
     }
 
@@ -302,6 +352,62 @@ export class ActivityGuardService {
     return state;
   }
 
+  async ensureCanStartCrafting(params: ActivityGuardParams) {
+    const state = await this.getCharacterActivityState(params);
+
+    this.ensureCharacterIsActive(
+      state.character.status,
+      'Apenas personagens ativos podem iniciar criação.',
+    );
+
+    this.ensureCharacterHasHp(
+      state.currentHp,
+      'Personagens derrotados ou com 0 de HP não podem iniciar criação. Cure o personagem antes.',
+    );
+
+    if (state.hasActiveCrafting) {
+      throw new ConflictException({
+        message:
+          'Este personagem já possui uma fabricação em andamento. Aguarde finalizar antes de iniciar outra.',
+        activeCrafting: state.activeCraftingSession,
+      });
+    }
+
+    if (state.hasActiveAutoCombat) {
+      throw new ConflictException({
+        message:
+          'Este personagem está em auto-combate. Pare o auto-combate antes de iniciar criação.',
+        activeAutoCombat: state.activeAutoCombatSession,
+      });
+    }
+
+    if (state.hasActiveGathering) {
+      throw new ConflictException({
+        message:
+          'Este personagem está em gathering. Encerre o gathering antes de iniciar criação.',
+        activeGathering: state.activeGatheringSession,
+      });
+    }
+
+    if (state.hasActiveIncursion) {
+      throw new ConflictException({
+        message:
+          'Este personagem está em uma incursão ativa. Aguarde finalizar antes de iniciar criação.',
+        activeIncursion: state.activeIncursionSession,
+      });
+    }
+
+    if (state.hasActiveWorldBoss) {
+      throw new ConflictException({
+        message:
+          'Este personagem está em uma Ameaça Global. Saia da atividade antes de iniciar criação.',
+        activeWorldBoss: state.activeWorldBossParticipation,
+      });
+    }
+
+    return state;
+  }
+
   async ensureCanStartAutoCombat(params: ActivityGuardParams) {
     const state = await this.getCharacterActivityState(params);
 
@@ -320,6 +426,14 @@ export class ActivityGuardService {
         message:
           'Este personagem está em gathering. Encerre o gathering antes de iniciar auto-combate.',
         activeGathering: state.activeGatheringSession,
+      });
+    }
+
+    if (state.hasActiveCrafting) {
+      throw new ConflictException({
+        message:
+          'Este personagem está fabricando um item. Aguarde a criação finalizar antes de iniciar auto-combate.',
+        activeCrafting: state.activeCraftingSession,
       });
     }
 
@@ -386,6 +500,14 @@ export class ActivityGuardService {
       });
     }
 
+    if (state.hasActiveCrafting) {
+      throw new ConflictException({
+        message:
+          'Este personagem está fabricando um item. Aguarde a criação finalizar antes de iniciar uma incursão.',
+        activeCrafting: state.activeCraftingSession,
+      });
+    }
+
     if (state.hasActiveWorldBoss) {
       throw new ConflictException({
         message:
@@ -423,6 +545,14 @@ export class ActivityGuardService {
         message:
           'Finalize ou encerre o gathering antes de entrar em um World Boss.',
         activeGathering: state.activeGatheringSession,
+      });
+    }
+
+    if (state.hasActiveCrafting) {
+      throw new ConflictException({
+        message:
+          'Aguarde a fabricação atual finalizar antes de entrar em um World Boss.',
+        activeCrafting: state.activeCraftingSession,
       });
     }
 
@@ -480,6 +610,14 @@ export class ActivityGuardService {
       });
     }
 
+    if (state.hasActiveCrafting) {
+      throw new ConflictException({
+        message:
+          'Este personagem está fabricando um item. Aguarde a criação finalizar antes de iniciar combate manual.',
+        activeCrafting: state.activeCraftingSession,
+      });
+    }
+
     if (state.hasActiveIncursion) {
       throw new ConflictException({
         message:
@@ -514,6 +652,14 @@ export class ActivityGuardService {
         message:
           'Não é possível usar a enfermaria durante gathering. Encerre o gathering antes de curar.',
         activeGatheringSession: state.activeGatheringSession,
+      });
+    }
+
+    if (state.hasActiveCrafting) {
+      throw new ConflictException({
+        message:
+          'Não é possível usar a enfermaria durante uma fabricação ativa.',
+        activeCraftingSession: state.activeCraftingSession,
       });
     }
 

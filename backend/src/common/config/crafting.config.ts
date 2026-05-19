@@ -1,6 +1,18 @@
 export const CRAFTING_LEVEL_CAP = 100;
 export const CRAFTING_LEVELS_PER_TIER = 10;
 export const CRAFTING_TARGET_CRAFTS_PER_TIER = 45;
+export const CRAFTING_DURATION_SECONDS_BY_TIER: Record<number, number> = {
+  1: 60,
+  2: 90,
+  3: 120,
+  4: 180,
+  5: 300,
+  6: 420,
+  7: 600,
+  8: 840,
+  9: 1200,
+  10: 1680,
+};
 
 export function getCraftingXpToNextLevel(level: number) {
   const safeLevel = Math.max(1, Math.floor(Number(level) || 1));
@@ -53,4 +65,12 @@ export function getCraftingXpRewardForTier(tier: number) {
   }
 
   return Math.max(5, Math.round(totalTierXp / CRAFTING_TARGET_CRAFTS_PER_TIER));
+}
+
+export function getCraftingDurationSecondsForTier(tier: number, quantity = 1) {
+  const safeTier = Math.max(1, Math.min(10, Math.floor(Number(tier) || 1)));
+  const safeQuantity = Math.max(1, Math.floor(Number(quantity) || 1));
+  const baseDuration = CRAFTING_DURATION_SECONDS_BY_TIER[safeTier] ?? 60;
+
+  return baseDuration * safeQuantity;
 }

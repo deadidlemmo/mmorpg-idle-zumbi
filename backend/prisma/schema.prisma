@@ -281,6 +281,7 @@ model Character {
   autoCombatSessions      AutoCombatSession[]
   autoCombatSessionEvents AutoCombatSessionEvent[]
   gatheringSessions       GatheringSession[]
+  craftingSessions        CraftingSession[]
   incursionSessions       CharacterIncursionSession[]
   worldBossParticipations WorldBossParticipant[]
 
@@ -439,8 +440,9 @@ model Item {
 
   potionConfigs CharacterPotionConfig[] @relation("PotionConfigItem")
 
-  craftingRecipeOutput CraftingRecipe?      @relation("CraftingRecipeOutput")
-  craftingIngredients  CraftingIngredient[] @relation("CraftingIngredientItem")
+  craftingRecipeOutput   CraftingRecipe?      @relation("CraftingRecipeOutput")
+  craftingIngredients    CraftingIngredient[] @relation("CraftingIngredientItem")
+  craftingSessionOutputs CraftingSession[]    @relation("CraftingSessionOutputItem")
 
   gatheringTargetSessions GatheringSession[] @relation("GatheringTargetMaterial")
 
@@ -476,10 +478,45 @@ model CraftingRecipe {
   updatedAt DateTime @updatedAt
 
   ingredients CraftingIngredient[]
+  sessions    CraftingSession[]
 
   @@index([tier])
   @@index([isActive])
   @@map("crafting_recipes")
+}
+
+model CraftingSession {
+  id String @id @default(uuid())
+
+  characterId  String
+  recipeId     String
+  outputItemId String
+
+  status ActivityStatus @default(ACTIVE)
+
+  quantity         Int
+  outputQuantity   Int
+  craftingXpGained Int
+  durationSeconds  Int
+
+  startedAt   DateTime  @default(now())
+  completesAt DateTime
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  character  Character      @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  recipe     CraftingRecipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  outputItem Item           @relation("CraftingSessionOutputItem", fields: [outputItemId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+  @@index([recipeId])
+  @@index([outputItemId])
+  @@index([status])
+  @@index([characterId, status])
+  @@index([completesAt])
+  @@map("crafting_sessions")
 }
 
 model CraftingIngredient {

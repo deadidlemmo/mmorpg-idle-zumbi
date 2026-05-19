@@ -1,10 +1,12 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import {
+  ActivityStatus,
   CharacterStatus,
   InventoryItemType,
   ItemSlot,
@@ -13,12 +15,14 @@ import {
 import type { CharacterCraftingSkill } from '@prisma/client';
 import {
   CRAFTING_LEVEL_CAP,
+  getCraftingDurationSecondsForTier,
   getCraftingXpProgressPercent,
   getCraftingXpRewardForTier,
   getCraftingXpToNextLevel,
   getRequiredCraftingLevelForTier,
   getUnlockedCraftingTier,
 } from '../../common/config/crafting.config';
+import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CraftItemDto } from './dto/craft-item.dto';
 
@@ -91,9 +95,36 @@ type CraftingProgressResult = {
   xpProgressPercent: number;
 };
 
+type CraftingSessionSnapshot = {
+  id: string;
+  characterId: string;
+  recipeId: string;
+  outputItemId: string;
+  status: ActivityStatus;
+  quantity: number;
+  outputQuantity: number;
+  craftingXpGained: number;
+  durationSeconds: number;
+  startedAt: Date;
+  completesAt: Date;
+  completedAt: Date | null;
+  outputItem: {
+    id: string;
+    name: string;
+    description: string | null;
+    tier: number;
+    rarity: string;
+    slot: ItemSlot;
+    family: string;
+  };
+};
+
 @Injectable()
 export class CraftingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityGuard: ActivityGuardService,
+  ) {}
 
   async listCharacterRecipes(params: {
     userId: string;
@@ -147,6 +178,11 @@ export class CraftingService {
     if (character.userId !== userId) {
       throw new ForbiddenException('Você não pode acessar este personagem.');
     }
+
+    const resolvedCraftingSessions =
+      await this.resolveCompletedCraftingSessions(characterId);
+    const activeCraftingSession =
+      await this.findActiveCraftingSession(characterId);
 
     const craftingSkill = await this.getOrCreateCraftingSkill(characterId);
     const craftingSkillViewModel =
@@ -335,6 +371,9 @@ export class CraftingService {
       const craftingXpReward = getCraftingXpRewardForTier(
         recipe.outputItem.tier,
       );
+      const craftingDurationSeconds = getCraftingDurationSecondsForTier(
+        recipe.outputItem.tier,
+      );
 
       const totalRequired = ingredients.reduce(
         (total, ingredient) => total + ingredient.required,
@@ -426,6 +465,7 @@ export class CraftingService {
         requiredCraftingLevel,
         requiredCharacterLevel: requiredCraftingLevel,
         craftingXpReward,
+        craftingDurationSeconds,
         lockReason: isUnlocked
           ? null
           : `Requer nível ${requiredCraftingLevel} de criação.`,
@@ -434,6 +474,13 @@ export class CraftingService {
         maxOutputQuantity: isUnlocked
           ? maxCraftableTimes * recipe.outputQuantity
           : 0,
+        maxBatchCraftingDurationSeconds:
+          isUnlocked && maxCraftableTimes > 0
+            ? getCraftingDurationSecondsForTier(
+                recipe.outputItem.tier,
+                maxCraftableTimes,
+              )
+            : 0,
 
         progress: {
           percent: progressPercent,
@@ -514,6 +561,12 @@ export class CraftingService {
         equippedRecipes: visibleRecipes.filter((recipe) => recipe.isEquipped)
           .length,
       },
+      activeSession: activeCraftingSession
+        ? this.buildCraftingSessionViewModel(activeCraftingSession)
+        : null,
+      completedSessions: resolvedCraftingSessions.map((session) =>
+        this.buildCraftingSessionViewModel(session),
+      ),
       recipes: visibleRecipes,
     };
   }
@@ -682,6 +735,12 @@ export class CraftingService {
       );
     }
 
+    await this.resolveCompletedCraftingSessions(dto.characterId);
+    await this.activityGuard.ensureCanStartCrafting({
+      characterId: dto.characterId,
+      userId,
+    });
+
     const recipe = await this.prisma.craftingRecipe.findFirst({
       where: {
         outputItemId: dto.itemId,
@@ -775,8 +834,41 @@ export class CraftingService {
 
     const craftingXpGained =
       getCraftingXpRewardForTier(recipe.outputItem.tier) * craftQuantity;
+    const durationSeconds = getCraftingDurationSecondsForTier(
+      recipe.outputItem.tier,
+      craftQuantity,
+    );
+    const startedAt = new Date();
+    const completesAt = new Date(startedAt.getTime() + durationSeconds * 1000);
 
     const craftResult = await this.prisma.$transaction(async (tx) => {
+      await tx.character.update({
+        where: {
+          id: dto.characterId,
+        },
+        data: {
+          updatedAt: new Date(),
+        },
+      });
+
+      const activeCraftingSession = await tx.craftingSession.findFirst({
+        where: {
+          characterId: dto.characterId,
+          status: ActivityStatus.ACTIVE,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (activeCraftingSession) {
+        throw new ConflictException({
+          message:
+            'Este personagem já possui uma fabricação em andamento. Aguarde finalizar antes de iniciar outra.',
+          activeCraftingSession,
+        });
+      }
+
       const activeCraftingSkill = await tx.characterCraftingSkill.upsert({
         where: {
           characterId: dto.characterId,
@@ -809,33 +901,7 @@ export class CraftingService {
         });
       }
 
-      const outputInventoryType =
-        recipe.outputItem.slot === ItemSlot.CONSUMABLE
-          ? InventoryItemType.CONSUMABLE
-          : InventoryItemType.EQUIPMENT;
-
       const outputQuantity = recipe.outputQuantity * craftQuantity;
-
-      const craftedInventoryItem = await tx.inventoryItem.upsert({
-        where: {
-          characterId_itemId: {
-            characterId: dto.characterId,
-            itemId: recipe.outputItemId,
-          },
-        },
-        update: {
-          quantity: {
-            increment: outputQuantity,
-          },
-          type: outputInventoryType,
-        },
-        create: {
-          characterId: dto.characterId,
-          itemId: recipe.outputItemId,
-          quantity: outputQuantity,
-          type: outputInventoryType,
-        },
-      });
 
       await tx.inventoryItem.deleteMany({
         where: {
@@ -846,31 +912,41 @@ export class CraftingService {
         },
       });
 
-      const craftingProgress = this.applyCraftingXp({
-        skill: activeCraftingSkill,
-        xpGained: craftingXpGained,
-      });
-
-      const updatedCraftingSkill = await tx.characterCraftingSkill.update({
-        where: {
-          id: activeCraftingSkill.id,
-        },
+      const craftingSession = await tx.craftingSession.create({
         data: {
-          level: craftingProgress.newLevel,
-          xp: craftingProgress.currentXp,
-          totalXp: craftingProgress.totalXp,
+          characterId: dto.characterId,
+          recipeId: recipe.id,
+          outputItemId: recipe.outputItemId,
+          quantity: craftQuantity,
+          outputQuantity,
+          craftingXpGained,
+          durationSeconds,
+          startedAt,
+          completesAt,
+        },
+        include: {
+          outputItem: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              tier: true,
+              rarity: true,
+              slot: true,
+              family: true,
+            },
+          },
         },
       });
 
       return {
-        inventoryItem: craftedInventoryItem,
-        craftingSkill: updatedCraftingSkill,
-        craftingProgress,
+        craftingSkill: activeCraftingSkill,
+        craftingSession,
       };
     });
 
     return {
-      message: 'Item craftado com sucesso.',
+      message: 'Fabricação iniciada.',
       character: {
         id: character.id,
         name: character.name,
@@ -892,11 +968,200 @@ export class CraftingService {
         role: ingredient.role,
         origin: ingredient.origin,
       })),
-      inventoryItem: craftResult.inventoryItem,
       craftingSkill: this.buildCraftingSkillViewModel(
         craftResult.craftingSkill,
       ),
-      craftingProgress: craftResult.craftingProgress,
+      craftingSession: this.buildCraftingSessionViewModel(
+        craftResult.craftingSession,
+      ),
+    };
+  }
+
+  private async findActiveCraftingSession(characterId: string) {
+    return this.prisma.craftingSession.findFirst({
+      where: {
+        characterId,
+        status: ActivityStatus.ACTIVE,
+      },
+      orderBy: {
+        startedAt: 'desc',
+      },
+      include: {
+        outputItem: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            tier: true,
+            rarity: true,
+            slot: true,
+            family: true,
+          },
+        },
+      },
+    });
+  }
+
+  private async resolveCompletedCraftingSessions(characterId: string) {
+    const now = new Date();
+    const sessions = await this.prisma.craftingSession.findMany({
+      where: {
+        characterId,
+        status: ActivityStatus.ACTIVE,
+        completesAt: {
+          lte: now,
+        },
+      },
+      orderBy: {
+        completesAt: 'asc',
+      },
+      include: {
+        outputItem: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            tier: true,
+            rarity: true,
+            slot: true,
+            family: true,
+          },
+        },
+      },
+    });
+
+    const completedSessions: CraftingSessionSnapshot[] = [];
+
+    for (const session of sessions) {
+      const completedSession = await this.prisma.$transaction(async (tx) => {
+        const claimedSession = await tx.craftingSession.updateMany({
+          where: {
+            id: session.id,
+            status: ActivityStatus.ACTIVE,
+          },
+          data: {
+            status: ActivityStatus.COMPLETED,
+            completedAt: now,
+          },
+        });
+
+        if (claimedSession.count <= 0) {
+          return null;
+        }
+
+        const inventoryType =
+          session.outputItem.slot === ItemSlot.CONSUMABLE
+            ? InventoryItemType.CONSUMABLE
+            : InventoryItemType.EQUIPMENT;
+
+        await tx.inventoryItem.upsert({
+          where: {
+            characterId_itemId: {
+              characterId,
+              itemId: session.outputItemId,
+            },
+          },
+          update: {
+            quantity: {
+              increment: session.outputQuantity,
+            },
+            type: inventoryType,
+          },
+          create: {
+            characterId,
+            itemId: session.outputItemId,
+            quantity: session.outputQuantity,
+            type: inventoryType,
+          },
+        });
+
+        const activeCraftingSkill = await tx.characterCraftingSkill.upsert({
+          where: {
+            characterId,
+          },
+          update: {},
+          create: {
+            characterId,
+          },
+        });
+
+        const craftingProgress = this.applyCraftingXp({
+          skill: activeCraftingSkill,
+          xpGained: session.craftingXpGained,
+        });
+
+        await tx.characterCraftingSkill.update({
+          where: {
+            id: activeCraftingSkill.id,
+          },
+          data: {
+            level: craftingProgress.newLevel,
+            xp: craftingProgress.currentXp,
+            totalXp: craftingProgress.totalXp,
+          },
+        });
+
+        return tx.craftingSession.findUnique({
+          where: {
+            id: session.id,
+          },
+          include: {
+            outputItem: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                tier: true,
+                rarity: true,
+                slot: true,
+                family: true,
+              },
+            },
+          },
+        });
+      });
+
+      if (completedSession) {
+        completedSessions.push(completedSession);
+      }
+    }
+
+    return completedSessions;
+  }
+
+  private buildCraftingSessionViewModel(session: CraftingSessionSnapshot) {
+    const nowMs = Date.now();
+    const startedAtMs = session.startedAt.getTime();
+    const completesAtMs = session.completesAt.getTime();
+    const totalMs = Math.max(1, completesAtMs - startedAtMs);
+    const elapsedMs =
+      session.status === ActivityStatus.ACTIVE
+        ? Math.max(0, nowMs - startedAtMs)
+        : totalMs;
+    const remainingSeconds =
+      session.status === ActivityStatus.ACTIVE
+        ? Math.max(0, Math.ceil((completesAtMs - nowMs) / 1000))
+        : 0;
+
+    return {
+      id: session.id,
+      characterId: session.characterId,
+      recipeId: session.recipeId,
+      outputItemId: session.outputItemId,
+      status: session.status,
+      quantity: session.quantity,
+      outputQuantity: session.outputQuantity,
+      craftingXpGained: session.craftingXpGained,
+      durationSeconds: session.durationSeconds,
+      remainingSeconds,
+      progressPercent: Math.max(
+        0,
+        Math.min(100, Math.floor((elapsedMs / totalMs) * 100)),
+      ),
+      startedAt: session.startedAt,
+      completesAt: session.completesAt,
+      completedAt: session.completedAt,
+      outputItem: session.outputItem,
     };
   }
 

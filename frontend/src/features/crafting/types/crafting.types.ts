@@ -126,6 +126,27 @@ export interface CraftingSkillViewModel {
   unlockedTier: number;
 }
 
+export interface CraftingSessionViewModel {
+  id: string;
+  characterId: string;
+  recipeId: string;
+  outputItemId: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'STOPPED' | (string & {});
+  quantity: number;
+  outputQuantity: number;
+  craftingXpGained: number;
+  durationSeconds: number;
+  remainingSeconds: number;
+  progressPercent: number;
+  startedAt: string;
+  completesAt: string;
+  completedAt?: string | null;
+  outputItem: Pick<
+    CraftingOutputItemViewModel,
+    'id' | 'name' | 'description' | 'tier' | 'rarity' | 'slot' | 'family'
+  >;
+}
+
 export interface CraftingRecipeViewModel {
   recipeId: string;
   tier: number;
@@ -137,6 +158,8 @@ export interface CraftingRecipeViewModel {
   requiredCraftingLevel: number;
   requiredCharacterLevel: number;
   craftingXpReward: number;
+  craftingDurationSeconds: number;
+  maxBatchCraftingDurationSeconds: number;
   lockReason?: string | null;
   canCraft: boolean;
   maxCraftableTimes: number;
@@ -178,6 +201,8 @@ export interface CraftingRecipesResponse {
     ownedRecipes: number;
     equippedRecipes: number;
   };
+  activeSession?: CraftingSessionViewModel | null;
+  completedSessions?: CraftingSessionViewModel[];
   recipes: CraftingRecipeViewModel[];
 }
 
@@ -207,6 +232,7 @@ export interface CraftItemResponse {
     origin: CraftingOrigin;
   }>;
   craftingSkill?: CraftingSkillViewModel | null;
+  craftingSession?: CraftingSessionViewModel | null;
   craftingProgress?: {
     xpGained: number;
     previousLevel: number;
