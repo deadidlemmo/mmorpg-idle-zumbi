@@ -22,6 +22,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
+    "prisma:recipes:from-csv": "node node_modules/tsx/dist/cli.mjs prisma/generate-recipes-from-csv.ts",
     "test:grant-lutador-t1": "tsx prisma/grant-lutador-tier1-items.ts",
     "prisma:cleanup-items": "node node_modules/tsx/dist/cli.mjs prisma/cleanup-old-items.ts",
     "prisma:cleanup-items:apply": "node node_modules/tsx/dist/cli.mjs prisma/cleanup-old-items.ts --apply"
