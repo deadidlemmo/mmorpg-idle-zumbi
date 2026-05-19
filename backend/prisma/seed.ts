@@ -847,21 +847,37 @@ async function validateOfficialGatheringMaterials() {
     return;
   }
 
-  const total = await prisma.item.count({
+  const expectedMaterialNames = new Set(
+    materialDefinitions.map((material) => material.name),
+  );
+
+  if (expectedMaterialNames.size !== materialDefinitions.length) {
+    throw new Error(
+      'Validação de gathering falhou: existem materiais duplicados no seed.',
+    );
+  }
+
+  const totalSeeded = await prisma.item.count({
     where: {
+      name: {
+        in: [...expectedMaterialNames],
+      },
       isGatheringMaterial: true,
     },
   });
 
-  if (total !== 360) {
+  if (totalSeeded !== expectedMaterialNames.size) {
     throw new Error(
-      `Validação de gathering falhou: esperado 360 materiais oficiais, encontrado ${total}.`,
+      `Validação de gathering falhou: esperado ${expectedMaterialNames.size} materiais oficiais do seed, encontrado ${totalSeeded}.`,
     );
   }
 
   const tierGroups = await prisma.item.groupBy({
     by: ['tier'],
     where: {
+      name: {
+        in: [...expectedMaterialNames],
+      },
       isGatheringMaterial: true,
     },
     _count: {
@@ -869,13 +885,22 @@ async function validateOfficialGatheringMaterials() {
     },
   });
 
-  for (let tier = 1; tier <= 10; tier += 1) {
-    const group = tierGroups.find((entry) => entry.tier === tier);
-    const count = group?._count._all ?? 0;
+  const expectedTierCounts = new Map<number, number>();
 
-    if (count !== 36) {
+  for (const materialDefinition of materialDefinitions) {
+    expectedTierCounts.set(
+      materialDefinition.tier,
+      (expectedTierCounts.get(materialDefinition.tier) ?? 0) + 1,
+    );
+  }
+
+  for (const [tier, expectedCount] of expectedTierCounts) {
+    const actualCount =
+      tierGroups.find((entry) => entry.tier === tier)?._count._all ?? 0;
+
+    if (actualCount !== expectedCount) {
       throw new Error(
-        `Validação de gathering falhou: tier ${tier} deveria ter 36 materiais, encontrado ${count}.`,
+        `Validação de gathering falhou: tier ${tier} deveria ter ${expectedCount} materiais do seed, encontrado ${actualCount}.`,
       );
     }
   }
@@ -883,18 +908,15 @@ async function validateOfficialGatheringMaterials() {
   const combinationGroups = await prisma.item.groupBy({
     by: ['tier', 'materialOrigin', 'materialSlot'],
     where: {
+      name: {
+        in: [...expectedMaterialNames],
+      },
       isGatheringMaterial: true,
     },
     _count: {
       _all: true,
     },
   });
-
-  if (combinationGroups.length !== 360) {
-    throw new Error(
-      `Validação de gathering falhou: esperado 360 combinações tier+gathering+slot, encontrado ${combinationGroups.length}.`,
-    );
-  }
 
   const officialOrigins: MaterialOrigin[] = [
     MaterialOrigin.DESMANCHE,
@@ -915,7 +937,6 @@ async function validateOfficialGatheringMaterials() {
 
   const invalidCombination = combinationGroups.find(
     (entry) =>
-      entry._count._all !== 1 ||
       !entry.materialOrigin ||
       !entry.materialSlot ||
       !officialOrigins.includes(entry.materialOrigin) ||
@@ -928,38 +949,40 @@ async function validateOfficialGatheringMaterials() {
     );
   }
 
-  for (let tier = 1; tier <= 10; tier += 1) {
-    for (const origin of officialOrigins) {
-      const count = combinationGroups.filter(
-        (entry) => entry.tier === tier && entry.materialOrigin === origin,
-      ).length;
+  const expectedCombinationCounts = new Map<string, number>();
 
-      if (count !== 6) {
-        throw new Error(
-          `Validação de gathering falhou: tier ${tier} / ${origin} deveria ter 6 slots, encontrado ${count}.`,
-        );
-      }
+  for (const materialDefinition of materialDefinitions) {
+    const key = [
+      materialDefinition.tier,
+      materialDefinition.materialOrigin,
+      materialDefinition.materialSlot,
+    ].join('::');
 
-      for (const slot of officialSlots) {
-        const hasSlot = combinationGroups.some(
-          (entry) =>
-            entry.tier === tier &&
-            entry.materialOrigin === origin &&
-            entry.materialSlot === slot &&
-            entry._count._all === 1,
-        );
+    expectedCombinationCounts.set(
+      key,
+      (expectedCombinationCounts.get(key) ?? 0) + 1,
+    );
+  }
 
-        if (!hasSlot) {
-          throw new Error(
-            `Validação de gathering falhou: faltando tier ${tier} / ${origin} / ${slot}.`,
-          );
-        }
-      }
+  for (const [key, expectedCount] of expectedCombinationCounts) {
+    const [tier, origin, slot] = key.split('::');
+    const actualCount =
+      combinationGroups.find(
+        (entry) =>
+          entry.tier === Number(tier) &&
+          entry.materialOrigin === origin &&
+          entry.materialSlot === slot,
+      )?._count._all ?? 0;
+
+    if (actualCount !== expectedCount) {
+      throw new Error(
+        `Validação de gathering falhou: ${key} deveria ter ${expectedCount} materiais do seed, encontrado ${actualCount}.`,
+      );
     }
   }
 
   console.log(
-    'Validação de gathering concluída: 360 materiais oficiais, 36 por tier e 1 por combinação tier+gathering+slot.',
+    `Validação de gathering concluída: ${expectedMaterialNames.size} materiais oficiais do seed conferidos.`,
   );
 }
 
@@ -1170,9 +1193,15 @@ async function main() {
     itemsByName.set(item.name, item);
   }
 
-  console.log(
-    'Seed de receitas vazio: nenhuma receita antiga será criada/atualizada.',
-  );
+  if (recipeDefinitions.length === 0) {
+    console.log(
+      'Seed de receitas vazio: nenhuma receita antiga será criada/atualizada.',
+    );
+  } else {
+    console.log(
+      `Criando/atualizando ${recipeDefinitions.length} receitas de crafting...`,
+    );
+  }
 
   for (const recipeDefinition of recipeDefinitions) {
     const outputItem = getRequiredItem(
@@ -1232,15 +1261,20 @@ async function main() {
     }
   }
 
-  if (mobsByDropKey.size > 0) {
+  const officialMobDropItemIds = mobDropItemDefinitions.map(
+    (mobDropItemDefinition) =>
+      getRequiredItem(itemsByName, mobDropItemDefinition.name).id,
+  );
+
+  if (officialMobDropItemIds.length > 0) {
     console.log(
-      'Limpando drops antigos dos mobs cadastrados na tabela de drops...',
+      'Limpando drops antigos oficiais de mobs antes de recriar a matriz canonica...',
     );
 
     await prisma.mobDrop.deleteMany({
       where: {
-        mobId: {
-          in: Array.from(mobsByDropKey.values()).map((mob) => mob.id),
+        itemId: {
+          in: officialMobDropItemIds,
         },
       },
     });

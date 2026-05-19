@@ -12,7 +12,7 @@ type MobBaseSeedData = {
   mobType: MobType;
 };
 
-const mobBaseDefinitions: MobBaseSeedData[] = [
+export const mobBaseDefinitions: MobBaseSeedData[] = [
   {
     name: 'Errante do Subúrbio',
     aliases: ['Errante Zumbi', 'Errante Suburbano'],
