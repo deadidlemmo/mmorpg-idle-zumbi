@@ -9,22 +9,34 @@ import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
   DashboardEquipmentItem,
+  DashboardEquipmentViewModel,
 } from '../../dashboard/types/dashboard.types';
 import { EmptyInventoryState } from '../components/EmptyInventoryState';
 import { InventoryFilters } from '../components/InventoryFilters';
 import { InventoryGrid } from '../components/InventoryGrid';
 import { InventoryItemDetailsModal } from '../components/InventoryItemDetailsModal';
+import {
+  getCharacterBank,
+  getCharacterEquipment,
+  equipInventoryItem,
+  extractInventoryActionApiError,
+  consumeInventoryItem,
+  depositInventoryItemToBank,
+  unequipInventoryItem,
+  withdrawInventoryItemFromBank,
+} from '../api/inventory.api';
 import { useInventory } from '../hooks/useInventory';
 import '../styles/inventory.css';
 import type {
   InventoryEntry,
   InventoryFilterKey,
+  InventoryItemActionFeedback,
+  InventoryItemActionViewModel,
 } from '../types/inventory.types';
 import {
   buildInventoryFilters,
   filterInventoryItems,
   formatInventoryRarity,
-  formatInventorySlot,
   formatInventoryType,
   formatMaterialOrigin,
   getInventoryBonusList,
@@ -216,6 +228,95 @@ interface InventorySelectionState {
 
 const EMPTY_PANEL_TEXT = 'Clique em um slot para visualizar os detalhes.';
 
+function isEquipmentEntry(entry: InventoryEntry) {
+  const entryType = String(entry.type ?? '').toUpperCase();
+  const slot = String(entry.item.slot ?? '').toUpperCase();
+
+  return (
+    entryType === 'EQUIPMENT' && slot !== 'MATERIAL' && slot !== 'CONSUMABLE'
+  );
+}
+
+function isConsumableEntry(entry: InventoryEntry) {
+  const entryType = String(entry.type ?? '').toUpperCase();
+  const slot = String(entry.item.slot ?? '').toUpperCase();
+
+  return entryType === 'CONSUMABLE' || slot === 'CONSUMABLE';
+}
+
+function getInventoryItemActions(
+  entry: InventoryEntry | null,
+  source: InventorySelectionSource,
+): InventoryItemActionViewModel[] {
+  if (!entry || entry.quantity <= 0) return [];
+
+  if (source === 'equipped' && isEquipmentEntry(entry)) {
+    return [
+      {
+        kind: 'unequip',
+        label: 'Desequipar',
+        description: 'Remove este item do slot atual do personagem.',
+      },
+    ];
+  }
+
+  if (source === 'bank') {
+    return [
+      {
+        kind: 'withdraw',
+        label: 'Retirar',
+        description: 'Move este item do banco para a mochila.',
+      },
+    ];
+  }
+
+  if (source !== 'inventory') return [];
+
+  const actions: InventoryItemActionViewModel[] = [];
+
+  if (isConsumableEntry(entry)) {
+    actions.push({
+      kind: 'consume',
+      label: 'Usar',
+      description: 'Consome 1 unidade e aplica o efeito do item.',
+    });
+  }
+
+  if (isEquipmentEntry(entry)) {
+    actions.push({
+      kind: 'equip',
+      label: 'Equipar',
+      description: 'Move este item para o slot compat\u00edvel do personagem.',
+    });
+  }
+
+  actions.push({
+    kind: 'deposit',
+    label: 'Enviar ao banco',
+    description: '',
+  });
+
+  return actions;
+}
+
+function findEquipmentItemById(
+  equipment: DashboardEquipmentViewModel,
+  itemId: string | null,
+) {
+  if (!itemId) return null;
+
+  return (
+    [
+      equipment.mainHand,
+      equipment.offHand,
+      equipment.head,
+      equipment.armor,
+      equipment.pants,
+      equipment.boots,
+    ].find((item) => item?.id === itemId) ?? null
+  );
+}
+
 function buildEquippedInventoryEntry(
   item: DashboardEquipmentItem,
 ): InventoryEntry {
@@ -285,10 +386,7 @@ function buildDetails(entry: InventoryEntry): Array<[string, string]> {
     ['Tipo', formatInventoryType(entry)],
     ['Raridade', formatInventoryRarity(item.rarity)],
     ['Tier', typeof item.tier === 'number' ? String(item.tier) : null],
-    ['Slot', formatInventorySlot(item.slot)],
     ['Origem', formatMaterialOrigin(item.materialOrigin)],
-    ['Família', item.family ?? null],
-    ['Mapa', item.map?.name ?? null],
     ['Classe', item.class?.name ?? null],
   ];
 
@@ -302,6 +400,10 @@ interface InventoryDesktopDetailsPanelProps {
   onClear: () => void;
   emptyText: string;
   emptySlotLabel?: string | null;
+  actions?: InventoryItemActionViewModel[];
+  actionFeedback?: InventoryItemActionFeedback | null;
+  isActionBusy?: boolean;
+  onUseItem?: (entry: InventoryEntry, action: InventoryItemActionViewModel) => void;
 }
 
 function InventoryDesktopDetailsPanel({
@@ -309,6 +411,10 @@ function InventoryDesktopDetailsPanel({
   onClear,
   emptyText,
   emptySlotLabel = null,
+  actions = [],
+  actionFeedback = null,
+  isActionBusy = false,
+  onUseItem,
 }: InventoryDesktopDetailsPanelProps) {
   if (!entry) {
     return (
@@ -426,6 +532,37 @@ function InventoryDesktopDetailsPanel({
           ))}
         </dl>
       </div>
+
+      {actions.length > 0 ? (
+        <div className="inventory-details-panel__actions">
+          <div className="inventory-item-action-list">
+            {actions.map((action) => (
+              <button
+                key={action.kind}
+                type="button"
+                className={`inventory-item-action-button inventory-item-action-button--${action.kind}`}
+                disabled={isActionBusy}
+                onClick={() => onUseItem?.(entry, action)}
+              >
+                {isActionBusy ? 'Processando...' : action.label}
+              </button>
+            ))}
+          </div>
+
+          {actions[0]?.description ? (
+            <span>{actions[0].description}</span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {actionFeedback ? (
+        <p
+          className={`inventory-item-action-feedback inventory-item-action-feedback--${actionFeedback.tone}`}
+          role="status"
+        >
+          {actionFeedback.message}
+        </p>
+      ) : null}
     </aside>
   );
 }
@@ -441,6 +578,16 @@ export function InventoryPage() {
   });
   const isMobileDetails = useIsMobileInventoryDetails();
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isItemActionBusy, setIsItemActionBusy] = useState(false);
+  const [itemActionFeedback, setItemActionFeedback] =
+    useState<InventoryItemActionFeedback | null>(null);
+  const [equipmentSnapshot, setEquipmentSnapshot] =
+    useState<DashboardEquipmentViewModel | null>(null);
+  const [isEquipmentLoading, setIsEquipmentLoading] = useState(false);
+  const [equipmentError, setEquipmentError] = useState('');
+  const [bankItems, setBankItems] = useState<InventoryEntry[]>([]);
+  const [isBankLoading, setIsBankLoading] = useState(false);
+  const [bankError, setBankError] = useState('');
 
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
@@ -490,11 +637,109 @@ export function InventoryPage() {
     };
   }, [characterId]);
 
+  async function refreshCharacterOverview() {
+    if (!characterId) return;
+
+    const data = await getCharacterOverview(characterId);
+
+    setOverview(data);
+  }
+
+  async function refreshEquipmentSnapshot() {
+    if (!characterId) return;
+
+    const data = await getCharacterEquipment(characterId);
+
+    setEquipmentSnapshot(data.equipment ?? {});
+  }
+
+  async function refreshBankItems() {
+    if (!characterId) return;
+
+    const data = await getCharacterBank(characterId);
+
+    setBankItems(data.items ?? []);
+  }
+
+  useEffect(() => {
+    if (!characterId || activeTab !== 'equipped') return undefined;
+
+    let isMounted = true;
+    const selectedCharacterId = characterId;
+
+    async function loadEquipment() {
+      try {
+        setIsEquipmentLoading(true);
+        setEquipmentError('');
+
+        const data = await getCharacterEquipment(selectedCharacterId);
+
+        if (isMounted) {
+          setEquipmentSnapshot(data.equipment ?? {});
+        }
+      } catch {
+        if (isMounted) {
+          setEquipmentError(
+            'N\u00e3o foi poss\u00edvel carregar os equipamentos.',
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsEquipmentLoading(false);
+        }
+      }
+    }
+
+    loadEquipment();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab, characterId]);
+
+  useEffect(() => {
+    if (!characterId || activeTab !== 'bank') return undefined;
+
+    let isMounted = true;
+    const selectedCharacterId = characterId;
+
+    async function loadBank() {
+      try {
+        setIsBankLoading(true);
+        setBankError('');
+
+        const data = await getCharacterBank(selectedCharacterId);
+
+        if (isMounted) {
+          setBankItems(data.items ?? []);
+        }
+      } catch {
+        if (isMounted) {
+          setBankError('N\u00e3o foi poss\u00edvel carregar o banco.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsBankLoading(false);
+        }
+      }
+    }
+
+    loadBank();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab, characterId]);
+
   const character = useMemo(() => {
     if (!overview) return null;
 
     return buildCharacterViewModel(overview);
   }, [overview]);
+
+  const equipmentForDisplay = useMemo<DashboardEquipmentViewModel>(() => {
+    return equipmentSnapshot ?? character?.equipment ?? {};
+  }, [character?.equipment, equipmentSnapshot]);
 
   const filters = useMemo(() => buildInventoryFilters(items), [items]);
 
@@ -504,6 +749,27 @@ export function InventoryPage() {
 
   const selectedDetailsItem = useMemo(() => {
     if (!selection.entry || selection.source !== activeTab) return null;
+
+    if (activeTab === 'equipped') {
+      const currentSelectedItem = findEquipmentItemById(
+        equipmentForDisplay,
+        selection.entry.item.id,
+      );
+
+      return currentSelectedItem
+        ? buildEquippedInventoryEntry(currentSelectedItem)
+        : null;
+    }
+
+    if (activeTab === 'bank') {
+      const currentSelectedItemId = getInventoryEntryId(selection.entry);
+
+      return (
+        bankItems.find((entry) => {
+          return getInventoryEntryId(entry) === currentSelectedItemId;
+        }) ?? null
+      );
+    }
 
     if (activeTab !== 'inventory') {
       return selection.entry;
@@ -516,7 +782,11 @@ export function InventoryPage() {
         return getInventoryEntryId(entry) === currentSelectedItemId;
       }) ?? null
     );
-  }, [activeTab, filteredItems, selection]);
+  }, [activeTab, bankItems, equipmentForDisplay, filteredItems, selection]);
+
+  const selectedItemActions = useMemo(() => {
+    return getInventoryItemActions(selectedDetailsItem, activeTab);
+  }, [activeTab, selectedDetailsItem]);
 
   const selectedItemId = getInventoryEntryId(selectedDetailsItem);
   const selectedEmptySlotLabel =
@@ -526,10 +796,12 @@ export function InventoryPage() {
   const hasFilteredItems = filteredItems.length > 0;
   const isEmptyAfterFilter = hasItems && !hasFilteredItems;
   const isCompletelyEmpty = !hasItems;
+  const hasBankItems = bankItems.length > 0;
 
   function updateSelection(nextSelection: InventorySelectionState) {
     setSelection(nextSelection);
     setIsDetailsModalOpen(Boolean(isMobileDetails && nextSelection.entry));
+    setItemActionFeedback(null);
   }
 
   function clearSelection(source: InventorySelectionSource = activeTab) {
@@ -539,6 +811,97 @@ export function InventoryPage() {
       emptySlotLabel: null,
     });
     setIsDetailsModalOpen(false);
+    setItemActionFeedback(null);
+  }
+
+  async function handleUseInventoryItem(
+    entry: InventoryEntry,
+    requestedAction: InventoryItemActionViewModel,
+  ) {
+    if (!characterId) return;
+
+    const action = getInventoryItemActions(entry, activeTab).find((itemAction) => {
+      return itemAction.kind === requestedAction.kind;
+    });
+
+    if (!action) return;
+
+    setIsItemActionBusy(true);
+    setItemActionFeedback(null);
+
+    try {
+      const payload = {
+        characterId,
+        itemId: entry.item.id,
+      };
+
+      const storagePayload = {
+        ...payload,
+        quantity: entry.quantity,
+      };
+
+      const result =
+        action.kind === 'equip'
+          ? await equipInventoryItem(payload)
+          : action.kind === 'unequip'
+            ? await unequipInventoryItem({
+                characterId,
+                slot: String(entry.item.slot ?? ''),
+              })
+            : action.kind === 'deposit'
+              ? await depositInventoryItemToBank(storagePayload)
+              : action.kind === 'withdraw'
+                ? await withdrawInventoryItemFromBank(storagePayload)
+                : await consumeInventoryItem(payload);
+
+      setItemActionFeedback({
+        tone: 'success',
+        message:
+          result.message ??
+          (action.kind === 'equip'
+            ? 'Item equipado com sucesso.'
+            : action.kind === 'unequip'
+              ? 'Item desequipado com sucesso.'
+              : action.kind === 'deposit'
+                ? 'Item enviado ao banco.'
+                : action.kind === 'withdraw'
+                  ? 'Item retirado do banco.'
+                  : 'Item usado com sucesso.'),
+      });
+
+      await Promise.allSettled([
+        refetch(),
+        refreshCharacterOverview(),
+        refreshEquipmentSnapshot(),
+        refreshBankItems(),
+      ]);
+
+      if (action.kind === 'unequip') {
+        clearSelection('equipped');
+      } else if (action.kind === 'deposit') {
+        clearSelection('inventory');
+      } else if (action.kind === 'withdraw') {
+        clearSelection('bank');
+      }
+    } catch (error) {
+      setItemActionFeedback({
+        tone: 'error',
+        message: extractInventoryActionApiError(
+          error,
+          action.kind === 'equip'
+            ? 'N\u00e3o foi poss\u00edvel equipar este item.'
+            : action.kind === 'unequip'
+              ? 'N\u00e3o foi poss\u00edvel desequipar este item.'
+              : action.kind === 'deposit'
+                ? 'N\u00e3o foi poss\u00edvel enviar este item ao banco.'
+                : action.kind === 'withdraw'
+                  ? 'N\u00e3o foi poss\u00edvel retirar este item do banco.'
+                  : 'N\u00e3o foi poss\u00edvel usar este consum\u00edvel.',
+        ),
+      });
+    } finally {
+      setIsItemActionBusy(false);
+    }
   }
 
   if (!characterId) {
@@ -692,8 +1055,20 @@ export function InventoryPage() {
                 </div>
 
                 <div className="inventory-equipped-shell">
+                  {isEquipmentLoading ? (
+                    <div className="inventory-equipped-status">
+                      Atualizando equipamentos...
+                    </div>
+                  ) : null}
+
+                  {!isEquipmentLoading && equipmentError ? (
+                    <div className="inventory-equipped-status inventory-equipped-status--error">
+                      {equipmentError}
+                    </div>
+                  ) : null}
+
                   <DashboardEquipmentBody
-                    equipment={character.equipment ?? {}}
+                    equipment={equipmentForDisplay}
                     selectedItemId={selectedItemId}
                     onSelectSlot={({ item, label }) => {
                       updateSelection({
@@ -717,30 +1092,64 @@ export function InventoryPage() {
                     <span>Banco</span>
                     <h2 id="inventory-bank-title">Armazenamento</h2>
                   </div>
+
+                  <p>
+                    <strong>{bankItems.length}</strong> tipos guardados
+                  </p>
                 </div>
 
-                <div className="inventory-grid-shell inventory-grid-shell--bank">
-                  <InventoryGrid
-                    items={[]}
-                    onSelectItem={(entry) => {
-                      updateSelection({
-                        source: 'bank',
-                        entry,
-                        emptySlotLabel: null,
-                      });
-                    }}
-                    selectedItemId={selectedItemId}
-                    ariaLabel="Grade de slots do banco"
-                    emptySlotLabel="Vazio"
-                    onSelectEmptySlot={(slotNumber) => {
-                      updateSelection({
-                        source: 'bank',
-                        entry: null,
-                        emptySlotLabel: `Slot ${slotNumber}`,
-                      });
-                    }}
-                  />
-                </div>
+                {isBankLoading ? (
+                  <div className="inventory-state-card">
+                    <div className="loading-spinner" />
+                    <span>Carregando banco...</span>
+                  </div>
+                ) : null}
+
+                {!isBankLoading && bankError ? (
+                  <div className="inventory-state-card inventory-state-card--error">
+                    <strong>Falha ao carregar banco</strong>
+                    <p>{bankError}</p>
+
+                    <button type="button" onClick={refreshBankItems}>
+                      Tentar novamente
+                    </button>
+                  </div>
+                ) : null}
+
+                {!isBankLoading && !bankError ? (
+                  <div className="inventory-grid-shell inventory-grid-shell--bank">
+                    <InventoryGrid
+                      items={bankItems}
+                      onSelectItem={(entry) => {
+                        updateSelection({
+                          source: 'bank',
+                          entry,
+                          emptySlotLabel: null,
+                        });
+                      }}
+                      selectedItemId={selectedItemId}
+                      ariaLabel="Grade de slots do banco"
+                      emptySlotLabel="Vazio"
+                      onSelectEmptySlot={(slotNumber) => {
+                        updateSelection({
+                          source: 'bank',
+                          entry: null,
+                          emptySlotLabel: `Slot ${slotNumber}`,
+                        });
+                      }}
+                    />
+                  </div>
+                ) : null}
+
+                {!isBankLoading && !bankError && !hasBankItems ? (
+                  <div className="inventory-state-card inventory-state-card--compact">
+                    <strong>Banco vazio</strong>
+                    <p>
+                      Selecione um item da mochila e use Enviar ao banco para
+                      liberar espa\u00e7o no invent\u00e1rio.
+                    </p>
+                  </div>
+                ) : null}
               </section>
             ) : null}
           </section>
@@ -751,6 +1160,10 @@ export function InventoryPage() {
               emptyText={EMPTY_PANEL_TEXT}
               emptySlotLabel={selectedEmptySlotLabel}
               onClear={() => clearSelection()}
+              actions={selectedItemActions}
+              actionFeedback={itemActionFeedback}
+              isActionBusy={isItemActionBusy}
+              onUseItem={handleUseInventoryItem}
             />
           </div>
         </div>
@@ -760,6 +1173,10 @@ export function InventoryPage() {
             isMobileDetails && isDetailsModalOpen ? selectedDetailsItem : null
           }
           onClose={() => setIsDetailsModalOpen(false)}
+          actions={selectedItemActions}
+          actionFeedback={itemActionFeedback}
+          isActionBusy={isItemActionBusy}
+          onUseItem={handleUseInventoryItem}
         />
       </main>
     </DashboardLayout>

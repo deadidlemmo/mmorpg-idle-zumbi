@@ -26,6 +26,7 @@
   --dashboard-topbar-blue-rgb: 72, 144, 214;
   --dashboard-topbar-red-rgb: 176, 66, 58;
   --dashboard-topbar-incursion-rgb: 216, 181, 86;
+  --dashboard-topbar-world-boss-rgb: 143, 93, 214;
   --dashboard-topbar-white-rgb: 231, 227, 216;
   --dashboard-topbar-border-rgb: var(--dashboard-topbar-green-rgb);
 
@@ -77,12 +78,16 @@
   --dashboard-topbar-border-rgb: var(--dashboard-topbar-red-rgb);
 }
 
+.dashboard-topbar--crafting {
+  --dashboard-topbar-border-rgb: var(--dashboard-topbar-gold-rgb);
+}
+
 .dashboard-topbar--incursion {
   --dashboard-topbar-border-rgb: var(--dashboard-topbar-incursion-rgb);
 }
 
 .dashboard-topbar--world-boss {
-  --dashboard-topbar-border-rgb: var(--dashboard-topbar-gold-rgb);
+  --dashboard-topbar-border-rgb: var(--dashboard-topbar-world-boss-rgb);
 }
 
 .dashboard-topbar--idle {
@@ -165,7 +170,10 @@
   opacity: 0.9;
 }
 
-.dashboard-topbar__activity > :not(.dashboard-topbar__activity-progress) {
+.dashboard-topbar__activity
+  > :not(.dashboard-topbar__activity-progress):not(
+    .dashboard-topbar__activity-stop
+  ) {
   position: relative;
   z-index: 2;
 }
@@ -217,6 +225,38 @@
       rgba(96, 214, 103, 0.92),
       rgba(34, 142, 68, 0.94)
     );
+}
+
+.dashboard-topbar__activity--stoppable {
+  grid-template-columns: 34px minmax(142px, auto) 25px;
+  margin-right: 0.44rem;
+  padding-right: 0.56rem;
+}
+
+.dashboard-topbar--crafting .dashboard-topbar__activity {
+  border-color: rgba(var(--dashboard-topbar-gold-rgb), 0.34);
+}
+
+.dashboard-topbar--crafting .dashboard-topbar__activity-progress {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(0, 0, 0, 0.12)),
+    rgb(34, 31, 20);
+}
+
+.dashboard-topbar--crafting .dashboard-topbar__activity-progress span {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 48%, rgba(0, 0, 0, 0.16)),
+    linear-gradient(
+      90deg,
+      rgba(121, 91, 24, 0.94),
+      rgba(212, 169, 57, 0.94) 58%,
+      rgba(255, 218, 95, 0.92)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 0 10px rgba(var(--dashboard-topbar-gold-rgb), 0.16);
 }
 
 .dashboard-topbar--auto-combat .dashboard-topbar__activity {
@@ -273,29 +313,30 @@
 }
 
 .dashboard-topbar--world-boss .dashboard-topbar__activity {
-  border-color: rgba(var(--dashboard-topbar-gold-rgb), 0.34);
+  border-color: rgba(var(--dashboard-topbar-world-boss-rgb), 0.36);
 }
 
 .dashboard-topbar--world-boss .dashboard-topbar__activity-progress {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(0, 0, 0, 0.14)),
-    rgb(34, 24, 24);
+    rgb(27, 24, 38);
 }
 
 .dashboard-topbar--world-boss .dashboard-topbar__activity-progress span {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 48%, rgba(0, 0, 0, 0.18)),
+    repeating-linear-gradient(135deg, rgba(236, 223, 255, 0.08) 0 5px, transparent 5px 12px),
     linear-gradient(
       90deg,
-      rgba(117, 24, 29, 0.95),
-      rgba(196, 47, 48, 0.94) 58%,
-      rgba(245, 83, 76, 0.9)
+      rgba(70, 40, 128, 0.96),
+      rgba(125, 76, 202, 0.95) 58%,
+      rgba(180, 126, 255, 0.92)
     );
 
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     inset -1px 0 0 rgba(255, 255, 255, 0.07),
-    0 0 10px rgba(var(--dashboard-topbar-red-rgb), 0.18);
+    0 0 10px rgba(var(--dashboard-topbar-world-boss-rgb), 0.18);
 }
 
 .dashboard-topbar--idle .dashboard-topbar__activity {
@@ -516,7 +557,11 @@
   background:
     radial-gradient(circle at 50% 0%, rgba(255, 248, 232, 0.18), transparent 48%),
     radial-gradient(circle at 50% 100%, rgba(var(--dashboard-topbar-border-rgb), 0.28), transparent 68%),
-    linear-gradient(180deg, rgba(36, 27, 15, 0.98), rgba(8, 11, 10, 0.98));
+    linear-gradient(
+      180deg,
+      rgba(var(--dashboard-topbar-border-rgb), 0.22),
+      rgba(8, 11, 10, 0.98)
+    );
 
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
@@ -544,6 +589,13 @@
     rgb(88, 30, 27);
 }
 
+.dashboard-topbar--crafting .dashboard-topbar__activity-status-core {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgb(91, 69, 24);
+}
+
 .dashboard-topbar--incursion .dashboard-topbar__activity-status-core {
   background:
     radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.12), transparent 42%),
@@ -555,7 +607,60 @@
   background:
     radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.12), transparent 42%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
-    rgb(83, 66, 31);
+    rgb(64, 43, 104);
+}
+
+.dashboard-topbar__activity-stop {
+  position: absolute;
+  right: -0.42rem;
+  bottom: -0.34rem;
+  z-index: 24;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+
+  color: rgba(255, 248, 232, 0.96);
+
+  border: 1px solid rgba(255, 248, 232, 0.12);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.16), transparent 54%),
+    linear-gradient(180deg, rgba(52, 28, 29, 0.96), rgba(11, 12, 13, 0.96));
+
+  box-shadow:
+    0 0 0 2px rgba(5, 8, 8, 0.82),
+    0 8px 14px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.36);
+  cursor: pointer;
+  transform: translate(16%, 12%);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.dashboard-topbar__activity-stop:hover:not(:disabled),
+.dashboard-topbar__activity-stop:focus-visible:not(:disabled) {
+  color: #fff8e8;
+  border-color: rgba(255, 123, 123, 0.64);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.18), transparent 54%),
+    linear-gradient(180deg, rgba(108, 39, 40, 0.98), rgba(25, 15, 16, 0.98));
+  transform: translate(16%, 12%) scale(1.06);
+  outline: none;
+}
+
+.dashboard-topbar__activity-stop:disabled {
+  cursor: progress;
+  opacity: 0.58;
 }
 
 .dashboard-topbar--idle .dashboard-topbar__activity-status-ring {
@@ -799,15 +904,23 @@
   }
 
   .dashboard-topbar__activity {
+    flex: 1 1 auto;
     grid-template-columns: 28px minmax(0, 1fr) 22px;
     align-items: center;
     gap: 0.3rem;
 
-    width: 100%;
+    width: auto;
     max-width: none;
+    min-width: 0;
     min-height: 36px;
-    padding: 0.18rem 0.5rem 0.18rem 0.22rem;
+    padding: 0.18rem 0.86rem 0.18rem 0.22rem;
     overflow: visible;
+  }
+
+  .dashboard-topbar__activity--stoppable {
+    grid-template-columns: 28px minmax(0, 1fr) 22px;
+    margin-right: 0.3rem;
+    padding-right: 0.86rem;
   }
 
   .dashboard-topbar__activity-icon {
@@ -824,13 +937,13 @@
 
   .dashboard-topbar__activity-copy strong,
   .dashboard-topbar__activity-main strong {
-    max-width: 140px;
+    max-width: none;
     font-size: 0.67rem;
   }
 
   .dashboard-topbar__activity-copy small,
   .dashboard-topbar__activity-main small {
-    max-width: 140px;
+    max-width: none;
     font-size: 0.53rem;
   }
 
@@ -850,7 +963,7 @@
 
   .dashboard-topbar__activity-status-bubble {
     top: -0.52rem;
-    right: -0.64rem;
+    right: -0.5rem;
     z-index: 20;
     transform: none;
     min-width: 22px;
@@ -885,6 +998,20 @@
     height: 34px;
     font-size: 0.8rem;
   }
+
+  .dashboard-topbar__activity-stop {
+    right: -0.24rem;
+    bottom: -0.22rem;
+    width: 22px;
+    min-width: 22px;
+    height: 22px;
+    transform: translate(14%, 8%);
+  }
+
+  .dashboard-topbar__activity-stop:hover:not(:disabled),
+  .dashboard-topbar__activity-stop:focus-visible:not(:disabled) {
+    transform: translate(14%, 8%) scale(1.06);
+  }
 }
 
 @media (max-width: 430px) {
@@ -896,7 +1023,13 @@
     max-width: none;
     grid-template-columns: 27px minmax(0, 1fr) 21px;
     min-height: 36px;
-    padding: 0.17rem 0.48rem 0.17rem 0.2rem;
+    padding: 0.17rem 0.78rem 0.17rem 0.2rem;
+  }
+
+  .dashboard-topbar__activity--stoppable {
+    grid-template-columns: 27px minmax(0, 1fr) 21px;
+    margin-right: 0.22rem;
+    padding-right: 0.78rem;
   }
 
   .dashboard-topbar__activity-copy small,
@@ -906,7 +1039,7 @@
 
   .dashboard-topbar__activity-copy strong,
   .dashboard-topbar__activity-main strong {
-    max-width: 108px;
+    max-width: none;
   }
 
   .dashboard-topbar__activity-status {
@@ -925,7 +1058,7 @@
 
   .dashboard-topbar__activity-status-bubble {
     top: -0.65rem;
-    right: -1.00rem;
+    right: -0.48rem;
     min-width: 22px;
     height: 22px;
     padding-inline: 0.32rem;
@@ -934,6 +1067,14 @@
 
   .dashboard-topbar__resource {
     padding-inline: 0.46rem;
+  }
+
+  .dashboard-topbar__activity-stop {
+    right: -0.18rem;
+    bottom: -0.16rem;
+    width: 20px;
+    min-width: 20px;
+    height: 20px;
   }
 }
 

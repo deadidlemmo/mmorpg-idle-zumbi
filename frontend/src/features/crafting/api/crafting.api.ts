@@ -1,17 +1,18 @@
-import { API_ENDPOINTS } from '../../../services/api/endpoints';
-import { apiClient } from '../../../services/api/apiClient';
+import { API_ENDPOINTS } from "../../../services/api/endpoints";
+import { apiClient } from "../../../services/api/apiClient";
 import type {
   CraftingApiErrorResponse,
   CraftingRecipesResponse,
   CraftItemPayload,
   CraftItemResponse,
+  CraftingStatusResponse,
   CraftingSlot,
-} from '../types/crafting.types';
+} from "../types/crafting.types";
 
 interface ListCraftingRecipesParams {
   characterId: string;
   tier?: number | null;
-  slot?: CraftingSlot | 'ALL' | null;
+  slot?: CraftingSlot | "ALL" | null;
   craftableOnly?: boolean;
 }
 
@@ -26,8 +27,8 @@ export async function listCraftingRecipesRequest({
     {
       params: {
         tier: tier ?? undefined,
-        slot: slot && slot !== 'ALL' ? slot : undefined,
-        craftableOnly: craftableOnly ? 'true' : undefined,
+        slot: slot && slot !== "ALL" ? slot : undefined,
+        craftableOnly: craftableOnly ? "true" : undefined,
       },
     },
   );
@@ -46,8 +47,28 @@ export async function craftItemRequest(
   return response.data;
 }
 
+export async function getCraftingStatusRequest(
+  characterId: string,
+): Promise<CraftingStatusResponse> {
+  const response = await apiClient.get<CraftingStatusResponse>(
+    API_ENDPOINTS.crafting.status(characterId),
+  );
+
+  return response.data;
+}
+
+export async function stopCraftingRequest(
+  characterId: string,
+): Promise<CraftingStatusResponse> {
+  const response = await apiClient.post<CraftingStatusResponse>(
+    API_ENDPOINTS.crafting.stop(characterId),
+  );
+
+  return response.data;
+}
+
 export function extractCraftingApiError(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'response' in error) {
+  if (typeof error === "object" && error !== null && "response" in error) {
     const apiError = error as {
       response?: {
         data?: CraftingApiErrorResponse;
@@ -57,17 +78,17 @@ export function extractCraftingApiError(error: unknown): string {
     const message = apiError.response?.data?.message;
 
     if (Array.isArray(message)) {
-      return message.join(' ');
+      return message.join(" ");
     }
 
-    if (typeof message === 'string') {
+    if (typeof message === "string") {
       return message;
     }
 
-    if (typeof apiError.response?.data?.error === 'string') {
+    if (typeof apiError.response?.data?.error === "string") {
       return apiError.response.data.error;
     }
   }
 
-  return 'Não foi possível executar a criação. Tente novamente.';
+  return "Não foi possível executar a criação. Tente novamente.";
 }

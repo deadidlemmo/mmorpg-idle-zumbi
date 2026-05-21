@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { normalizeClassName } from '../../characters/api/characters.api';
 import '../../characters/characters.css';
+import { useGatheringRealtimeState } from '../../gathering/realtime/useGatheringRealtime';
 import { getCharacterOverview } from '../api/dashboard.api';
 import { CharacterStatsPanel } from '../components/CharacterStatsPanel';
 import { DashboardCard } from '../components/DashboardCard';
@@ -166,17 +167,33 @@ function readRawGatheringSkills(
 ): Array<Record<string, unknown>> {
   const overviewWithSkills = overview as CharacterOverviewResponse & {
     gatheringSkills?: unknown;
+    gathering?: {
+      gatheringSkills?: unknown;
+      skills?: unknown;
+      byOrigin?: unknown;
+    };
     skills?: unknown;
     character?: {
       gatheringSkills?: unknown;
+      gathering?: {
+        gatheringSkills?: unknown;
+        skills?: unknown;
+        byOrigin?: unknown;
+      };
       skills?: unknown;
     };
   };
 
   const source =
     overviewWithSkills.gatheringSkills ??
+    overviewWithSkills.gathering?.skills ??
+    overviewWithSkills.gathering?.gatheringSkills ??
+    overviewWithSkills.gathering?.byOrigin ??
     overviewWithSkills.skills ??
     overviewWithSkills.character?.gatheringSkills ??
+    overviewWithSkills.character?.gathering?.skills ??
+    overviewWithSkills.character?.gathering?.gatheringSkills ??
+    overviewWithSkills.character?.gathering?.byOrigin ??
     overviewWithSkills.character?.skills ??
     [];
 
@@ -204,7 +221,9 @@ function buildGatheringSkillsViewModel(
   return GATHERING_SKILLS_CONFIG.map((config) => {
     const matchedSkill = rawSkills.find((skill) => {
       const normalizedKey = normalizeGatheringSkillKey(
-        typeof skill.key === 'string'
+        typeof skill.origin === 'string'
+          ? skill.origin
+          : typeof skill.key === 'string'
           ? skill.key
           : typeof skill.name === 'string'
             ? skill.name
@@ -245,7 +264,8 @@ function buildGatheringSkillsViewModel(
       ),
     );
 
-    const explicitPercent = matchedSkill?.progressPercent;
+    const explicitPercent =
+      matchedSkill?.xpProgressPercent ?? matchedSkill?.progressPercent;
     const calculatedPercent =
       xpToNextLevel > 0 ? Math.round((currentXp / xpToNextLevel) * 100) : 0;
 
@@ -264,8 +284,87 @@ function buildGatheringSkillsViewModel(
   });
 }
 
+function applyRealtimeGatheringSkill(
+  skills: GatheringSkillViewModel[],
+  realtimeSkill?: {
+    origin?: string | null;
+    key?: string | null;
+    name?: string | null;
+    type?: string | null;
+    slug?: string | null;
+    level?: number | null;
+    currentLevel?: number | null;
+    xp?: number | null;
+    currentXp?: number | null;
+    xpToNextLevel?: number | null;
+    nextLevelXp?: number | null;
+    xpProgressPercent?: number | null;
+    progressPercent?: number | null;
+    isAtLevelCap?: boolean | null;
+  } | null,
+) {
+  if (!realtimeSkill) {
+    return skills;
+  }
+
+  const realtimeKey = normalizeGatheringSkillKey(
+    realtimeSkill.origin ??
+      realtimeSkill.key ??
+      realtimeSkill.name ??
+      realtimeSkill.type ??
+      realtimeSkill.slug ??
+      null,
+  );
+
+  if (!realtimeKey) {
+    return skills;
+  }
+
+  const level = Math.max(
+    1,
+    toSafeNumber(realtimeSkill.level ?? realtimeSkill.currentLevel ?? 1, 1),
+  );
+  const currentXp = Math.max(
+    0,
+    toSafeNumber(realtimeSkill.xp ?? realtimeSkill.currentXp ?? 0, 0),
+  );
+  const rawXpToNext = toSafeNumber(
+    realtimeSkill.xpToNextLevel ?? realtimeSkill.nextLevelXp ?? 100,
+    100,
+  );
+  const xpToNextLevel = realtimeSkill.isAtLevelCap
+    ? Math.max(1, currentXp)
+    : Math.max(1, rawXpToNext);
+  const calculatedPercent =
+    xpToNextLevel > 0 ? (currentXp / xpToNextLevel) * 100 : 0;
+  const explicitPercent =
+    realtimeSkill.xpProgressPercent ?? realtimeSkill.progressPercent;
+  const progressPercent = realtimeSkill.isAtLevelCap
+    ? 100
+    : Math.max(
+        0,
+        Math.min(
+          100,
+          toSafeNumber(explicitPercent ?? calculatedPercent, calculatedPercent),
+        ),
+      );
+
+  return skills.map((skill) =>
+    skill.key === realtimeKey
+      ? {
+          ...skill,
+          level,
+          currentXp,
+          xpToNextLevel,
+          progressPercent,
+        }
+      : skill,
+  );
+}
+
 export function DashboardOverviewPage() {
   const { characterId } = useParams();
+  const gatheringRealtimeState = useGatheringRealtimeState();
 
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
@@ -317,8 +416,11 @@ export function DashboardOverviewPage() {
   const gatheringSkills = useMemo(() => {
     if (!overview) return [];
 
-    return buildGatheringSkillsViewModel(overview);
-  }, [overview]);
+    return applyRealtimeGatheringSkill(
+      buildGatheringSkillsViewModel(overview),
+      gatheringRealtimeState.gatheringSkill,
+    );
+  }, [gatheringRealtimeState.gatheringSkill, overview]);
 
   if (!characterId) {
     return <Navigate to="/characters" replace />;

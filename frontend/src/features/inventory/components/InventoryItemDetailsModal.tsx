@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
-import type { InventoryEntry } from '../types/inventory.types';
+import type {
+  InventoryEntry,
+  InventoryItemActionFeedback,
+  InventoryItemActionViewModel,
+} from '../types/inventory.types';
 import {
   formatInventoryRarity,
-  formatInventorySlot,
   formatInventoryType,
   formatMaterialOrigin,
   getInventoryBonusList,
@@ -14,6 +17,10 @@ import {
 interface InventoryItemDetailsModalProps {
   entry: InventoryEntry | null;
   onClose: () => void;
+  actions?: InventoryItemActionViewModel[];
+  actionFeedback?: InventoryItemActionFeedback | null;
+  isActionBusy?: boolean;
+  onUseItem?: (entry: InventoryEntry, action: InventoryItemActionViewModel) => void;
 }
 
 type InventoryItemWithVisualMetadata = InventoryEntry['item'] & {
@@ -75,12 +82,9 @@ function buildDetails(entry: InventoryEntry): Array<[string, string]> {
     ['Valor', value],
     ['Origem', formatMaterialOrigin(item.materialOrigin)],
     ['Raridade', formatInventoryRarity(item.rarity)],
-    ['Slot compatível', formatInventorySlot(item.slot)],
     ['Tier', typeof item.tier === 'number' ? String(item.tier) : null],
     ['Nível', typeof level === 'number' ? String(level) : null],
     ['Classe', item.class?.name ?? item.className ?? null],
-    ['Família', item.family ?? null],
-    ['Mapa', item.map?.name ?? null],
   ];
 
   return details.filter((detail): detail is [string, string] =>
@@ -91,6 +95,10 @@ function buildDetails(entry: InventoryEntry): Array<[string, string]> {
 export function InventoryItemDetailsModal({
   entry,
   onClose,
+  actions = [],
+  actionFeedback = null,
+  isActionBusy = false,
+  onUseItem,
 }: InventoryItemDetailsModalProps) {
   useEffect(() => {
     if (!entry) return undefined;
@@ -229,6 +237,37 @@ export function InventoryItemDetailsModal({
               ) : null}
             </div>
           </div>
+        ) : null}
+
+        {actions.length > 0 ? (
+          <div className="inventory-modal__actions">
+            <div className="inventory-item-action-list">
+              {actions.map((action) => (
+                <button
+                  key={action.kind}
+                  type="button"
+                  className={`inventory-item-action-button inventory-item-action-button--${action.kind}`}
+                  disabled={isActionBusy}
+                  onClick={() => onUseItem?.(entry, action)}
+                >
+                  {isActionBusy ? 'Processando...' : action.label}
+                </button>
+              ))}
+            </div>
+
+            {actions[0]?.description ? (
+              <span>{actions[0].description}</span>
+            ) : null}
+          </div>
+        ) : null}
+
+        {actionFeedback ? (
+          <p
+            className={`inventory-item-action-feedback inventory-item-action-feedback--${actionFeedback.tone}`}
+            role="status"
+          >
+            {actionFeedback.message}
+          </p>
         ) : null}
       </section>
     </div>

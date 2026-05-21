@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import npcArsenalNogueira from '../../../assets/images/npcs/npc_arsenal_nogueira.png';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useParams } from "react-router-dom";
+import npcArsenalNogueira from "../../../assets/images/npcs/npc_arsenal_nogueira.png";
 import {
   CheckCircle2,
   ChevronDown,
@@ -12,23 +12,27 @@ import {
   Search,
   ShieldAlert,
   X,
-} from 'lucide-react';
-import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
-import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
+} from "lucide-react";
+import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
+import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import {
   ATTRIBUTE_STATS_CONFIG,
   type DashboardAttributeKey,
-} from '../../dashboard/constants/stats-config';
-import '../../dashboard/dashboard.css';
-import type { DashboardCharacterViewModel } from '../../dashboard/types/dashboard.types';
-import '../../gathering/styles/gathering.css';
-import { buildGatheringDashboardCharacter } from '../../gathering/utils/gathering-dashboard-character';
+} from "../../dashboard/constants/stats-config";
+import "../../dashboard/dashboard.css";
+import type { DashboardCharacterViewModel } from "../../dashboard/types/dashboard.types";
+import "../../gathering/styles/gathering.css";
+import { buildGatheringDashboardCharacter } from "../../gathering/utils/gathering-dashboard-character";
 import {
   craftItemRequest,
   extractCraftingApiError,
   listCraftingRecipesRequest,
-} from '../api/crafting.api';
-import '../styles/crafting.css';
+} from "../api/crafting.api";
+import {
+  useCraftingRealtimeActions,
+  useCraftingRealtimeState,
+} from "../realtime/useCraftingRealtime";
+import "../styles/crafting.css";
 import type {
   CraftingIngredientViewModel,
   CraftingOrigin,
@@ -37,13 +41,13 @@ import type {
   CraftingSessionViewModel,
   CraftingSkillViewModel,
   CraftingSlot,
-} from '../types/crafting.types';
+} from "../types/crafting.types";
 
-const CHARACTER_CLASS_FILTER = 'CHARACTER';
-const CRAFTING_FILTER_STORAGE_PREFIX = 'dead_idle_crafting_filters';
+const CHARACTER_CLASS_FILTER = "CHARACTER";
+const CRAFTING_FILTER_STORAGE_PREFIX = "dead_idle_crafting_filters";
 
-type CraftingTierFilter = 'CURRENT' | 'ALL' | number;
-type CraftingClassFilter = 'ALL' | typeof CHARACTER_CLASS_FILTER | string;
+type CraftingTierFilter = "CURRENT" | "ALL" | number;
+type CraftingClassFilter = "ALL" | typeof CHARACTER_CLASS_FILTER | string;
 type CraftingDropdownOption = {
   value: string;
   label: string;
@@ -52,7 +56,7 @@ type CraftingDropdownOption = {
 type CraftingStoredFilters = {
   tier: CraftingTierFilter;
   class: CraftingClassFilter;
-  slot: CraftingSlot | 'ALL';
+  slot: CraftingSlot | "ALL";
   craftableOnly: boolean;
 };
 type CraftingBonusEntry = {
@@ -63,18 +67,18 @@ type CraftingBonusEntry = {
   value: number;
 };
 
-const SLOT_FILTERS: Array<{ key: CraftingSlot | 'ALL'; label: string }> = [
-  { key: 'ALL', label: 'Todos' },
-  { key: 'MAIN_HAND', label: 'Arma' },
-  { key: 'OFF_HAND', label: 'Apoio' },
-  { key: 'HEAD', label: 'Elmo' },
-  { key: 'ARMOR', label: 'Armadura' },
-  { key: 'PANTS', label: 'Pernas' },
-  { key: 'BOOTS', label: 'Pés' },
+const SLOT_FILTERS: Array<{ key: CraftingSlot | "ALL"; label: string }> = [
+  { key: "ALL", label: "Todos" },
+  { key: "MAIN_HAND", label: "Arma" },
+  { key: "OFF_HAND", label: "Apoio" },
+  { key: "HEAD", label: "Elmo" },
+  { key: "ARMOR", label: "Armadura" },
+  { key: "PANTS", label: "Pernas" },
+  { key: "BOOTS", label: "Pés" },
 ];
 
 const TIER_FILTERS: CraftingTierFilter[] = [
-  'CURRENT',
+  "CURRENT",
   1,
   2,
   3,
@@ -85,41 +89,41 @@ const TIER_FILTERS: CraftingTierFilter[] = [
   8,
   9,
   10,
-  'ALL',
+  "ALL",
 ];
 
 const EMPTY_RECIPES: CraftingRecipeViewModel[] = [];
 
 const CRAFTING_NPC = {
-  name: 'Nogueira, mestre de bancada',
-  role: 'Serviço de criação',
-  title: 'Toda peça tem um segundo destino',
+  name: "Nogueira, mestre de bancada",
+  role: "Serviço de criação",
+  title: "Toda peça tem um segundo destino",
   quote:
-    'Se dá para desmontar, dá para reforçar. Se dá para reforçar, dá para vender.',
+    "Se dá para desmontar, dá para reforçar. Se dá para reforçar, dá para vender.",
   description:
-    'Use materiais de expedição, resíduos e biomateriais para montar equipamentos de qualquer classe e alimentar a economia do abrigo.',
+    "Use materiais de expedição, resíduos e biomateriais para montar equipamentos de qualquer classe e alimentar a economia do abrigo.",
 };
 
 const ORIGIN_TO_GATHERING_SLUG: Partial<Record<CraftingOrigin, string>> = {
-  DESMANCHE: 'desmanche',
-  COLETA: 'coleta',
-  PATRULHA: 'patrulha',
-  ARSENAL: 'arsenal',
-  TECNOVARREDURA: 'tecnovarredura',
-  CONTENCAO: 'contencao',
+  DESMANCHE: "desmanche",
+  COLETA: "coleta",
+  PATRULHA: "patrulha",
+  ARSENAL: "arsenal",
+  TECNOVARREDURA: "tecnovarredura",
+  CONTENCAO: "contencao",
 };
 
 function normalizeText(value?: string | null) {
-  return String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 }
 
 function formatNumber(value?: number | null) {
   const safeValue = Math.max(0, Math.floor(Number(value) || 0));
 
-  return safeValue.toLocaleString('pt-BR');
+  return safeValue.toLocaleString("pt-BR");
 }
 
 function formatDuration(totalSeconds?: number | null) {
@@ -129,11 +133,11 @@ function formatDuration(totalSeconds?: number | null) {
   const seconds = safeSeconds % 60;
 
   if (hours > 0) {
-    return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+    return `${hours}h ${String(minutes).padStart(2, "0")}m`;
   }
 
   if (minutes > 0) {
-    return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+    return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
   }
 
   return `${seconds}s`;
@@ -151,54 +155,54 @@ function clampPercent(value?: number | null) {
 
 function formatSlot(slot?: string | null) {
   switch (slot) {
-    case 'MAIN_HAND':
-      return 'Arma';
-    case 'OFF_HAND':
-      return 'Apoio';
-    case 'HEAD':
-      return 'Elmo';
-    case 'ARMOR':
-      return 'Armadura';
-    case 'PANTS':
-      return 'Pernas';
-    case 'BOOTS':
-      return 'Pés';
+    case "MAIN_HAND":
+      return "Arma";
+    case "OFF_HAND":
+      return "Apoio";
+    case "HEAD":
+      return "Elmo";
+    case "ARMOR":
+      return "Armadura";
+    case "PANTS":
+      return "Pernas";
+    case "BOOTS":
+      return "Pés";
     default:
-      return slot ?? 'Item';
+      return slot ?? "Item";
   }
 }
 
 function formatOrigin(origin?: string | null) {
   switch (origin) {
-    case 'DESMANCHE':
-      return 'Desmanche';
-    case 'COLETA':
-      return 'Coleta';
-    case 'CONTENCAO':
-      return 'Contenção';
-    case 'ARSENAL':
-      return 'Arsenal';
-    case 'PATRULHA':
-      return 'Patrulha';
-    case 'TECNOVARREDURA':
-      return 'Tecnovarredura';
-    case 'DROP_MOBS':
-      return 'Mobs';
+    case "DESMANCHE":
+      return "Desmanche";
+    case "COLETA":
+      return "Coleta";
+    case "CONTENCAO":
+      return "Contenção";
+    case "ARSENAL":
+      return "Arsenal";
+    case "PATRULHA":
+      return "Patrulha";
+    case "TECNOVARREDURA":
+      return "Tecnovarredura";
+    case "DROP_MOBS":
+      return "Mobs";
     default:
-      return origin ?? 'Origem';
+      return origin ?? "Origem";
   }
 }
 
 function formatRole(role?: string | null) {
   switch (role) {
-    case 'MAIN_COMPONENT':
-      return 'Principal';
-    case 'SHARED_MATERIAL':
-      return 'Secundário';
-    case 'RARE_MOB_DROP':
-      return 'Drop de mob';
+    case "MAIN_COMPONENT":
+      return "Principal";
+    case "SHARED_MATERIAL":
+      return "Secundário";
+    case "RARE_MOB_DROP":
+      return "Drop de mob";
     default:
-      return role ?? 'Ingrediente';
+      return role ?? "Ingrediente";
   }
 }
 
@@ -208,30 +212,32 @@ function getItemInitials(name: string) {
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0])
-    .join('')
+    .join("")
     .toUpperCase();
 }
 
 function getRarityClassName(rarity?: string | null) {
-  return `rarity-${String(rarity ?? 'COMMON').toLowerCase()}`;
+  return `rarity-${String(rarity ?? "COMMON").toLowerCase()}`;
 }
 
 function getTierBandClassName(tier?: number | null) {
   const safeTier = Number(tier) || 1;
 
-  if (safeTier >= 9) return 'tier-band-legendary';
-  if (safeTier >= 7) return 'tier-band-epic';
-  if (safeTier >= 5) return 'tier-band-rare';
-  if (safeTier >= 3) return 'tier-band-uncommon';
+  if (safeTier >= 9) return "tier-band-legendary";
+  if (safeTier >= 7) return "tier-band-epic";
+  if (safeTier >= 5) return "tier-band-rare";
+  if (safeTier >= 3) return "tier-band-uncommon";
 
-  return 'tier-band-common';
+  return "tier-band-common";
 }
 
 function getCurrentCraftingTier(
   recipesResponse?: CraftingRecipesResponse | null,
+  craftingSkill?: CraftingSkillViewModel | null,
 ) {
   const responseTier = Number(
-    recipesResponse?.character.craftingSkill?.unlockedTier ??
+    craftingSkill?.unlockedTier ??
+      recipesResponse?.character.craftingSkill?.unlockedTier ??
       recipesResponse?.character.unlockedTier ??
       1,
   );
@@ -247,7 +253,7 @@ function getResolvedTierFilter(
   tierFilter: CraftingTierFilter,
   currentCraftingTier: number,
 ) {
-  return tierFilter === 'CURRENT' ? currentCraftingTier : tierFilter;
+  return tierFilter === "CURRENT" ? currentCraftingTier : tierFilter;
 }
 
 function getTierFilterValue(tierFilter: CraftingTierFilter) {
@@ -255,14 +261,14 @@ function getTierFilterValue(tierFilter: CraftingTierFilter) {
 }
 
 function parseTierFilterValue(value: string): CraftingTierFilter {
-  if (value === 'CURRENT' || value === 'ALL') {
+  if (value === "CURRENT" || value === "ALL") {
     return value;
   }
 
   const tier = Number(value);
 
   if (!Number.isFinite(tier)) {
-    return 'CURRENT';
+    return "CURRENT";
   }
 
   return Math.max(1, Math.min(10, Math.floor(tier)));
@@ -274,13 +280,13 @@ function getCraftingFilterStorageKey(characterId: string) {
 
 function readStoredCraftingFilters(characterId: string): CraftingStoredFilters {
   const fallback: CraftingStoredFilters = {
-    tier: 'CURRENT',
+    tier: "CURRENT",
     class: CHARACTER_CLASS_FILTER,
-    slot: 'ALL',
+    slot: "ALL",
     craftableOnly: false,
   };
 
-  if (!characterId || typeof window === 'undefined') {
+  if (!characterId || typeof window === "undefined") {
     return fallback;
   }
 
@@ -299,19 +305,16 @@ function readStoredCraftingFilters(characterId: string): CraftingStoredFilters {
 
     return {
       tier:
-        typeof parsed.tier === 'string'
+        typeof parsed.tier === "string"
           ? parseTierFilterValue(parsed.tier)
           : fallback.tier,
-      class:
-        typeof parsed.class === 'string'
-          ? parsed.class
-          : fallback.class,
+      class: typeof parsed.class === "string" ? parsed.class : fallback.class,
       slot:
-        typeof parsed.slot === 'string'
-          ? (parsed.slot as CraftingSlot | 'ALL')
+        typeof parsed.slot === "string"
+          ? (parsed.slot as CraftingSlot | "ALL")
           : fallback.slot,
       craftableOnly:
-        typeof parsed.craftableOnly === 'boolean'
+        typeof parsed.craftableOnly === "boolean"
           ? parsed.craftableOnly
           : fallback.craftableOnly,
     };
@@ -321,11 +324,11 @@ function readStoredCraftingFilters(characterId: string): CraftingStoredFilters {
 }
 
 function getRecipeClassKey(recipe: CraftingRecipeViewModel) {
-  return recipe.outputItem.classId ?? 'GENERAL';
+  return recipe.outputItem.classId ?? "GENERAL";
 }
 
 function getRecipeClassLabel(recipe: CraftingRecipeViewModel) {
-  return recipe.outputItem.class?.name ?? 'Geral';
+  return recipe.outputItem.class?.name ?? "Geral";
 }
 
 function getBonusEntries(recipe?: CraftingRecipeViewModel | null) {
@@ -370,7 +373,7 @@ function recipeMatchesSearch(recipe: CraftingRecipeViewModel, search: string) {
       recipe.outputItem.map?.name,
       formatSlot(recipe.outputItem.slot),
       ...recipe.ingredients.map((ingredient) => ingredient.name),
-    ].join(' '),
+    ].join(" "),
   );
 
   return haystack.includes(normalizedSearch);
@@ -378,8 +381,8 @@ function recipeMatchesSearch(recipe: CraftingRecipeViewModel, search: string) {
 
 function getRecipeStatusLabel(recipe: CraftingRecipeViewModel) {
   if (!recipe.isUnlocked) return `Criação Nv. ${recipe.requiredCraftingLevel}`;
-  if (recipe.canCraft) return 'Pronta';
-  if (recipe.ownedQuantity > 0) return 'Já possui';
+  if (recipe.canCraft) return "Pronta";
+  if (recipe.ownedQuantity > 0) return "Já possui";
 
   return `Faltam ${formatNumber(recipe.progress.missingTotal)}`;
 }
@@ -426,7 +429,7 @@ function CraftingDropdown({
           onClick={() => setIsOpen((current) => !current)}
         >
           <span className="crafting-dropdown__value">
-            {selectedOption?.label ?? 'Selecionar'}
+            {selectedOption?.label ?? "Selecionar"}
           </span>
           <ChevronDown aria-hidden="true" size={15} />
         </button>
@@ -440,12 +443,12 @@ function CraftingDropdown({
                 role="option"
                 aria-selected={option.value === value}
                 className={[
-                  'crafting-dropdown__option',
-                  option.className ?? '',
-                  option.value === value ? 'is-selected' : '',
+                  "crafting-dropdown__option",
+                  option.className ?? "",
+                  option.value === value ? "is-selected" : "",
                 ]
                   .filter(Boolean)
-                  .join(' ')}
+                  .join(" ")}
                 onClick={() => {
                   onChange(option.value);
                   setIsOpen(false);
@@ -479,14 +482,14 @@ function RecipeCard({
   return (
     <article
       className={[
-        'crafting-recipe-card',
+        "crafting-recipe-card",
         getRarityClassName(recipe.outputItem.rarity),
-        isSelected ? 'is-selected' : '',
-        recipe.canCraft ? 'is-ready' : '',
-        !recipe.isUnlocked ? 'is-locked' : '',
+        isSelected ? "is-selected" : "",
+        recipe.canCraft ? "is-ready" : "",
+        !recipe.isUnlocked ? "is-locked" : "",
       ]
         .filter(Boolean)
-        .join(' ')}
+        .join(" ")}
     >
       <button
         type="button"
@@ -515,7 +518,7 @@ function RecipeCard({
           <strong>{recipe.outputItem.name}</strong>
 
           <span className="crafting-recipe-card__subline">
-            {recipe.outputItem.map?.name ?? 'Mapa não vinculado'}
+            {recipe.outputItem.map?.name ?? "Mapa não vinculado"}
           </span>
 
           <span
@@ -535,11 +538,11 @@ function RecipeCard({
       <div className="crafting-recipe-card__footer">
         <span
           className={[
-            'crafting-status-pill',
-            recipe.canCraft ? 'crafting-status-pill--ready' : '',
+            "crafting-status-pill",
+            recipe.canCraft ? "crafting-status-pill--ready" : "",
           ]
             .filter(Boolean)
-            .join(' ')}
+            .join(" ")}
         >
           {recipe.canCraft ? (
             <CheckCircle2 aria-hidden="true" size={14} />
@@ -556,7 +559,7 @@ function RecipeCard({
           disabled={!recipe.canCraft || isBusy}
         >
           <Hammer aria-hidden="true" size={14} />
-          {recipe.isUnlocked ? 'Criar' : 'Bloqueado'}
+          {recipe.isUnlocked ? "Criar" : "Bloqueado"}
         </button>
       </div>
     </article>
@@ -576,15 +579,17 @@ function IngredientRow({
   return (
     <li
       className={[
-        'crafting-ingredient',
-        ingredient.hasEnough ? 'is-complete' : 'is-missing',
+        "crafting-ingredient",
+        ingredient.hasEnough ? "is-complete" : "is-missing",
       ]
         .filter(Boolean)
-        .join(' ')}
+        .join(" ")}
     >
       <div className="crafting-ingredient__main">
         <span className="crafting-ingredient__icon" aria-hidden="true">
-          {ingredient.origin === 'DROP_MOBS' ? 'DM' : getItemInitials(ingredient.name)}
+          {ingredient.origin === "DROP_MOBS"
+            ? "DM"
+            : getItemInitials(ingredient.name)}
         </span>
 
         <div>
@@ -597,7 +602,8 @@ function IngredientRow({
 
       <div className="crafting-ingredient__amount">
         <strong>
-          {formatNumber(ingredient.available)} / {formatNumber(ingredient.required)}
+          {formatNumber(ingredient.available)} /{" "}
+          {formatNumber(ingredient.required)}
         </strong>
         {ingredient.missing > 0 ? (
           <span>Faltam {formatNumber(ingredient.missing)}</span>
@@ -649,7 +655,7 @@ function CraftingDetailsModal({
   );
   const totalCraftingXp = recipe.craftingXpReward * safeQuantity;
   const xpRewardLabel = craftingSkill?.isAtLevelCap
-    ? 'Criação no nível máximo'
+    ? "Criação no nível máximo"
     : `+${formatNumber(recipe.craftingXpReward)} XP por item`;
 
   return (
@@ -684,10 +690,8 @@ function CraftingDetailsModal({
               {formatSlot(recipe.outputItem.slot)}
             </span>
             <h2 id="crafting-details-title">{recipe.outputItem.name}</h2>
-            <p>{recipe.outputItem.description ?? 'Equipamento craftável.'}</p>
-            <span className="crafting-side-card__reward">
-              {xpRewardLabel}
-            </span>
+            <p>{recipe.outputItem.description ?? "Equipamento craftável."}</p>
+            <span className="crafting-side-card__reward">{xpRewardLabel}</span>
           </div>
         </div>
 
@@ -695,17 +699,17 @@ function CraftingDetailsModal({
           <div className="crafting-lock-warning">
             <ShieldAlert aria-hidden="true" size={16} />
             <span>
-              Requer criação Nv. {recipe.requiredCraftingLevel}. Seu nível atual:{' '}
-              {formatNumber(craftingLevel)}.
+              Requer criação Nv. {recipe.requiredCraftingLevel}. Seu nível
+              atual: {formatNumber(craftingLevel)}.
             </span>
           </div>
         ) : null}
 
-        <div className="crafting-modal-divider" aria-hidden="true" />
-
         {bonusEntries.length > 0 ? (
-          <section className="crafting-side-card__section crafting-side-card__section--compact">
-            <h3>Atributos</h3>
+          <section className="crafting-modal-section crafting-modal-section--stats">
+            <div className="crafting-modal-section__title">
+              <span>Atributos do item</span>
+            </div>
 
             <div className="crafting-bonus-grid">
               {bonusEntries.map((entry) => (
@@ -724,15 +728,13 @@ function CraftingDetailsModal({
           </section>
         ) : null}
 
-        <div className="crafting-modal-divider" aria-hidden="true" />
-
-        <section className="crafting-side-card__section">
-          <div className="crafting-section-heading">
-            <h3>Ingredientes</h3>
-            <span>
-              {formatNumber(recipe.progress.availableTotal)} /{' '}
+        <section className="crafting-modal-section">
+          <div className="crafting-modal-section__title">
+            <span>Ingredientes necessários</span>
+            <em>
+              {formatNumber(recipe.progress.availableTotal)} /{" "}
               {formatNumber(recipe.progress.requiredTotal)}
-            </span>
+            </em>
           </div>
 
           <ul className="crafting-ingredients-list">
@@ -743,18 +745,20 @@ function CraftingDetailsModal({
         </section>
 
         {!recipe.canCraft ? (
-          <section className="crafting-side-card__section">
-            <h3>Onde buscar</h3>
+          <section className="crafting-modal-section">
+            <div className="crafting-modal-section__title">
+              <span>Onde buscar</span>
+            </div>
 
             <div className="crafting-next-actions">
               {recipe.missingByOrigin.map((group) => {
                 const gatheringSlug = ORIGIN_TO_GATHERING_SLUG[group.origin];
                 const label =
-                  group.origin === 'DROP_MOBS'
-                    ? 'Auto-combate'
+                  group.origin === "DROP_MOBS"
+                    ? "Auto-combate"
                     : formatOrigin(group.origin);
                 const to =
-                  group.origin === 'DROP_MOBS'
+                  group.origin === "DROP_MOBS"
                     ? `/dashboard/${characterId}/auto-combat`
                     : `/dashboard/${characterId}/gathering/${gatheringSlug}`;
 
@@ -776,66 +780,70 @@ function CraftingDetailsModal({
           </section>
         ) : null}
 
-        <div className="crafting-modal-divider" aria-hidden="true" />
+        <section className="crafting-modal-section crafting-modal-section--summary">
+          <div className="crafting-modal-section__title">
+            <span>Resumo da bancada</span>
+          </div>
 
-        <div className="crafting-craft-summary">
-          <span>
-            <Clock3 aria-hidden="true" size={15} />
-            Tempo total
-            <strong>{formatDuration(totalDurationSeconds)}</strong>
-          </span>
-          <span>
-            XP total
-            <strong>
-              {craftingSkill?.isAtLevelCap
-                ? 'Nível máximo'
-                : `+${formatNumber(totalCraftingXp)}`}
-            </strong>
-          </span>
-        </div>
+          <div className="crafting-craft-summary">
+            <span>
+              <Clock3 aria-hidden="true" size={15} />
+              Tempo total
+              <strong>{formatDuration(totalDurationSeconds)}</strong>
+            </span>
+            <span>
+              XP total
+              <strong>
+                {craftingSkill?.isAtLevelCap
+                  ? "Nível máximo"
+                  : `+${formatNumber(totalCraftingXp)}`}
+              </strong>
+            </span>
+          </div>
 
-        <div className="crafting-side-card__actions">
-          {recipe.canCraft ? (
-            <div className="crafting-quantity-group">
-              <label className="crafting-quantity">
-                <span>Qtd.</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={maxQuantity}
-                  value={safeQuantity}
-                  onChange={(event) =>
-                    onQuantityChange(Number(event.currentTarget.value))
-                  }
-                />
-              </label>
-              <button
-                type="button"
-                className="crafting-quantity-max"
-                onClick={() => onQuantityChange(maxQuantity)}
-                disabled={maxQuantity <= 1}
-              >
-                Máx.
-              </button>
-            </div>
-          ) : null}
+          <div className="crafting-side-card__actions">
+            {recipe.canCraft ? (
+              <div className="crafting-quantity-group">
+                <label className="crafting-quantity">
+                  <span>Qtd.</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={maxQuantity}
+                    value={safeQuantity}
+                    onChange={(event) =>
+                      onQuantityChange(Number(event.currentTarget.value))
+                    }
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="crafting-quantity-max"
+                  onClick={() => onQuantityChange(maxQuantity)}
+                  disabled={maxQuantity <= 1}
+                >
+                  Máx.
+                </button>
+              </div>
+            ) : null}
 
-          <button
-            type="button"
-            className="crafting-button crafting-button--primary"
-            onClick={() => onCraft(recipe)}
-            disabled={!recipe.canCraft || isBusy}
-          >
-            <Hammer aria-hidden="true" size={16} />
-            {!recipe.isUnlocked
-              ? 'Nível insuficiente'
-              : recipe.canCraft
-                ? safeQuantity > 1
-                  ? `Iniciar x${safeQuantity}`
-                  : 'Iniciar criação'
-                : 'Materiais insuficientes'}
-          </button>
-        </div>
+            <button
+              type="button"
+              className="crafting-button crafting-button--primary"
+              onClick={() => onCraft(recipe)}
+              disabled={!recipe.canCraft || isBusy}
+            >
+              <Hammer aria-hidden="true" size={16} />
+              {!recipe.isUnlocked
+                ? "Nível insuficiente"
+                : recipe.canCraft
+                  ? safeQuantity > 1
+                    ? `Iniciar x${safeQuantity}`
+                    : "Iniciar criação"
+                  : "Materiais insuficientes"}
+            </button>
+          </div>
+        </section>
       </aside>
     </div>
   );
@@ -858,43 +866,44 @@ function CraftingActivityPanel({
     <section className="crafting-right-section">
       <div className="crafting-right-section__heading">
         <span className="crafting-page__eyebrow">Atividade atual</span>
-        <button
-          type="button"
-          className="crafting-icon-button"
-          onClick={onRefresh}
-          disabled={isBusy}
-          aria-label="Atualizar atividade de criação"
-        >
-          <RefreshCw aria-hidden="true" size={14} />
-        </button>
       </div>
 
       <aside
         className={[
-          'crafting-activity-card',
-          session ? 'is-active' : 'is-empty',
+          "crafting-activity-card",
+          session ? "is-active" : "is-empty",
         ]
           .filter(Boolean)
-          .join(' ')}
+          .join(" ")}
         aria-label="Atividade atual de criação"
       >
         <div className="crafting-activity-card__header">
           <span className="crafting-side-card__icon" aria-hidden="true">
-            {session ? getItemInitials(session.outputItem.name) : 'CR'}
+            {session ? getItemInitials(session.outputItem.name) : "CR"}
           </span>
 
           <div>
             <strong>
-              {session ? session.outputItem.name : 'Nenhuma criação ativa'}
+              {session ? session.outputItem.name : "Nenhuma criação ativa"}
             </strong>
             <span>
               {session
                 ? `Produzindo ${formatNumber(session.outputQuantity)} item${
-                    session.outputQuantity > 1 ? 's' : ''
+                    session.outputQuantity > 1 ? "s" : ""
                   }`
-                : 'Escolha uma receita para iniciar uma fabricação.'}
+                : "Escolha uma receita para iniciar uma fabricação."}
             </span>
           </div>
+
+          <button
+            type="button"
+            className="crafting-icon-button crafting-right-card__action"
+            onClick={onRefresh}
+            disabled={isBusy}
+            aria-label="Atualizar atividade de criação"
+          >
+            <RefreshCw aria-hidden="true" size={14} />
+          </button>
         </div>
 
         {session ? (
@@ -927,7 +936,6 @@ function CraftingActivityPanel({
 function CraftingSkillPanel({
   skill,
   level,
-  unlockedTier,
   xp,
   xpToNext,
   progressPercent,
@@ -936,7 +944,6 @@ function CraftingSkillPanel({
 }: {
   skill?: CraftingSkillViewModel | null;
   level: number;
-  unlockedTier: number;
   xp: number;
   xpToNext: number | null;
   progressPercent: number;
@@ -947,15 +954,6 @@ function CraftingSkillPanel({
     <section className="crafting-right-section">
       <div className="crafting-right-section__heading">
         <span className="crafting-page__eyebrow">Sua proficiência</span>
-        <button
-          type="button"
-          className="crafting-icon-button"
-          onClick={onRefresh}
-          disabled={isBusy}
-          aria-label="Atualizar criação"
-        >
-          <RefreshCw aria-hidden="true" size={14} />
-        </button>
       </div>
 
       <aside className="crafting-skill-card" aria-label="Sua proficiência">
@@ -966,8 +964,17 @@ function CraftingSkillPanel({
 
           <div>
             <strong>Criação</strong>
-            <span>Tier liberado T{unlockedTier}</span>
           </div>
+
+          <button
+            type="button"
+            className="crafting-icon-button crafting-right-card__action"
+            onClick={onRefresh}
+            disabled={isBusy}
+            aria-label="Atualizar criação"
+          >
+            <RefreshCw aria-hidden="true" size={14} />
+          </button>
         </div>
 
         <span
@@ -984,7 +991,7 @@ function CraftingSkillPanel({
           <span>Nv. {formatNumber(level)}</span>
           <span>
             {skill?.isAtLevelCap || xpToNext === null
-              ? 'Nível máximo'
+              ? "Nível máximo"
               : `${formatNumber(Math.max(0, xpToNext - xp))} XP necessários`}
           </span>
           <span>{Math.round(progressPercent)}%</span>
@@ -996,7 +1003,7 @@ function CraftingSkillPanel({
 
 export function CraftingPage() {
   const { characterId } = useParams();
-  const safeCharacterId = characterId ?? '';
+  const safeCharacterId = characterId ?? "";
   const storedFilters = useMemo(
     () => readStoredCraftingFilters(safeCharacterId),
     [safeCharacterId],
@@ -1014,19 +1021,24 @@ export function CraftingPage() {
   const [classFilter, setClassFilter] = useState<CraftingClassFilter>(
     storedFilters.class,
   );
-  const [slotFilter, setSlotFilter] = useState<CraftingSlot | 'ALL'>(
+  const [slotFilter, setSlotFilter] = useState<CraftingSlot | "ALL">(
     storedFilters.slot,
   );
   const [craftableOnly, setCraftableOnly] = useState(
     storedFilters.craftableOnly,
   );
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [craftQuantity, setCraftQuantity] = useState(1);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isLoading, setIsLoading] = useState(true);
   const [isCrafting, setIsCrafting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const craftingRealtimeState = useCraftingRealtimeState();
+  const {
+    refresh: refreshCraftingRealtime,
+    requestSnapshot: requestCraftingSnapshot,
+  } = useCraftingRealtimeActions();
 
   const recipes = useMemo(
     () => recipesResponse?.recipes ?? EMPTY_RECIPES,
@@ -1034,7 +1046,10 @@ export function CraftingPage() {
   );
 
   const classFilters = useMemo(() => {
-    const filters = new Map<string, { key: string; label: string; count: number }>();
+    const filters = new Map<
+      string,
+      { key: string; label: string; count: number }
+    >();
 
     for (const recipe of recipes) {
       const key = getRecipeClassKey(recipe);
@@ -1053,49 +1068,65 @@ export function CraftingPage() {
     );
   }, [recipes]);
 
-  const currentCraftingTier = getCurrentCraftingTier(recipesResponse);
-  const currentCraftingSkill = recipesResponse?.character.craftingSkill ?? null;
+  const currentCraftingSkill =
+    craftingRealtimeState.craftingSkill ??
+    recipesResponse?.character.craftingSkill ??
+    null;
+  const currentCraftingTier = getCurrentCraftingTier(
+    recipesResponse,
+    currentCraftingSkill,
+  );
   const currentCraftingLevel =
-    currentCraftingSkill?.level ?? recipesResponse?.character.craftingLevel ?? 1;
+    currentCraftingSkill?.level ??
+    recipesResponse?.character.craftingLevel ??
+    1;
   const currentCraftingXp = Math.max(0, Number(currentCraftingSkill?.xp ?? 0));
-  const currentCraftingXpToNext =
-    currentCraftingSkill?.xpToNextLevel ?? null;
+  const currentCraftingXpToNext = currentCraftingSkill?.xpToNextLevel ?? null;
   const currentCraftingProgressPercent = clampPercent(
     currentCraftingSkill?.xpProgressPercent ?? 0,
   );
   const characterClassId = recipesResponse?.character.class?.id ?? null;
   const characterClassName = recipesResponse?.character.class?.name ?? null;
-  const activeCraftingSession = recipesResponse?.activeSession ?? null;
+  const realtimeCraftingSession = craftingRealtimeState.session ?? null;
+  const activeCraftingSession =
+    realtimeCraftingSession ?? recipesResponse?.activeSession ?? null;
   const activeCraftingSessionId = activeCraftingSession?.id ?? null;
+  const isRealtimeCraftingSession =
+    Boolean(realtimeCraftingSession) &&
+    realtimeCraftingSession?.id === activeCraftingSessionId;
   const activeCraftingRemainingSeconds = activeCraftingSession
-    ? Math.max(
-        0,
-        Math.ceil(
-          (new Date(activeCraftingSession.completesAt).getTime() - nowMs) /
-            1000,
-        ),
-      )
+    ? isRealtimeCraftingSession
+      ? craftingRealtimeState.liveSession.remainingSeconds
+      : Math.max(
+          0,
+          Math.ceil(
+            (new Date(activeCraftingSession.completesAt).getTime() - nowMs) /
+              1000,
+          ),
+        )
     : 0;
   const activeCraftingProgressPercent = activeCraftingSession
-    ? clampPercent(
-        ((Math.max(1, activeCraftingSession.durationSeconds) -
-          activeCraftingRemainingSeconds) /
-          Math.max(1, activeCraftingSession.durationSeconds)) *
-          100,
-      )
+    ? isRealtimeCraftingSession
+      ? craftingRealtimeState.liveSession.progressPercent
+      : clampPercent(
+          ((Math.max(1, activeCraftingSession.durationSeconds) -
+            activeCraftingRemainingSeconds) /
+            Math.max(1, activeCraftingSession.durationSeconds)) *
+            100,
+        )
     : 0;
   const tierFilterOptions = useMemo<CraftingDropdownOption[]>(
     () =>
       TIER_FILTERS.map((tier) => ({
         value: getTierFilterValue(tier),
         label:
-          tier === 'CURRENT'
+          tier === "CURRENT"
             ? `Meu tier (T${currentCraftingTier})`
-            : tier === 'ALL'
-              ? 'Todos os tiers'
+            : tier === "ALL"
+              ? "Todos os tiers"
               : `Tier ${tier}`,
         className:
-          typeof tier === 'number'
+          typeof tier === "number"
             ? `crafting-dropdown__option--tier ${getTierBandClassName(tier)}`
             : undefined,
       })),
@@ -1103,12 +1134,12 @@ export function CraftingPage() {
   );
   const classFilterOptions = useMemo<CraftingDropdownOption[]>(
     () => [
-      { value: 'ALL', label: 'Todas as classes' },
+      { value: "ALL", label: "Todas as classes" },
       {
         value: CHARACTER_CLASS_FILTER,
         label: characterClassName
           ? `Minha classe (${characterClassName})`
-          : 'Minha classe',
+          : "Minha classe",
       },
       ...classFilters.map((filter) => ({
         value: filter.key,
@@ -1121,7 +1152,7 @@ export function CraftingPage() {
     () =>
       SLOT_FILTERS.map((slot) => ({
         value: slot.key,
-        label: slot.key === 'ALL' ? 'Todos os tipos' : slot.label,
+        label: slot.key === "ALL" ? "Todos os tipos" : slot.label,
       })),
     [],
   );
@@ -1151,7 +1182,7 @@ export function CraftingPage() {
                 session.outputQuantity,
               )}`,
           )
-          .join(', ');
+          .join(", ");
 
         setFeedback(`Fabricação concluída: ${completedLabel}.`);
       }
@@ -1162,6 +1193,12 @@ export function CraftingPage() {
     }
   }, [safeCharacterId]);
 
+  const refreshCraftingState = useCallback(() => {
+    requestCraftingSnapshot();
+    void refreshCraftingRealtime();
+    void loadCraftingData();
+  }, [loadCraftingData, refreshCraftingRealtime, requestCraftingSnapshot]);
+
   useEffect(() => {
     const loadTimer = window.setTimeout(() => {
       void loadCraftingData();
@@ -1171,7 +1208,7 @@ export function CraftingPage() {
   }, [loadCraftingData]);
 
   useEffect(() => {
-    if (!safeCharacterId || typeof window === 'undefined') {
+    if (!safeCharacterId || typeof window === "undefined") {
       return;
     }
 
@@ -1214,6 +1251,26 @@ export function CraftingPage() {
     loadCraftingData,
   ]);
 
+  const realtimeCompletedSessionSignature = useMemo(
+    () =>
+      craftingRealtimeState.completedSessions
+        .map((session) => `${session.id}:${session.completedAt ?? ""}`)
+        .join("|"),
+    [craftingRealtimeState.completedSessions],
+  );
+
+  useEffect(() => {
+    if (!realtimeCompletedSessionSignature) {
+      return;
+    }
+
+    const refreshTimer = window.setTimeout(() => {
+      void loadCraftingData();
+    }, 0);
+
+    return () => window.clearTimeout(refreshTimer);
+  }, [loadCraftingData, realtimeCompletedSessionSignature]);
+
   const filteredRecipes = useMemo(() => {
     const resolvedTierFilter = getResolvedTierFilter(
       tierFilter,
@@ -1221,25 +1278,25 @@ export function CraftingPage() {
     );
     const resolvedClassFilter =
       classFilter === CHARACTER_CLASS_FILTER
-        ? (characterClassId ?? 'ALL')
+        ? (characterClassId ?? "ALL")
         : classFilter;
 
     return recipes.filter((recipe) => {
       if (
-        resolvedTierFilter !== 'ALL' &&
+        resolvedTierFilter !== "ALL" &&
         recipe.outputItem.tier !== resolvedTierFilter
       ) {
         return false;
       }
 
       if (
-        resolvedClassFilter !== 'ALL' &&
+        resolvedClassFilter !== "ALL" &&
         getRecipeClassKey(recipe) !== resolvedClassFilter
       ) {
         return false;
       }
 
-      if (slotFilter !== 'ALL' && recipe.outputItem.slot !== slotFilter) {
+      if (slotFilter !== "ALL" && recipe.outputItem.slot !== slotFilter) {
         return false;
       }
 
@@ -1283,7 +1340,7 @@ export function CraftingPage() {
 
     if (activeCraftingSession) {
       setErrorMessage(
-        'Aguarde a fabricação atual terminar antes de iniciar outra.',
+        "Aguarde a fabricação atual terminar antes de iniciar outra.",
       );
       return;
     }
@@ -1309,10 +1366,12 @@ export function CraftingPage() {
 
       setFeedback(
         `Fabricação iniciada: ${result.craftedItem.name}${
-          safeQuantity > 1 ? ` x${safeQuantity}` : ''
+          safeQuantity > 1 ? ` x${safeQuantity}` : ""
         }. Pronto em ${formatDuration(sessionDuration)}.`,
       );
       setIsDetailsModalOpen(false);
+      requestCraftingSnapshot();
+      await refreshCraftingRealtime();
       await loadCraftingData();
     } catch (error) {
       setErrorMessage(extractCraftingApiError(error));
@@ -1338,7 +1397,7 @@ export function CraftingPage() {
     return (
       <main className="dashboard-error">
         <h1>Erro ao carregar criação</h1>
-        <p>{errorMessage || 'Não foi possível carregar este personagem.'}</p>
+        <p>{errorMessage || "Não foi possível carregar este personagem."}</p>
         <Link to="/characters" className="btn btn-primary">
           Voltar para seleção
         </Link>
@@ -1390,15 +1449,37 @@ export function CraftingPage() {
           </div>
         ) : null}
 
+        <aside
+          className="gathering-origin-premium-card"
+          aria-label="Benefícios premium da criação"
+        >
+          <div
+            className="gathering-origin-premium-card__badge"
+            aria-hidden="true"
+          >
+            i
+          </div>
+
+          <div>
+            <h2>Benefícios premium</h2>
+            <p>Fila, bônus e notificações avançadas para criação.</p>
+          </div>
+
+          <button
+            type="button"
+            className="gathering-origin-premium-card__button"
+          >
+            Ver benefícios
+          </button>
+        </aside>
+
         <section className="crafting-layout" aria-label="Receitas de criação">
           <main className="crafting-main-panel">
             <div className="crafting-panel-header">
               <div>
                 <span className="crafting-page__eyebrow">Receitas</span>
                 <h2>Itens disponíveis</h2>
-                <p>
-                  Separe a bancada por tier, classe e tipo de equipamento.
-                </p>
+                <p>Separe a bancada por tier, classe e tipo de equipamento.</p>
               </div>
 
               <label className="crafting-search">
@@ -1418,7 +1499,9 @@ export function CraftingPage() {
                   label="Tier"
                   value={getTierFilterValue(tierFilter)}
                   options={tierFilterOptions}
-                  onChange={(value) => setTierFilter(parseTierFilterValue(value))}
+                  onChange={(value) =>
+                    setTierFilter(parseTierFilterValue(value))
+                  }
                 />
 
                 <CraftingDropdown
@@ -1432,16 +1515,18 @@ export function CraftingPage() {
                   label="Tipo"
                   value={slotFilter}
                   options={slotFilterOptions}
-                  onChange={(value) => setSlotFilter(value as CraftingSlot | 'ALL')}
+                  onChange={(value) =>
+                    setSlotFilter(value as CraftingSlot | "ALL")
+                  }
                 />
 
                 <label
                   className={[
-                    'crafting-checkbox-filter',
-                    craftableOnly ? 'is-checked' : '',
+                    "crafting-checkbox-filter",
+                    craftableOnly ? "is-checked" : "",
                   ]
                     .filter(Boolean)
-                    .join(' ')}
+                    .join(" ")}
                 >
                   <input
                     type="checkbox"
@@ -1495,18 +1580,17 @@ export function CraftingPage() {
               session={activeCraftingSession}
               remainingSeconds={activeCraftingRemainingSeconds}
               progressPercent={activeCraftingProgressPercent}
-              onRefresh={() => void loadCraftingData()}
+              onRefresh={refreshCraftingState}
               isBusy={isLoading || isCrafting}
             />
 
             <CraftingSkillPanel
               skill={currentCraftingSkill}
               level={currentCraftingLevel}
-              unlockedTier={currentCraftingTier}
               xp={currentCraftingXp}
               xpToNext={currentCraftingXpToNext}
               progressPercent={currentCraftingProgressPercent}
-              onRefresh={() => void loadCraftingData()}
+              onRefresh={refreshCraftingState}
               isBusy={isLoading || isCrafting}
             />
           </aside>

@@ -193,8 +193,10 @@
   }
 
   .dashboard-topbar__activity {
-    width: 100%;
+    flex: 1 1 auto;
+    width: auto;
     max-width: none;
+    min-width: 0;
     overflow: visible;
   }
 
@@ -653,14 +655,19 @@
 
   .character-stat-card {
     position: relative;
-    grid-template-columns: 54px minmax(0, 1fr);
-    gap: 0.62rem;
+    grid-template-columns: 54px auto;
+    grid-template-areas:
+      'icon value'
+      'content content';
+    justify-content: start;
+    gap: 0.5rem 0.48rem;
     min-height: 122px;
     padding: 0.76rem 0.72rem;
     align-items: start;
   }
 
   .character-stat-card__icon {
+    grid-area: icon;
     width: 54px;
     height: 54px;
     border-radius: 0.86rem;
@@ -672,7 +679,8 @@
   }
 
   .character-stat-card__content {
-    padding-right: 2.35rem;
+    grid-area: content;
+    padding-right: 0;
   }
 
   .character-stat-card__content strong {
@@ -687,9 +695,12 @@
   }
 
   .character-stat-card__value {
-    position: absolute;
-    top: 0.64rem;
-    right: 0.64rem;
+    position: relative;
+    grid-area: value;
+    top: auto;
+    right: auto;
+    justify-self: start;
+    align-self: center;
     min-width: 32px;
     height: 24px;
     padding: 0 0.38rem;
@@ -930,12 +941,12 @@
   }
 
   .character-stat-card__content {
-    padding-right: 2.2rem;
+    padding-right: 0;
   }
 
   .character-stat-card__value {
-    top: 0.58rem;
-    right: 0.58rem;
+    top: auto;
+    right: auto;
     min-width: 30px;
     height: 23px;
     font-size: 0.68rem;
@@ -1051,7 +1062,7 @@
   }
 
   .character-stat-card {
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: 56px auto;
     min-height: 92px;
   }
 
@@ -1066,12 +1077,12 @@
   }
 
   .character-stat-card__content {
-    padding-right: 2.4rem;
+    padding-right: 0;
   }
 
   .character-stat-card__value {
-    top: 0.7rem;
-    right: 0.7rem;
+    top: auto;
+    right: auto;
     min-width: 32px;
     height: 24px;
     font-size: 0.7rem;

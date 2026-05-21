@@ -153,26 +153,63 @@
 
 .crafting-side-column {
   position: sticky;
-  top: 18px;
+  top: 0.95rem;
   display: grid;
-  gap: 14px;
+  max-height: calc(100vh - 1.9rem);
+  gap: 0.78rem;
+  overflow: auto;
+  padding-right: 0.1rem;
+  scrollbar-width: thin;
 }
 
 .crafting-right-section {
   display: grid;
-  gap: 8px;
+  min-width: 0;
+  gap: 0.52rem;
 }
 
 .crafting-right-section__heading {
-  display: flex;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(18px, 1fr) auto minmax(18px, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 2px;
+  gap: 0.56rem;
+  margin: 0.04rem 0 0.34rem;
+  padding: 0;
+}
+
+.crafting-right-section__heading::before,
+.crafting-right-section__heading::after {
+  content: "";
+  display: block;
+  height: 1px;
+  min-width: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(110, 159, 67, 0.24),
+    rgba(232, 184, 78, 0.12),
+    transparent
+  );
 }
 
 .crafting-right-section__heading .crafting-page__eyebrow {
+  display: inline-flex;
+  min-width: max-content;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 0;
+  color: rgba(174, 218, 120, 0.9);
+  font-family: var(--font-title);
+  font-size: 0.68rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.65),
+    0 0 8px rgba(110, 159, 67, 0.16);
 }
 
 .crafting-panel-header {
@@ -357,7 +394,7 @@
 }
 
 .crafting-dropdown__button:hover,
-.crafting-dropdown__button[aria-expanded='true'] {
+.crafting-dropdown__button[aria-expanded="true"] {
   border-color: rgba(218, 195, 95, 0.52);
   box-shadow: 0 0 0 2px rgba(218, 195, 95, 0.12);
 }
@@ -791,6 +828,73 @@
   );
 }
 
+.crafting-modal-section {
+  position: relative;
+  margin-top: 16px;
+  border: 1px solid rgba(168, 202, 142, 0.14);
+  border-radius: 8px;
+  padding: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent),
+    rgba(0, 0, 0, 0.14);
+}
+
+.crafting-modal-section--stats {
+  margin-top: 18px;
+}
+
+.crafting-modal-section--summary {
+  border-color: rgba(218, 195, 95, 0.18);
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      rgba(218, 195, 95, 0.06),
+      transparent 12rem
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent),
+    rgba(0, 0, 0, 0.16);
+}
+
+.crafting-modal-section__title {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  color: #fff8df;
+  font-family: var(--font-title);
+  font-size: 0.82rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.crafting-modal-section__title::after {
+  content: "";
+  display: block;
+  height: 1px;
+  min-width: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(218, 195, 95, 0.28),
+    rgba(168, 202, 142, 0.14),
+    transparent
+  );
+}
+
+.crafting-modal-section__title em {
+  color: #e8d47a;
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.crafting-modal-section .crafting-bonus-grid {
+  margin-top: 12px;
+}
+
 .crafting-section-heading {
   display: flex;
   align-items: center;
@@ -1018,22 +1122,101 @@
   margin-bottom: 12px;
 }
 
-.crafting-activity-card {
-  padding: 14px;
+.crafting-activity-card,
+.crafting-skill-card {
+  --craft-side-green-rgb: 110, 159, 67;
+  --craft-side-gold-rgb: 232, 184, 78;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.62rem;
+  padding: 0.72rem;
+  overflow: hidden;
+  border-color: rgba(var(--craft-side-green-rgb), 0.22);
+  border-radius: 0.86rem;
+  background:
+    radial-gradient(
+      circle at 0% 0%,
+      rgba(var(--craft-side-green-rgb), 0.105),
+      transparent 12rem
+    ),
+    linear-gradient(
+      180deg,
+      rgba(var(--craft-side-green-rgb), 0.045),
+      rgba(255, 255, 255, 0.008)
+    ),
+    rgba(5, 14, 9, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 12px 25px rgba(0, 0, 0, 0.18),
+    0 0 18px rgba(var(--craft-side-green-rgb), 0.04);
 }
 
 .crafting-activity-card.is-empty {
-  border-color: rgba(168, 202, 142, 0.16);
-  background:
-    linear-gradient(145deg, rgba(15, 40, 20, 0.62), rgba(4, 13, 11, 0.9)),
-    rgba(4, 13, 11, 0.92);
+  gap: 0;
+  padding: 0.64rem;
 }
 
 .crafting-activity-card__header,
 .crafting-skill-card__header {
-  display: flex;
+  display: grid;
+  min-width: 0;
   align-items: center;
-  gap: 12px;
+}
+
+.crafting-activity-card__header {
+  grid-template-columns: 46px minmax(0, 1fr) 30px;
+  min-height: 54px;
+  gap: 0.68rem;
+}
+
+.crafting-skill-card__header {
+  grid-template-columns: 36px minmax(0, 1fr) 30px;
+  min-height: 42px;
+  gap: 0.58rem;
+}
+
+.crafting-activity-card .crafting-side-card__icon,
+.crafting-skill-card .crafting-side-card__icon {
+  display: grid;
+  place-items: center;
+  color: rgba(255, 229, 155, 0.94);
+  font-family: var(--font-title);
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.035em;
+  border-color: rgba(var(--craft-side-gold-rgb), 0.24);
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      rgba(var(--craft-side-gold-rgb), 0.2),
+      transparent 70%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.048), transparent),
+    rgba(28, 22, 11, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 7px 12px rgba(0, 0, 0, 0.18),
+    0 0 12px rgba(var(--craft-side-gold-rgb), 0.08);
+}
+
+.crafting-activity-card .crafting-side-card__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 0.78rem;
+  font-size: 0.68rem;
+}
+
+.crafting-skill-card .crafting-side-card__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 0.66rem;
+  font-size: 0.58rem;
+}
+
+.crafting-activity-card__header > div,
+.crafting-skill-card__header > div {
+  min-width: 0;
 }
 
 .crafting-activity-card__header strong,
@@ -1045,50 +1228,116 @@
 
 .crafting-activity-card__header strong,
 .crafting-skill-card__header strong {
-  color: #fff8df;
-  font-size: 0.96rem;
+  min-width: 0;
+  overflow: hidden;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.94rem;
+  font-weight: 950;
+  line-height: 1.08;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .crafting-activity-card__header span,
 .crafting-skill-card__header span {
-  margin-top: 3px;
-  color: rgba(242, 236, 206, 0.62);
-  font-size: 0.76rem;
-  font-weight: 800;
-  line-height: 1.25;
+  margin-top: 0.16rem;
+  color: rgba(231, 227, 216, 0.58);
+  font-size: 0.68rem;
+  font-weight: 760;
+  line-height: 1.18;
+}
+
+.crafting-right-card__action {
+  width: 30px;
+  height: 30px;
+  justify-self: end;
+  border-radius: 0.58rem;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.crafting-activity-card .crafting-skill-progress,
+.crafting-skill-card .crafting-skill-progress {
+  width: 100%;
+  height: 7px;
+  min-height: 7px;
+  max-height: 7px;
+  margin-top: 0;
+  border: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    rgba(0, 0, 0, 0.54);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.72),
+    0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.crafting-activity-card .crafting-skill-progress i,
+.crafting-skill-card .crafting-skill-progress i {
+  min-width: 3px;
+  background: linear-gradient(90deg, #e8b84e, #ffd229);
+  box-shadow:
+    0 0 12px rgba(255, 210, 41, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .crafting-activity-card__metrics,
 .crafting-skill-card__metrics {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: 0.62rem;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 .crafting-activity-card__metrics span,
 .crafting-skill-card__metrics span {
-  border: 1px solid rgba(168, 202, 142, 0.14);
-  border-radius: 8px;
-  padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.2);
-  color: rgba(242, 236, 206, 0.78);
-  font-size: 0.72rem;
-  font-weight: 900;
-  text-align: center;
-}
-
-.crafting-activity-card__metrics span {
   display: inline-flex;
+  min-width: 0;
+  min-height: 31px;
   align-items: center;
   justify-content: center;
   gap: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(var(--craft-side-green-rgb), 0.2);
+  border-radius: 0.58rem;
+  padding: 0.22rem 0.62rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.042), transparent),
+    rgba(5, 13, 9, 0.58);
+  color: rgba(255, 248, 232, 0.92);
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .crafting-activity-card__metrics span:first-child,
 .crafting-skill-card__metrics span:first-child {
-  color: #dfffba;
+  min-width: 58px;
+  border-color: rgba(var(--craft-side-green-rgb), 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(40, 82, 35, 0.52);
+  color: #f6ffe6;
+}
+
+.crafting-activity-card__metrics span:nth-child(2),
+.crafting-skill-card__metrics span:nth-child(2) {
+  justify-self: stretch;
+}
+
+.crafting-activity-card__metrics span:last-child,
+.crafting-skill-card__metrics span:last-child {
+  min-width: 54px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), transparent),
+    rgba(var(--craft-side-green-rgb), 0.065);
+  color: #f6ffe6;
 }
 
 .crafting-quantity {

@@ -1,36 +1,36 @@
 export type CraftingRarity =
-  | 'COMMON'
-  | 'UNCOMMON'
-  | 'RARE'
-  | 'EPIC'
-  | 'LEGENDARY'
+  | "COMMON"
+  | "UNCOMMON"
+  | "RARE"
+  | "EPIC"
+  | "LEGENDARY"
   | (string & {});
 
 export type CraftingSlot =
-  | 'MAIN_HAND'
-  | 'OFF_HAND'
-  | 'HEAD'
-  | 'ARMOR'
-  | 'PANTS'
-  | 'BOOTS'
-  | 'MATERIAL'
-  | 'CONSUMABLE'
+  | "MAIN_HAND"
+  | "OFF_HAND"
+  | "HEAD"
+  | "ARMOR"
+  | "PANTS"
+  | "BOOTS"
+  | "MATERIAL"
+  | "CONSUMABLE"
   | (string & {});
 
 export type CraftingOrigin =
-  | 'DESMANCHE'
-  | 'COLETA'
-  | 'CONTENCAO'
-  | 'ARSENAL'
-  | 'PATRULHA'
-  | 'TECNOVARREDURA'
-  | 'DROP_MOBS'
+  | "DESMANCHE"
+  | "COLETA"
+  | "CONTENCAO"
+  | "ARSENAL"
+  | "PATRULHA"
+  | "TECNOVARREDURA"
+  | "DROP_MOBS"
   | (string & {});
 
 export type CraftingIngredientRole =
-  | 'MAIN_COMPONENT'
-  | 'SHARED_MATERIAL'
-  | 'RARE_MOB_DROP'
+  | "MAIN_COMPONENT"
+  | "SHARED_MATERIAL"
+  | "RARE_MOB_DROP"
   | (string & {});
 
 export interface CraftingMapViewModel {
@@ -106,7 +106,7 @@ export interface CraftingMissingByOriginGroup {
 }
 
 export interface CraftingNextAction {
-  type: 'CRAFT' | 'GATHERING' | 'AUTO_COMBAT' | (string & {});
+  type: "CRAFT" | "GATHERING" | "AUTO_COMBAT" | (string & {});
   priority: number;
   origin?: CraftingOrigin | string | null;
   label: string;
@@ -131,7 +131,7 @@ export interface CraftingSessionViewModel {
   characterId: string;
   recipeId: string;
   outputItemId: string;
-  status: 'ACTIVE' | 'COMPLETED' | 'STOPPED' | (string & {});
+  status: "ACTIVE" | "COMPLETED" | "STOPPED" | (string & {});
   quantity: number;
   outputQuantity: number;
   craftingXpGained: number;
@@ -143,7 +143,7 @@ export interface CraftingSessionViewModel {
   completedAt?: string | null;
   outputItem: Pick<
     CraftingOutputItemViewModel,
-    'id' | 'name' | 'description' | 'tier' | 'rarity' | 'slot' | 'family'
+    "id" | "name" | "description" | "tier" | "rarity" | "slot" | "family"
   >;
 }
 
@@ -204,6 +204,16 @@ export interface CraftingRecipesResponse {
   activeSession?: CraftingSessionViewModel | null;
   completedSessions?: CraftingSessionViewModel[];
   recipes: CraftingRecipeViewModel[];
+}
+
+export interface CraftingStatusResponse {
+  active: boolean;
+  character: CraftingRecipesResponse["character"];
+  craftingSkill: CraftingSkillViewModel;
+  activeSession?: CraftingSessionViewModel | null;
+  completedSessions?: CraftingSessionViewModel[];
+  stoppedSession?: CraftingSessionViewModel | null;
+  message?: string;
 }
 
 export interface CraftItemPayload {

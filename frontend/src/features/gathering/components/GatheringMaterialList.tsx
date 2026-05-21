@@ -268,14 +268,17 @@ export function GatheringMaterialList({
   if (materials.length <= 0) {
     return (
       <div className="gathering-empty gathering-empty--compact">
+        <span className="gathering-empty__icon" aria-hidden="true">
+          ▦
+        </span>
         <strong>
           {isClassFiltered
-            ? `Nenhum material para ${activeClassFilterLabel}.`
-            : 'Nenhum material encontrado.'}
+            ? 'Nenhum item nesta categoria'
+            : 'Nenhum material encontrado'}
         </strong>
         <p>
           {isClassFiltered
-            ? 'Troque o filtro de classe ou escolha outra origem/mapa para ver materiais compatíveis.'
+            ? 'Tente alternar para Todos ou escolha outra origem/mapa com materiais dessa classe.'
             : 'Não há materiais disponíveis para esta origem neste mapa.'}
         </p>
       </div>
@@ -286,6 +289,7 @@ export function GatheringMaterialList({
     <div className="gathering-material-groups">
       <div className="gathering-materials-toolbar gathering-materials-toolbar--compact">
         <p className="gathering-materials-toolbar__summary">
+          <span>Resultado</span>
           {isClassFiltered ? (
             <>
               <strong>{visibleMaterialsCount}</strong> de{' '}

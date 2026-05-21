@@ -12,6 +12,7 @@ import { AutoCombatPage } from "../features/auto-combat/pages/AutoCombatPage";
 import { AutoCombatRealtimeProvider } from "../features/auto-combat/realtime/AutoCombatRealtimeProvider";
 import { CharacterSelectPage } from "../features/characters/pages/CharacterSelectPage";
 import { CraftingPage } from "../features/crafting/pages/CraftingPage";
+import { CraftingRealtimeProvider } from "../features/crafting/realtime/CraftingRealtimeProvider";
 import { DashboardOverviewPage } from "../features/dashboard/pages/DashboardOverviewPage";
 import { DashboardPlaceholderPage } from "../features/dashboard/pages/DashboardPlaceholderPage";
 import { GatheringHubPage } from "../features/gathering/pages/GatheringHubPage";
@@ -71,15 +72,23 @@ function DashboardRealtimeRoute() {
           refreshMs={5000}
           tickMs={1000}
         >
-          <IncursionsRealtimeProvider
-            key={`incursions-${characterId}`}
+          <CraftingRealtimeProvider
+            key={`crafting-${characterId}`}
             characterId={characterId}
             autoLoad
             refreshMs={5000}
             tickMs={1000}
           >
-            <Outlet />
-          </IncursionsRealtimeProvider>
+            <IncursionsRealtimeProvider
+              key={`incursions-${characterId}`}
+              characterId={characterId}
+              autoLoad
+              refreshMs={5000}
+              tickMs={1000}
+            >
+              <Outlet />
+            </IncursionsRealtimeProvider>
+          </CraftingRealtimeProvider>
         </GatheringRealtimeProvider>
       </AutoCombatRealtimeProvider>
     </LootNotificationProvider>
@@ -124,10 +133,7 @@ export function AppRoutes() {
 
           <Route path="gathering/:origin" element={<GatheringOriginPage />} />
 
-          <Route
-            path="crafting"
-            element={<CraftingPage />}
-          />
+          <Route path="crafting" element={<CraftingPage />} />
 
           <Route path="inventory" element={<InventoryPage />} />
 

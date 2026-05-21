@@ -204,6 +204,27 @@ export interface AutoCombatMapSummaryViewModel {
   description?: string | null;
 }
 
+export interface AutoCombatMobDropItemViewModel {
+  id: string;
+  name: string;
+  description?: string | null;
+  tier?: number | null;
+  rarity?: string | null;
+  slot?: string | null;
+  family?: string | null;
+  slug?: string | null;
+}
+
+export interface AutoCombatMobDropViewModel {
+  id: string;
+  mobId?: string | null;
+  itemId: string;
+  dropChance: number;
+  minQuantity: number;
+  maxQuantity: number;
+  item?: AutoCombatMobDropItemViewModel | null;
+}
+
 export interface AutoCombatMobViewModel {
   id: string;
   name: string;
@@ -227,6 +248,8 @@ export interface AutoCombatMobViewModel {
   iconUrl?: string | null;
   imageUrl?: string | null;
   assetKey?: string | null;
+
+  drops?: AutoCombatMobDropViewModel[] | null;
 }
 
 export interface AutoCombatCurrentMobViewModel {

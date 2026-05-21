@@ -222,11 +222,12 @@
   }
 
   .character-stat-card {
-    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-columns: 48px auto;
     grid-template-areas:
       'icon value'
       'content content';
     align-items: start;
+    justify-content: start;
     gap: 0.46rem 0.5rem;
     min-height: 164px;
     padding: 0.68rem;
@@ -250,8 +251,8 @@
 
   .character-stat-card__value {
     grid-area: value;
-    justify-self: end;
-    align-self: start;
+    justify-self: start;
+    align-self: center;
     min-width: 32px;
     height: 24px;
     padding: 0 0.42rem;
@@ -290,7 +291,7 @@
   }
 
   .character-stat-card {
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 44px auto;
     gap: 0.42rem 0.44rem;
     min-height: 156px;
     padding: 0.58rem;
@@ -331,7 +332,7 @@
 
 @media (max-width: 340px) {
   .character-stat-card {
-    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-columns: 40px auto;
     min-height: 148px;
     padding: 0.52rem;
   }

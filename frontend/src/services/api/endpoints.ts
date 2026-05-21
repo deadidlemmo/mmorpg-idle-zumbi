@@ -38,11 +38,28 @@ export const API_ENDPOINTS = {
 
   inventory: {
     byCharacter: (characterId: string) => `/inventory/${characterId}`,
+    bank: (characterId: string) => `/inventory/${characterId}/bank`,
+    depositToBank: "/inventory/bank/deposit",
+    withdrawFromBank: "/inventory/bank/withdraw",
+  },
+
+  equipment: {
+    byCharacter: (characterId: string) => `/equipment/${characterId}`,
+    equip: "/equipment/equip",
+    unequip: "/equipment/unequip",
+  },
+
+  consumables: {
+    use: "/consumables/use",
+    config: (characterId: string) => `/consumables/${characterId}/config`,
   },
 
   crafting: {
     recipes: (characterId: string) =>
       `/crafting/character/${characterId}/recipes`,
+    status: (characterId: string) =>
+      `/crafting/character/${characterId}/status`,
+    stop: (characterId: string) => `/crafting/character/${characterId}/stop`,
     craft: "/crafting/craft",
   },
 

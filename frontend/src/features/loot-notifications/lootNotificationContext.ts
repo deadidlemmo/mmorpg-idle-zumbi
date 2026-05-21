@@ -1,5 +1,14 @@
 import { createContext, useContext } from 'react';
 
+export type LootNotificationSource =
+  | 'auto-combat'
+  | 'gathering'
+  | 'crafting'
+  | 'incursion'
+  | 'world-boss'
+  | 'system'
+  | (string & {});
+
 export interface LootNotificationPayload {
   idempotencyKey: string;
   itemId?: string | null;
@@ -7,7 +16,7 @@ export interface LootNotificationPayload {
   quantity: number;
   imageUrl?: string | null;
   rarity?: string | null;
-  source?: 'auto-combat' | 'gathering' | 'system' | string;
+  source?: LootNotificationSource;
 }
 
 export interface LootNotificationContextValue {

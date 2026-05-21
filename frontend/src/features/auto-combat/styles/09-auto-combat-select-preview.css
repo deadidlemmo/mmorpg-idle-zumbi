@@ -134,7 +134,11 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.55rem;
-  margin-top: 1rem;
+  margin-top: 0;
+}
+
+.auto-combat-preview-divider {
+  margin: 1rem 0 0.68rem;
 }
 
 .auto-combat-preview-grid div {
@@ -157,4 +161,15 @@
   font-size: 1rem;
   font-weight: 900;
   line-height: 1.1;
+}
+
+.auto-combat-preview-grid small {
+  display: block;
+  margin-top: 0.34rem;
+  padding-top: 0;
+  color: rgba(231, 227, 216, 0.58);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
 }

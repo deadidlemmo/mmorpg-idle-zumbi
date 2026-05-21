@@ -1,14 +1,25 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from 'react';
+import { X } from 'lucide-react';
 import {
   connectWorldBossSocket,
   type WorldBossSocket,
 } from '../../../services/websocket/socketClient';
-import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
-import { useGatheringRealtimeState } from '../../gathering/realtime/useGatheringRealtime';
+import { useAutoCombatRealtime } from '../../auto-combat/realtime/useAutoCombatRealtime';
+import { useCraftingRealtime } from '../../crafting/realtime/useCraftingRealtime';
+import { useGatheringRealtime } from '../../gathering/realtime/useGatheringRealtime';
 import type { IncursionsRealtimeState } from '../../incursions/realtime/IncursionsRealtimeProvider';
-import { useIncursionsRealtimeState } from '../../incursions/realtime/useIncursionsRealtime';
+import { useIncursionsRealtime } from '../../incursions/realtime/useIncursionsRealtime';
 import type { GatheringMaterialViewModel } from '../../gathering/types/gathering.types';
-import { getWorldBossStatus } from '../../world-bosses/api/world-bosses.api';
+import {
+  getWorldBossStatus,
+  leaveWorldBoss,
+} from '../../world-bosses/api/world-bosses.api';
 import type { WorldBossStatusResponse } from '../../world-bosses/types/world-bosses.types';
 import '../styles/dashboard-topbar.css';
 
@@ -27,6 +38,7 @@ export type DashboardTopBarActivityKind =
   | 'idle'
   | 'gathering'
   | 'auto-combat'
+  | 'crafting'
   | 'incursion'
   | 'world-boss';
 
@@ -557,7 +569,7 @@ function buildAutoCombatActivity(
 }
 
 function buildGatheringActivity(
-  gatheringState: ReturnType<typeof useGatheringRealtimeState>,
+  gatheringState: ReturnType<typeof useGatheringRealtime>['state'],
 ): DashboardTopBarActivityViewModel | null {
   if (!gatheringState.isActive || !gatheringState.session) return null;
 
@@ -593,6 +605,41 @@ function buildGatheringActivity(
     progressPercent,
     badge: badgeValue !== null ? formatNumber(badgeValue) : null,
     titleText: 'Expedição ativa em tempo real',
+  };
+}
+
+function buildCraftingActivity(
+  craftingState: ReturnType<typeof useCraftingRealtime>['state'],
+): DashboardTopBarActivityViewModel | null {
+  if (!craftingState.isActive || !craftingState.session) return null;
+
+  const session = craftingState.session;
+  const itemName = session.outputItem.name || 'Criação ativa';
+  const outputQuantity = Math.max(
+    1,
+    Math.floor(Number(session.outputQuantity ?? session.quantity ?? 1)),
+  );
+  const progressPercent = clampPercent(
+    craftingState.liveSession.progressPercent ?? session.progressPercent ?? 0,
+  );
+  const remainingSeconds =
+    craftingState.liveSession.remainingSeconds ?? session.remainingSeconds ?? 0;
+  const isComplete = craftingState.liveSession.isComplete;
+  const timerText = isComplete
+    ? 'finalizando'
+    : `pronto em ${formatCompactDuration(remainingSeconds)}`;
+  const quantityText = `${formatNumber(outputQuantity)} ${
+    outputQuantity === 1 ? 'item' : 'itens'
+  }`;
+
+  return {
+    kind: 'crafting',
+    title: itemName,
+    subtitle: `${quantityText} · ${timerText}`,
+    icon: getMaterialInitials(itemName),
+    progressPercent: isComplete ? 100 : progressPercent,
+    badge: `${Math.floor(isComplete ? 100 : progressPercent)}%`,
+    titleText: `${itemName} em criação · ${quantityText} · ${timerText}`,
   };
 }
 
@@ -709,6 +756,19 @@ function getResourceClassName(resource: DashboardTopBarResource): string {
     .join(' ');
 }
 
+function getActivityStopTitle(kind: DashboardTopBarActivityKind): string {
+  const titles: Record<DashboardTopBarActivityKind, string> = {
+    idle: 'Nenhuma atividade ativa',
+    gathering: 'Parar coleta',
+    'auto-combat': 'Parar combate automÃ¡tico',
+    crafting: 'Cancelar criaÃ§Ã£o',
+    incursion: 'Cancelar incursÃ£o',
+    'world-boss': 'Sair do World Boss',
+  };
+
+  return titles[kind] ?? 'Encerrar atividade';
+}
+
 export function DashboardTopBar({
   characterId,
   resources = [],
@@ -717,10 +777,16 @@ export function DashboardTopBar({
   activityOverride,
   onRefresh,
 }: DashboardTopBarProps) {
-  const autoCombatState = useAutoCombatRealtimeState();
-  const gatheringState = useGatheringRealtimeState();
-  const incursionsState = useIncursionsRealtimeState();
+  const autoCombatRealtime = useAutoCombatRealtime();
+  const gatheringRealtime = useGatheringRealtime();
+  const craftingRealtime = useCraftingRealtime();
+  const incursionsRealtime = useIncursionsRealtime();
+  const autoCombatState = autoCombatRealtime.state;
+  const gatheringState = gatheringRealtime.state;
+  const craftingState = craftingRealtime.state;
+  const incursionsState = incursionsRealtime.state;
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [isStoppingActivity, setIsStoppingActivity] = useState(false);
   const [worldBossStatus, setWorldBossStatus] =
     useState<WorldBossStatusResponse | null>(() =>
       characterId ? (worldBossStatusCache.get(characterId) ?? null) : null,
@@ -738,14 +804,24 @@ export function DashboardTopBar({
 
   useEffect(() => {
     if (!characterId) {
-      setWorldBossStatus(null);
-      return;
+      const resetTimer = window.setTimeout(() => {
+        setWorldBossStatus(null);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(resetTimer);
+      };
     }
 
     let isDisposed = false;
     const safeCharacterId = characterId;
+    const cachedStatus = worldBossStatusCache.get(safeCharacterId) ?? null;
 
-    setWorldBossStatus(worldBossStatusCache.get(safeCharacterId) ?? null);
+    const cacheTimer = window.setTimeout(() => {
+      if (!isDisposed) {
+        setWorldBossStatus(cachedStatus);
+      }
+    }, 0);
 
     async function loadWorldBossStatus() {
       try {
@@ -773,6 +849,7 @@ export function DashboardTopBar({
 
     return () => {
       isDisposed = true;
+      window.clearTimeout(cacheTimer);
       window.clearInterval(intervalId);
     };
   }, [characterId]);
@@ -849,12 +926,14 @@ export function DashboardTopBar({
       worldBossActivity ??
       buildAutoCombatActivity(autoCombatState) ??
       buildGatheringActivity(gatheringState) ??
+      buildCraftingActivity(craftingState) ??
       buildIncursionActivity(incursionsState) ??
       buildIdleActivity()
     );
   }, [
     activityOverride,
     autoCombatState,
+    craftingState,
     gatheringState,
     incursionsState,
     worldBossActivity,
@@ -873,10 +952,76 @@ export function DashboardTopBar({
     .filter(Boolean)
     .join(' ');
 
+  const activityCanBeStopped = (() => {
+    if (activity.kind === 'idle') return false;
+
+    if (activity.kind === 'auto-combat') {
+      return Boolean(buildAutoCombatActivity(autoCombatState));
+    }
+
+    if (activity.kind === 'gathering') {
+      return gatheringState.isActive;
+    }
+
+    if (activity.kind === 'crafting') {
+      return craftingState.isActive;
+    }
+
+    if (activity.kind === 'incursion') {
+      return incursionsState.session?.status === 'ACTIVE';
+    }
+
+    if (activity.kind === 'world-boss') {
+      return Boolean(
+        characterId &&
+          worldBossStatus?.event?.id &&
+          isActiveWorldBossStatus(worldBossStatus),
+      );
+    }
+
+    return false;
+  })();
+  const canStopActivity = activityCanBeStopped && !isStoppingActivity;
+
+  const stopActivityTitle = getActivityStopTitle(activity.kind);
+
   function handleRefresh() {
     if (!onRefresh) return;
 
     void onRefresh();
+  }
+
+  async function handleStopActivity(
+    event: ReactMouseEvent<HTMLButtonElement>,
+  ) {
+    event.stopPropagation();
+
+    if (!canStopActivity || !characterId) return;
+
+    setIsStoppingActivity(true);
+
+    try {
+      if (activity.kind === 'auto-combat') {
+        await autoCombatRealtime.stop();
+      } else if (activity.kind === 'gathering') {
+        await gatheringRealtime.stop();
+      } else if (activity.kind === 'crafting') {
+        await craftingRealtime.stop();
+      } else if (activity.kind === 'incursion') {
+        await incursionsRealtime.cancel();
+      } else if (activity.kind === 'world-boss' && worldBossStatus?.event?.id) {
+        const status = await leaveWorldBoss(
+          characterId,
+          worldBossStatus.event.id,
+        );
+
+        worldBossStatusCache.set(characterId, status);
+        setWorldBossStatus(status);
+        setNowMs(Date.now());
+      }
+    } finally {
+      setIsStoppingActivity(false);
+    }
   }
 
   return (
@@ -886,7 +1031,12 @@ export function DashboardTopBar({
       aria-label="Barra superior do dashboard"
     >
       <section
-        className="dashboard-topbar__activity"
+        className={[
+          'dashboard-topbar__activity',
+          activityCanBeStopped ? 'dashboard-topbar__activity--stoppable' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         aria-label="Atividade atual"
         title={activity.titleText}
       >
@@ -929,6 +1079,19 @@ export function DashboardTopBar({
             </span>
           ) : null}
         </span>
+
+        {activityCanBeStopped ? (
+          <button
+            type="button"
+            className="dashboard-topbar__activity-stop"
+            onClick={handleStopActivity}
+            disabled={isStoppingActivity}
+            aria-label={stopActivityTitle}
+            title={stopActivityTitle}
+          >
+            <X size={13} strokeWidth={3} aria-hidden="true" />
+          </button>
+        ) : null}
       </section>
 
       <nav className="dashboard-topbar__resources" aria-label="Recursos rápidos">

@@ -8,6 +8,8 @@ import type {
 import { getMobPortraitImage } from "../../auto-combat/utils/mobAssets";
 import type { GatheringRealtimeState } from "../../gathering/realtime/GatheringRealtimeProvider";
 import { useGatheringRealtimeState } from "../../gathering/realtime/useGatheringRealtime";
+import type { CraftingRealtimeState } from "../../crafting/realtime/CraftingRealtimeProvider";
+import { useCraftingRealtimeState } from "../../crafting/realtime/useCraftingRealtime";
 import type { IncursionsRealtimeState } from "../../incursions/realtime/IncursionsRealtimeProvider";
 import {
   useIncursionsRealtimeActions,
@@ -34,7 +36,7 @@ interface DashboardActivityBarProps {
 
 type ActivityBarItem = {
   key: string;
-  type: "auto-combat" | "gathering" | "incursion" | "world-boss";
+  type: "auto-combat" | "gathering" | "crafting" | "incursion" | "world-boss";
   icon: string;
   title: string;
   description: string;
@@ -1753,6 +1755,73 @@ function buildGatheringItemFromOverview(params: {
   };
 }
 
+function buildCraftingItemFromRealtime(params: {
+  characterId: string;
+  craftingState: CraftingRealtimeState;
+}): ActivityBarItem | null {
+  const { characterId, craftingState } = params;
+
+  if (!craftingState.isActive || !craftingState.session) {
+    return null;
+  }
+
+  const session = craftingState.session;
+  const outputItem = session.outputItem;
+  const remainingSeconds = Math.max(
+    0,
+    Math.ceil(
+      getFirstValidNumber(
+        craftingState.liveSession.remainingSeconds,
+        session.remainingSeconds,
+        0,
+      ) ?? 0,
+    ),
+  );
+  const progressPercent = clampPercent(
+    getFirstValidNumber(
+      craftingState.liveSession.progressPercent,
+      session.progressPercent,
+      0,
+    ) ?? 0,
+  );
+  const progressPercentLabel = floorPercent(progressPercent);
+  const outputQuantity = Math.max(
+    1,
+    Math.floor(toSafeNumber(session.outputQuantity, 1)),
+  );
+  const xpGained = Math.max(
+    0,
+    Math.floor(toSafeNumber(session.craftingXpGained, 0)),
+  );
+  const itemName = outputItem?.name ?? "Item em criação";
+  const tierLabel = outputItem?.tier ? `Tier ${outputItem.tier}` : "Criação";
+  const remainingLabel = formatRemainingTime(remainingSeconds);
+
+  return {
+    key: `crafting-${session.id ?? "active"}`,
+    type: "crafting",
+    icon: "CR",
+    title: itemName,
+    description: `Criando ${formatSessionCountIndicator(
+      outputQuantity,
+    )} item${outputQuantity > 1 ? "s" : ""} • pronto em ${remainingLabel}`,
+    progressLabel: "Fabricação",
+    progressPercent,
+    progressValueLabel: `${progressPercentLabel}%`,
+    primaryMetric: remainingLabel,
+    primaryMetricLabel: "Pronto em",
+    secondaryMetric: xpGained > 0 ? formatXp(xpGained) : tierLabel,
+    secondaryMetricLabel: xpGained > 0 ? "XP ao concluir" : "Item",
+    indicatorMetric: `${progressPercentLabel}%`,
+    indicatorLabel: "Progresso da criação",
+    href: `/dashboard/${characterId}/crafting`,
+    monsterMetaLabel: `${tierLabel} • Bancada`,
+    combatMetric: "Criação",
+    killsMetric: `x${formatSessionCountIndicator(outputQuantity)}`,
+    xpMetric: xpGained > 0 ? formatXp(xpGained) : remainingLabel,
+  };
+}
+
 function formatRemainingTime(seconds: unknown) {
   const safeSeconds = Math.max(0, Math.ceil(toSafeNumber(seconds, 0)));
   const hours = Math.floor(safeSeconds / 3600);
@@ -1764,7 +1833,10 @@ function formatRemainingTime(seconds: unknown) {
   return `${secs}s`;
 }
 
-function getRemainingSecondsUntil(value: string | null | undefined, nowMs: number) {
+function getRemainingSecondsUntil(
+  value: string | null | undefined,
+  nowMs: number,
+) {
   const targetMs = getParsedDateMs(value);
   if (!targetMs) return 0;
   return Math.max(0, Math.ceil((targetMs - nowMs) / 1000));
@@ -1828,6 +1900,7 @@ function buildActivityItems(params: {
   overview: CharacterOverviewResponse | null;
   realtimeState: AutoCombatRealtimeStateLoose;
   gatheringState: GatheringRealtimeState;
+  craftingState: CraftingRealtimeState;
   incursionsState: IncursionsRealtimeState;
   worldBossStatus: WorldBossStatusResponse | null;
   nowMs: number;
@@ -1837,6 +1910,7 @@ function buildActivityItems(params: {
     overview,
     realtimeState,
     gatheringState,
+    craftingState,
     incursionsState,
     worldBossStatus,
     nowMs,
@@ -1916,6 +1990,15 @@ function buildActivityItems(params: {
         }),
       );
     }
+  }
+
+  const realtimeCraftingItem = buildCraftingItemFromRealtime({
+    characterId,
+    craftingState,
+  });
+
+  if (realtimeCraftingItem) {
+    items.push(realtimeCraftingItem);
   }
 
   if (incursionsState.session) {
@@ -2037,6 +2120,7 @@ export function DashboardActivityBar({
     useAutoCombatRealtimeState() as AutoCombatRealtimeStateLoose;
 
   const gatheringState = useGatheringRealtimeState();
+  const craftingState = useCraftingRealtimeState();
   const incursionsState = useIncursionsRealtimeState();
   const { cancel: cancelIncursionActivity } = useIncursionsRealtimeActions();
 
@@ -2102,10 +2186,10 @@ export function DashboardActivityBar({
     const eventId = worldBossStatus?.event?.id;
     const isActiveWorldBossStatus = Boolean(
       worldBossStatus?.participant &&
-        worldBossStatus.event &&
-        ["SCHEDULED", "LOBBY_OPEN", "ACTIVE"].includes(
-          worldBossStatus.event.status,
-        ),
+      worldBossStatus.event &&
+      ["SCHEDULED", "LOBBY_OPEN", "ACTIVE"].includes(
+        worldBossStatus.event.status,
+      ),
     );
 
     if (!characterId || !eventId || !isActiveWorldBossStatus) return;
@@ -2146,8 +2230,10 @@ export function DashboardActivityBar({
   }, [
     characterId,
     location.pathname,
+    worldBossStatus?.event,
     worldBossStatus?.event?.id,
     worldBossStatus?.event?.status,
+    worldBossStatus?.participant,
     worldBossStatus?.participant?.id,
   ]);
 
@@ -2157,12 +2243,14 @@ export function DashboardActivityBar({
       overview,
       realtimeState,
       gatheringState,
+      craftingState,
       incursionsState,
       worldBossStatus,
       nowMs,
     });
   }, [
     characterId,
+    craftingState,
     gatheringState,
     incursionsState,
     worldBossStatus,
@@ -2209,13 +2297,12 @@ export function DashboardActivityBar({
         const progressStyle = {
           width: `${progressPercent}%`,
         };
-        const itemStyle =
-          isMonsterHpTrack
-            ? ({
-                "--dashboard-activity-monster-hp-percent": `${progressPercent}%`,
-                "--dashboard-activity-monster-hp-scale": progressPercent / 100,
-              } as CSSProperties)
-            : undefined;
+        const itemStyle = isMonsterHpTrack
+          ? ({
+              "--dashboard-activity-monster-hp-percent": `${progressPercent}%`,
+              "--dashboard-activity-monster-hp-scale": progressPercent / 100,
+            } as CSSProperties)
+          : undefined;
         const progressTrackClassName = [
           isMonsterHpTrack
             ? "dashboard-activity-bar__track dashboard-activity-bar__track--monster-hp"
@@ -2420,7 +2507,9 @@ export function DashboardActivityBar({
                 ) : (
                   <>
                     <span className="dashboard-activity-bar__metric dashboard-activity-bar__metric--xp">
-                      <small>{item.primaryMetricLabel ?? item.progressLabel}</small>
+                      <small>
+                        {item.primaryMetricLabel ?? item.progressLabel}
+                      </small>
                       <strong>{item.primaryMetric}</strong>
                     </span>
 

@@ -39,11 +39,6 @@ export function CharacterStatsPanel({ stats }: CharacterStatsPanelProps) {
   return (
     <div className="character-stats-panel character-stats-panel--primary-only">
       <section className="character-stats-group character-stats-group--primary">
-        <header className="character-stats-group__header">
-          <span>Base do personagem</span>
-          <h3>Atributos primários</h3>
-        </header>
-
         <div className="character-stats-grid character-stats-grid--primary">
           {ATTRIBUTE_STATS_CONFIG.map((stat) => (
             <article

@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import type { InventoryEntry } from '../types/inventory.types';
 import {
   formatInventoryType,
@@ -15,6 +16,8 @@ type InventoryItemWithOptionalLevel = InventoryEntry['item'] & {
   requiredLevel?: number | null;
   minLevel?: number | null;
 };
+
+type TooltipPlacement = 'center' | 'start' | 'end';
 
 function normalizeRarityClass(rarity?: string | null) {
   return String(rarity ?? 'COMMON')
@@ -78,6 +81,9 @@ function getItemTierLabel(item: InventoryItemWithOptionalLevel) {
 }
 
 export function InventoryItemCard({ entry, onSelect }: InventoryItemCardProps) {
+  const cardRef = useRef<HTMLElement | null>(null);
+  const [tooltipPlacement, setTooltipPlacement] =
+    useState<TooltipPlacement>('center');
   const item = entry.item as InventoryItemWithOptionalLevel;
 
   const itemName = item.name?.trim() || 'Item desconhecido';
@@ -94,8 +100,30 @@ export function InventoryItemCard({ entry, onSelect }: InventoryItemCardProps) {
   const quantity = Math.max(0, Math.floor(Number(entry.quantity) || 0));
   const quantityLabel = formatQuantity(quantity);
 
+  function updateTooltipPlacement() {
+    const cardElement = cardRef.current;
+
+    if (!cardElement) return;
+
+    const cardBounds = cardElement.getBoundingClientRect();
+    const edgeSafeArea = 136;
+
+    if (cardBounds.left < edgeSafeArea) {
+      setTooltipPlacement('start');
+      return;
+    }
+
+    if (window.innerWidth - cardBounds.right < edgeSafeArea) {
+      setTooltipPlacement('end');
+      return;
+    }
+
+    setTooltipPlacement('center');
+  }
+
   return (
     <article
+      ref={cardRef}
       className={`inventory-item-card rarity-${rarityClass}`}
       data-rarity={rarityClass}
       data-type={itemTypeLabel}
@@ -104,6 +132,8 @@ export function InventoryItemCard({ entry, onSelect }: InventoryItemCardProps) {
         type="button"
         className="inventory-item-card__button"
         onClick={onSelect}
+        onFocus={updateTooltipPlacement}
+        onPointerEnter={updateTooltipPlacement}
         aria-label={`Ver detalhes de ${itemName}. Quantidade: ${quantity}. ${secondaryTooltipLabel}.`}
       >
         <div className="inventory-item-card__topline" aria-hidden="true">
@@ -128,7 +158,10 @@ export function InventoryItemCard({ entry, onSelect }: InventoryItemCardProps) {
           </div>
         </div>
 
-        <div className="inventory-item-card__tooltip" aria-hidden="true">
+        <div
+          className={`inventory-item-card__tooltip inventory-item-card__tooltip--${tooltipPlacement}`}
+          aria-hidden="true"
+        >
           <strong>{itemName}</strong>
           <span>{secondaryTooltipLabel}</span>
         </div>

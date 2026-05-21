@@ -16,7 +16,6 @@ import {
 } from '../assets/auto-combat-map-assets';
 import '../auto-combat-mob-images.css';
 import '../auto-combat.css';
-import { AutoCombatAppHeader } from '../components/AutoCombatAppHeader';
 import { AutoCombatBattleLog } from '../components/AutoCombatBattleLog';
 import { AutoCombatSessionSummary } from '../components/AutoCombatSessionSummary';
 import { AutoCombatStatsTab } from '../components/AutoCombatStatsTab';
@@ -40,6 +39,7 @@ import type {
   RealtimeSessionTotalsState,
 } from '../types/auto-combat-page.types';
 import type {
+  AutoCombatEncounterViewModel,
   AutoCombatMapViewModel,
   AutoCombatProjectionPreview,
   AutoCombatRealtimeEvent,
@@ -150,6 +150,62 @@ function getMapRarityClassName(tier?: number | string | null) {
   return 'auto-combat-map-rarity-common';
 }
 
+function getLootInitials(name?: string | null) {
+  const cleanName = String(name ?? '').trim();
+
+  if (!cleanName) return '??';
+
+  const words = cleanName
+    .split(/\s+/)
+    .filter((word) => word.length > 0)
+    .slice(0, 2);
+
+  return words
+    .map((word) => word.charAt(0))
+    .join('')
+    .toUpperCase();
+}
+
+function getLootRarityClassName(rarity?: string | null) {
+  const normalizedRarity = String(rarity ?? 'common').toLowerCase();
+
+  if (normalizedRarity.includes('legendary')) {
+    return 'auto-combat-threat-loot-card--legendary';
+  }
+
+  if (normalizedRarity.includes('epic')) {
+    return 'auto-combat-threat-loot-card--epic';
+  }
+
+  if (normalizedRarity.includes('rare')) {
+    return 'auto-combat-threat-loot-card--rare';
+  }
+
+  if (normalizedRarity.includes('uncommon')) {
+    return 'auto-combat-threat-loot-card--uncommon';
+  }
+
+  return 'auto-combat-threat-loot-card--common';
+}
+
+function formatDropChance(chance?: number | null) {
+  const safeChance = Number(chance);
+
+  if (!Number.isFinite(safeChance)) return null;
+
+  return `~${Math.max(0, Math.min(100, safeChance))}%`;
+}
+
+function formatDropQuantity(
+  minQuantity?: number | null,
+  maxQuantity?: number | null,
+) {
+  const min = Math.max(1, Number(minQuantity) || 1);
+  const max = Math.max(min, Number(maxQuantity) || min);
+
+  return min === max ? `x${min}` : `x${min}-${max}`;
+}
+
 export function AutoCombatPage() {
   const { characterId } = useParams();
   const [searchParams] = useSearchParams();
@@ -171,6 +227,8 @@ export function AutoCombatPage() {
     useState<AutoCombatStatusResponse | null>(null);
   const [selectedMapId, setSelectedMapId] = useState('');
   const [selectedSubMapId, setSelectedSubMapId] = useState('');
+  const [selectedThreat, setSelectedThreat] =
+    useState<AutoCombatEncounterViewModel | null>(null);
   const [preparationPreview, setPreparationPreview] =
     useState<AutoCombatProjectionPreview | null>(null);
 
@@ -671,6 +729,25 @@ export function AutoCombatPage() {
     });
   }, [selectedSubMap]);
 
+  const selectedThreatDetails = useMemo(() => {
+    if (!selectedThreat) return null;
+
+    return (
+      selectedSubMapThreats.find((encounter) => {
+        return encounter.id === selectedThreat.id;
+      }) ?? selectedThreat
+    );
+  }, [selectedSubMapThreats, selectedThreat]);
+
+  const selectedThreatMob = selectedThreatDetails?.mob ?? null;
+  const selectedThreatChance = selectedThreatDetails
+    ? getThreatWeightPercent(selectedThreatDetails, selectedSubMapThreats)
+    : null;
+  const selectedThreatImage =
+    getMobFullBodyImage(selectedThreatMob?.name) ??
+    getMobPortraitImage(selectedThreatMob?.name);
+  const selectedThreatDrops = selectedThreatMob?.drops ?? [];
+
   const selectedMapIsUnlocked = selectedMap
     ? currentSelectionLevel >= getGameMapMinLevel(selectedMap)
     : false;
@@ -681,6 +758,22 @@ export function AutoCombatPage() {
     : false;
 
   const selectedSubMapHasActiveEncounters = selectedSubMapThreats.length > 0;
+
+  useEffect(() => {
+    if (!selectedThreat) return;
+
+    function handleThreatModalKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setSelectedThreat(null);
+      }
+    }
+
+    window.addEventListener('keydown', handleThreatModalKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleThreatModalKeyDown);
+    };
+  }, [selectedThreat]);
 
   useEffect(() => {
     if (maps.length <= 0) return;
@@ -1751,8 +1844,6 @@ export function AutoCombatPage() {
   return (
     <DashboardLayout character={layoutCharacter}>
       <div className="auto-combat-page">
-        <AutoCombatAppHeader />
-
         {errorMessage ? (
           <div className="auto-combat-alert" role="alert">
             {errorMessage}
@@ -1909,10 +2000,6 @@ export function AutoCombatPage() {
                     <div className="auto-combat-enemy-grid">
                       {selectedSubMapThreats.map((encounter) => {
                         const mob = encounter.mob;
-                        const chance = getThreatWeightPercent(
-                          encounter,
-                          selectedSubMapThreats,
-                        );
                         const mobFullBodyImage =
                           getMobFullBodyImage(mob?.name) ??
                           getMobPortraitImage(mob?.name);
@@ -1921,15 +2008,19 @@ export function AutoCombatPage() {
                           <article
                             key={encounter.id}
                             className="auto-combat-enemy-card"
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Ver detalhes de ${mob?.name ?? 'Infectado'}`}
+                            onClick={() => setSelectedThreat(encounter)}
+                            onKeyDown={(event) => {
+                              if (event.key !== 'Enter' && event.key !== ' ') {
+                                return;
+                              }
+
+                              event.preventDefault();
+                              setSelectedThreat(encounter);
+                            }}
                           >
-                            <div className="auto-combat-enemy-card__level">
-                              Nv. {mob?.level ?? '—'}
-                            </div>
-
-                            <div className="auto-combat-enemy-card__xp">
-                              XP {mob?.xpReward ?? '—'}
-                            </div>
-
                             <div
                               className={[
                                 'auto-combat-enemy-card__portrait',
@@ -1958,28 +2049,6 @@ export function AutoCombatPage() {
                               <span>Ameaça próxima</span>
 
                               <strong>{mob?.name ?? 'Infectado'}</strong>
-
-                              <div className="auto-combat-enemy-card__hp">
-                                <div className="auto-combat-enemy-card__hp-header">
-                                  <span>HP</span>
-                                  <strong>{mob?.hp ?? '—'}</strong>
-                                </div>
-
-                                <i className="auto-combat-enemy-card__hp-track">
-                                  <b
-                                    style={{
-                                      width: mob?.hp ? '100%' : '0%',
-                                    }}
-                                  />
-                                </i>
-                              </div>
-
-                              <div className="auto-combat-enemy-card__stats">
-                                <span>ATQ {mob?.attack ?? '—'}</span>
-                                <span>DEF {mob?.defense ?? '—'}</span>
-                                <span>VEL {mob?.speed ?? '—'}</span>
-                                <span>Chance {chance}%</span>
-                              </div>
                             </div>
                           </article>
                         );
@@ -1999,6 +2068,10 @@ export function AutoCombatPage() {
                     </div>
                   )}
 
+                  <div className="auto-combat-section-title auto-combat-section-title--small auto-combat-preview-divider">
+                    <span>Prévia da caça</span>
+                  </div>
+
                   <div className="auto-combat-preview-grid">
                     <div>
                       <span>Risco</span>
@@ -2007,6 +2080,7 @@ export function AutoCombatPage() {
                           ? 'Calculando...'
                           : formatRiskLabel(preparationPreview?.risk?.level)}
                       </strong>
+                      <small>Perigo da caça</small>
                     </div>
 
                     <div>
@@ -2016,6 +2090,7 @@ export function AutoCombatPage() {
                           ? '...'
                           : preparationPreview?.xpPerMinute ?? '—'}
                       </strong>
+                      <small>Experiência média</small>
                     </div>
 
                     <div>
@@ -2030,6 +2105,7 @@ export function AutoCombatPage() {
                               )}%`
                             : '—'}
                       </strong>
+                      <small>Vida ao final</small>
                     </div>
                   </div>
 
@@ -2520,6 +2596,109 @@ export function AutoCombatPage() {
           )}
         </section>
       </div>
+
+      {selectedThreatDetails && selectedThreatMob ? (
+        <div
+          className="auto-combat-threat-modal-backdrop"
+          role="presentation"
+          onClick={() => setSelectedThreat(null)}
+        >
+          <article
+            className="auto-combat-threat-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="auto-combat-threat-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="auto-combat-threat-modal__close"
+              aria-label="Fechar detalhes do monstro"
+              onClick={() => setSelectedThreat(null)}
+            >
+              ×
+            </button>
+
+            <div className="auto-combat-threat-modal__visual">
+              {selectedThreatImage ? (
+                <img
+                  src={selectedThreatImage}
+                  alt={selectedThreatMob.name}
+                  loading="lazy"
+                />
+              ) : (
+                <span className="auto-combat-threat-modal__fallback">☣</span>
+              )}
+            </div>
+
+            <div className="auto-combat-threat-modal__heading">
+              <span>Ameaça próxima</span>
+              <strong id="auto-combat-threat-modal-title">
+                {selectedThreatMob.name}
+              </strong>
+            </div>
+
+            <div className="auto-combat-threat-modal__pills">
+              <span>XP {selectedThreatMob.xpReward ?? '—'}</span>
+              <span>Nível {selectedThreatMob.level ?? '—'}</span>
+              <span>HP {selectedThreatMob.hp ?? '—'}</span>
+              {selectedThreatChance !== null ? (
+                <span>{selectedThreatChance}% encontro</span>
+              ) : null}
+            </div>
+
+            <div className="auto-combat-threat-modal__divider">
+              <span>Loot possível</span>
+            </div>
+
+            {selectedThreatDrops.length > 0 ? (
+              <div className="auto-combat-threat-modal__loot-grid">
+                {selectedThreatDrops.map((drop) => {
+                  const itemName = drop.item?.name ?? 'Item desconhecido';
+                  const chanceLabel = formatDropChance(drop.dropChance);
+
+                  return (
+                    <div
+                      key={drop.id}
+                      className={[
+                        'auto-combat-threat-loot-card',
+                        getLootRarityClassName(drop.item?.rarity),
+                      ].join(' ')}
+                      title={itemName}
+                    >
+                      {chanceLabel ? (
+                        <span className="auto-combat-threat-loot-card__chance">
+                          {chanceLabel}
+                        </span>
+                      ) : null}
+
+                      <span
+                        className="auto-combat-threat-loot-card__icon"
+                        aria-hidden="true"
+                      >
+                        {getLootInitials(itemName)}
+                      </span>
+
+                      <strong>{itemName}</strong>
+
+                      <small>
+                        {formatDropQuantity(
+                          drop.minQuantity,
+                          drop.maxQuantity,
+                        )}
+                      </small>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="auto-combat-threat-modal__empty-loot">
+                Nenhum drop cadastrado para este monstro.
+              </p>
+            )}
+          </article>
+        </div>
+      ) : null}
     </DashboardLayout>
   );
 }

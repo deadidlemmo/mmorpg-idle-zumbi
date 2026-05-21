@@ -27,6 +27,23 @@ const MAX_VISIBLE_LOOT_NOTIFICATIONS = 5;
 const MAX_PROCESSED_KEYS = 240;
 const LOOT_NOTIFICATION_TTL_MS = 4200;
 
+function getSourceLabel(source?: string | null) {
+  switch (source) {
+    case 'auto-combat':
+      return 'Combate automático';
+    case 'gathering':
+      return 'Item coletado';
+    case 'crafting':
+      return 'Item criado';
+    case 'incursion':
+      return 'Incursão';
+    case 'world-boss':
+      return 'World Boss';
+    default:
+      return 'Item recebido';
+  }
+}
+
 function normalizeQuantity(quantity: number) {
   if (!Number.isFinite(quantity)) {
     return 0;
@@ -88,6 +105,9 @@ export function LootNotificationProvider({
         const quantity = normalizeQuantity(payload.quantity);
         const itemName = payload.itemName.trim();
         const idempotencyKey = payload.idempotencyKey.trim();
+        const source = String(payload.source ?? 'system')
+          .trim()
+          .toLowerCase();
 
         if (!idempotencyKey || !itemName || quantity <= 0) {
           continue;
@@ -105,6 +125,7 @@ export function LootNotificationProvider({
           idempotencyKey,
           itemName,
           quantity,
+          source,
           createdAt,
         });
       }
@@ -169,6 +190,7 @@ export function LootNotificationProvider({
             key={notification.id}
             className="loot-notification-card"
             data-rarity={String(notification.rarity ?? 'COMMON').toLowerCase()}
+            data-source={String(notification.source ?? 'system').toLowerCase()}
           >
             <span className="loot-notification-card__icon" aria-hidden="true">
               {notification.imageUrl ? (
@@ -180,7 +202,7 @@ export function LootNotificationProvider({
 
             <span className="loot-notification-card__body">
               <span className="loot-notification-card__eyebrow">
-                Item recebido
+                {getSourceLabel(notification.source)}
               </span>
               <strong className="loot-notification-card__name">
                 {notification.quantity > 1

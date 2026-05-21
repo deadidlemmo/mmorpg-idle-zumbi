@@ -21,6 +21,12 @@ function clampPercent(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function formatXp(value: number) {
+  const safeValue = Math.max(0, Math.floor(Number(value) || 0));
+
+  return safeValue.toLocaleString('pt-BR');
+}
+
 export function GatheringSkillsPanel({
   skills,
   activeGathering,
@@ -79,19 +85,19 @@ export function GatheringSkillsPanel({
       ) : null}
 
       <section className="gathering-panel__skills">
-        <div className="gathering-panel__section-header">
-          <span>Proficiências</span>
-          <h3>Níveis de gathering</h3>
-        </div>
-
         <div className="gathering-skills-grid">
           {skills.map((skill) => {
             const progress = clampPercent(skill.progressPercent);
+            const xpLabel = `${formatXp(skill.currentXp)} / ${formatXp(
+              skill.xpToNextLevel,
+            )}`;
 
             return (
               <article
                 key={skill.key}
-                className={`gathering-skill-card is-${skill.key}`}
+                className={`gathering-skill-card is-${skill.key} ${
+                  progress > 0 ? 'has-progress' : ''
+                }`}
               >
                 <div className="gathering-skill-card__top">
                   <div className="gathering-skill-card__icon" aria-hidden="true">
@@ -115,12 +121,18 @@ export function GatheringSkillsPanel({
                 <div className="gathering-skill-card__progress">
                   <div className="gathering-skill-card__progress-header">
                     <span>EXP</span>
-                    <strong>
-                      {skill.currentXp}/{skill.xpToNextLevel}
-                    </strong>
+                    <strong>{xpLabel}</strong>
+                    <em>{progress}%</em>
                   </div>
 
-                  <div className="gathering-skill-card__track">
+                  <div
+                    className="gathering-skill-card__track"
+                    role="progressbar"
+                    aria-label={`Experiência de ${skill.label}`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={progress}
+                  >
                     <i style={{ width: `${progress}%` }} />
                   </div>
                 </div>

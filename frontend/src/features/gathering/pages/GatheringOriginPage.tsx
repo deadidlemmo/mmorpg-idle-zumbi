@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import npcArsenalNogueira from '../../../assets/images/npcs/npc_arsenal_nogueira.png';
 import npcColetaDonaCelia from '../../../assets/images/npcs/npc_coleta_dona_celia.png';
@@ -79,6 +80,12 @@ const GATHERING_CLASS_FILTERS: Array<{
   { key: 'Atirador', label: 'Atirador' },
   { key: 'Médico', label: 'Médico' },
 ];
+
+type GatheringClassDropdownOption = {
+  value: GatheringClassFilter;
+  label: string;
+  count: number;
+};
 
 type GatheringSkillLoose = Partial<GatheringSkillViewModel> & {
   key?: string | null;
@@ -637,6 +644,81 @@ function countMaterialsByClass(materials: GatheringMaterialViewModel[]) {
   );
 }
 
+function GatheringClassDropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: GatheringClassFilter;
+  options: GatheringClassDropdownOption[];
+  onChange: (value: GatheringClassFilter) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOption =
+    options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <div className="gathering-class-dropdown-filter">
+      <span>Classe</span>
+
+      <div
+        className="gathering-class-dropdown"
+        onBlur={(event) => {
+          const nextFocus = event.relatedTarget;
+
+          if (
+            nextFocus instanceof Node &&
+            event.currentTarget.contains(nextFocus)
+          ) {
+            return;
+          }
+
+          setIsOpen(false);
+        }}
+      >
+        <button
+          type="button"
+          className="gathering-class-dropdown__button"
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((current) => !current)}
+        >
+          <span className="gathering-class-dropdown__value">
+            {selectedOption?.label ?? 'Todas'}
+          </span>
+          <ChevronDown aria-hidden="true" size={15} />
+        </button>
+
+        {isOpen ? (
+          <div className="gathering-class-dropdown__menu" role="listbox">
+            {options.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={option.value === value}
+                className={[
+                  'gathering-class-dropdown__option',
+                  option.value === value ? 'is-selected' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+              >
+                <span>{option.label}</span>
+                <em>{option.count}</em>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function GatheringOriginPage() {
   const { characterId, origin } = useParams();
 
@@ -703,6 +785,19 @@ export function GatheringOriginPage() {
     () => countMaterialsByClass(materials),
     [materials],
   );
+  const classFilterOptions = useMemo<GatheringClassDropdownOption[]>(
+    () =>
+      GATHERING_CLASS_FILTERS.map((option) => {
+        const count = materialClassCounts[option.key] ?? 0;
+
+        return {
+          value: option.key,
+          label: option.label,
+          count,
+        };
+      }),
+    [materialClassCounts],
+  );
   const filteredMaterials = useMemo(
     () =>
       materials.filter((material) =>
@@ -762,9 +857,19 @@ export function GatheringOriginPage() {
   useEffect(() => {
     if (!gatheringSkill) return;
 
-    setLastKnownGatheringSkill((currentSkill) =>
-      getNextGatheringSkillState(currentSkill, gatheringSkill),
-    );
+    let isCancelled = false;
+
+    queueMicrotask(() => {
+      if (isCancelled) return;
+
+      setLastKnownGatheringSkill((currentSkill) =>
+        getNextGatheringSkillState(currentSkill, gatheringSkill),
+      );
+    });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [gatheringSkill]);
 
   const selectedMaterial = useMemo(
@@ -842,7 +947,17 @@ export function GatheringOriginPage() {
   }, [originKey, refreshGathering, safeCharacterId]);
 
   useEffect(() => {
-    void loadGatheringData();
+    let isCancelled = false;
+
+    queueMicrotask(() => {
+      if (isCancelled) return;
+
+      void loadGatheringData();
+    });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [loadGatheringData]);
 
   const handleRefreshActivity = useCallback(async () => {
@@ -1189,44 +1304,11 @@ export function GatheringOriginPage() {
                     </span>
                   </div>
 
-                  <div
-                    className="gathering-material-class-filter__options"
-                    role="group"
-                    aria-label="Classes de equipamento"
-                  >
-                    {GATHERING_CLASS_FILTERS.map((option) => {
-                      const count = materialClassCounts[option.key] ?? 0;
-                      const isActive = classFilter === option.key;
-                      const isCharacterClass =
-                        option.key !== 'ALL' &&
-                        normalizeClassFilterValue(character.className) ===
-                          normalizeClassFilterValue(option.key);
-
-                      return (
-                        <button
-                          key={option.key}
-                          type="button"
-                          className={[
-                            'gathering-material-class-filter__button',
-                            isActive
-                              ? 'gathering-material-class-filter__button--active'
-                              : '',
-                            isCharacterClass
-                              ? 'gathering-material-class-filter__button--character'
-                              : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          onClick={() => setClassFilter(option.key)}
-                          aria-pressed={isActive}
-                          disabled={option.key !== 'ALL' && count <= 0}
-                        >
-                          <span>{option.label}</span>
-                          <em>{count}</em>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <GatheringClassDropdown
+                    value={classFilter}
+                    options={classFilterOptions}
+                    onChange={setClassFilter}
+                  />
                 </div>
 
                 {isLoading ? (

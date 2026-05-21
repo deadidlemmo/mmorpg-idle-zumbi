@@ -95,3 +95,21 @@ export interface InventoryFilterOption {
   label: string;
   count: number;
 }
+
+export type InventoryItemActionKind =
+  | 'equip'
+  | 'consume'
+  | 'unequip'
+  | 'deposit'
+  | 'withdraw';
+
+export interface InventoryItemActionViewModel {
+  kind: InventoryItemActionKind;
+  label: string;
+  description: string;
+}
+
+export interface InventoryItemActionFeedback {
+  tone: 'success' | 'error';
+  message: string;
+}
