@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ItemSlot } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CraftingGateway } from './crafting.gateway';
 import { CraftingService } from './crafting.service';
 import { CraftItemDto } from './dto/craft-item.dto';
 
@@ -25,7 +26,10 @@ type AuthenticatedRequest = {
 @Controller('crafting')
 @UseGuards(JwtAuthGuard)
 export class CraftingController {
-  constructor(private readonly craftingService: CraftingService) {}
+  constructor(
+    private readonly craftingService: CraftingService,
+    private readonly craftingGateway: CraftingGateway,
+  ) {}
 
   private getUserId(request: AuthenticatedRequest): string {
     const userId =
@@ -55,13 +59,42 @@ export class CraftingController {
     });
   }
 
+  @Get('character/:characterId/status')
+  getCharacterCraftingStatus(
+    @Req() request: AuthenticatedRequest,
+    @Param('characterId') characterId: string,
+  ) {
+    return this.craftingService.getCharacterCraftingStatus(
+      this.getUserId(request),
+      characterId,
+    );
+  }
+
   @Get(':itemId/recipe')
   getRecipe(@Param('itemId') itemId: string) {
     return this.craftingService.getRecipeByOutputItemId(itemId);
   }
 
   @Post('craft')
-  craft(@Req() request: AuthenticatedRequest, @Body() dto: CraftItemDto) {
-    return this.craftingService.craft(this.getUserId(request), dto);
+  async craft(@Req() request: AuthenticatedRequest, @Body() dto: CraftItemDto) {
+    const userId = this.getUserId(request);
+    const result = await this.craftingService.craft(userId, dto);
+
+    await this.craftingGateway.emitStartedForCharacter(dto.characterId, userId);
+
+    return result;
+  }
+
+  @Post('character/:characterId/stop')
+  async stop(
+    @Req() request: AuthenticatedRequest,
+    @Param('characterId') characterId: string,
+  ) {
+    const userId = this.getUserId(request);
+    const result = await this.craftingService.stop(userId, characterId);
+
+    await this.craftingGateway.emitStoppedForCharacter(characterId, userId);
+
+    return result;
   }
 }

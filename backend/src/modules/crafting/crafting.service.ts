@@ -698,6 +698,67 @@ export class CraftingService {
     return this.getRecipeByOutputItemId(itemId);
   }
 
+  async getCharacterCraftingStatus(userId: string, characterId: string) {
+    if (!characterId) {
+      throw new BadRequestException('O characterId é obrigatório.');
+    }
+
+    const character = await this.prisma.character.findUnique({
+      where: {
+        id: characterId,
+      },
+      select: {
+        id: true,
+        userId: true,
+        name: true,
+        level: true,
+        status: true,
+        class: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!character) {
+      throw new NotFoundException('Personagem não encontrado.');
+    }
+
+    if (character.userId !== userId) {
+      throw new ForbiddenException('Você não pode acessar este personagem.');
+    }
+
+    const completedSessions =
+      await this.resolveCompletedCraftingSessions(characterId);
+    const activeSession = await this.findActiveCraftingSession(characterId);
+    const craftingSkill = await this.getOrCreateCraftingSkill(characterId);
+    const craftingSkillViewModel =
+      this.buildCraftingSkillViewModel(craftingSkill);
+
+    return {
+      active: Boolean(activeSession),
+      character: {
+        id: character.id,
+        name: character.name,
+        level: character.level,
+        craftingLevel: craftingSkillViewModel.level,
+        unlockedTier: craftingSkillViewModel.unlockedTier,
+        craftingSkill: craftingSkillViewModel,
+        status: character.status,
+        class: character.class,
+      },
+      craftingSkill: craftingSkillViewModel,
+      activeSession: activeSession
+        ? this.buildCraftingSessionViewModel(activeSession)
+        : null,
+      completedSessions: completedSessions.map((session) =>
+        this.buildCraftingSessionViewModel(session),
+      ),
+    };
+  }
+
   async craft(userId: string, dto: CraftItemDto) {
     const craftQuantity = dto.quantity ?? 1;
 
@@ -974,6 +1035,77 @@ export class CraftingService {
       craftingSession: this.buildCraftingSessionViewModel(
         craftResult.craftingSession,
       ),
+    };
+  }
+
+  async stop(userId: string, characterId: string) {
+    if (!characterId) {
+      throw new BadRequestException('O characterId Ã© obrigatÃ³rio.');
+    }
+
+    const character = await this.prisma.character.findUnique({
+      where: {
+        id: characterId,
+      },
+      select: {
+        id: true,
+        userId: true,
+        name: true,
+        status: true,
+      },
+    });
+
+    if (!character) {
+      throw new NotFoundException('Personagem nÃ£o encontrado.');
+    }
+
+    if (character.userId !== userId) {
+      throw new ForbiddenException(
+        'VocÃª nÃ£o pode encerrar a criaÃ§Ã£o deste personagem.',
+      );
+    }
+
+    if (character.status !== CharacterStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Apenas personagens ativos podem encerrar criaÃ§Ãµes.',
+      );
+    }
+
+    await this.resolveCompletedCraftingSessions(characterId);
+
+    const activeSession = await this.findActiveCraftingSession(characterId);
+
+    if (!activeSession) {
+      throw new BadRequestException('Nenhuma criaÃ§Ã£o ativa para encerrar.');
+    }
+
+    const stoppedAt = new Date();
+    const stopResult = await this.prisma.craftingSession.updateMany({
+      where: {
+        id: activeSession.id,
+        status: ActivityStatus.ACTIVE,
+      },
+      data: {
+        status: ActivityStatus.STOPPED,
+        completedAt: stoppedAt,
+      },
+    });
+
+    if (stopResult.count <= 0) {
+      throw new ConflictException(
+        'Esta criaÃ§Ã£o jÃ¡ foi encerrada por outra aÃ§Ã£o.',
+      );
+    }
+
+    return {
+      ...(await this.getCharacterCraftingStatus(userId, characterId)),
+      message:
+        'CriaÃ§Ã£o encerrada. Materiais consumidos nÃ£o foram recuperados.',
+      stoppedSession: this.buildCraftingSessionViewModel({
+        ...activeSession,
+        status: ActivityStatus.STOPPED,
+        completedAt: stoppedAt,
+      }),
     };
   }
 

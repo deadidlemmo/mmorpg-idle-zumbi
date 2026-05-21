@@ -275,6 +275,7 @@ model Character {
   map   GameMap?  @relation(fields: [mapId], references: [id])
 
   inventoryItems          InventoryItem[]
+  bankItems               BankItem[]
   equipment               Equipment?
   potionConfig            CharacterPotionConfig?
   combats                 Combat[]
@@ -423,6 +424,7 @@ model Item {
   map   GameMap?   @relation(fields: [mapId], references: [id])
 
   inventoryItems InventoryItem[]
+  bankItems      BankItem[]
 
   mainHandUsers Equipment[] @relation("MainHandItem")
   offHandUsers  Equipment[] @relation("OffHandItem")
@@ -606,6 +608,28 @@ model InventoryItem {
   @@index([itemId])
   @@index([type])
   @@map("inventory_items")
+}
+
+model BankItem {
+  id String @id @default(uuid())
+
+  characterId String
+  itemId      String
+
+  type     InventoryItemType
+  quantity Int               @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, itemId])
+  @@index([characterId])
+  @@index([itemId])
+  @@index([type])
+  @@map("bank_items")
 }
 
 model Equipment {

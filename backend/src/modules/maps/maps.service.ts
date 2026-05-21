@@ -26,7 +26,15 @@ export class MapsService {
                 isActive: true,
               },
               include: {
-                mob: true,
+                mob: {
+                  include: {
+                    drops: {
+                      include: {
+                        item: true,
+                      },
+                    },
+                  },
+                },
               },
             },
           },
@@ -74,7 +82,15 @@ export class MapsService {
                 isActive: true,
               },
               include: {
-                mob: true,
+                mob: {
+                  include: {
+                    drops: {
+                      include: {
+                        item: true,
+                      },
+                    },
+                  },
+                },
               },
             },
           },
