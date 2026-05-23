@@ -1,21 +1,16 @@
 import type { MouseEvent } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import type {
-    GatheringMaterialRecipeUsageViewModel,
-    GatheringMaterialViewModel,
-    GatheringSkillViewModel,
+  GatheringMaterialViewModel,
+  GatheringSkillViewModel,
 } from '../types/gathering.types';
 import {
-    formatGatheringOutputItemSlot,
-    formatGatheringRecipeQuantity,
-    formatGatheringTimePerUnitShort,
-    getGatheringMaterialRatePerHour,
-    getGatheringMaterialRelatedClasses,
-    getGatheringMaterialUsedInRecipes,
-    getGatheringRequiredLevel,
-    getGatheringSkillLevel,
-    getGatheringXpPerUnit,
-    isGatheringMaterialUnlocked,
+  formatGatheringTimePerUnitShort,
+  getGatheringMaterialRatePerHour,
+  getGatheringRequiredLevel,
+  getGatheringSkillLevel,
+  getGatheringXpPerUnit,
+  isGatheringMaterialUnlocked,
 } from '../types/gathering.types';
 
 interface GatheringUsageModalProps {
@@ -28,59 +23,6 @@ interface GatheringUsageModalProps {
   startDisabledReason?: string | null;
   onClose: () => void;
   onStart?: (material: GatheringMaterialViewModel) => void | Promise<void>;
-}
-
-function getRoleLabel(role?: string | null): string {
-  switch (role) {
-    case 'MAIN_COMPONENT':
-      return 'Componente principal';
-
-    case 'SHARED_MATERIAL':
-      return 'Material compartilhado';
-
-    case 'RARE_MOB_DROP':
-      return 'Drop raro';
-
-    default:
-      return role ?? 'Ingrediente';
-  }
-}
-
-function getRarityLabel(rarity?: string | null): string {
-  switch (rarity) {
-    case 'COMMON':
-      return 'Comum';
-
-    case 'UNCOMMON':
-      return 'Incomum';
-
-    case 'RARE':
-      return 'Raro';
-
-    case 'EPIC':
-      return 'Épico';
-
-    case 'LEGENDARY':
-      return 'Lendário';
-
-    default:
-      return rarity ?? 'Raridade não definida';
-  }
-}
-
-function getOutputInitials(recipe: GatheringMaterialRecipeUsageViewModel): string {
-  const words = recipe.outputItemName
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (words.length <= 0) return '?';
-
-  if (words.length === 1) {
-    return words[0].slice(0, 2).toUpperCase();
-  }
-
-  return `${words[0][0] ?? ''}${words[1][0] ?? ''}`.toUpperCase();
 }
 
 function getMaterialInitials(material?: GatheringMaterialViewModel | null): string {
@@ -126,88 +68,6 @@ function getMaterialIconUrl(
   return trimmedIcon.length > 0 ? trimmedIcon : null;
 }
 
-function getRecipeClassLabel(
-  recipe: GatheringMaterialRecipeUsageViewModel,
-): string {
-  return recipe.outputItemClassName ?? 'Classe livre';
-}
-
-function getRecipeMetaLine(recipe: GatheringMaterialRecipeUsageViewModel): string {
-  const slot = formatGatheringOutputItemSlot(recipe.outputItemSlot);
-  const rarity = getRarityLabel(recipe.outputItemRarity);
-
-  return `${getRecipeClassLabel(recipe)} • ${slot} • T${recipe.outputItemTier} • ${rarity}`;
-}
-
-function getRecipeQuantityLine(
-  recipe: GatheringMaterialRecipeUsageViewModel,
-): string {
-  const ingredientQuantity = formatGatheringRecipeQuantity(recipe);
-  const outputQuantity =
-    recipe.outputQuantity > 1 ? `gera ${recipe.outputQuantity}` : 'gera 1';
-
-  return `${ingredientQuantity} usado • ${outputQuantity}`;
-}
-
-function sortRecipes(
-  recipes: GatheringMaterialRecipeUsageViewModel[],
-): GatheringMaterialRecipeUsageViewModel[] {
-  return [...recipes].sort((first, second) => {
-    if (first.outputItemTier !== second.outputItemTier) {
-      return first.outputItemTier - second.outputItemTier;
-    }
-
-    const firstSlot = formatGatheringOutputItemSlot(first.outputItemSlot);
-    const secondSlot = formatGatheringOutputItemSlot(second.outputItemSlot);
-
-    const slotCompare = firstSlot.localeCompare(secondSlot, 'pt-BR');
-
-    if (slotCompare !== 0) {
-      return slotCompare;
-    }
-
-    return first.outputItemName.localeCompare(second.outputItemName, 'pt-BR');
-  });
-}
-
-function getRecipeSummary(recipes: GatheringMaterialRecipeUsageViewModel[]): string {
-  if (recipes.length <= 0) {
-    return 'Sem receita vinculada';
-  }
-
-  if (recipes.length === 1) {
-    return '1 receita vinculada';
-  }
-
-  return `${recipes.length} receitas vinculadas`;
-}
-
-function getRelatedRecipeSlots(
-  recipes: GatheringMaterialRecipeUsageViewModel[],
-): string[] {
-  const slotLabels = recipes
-    .map((recipe) => formatGatheringOutputItemSlot(recipe.outputItemSlot))
-    .filter(Boolean);
-
-  return Array.from(new Set(slotLabels));
-}
-
-function getModalClassSummary(classes: string[]): string {
-  if (classes.length <= 0) {
-    return 'Sem classe vinculada';
-  }
-
-  return classes.join(' / ');
-}
-
-function getModalSlotSummary(slots: string[]): string {
-  if (slots.length <= 0) {
-    return 'Sem peça vinculada';
-  }
-
-  return slots.join(' / ');
-}
-
 function getStartButtonLabel(params: {
   isBusy: boolean;
   isUnlocked: boolean;
@@ -232,23 +92,6 @@ export function GatheringUsageModal({
   onClose,
   onStart,
 }: GatheringUsageModalProps) {
-  const [inspectedMaterialId, setInspectedMaterialId] = useState<string | null>(
-    null,
-  );
-
-  const recipes = useMemo(
-    () => sortRecipes(getGatheringMaterialUsedInRecipes(material)),
-    [material],
-  );
-  const relatedClasses = useMemo(
-    () => getGatheringMaterialRelatedClasses(material),
-    [material],
-  );
-  const relatedSlots = useMemo(() => getRelatedRecipeSlots(recipes), [recipes]);
-  const primaryRecipeRoleLabel = recipes[0]
-    ? getRoleLabel(recipes[0].role)
-    : 'Ingrediente';
-
   const requiredLevel = material ? getGatheringRequiredLevel(material) : 1;
   const currentSkillLevel = getGatheringSkillLevel(gatheringSkill);
 
@@ -266,9 +109,6 @@ export function GatheringUsageModal({
 
   const timePerUnitLabel = formatGatheringTimePerUnitShort(ratePerHour);
   const iconUrl = getMaterialIconUrl(material);
-  const isInspecting = Boolean(
-    isOpen && material?.id && inspectedMaterialId === material.id,
-  );
   const canStart = Boolean(
     material && onStart && isUnlocked && !isBusy && !isStartDisabled,
   );
@@ -278,7 +118,6 @@ export function GatheringUsageModal({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setInspectedMaterialId(null);
         onClose();
       }
     }
@@ -294,10 +133,7 @@ export function GatheringUsageModal({
     return null;
   }
 
-  const currentMaterialId = material.id;
-
   function handleClose() {
-    setInspectedMaterialId(null);
     onClose();
   }
 
@@ -307,12 +143,6 @@ export function GatheringUsageModal({
 
   function handlePanelClick(event: MouseEvent<HTMLDivElement>) {
     event.stopPropagation();
-  }
-
-  function handleInspectClick() {
-    setInspectedMaterialId((currentValue) =>
-      currentValue === currentMaterialId ? null : currentMaterialId,
-    );
   }
 
   async function handleStartClick() {
@@ -329,13 +159,7 @@ export function GatheringUsageModal({
       onClick={handleBackdropClick}
     >
       <div
-        className={[
-          'gathering-usage-modal__panel',
-          'gathering-usage-modal__panel--compact',
-          isInspecting ? 'is-inspecting' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
+        className="gathering-usage-modal__panel gathering-usage-modal__panel--compact"
         role="dialog"
         aria-modal="true"
         aria-labelledby="gathering-usage-modal-title"
@@ -365,48 +189,23 @@ export function GatheringUsageModal({
           </span>
 
           <div className="gathering-usage-modal__hero-body">
-            <span className="gathering-card__eyebrow">
-              Material de gathering
-            </span>
-
             <h2 id="gathering-usage-modal-title">{material.name}</h2>
 
             <div className="gathering-usage-modal__chips">
               <span>Lv. {requiredLevel}</span>
               <span>{timePerUnitLabel}</span>
               <span>+{xpPerUnit} XP</span>
-              <span>{getRecipeSummary(recipes)}</span>
             </div>
           </div>
         </header>
-
-        <section
-          className="gathering-usage-modal__usage-overview"
-          aria-label="Resumo de uso do material"
-        >
-          <article>
-            <span>Classes</span>
-            <strong>{getModalClassSummary(relatedClasses)}</strong>
-          </article>
-
-          <article>
-            <span>Usado em</span>
-            <strong>{getModalSlotSummary(relatedSlots)}</strong>
-          </article>
-
-          <article>
-            <span>Função</span>
-            <strong>{primaryRecipeRoleLabel}</strong>
-          </article>
-        </section>
 
         <div className="gathering-usage-modal__actions">
           <button
             type="button"
             className="gathering-usage-modal__inspect-button"
-            onClick={handleInspectClick}
+            title="Inspeção detalhada será adicionada depois."
           >
-            {isInspecting ? 'Ocultar detalhes' : 'Inspecionar item'}
+            Inspecionar item
           </button>
 
           <button
@@ -432,55 +231,6 @@ export function GatheringUsageModal({
                 })}
           </button>
         </div>
-
-        {isInspecting ? (
-          <div className="gathering-usage-modal__content">
-            {recipes.length > 0 ? (
-              <div className="gathering-usage-modal__recipes">
-                {recipes.map((recipe) => (
-                  <article
-                    key={recipe.recipeId}
-                    className="gathering-usage-modal__recipe"
-                  >
-                    <span
-                      className="gathering-usage-modal__recipe-icon"
-                      aria-hidden="true"
-                    >
-                      {getOutputInitials(recipe)}
-                    </span>
-
-                    <div className="gathering-usage-modal__recipe-body">
-                      <div className="gathering-usage-modal__recipe-top">
-                        <strong title={recipe.outputItemName}>
-                          {recipe.outputItemName}
-                        </strong>
-
-                        <span>
-                          {formatGatheringOutputItemSlot(recipe.outputItemSlot)}
-                        </span>
-                      </div>
-
-                      <p>{getRecipeMetaLine(recipe)}</p>
-
-                      <div className="gathering-usage-modal__recipe-footer">
-                        <span>{getRoleLabel(recipe.role)}</span>
-                        <span>{getRecipeQuantityLine(recipe)}</span>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="gathering-empty gathering-empty--compact">
-                <strong>Nenhuma receita vinculada.</strong>
-                <p>
-                  Este material já pode existir no jogo, mas ainda não está
-                  associado a uma receita retornada pela API.
-                </p>
-              </div>
-            )}
-          </div>
-        ) : null}
       </div>
     </div>
   );

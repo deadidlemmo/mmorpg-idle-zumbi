@@ -106,6 +106,8 @@ import {
 } from '../utils/mobAssets';
 import { selectVisibleCharacterProgress } from '../utils/visible-progress';
 
+const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
+
 function getRealtimeFeedbackTarget(event?: AutoCombatRealtimeEvent | null) {
   const eventType = normalizeRealtimeEventType(event?.type);
   const eventTarget = normalizeRealtimeEventType(event?.target);
@@ -241,7 +243,6 @@ export function AutoCombatPage() {
   const [selectedPotionSlotIndex, setSelectedPotionSlotIndex] = useState(0);
   const [selectedPotionItemId, setSelectedPotionItemId] = useState('');
   const [potionThresholdPercent, setPotionThresholdPercent] = useState(35);
-  const [isPotionEnabled, setIsPotionEnabled] = useState(true);
   const [isPotionConfigLoading, setIsPotionConfigLoading] = useState(false);
   const [potionConfigMessage, setPotionConfigMessage] = useState('');
 
@@ -496,7 +497,6 @@ export function AutoCombatPage() {
       setPotionThresholdPercent(
         clampNumber(normalizedPotionConfig?.hpThresholdPercent ?? 35, 1, 100),
       );
-      setIsPotionEnabled(Boolean(normalizedPotionConfig?.enabled));
 
       setLocalCharacterProgress((current) => {
         if (hasPendingRealtimeVisualRef.current && current) {
@@ -774,6 +774,22 @@ export function AutoCombatPage() {
       window.removeEventListener('keydown', handleThreatModalKeyDown);
     };
   }, [selectedThreat]);
+
+  useEffect(() => {
+    if (!isPotionConfigPanelOpen) return;
+
+    function handlePotionConfigModalKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsPotionConfigPanelOpen(false);
+      }
+    }
+
+    window.addEventListener('keydown', handlePotionConfigModalKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handlePotionConfigModalKeyDown);
+    };
+  }, [isPotionConfigPanelOpen]);
 
   useEffect(() => {
     if (maps.length <= 0) return;
@@ -1578,7 +1594,6 @@ export function AutoCombatPage() {
     setPotionThresholdPercent(
       clampNumber(currentPotionConfig?.hpThresholdPercent ?? 35, 1, 100),
     );
-    setIsPotionEnabled(Boolean(currentPotionConfig?.enabled));
     setIsPotionConfigPanelOpen(true);
   }
 
@@ -1589,11 +1604,11 @@ export function AutoCombatPage() {
       clampNumber(potionThresholdPercent, 1, 100),
     );
 
-    const shouldEnable = Boolean(isPotionEnabled && selectedPotionItemId);
+    const shouldEnable = Boolean(selectedPotionItemId);
 
-    if (isPotionEnabled && !selectedPotionItemId) {
+    if (!selectedPotionItemId) {
       setPotionConfigMessage(
-        'Selecione uma poção antes de ativar o uso automático.',
+        'Selecione uma poção antes de salvar a configuração automática.',
       );
       return;
     }
@@ -1606,7 +1621,7 @@ export function AutoCombatPage() {
         enabled: shouldEnable,
         potionItemId: selectedPotionItemId || null,
         hpThresholdPercent: safeThreshold,
-        useInManualCombat: true,
+        useInManualCombat: false,
         useInAutoCombat: true,
       });
 
@@ -1617,7 +1632,7 @@ export function AutoCombatPage() {
       setPotionThresholdPercent(
         clampNumber(normalized?.hpThresholdPercent ?? safeThreshold, 1, 100),
       );
-      setIsPotionEnabled(Boolean(normalized?.enabled));
+      setIsPotionConfigPanelOpen(false);
       setPotionConfigMessage(
         response.message ?? 'Configuração de poção atualizada com sucesso.',
       );
@@ -1628,43 +1643,6 @@ export function AutoCombatPage() {
         getApiErrorMessage(
           error,
           'Não foi possível salvar a configuração de poção.',
-        ),
-      );
-    } finally {
-      setIsPotionConfigLoading(false);
-    }
-  }
-
-  async function handleDisablePotionConfig() {
-    if (!characterId || isPotionConfigLoading) return;
-
-    try {
-      setIsPotionConfigLoading(true);
-      setPotionConfigMessage('');
-
-      const response = await updateCharacterPotionConfigRaw(characterId, {
-        enabled: false,
-        potionItemId:
-          selectedPotionItemId || currentPotionConfig?.potionItemId || null,
-        hpThresholdPercent: Math.floor(
-          clampNumber(potionThresholdPercent, 1, 100),
-        ),
-        useInManualCombat: true,
-        useInAutoCombat: true,
-      });
-
-      const normalized = normalizePotionConfigResponse(response);
-
-      setAutoPotionConfig(normalized);
-      setIsPotionEnabled(false);
-      setPotionConfigMessage('Uso automático de poção desativado.');
-
-      await loadAutoCombatData();
-    } catch (error) {
-      setPotionConfigMessage(
-        getApiErrorMessage(
-          error,
-          'Não foi possível desativar a configuração de poção.',
         ),
       );
     } finally {
@@ -1685,7 +1663,7 @@ export function AutoCombatPage() {
         hpThresholdPercent: Math.floor(
           clampNumber(potionThresholdPercent, 1, 100),
         ),
-        useInManualCombat: true,
+        useInManualCombat: false,
         useInAutoCombat: true,
       });
 
@@ -1693,7 +1671,7 @@ export function AutoCombatPage() {
 
       setAutoPotionConfig(normalized);
       setSelectedPotionItemId('');
-      setIsPotionEnabled(false);
+      setIsPotionConfigPanelOpen(false);
       setPotionConfigMessage('Poção removida da configuração automática.');
 
       await loadAutoCombatData();
@@ -1827,6 +1805,8 @@ export function AutoCombatPage() {
       setLocalRealtimeCombat(null);
       setLocalBattleLogEvents([]);
       setLocalActiveEvent(null);
+      setHasStartedHunt(false);
+      setActiveTab('battle');
 
       await loadAutoCombatData();
     } catch (error) {
@@ -2132,7 +2112,16 @@ export function AutoCombatPage() {
               ) : null}
 
               {showActiveSession ? (
-                <div className="auto-combat-session-stage">
+                <div
+                  className={[
+                    'auto-combat-session-stage',
+                    !SHOW_AUTO_COMBAT_BATTLE_LOG
+                      ? 'auto-combat-session-stage--battle-log-hidden'
+                      : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
                   <article className="auto-combat-arena-card">
                     <div className="auto-combat-arena-card__top">
                       <span>{sessionStatusText}</span>
@@ -2317,40 +2306,52 @@ export function AutoCombatPage() {
                     </div>
                   </article>
 
-                  <AutoCombatBattleLog
-                    events={battleLogEvents}
-                    activeEvent={activeBattleLogEvent}
-                    isActive={showActiveSession}
-                    maxItems={20}
-                  />
+                  {SHOW_AUTO_COMBAT_BATTLE_LOG ? (
+                    <AutoCombatBattleLog
+                      events={battleLogEvents}
+                      activeEvent={activeBattleLogEvent}
+                      isActive={showActiveSession}
+                      maxItems={20}
+                    />
+                  ) : null}
 
-                  <div className="auto-combat-consumables auto-combat-consumables--minimal">
+                  <div className="auto-combat-potion-belt">
+                    <div className="auto-combat-potion-belt__header">
+                      <div>
+                        <span>Poção automática</span>
+                        <strong>Slot de cura</strong>
+                      </div>
+
+                      <small>Clique no slot para configurar o gatilho de HP.</small>
+                    </div>
+
+                    <div className="auto-combat-potion-slot-grid">
                     {potionSlots.map((potionConfig, index) => {
                       const potionItem = getPotionItem(potionConfig);
                       const potionQuantity = configuredPotionQuantity;
                       const hasConfiguredPotion = Boolean(potionItem);
-                      const isEnabled = Boolean(
-                        potionConfig?.enabled && hasConfiguredPotion,
-                      );
+                      const isEnabled = hasConfiguredPotion;
 
                       return (
-                        <button
+                        <div
                           key={potionConfig?.id ?? `auto-potion-${index}`}
-                          type="button"
-                          className={[
-                            'auto-combat-consumable-slot',
-                            'auto-combat-consumable-slot--primary',
-                            isEnabled ? 'is-enabled' : 'is-empty',
-                            index === selectedPotionSlotIndex &&
-                            isPotionConfigPanelOpen
-                              ? 'is-selected'
-                              : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          onClick={() => handleOpenPotionConfig(index)}
+                          className="auto-combat-potion-slot"
                         >
-                          <div className="auto-combat-consumable-slot__icon">
+                          <button
+                            type="button"
+                            className={[
+                              'auto-combat-potion-slot__button',
+                              isEnabled ? 'is-enabled' : 'is-empty',
+                              index === selectedPotionSlotIndex &&
+                              isPotionConfigPanelOpen
+                                ? 'is-selected'
+                                : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                            onClick={() => handleOpenPotionConfig(index)}
+                          >
+                          <div className="auto-combat-potion-slot__icon">
                             ✚
                           </div>
 
@@ -2362,7 +2363,7 @@ export function AutoCombatPage() {
                             <strong>
                               {potionItem
                                 ? getPotionName(potionConfig)
-                                : 'Nenhuma poção configurada'}
+                                : 'Configurar'}
                             </strong>
 
                             <span>
@@ -2373,35 +2374,70 @@ export function AutoCombatPage() {
 
                             <small className="auto-combat-consumable-slot__meta">
                               {potionItem
-                                ? `${getPotionHealLabel(potionItem)} · Qtd. ${potionQuantity} · HP ≤ ${currentPotionConfig?.hpThresholdPercent ?? potionThresholdPercent}%`
-                                : 'Grid de poções · gatilho automático'}
+                                ? `HP <= ${currentPotionConfig?.hpThresholdPercent ?? potionThresholdPercent}% · x${potionQuantity}`
+                                : 'Escolher poção'}
                             </small>
                           </div>
 
                           <em className="auto-combat-consumable-slot__action">
-                            {isPotionConfigPanelOpen ? 'Editando' : 'Configurar'}
+                            {hasConfiguredPotion ? 'Editar' : 'Configurar'}
                           </em>
-                        </button>
+                          </button>
+
+                          {hasConfiguredPotion ? (
+                            <button
+                              type="button"
+                              className="auto-combat-potion-slot__remove"
+                              aria-label="Remover poção automática"
+                              disabled={isPotionConfigLoading}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleClearPotionConfig();
+                              }}
+                            >
+                              X
+                            </button>
+                          ) : null}
+                        </div>
                       );
                     })}
+                    </div>
                   </div>
 
                   {isPotionConfigPanelOpen ? (
-                    <article className="auto-combat-potion-config-panel auto-combat-potion-config-panel--minimal">
-                      <div className="auto-combat-potion-config-panel__header">
-                        <div>
-                          <span>Poção automática</span>
-                          <strong>Escolha a poção e o gatilho de HP</strong>
-                        </div>
+                    <div
+                      className="auto-combat-potion-config-modal-backdrop"
+                      role="presentation"
+                      onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                          setIsPotionConfigPanelOpen(false);
+                        }
+                      }}
+                    >
+                      <article
+                        className="auto-combat-potion-config-panel auto-combat-potion-config-panel--minimal auto-combat-potion-config-panel--modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="auto-combat-potion-config-title"
+                        onMouseDown={(event) => event.stopPropagation()}
+                      >
+                        <div className="auto-combat-potion-config-panel__header">
+                          <div>
+                            <span>Poção automática</span>
+                            <strong id="auto-combat-potion-config-title">
+                              Escolha a poção e o gatilho de HP
+                            </strong>
+                          </div>
 
-                        <button
-                          type="button"
-                          className="auto-combat-potion-config-panel__close"
-                          onClick={() => setIsPotionConfigPanelOpen(false)}
-                        >
-                          Fechar
-                        </button>
-                      </div>
+                          <button
+                            type="button"
+                            className="auto-combat-potion-config-panel__close"
+                            aria-label="Fechar configuração de poção"
+                            onClick={() => setIsPotionConfigPanelOpen(false)}
+                          >
+                            Fechar
+                          </button>
+                        </div>
 
                       <div className="auto-combat-potion-config-grid auto-combat-potion-config-grid--minimal">
                         <section className="auto-combat-potion-picker">
@@ -2415,18 +2451,6 @@ export function AutoCombatPage() {
                               </strong>
                             </div>
 
-                            <label className="auto-combat-potion-toggle auto-combat-potion-toggle--compact">
-                              <input
-                                type="checkbox"
-                                checked={isPotionEnabled}
-                                disabled={isPotionConfigLoading}
-                                onChange={(event) =>
-                                  setIsPotionEnabled(event.target.checked)
-                                }
-                              />
-
-                              <span>Auto</span>
-                            </label>
                           </div>
 
                           {potionOptions.length > 0 ? (
@@ -2457,7 +2481,6 @@ export function AutoCombatPage() {
                                     }
                                     onClick={() => {
                                       setSelectedPotionItemId(potionId);
-                                      setIsPotionEnabled(true);
                                       setPotionConfigMessage('');
                                     }}
                                   >
@@ -2478,10 +2501,18 @@ export function AutoCombatPage() {
                               })}
                             </div>
                           ) : (
-                            <p className="auto-combat-potion-config-warning">
-                              Nenhuma poção de cura foi encontrada no inventário
-                              deste personagem.
-                            </p>
+                            <div className="auto-combat-potion-grid auto-combat-potion-grid--empty">
+                              <div className="auto-combat-potion-empty-state">
+                                <span className="auto-combat-potion-empty-state__icon">
+                                  +
+                                </span>
+                                <strong>Inventário sem poções</strong>
+                                <p>
+                                  Nenhuma poção de cura foi encontrada no
+                                  inventário deste personagem.
+                                </p>
+                              </div>
+                            </div>
                           )}
                         </section>
 
@@ -2560,15 +2591,6 @@ export function AutoCombatPage() {
 
                         <button
                           type="button"
-                          className="auto-combat-secondary-button"
-                          disabled={isPotionConfigLoading}
-                          onClick={handleDisablePotionConfig}
-                        >
-                          Desativar
-                        </button>
-
-                        <button
-                          type="button"
                           className="auto-combat-secondary-button auto-combat-secondary-button--danger"
                           disabled={isPotionConfigLoading}
                           onClick={handleClearPotionConfig}
@@ -2576,7 +2598,8 @@ export function AutoCombatPage() {
                           Remover
                         </button>
                       </div>
-                    </article>
+                      </article>
+                    </div>
                   ) : null}
 
                   <AutoCombatSessionSummary

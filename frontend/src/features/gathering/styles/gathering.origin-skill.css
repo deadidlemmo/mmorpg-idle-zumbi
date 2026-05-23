@@ -44,14 +44,14 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 0.62rem;
-  padding: 0.72rem !important;
+  gap: 0;
+  padding: 0 !important;
   overflow: hidden;
   border: 1px solid rgba(var(--skill-card-green-rgb), 0.22) !important;
   border-radius: 0.86rem !important;
   background:
-    radial-gradient(circle at 0% 0%, rgba(var(--skill-card-green-rgb), 0.105), transparent 12rem),
-    linear-gradient(180deg, rgba(var(--skill-card-green-rgb), 0.045), rgba(255, 255, 255, 0.008)),
+    radial-gradient(circle at 0% 0%, rgba(var(--skill-card-green-rgb), 0.055), transparent 13rem),
+    linear-gradient(180deg, rgba(11, 28, 17, 0.94), rgba(3, 11, 8, 0.94)),
     rgba(5, 14, 9, 0.88) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.035),
@@ -59,8 +59,22 @@
     0 0 18px rgba(var(--skill-card-green-rgb), 0.04) !important;
 }
 
+.gathering-page--origin .gathering-origin-skill-card {
+  padding: 0 !important;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(var(--skill-card-green-rgb), 0.055), transparent 13rem),
+    linear-gradient(180deg, rgba(11, 28, 17, 0.94), rgba(3, 11, 8, 0.94)),
+    rgba(5, 14, 9, 0.88) !important;
+}
+
 .gathering-origin-skill-card--collapsed {
-  gap: 0.56rem !important;
+  gap: 0 !important;
+}
+
+.gathering-origin-skill-card--collapsed .gathering-origin-skill-card__toggle {
+  min-height: 74px !important;
+  padding-bottom: 1.62rem !important;
+  border-bottom: 0 !important;
 }
 
 /* =========================================================
@@ -74,12 +88,15 @@
   gap: 0.58rem;
   width: 100%;
   min-width: 0;
-  min-height: 42px;
-  padding: 0;
+  min-height: 58px;
+  padding: 0.66rem 0.72rem;
   color: inherit;
   text-align: left;
   border: 0;
-  background: transparent;
+  border-bottom: 1px solid rgba(var(--skill-card-green-rgb), 0.11);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(var(--skill-card-green-rgb), 0.18), transparent 9rem),
+    linear-gradient(180deg, rgba(24, 48, 28, 0.86), rgba(12, 29, 18, 0.72));
   cursor: pointer;
 }
 
@@ -220,11 +237,11 @@
 }
 
 .gathering-origin-skill-card__chevron--collapsed::before {
-  transform: translateY(-2px) rotate(45deg) !important;
+  transform: translateY(2px) rotate(225deg) !important;
 }
 
 .gathering-origin-skill-card__chevron--expanded::before {
-  transform: translateY(2px) rotate(225deg) !important;
+  transform: translateY(-2px) rotate(45deg) !important;
 }
 
 .gathering-origin-skill-card__toggle:hover .gathering-origin-skill-card__chevron {
@@ -239,11 +256,11 @@
 .gathering-origin-skill-card__track {
   position: relative;
   display: block;
-  width: 100%;
+  width: calc(100% - 1.44rem);
   height: var(--skill-bar-height) !important;
   min-height: var(--skill-bar-height) !important;
   max-height: var(--skill-bar-height) !important;
-  margin-top: 0 !important;
+  margin: 0.62rem 0.72rem 0 !important;
   overflow: hidden;
   border: 0 !important;
   border-radius: var(--skill-bar-radius) !important;
@@ -253,6 +270,16 @@
   box-shadow:
     inset 0 1px 3px rgba(0, 0, 0, 0.72),
     0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+.gathering-origin-skill-card--collapsed .gathering-origin-skill-card__track {
+  z-index: 2;
+  width: calc(100% - 5.2rem) !important;
+  margin: -1.34rem 2.42rem 0.9rem 4.1rem !important;
+}
+
+.gathering-origin-skill-card--expanded .gathering-origin-skill-card__track {
+  margin-bottom: 0 !important;
 }
 
 .gathering-origin-skill-card__track i {
@@ -279,8 +306,8 @@
   display: grid !important;
   gap: 0.42rem !important;
   min-width: 0 !important;
-  padding-top: 0.54rem !important;
-  border-top: 1px solid rgba(var(--skill-card-green-rgb), 0.12) !important;
+  padding: 0.62rem 0.72rem 0.72rem !important;
+  border-top: 0 !important;
 }
 
 /* Linha expandida:
@@ -453,13 +480,15 @@
 
 @media (max-width: 720px) {
   .gathering-origin-skill-card {
-    gap: 0.56rem !important;
-    padding: 0.66rem !important;
+    gap: 0 !important;
+    padding: 0 !important;
   }
 
   .gathering-origin-skill-card__toggle {
     grid-template-columns: 36px minmax(0, 1fr) 22px;
     gap: 0.52rem;
+    min-height: 56px;
+    padding: 0.62rem 0.66rem;
   }
 
   .gathering-origin-skill-card__icon {
@@ -486,9 +515,19 @@
   }
 
   .gathering-origin-skill-card__track {
+    width: calc(100% - 1.32rem);
+    margin: 0.58rem 0.66rem 0 !important;
     height: 6px !important;
     min-height: 6px !important;
     max-height: 6px !important;
+  }
+
+  .gathering-origin-skill-card--collapsed .gathering-origin-skill-card__track {
+    margin-bottom: 0.7rem !important;
+  }
+
+  .gathering-origin-skill-card__details {
+    padding: 0.58rem 0.66rem 0.66rem !important;
   }
 
   .gathering-origin-skill-card__expanded-metrics {
@@ -517,12 +556,14 @@
 
 @media (max-width: 430px) {
   .gathering-origin-skill-card {
-    padding: 0.62rem !important;
+    padding: 0 !important;
   }
 
   .gathering-origin-skill-card__toggle {
     grid-template-columns: 34px minmax(0, 1fr) 20px;
     gap: 0.48rem;
+    min-height: 54px;
+    padding: 0.58rem 0.62rem;
   }
 
   .gathering-origin-skill-card__icon {
@@ -553,6 +594,19 @@
 
   .gathering-origin-skill-card__expanded-metrics {
     gap: 0.42rem !important;
+  }
+
+  .gathering-origin-skill-card__track {
+    width: calc(100% - 1.24rem);
+    margin: 0.54rem 0.62rem 0 !important;
+  }
+
+  .gathering-origin-skill-card--collapsed .gathering-origin-skill-card__track {
+    margin-bottom: 0.66rem !important;
+  }
+
+  .gathering-origin-skill-card__details {
+    padding: 0.54rem 0.62rem 0.62rem !important;
   }
 
   .gathering-origin-skill-card__xp-capsule,
@@ -588,4 +642,3 @@
     animation: none !important;
   }
 }
-

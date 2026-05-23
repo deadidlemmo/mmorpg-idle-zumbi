@@ -459,9 +459,62 @@ export function GatheringActivityPanel({
         </div>
 
         <div className="gathering-session__current-body gathering-session__current-body--title-only">
-          <h2 title={getActivityTitle(material)}>
-            {getActivityTitle(material)}
-          </h2>
+          <span className="gathering-session__activity-heading">
+            <span
+              className="gathering-session__activity-spinner"
+              aria-hidden="true"
+            />
+            <h2 title={getActivityTitle(material)}>
+              {getActivityTitle(material)}
+            </h2>
+          </span>
+
+          <div
+            className="gathering-session__progress-strip"
+            role="progressbar"
+            aria-label="Progresso até a próxima unidade coletada"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progressPercent)}
+            title={`${Math.round(progressPercent)}% até a próxima unidade`}
+          >
+            <span
+              className="gathering-session__progress-track"
+              aria-hidden="true"
+            >
+              <span
+                className="gathering-session__progress-fill"
+                style={{
+                  width: `${progressPercent}%`,
+                }}
+              />
+            </span>
+          </div>
+
+          <div className="gathering-session__inline-stats gathering-session__inline-stats--auto">
+            <span
+              className="gathering-session__inline-badge gathering-session__inline-value--collected"
+              title="Quantidade coletada automaticamente nesta sessão"
+            >
+              {getCollectedQuantityLabel(collectedQuantity)}
+            </span>
+
+            <span className="gathering-session__inline-capsule">
+              <span
+                className="gathering-session__inline-value gathering-session__inline-value--time"
+                title="Tempo estimado para a próxima unidade"
+              >
+                {nextUnitLabel}
+              </span>
+
+              <span
+                className="gathering-session__inline-value gathering-session__inline-value--xp"
+                title="Experiência gerada por segundo"
+              >
+                {expPerSecondLabel}
+              </span>
+            </span>
+          </div>
         </div>
 
         <div className="gathering-session__header-actions">

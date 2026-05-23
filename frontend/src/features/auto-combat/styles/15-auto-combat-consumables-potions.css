@@ -291,6 +291,250 @@
   border-radius: 999px;
 }
 
+.auto-combat-potion-belt {
+  display: grid;
+  grid-column: 1;
+  gap: 0.68rem;
+  min-width: 0;
+  padding: 0.78rem;
+  background:
+    radial-gradient(circle at top left, rgba(110, 159, 67, 0.06), transparent 11rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    rgba(5, 9, 8, 0.34);
+  border: 1px solid rgba(180, 214, 112, 0.12);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.024),
+    0 8px 20px rgba(0, 0, 0, 0.11);
+}
+
+.auto-combat-potion-belt__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.7rem;
+  min-width: 0;
+  padding-bottom: 0.56rem;
+  border-bottom: 1px solid rgba(231, 227, 216, 0.06);
+}
+
+.auto-combat-potion-belt__header span {
+  display: block;
+  color: color-mix(in srgb, var(--action-primary-hover) 86%, #f4f8dc);
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.auto-combat-potion-belt__header strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  font-weight: 950;
+  line-height: 1.08;
+}
+
+.auto-combat-potion-belt__header small {
+  max-width: 280px;
+  color: rgba(231, 227, 216, 0.58);
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.auto-combat-potion-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 116px));
+  gap: 0.72rem;
+  align-items: start;
+  justify-content: center;
+  min-width: 0;
+}
+
+.auto-combat-potion-slot {
+  position: relative;
+  min-width: 0;
+}
+
+.auto-combat-potion-slot__button {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  justify-items: center;
+  gap: 0.46rem;
+  width: 116px;
+  min-height: 134px;
+  padding: 0.72rem 0.56rem 0.66rem;
+  overflow: hidden;
+  color: inherit;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(110, 159, 67, 0.08), transparent 6rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent),
+    rgba(5, 9, 8, 0.44);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 0.94rem;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.026),
+    0 8px 18px rgba(0, 0, 0, 0.11);
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.auto-combat-potion-slot__button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(180, 214, 112, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 10px 22px rgba(0, 0, 0, 0.14),
+    0 0 20px rgba(110, 159, 67, 0.08);
+}
+
+.auto-combat-potion-slot__button:focus-visible {
+  outline: 2px solid rgba(180, 214, 112, 0.55);
+  outline-offset: 2px;
+}
+
+.auto-combat-potion-slot__button.is-enabled {
+  border-color: rgba(110, 159, 67, 0.34);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(110, 159, 67, 0.13), transparent 6.5rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), transparent),
+    rgba(5, 9, 8, 0.46);
+}
+
+.auto-combat-potion-slot__button.is-selected {
+  border-color: rgba(229, 182, 63, 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.034),
+    0 10px 24px rgba(0, 0, 0, 0.16),
+    0 0 22px rgba(229, 182, 63, 0.1);
+}
+
+.auto-combat-potion-slot__icon {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 50px;
+  height: 50px;
+  color: color-mix(in srgb, var(--action-primary-hover) 88%, #f4f8dc);
+  font-size: 0;
+  font-weight: 950;
+  line-height: 1;
+  background:
+    radial-gradient(circle at center, rgba(110, 159, 67, 0.2), transparent 72%),
+    rgba(5, 9, 8, 0.6);
+  border: 1px solid rgba(110, 159, 67, 0.25);
+  border-radius: 0.82rem;
+}
+
+.auto-combat-potion-slot__icon::before {
+  content: '+';
+  display: block;
+  font-family: var(--font-title);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.auto-combat-potion-slot__button.is-enabled
+  .auto-combat-potion-slot__icon::before {
+  content: 'PV';
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.auto-combat-potion-slot__button .auto-combat-consumable-slot__body {
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+  width: 100%;
+}
+
+.auto-combat-potion-slot__button .auto-combat-consumable-slot__eyebrow,
+.auto-combat-potion-slot__button
+  .auto-combat-consumable-slot__body
+  > span:not(.auto-combat-consumable-slot__eyebrow),
+.auto-combat-potion-slot__button .auto-combat-consumable-slot__action {
+  display: none !important;
+}
+
+.auto-combat-potion-slot__button .auto-combat-consumable-slot__body strong {
+  display: -webkit-box;
+  max-width: 100%;
+  min-height: 2.05em;
+  overflow: hidden;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 950;
+  line-height: 1.04;
+  text-align: center;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.auto-combat-potion-slot__button .auto-combat-consumable-slot__meta {
+  display: block;
+  max-width: 100%;
+  margin-top: 0.24rem;
+  overflow: hidden;
+  color: rgba(231, 227, 216, 0.62);
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1.14;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auto-combat-potion-slot__remove {
+  position: absolute;
+  top: -0.42rem;
+  right: -0.42rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.7rem;
+  font-weight: 950;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(92, 21, 21, 0.9);
+  border: 1px solid rgba(255, 111, 111, 0.42);
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.22);
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.auto-combat-potion-slot__remove:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 150, 150, 0.68);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), transparent),
+    rgba(126, 30, 30, 0.94);
+}
+
 /* =========================================================
    PAINEL DE CONFIGURAÇÃO
    ========================================================= */
@@ -321,6 +565,57 @@
 
 .auto-combat-potion-config-panel--minimal {
   padding: 0.95rem;
+}
+
+.auto-combat-potion-config-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  padding: clamp(0.85rem, 2vw, 1.35rem);
+  background:
+    radial-gradient(
+      circle at 50% 18%,
+      rgba(110, 159, 67, 0.16),
+      transparent 24rem
+    ),
+    rgba(2, 5, 7, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.auto-combat-potion-config-panel--modal {
+  width: min(640px, calc(100vw - 1.5rem));
+  max-height: min(86vh, 700px);
+  margin: 0;
+  overflow: auto;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 26px 72px rgba(0, 0, 0, 0.48),
+    0 0 42px rgba(110, 159, 67, 0.11);
+}
+
+.auto-combat-potion-config-panel--modal .auto-combat-potion-config-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.auto-combat-potion-config-panel--modal .auto-combat-potion-grid {
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  justify-content: stretch;
+}
+
+.auto-combat-potion-config-panel--modal .auto-combat-potion-grid--empty {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 128px;
+}
+
+.auto-combat-potion-config-panel--modal .auto-combat-potion-empty-state {
+  min-height: 106px;
+}
+
+.auto-combat-potion-config-panel--modal .auto-combat-potion-picker__header {
+  display: none;
 }
 
 .auto-combat-potion-config-panel__header {
@@ -494,6 +789,64 @@
     rgba(0, 0, 0, 0.12);
   border: 1px solid rgba(231, 227, 216, 0.045);
   border-radius: 0.86rem;
+}
+
+.auto-combat-potion-grid--empty {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 154px;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.auto-combat-potion-empty-state {
+  display: grid;
+  place-items: center;
+  gap: 0.38rem;
+  min-width: 0;
+  min-height: 132px;
+  padding: 1rem;
+  color: rgba(231, 227, 216, 0.78);
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(229, 182, 63, 0.09), transparent 8rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent),
+    rgba(5, 9, 8, 0.32);
+  border: 1px dashed rgba(229, 182, 63, 0.2);
+  border-radius: 0.78rem;
+}
+
+.auto-combat-potion-empty-state__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: #ffe7a7;
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+  font-weight: 950;
+  line-height: 1;
+  background:
+    radial-gradient(circle at center, rgba(229, 182, 63, 0.2), transparent 70%),
+    rgba(5, 9, 8, 0.62);
+  border: 1px solid rgba(229, 182, 63, 0.24);
+  border-radius: 0.82rem;
+}
+
+.auto-combat-potion-empty-state strong {
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.92rem;
+  font-weight: 950;
+  line-height: 1.08;
+}
+
+.auto-combat-potion-empty-state p {
+  max-width: 320px;
+  margin: 0;
+  color: rgba(255, 231, 167, 0.82);
+  font-size: 0.76rem;
+  font-weight: 750;
+  line-height: 1.32;
 }
 
 .auto-combat-potion-option,
@@ -1251,6 +1604,65 @@
 }
 
 @media (max-width: 620px) {
+  .auto-combat-potion-belt {
+    padding: 0.7rem;
+    border-radius: 0.9rem;
+  }
+
+  .auto-combat-potion-belt__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.28rem;
+  }
+
+  .auto-combat-potion-belt__header small {
+    max-width: none;
+    text-align: left;
+  }
+
+  .auto-combat-potion-slot-grid {
+    grid-template-columns: repeat(auto-fit, minmax(94px, 108px));
+    gap: 0.62rem;
+  }
+
+  .auto-combat-potion-slot__button {
+    width: 108px;
+    min-height: 126px;
+    padding: 0.64rem 0.48rem 0.58rem;
+  }
+
+  .auto-combat-potion-slot__icon {
+    width: 46px;
+    height: 46px;
+  }
+
+  .auto-combat-potion-slot__button .auto-combat-consumable-slot__body strong {
+    font-size: 0.68rem;
+  }
+
+  .auto-combat-potion-slot__remove {
+    top: -0.36rem;
+    right: -0.36rem;
+    width: 26px;
+    height: 26px;
+  }
+
+  .auto-combat-potion-config-modal-backdrop {
+    align-items: center;
+    justify-items: center;
+    padding: 0.72rem;
+  }
+
+  .auto-combat-potion-config-panel--modal {
+    width: min(100%, 560px);
+    max-height: calc(100dvh - 1.44rem);
+    border-radius: 1rem;
+  }
+
+  .auto-combat-potion-config-panel--modal .auto-combat-potion-config-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .auto-combat-consumables-panel,
   .auto-combat-potion-config-panel {
     padding: 0.82rem;
@@ -1273,6 +1685,17 @@
 
   .auto-combat-potion-config-panel__close {
     width: 100%;
+  }
+
+  .auto-combat-potion-config-panel--modal
+    .auto-combat-potion-config-panel__header {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .auto-combat-potion-config-panel--modal
+    .auto-combat-potion-config-panel__close {
+    width: auto;
   }
 
   .auto-combat-consumables {
@@ -1321,6 +1744,16 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.52rem;
     padding: 0.48rem;
+  }
+
+  .auto-combat-potion-grid--empty {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 148px;
+  }
+
+  .auto-combat-potion-empty-state {
+    min-height: 126px;
+    padding: 0.86rem;
   }
 
   .auto-combat-potion-option,

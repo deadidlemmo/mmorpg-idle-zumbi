@@ -408,6 +408,23 @@
     border-bottom: 1px solid rgba(231, 227, 216, 0.07);
   }
 
+  .gathering-material-card__class-line {
+    max-width: 100%;
+    padding-bottom: 0.32rem;
+    font-size: 0.58rem;
+  }
+
+  .gathering-material-card__class-line strong {
+    width: auto;
+    max-width: 100%;
+    overflow: hidden;
+    color: rgba(255, 248, 232, 0.88);
+    font-size: inherit;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .gathering-material-card__meta {
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -477,14 +494,16 @@
   }
 
   .gathering-material-card__start-button {
-    color: #10140f;
+    color: #f6ffe6;
     background:
-      linear-gradient(180deg, #fffaf0, #ded9c9),
-      #e7e3d8;
-    border-color: rgba(255, 255, 255, 0.42);
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent),
+      linear-gradient(180deg, rgba(77, 130, 54, 0.96), rgba(36, 78, 33, 0.98));
+    border-color: rgba(110, 159, 67, 0.42);
     box-shadow:
       0 8px 14px rgba(0, 0, 0, 0.18),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 0 12px rgba(110, 159, 67, 0.1);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
   }
 
   .gathering-material-card__recipes-button {
@@ -899,6 +918,446 @@
 /* =========================================================
    REDUÇÃO DE MOVIMENTO
    ========================================================= */
+
+/* =========================================================
+   GATHERING ORIGIN — REFINO MOBILE DA LATERAL
+   ========================================================= */
+
+@media (max-width: 720px) {
+  .gathering-origin-current-card .gathering-session,
+  .gathering-origin-current-card .gathering-session--active,
+  .gathering-origin-current-card .gathering-session--horizontal {
+    gap: 0 !important;
+  }
+
+  .gathering-origin-current-card,
+  .gathering-origin-current-card .gathering-session__current-action,
+  .gathering-origin-current-card .gathering-session__current-action--horizontal {
+    overflow: visible !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-action,
+  .gathering-origin-current-card .gathering-session__current-action--horizontal {
+    grid-template-columns: 44px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 0.62rem !important;
+    min-height: 92px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-icon {
+    align-self: center !important;
+    justify-self: center !important;
+    place-self: center !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    transform: translateX(0.24rem);
+  }
+
+  .gathering-origin-current-card
+    .gathering-session__item-icon
+    .gathering-material-card__icon-fallback {
+    margin: auto !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body {
+    display: grid !important;
+    align-self: center !important;
+    gap: 0.56rem !important;
+    min-width: 0 !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__activity-heading {
+    grid-template-columns: 13px minmax(0, 1fr) !important;
+    gap: 0.32rem !important;
+    align-items: center !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__activity-spinner {
+    width: 11px !important;
+    height: 11px !important;
+    border-width: 2px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__progress-strip {
+    margin: 0.24rem 0 0.28rem !important;
+    padding-top: 0 !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-stats,
+  .gathering-origin-current-card .gathering-session__inline-stats--auto {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    gap: 0.42rem !important;
+    padding-top: 0 !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-badge,
+  .gathering-origin-current-card .gathering-session__inline-value--collected {
+    width: auto !important;
+    min-width: 58px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-capsule {
+    width: auto !important;
+    min-width: 0 !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .gathering-origin-current-card
+    .gathering-session__current-action
+    > .gathering-session__header-actions,
+  .gathering-origin-current-card
+    .gathering-session__current-action--horizontal
+    > .gathering-session__header-actions {
+    position: absolute !important;
+    top: -1.24rem !important;
+    right: -0.78rem !important;
+    z-index: 8 !important;
+    flex-direction: row !important;
+    gap: 0.2rem !important;
+  }
+
+  .gathering-origin-current-card
+    .gathering-session__current-action
+    > .gathering-session__header-actions
+    .gathering-session__icon-button,
+  .gathering-origin-current-card
+    .gathering-session__current-action--horizontal
+    > .gathering-session__header-actions
+    .gathering-session__icon-button {
+    width: 27px !important;
+    min-width: 27px !important;
+    height: 27px !important;
+  }
+
+  .gathering-origin-skill-card__metric-level
+    > .gathering-origin-skill-card__level-badge,
+  .gathering-origin-skill-card__metric-level > strong {
+    min-width: 62px !important;
+    min-height: 33px !important;
+    font-size: 0.76rem !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule,
+  .gathering-origin-skill-card__metric-progress,
+  .gathering-origin-skill-card__metric-progress.gathering-origin-skill-card__xp-capsule {
+    min-height: 33px !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule-value,
+  .gathering-origin-skill-card__xp-capsule-percent,
+  .gathering-origin-skill-card__metric-progress strong,
+  .gathering-origin-skill-card__metric-progress strong:first-child,
+  .gathering-origin-skill-card__metric-progress strong:last-child {
+    min-height: 33px !important;
+    padding-inline: 0.62rem !important;
+    font-size: 0.76rem !important;
+  }
+
+  .gathering-origin-skill-card--collapsed {
+    min-height: 78px !important;
+  }
+
+  .gathering-origin-skill-card--collapsed .gathering-origin-skill-card__toggle {
+    grid-template-columns: 42px minmax(0, 1fr) 24px !important;
+    gap: 0.58rem !important;
+    min-height: 72px !important;
+    padding: 0.58rem 0.72rem 1.48rem !important;
+    border-bottom: 0 !important;
+  }
+
+  .gathering-origin-skill-card--collapsed .gathering-origin-skill-card__icon {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    font-size: 0.62rem !important;
+  }
+
+  .gathering-origin-skill-card--collapsed .gathering-origin-skill-card__heading strong {
+    font-size: 0.92rem !important;
+  }
+
+  .gathering-origin-skill-card--collapsed .gathering-origin-skill-card__heading {
+    gap: 0.4rem !important;
+  }
+
+  .gathering-origin-skill-card--collapsed
+    .gathering-origin-skill-card__heading
+    > span {
+    gap: 0.46rem !important;
+  }
+
+  .gathering-origin-skill-card--collapsed
+    .gathering-origin-skill-card__heading
+    em,
+  .gathering-origin-skill-card--collapsed
+    .gathering-origin-skill-card__level-badge {
+    min-width: 58px !important;
+    min-height: 31px !important;
+    font-size: 0.72rem !important;
+  }
+
+  .gathering-origin-skill-card--collapsed
+    .gathering-origin-skill-card__track {
+    width: calc(100% - 6.34rem) !important;
+    margin: -1.18rem 2.46rem 0.78rem 3.88rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-current-card {
+    padding: 0.6rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__current-action,
+  .gathering-origin-current-card .gathering-session__current-action--horizontal {
+    grid-template-columns: 42px minmax(0, 1fr) !important;
+    gap: 0.56rem !important;
+    min-height: 88px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__item-icon {
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    transform: translateX(0.2rem);
+  }
+
+  .gathering-origin-current-card .gathering-session__current-body {
+    gap: 0.48rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__progress-strip {
+    margin: 0.22rem 0 0.24rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-stats,
+  .gathering-origin-current-card .gathering-session__inline-stats--auto {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    gap: 0.34rem !important;
+  }
+
+  .gathering-origin-current-card
+    .gathering-session__current-action
+    > .gathering-session__header-actions,
+  .gathering-origin-current-card
+    .gathering-session__current-action--horizontal
+    > .gathering-session__header-actions {
+    top: -1.12rem !important;
+    right: -0.68rem !important;
+    padding: 0 !important;
+  }
+
+  .gathering-origin-current-card
+    .gathering-session__current-action
+    > .gathering-session__header-actions
+    .gathering-session__icon-button,
+  .gathering-origin-current-card
+    .gathering-session__current-action--horizontal
+    > .gathering-session__header-actions
+    .gathering-session__icon-button {
+    width: 25px !important;
+    min-width: 25px !important;
+    height: 25px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-badge,
+  .gathering-origin-current-card .gathering-session__inline-value--collected {
+    width: auto !important;
+    min-width: 52px !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-capsule {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .gathering-origin-current-card
+    .gathering-session__inline-capsule
+    > .gathering-session__inline-value {
+    padding-inline: 0.42rem !important;
+  }
+
+  .gathering-origin-current-card
+    .gathering-session__inline-capsule
+    > .gathering-session__inline-value--xp {
+    min-width: 58px !important;
+  }
+
+  .gathering-origin-skill-card__metric-level
+    > .gathering-origin-skill-card__level-badge,
+  .gathering-origin-skill-card__metric-level > strong {
+    min-width: 58px !important;
+    min-height: 31px !important;
+    font-size: 0.72rem !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule,
+  .gathering-origin-skill-card__metric-progress,
+  .gathering-origin-skill-card__metric-progress.gathering-origin-skill-card__xp-capsule {
+    min-height: 31px !important;
+  }
+
+  .gathering-origin-skill-card__xp-capsule-value,
+  .gathering-origin-skill-card__xp-capsule-percent,
+  .gathering-origin-skill-card__metric-progress strong,
+  .gathering-origin-skill-card__metric-progress strong:first-child,
+  .gathering-origin-skill-card__metric-progress strong:last-child {
+    min-height: 31px !important;
+    padding-inline: 0.56rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  .gathering-origin-skill-card--collapsed .gathering-origin-skill-card__toggle {
+    grid-template-columns: 40px minmax(0, 1fr) 22px !important;
+    gap: 0.52rem !important;
+    min-height: 70px !important;
+    padding: 0.56rem 0.64rem 1.42rem !important;
+    border-bottom: 0 !important;
+  }
+
+  .gathering-origin-skill-card--collapsed .gathering-origin-skill-card__icon {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .gathering-origin-skill-card--collapsed .gathering-origin-skill-card__heading strong {
+    font-size: 0.86rem !important;
+  }
+
+  .gathering-origin-skill-card--collapsed
+    .gathering-origin-skill-card__heading
+    em,
+  .gathering-origin-skill-card--collapsed
+    .gathering-origin-skill-card__level-badge {
+    min-width: 54px !important;
+    min-height: 30px !important;
+    font-size: 0.68rem !important;
+  }
+
+  .gathering-origin-skill-card--collapsed
+    .gathering-origin-skill-card__track {
+    width: calc(100% - 5.84rem) !important;
+    margin: -1.14rem 2.24rem 0.72rem 3.6rem !important;
+  }
+}
+
+/* =========================================================
+   TIPOGRAFIA UNIFICADA - ATIVIDADE ATUAL / SUA PROFICIENCIA
+   ========================================================= */
+
+.gathering-origin-current-card .gathering-session__current-body h2,
+.gathering-origin-current-card .gathering-session .gathering-session__current-body h2,
+.gathering-origin-skill-card .gathering-origin-skill-card__heading strong,
+.gathering-origin-skill-card.gathering-origin-skill-card--collapsed
+  .gathering-origin-skill-card__heading
+  strong,
+.gathering-origin-skill-card.gathering-origin-skill-card--expanded
+  .gathering-origin-skill-card__heading
+  strong {
+  font-size: 0.96rem !important;
+  line-height: 1.08 !important;
+}
+
+.gathering-origin-current-card .gathering-session__inline-badge,
+.gathering-origin-current-card .gathering-session__inline-value--collected,
+.gathering-origin-current-card
+  .gathering-session__inline-capsule
+  > .gathering-session__inline-value,
+.gathering-origin-skill-card
+  .gathering-origin-skill-card__metric-level
+  > .gathering-origin-skill-card__level-badge,
+.gathering-origin-skill-card
+  .gathering-origin-skill-card__metric-level
+  > strong,
+.gathering-origin-skill-card .gathering-origin-skill-card__xp-capsule-value,
+.gathering-origin-skill-card .gathering-origin-skill-card__xp-capsule-percent,
+.gathering-origin-skill-card .gathering-origin-skill-card__metric-progress strong,
+.gathering-origin-skill-card
+  .gathering-origin-skill-card__metric-progress
+  strong:first-child,
+.gathering-origin-skill-card
+  .gathering-origin-skill-card__metric-progress
+  strong:last-child {
+  font-size: 0.76rem !important;
+  line-height: 1 !important;
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-current-card .gathering-session__current-body h2,
+  .gathering-origin-current-card .gathering-session .gathering-session__current-body h2,
+  .gathering-origin-skill-card .gathering-origin-skill-card__heading strong,
+  .gathering-origin-skill-card.gathering-origin-skill-card--collapsed
+    .gathering-origin-skill-card__heading
+    strong,
+  .gathering-origin-skill-card.gathering-origin-skill-card--expanded
+    .gathering-origin-skill-card__heading
+    strong {
+    font-size: 0.88rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-badge,
+  .gathering-origin-current-card .gathering-session__inline-value--collected,
+  .gathering-origin-current-card
+    .gathering-session__inline-capsule
+    > .gathering-session__inline-value,
+  .gathering-origin-skill-card
+    .gathering-origin-skill-card__metric-level
+    > .gathering-origin-skill-card__level-badge,
+  .gathering-origin-skill-card
+    .gathering-origin-skill-card__metric-level
+    > strong,
+  .gathering-origin-skill-card .gathering-origin-skill-card__xp-capsule-value,
+  .gathering-origin-skill-card .gathering-origin-skill-card__xp-capsule-percent,
+  .gathering-origin-skill-card .gathering-origin-skill-card__metric-progress strong,
+  .gathering-origin-skill-card
+    .gathering-origin-skill-card__metric-progress
+    strong:first-child,
+  .gathering-origin-skill-card
+    .gathering-origin-skill-card__metric-progress
+    strong:last-child {
+    font-size: 0.76rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-current-card .gathering-session__current-body h2,
+  .gathering-origin-current-card .gathering-session .gathering-session__current-body h2,
+  .gathering-origin-skill-card .gathering-origin-skill-card__heading strong,
+  .gathering-origin-skill-card.gathering-origin-skill-card--collapsed
+    .gathering-origin-skill-card__heading
+    strong,
+  .gathering-origin-skill-card.gathering-origin-skill-card--expanded
+    .gathering-origin-skill-card__heading
+    strong {
+    font-size: 0.84rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-badge,
+  .gathering-origin-current-card .gathering-session__inline-value--collected,
+  .gathering-origin-current-card
+    .gathering-session__inline-capsule
+    > .gathering-session__inline-value,
+  .gathering-origin-skill-card
+    .gathering-origin-skill-card__metric-level
+    > .gathering-origin-skill-card__level-badge,
+  .gathering-origin-skill-card
+    .gathering-origin-skill-card__metric-level
+    > strong,
+  .gathering-origin-skill-card .gathering-origin-skill-card__xp-capsule-value,
+  .gathering-origin-skill-card .gathering-origin-skill-card__xp-capsule-percent,
+  .gathering-origin-skill-card .gathering-origin-skill-card__metric-progress strong,
+  .gathering-origin-skill-card
+    .gathering-origin-skill-card__metric-progress
+    strong:first-child,
+  .gathering-origin-skill-card
+    .gathering-origin-skill-card__metric-progress
+    strong:last-child {
+    font-size: 0.72rem !important;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .gathering-loading__spinner,

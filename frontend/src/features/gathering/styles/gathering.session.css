@@ -107,6 +107,11 @@
 .gathering-origin-current-card .gathering-session {
   width: 100% !important;
   gap: 0.66rem !important;
+  overflow: visible !important;
+}
+
+.gathering-origin-current-card {
+  overflow: visible !important;
 }
 
 .gathering-origin-current-card .gathering-session--active,
@@ -168,10 +173,11 @@
 .gathering-origin-current-card .gathering-session__current-action,
 .gathering-origin-current-card .gathering-session__current-action--horizontal,
 .gathering-origin-current-card .gathering-session__live-hero {
-  grid-template-columns: 50px minmax(0, 1fr) auto !important;
-  gap: 0.68rem !important;
-  min-height: 54px !important;
+  grid-template-columns: 50px minmax(0, 1fr) !important;
+  gap: 0.78rem !important;
+  min-height: 64px !important;
   padding: 0 !important;
+  overflow: visible !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
@@ -293,6 +299,40 @@
 
 .gathering-session__current-body--title-only {
   justify-content: center;
+  gap: 0.62rem;
+}
+
+.gathering-session--active.gathering-session--horizontal
+  > .gathering-session__progress-strip,
+.gathering-session--active.gathering-session--horizontal
+  > .gathering-session__inline-stats {
+  display: none !important;
+}
+
+.gathering-session__activity-heading {
+  display: inline-grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.34rem;
+  min-width: 0;
+}
+
+.gathering-session__activity-spinner {
+  position: relative;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(231, 227, 216, 0.18);
+  border-top-color: rgba(174, 218, 120, 0.92);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(110, 159, 67, 0.14);
+  animation: gathering-session-spin 920ms linear infinite;
+}
+
+@keyframes gathering-session-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .gathering-session__current-body h2,
@@ -354,6 +394,30 @@
   min-width: 0;
 }
 
+.gathering-origin-current-card
+  .gathering-session__current-action
+  > .gathering-session__header-actions,
+.gathering-origin-current-card
+  .gathering-session__current-action--horizontal
+  > .gathering-session__header-actions {
+  position: absolute !important;
+  top: -1.26rem !important;
+  right: -0.86rem !important;
+  z-index: 8 !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.2rem !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+  border: 0 !important;
+  border-radius: 0.68rem !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+}
+
 .gathering-session__icon-button {
   display: grid;
   place-items: center;
@@ -407,6 +471,23 @@
   opacity: 0.48;
 }
 
+.gathering-origin-current-card
+  .gathering-session__current-action
+  > .gathering-session__header-actions
+  .gathering-session__icon-button,
+.gathering-origin-current-card
+  .gathering-session__current-action--horizontal
+  > .gathering-session__header-actions
+  .gathering-session__icon-button {
+  width: 28px !important;
+  min-width: 28px !important;
+  height: 28px !important;
+  border-radius: 0.52rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgba(8, 16, 14, 0.86) !important;
+}
+
 /* =========================================================
    BARRA DE PROGRESSO — ATIVIDADE ATUAL
    ========================================================= */
@@ -417,6 +498,10 @@
   min-width: 0;
   padding-top: 0.04rem;
   border-top: 0 !important;
+}
+
+.gathering-origin-current-card .gathering-session__progress-strip {
+  margin: 0.26rem 0 0.3rem !important;
 }
 
 .gathering-session__progress-track {
@@ -1058,6 +1143,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .gathering-session__icon-button,
+  .gathering-session__activity-spinner,
   .gathering-session__inline-badge,
   .gathering-session__inline-capsule,
   .gathering-session__inline-capsule > .gathering-session__inline-value,

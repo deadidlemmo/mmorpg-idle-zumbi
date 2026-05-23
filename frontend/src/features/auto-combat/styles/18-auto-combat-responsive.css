@@ -24,8 +24,40 @@
     align-items: start;
   }
 
+  .auto-combat-session-stage--battle-log-hidden {
+    grid-template-columns: minmax(0, 940px);
+    justify-content: center;
+    max-width: 1040px;
+    margin-inline: auto;
+  }
+
   .auto-combat-arena-card {
     grid-column: 1;
+  }
+
+  .auto-combat-session-stage--battle-log-hidden .auto-combat-arena-card {
+    width: 100%;
+    padding: 1.18rem;
+  }
+
+  .auto-combat-session-stage--battle-log-hidden .auto-combat-duel-row {
+    grid-template-columns: minmax(0, 1fr) 70px minmax(0, 1fr);
+    gap: 1.18rem;
+  }
+
+  .auto-combat-session-stage--battle-log-hidden .auto-combat-fighter-card {
+    min-height: 382px;
+  }
+
+  .auto-combat-session-stage--battle-log-hidden
+    .auto-combat-stage-actions--session {
+    justify-content: center;
+  }
+
+  .auto-combat-session-stage--battle-log-hidden
+    .auto-combat-stage-actions--session
+    .auto-combat-secondary-button {
+    min-width: 280px;
   }
 
   .auto-combat-battle-log {
@@ -37,6 +69,7 @@
 
   .auto-combat-consumables-panel,
   .auto-combat-consumables,
+  .auto-combat-potion-belt,
   .auto-combat-potion-config-panel,
   .auto-combat-session-panel {
     grid-column: 1;
@@ -465,6 +498,17 @@
 
   .auto-combat-potion-config-panel__close {
     width: 100%;
+  }
+
+  .auto-combat-potion-config-panel--modal
+    .auto-combat-potion-config-panel__header {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .auto-combat-potion-config-panel--modal
+    .auto-combat-potion-config-panel__close {
+    width: auto;
   }
 
   .auto-combat-floating-hp,

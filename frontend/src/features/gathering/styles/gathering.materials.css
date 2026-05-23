@@ -699,6 +699,55 @@
     rgba(5, 9, 8, 0.48);
 }
 
+.gathering-material-card__class-line {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.24rem;
+  width: fit-content;
+  max-width: 100%;
+  color: rgba(231, 227, 216, 0.72);
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.015em;
+  text-transform: none;
+}
+
+.gathering-material-card__class-line > span {
+  flex: 0 0 auto;
+  color: rgba(160, 196, 126, 0.78);
+  font-size: 0.55rem;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.gathering-material-card__class-line strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 248, 232, 0.88);
+  font-family: var(--font-title);
+  font-size: inherit;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.56);
+  white-space: nowrap;
+}
+
+.gathering-material-card__class-line em {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: rgba(255, 232, 166, 0.76);
+  font-style: normal;
+  font-size: 0.6rem;
+}
+
 .gathering-material-card__recipe-example {
   display: block;
   min-width: 0;
@@ -1125,7 +1174,6 @@
     grid-template-areas:
       'icon body chevron'
       'icon summary chevron'
-      'icon classes chevron'
       'icon meta chevron';
     align-items: center;
     gap: 0.3rem 0.56rem;
@@ -1158,6 +1206,13 @@
     align-self: start;
     gap: 0.1rem;
     font-size: 0.7rem;
+  }
+
+  .gathering-material-card__class-line {
+    grid-area: summary;
+    align-self: start;
+    max-width: 100%;
+    font-size: 0.56rem;
   }
 
   .gathering-material-card__class-tags {
