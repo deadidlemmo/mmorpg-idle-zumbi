@@ -308,9 +308,9 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: '◇',
   },
   {
-    label: 'Consumíveis',
+    label: 'Mercador',
     path: 'consumables',
-    icon: '+',
+    icon: '$',
   },
   {
     label: 'Mapas',

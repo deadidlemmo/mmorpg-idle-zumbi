@@ -18,6 +18,7 @@ import { ItemsModule } from './modules/items/items.module';
 import { MapsModule } from './modules/maps/maps.module';
 import { MobsModule } from './modules/mobs/mobs.module';
 import { UsersModule } from './modules/users/users.module';
+import { VendorModule } from './modules/vendor/vendor.module';
 import { WorldBossesModule } from './modules/world-bosses/world-bosses.module';
 import { PrismaModule } from './prisma/prisma.module';
 
@@ -49,6 +50,7 @@ import { PrismaModule } from './prisma/prisma.module';
     CraftingModule,
     GatheringModule,
     IncursionsModule,
+    VendorModule,
     WorldBossesModule,
   ],
   controllers: [AppController],

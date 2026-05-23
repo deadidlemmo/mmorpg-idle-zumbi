@@ -22,6 +22,7 @@ import { IncursionsPage } from "../features/incursions/pages/IncursionsPage";
 import { IncursionsRealtimeProvider } from "../features/incursions/realtime/IncursionsRealtimeProvider";
 import { InventoryPage } from "../features/inventory/pages/InventoryPage";
 import { MapsSelectionPage } from "../features/maps/pages/MapsSelectionPage";
+import { VendorPage } from "../features/vendor/pages/VendorPage";
 import { WorldBossesPage } from "../features/world-bosses/pages/WorldBossesPage";
 import { LootNotificationProvider } from "../features/loot-notifications/LootNotificationProvider";
 import { useAuthStore } from "../store/auth.store";
@@ -147,15 +148,7 @@ export function AppRoutes() {
             }
           />
 
-          <Route
-            path="consumables"
-            element={
-              <DashboardPlaceholderPage
-                title="Consumíveis e Enfermaria"
-                description="Tela futura para poções, cura automática e recuperação de HP pela enfermaria."
-              />
-            }
-          />
+          <Route path="consumables" element={<VendorPage />} />
 
           <Route path="maps" element={<MapsSelectionPage />} />
 
