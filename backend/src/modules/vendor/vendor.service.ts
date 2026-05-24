@@ -44,9 +44,7 @@ export class VendorService {
 
     const items = await this.prisma.item.findMany({
       where: {
-        slot: {
-          in: [ItemSlot.CONSUMABLE, ItemSlot.MATERIAL],
-        },
+        slot: ItemSlot.CONSUMABLE,
         tier: {
           lte: characterTier,
         },
@@ -509,18 +507,14 @@ export class VendorService {
     characterTier: number,
   ) {
     if (item.tier > characterTier) return false;
-    if (!this.isVendorTradableItem(item)) return false;
+    if (item.slot !== ItemSlot.CONSUMABLE) return false;
 
-    if (item.slot === ItemSlot.CONSUMABLE) {
-      if (item.minTier && item.minTier > characterTier) return false;
-      if (item.maxTier && item.maxTier < Math.max(1, characterTier - 2)) {
-        return false;
-      }
-
-      return true;
+    if (item.minTier && item.minTier > characterTier) return false;
+    if (item.maxTier && item.maxTier < Math.max(1, characterTier - 2)) {
+      return false;
     }
 
-    return item.slot === ItemSlot.MATERIAL;
+    return true;
   }
 
   private isVendorTradableItem(item: { slot: ItemSlot }) {

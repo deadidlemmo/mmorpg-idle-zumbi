@@ -22,6 +22,7 @@ import { IncursionsPage } from "../features/incursions/pages/IncursionsPage";
 import { IncursionsRealtimeProvider } from "../features/incursions/realtime/IncursionsRealtimeProvider";
 import { InventoryPage } from "../features/inventory/pages/InventoryPage";
 import { MapsSelectionPage } from "../features/maps/pages/MapsSelectionPage";
+import { MerchantHubPage } from "../features/vendor/pages/MerchantHubPage";
 import { VendorPage } from "../features/vendor/pages/VendorPage";
 import { WorldBossesPage } from "../features/world-bosses/pages/WorldBossesPage";
 import { LootNotificationProvider } from "../features/loot-notifications/LootNotificationProvider";
@@ -148,7 +149,9 @@ export function AppRoutes() {
             }
           />
 
-          <Route path="consumables" element={<VendorPage />} />
+          <Route path="consumables" element={<MerchantHubPage />} />
+
+          <Route path="consumables/:merchantId" element={<VendorPage />} />
 
           <Route path="maps" element={<MapsSelectionPage />} />
 

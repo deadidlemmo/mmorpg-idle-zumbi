@@ -22,10 +22,10 @@ import {
   getVendorShop,
   sellVendorItem,
 } from "../api/vendor.api";
+import { getMerchantByRouteSegment } from "../data/merchants";
 import "../styles/vendor.css";
 import type {
   VendorCategory,
-  VendorCategorySummary,
   VendorItemEffect,
   VendorItemSummary,
   VendorSellableItem,
@@ -34,6 +34,7 @@ import type {
 } from "../types/vendor.types";
 
 type VendorMode = "BUY" | "SELL";
+type VendorTierFilter = "CURRENT" | "ALL" | `${number}`;
 type FeedbackState = {
   tone: "success" | "error";
   message: string;
@@ -44,15 +45,6 @@ const CATEGORY_LABELS: Record<VendorCategory, string> = {
   CONSUMABLE: "Pocoes",
   GATHERING: "Gathering",
   MOB_DROP: "Drops de mobs",
-};
-
-const VENDOR_NPC = {
-  name: "Mara",
-  role: "Servico de mercador",
-  title: "Mara, a Mercadora",
-  quote: "Compra, venda e troca de suprimentos para quem ainda sobrevive.",
-  description:
-    "Troque Gold por pocoes e materiais, venda excessos da mochila e mantenha o abrigo girando sem sair do dashboard.",
 };
 
 function formatNumber(value?: number | null) {
@@ -123,11 +115,8 @@ function formatRarity(rarity?: string | null) {
   }
 }
 
-function getCategoryCount(
-  categories: VendorCategorySummary[] | undefined,
-  key: VendorCategory,
-) {
-  return categories?.find((category) => category.key === key)?.count ?? 0;
+function getCharacterTier(level?: number | null) {
+  return Math.max(1, Math.min(10, Math.ceil(Math.max(1, level ?? 1) / 10)));
 }
 
 function itemMatchesSearch(
@@ -156,6 +145,17 @@ function itemMatchesCategory(
   category: VendorCategory,
 ) {
   return category === "ALL" || item.category === category;
+}
+
+function itemMatchesTier(
+  item: VendorItemSummary | VendorSellableItem,
+  tierFilter: VendorTierFilter,
+  currentTier: number,
+) {
+  if (tierFilter === "ALL") return true;
+
+  const targetTier = tierFilter === "CURRENT" ? currentTier : Number(tierFilter);
+  return item.tier === targetTier;
 }
 
 function getEffectSummary(effects: VendorItemEffect[]) {
@@ -326,8 +326,9 @@ function VendorItemCard({
 }
 
 export function VendorPage() {
-  const { characterId } = useParams();
+  const { characterId, merchantId } = useParams();
   const safeCharacterId = characterId ?? "";
+  const activeMerchant = getMerchantByRouteSegment(merchantId ?? "mara");
   const [character, setCharacter] =
     useState<DashboardCharacterViewModel | null>(null);
   const [shopData, setShopData] = useState<VendorShopResponse | null>(null);
@@ -337,6 +338,7 @@ export function VendorPage() {
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [mode, setMode] = useState<VendorMode>("BUY");
   const [category, setCategory] = useState<VendorCategory>("ALL");
+  const [tierFilter, setTierFilter] = useState<VendorTierFilter>("CURRENT");
   const [searchTerm, setSearchTerm] = useState("");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -390,9 +392,29 @@ export function VendorPage() {
   }, [loadVendorData, safeCharacterId]);
 
   const gold = shopData?.gold ?? sellableData?.gold ?? character?.gold ?? 0;
+  const currentTier = getCharacterTier(character?.level);
 
   const activeCategories =
     mode === "BUY" ? shopData?.categories : sellableData?.categories;
+
+  const categoryOptions = useMemo(
+    () =>
+      (activeCategories ?? []).filter((categorySummary) => {
+        if (categorySummary.key === "ALL") return true;
+        if (categorySummary.count <= 0) return false;
+
+        return mode === "BUY"
+          ? categorySummary.key === "CONSUMABLE"
+          : true;
+      }),
+    [activeCategories, mode],
+  );
+
+  const effectiveCategory = categoryOptions.some(
+    (categorySummary) => categorySummary.key === category,
+  )
+    ? category
+    : "ALL";
 
   const rawItems = useMemo<Array<VendorItemSummary | VendorSellableItem>>(
     () => (mode === "BUY" ? shopData?.items ?? [] : sellableData?.items ?? []),
@@ -403,10 +425,11 @@ export function VendorPage() {
     () =>
       rawItems.filter(
         (item) =>
-          itemMatchesCategory(item, category) &&
+          itemMatchesCategory(item, effectiveCategory) &&
+          itemMatchesTier(item, tierFilter, currentTier) &&
           itemMatchesSearch(item, searchTerm),
       ),
-    [category, rawItems, searchTerm],
+    [currentTier, effectiveCategory, rawItems, searchTerm, tierFilter],
   );
 
   const setItemQuantity = useCallback((key: string, quantity: number) => {
@@ -481,6 +504,10 @@ export function VendorPage() {
     return <Navigate to="/characters" replace />;
   }
 
+  if (!activeMerchant) {
+    return <Navigate to={`/dashboard/${safeCharacterId}/consumables`} replace />;
+  }
+
   if (isLoading && !character) {
     return (
       <main className="dashboard-loading">
@@ -507,27 +534,31 @@ export function VendorPage() {
       <section className="vendor-page gathering-page gathering-page--clean">
         <article
           className="gathering-origin-lore-card gathering-origin-lore-card--npc gathering-origin-npc vendor-lore-card"
-          aria-label="Mara, a Mercadora"
+          aria-label={activeMerchant.title}
         >
           <div className="gathering-origin-npc__stage" aria-hidden="true">
             <div className="gathering-origin-npc__portrait vendor-npc-fallback">
-              <span>M</span>
+              {activeMerchant.portraitUrl ? (
+                <img src={activeMerchant.portraitUrl} alt="" />
+              ) : (
+                <span>{activeMerchant.initials}</span>
+              )}
             </div>
           </div>
 
           <div className="gathering-origin-npc__content">
             <div className="gathering-origin-npc__meta">
               <strong className="gathering-origin-npc__name">
-                {VENDOR_NPC.name}
+                {activeMerchant.npcName}
               </strong>
               <span className="gathering-origin-npc__role">
-                {VENDOR_NPC.role}
+                {activeMerchant.role}
               </span>
             </div>
 
-            <h2>{VENDOR_NPC.title}</h2>
-            <blockquote>{VENDOR_NPC.quote}</blockquote>
-            <p>{VENDOR_NPC.description}</p>
+            <h2>{activeMerchant.title}</h2>
+            <blockquote>{activeMerchant.quote}</blockquote>
+            <p>{activeMerchant.shopDescription}</p>
 
             <div className="vendor-wallet-chip" aria-label="Gold atual">
               <Coins size={16} aria-hidden="true" />
@@ -550,7 +581,7 @@ export function VendorPage() {
                 <h2>{mode === "BUY" ? "Comprar itens" : "Vender itens"}</h2>
                 <p>
                   {mode === "BUY"
-                    ? "Escolha pocoes, materiais de gathering e drops de mobs."
+                    ? "Mara vende apenas pocoes por enquanto."
                     : "Venda pocoes e materiais excedentes para recuperar Gold."}
                 </p>
               </div>
@@ -570,7 +601,10 @@ export function VendorPage() {
               <button
                 type="button"
                 className={mode === "BUY" ? "is-active" : ""}
-                onClick={() => setMode("BUY")}
+                onClick={() => {
+                  setMode("BUY");
+                  setCategory("ALL");
+                }}
               >
                 <ShoppingBag size={16} aria-hidden="true" />
                 Comprar
@@ -578,25 +612,56 @@ export function VendorPage() {
               <button
                 type="button"
                 className={mode === "SELL" ? "is-active" : ""}
-                onClick={() => setMode("SELL")}
+                onClick={() => {
+                  setMode("SELL");
+                  setCategory("ALL");
+                }}
               >
                 <HandCoins size={16} aria-hidden="true" />
                 Vender
               </button>
             </div>
 
-            <div className="vendor-category-tabs" aria-label="Categorias">
-              {(Object.keys(CATEGORY_LABELS) as VendorCategory[]).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={category === key ? "is-active" : ""}
-                  onClick={() => setCategory(key)}
+            <div className="vendor-filter-panel" aria-label="Filtros do Mercador">
+              <label className="vendor-filter-field">
+                <span>Tier</span>
+                <select
+                  value={tierFilter}
+                  onChange={(event) =>
+                    setTierFilter(event.currentTarget.value as VendorTierFilter)
+                  }
                 >
-                  <span>{CATEGORY_LABELS[key]}</span>
-                  <strong>{getCategoryCount(activeCategories, key)}</strong>
-                </button>
-              ))}
+                  <option value="CURRENT">Meu tier (T{currentTier})</option>
+                  <option value="ALL">Todos os tiers</option>
+                  {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                    (tier) => (
+                      <option key={tier} value={String(tier)}>
+                        Tier {tier}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+
+              <label className="vendor-filter-field">
+                <span>Tipo</span>
+                <select
+                  value={effectiveCategory}
+                  onChange={(event) =>
+                    setCategory(event.currentTarget.value as VendorCategory)
+                  }
+                >
+                  {categoryOptions.map((categorySummary) => (
+                    <option
+                      key={categorySummary.key}
+                      value={categorySummary.key}
+                    >
+                      {CATEGORY_LABELS[categorySummary.key]} (
+                      {categorySummary.count})
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <div className="vendor-result-row">
@@ -664,7 +729,7 @@ export function VendorPage() {
               <div className="vendor-empty-state">
                 <Package size={28} aria-hidden="true" />
                 <strong>Nenhum item nesta categoria</strong>
-                <p>Altere os filtros ou volte depois que a mochila mudar.</p>
+                <p>Altere o tier, tipo ou modo de negociacao.</p>
               </div>
             )}
           </main>
@@ -689,7 +754,8 @@ export function VendorPage() {
                 <span className="vendor-eyebrow">Regras da banca</span>
                 <ul>
                   <li>Itens empilhaveis aceitam compra e venda em lote.</li>
-                  <li>Mara negocia pocoes, gathering e drops de mobs.</li>
+                  <li>A loja vende somente pocoes por enquanto.</li>
+                  <li>Mara compra pocoes, gathering e drops de mobs.</li>
                   <li>Equipamentos ficam fora da banca do Mercador.</li>
                 </ul>
               </div>
