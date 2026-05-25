@@ -2,45 +2,64 @@ import { Rarity } from '@prisma/client';
 import type { ConsumableSeedData } from '../seed-types';
 
 /**
- * Consumiveis basicos vendidos pelo Mercador.
- * Mantidos pequenos e idempotentes para servir como suprimentos iniciais sem
- * interferir na economia principal de crafting/gathering.
+ * Pocoes vendidas pela Mara.
+ * Cada item cobre dois tiers de progressao e usa nomes classicos de RPG para
+ * facilitar a leitura rapida na loja.
  */
 export const consumableDefinitions: ConsumableSeedData[] = [
   {
-    name: 'Pocao Pequena de Vida',
-    description:
-      'Frasco improvisado que recupera uma pequena porcao de HP em combate ou fora dele.',
+    name: 'Poção de Vida Menor',
+    description: 'Recupera uma pequena quantidade de HP.',
     tier: 1,
     rarity: Rarity.COMMON,
-    family: 'Pocao de Vida',
-    healFlat: 60,
-    healPercent: 8,
+    family: 'Poção de Vida',
+    healFlat: 80,
+    healPercent: 0,
     minTier: 1,
-    maxTier: 3,
+    maxTier: 2,
   },
   {
-    name: 'Pocao Media de Vida',
-    description:
-      'Mistura estabilizada para recuperar HP com mais seguranca durante expedicoes longas.',
-    tier: 3,
+    name: 'Poção de Vida',
+    description: 'Recupera uma quantidade moderada de HP.',
+    tier: 2,
     rarity: Rarity.UNCOMMON,
-    family: 'Pocao de Vida',
-    healFlat: 140,
-    healPercent: 12,
+    family: 'Poção de Vida',
+    healFlat: 180,
+    healPercent: 0,
     minTier: 3,
+    maxTier: 4,
+  },
+  {
+    name: 'Poção de Vida Maior',
+    description: 'Recupera uma boa quantidade de HP.',
+    tier: 3,
+    rarity: Rarity.RARE,
+    family: 'Poção de Vida',
+    healFlat: 420,
+    healPercent: 0,
+    minTier: 5,
     maxTier: 6,
   },
   {
-    name: 'Pocao Grande de Vida',
-    description:
-      'Reserva concentrada para emergencias, valiosa em confrontos de alto risco.',
+    name: 'Poção de Vida Superior',
+    description: 'Recupera uma alta quantidade de HP.',
+    tier: 4,
+    rarity: Rarity.EPIC,
+    family: 'Poção de Vida',
+    healFlat: 900,
+    healPercent: 0,
+    minTier: 7,
+    maxTier: 8,
+  },
+  {
+    name: 'Poção de Vida Suprema',
+    description: 'Recupera uma quantidade extrema de HP.',
     tier: 5,
-    rarity: Rarity.RARE,
-    family: 'Pocao de Vida',
-    healFlat: 320,
-    healPercent: 16,
-    minTier: 5,
+    rarity: Rarity.LEGENDARY,
+    family: 'Poção de Vida',
+    healFlat: 1800,
+    healPercent: 0,
+    minTier: 9,
     maxTier: 10,
   },
 ];

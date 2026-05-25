@@ -2,7 +2,6 @@ import { API_ENDPOINTS } from "../../../services/api/endpoints";
 import { apiClient } from "../../../services/api/apiClient";
 import type {
   VendorApiErrorResponse,
-  VendorSellableResponse,
   VendorShopResponse,
   VendorTransactionPayload,
   VendorTransactionResponse,
@@ -18,16 +17,6 @@ export async function getVendorShop(
   return response.data;
 }
 
-export async function getVendorSellable(
-  characterId: string,
-): Promise<VendorSellableResponse> {
-  const response = await apiClient.get<VendorSellableResponse>(
-    API_ENDPOINTS.vendor.sellable(characterId),
-  );
-
-  return response.data;
-}
-
 export async function buyVendorItem(
   characterId: string,
   payload: Required<Pick<VendorTransactionPayload, "itemId">> &
@@ -35,19 +24,6 @@ export async function buyVendorItem(
 ): Promise<VendorTransactionResponse> {
   const response = await apiClient.post<VendorTransactionResponse>(
     API_ENDPOINTS.vendor.buy(characterId),
-    payload,
-  );
-
-  return response.data;
-}
-
-export async function sellVendorItem(
-  characterId: string,
-  payload: Required<Pick<VendorTransactionPayload, "inventoryItemId">> &
-    Pick<VendorTransactionPayload, "quantity">,
-): Promise<VendorTransactionResponse> {
-  const response = await apiClient.post<VendorTransactionResponse>(
-    API_ENDPOINTS.vendor.sell(characterId),
     payload,
   );
 

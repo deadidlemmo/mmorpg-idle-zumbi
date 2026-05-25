@@ -37,6 +37,13 @@ type MobStatPreset = {
   xpMax: number;
 };
 
+type MobTierPressure = {
+  hp: number;
+  attack: number;
+  defense: number;
+  xpReward: number;
+};
+
 export const mobStatPresetsByTier: Record<number, MobStatPreset> = {
   1: {
     hpMin: 45,
@@ -157,6 +164,69 @@ export const mobStatPresetsByTier: Record<number, MobStatPreset> = {
     speedMax: 50,
     xpMin: 370,
     xpMax: 480,
+  },
+};
+
+export const mobTierPressureByTier: Record<number, MobTierPressure> = {
+  1: {
+    hp: 1.05,
+    attack: 1,
+    defense: 1,
+    xpReward: 1,
+  },
+  2: {
+    hp: 1.3,
+    attack: 1.25,
+    defense: 1.15,
+    xpReward: 1,
+  },
+  3: {
+    hp: 1.9,
+    attack: 1.9,
+    defense: 1.45,
+    xpReward: 1,
+  },
+  4: {
+    hp: 2.1,
+    attack: 2.05,
+    defense: 1.6,
+    xpReward: 1,
+  },
+  5: {
+    hp: 2.25,
+    attack: 2.2,
+    defense: 1.75,
+    xpReward: 1,
+  },
+  6: {
+    hp: 2.4,
+    attack: 2.3,
+    defense: 1.85,
+    xpReward: 1,
+  },
+  7: {
+    hp: 2.55,
+    attack: 2.4,
+    defense: 1.95,
+    xpReward: 1,
+  },
+  8: {
+    hp: 2.7,
+    attack: 2.5,
+    defense: 2.05,
+    xpReward: 1,
+  },
+  9: {
+    hp: 2.85,
+    attack: 2.6,
+    defense: 2.15,
+    xpReward: 1,
+  },
+  10: {
+    hp: 3,
+    attack: 2.7,
+    defense: 2.25,
+    xpReward: 1,
   },
 };
 
@@ -316,26 +386,34 @@ export function buildMobCombatStats(input: MobStatsInput): MobCombatStats {
   const tierProgress = clamp((input.level - tierStartLevel) / 9, 0, 1);
   const profile = inferMobCombatProfile(input);
   const multiplier = mobProfileMultipliers[profile];
+  const tierPressure =
+    mobTierPressureByTier[input.tier] ?? mobTierPressureByTier[10];
 
   return {
     level: input.level,
     tier: input.tier,
     hp: roundStat(
-      lerp(preset.hpMin, preset.hpMax, tierProgress) * multiplier.hp,
+      lerp(preset.hpMin, preset.hpMax, tierProgress) *
+        multiplier.hp *
+        tierPressure.hp,
     ),
     attack: roundStat(
       lerp(preset.attackMin, preset.attackMax, tierProgress) *
-        multiplier.attack,
+        multiplier.attack *
+        tierPressure.attack,
     ),
     defense: roundStat(
       lerp(preset.defenseMin, preset.defenseMax, tierProgress) *
-        multiplier.defense,
+        multiplier.defense *
+        tierPressure.defense,
     ),
     speed: roundStat(
       lerp(preset.speedMin, preset.speedMax, tierProgress) * multiplier.speed,
     ),
     xpReward: roundStat(
-      lerp(preset.xpMin, preset.xpMax, tierProgress) * multiplier.xpReward,
+      lerp(preset.xpMin, preset.xpMax, tierProgress) *
+        multiplier.xpReward *
+        tierPressure.xpReward,
     ),
   };
 }

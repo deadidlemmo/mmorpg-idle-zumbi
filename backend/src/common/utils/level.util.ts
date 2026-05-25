@@ -241,10 +241,18 @@ function buildLevelProgressResult(params: {
   levelCap: number;
 }): LevelProgressResult {
   const oldLevel = normalizeLevel(params.oldLevel, params.levelCap);
-  const currentXp = normalizeXp(params.currentXp);
+  const rawCurrentXp = normalizeXp(params.currentXp);
   const gainedXp = normalizeGainedXp(params.gainedXp);
-  const totalXp = normalizeXp(params.totalXp);
+  const rawTotalXp = normalizeXp(params.totalXp);
   const levelCap = normalizeLevel(params.levelCap, FUTURE_LEVEL_CAP);
+  const oldLevelStartXp = getTotalXpRequiredForLevel(oldLevel);
+
+  // Quando a curva de XP muda, personagens existentes podem ficar com
+  // level salvo maior do que o XP total novo justificaria. Nao rebaixamos
+  // o personagem; tratamos o XP minimo do level salvo como piso efetivo
+  // para a barra voltar a progredir imediatamente.
+  const currentXp = Math.max(rawCurrentXp, oldLevelStartXp);
+  const totalXp = Math.max(rawTotalXp, oldLevelStartXp + gainedXp);
 
   /**
    * O nível calculado pelo XP pode subir.

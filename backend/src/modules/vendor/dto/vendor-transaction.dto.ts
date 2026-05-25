@@ -17,20 +17,3 @@ export class VendorBuyDto {
   })
   quantity?: number;
 }
-
-export class VendorSellDto {
-  @IsUUID('4', {
-    message: 'O inventoryItemId precisa ser um UUID valido.',
-  })
-  inventoryItemId!: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt({
-    message: 'A quantidade precisa ser um numero inteiro.',
-  })
-  @Min(1, {
-    message: 'A quantidade precisa ser maior que zero.',
-  })
-  quantity?: number;
-}

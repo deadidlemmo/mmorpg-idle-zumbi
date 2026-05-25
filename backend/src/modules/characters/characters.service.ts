@@ -16,6 +16,18 @@ import {
   WorldBossEventStatus,
 } from '@prisma/client';
 import { AUTO_COMBAT_ROUND_DURATION_SECONDS } from '../../common/config/auto-combat.config';
+import {
+  GATHERING_AFFINITY_PRODUCTION_MULTIPLIER,
+  GATHERING_AFFINITY_XP_MULTIPLIER,
+  GATHERING_LEVEL_CAP,
+  GATHERING_PRODUCTION_BONUS_PER_LEVEL,
+  GATHERING_STAT_BONUS_PER_LEVEL,
+  getGatheringRateMultiplier,
+  getGatheringStatBonus,
+  getGatheringXpPerUnitForTier,
+  getGatheringXpProgressPercent,
+  getGatheringXpToNextLevel,
+} from '../../common/config/gathering.config';
 import { calculateGatheringReward } from '../../common/utils/gathering.util';
 import { getLevelProgress } from '../../common/utils/level.util';
 import { calculateFullStats } from '../../common/utils/stats.util';
@@ -25,12 +37,6 @@ import { CreateCharacterDto } from './dto/create-character.dto';
 const MAX_CHARACTERS_PER_USER = 2;
 const INITIAL_CHARACTER_GOLD = 250;
 const INITIAL_CHARACTER_CASH = 0;
-
-const GATHERING_LEVEL_CAP = 50;
-const GATHERING_STAT_BONUS_PER_LEVEL = 2;
-const GATHERING_PRODUCTION_BONUS_PER_LEVEL = 0.03;
-const GATHERING_AFFINITY_XP_MULTIPLIER = 1.15;
-const GATHERING_AFFINITY_PRODUCTION_MULTIPLIER = 1.05;
 
 const GATHERING_ORIGINS = [
   MaterialOrigin.DESMANCHE,
@@ -1623,35 +1629,22 @@ export class CharactersService {
   }
 
   private getGatheringXpToNextLevel(level: number) {
-    if (level >= GATHERING_LEVEL_CAP) {
-      return null;
-    }
-
-    return Math.max(50, level * 50);
+    return getGatheringXpToNextLevel(level);
   }
 
   private getGatheringRateMultiplier(level: number) {
-    return Number(
-      (
-        1 +
-        Math.max(0, level - 1) * GATHERING_PRODUCTION_BONUS_PER_LEVEL
-      ).toFixed(4),
-    );
+    return getGatheringRateMultiplier(level);
   }
 
   private getGatheringStatBonus(level: number) {
-    return Math.max(0, level - 1) * GATHERING_STAT_BONUS_PER_LEVEL;
+    return getGatheringStatBonus(level);
   }
 
   private getGatheringXpProgressPercent(
     xp: number,
     xpToNextLevel: number | null,
   ) {
-    if (!xpToNextLevel || xpToNextLevel <= 0) {
-      return 100;
-    }
-
-    return Math.max(0, Math.min(100, Math.floor((xp / xpToNextLevel) * 100)));
+    return getGatheringXpProgressPercent(xp, xpToNextLevel);
   }
 
   private formatActiveAutoCombatSession(activeAutoCombatSession: any) {
@@ -1966,8 +1959,9 @@ export class CharactersService {
         materialOrigin: activeGatheringSession.targetMaterial.materialOrigin,
         requiredGatheringLevel:
           activeGatheringSession.targetMaterial.requiredGatheringLevel ?? 1,
-        gatheringXpPerUnit:
-          activeGatheringSession.targetMaterial.gatheringXpPerUnit ?? 1,
+        gatheringXpPerUnit: getGatheringXpPerUnitForTier(
+          activeGatheringSession.targetMaterial.tier,
+        ),
         baseGatheringRatePerHour:
           activeGatheringSession.targetMaterial.baseGatheringRatePerHour ??
           null,
@@ -2196,7 +2190,9 @@ export class CharactersService {
           mapId: inventoryItem.item.mapId,
           requiredGatheringLevel:
             inventoryItem.item.requiredGatheringLevel ?? 1,
-          gatheringXpPerUnit: inventoryItem.item.gatheringXpPerUnit ?? 1,
+          gatheringXpPerUnit: inventoryItem.item.isGatheringMaterial
+            ? getGatheringXpPerUnitForTier(inventoryItem.item.tier)
+            : (inventoryItem.item.gatheringXpPerUnit ?? 1),
           baseGatheringRatePerHour:
             inventoryItem.item.baseGatheringRatePerHour ?? null,
         })),

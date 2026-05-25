@@ -3,40 +3,44 @@ export const FUTURE_LEVEL_CAP = 100;
 
 export const LEVELS_PER_TIER = 10;
 
-// Base de balanceamento idle.
-// 120 combates por dia = 1 combate efetivo a cada 12 minutos.
-export const EXPECTED_COMBATS_PER_DAY = 120;
+// Base de balanceamento idle para auto-combate 24h.
+// 3600 vitorias por dia = 1 abate efetivo a cada 24 segundos.
+// O round real pode ser mais rapido, mas lutas dificeis, derrotas, troca de mob,
+// pocoes e gargalos de equipamento reduzem a taxa efetiva.
+export const EXPECTED_COMBATS_PER_DAY = 3600;
 
-// Meta aproximada para o lançamento 1–50.
-// Total: 4 + 8 + 12 + 16 + 20 = 60 dias.
+// Meta aproximada para o lancamento 1-50.
+// Total: 3 + 7 + 12 + 18 + 26 = 66 dias no ritmo efetivo alvo.
+// T1 sobe mais cedo para dar arranque; depois cada tier segura mais tempo.
 export const TIER_TARGET_DAYS: Record<number, number> = {
-  1: 4,
-  2: 8,
+  1: 3,
+  2: 7,
   3: 12,
-  4: 16,
-  5: 20,
+  4: 18,
+  5: 26,
 
-  // Preparado para expansão futura 51–100.
-  6: 24,
-  7: 28,
-  8: 32,
-  9: 36,
-  10: 40,
+  // Preparado para expansao futura 51-100.
+  6: 36,
+  7: 48,
+  8: 62,
+  9: 78,
+  10: 96,
 };
 
-// XP médio aproximado dos mobs por tier,
-// baseado na curva documental de monstros.
+// XP medio real aproximado dos mobs seedados por tier.
+// Manter estes valores alinhados com mob-stats.seed-data.ts para que
+// os dias-alvo continuem representando tempo real de aquisicao de XP.
 export const TIER_AVERAGE_XP_PER_COMBAT: Record<number, number> = {
   1: 9,
-  2: 14,
-  3: 19,
-  4: 26,
-  5: 35,
+  2: 16,
+  3: 28,
+  4: 45,
+  5: 69,
 
-  // Futuro 51–100.
-  6: 47,
-  7: 63,
-  8: 83,
-  9: 107,
-  10: 136,
+  // Futuro 51-100.
+  6: 103,
+  7: 151,
+  8: 218,
+  9: 312,
+  10: 448,
 };

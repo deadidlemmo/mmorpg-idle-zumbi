@@ -56,9 +56,7 @@ export const API_ENDPOINTS = {
 
   vendor: {
     shop: (characterId: string) => `/vendor/${characterId}/shop`,
-    sellable: (characterId: string) => `/vendor/${characterId}/sellable`,
     buy: (characterId: string) => `/vendor/${characterId}/buy`,
-    sell: (characterId: string) => `/vendor/${characterId}/sell`,
   },
 
   crafting: {

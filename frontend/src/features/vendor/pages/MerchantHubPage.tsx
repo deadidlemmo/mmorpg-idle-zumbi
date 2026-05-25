@@ -19,37 +19,34 @@ function MerchantCard({
 }) {
   return (
     <Link className="merchant-card" to={to} aria-label={`Abrir ${merchant.marketName}`}>
-      <div className="merchant-card__avatar" aria-hidden="true">
-        {merchant.portraitUrl ? (
-          <img src={merchant.portraitUrl} alt="" />
-        ) : (
-          <span>{merchant.initials}</span>
-        )}
+      <div className="merchant-card__identity">
+        <div className="merchant-card__avatar" aria-hidden="true">
+          {merchant.portraitUrl ? (
+            <img src={merchant.portraitUrl} alt="" />
+          ) : (
+            <span>{merchant.initials}</span>
+          )}
+        </div>
+
+        <div className="merchant-card__body">
+          <h3>{merchant.marketName}</h3>
+          <span>{merchant.npcName}</span>
+        </div>
       </div>
 
-      <div className="merchant-card__body">
-        <div className="merchant-card__meta">
-          <span>{merchant.npcName}</span>
-          <strong>{merchant.role}</strong>
-        </div>
-
-        <h3>{merchant.marketName}</h3>
-        <p>{merchant.description}</p>
-
-        <div className="merchant-card__tags" aria-label="Categorias vendidas">
-          {merchant.tags.map((tag) => (
-            <span
-              key={tag.label}
-              className={`merchant-card__tag merchant-card__tag--${tag.tone ?? 'green'}`}
-            >
-              {tag.label}
-            </span>
-          ))}
-        </div>
+      <div className="merchant-card__tags" aria-label="Categorias vendidas">
+        {merchant.tags.map((tag) => (
+          <span
+            key={tag.label}
+            className={`merchant-card__tag merchant-card__tag--${tag.tone ?? 'green'}`}
+          >
+            {tag.label}
+          </span>
+        ))}
       </div>
 
       <span className="merchant-card__action" aria-hidden="true">
-        <ArrowRight size={18} />
+        <ArrowRight size={15} />
       </span>
     </Link>
   );
@@ -129,7 +126,7 @@ export function MerchantHubPage() {
         >
           <div className="gathering-origin-npc__stage" aria-hidden="true">
             <div className="gathering-origin-npc__portrait merchant-hub-hero__portrait">
-              <Store size={78} />
+              <Store size={52} />
             </div>
           </div>
 
@@ -145,27 +142,14 @@ export function MerchantHubPage() {
 
             <h2>Mercadores do Abrigo</h2>
             <blockquote>Toda sobrevivencia precisa de troca.</blockquote>
-            <p>
-              Compre suprimentos, consumiveis e itens raros com os comerciantes
-              disponiveis no abrigo.
-            </p>
+            <p>Compre suprimentos e consumiveis com os comerciantes do abrigo.</p>
           </div>
         </article>
 
         <section className="merchant-list-panel" aria-label="Lista de mercadores">
-          <div className="merchant-list-panel__header">
-            <div>
-              <span className="vendor-eyebrow">Mercador</span>
-              <h2>Comerciantes disponiveis</h2>
-              <p>
-                Escolha uma banca para abrir compra, venda e negociacao de
-                suprimentos.
-              </p>
-            </div>
-
-            <span className="merchant-list-panel__count">
-              {MERCHANTS.length} {MERCHANTS.length === 1 ? 'banca' : 'bancas'}
-            </span>
+          <div className="merchant-list-panel__table-head" aria-hidden="true">
+            <span>Mercador</span>
+            <span>Vende</span>
           </div>
 
           <div className="merchant-list">

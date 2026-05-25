@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { VendorBuyDto, VendorSellDto } from './dto/vendor-transaction.dto';
+import { VendorBuyDto } from './dto/vendor-transaction.dto';
 import { VendorService } from './vendor.service';
 
 type AuthenticatedRequest = {
@@ -51,14 +51,6 @@ export class VendorController {
     return this.vendorService.getShop(this.getUserId(request), characterId);
   }
 
-  @Get(':characterId/sellable')
-  getSellable(
-    @Req() request: AuthenticatedRequest,
-    @Param('characterId', UUID_V4_PIPE) characterId: string,
-  ) {
-    return this.vendorService.getSellable(this.getUserId(request), characterId);
-  }
-
   @Post(':characterId/buy')
   @HttpCode(200)
   buy(
@@ -70,20 +62,6 @@ export class VendorController {
       this.getUserId(request),
       characterId,
       vendorBuyDto,
-    );
-  }
-
-  @Post(':characterId/sell')
-  @HttpCode(200)
-  sell(
-    @Req() request: AuthenticatedRequest,
-    @Param('characterId', UUID_V4_PIPE) characterId: string,
-    @Body() vendorSellDto: VendorSellDto,
-  ) {
-    return this.vendorService.sell(
-      this.getUserId(request),
-      characterId,
-      vendorSellDto,
     );
   }
 }

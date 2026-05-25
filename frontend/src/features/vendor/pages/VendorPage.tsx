@@ -1,14 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import {
-  Coins,
-  HandCoins,
-  Package,
-  Search,
-  ShoppingBag,
-  Store,
-  Wallet,
-} from "lucide-react";
+import { HeartPulse, Package, Search, ShoppingCart } from "lucide-react";
+import goldIcon from "../../../assets/images/coins/gold.png";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import "../../dashboard/dashboard.css";
@@ -18,34 +11,16 @@ import { buildGatheringDashboardCharacter } from "../../gathering/utils/gatherin
 import {
   buyVendorItem,
   extractVendorApiError,
-  getVendorSellable,
   getVendorShop,
-  sellVendorItem,
 } from "../api/vendor.api";
 import { getMerchantByRouteSegment } from "../data/merchants";
 import "../styles/vendor.css";
-import type {
-  VendorCategory,
-  VendorItemEffect,
-  VendorItemSummary,
-  VendorSellableItem,
-  VendorSellableResponse,
-  VendorShopResponse,
-} from "../types/vendor.types";
+import type { VendorItemSummary, VendorShopResponse } from "../types/vendor.types";
 
-type VendorMode = "BUY" | "SELL";
-type VendorTierFilter = "CURRENT" | "ALL" | `${number}`;
 type FeedbackState = {
   tone: "success" | "error";
   message: string;
 } | null;
-
-const CATEGORY_LABELS: Record<VendorCategory, string> = {
-  ALL: "Todos",
-  CONSUMABLE: "Pocoes",
-  GATHERING: "Gathering",
-  MOB_DROP: "Drops de mobs",
-};
 
 function formatNumber(value?: number | null) {
   return Math.max(0, Math.floor(Number(value) || 0)).toLocaleString("pt-BR");
@@ -75,253 +50,257 @@ function getItemInitials(name?: string | null) {
   return `${words[0][0]}${words[1][0]}`.toUpperCase();
 }
 
-function formatSlot(slot?: string | null) {
-  switch (slot) {
-    case "MAIN_HAND":
-      return "Arma";
-    case "OFF_HAND":
-      return "Apoio";
-    case "HEAD":
-      return "Elmo";
-    case "ARMOR":
-      return "Armadura";
-    case "PANTS":
-      return "Pernas";
-    case "BOOTS":
-      return "Pes";
-    case "MATERIAL":
-      return "Material";
-    case "CONSUMABLE":
-      return "Consumivel";
-    default:
-      return slot ?? "Item";
-  }
-}
-
-function formatRarity(rarity?: string | null) {
-  switch (rarity) {
-    case "COMMON":
-      return "Comum";
-    case "UNCOMMON":
-      return "Incomum";
-    case "RARE":
-      return "Raro";
-    case "EPIC":
-      return "Epico";
-    case "LEGENDARY":
-      return "Lendario";
-    default:
-      return rarity ?? "Comum";
-  }
-}
-
-function getCharacterTier(level?: number | null) {
-  return Math.max(1, Math.min(10, Math.ceil(Math.max(1, level ?? 1) / 10)));
-}
-
-function itemMatchesSearch(
-  item: VendorItemSummary | VendorSellableItem,
-  searchTerm: string,
-) {
+function itemMatchesSearch(item: VendorItemSummary, searchTerm: string) {
   const normalizedSearch = normalizeText(searchTerm);
 
   if (!normalizedSearch) return true;
 
-  return [
-    item.name,
-    item.description,
-    item.family,
-    item.map?.name,
-    item.class?.name,
-    formatSlot(item.slot),
-    CATEGORY_LABELS[item.category],
-  ]
+  return [item.name, item.description, item.family]
     .map(normalizeText)
     .some((value) => value.includes(normalizedSearch));
 }
 
-function itemMatchesCategory(
-  item: VendorItemSummary | VendorSellableItem,
-  category: VendorCategory,
-) {
-  return category === "ALL" || item.category === category;
+function getRecommendedTierLabel(item: VendorItemSummary) {
+  if (item.minTier && item.maxTier) {
+    return `Tiers ${item.minTier}-${item.maxTier}`;
+  }
+
+  return `Tier ${item.tier}`;
 }
 
-function itemMatchesTier(
-  item: VendorItemSummary | VendorSellableItem,
-  tierFilter: VendorTierFilter,
-  currentTier: number,
-) {
-  if (tierFilter === "ALL") return true;
+function getEffectLabel(item: VendorItemSummary) {
+  const healParts = [];
 
-  const targetTier = tierFilter === "CURRENT" ? currentTier : Number(tierFilter);
-  return item.tier === targetTier;
+  if (item.healFlat > 0) {
+    healParts.push(`${formatNumber(item.healFlat)} HP`);
+  }
+
+  if (item.healPercent > 0) {
+    healParts.push(`${formatNumber(item.healPercent)}% do HP`);
+  }
+
+  if (healParts.length > 0) {
+    return `Recupera ${healParts.join(" + ")}`;
+  }
+
+  return item.description || "Consumível de uso geral";
 }
 
-function getEffectSummary(effects: VendorItemEffect[]) {
-  if (effects.length <= 0) return null;
+function clampQuantity(quantity: number, maxQuantity: number) {
+  if (maxQuantity <= 0) return 1;
 
-  return effects
-    .slice(0, 3)
-    .map((effect) => `+${effect.value} ${effect.label}`)
-    .join(" • ");
+  return Math.max(1, Math.min(maxQuantity, Math.floor(quantity) || 1));
 }
 
-function QuantitySelector({
-  value,
-  max,
-  disabled,
-  onChange,
+function VendorShopItemCard({
+  item,
+  onInspect,
 }: {
-  value: number;
-  max: number;
-  disabled?: boolean;
-  onChange: (quantity: number) => void;
+  item: VendorItemSummary;
+  onInspect: () => void;
 }) {
-  const safeMax = Math.max(1, max);
-  const quickValues = [1, 5, 10];
-
   return (
-    <div className="vendor-quantity-selector" aria-label="Quantidade">
-      <div className="vendor-quantity-selector__row">
-        {quickValues.map((quantity) => (
-          <button
-            key={quantity}
-            type="button"
-            disabled={disabled || quantity > safeMax}
-            onClick={() => onChange(Math.min(quantity, safeMax))}
-          >
-            {quantity}
-          </button>
-        ))}
-
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(safeMax)}
-        >
-          Max
-        </button>
+    <button
+      type="button"
+      className={`vendor-shop-card vendor-shop-card--item rarity-${String(
+        item.rarity,
+      ).toLowerCase()}`}
+      aria-label={`Ver detalhes de ${item.name}`}
+      onClick={onInspect}
+    >
+      <div className="vendor-shop-card__visual">
+        <span className="vendor-shop-card__icon" aria-hidden="true">
+          <HeartPulse size={26} />
+          <small>{getItemInitials(item.name)}</small>
+        </span>
       </div>
 
-      <input
-        type="number"
-        min={1}
-        max={safeMax}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => {
-          const nextValue = Math.floor(Number(event.currentTarget.value) || 1);
-          onChange(Math.max(1, Math.min(safeMax, nextValue)));
-        }}
-      />
-    </div>
+      <div className="vendor-shop-card__content">
+        <h3 className="vendor-shop-card__name" title={item.name}>
+          {item.name}
+        </h3>
+
+        <span className="vendor-shop-card__compact-price">
+          <img
+            src={goldIcon}
+            alt=""
+            className="vendor-gold-icon"
+            aria-hidden="true"
+          />
+          {formatNumber(item.buyPrice)}
+        </span>
+      </div>
+    </button>
   );
 }
 
-function VendorItemCard({
+function VendorItemPurchaseModal({
   item,
-  mode,
   gold,
   quantity,
   maxQuantity,
   isBusy,
+  onClose,
   onQuantityChange,
-  onAction,
+  onBuy,
 }: {
-  item: VendorItemSummary | VendorSellableItem;
-  mode: VendorMode;
+  item: VendorItemSummary;
   gold: number;
   quantity: number;
   maxQuantity: number;
   isBusy: boolean;
+  onClose: () => void;
   onQuantityChange: (quantity: number) => void;
-  onAction: () => void;
+  onBuy: () => void;
 }) {
-  const isSellMode = mode === "SELL";
-  const sellableItem = isSellMode ? (item as VendorSellableItem) : null;
-  const unitPrice = isSellMode ? sellableItem?.unitSellPrice ?? 0 : item.buyPrice;
-  const totalPrice = unitPrice * quantity;
-  const effectSummary = getEffectSummary(item.effects);
-  const cannotBuy = !isSellMode && totalPrice > gold;
-  const cannotSell = Boolean(
-    isSellMode && (!sellableItem?.canSell || maxQuantity <= 0),
-  );
-  const actionDisabled = isBusy || cannotBuy || cannotSell || maxQuantity <= 0;
+  const totalPrice = item.buyPrice * quantity;
+  const isUnavailable = maxQuantity <= 0;
+  const quickQuantities = [1, 5, 10];
 
   return (
-    <article
-      className={`vendor-item-card rarity-${String(item.rarity).toLowerCase()}`}
+    <div
+      className="vendor-item-modal-backdrop"
+      role="presentation"
+      onMouseDown={onClose}
     >
-      <div className="vendor-item-card__icon" aria-hidden="true">
-        <span>{getItemInitials(item.name)}</span>
-      </div>
-
-      <div className="vendor-item-card__body">
-        <div className="vendor-item-card__meta">
-          <span>T{item.tier}</span>
-          <span>{formatRarity(item.rarity)}</span>
-          <span>{formatSlot(item.slot)}</span>
-        </div>
-
-        <h3>{item.name}</h3>
-        <p>{effectSummary ?? item.description ?? item.family}</p>
-
-        <div className="vendor-item-card__details">
-          <span>{CATEGORY_LABELS[item.category]}</span>
-          <span>{item.family}</span>
-          {isSellMode && sellableItem ? (
-            <span>Possui {formatNumber(sellableItem.availableQuantity)}</span>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="vendor-item-card__trade">
-        <div className="vendor-item-card__price">
-          <small>{isSellMode ? "Venda un." : "Preco un."}</small>
-          <strong>{formatGold(unitPrice)}</strong>
-        </div>
-
-        {item.stackable ? (
-          <QuantitySelector
-            value={quantity}
-            max={maxQuantity}
-            disabled={isBusy || maxQuantity <= 0}
-            onChange={onQuantityChange}
-          />
-        ) : (
-          <span className="vendor-item-card__single-quantity">Qtd. 1</span>
-        )}
-
-        <div className="vendor-item-card__total">
-          <small>Total</small>
-          <strong>{formatGold(totalPrice)}</strong>
-        </div>
-
-        {cannotBuy ? (
-          <span className="vendor-item-card__warning">Gold insuficiente</span>
-        ) : null}
-
-        {cannotSell && sellableItem?.sellBlockReason ? (
-          <span className="vendor-item-card__warning">
-            {sellableItem.sellBlockReason}
-          </span>
-        ) : null}
-
+      <article
+        className="vendor-item-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="vendor-item-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <button
           type="button"
-          className="vendor-trade-button"
-          disabled={actionDisabled}
-          onClick={onAction}
+          className="vendor-item-modal__close"
+          aria-label="Fechar"
+          onClick={onClose}
         >
-          {isBusy
-            ? "Processando..."
-            : isSellMode
-              ? "Vender"
-              : "Comprar"}
+          ×
         </button>
-      </div>
-    </article>
+
+        <div className="vendor-item-modal__hero">
+          <span className="vendor-item-modal__icon" aria-hidden="true">
+            <HeartPulse size={40} />
+            <small>{getItemInitials(item.name)}</small>
+          </span>
+
+          <h2 id="vendor-item-modal-title">{item.name}</h2>
+
+          <div className="vendor-item-modal__chips" aria-label="Detalhes do item">
+            <span>{formatGold(item.buyPrice)}</span>
+            <span>{item.category === "CONSUMABLE" ? "Consumível" : "Item"}</span>
+            <span>{getRecommendedTierLabel(item)}</span>
+          </div>
+        </div>
+
+        <div className="vendor-item-modal__body">
+          <div className="vendor-item-modal__description">
+            <strong>{getEffectLabel(item)}</strong>
+            {item.description ? <p>{item.description}</p> : null}
+          </div>
+
+          <div className="vendor-item-modal__currency">
+            <span>Seu Gold</span>
+            <strong>
+              <img
+                src={goldIcon}
+                alt=""
+                className="vendor-gold-icon"
+                aria-hidden="true"
+              />
+              {formatNumber(gold)}
+            </strong>
+          </div>
+
+          <div className="vendor-item-modal__quantity">
+            <span>Quantidade</span>
+            <div className="vendor-item-modal__quantity-control">
+              <input
+                type="number"
+                min={1}
+                max={Math.max(1, maxQuantity)}
+                disabled={isBusy || isUnavailable}
+                value={quantity}
+                onChange={(event) =>
+                  onQuantityChange(Number(event.currentTarget.value))
+                }
+              />
+              <button
+                type="button"
+                disabled={isBusy || isUnavailable}
+                aria-label="Diminuir quantidade"
+                onClick={() => onQuantityChange(quantity - 1)}
+              >
+                −
+              </button>
+              <button
+                type="button"
+                disabled={isBusy || isUnavailable}
+                aria-label="Aumentar quantidade"
+                onClick={() => onQuantityChange(quantity + 1)}
+              >
+                +
+              </button>
+            </div>
+
+            <div className="vendor-item-modal__quick">
+              {quickQuantities.map((quickQuantity) => (
+                <button
+                  key={quickQuantity}
+                  type="button"
+                  disabled={isBusy || isUnavailable}
+                  className={quantity === quickQuantity ? "is-active" : ""}
+                  onClick={() => onQuantityChange(quickQuantity)}
+                >
+                  {quickQuantity}
+                </button>
+              ))}
+              <button
+                type="button"
+                disabled={isBusy || isUnavailable}
+                className={
+                  quantity === maxQuantity && maxQuantity > 0 ? "is-active" : ""
+                }
+                onClick={() => onQuantityChange(maxQuantity)}
+              >
+                Máx.
+              </button>
+            </div>
+          </div>
+
+          <div className="vendor-item-modal__total">
+            <span>Total</span>
+            <strong>{formatGold(totalPrice)}</strong>
+          </div>
+        </div>
+
+        <footer className="vendor-item-modal__actions">
+          <button
+            type="button"
+            className="vendor-item-modal__secondary"
+            onClick={() => undefined}
+          >
+            Inspecionar item
+          </button>
+
+          <button
+            type="button"
+            className="vendor-trade-button vendor-trade-button--buy"
+            disabled={isBusy || isUnavailable}
+            aria-busy={isBusy}
+            onClick={onBuy}
+          >
+            <ShoppingCart size={15} aria-hidden="true" />
+            {isBusy
+              ? "Comprando..."
+              : isUnavailable
+                ? "Gold insuficiente"
+                : `Comprar por ${formatNumber(totalPrice)}`}
+          </button>
+        </footer>
+      </article>
+    </div>
   );
 }
 
@@ -332,30 +311,23 @@ export function VendorPage() {
   const [character, setCharacter] =
     useState<DashboardCharacterViewModel | null>(null);
   const [shopData, setShopData] = useState<VendorShopResponse | null>(null);
-  const [sellableData, setSellableData] =
-    useState<VendorSellableResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const [mode, setMode] = useState<VendorMode>("BUY");
-  const [category, setCategory] = useState<VendorCategory>("ALL");
-  const [tierFilter, setTierFilter] = useState<VendorTierFilter>("CURRENT");
   const [searchTerm, setSearchTerm] = useState("");
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   const loadVendorData = useCallback(async () => {
     if (!safeCharacterId) return;
 
-    const [overviewResponse, shopResponse, sellableResponse] =
-      await Promise.all([
-        getCharacterOverview(safeCharacterId),
-        getVendorShop(safeCharacterId),
-        getVendorSellable(safeCharacterId),
-      ]);
+    const [overviewResponse, shopResponse] = await Promise.all([
+      getCharacterOverview(safeCharacterId),
+      getVendorShop(safeCharacterId),
+    ]);
 
     setCharacter(buildGatheringDashboardCharacter(overviewResponse));
     setShopData(shopResponse);
-    setSellableData(sellableResponse);
   }, [safeCharacterId]);
 
   useEffect(() => {
@@ -373,7 +345,7 @@ export function VendorPage() {
             tone: "error",
             message: extractVendorApiError(
               error,
-              "Nao foi possivel carregar o Mercador.",
+              "Não foi possível carregar o Mercador.",
             ),
           });
         }
@@ -391,61 +363,30 @@ export function VendorPage() {
     };
   }, [loadVendorData, safeCharacterId]);
 
-  const gold = shopData?.gold ?? sellableData?.gold ?? character?.gold ?? 0;
-  const currentTier = getCharacterTier(character?.level);
-
-  const activeCategories =
-    mode === "BUY" ? shopData?.categories : sellableData?.categories;
-
-  const categoryOptions = useMemo(
-    () =>
-      (activeCategories ?? []).filter((categorySummary) => {
-        if (categorySummary.key === "ALL") return true;
-        if (categorySummary.count <= 0) return false;
-
-        return mode === "BUY"
-          ? categorySummary.key === "CONSUMABLE"
-          : true;
-      }),
-    [activeCategories, mode],
-  );
-
-  const effectiveCategory = categoryOptions.some(
-    (categorySummary) => categorySummary.key === category,
-  )
-    ? category
-    : "ALL";
-
-  const rawItems = useMemo<Array<VendorItemSummary | VendorSellableItem>>(
-    () => (mode === "BUY" ? shopData?.items ?? [] : sellableData?.items ?? []),
-    [mode, sellableData?.items, shopData?.items],
+  const gold = shopData?.gold ?? character?.gold ?? 0;
+  const rawItems = useMemo(() => shopData?.items ?? [], [shopData?.items]);
+  const selectedItem = useMemo(
+    () => rawItems.find((item) => item.id === selectedItemId) ?? null,
+    [rawItems, selectedItemId],
   );
 
   const filteredItems = useMemo(
-    () =>
-      rawItems.filter(
-        (item) =>
-          itemMatchesCategory(item, effectiveCategory) &&
-          itemMatchesTier(item, tierFilter, currentTier) &&
-          itemMatchesSearch(item, searchTerm),
-      ),
-    [currentTier, effectiveCategory, rawItems, searchTerm, tierFilter],
+    () => rawItems.filter((item) => itemMatchesSearch(item, searchTerm)),
+    [rawItems, searchTerm],
   );
 
-  const setItemQuantity = useCallback((key: string, quantity: number) => {
-    setQuantities((current) => ({
-      ...current,
-      [key]: quantity,
-    }));
-  }, []);
+  useEffect(() => {
+    if (!selectedItem) return;
 
-  const getQuantity = useCallback(
-    (key: string, maxQuantity: number) => {
-      const max = Math.max(1, maxQuantity);
-      return Math.max(1, Math.min(max, quantities[key] ?? 1));
-    },
-    [quantities],
-  );
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setSelectedItemId(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedItem]);
 
   const getMaxBuyQuantity = useCallback(
     (item: VendorItemSummary) => {
@@ -460,9 +401,39 @@ export function VendorPage() {
     [gold],
   );
 
+  const getQuantity = useCallback(
+    (item: VendorItemSummary) => {
+      const maxQuantity = getMaxBuyQuantity(item);
+      const savedQuantity = quantities[item.id] ?? 1;
+
+      return clampQuantity(savedQuantity, maxQuantity);
+    },
+    [getMaxBuyQuantity, quantities],
+  );
+
+  const setItemQuantity = useCallback(
+    (item: VendorItemSummary, nextQuantity: number) => {
+      const maxQuantity = getMaxBuyQuantity(item);
+
+      setQuantities((currentQuantities) => ({
+        ...currentQuantities,
+        [item.id]: clampQuantity(nextQuantity, maxQuantity),
+      }));
+    },
+    [getMaxBuyQuantity],
+  );
+
   async function handleBuy(item: VendorItemSummary) {
     const maxQuantity = getMaxBuyQuantity(item);
-    const quantity = getQuantity(item.id, maxQuantity);
+    const quantity = getQuantity(item);
+
+    if (maxQuantity <= 0) {
+      setFeedback({
+        tone: "error",
+        message: "Gold insuficiente para comprar este item.",
+      });
+      return;
+    }
 
     try {
       setBusyKey(`buy-${item.id}`);
@@ -473,26 +444,7 @@ export function VendorPage() {
 
       setFeedback({ tone: "success", message: response.message });
       await loadVendorData();
-    } catch (error) {
-      setFeedback({ tone: "error", message: extractVendorApiError(error) });
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
-  async function handleSell(item: VendorSellableItem) {
-    const maxQuantity = item.stackable ? item.availableQuantity : 1;
-    const quantity = getQuantity(item.inventoryItemId, maxQuantity);
-
-    try {
-      setBusyKey(`sell-${item.inventoryItemId}`);
-      const response = await sellVendorItem(safeCharacterId, {
-        inventoryItemId: item.inventoryItemId,
-        quantity,
-      });
-
-      setFeedback({ tone: "success", message: response.message });
-      await loadVendorData();
+      setSelectedItemId(null);
     } catch (error) {
       setFeedback({ tone: "error", message: extractVendorApiError(error) });
     } finally {
@@ -521,9 +473,9 @@ export function VendorPage() {
     return (
       <main className="dashboard-error">
         <h1>Erro ao carregar Mercador</h1>
-        <p>{feedback?.message ?? "Nao foi possivel carregar este personagem."}</p>
+        <p>{feedback?.message ?? "Não foi possível carregar este personagem."}</p>
         <Link to="/characters" className="btn btn-primary">
-          Voltar para selecao
+          Voltar para seleção
         </Link>
       </main>
     );
@@ -559,13 +511,32 @@ export function VendorPage() {
             <h2>{activeMerchant.title}</h2>
             <blockquote>{activeMerchant.quote}</blockquote>
             <p>{activeMerchant.shopDescription}</p>
-
-            <div className="vendor-wallet-chip" aria-label="Gold atual">
-              <Coins size={16} aria-hidden="true" />
-              <span>{formatGold(gold)}</span>
-            </div>
           </div>
         </article>
+
+        <aside
+          className="gathering-origin-premium-card"
+          aria-label="Benefícios premium do Mercador"
+        >
+          <div
+            className="gathering-origin-premium-card__badge"
+            aria-hidden="true"
+          >
+            i
+          </div>
+
+          <div>
+            <h2>Benefícios premium</h2>
+            <p>Fila, bônus e notificações avançadas para compras e estoque.</p>
+          </div>
+
+          <button
+            type="button"
+            className="gathering-origin-premium-card__button"
+          >
+            Ver benefícios
+          </button>
+        </aside>
 
         {feedback ? (
           <div className={`vendor-feedback vendor-feedback--${feedback.tone}`}>
@@ -575,15 +546,11 @@ export function VendorPage() {
 
         <section className="vendor-layout" aria-label="Mercador">
           <main className="vendor-main-panel">
-            <div className="vendor-panel-header">
+            <div className="vendor-panel-header vendor-panel-header--shop">
               <div>
-                <span className="vendor-eyebrow">Mercador</span>
-                <h2>{mode === "BUY" ? "Comprar itens" : "Vender itens"}</h2>
-                <p>
-                  {mode === "BUY"
-                    ? "Mara vende apenas pocoes por enquanto."
-                    : "Venda pocoes e materiais excedentes para recuperar Gold."}
-                </p>
+                <span className="vendor-eyebrow">Loja da Mara</span>
+                <h2>Estoque da Mara</h2>
+                <p>Compre consumíveis e suprimentos com Gold.</p>
               </div>
 
               <label className="vendor-search">
@@ -597,171 +564,47 @@ export function VendorPage() {
               </label>
             </div>
 
-            <div className="vendor-mode-tabs" role="tablist" aria-label="Operacao">
-              <button
-                type="button"
-                className={mode === "BUY" ? "is-active" : ""}
-                onClick={() => {
-                  setMode("BUY");
-                  setCategory("ALL");
-                }}
-              >
-                <ShoppingBag size={16} aria-hidden="true" />
-                Comprar
-              </button>
-              <button
-                type="button"
-                className={mode === "SELL" ? "is-active" : ""}
-                onClick={() => {
-                  setMode("SELL");
-                  setCategory("ALL");
-                }}
-              >
-                <HandCoins size={16} aria-hidden="true" />
-                Vender
-              </button>
-            </div>
-
-            <div className="vendor-filter-panel" aria-label="Filtros do Mercador">
-              <label className="vendor-filter-field">
-                <span>Tier</span>
-                <select
-                  value={tierFilter}
-                  onChange={(event) =>
-                    setTierFilter(event.currentTarget.value as VendorTierFilter)
-                  }
-                >
-                  <option value="CURRENT">Meu tier (T{currentTier})</option>
-                  <option value="ALL">Todos os tiers</option>
-                  {Array.from({ length: 10 }, (_, index) => index + 1).map(
-                    (tier) => (
-                      <option key={tier} value={String(tier)}>
-                        Tier {tier}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </label>
-
-              <label className="vendor-filter-field">
-                <span>Tipo</span>
-                <select
-                  value={effectiveCategory}
-                  onChange={(event) =>
-                    setCategory(event.currentTarget.value as VendorCategory)
-                  }
-                >
-                  {categoryOptions.map((categorySummary) => (
-                    <option
-                      key={categorySummary.key}
-                      value={categorySummary.key}
-                    >
-                      {CATEGORY_LABELS[categorySummary.key]} (
-                      {categorySummary.count})
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
             <div className="vendor-result-row">
               <span>
-                Resultado <strong>{filteredItems.length}</strong> de{" "}
+                <strong>{filteredItems.length}</strong> de{" "}
                 <strong>{rawItems.length}</strong> itens
               </span>
             </div>
 
             {filteredItems.length > 0 ? (
-              <div className="vendor-items-grid">
-                {filteredItems.map((item) => {
-                  if (mode === "SELL") {
-                    const sellableItem = item as VendorSellableItem;
-                    const maxQuantity = sellableItem.stackable
-                      ? sellableItem.availableQuantity
-                      : 1;
-                    const quantity = getQuantity(
-                      sellableItem.inventoryItemId,
-                      maxQuantity,
-                    );
-
-                    return (
-                      <VendorItemCard
-                        key={sellableItem.inventoryItemId}
-                        item={sellableItem}
-                        mode={mode}
-                        gold={gold}
-                        quantity={quantity}
-                        maxQuantity={maxQuantity}
-                        isBusy={busyKey === `sell-${sellableItem.inventoryItemId}`}
-                        onQuantityChange={(nextQuantity) =>
-                          setItemQuantity(
-                            sellableItem.inventoryItemId,
-                            nextQuantity,
-                          )
-                        }
-                        onAction={() => handleSell(sellableItem)}
-                      />
-                    );
-                  }
-
-                  const shopItem = item as VendorItemSummary;
-                  const maxQuantity = getMaxBuyQuantity(shopItem);
-                  const quantity = getQuantity(shopItem.id, maxQuantity);
-
-                  return (
-                    <VendorItemCard
-                      key={shopItem.id}
-                      item={shopItem}
-                      mode={mode}
-                      gold={gold}
-                      quantity={quantity}
-                      maxQuantity={maxQuantity}
-                      isBusy={busyKey === `buy-${shopItem.id}`}
-                      onQuantityChange={(nextQuantity) =>
-                        setItemQuantity(shopItem.id, nextQuantity)
-                      }
-                      onAction={() => handleBuy(shopItem)}
-                    />
-                  );
-                })}
+              <div className="vendor-items-grid vendor-items-grid--shop">
+                {filteredItems.map((item) => (
+                  <VendorShopItemCard
+                    key={item.id}
+                    item={item}
+                    onInspect={() => setSelectedItemId(item.id)}
+                  />
+                ))}
               </div>
             ) : (
               <div className="vendor-empty-state">
                 <Package size={28} aria-hidden="true" />
-                <strong>Nenhum item nesta categoria</strong>
-                <p>Altere o tier, tipo ou modo de negociacao.</p>
+                <strong>Nenhum item encontrado</strong>
+                <p>Limpe a busca para ver o estoque da Mara.</p>
               </div>
             )}
           </main>
-
-          <aside className="vendor-side-column" aria-label="Resumo do Mercador">
-            <section className="vendor-side-card vendor-gold-card">
-              <span className="vendor-side-card__icon" aria-hidden="true">
-                <Wallet size={18} />
-              </span>
-              <div>
-                <span className="vendor-eyebrow">Carteira</span>
-                <h2>{formatGold(gold)}</h2>
-                <p>Saldo atual do personagem.</p>
-              </div>
-            </section>
-
-            <section className="vendor-side-card">
-              <span className="vendor-side-card__icon" aria-hidden="true">
-                <Store size={18} />
-              </span>
-              <div>
-                <span className="vendor-eyebrow">Regras da banca</span>
-                <ul>
-                  <li>Itens empilhaveis aceitam compra e venda em lote.</li>
-                  <li>A loja vende somente pocoes por enquanto.</li>
-                  <li>Mara compra pocoes, gathering e drops de mobs.</li>
-                  <li>Equipamentos ficam fora da banca do Mercador.</li>
-                </ul>
-              </div>
-            </section>
-          </aside>
         </section>
+
+        {selectedItem ? (
+          <VendorItemPurchaseModal
+            item={selectedItem}
+            gold={gold}
+            quantity={getQuantity(selectedItem)}
+            maxQuantity={getMaxBuyQuantity(selectedItem)}
+            isBusy={busyKey === `buy-${selectedItem.id}`}
+            onClose={() => setSelectedItemId(null)}
+            onQuantityChange={(nextQuantity) =>
+              setItemQuantity(selectedItem, nextQuantity)
+            }
+            onBuy={() => handleBuy(selectedItem)}
+          />
+        ) : null}
       </section>
     </DashboardLayout>
   );

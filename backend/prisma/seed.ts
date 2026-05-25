@@ -13,6 +13,7 @@ import {
   Rarity,
   WorldBossRewardType,
 } from '@prisma/client';
+import { getGatheringXpPerUnitForTier } from '../src/common/config/gathering.config';
 import { classDefinitions } from './seed-data/classes.seed-data';
 import { consumableDefinitions } from './seed-data/consumables.seed-data';
 import { encounterDefinitions } from './seed-data/encounters.seed-data';
@@ -46,6 +47,12 @@ import type {
 } from './seed-types';
 
 const prisma = new PrismaClient();
+
+const CONSUMABLE_ALIASES_BY_NAME: Record<string, string[]> = {
+  'Poção de Vida Menor': ['Pocao Pequena de Vida'],
+  'Poção de Vida': ['Pocao Media de Vida'],
+  'Poção de Vida Maior': ['Pocao Grande de Vida'],
+};
 
 type MaterialSeedDataWithGatheringProgression = MaterialSeedData & {
   requiredGatheringLevel?: number;
@@ -155,7 +162,7 @@ async function upsertMobByNameAndMap(params: {
       where: {
         id: existingOfficialMob.id,
       },
-      data: data as Prisma.MobUncheckedUpdateInput,
+      data,
     });
   }
 
@@ -174,7 +181,7 @@ async function upsertMobByNameAndMap(params: {
         where: {
           id: existingAliasMob.id,
         },
-        data: data as Prisma.MobUncheckedUpdateInput,
+        data,
       });
     }
   }
@@ -191,7 +198,7 @@ async function upsertItemByName(
     where: {
       name: data.name,
     },
-    update: data as Prisma.ItemUncheckedUpdateInput,
+    update: data,
     create: data,
   });
 }
@@ -207,7 +214,7 @@ async function upsertEquipmentItem(params: {
     name: data.name,
     description: data.description,
     tier: data.tier,
-    rarity: getRarityByTier(data.tier),
+    rarity: data.rarity,
     slot: data.slot,
     family: data.family,
     classId,
@@ -243,6 +250,11 @@ async function upsertMaterialItem(params: {
   const { data, mapId } = params;
 
   const isMobDrop = data.materialOrigin === 'DROP_MOBS';
+  const isGatheringMaterial = data.isGatheringMaterial ?? false;
+  const gatheringXpPerUnit =
+    isGatheringMaterial
+      ? getGatheringXpPerUnitForTier(data.tier)
+      : (data.gatheringXpPerUnit ?? (isMobDrop ? 0 : 1));
 
   return upsertItemByName({
     name: data.name,
@@ -259,7 +271,7 @@ async function upsertMaterialItem(params: {
     isGatheringMaterial: data.isGatheringMaterial ?? false,
 
     requiredGatheringLevel: data.requiredGatheringLevel ?? 1,
-    gatheringXpPerUnit: data.gatheringXpPerUnit ?? (isMobDrop ? 0 : 1),
+    gatheringXpPerUnit,
     baseGatheringRatePerHour: data.baseGatheringRatePerHour ?? null,
 
     strengthBonus: 0,
@@ -320,11 +332,11 @@ async function upsertMobDropMaterialItem(
 }
 
 async function upsertConsumableItem(data: ConsumableSeedData): Promise<Item> {
-  return upsertItemByName({
+  const itemData: Prisma.ItemUncheckedCreateInput = {
     name: data.name,
     description: data.description,
     tier: data.tier,
-    rarity: getRarityByTier(data.tier),
+    rarity: data.rarity,
     slot: ItemSlot.CONSUMABLE,
     family: data.family,
     classId: null,
@@ -350,6 +362,40 @@ async function upsertConsumableItem(data: ConsumableSeedData): Promise<Item> {
     maxTier: data.maxTier,
 
     isCraftable: data.isCraftable ?? false,
+  };
+
+  const existingOfficialItem = await prisma.item.findUnique({
+    where: { name: data.name },
+  });
+
+  if (existingOfficialItem) {
+    return prisma.item.update({
+      where: { id: existingOfficialItem.id },
+      data: itemData,
+    });
+  }
+
+  const aliases = CONSUMABLE_ALIASES_BY_NAME[data.name] ?? [];
+
+  if (aliases.length > 0) {
+    const existingAliasItem = await prisma.item.findFirst({
+      where: {
+        name: {
+          in: aliases,
+        },
+      },
+    });
+
+    if (existingAliasItem) {
+      return prisma.item.update({
+        where: { id: existingAliasItem.id },
+        data: itemData,
+      });
+    }
+  }
+
+  return prisma.item.create({
+    data: itemData,
   });
 }
 
@@ -987,6 +1033,31 @@ async function validateOfficialGatheringMaterials() {
     }
   }
 
+  const gatheringXpRows = await prisma.item.findMany({
+    where: {
+      name: {
+        in: [...expectedMaterialNames],
+      },
+      isGatheringMaterial: true,
+    },
+    select: {
+      name: true,
+      tier: true,
+      gatheringXpPerUnit: true,
+    },
+  });
+
+  const invalidGatheringXp = gatheringXpRows.find(
+    (item) =>
+      item.gatheringXpPerUnit !== getGatheringXpPerUnitForTier(item.tier),
+  );
+
+  if (invalidGatheringXp) {
+    throw new Error(
+      `Validação de gathering falhou: ${invalidGatheringXp.name} deveria conceder ${getGatheringXpPerUnitForTier(invalidGatheringXp.tier)} XP por unidade, encontrado ${invalidGatheringXp.gatheringXpPerUnit}.`,
+    );
+  }
+
   console.log(
     `Validação de gathering concluída: ${expectedMaterialNames.size} materiais oficiais do seed conferidos.`,
   );
@@ -1338,7 +1409,7 @@ async function main() {
       className: item.className,
       slot: item.slot,
       tier: item.tier,
-      rarity: getRarityByTier(item.tier),
+      rarity: item.rarity,
       isCraftable: item.isCraftable,
     })),
     equipamentosRegistrados: equipmentDefinitions.map((item) => ({
@@ -1351,20 +1422,16 @@ async function main() {
       tier: item.tier,
       rarity: getRarityByTier(item.tier),
       origin: item.materialOrigin,
-      requiredGatheringLevel:
-        (item as MaterialSeedDataWithGatheringProgression)
-          .requiredGatheringLevel ?? 1,
-      gatheringXpPerUnit:
-        (item as MaterialSeedDataWithGatheringProgression).gatheringXpPerUnit ??
-        1,
-      baseGatheringRatePerHour:
-        (item as MaterialSeedDataWithGatheringProgression)
-          .baseGatheringRatePerHour ?? null,
+      requiredGatheringLevel: item.requiredGatheringLevel ?? 1,
+      gatheringXpPerUnit: item.isGatheringMaterial
+        ? getGatheringXpPerUnitForTier(item.tier)
+        : (item.gatheringXpPerUnit ?? 1),
+      baseGatheringRatePerHour: item.baseGatheringRatePerHour ?? null,
     })),
     consumiveisRegistrados: consumableDefinitions.map((item) => ({
       name: item.name,
       tier: item.tier,
-      rarity: getRarityByTier(item.tier),
+      rarity: item.rarity,
       tiers: `${item.minTier}-${item.maxTier}`,
       heal: `${item.healFlat} + ${item.healPercent}% do HP máximo`,
     })),

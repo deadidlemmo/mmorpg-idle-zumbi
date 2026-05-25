@@ -12,15 +12,20 @@ import {
   MaterialOrigin,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
+import {
+  GATHERING_AFFINITY_PRODUCTION_MULTIPLIER,
+  GATHERING_AFFINITY_XP_MULTIPLIER,
+  GATHERING_LEVEL_CAP,
+  GATHERING_STAT_BONUS_PER_LEVEL,
+  getGatheringRateMultiplier,
+  getGatheringStatBonus,
+  getGatheringXpPerUnitForTier,
+  getGatheringXpProgressPercent,
+  getGatheringXpToNextLevel,
+} from '../../common/config/gathering.config';
 import { calculateGatheringReward } from '../../common/utils/gathering.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StartGatheringDto } from './dto/start-gathering.dto';
-
-const GATHERING_LEVEL_CAP = 50;
-const GATHERING_STAT_BONUS_PER_LEVEL = 2;
-const GATHERING_PRODUCTION_BONUS_PER_LEVEL = 0.03;
-const GATHERING_AFFINITY_XP_MULTIPLIER = 1.15;
-const GATHERING_AFFINITY_PRODUCTION_MULTIPLIER = 1.05;
 
 const GATHERING_ORIGINS = [
   MaterialOrigin.DESMANCHE,
@@ -166,28 +171,47 @@ function normalizeClassName(value?: string | null) {
     .toUpperCase();
 }
 
-function getGatheringXpToNextLevel(level: number) {
-  if (level >= GATHERING_LEVEL_CAP) {
-    return null;
+function getMaterialGatheringXpPerUnit(material: { tier: number }) {
+  return getGatheringXpPerUnitForTier(material.tier);
+}
+
+function calculateSessionGatheringXp(params: {
+  previousQuantity: number;
+  previousXp: number;
+  quantityGained: number;
+  xpPerUnit: number;
+  isAffinity: boolean;
+}) {
+  const previousQuantity = Math.max(0, Math.floor(params.previousQuantity));
+  const previousXp = Math.max(0, Math.floor(params.previousXp));
+  const quantityGained = Math.max(0, Math.floor(params.quantityGained));
+  const xpPerUnit = Math.max(1, Math.floor(params.xpPerUnit));
+  const totalQuantity = previousQuantity + quantityGained;
+  const baseTotalXp = totalQuantity * xpPerUnit;
+  const expectedTotalXp = params.isAffinity
+    ? Math.floor(baseTotalXp * GATHERING_AFFINITY_XP_MULTIPLIER)
+    : baseTotalXp;
+
+  return Math.max(0, expectedTotalXp - previousXp);
+}
+
+function normalizeGatheringTargetMaterial(targetMaterial?: unknown) {
+  if (
+    !targetMaterial ||
+    typeof targetMaterial !== 'object' ||
+    !('tier' in targetMaterial)
+  ) {
+    return targetMaterial;
   }
 
-  return Math.max(50, level * 50);
-}
+  const material = targetMaterial as Record<string, unknown> & {
+    tier: number;
+  };
 
-function getGatheringRateMultiplier(level: number) {
-  return 1 + Math.max(0, level - 1) * GATHERING_PRODUCTION_BONUS_PER_LEVEL;
-}
-
-function getGatheringStatBonus(level: number) {
-  return Math.max(0, level - 1) * GATHERING_STAT_BONUS_PER_LEVEL;
-}
-
-function getXpProgressPercent(xp: number, xpToNextLevel: number | null) {
-  if (!xpToNextLevel || xpToNextLevel <= 0) {
-    return 100;
-  }
-
-  return Math.max(0, Math.min(100, Math.floor((xp / xpToNextLevel) * 100)));
+  return {
+    ...material,
+    gatheringXpPerUnit: getMaterialGatheringXpPerUnit(material),
+  };
 }
 
 function isClassAffinity(params: {
@@ -223,7 +247,7 @@ function buildGatheringSkillViewModel(params: {
     xp: skill.xp,
     totalXp: skill.totalXp,
     xpToNextLevel,
-    xpProgressPercent: getXpProgressPercent(skill.xp, xpToNextLevel),
+    xpProgressPercent: getGatheringXpProgressPercent(skill.xp, xpToNextLevel),
     isAtLevelCap: skill.level >= GATHERING_LEVEL_CAP,
     isClassAffinity: isAffinity,
     statBonus: {
@@ -289,7 +313,7 @@ function applyGatheringXp(params: {
     currentXp,
     totalXp,
     xpToNextLevel,
-    xpProgressPercent: getXpProgressPercent(currentXp, xpToNextLevel),
+    xpProgressPercent: getGatheringXpProgressPercent(currentXp, xpToNextLevel),
     statBonusGained:
       levelsGained > 0
         ? {
@@ -561,7 +585,7 @@ export class GatheringService {
       collectedXp: session.collectedXp,
       character: session.character,
       map: session.map,
-      targetMaterial: session.targetMaterial,
+      targetMaterial: normalizeGatheringTargetMaterial(session.targetMaterial),
     };
   }
 
@@ -694,11 +718,16 @@ export class GatheringService {
       isAffinity: affinity,
     });
 
-    const baseXpGained =
-      reward.quantity * Math.max(1, session.targetMaterial.gatheringXpPerUnit);
-    const xpGained = affinity
-      ? Math.floor(baseXpGained * GATHERING_AFFINITY_XP_MULTIPLIER)
-      : baseXpGained;
+    const gatheringXpPerUnit = getMaterialGatheringXpPerUnit(
+      session.targetMaterial,
+    );
+    const xpGained = calculateSessionGatheringXp({
+      previousQuantity: session.collectedQuantity,
+      previousXp: session.collectedXp,
+      quantityGained: reward.quantity,
+      xpPerUnit: gatheringXpPerUnit,
+      isAffinity: affinity,
+    });
 
     const gatheringProgressPreview = applyGatheringXp({
       skill: gatheringSkill,
@@ -1031,7 +1060,7 @@ export class GatheringService {
           isGatheringMaterial: material.isGatheringMaterial,
           mapId: material.mapId,
           requiredGatheringLevel: material.requiredGatheringLevel,
-          gatheringXpPerUnit: material.gatheringXpPerUnit,
+          gatheringXpPerUnit: getMaterialGatheringXpPerUnit(material),
           baseGatheringRatePerHour: material.baseGatheringRatePerHour,
           ratePerHour:
             material.baseGatheringRatePerHour ?? rewardPreview.ratePerHour,

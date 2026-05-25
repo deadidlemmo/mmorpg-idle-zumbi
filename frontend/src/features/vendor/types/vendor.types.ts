@@ -40,7 +40,10 @@ export interface VendorItemSummary {
   category: Exclude<VendorCategory, "ALL">;
   stackable: boolean;
   buyPrice: number;
-  sellPrice: number;
+  healFlat: number;
+  healPercent: number;
+  minTier?: number | null;
+  maxTier?: number | null;
   effects: VendorItemEffect[];
   class?: {
     id: string;
@@ -53,15 +56,6 @@ export interface VendorItemSummary {
   } | null;
 }
 
-export interface VendorSellableItem extends VendorItemSummary {
-  inventoryItemId: string;
-  quantity: number;
-  availableQuantity: number;
-  unitSellPrice: number;
-  canSell: boolean;
-  sellBlockReason?: string | null;
-}
-
 export interface VendorShopResponse {
   npc: VendorNpc;
   character: VendorCharacter;
@@ -70,17 +64,8 @@ export interface VendorShopResponse {
   items: VendorItemSummary[];
 }
 
-export interface VendorSellableResponse {
-  npc: VendorNpc;
-  character: VendorCharacter;
-  gold: number;
-  categories: VendorCategorySummary[];
-  items: VendorSellableItem[];
-}
-
 export interface VendorTransactionPayload {
   itemId?: string;
-  inventoryItemId?: string;
   quantity?: number;
 }
 
@@ -89,7 +74,7 @@ export interface VendorTransactionResponse {
   gold: number;
   character: VendorCharacter;
   transaction: {
-    type: "BUY" | "SELL";
+    type: "BUY";
     quantity: number;
     unitPrice: number;
     totalPrice: number;

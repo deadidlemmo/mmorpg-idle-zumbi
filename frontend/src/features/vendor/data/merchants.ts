@@ -31,17 +31,17 @@ export const MERCHANTS: MerchantDefinition[] = [
     npcName: 'Mara',
     role: 'Mercadora geral',
     title: 'Mara, a Mercadora',
-    quote: 'Compra, venda e troca de suprimentos para quem ainda sobrevive.',
+    quote: 'Suprimentos, remédios e recursos para quem ainda sobrevive.',
     description:
-      'Pocoes, consumiveis e uma banca preparada para negociar excedentes do abrigo.',
+      'Banca de suprimentos para compras rapidas dentro do abrigo.',
     shopDescription:
-      'Compre pocoes com Gold, venda materiais excedentes e mantenha o abrigo girando sem sair do dashboard.',
+      'Compre consumiveis e suprimentos com Gold para sustentar suas cacadas e expedicoes.',
     portraitUrl: maraPortrait,
     initials: 'MA',
     tags: [
-      { label: 'Pocoes', tone: 'gold' },
-      { label: 'Consumiveis', tone: 'green' },
-      { label: 'Compra materiais', tone: 'muted' },
+      { label: 'Suprimentos', tone: 'gold' },
+      { label: 'Consumiveis', tone: 'muted' },
+      { label: 'Itens', tone: 'green' },
     ],
     available: true,
   },

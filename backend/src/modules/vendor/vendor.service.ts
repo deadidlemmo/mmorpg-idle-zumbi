@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InventoryItemType, ItemSlot, Prisma, Rarity } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { VendorBuyDto, VendorSellDto } from './dto/vendor-transaction.dto';
+import { VendorBuyDto } from './dto/vendor-transaction.dto';
 
 const VENDOR_ITEM_INCLUDE = {
   class: true,
@@ -34,32 +34,34 @@ type VendorCharacterRecord = {
   userId: string;
 };
 
+const VENDOR_FIXED_BUY_PRICE_BY_NAME: Record<string, number> = {
+  'Poção de Vida Menor': 25,
+  'Poção de Vida': 80,
+  'Poção de Vida Maior': 180,
+  'Poção de Vida Superior': 420,
+  'Poção de Vida Suprema': 900,
+  'Pocao Pequena de Vida': 25,
+  'Pocao Media de Vida': 80,
+  'Pocao Grande de Vida': 180,
+};
+
 @Injectable()
 export class VendorService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getShop(userId: string, characterId: string) {
     const character = await this.findCharacter(userId, characterId);
-    const characterTier = this.getTierFromLevel(character.level);
 
     const items = await this.prisma.item.findMany({
       where: {
         slot: ItemSlot.CONSUMABLE,
-        tier: {
-          lte: characterTier,
-        },
       },
       include: VENDOR_ITEM_INCLUDE,
-      orderBy: [
-        { tier: 'asc' },
-        { slot: 'asc' },
-        { rarity: 'asc' },
-        { name: 'asc' },
-      ],
+      orderBy: [{ minTier: 'asc' }, { tier: 'asc' }, { name: 'asc' }],
     });
 
     const shopItems = items
-      .filter((item) => this.isAvailableForPurchase(item, characterTier))
+      .filter((item) => this.isAvailableForPurchase(item))
       .map((item) => this.mapShopItem(item));
 
     return {
@@ -68,34 +70,6 @@ export class VendorService {
       gold: character.gold,
       categories: this.buildCategorySummary(shopItems),
       items: shopItems,
-    };
-  }
-
-  async getSellable(userId: string, characterId: string) {
-    const character = await this.findCharacter(userId, characterId);
-    const inventoryItems = await this.prisma.inventoryItem.findMany({
-      where: {
-        characterId,
-        item: {
-          slot: {
-            in: [ItemSlot.CONSUMABLE, ItemSlot.MATERIAL],
-          },
-        },
-      },
-      include: VENDOR_INVENTORY_INCLUDE,
-      orderBy: [{ item: { tier: 'asc' } }, { item: { name: 'asc' } }],
-    });
-
-    const sellableItems = inventoryItems
-      .filter((inventoryItem) => this.isVendorTradableItem(inventoryItem.item))
-      .map((inventoryItem) => this.mapSellableItem(inventoryItem));
-
-    return {
-      npc: this.getNpc(),
-      character: this.mapCharacter(character),
-      gold: character.gold,
-      categories: this.buildCategorySummary(sellableItems),
-      items: sellableItems,
     };
   }
 
@@ -129,9 +103,7 @@ export class VendorService {
         throw new NotFoundException('Item indisponivel no mercador.');
       }
 
-      const characterTier = this.getTierFromLevel(character.level);
-
-      if (!this.isAvailableForPurchase(item, characterTier)) {
+      if (!this.isAvailableForPurchase(item)) {
         throw new BadRequestException('Item indisponivel para compra.');
       }
 
@@ -220,126 +192,6 @@ export class VendorService {
     };
   }
 
-  async sell(
-    userId: string,
-    characterId: string,
-    vendorSellDto: VendorSellDto,
-  ) {
-    const result = await this.prisma.$transaction(async (tx) => {
-      const character = await tx.character.findFirst({
-        where: {
-          id: characterId,
-          userId,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          level: true,
-          gold: true,
-          userId: true,
-        },
-      });
-
-      if (!character) {
-        throw new NotFoundException('Personagem nao encontrado.');
-      }
-
-      const inventoryItem = await tx.inventoryItem.findFirst({
-        where: {
-          id: vendorSellDto.inventoryItemId,
-          characterId: character.id,
-        },
-        include: VENDOR_INVENTORY_INCLUDE,
-      });
-
-      if (!inventoryItem) {
-        throw new NotFoundException('Item nao encontrado no inventario.');
-      }
-
-      const item = inventoryItem.item;
-      const stackable = this.isStackable(item);
-
-      if (!this.isVendorTradableItem(item)) {
-        throw new BadRequestException(
-          'Este item nao pode ser vendido no Mercador.',
-        );
-      }
-
-      const availableQuantity = inventoryItem.quantity;
-      const quantity = this.normalizeQuantity(
-        vendorSellDto.quantity,
-        stackable,
-        availableQuantity,
-      );
-
-      if (availableQuantity <= 0 || quantity > availableQuantity) {
-        throw new BadRequestException('Quantidade maior que a disponivel.');
-      }
-
-      const unitPrice = this.calculateSellPrice(item);
-      const totalPrice = unitPrice * quantity;
-
-      if (totalPrice <= 0) {
-        throw new BadRequestException('Item sem valor de venda.');
-      }
-
-      if (inventoryItem.quantity === quantity) {
-        await tx.inventoryItem.delete({
-          where: { id: inventoryItem.id },
-        });
-      } else {
-        await tx.inventoryItem.update({
-          where: { id: inventoryItem.id },
-          data: {
-            quantity: {
-              decrement: quantity,
-            },
-          },
-        });
-      }
-
-      const updatedCharacter = await tx.character.update({
-        where: { id: character.id },
-        data: {
-          gold: {
-            increment: totalPrice,
-          },
-        },
-        select: {
-          id: true,
-          name: true,
-          level: true,
-          gold: true,
-          userId: true,
-        },
-      });
-
-      return {
-        character: updatedCharacter,
-        inventoryItem,
-        item,
-        quantity,
-        unitPrice,
-        totalPrice,
-      };
-    });
-
-    return {
-      message: `${result.quantity}x ${result.item.name} vendido com sucesso.`,
-      gold: result.character.gold,
-      character: this.mapCharacter(result.character),
-      transaction: {
-        type: 'SELL',
-        quantity: result.quantity,
-        unitPrice: result.unitPrice,
-        totalPrice: result.totalPrice,
-      },
-      item: this.mapShopItem(result.item),
-      inventoryItem: this.mapInventoryEntry(result.inventoryItem),
-    };
-  }
-
   private async findCharacter(userId: string, characterId: string) {
     const character = await this.prisma.character.findFirst({
       where: {
@@ -368,7 +220,7 @@ export class VendorService {
       name: 'Mara',
       title: 'Mara, a Mercadora',
       description:
-        'Compra, venda e troca de suprimentos para quem ainda sobrevive.',
+        'Suprimentos, remédios e recursos para quem ainda sobrevive.',
     };
   }
 
@@ -383,7 +235,6 @@ export class VendorService {
 
   private mapShopItem(item: VendorItemRecord) {
     const buyPrice = this.calculateBuyPrice(item);
-    const sellPrice = this.calculateSellPrice(item);
 
     return {
       id: item.id,
@@ -396,8 +247,11 @@ export class VendorService {
       category: this.getCategory(item),
       stackable: this.isStackable(item),
       buyPrice,
-      sellPrice,
       effects: this.getItemEffects(item),
+      healFlat: item.healFlat,
+      healPercent: item.healPercent,
+      minTier: item.minTier,
+      maxTier: item.maxTier,
       class: item.class
         ? {
             id: item.class.id,
@@ -411,23 +265,6 @@ export class VendorService {
             tier: item.map.tier,
           }
         : null,
-    };
-  }
-
-  private mapSellableItem(inventoryItem: VendorInventoryRecord) {
-    const item = inventoryItem.item;
-    const availableQuantity = inventoryItem.quantity;
-    const sellPrice = this.calculateSellPrice(item);
-    const canSell = availableQuantity > 0 && sellPrice > 0;
-
-    return {
-      ...this.mapShopItem(item),
-      inventoryItemId: inventoryItem.id,
-      quantity: inventoryItem.quantity,
-      availableQuantity,
-      unitSellPrice: sellPrice,
-      canSell,
-      sellBlockReason: canSell ? null : 'Item indisponivel para venda.',
     };
   }
 
@@ -502,23 +339,8 @@ export class VendorService {
     return item.slot === ItemSlot.CONSUMABLE || item.slot === ItemSlot.MATERIAL;
   }
 
-  private isAvailableForPurchase(
-    item: VendorItemRecord,
-    characterTier: number,
-  ) {
-    if (item.tier > characterTier) return false;
-    if (item.slot !== ItemSlot.CONSUMABLE) return false;
-
-    if (item.minTier && item.minTier > characterTier) return false;
-    if (item.maxTier && item.maxTier < Math.max(1, characterTier - 2)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  private isVendorTradableItem(item: { slot: ItemSlot }) {
-    return item.slot === ItemSlot.CONSUMABLE || item.slot === ItemSlot.MATERIAL;
+  private isAvailableForPurchase(item: VendorItemRecord) {
+    return item.slot === ItemSlot.CONSUMABLE;
   }
 
   private normalizeQuantity(
@@ -539,11 +361,13 @@ export class VendorService {
     return quantity;
   }
 
-  private getTierFromLevel(level: number) {
-    return Math.max(1, Math.min(10, Math.ceil(Math.max(1, level) / 10)));
-  }
-
   private calculateBuyPrice(item: VendorItemRecord) {
+    const fixedPotionPrice = VENDOR_FIXED_BUY_PRICE_BY_NAME[item.name];
+
+    if (fixedPotionPrice) {
+      return fixedPotionPrice;
+    }
+
     const tier = Math.max(1, item.tier);
     const rarityMultiplier = this.getRarityMultiplier(item.rarity);
 
@@ -558,10 +382,6 @@ export class VendorService {
     }
 
     return 0;
-  }
-
-  private calculateSellPrice(item: VendorItemRecord) {
-    return Math.max(1, Math.floor(this.calculateBuyPrice(item) * 0.35));
   }
 
   private getRarityMultiplier(rarity: Rarity) {
