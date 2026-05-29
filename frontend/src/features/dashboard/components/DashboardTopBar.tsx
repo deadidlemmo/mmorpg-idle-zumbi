@@ -10,6 +10,7 @@ import {
   connectWorldBossSocket,
   type WorldBossSocket,
 } from '../../../services/websocket/socketClient';
+import { getMobPortraitImage } from '../../auto-combat/utils/mobAssets';
 import { useAutoCombatRealtime } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import { useCraftingRealtime } from '../../crafting/realtime/useCraftingRealtime';
 import { useGatheringRealtime } from '../../gathering/realtime/useGatheringRealtime';
@@ -554,11 +555,13 @@ function buildAutoCombatActivity(
 
   const kills = getAutoCombatKills(autoCombatState) ?? 0;
   const monsterHpPercent = getAutoCombatMonsterHpPercent(autoCombatState);
+  const mobPortraitUrl = getMobPortraitImage(mobName);
 
   return {
     kind: 'auto-combat',
     title: mobName,
     subtitle: `${formatNumber(kills)} monstros mortos`,
+    imageUrl: mobPortraitUrl,
     icon: '☠',
     progressPercent: monsterHpPercent,
     badge: formatNumber(kills),

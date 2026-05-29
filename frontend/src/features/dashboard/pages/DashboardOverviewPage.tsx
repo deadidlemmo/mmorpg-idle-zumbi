@@ -133,6 +133,17 @@ function buildCharacterViewModel(
     currentHp: character.currentHp ?? character.maxHp ?? 1,
     maxHp: character.maxHp ?? 1,
 
+    gold: character.gold ?? character.wallet?.gold ?? character.currencies?.gold ?? 0,
+    cash: character.cash ?? character.wallet?.cash ?? character.currencies?.cash ?? 0,
+    wallet: {
+      gold: character.gold ?? character.wallet?.gold ?? character.currencies?.gold ?? 0,
+      cash: character.cash ?? character.wallet?.cash ?? character.currencies?.cash ?? 0,
+    },
+    currencies: {
+      gold: character.gold ?? character.wallet?.gold ?? character.currencies?.gold ?? 0,
+      cash: character.cash ?? character.wallet?.cash ?? character.currencies?.cash ?? 0,
+    },
+
     avatarKey: character.avatarKey ?? null,
     avatarUrl: character.avatarUrl ?? null,
 
@@ -450,30 +461,8 @@ export function DashboardOverviewPage() {
 
   const stats = overview.stats;
   const equipment = overview.equipment ?? {};
-  /**
-   * Preparação visual temporária para moedas.
-   * Não depende do backend, não altera API, não altera types e não salva nada.
-   * O DashboardLayout poderá usar estes campos depois para exibir Gold/Cash no hero.
-   */
-  const displayGold = 0;
-  const displayCash = 0;
-
-  const characterWithVisualWallet = {
-    ...character,
-    gold: displayGold,
-    cash: displayCash,
-    wallet: {
-      gold: displayGold,
-      cash: displayCash,
-    },
-    currencies: {
-      gold: displayGold,
-      cash: displayCash,
-    },
-  };
-
   return (
-    <DashboardLayout character={characterWithVisualWallet}>
+    <DashboardLayout character={character}>
       <div className="dashboard-section-divider">
         <span>Resumo do personagem</span>
       </div>

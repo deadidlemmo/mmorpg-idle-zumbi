@@ -551,12 +551,12 @@
   }
 
   .dashboard-mobile-topbar {
-    --dashboard-mobile-topbar-height: 46px;
-    --dashboard-mobile-control-size: 38px;
+    --dashboard-mobile-topbar-height: 50px;
+    --dashboard-mobile-control-size: 40px;
     --dashboard-mobile-topbar-gap: 0.36rem;
 
     margin-bottom: 0.72rem;
-    padding: 0.22rem;
+    padding: 0.24rem;
     top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
   }
 

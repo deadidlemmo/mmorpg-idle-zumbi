@@ -11,6 +11,10 @@ import {
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { calculateCombatHit } from '../../common/utils/combat-damage.util';
+import {
+  applyXpPenalty,
+  calculateTierFarmPenalty,
+} from '../../common/utils/farm-penalty.util';
 import { calculateLevelProgress } from '../../common/utils/level.util';
 import { calculateFullStats } from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -191,7 +195,10 @@ export class CombatService {
       ? CombatStatus.PLAYER_WIN
       : CombatStatus.PLAYER_LOSE;
 
-    const xpGained = playerWon ? mob.xpReward : 0;
+    const farmPenalty = calculateTierFarmPenalty(character.level, mob.tier);
+    const xpGained = playerWon
+      ? applyXpPenalty(mob.xpReward, farmPenalty.xpMultiplier)
+      : 0;
 
     const levelProgress = calculateLevelProgress(
       character.level,

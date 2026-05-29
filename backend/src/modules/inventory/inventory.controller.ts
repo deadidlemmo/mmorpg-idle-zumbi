@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MoveInventoryItemDto } from './dto/move-inventory-item.dto';
+import { SellInventoryItemDto } from './dto/sell-inventory-item.dto';
 import { InventoryService } from './inventory.service';
 
 @Controller('inventory')
@@ -49,5 +50,16 @@ export class InventoryController {
     @Body() moveItemDto: MoveInventoryItemDto,
   ) {
     return this.inventoryService.withdrawFromBank(request.user.id, moveItemDto);
+  }
+
+  @Post('black-market/sell')
+  sellToBlackMarket(
+    @Req() request: { user: { id: string } },
+    @Body() sellItemDto: SellInventoryItemDto,
+  ) {
+    return this.inventoryService.sellToBlackMarket(
+      request.user.id,
+      sellItemDto,
+    );
   }
 }

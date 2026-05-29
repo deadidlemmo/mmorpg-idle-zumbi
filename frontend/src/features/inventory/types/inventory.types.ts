@@ -71,6 +71,7 @@ export interface InventoryEntry {
   inventoryItemId: string;
   quantity: number;
   type: InventoryItemType;
+  blackMarketSellPrice?: number | null;
   item: InventoryItemDetails;
   createdAt?: string;
   updatedAt?: string;
@@ -101,7 +102,8 @@ export type InventoryItemActionKind =
   | 'consume'
   | 'unequip'
   | 'deposit'
-  | 'withdraw';
+  | 'withdraw'
+  | 'blackMarket';
 
 export interface InventoryItemActionViewModel {
   kind: InventoryItemActionKind;

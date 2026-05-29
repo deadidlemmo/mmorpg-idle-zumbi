@@ -3,9 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { InventoryItemType, ItemSlot, Prisma, Rarity } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MoveInventoryItemDto } from './dto/move-inventory-item.dto';
+import { SellInventoryItemDto } from './dto/sell-inventory-item.dto';
 
 const inventoryEntryInclude = {
   item: {
@@ -32,6 +33,25 @@ type InventoryEntryRecord = Prisma.InventoryItemGetPayload<{
 type BankEntryRecord = Prisma.BankItemGetPayload<{
   include: typeof bankEntryInclude;
 }>;
+
+const BLACK_MARKET_BASE_VALUE_BY_TIER: Record<number, number> = {
+  1: 3,
+  2: 6,
+  3: 12,
+  4: 20,
+  5: 32,
+  6: 50,
+  7: 76,
+  8: 112,
+  9: 160,
+  10: 225,
+};
+
+const BLACK_MARKET_TYPE_MULTIPLIER: Record<InventoryItemType, number> = {
+  [InventoryItemType.MATERIAL]: 1,
+  [InventoryItemType.CONSUMABLE]: 2,
+  [InventoryItemType.EQUIPMENT]: 8,
+};
 
 @Injectable()
 export class InventoryService {
@@ -227,6 +247,90 @@ export class InventoryService {
     };
   }
 
+  async sellToBlackMarket(userId: string, sellItemDto: SellInventoryItemDto) {
+    const soldItem = await this.prisma.$transaction(async (tx) => {
+      const character = await tx.character.findFirst({
+        where: {
+          id: sellItemDto.characterId,
+          userId,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          gold: true,
+        },
+      });
+
+      if (!character) {
+        throw new NotFoundException('Personagem não encontrado.');
+      }
+
+      const inventoryItem = await tx.inventoryItem.findFirst({
+        where: {
+          characterId: character.id,
+          itemId: sellItemDto.itemId,
+        },
+        include: inventoryEntryInclude,
+      });
+
+      if (!inventoryItem) {
+        throw new NotFoundException('Item não encontrado na mochila.');
+      }
+
+      await this.assertItemIsNotEquipped(
+        tx,
+        character.id,
+        inventoryItem.itemId,
+      );
+
+      const isStackable = this.isStackableForBlackMarket(inventoryItem);
+      const quantity = this.getSellQuantity(
+        sellItemDto.quantity,
+        inventoryItem.quantity,
+        isStackable,
+      );
+      const unitValue = this.calculateBlackMarketSellValue(inventoryItem);
+      const totalValue = unitValue * quantity;
+
+      if (totalValue <= 0) {
+        throw new BadRequestException(
+          'Este item não possui valor no Mercado Negro.',
+        );
+      }
+
+      await this.decrementInventoryItem(tx, inventoryItem, quantity);
+
+      const updatedCharacter = await tx.character.update({
+        where: {
+          id: character.id,
+        },
+        data: {
+          gold: {
+            increment: totalValue,
+          },
+        },
+        select: {
+          gold: true,
+        },
+      });
+
+      return {
+        itemId: inventoryItem.item.id,
+        itemName: inventoryItem.item.name,
+        quantity,
+        unitValue,
+        totalValue,
+        gold: updatedCharacter.gold,
+      };
+    });
+
+    return {
+      message: `${soldItem.quantity}x ${soldItem.itemName} vendido no Mercado Negro por ${soldItem.totalValue} Gold.`,
+      gold: soldItem.gold,
+      soldItem,
+    };
+  }
+
   private async assertCharacterOwnership(userId: string, characterId: string) {
     const character = await this.prisma.character.findFirst({
       where: {
@@ -259,24 +363,131 @@ export class InventoryService {
     return quantity;
   }
 
+  private getSellQuantity(
+    requestedQuantity: number | undefined,
+    availableQuantity: number,
+    stackable: boolean,
+  ) {
+    const quantity = stackable ? (requestedQuantity ?? 1) : 1;
+
+    if (
+      !Number.isInteger(quantity) ||
+      quantity <= 0 ||
+      quantity > availableQuantity
+    ) {
+      throw new BadRequestException(
+        'Quantidade inválida para venda no Mercado Negro.',
+      );
+    }
+
+    return quantity;
+  }
+
+  private async assertItemIsNotEquipped(
+    tx: Prisma.TransactionClient,
+    characterId: string,
+    itemId: string,
+  ) {
+    const equipment = await tx.equipment.findUnique({
+      where: {
+        characterId,
+      },
+      select: {
+        mainHandId: true,
+        offHandId: true,
+        headId: true,
+        armorId: true,
+        pantsId: true,
+        bootsId: true,
+      },
+    });
+
+    if (!equipment) return;
+
+    const equippedItemIds = [
+      equipment.mainHandId,
+      equipment.offHandId,
+      equipment.headId,
+      equipment.armorId,
+      equipment.pantsId,
+      equipment.bootsId,
+    ];
+
+    if (equippedItemIds.includes(itemId)) {
+      throw new BadRequestException(
+        'Item equipado não pode ser vendido no Mercado Negro.',
+      );
+    }
+  }
+
+  private isStackableForBlackMarket(
+    inventoryItem: InventoryEntryRecord | BankEntryRecord,
+  ) {
+    return (
+      inventoryItem.type !== InventoryItemType.EQUIPMENT &&
+      (inventoryItem.item.slot === ItemSlot.MATERIAL ||
+        inventoryItem.item.slot === ItemSlot.CONSUMABLE)
+    );
+  }
+
+  private calculateBlackMarketSellValue(
+    inventoryItem: InventoryEntryRecord | BankEntryRecord,
+  ) {
+    const tier = Math.min(10, Math.max(1, Math.floor(inventoryItem.item.tier)));
+    const baseValue = BLACK_MARKET_BASE_VALUE_BY_TIER[tier] ?? 3;
+    const typeMultiplier =
+      BLACK_MARKET_TYPE_MULTIPLIER[inventoryItem.type] ?? 1;
+    const rarityMultiplier = this.getBlackMarketRarityMultiplier(
+      inventoryItem.item.rarity,
+    );
+
+    return Math.max(
+      1,
+      Math.floor(baseValue * typeMultiplier * rarityMultiplier),
+    );
+  }
+
+  private getBlackMarketRarityMultiplier(rarity: Rarity) {
+    switch (rarity) {
+      case Rarity.UNCOMMON:
+        return 1.35;
+      case Rarity.RARE:
+        return 1.85;
+      case Rarity.EPIC:
+        return 2.6;
+      case Rarity.LEGENDARY:
+        return 3.75;
+      case Rarity.COMMON:
+      default:
+        return 1;
+    }
+  }
+
   private async decrementInventoryItem(
     tx: Prisma.TransactionClient,
     inventoryItem: { id: string; quantity: number },
     quantity: number,
   ) {
     if (inventoryItem.quantity === quantity) {
-      await tx.inventoryItem.delete({
+      const deletedItem = await tx.inventoryItem.deleteMany({
         where: {
           id: inventoryItem.id,
         },
       });
 
+      if (deletedItem.count <= 0) {
+        throw new BadRequestException('Quantidade insuficiente do item.');
+      }
+
       return;
     }
 
-    await tx.inventoryItem.update({
+    const updatedItem = await tx.inventoryItem.updateMany({
       where: {
         id: inventoryItem.id,
+        quantity: {
+          gte: quantity,
+        },
       },
       data: {
         quantity: {
@@ -284,6 +495,10 @@ export class InventoryService {
         },
       },
     });
+
+    if (updatedItem.count <= 0) {
+      throw new BadRequestException('Quantidade insuficiente do item.');
+    }
   }
 
   private async decrementBankItem(
@@ -320,6 +535,7 @@ export class InventoryService {
       inventoryItemId: inventoryItem.id,
       quantity: inventoryItem.quantity,
       type: inventoryItem.type,
+      blackMarketSellPrice: this.calculateBlackMarketSellValue(inventoryItem),
 
       item: {
         id: inventoryItem.item.id,

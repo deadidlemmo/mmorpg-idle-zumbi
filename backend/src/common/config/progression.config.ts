@@ -4,10 +4,10 @@ export const FUTURE_LEVEL_CAP = 100;
 export const LEVELS_PER_TIER = 10;
 
 // Base de balanceamento idle para auto-combate 24h.
-// 3600 vitorias por dia = 1 abate efetivo a cada 24 segundos.
-// O round real pode ser mais rapido, mas lutas dificeis, derrotas, troca de mob,
-// pocoes e gargalos de equipamento reduzem a taxa efetiva.
-export const EXPECTED_COMBATS_PER_DAY = 3600;
+// 7200 vitorias por dia = 1 abate efetivo a cada 12 segundos.
+// O round real roda a cada 3 segundos, mas lutas longas, derrotas, troca de mob,
+// pocoes e gargalos de equipamento reduzem a taxa sustentada.
+export const EXPECTED_COMBATS_PER_DAY = 7200;
 
 // Meta aproximada para o lancamento 1-50.
 // Total: 3 + 7 + 12 + 18 + 26 = 66 dias no ritmo efetivo alvo.

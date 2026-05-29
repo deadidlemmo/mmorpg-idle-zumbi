@@ -83,9 +83,9 @@ export function calculateCombatDamageDetails(
   const safeAttack = Math.max(1, attack);
   const safeDefense = Math.max(0, defense);
 
-  const defenseScale = 2;
-  const maxReductionRate = 0.75;
-  const minimumDamageRate = 0.15;
+  const defenseScale = 1.6;
+  const maxReductionRate = 0.8;
+  const minimumDamageRate = 0.12;
 
   const reductionRate = Math.min(
     maxReductionRate,
@@ -113,12 +113,7 @@ export function calculateVariableCombatDamage(params: {
   minMultiplier?: number;
   maxMultiplier?: number;
 }): CombatDamageResult {
-  const {
-    attack,
-    defense,
-    minMultiplier = 0.9,
-    maxMultiplier = 1.1,
-  } = params;
+  const { attack, defense, minMultiplier = 0.9, maxMultiplier = 1.1 } = params;
 
   const damageDetails = calculateCombatDamageDetails(attack, defense);
 
@@ -126,8 +121,7 @@ export function calculateVariableCombatDamage(params: {
   const safeMaxMultiplier = Math.max(safeMinMultiplier, maxMultiplier);
 
   const variationMultiplier =
-    safeMinMultiplier +
-    Math.random() * (safeMaxMultiplier - safeMinMultiplier);
+    safeMinMultiplier + Math.random() * (safeMaxMultiplier - safeMinMultiplier);
 
   const finalDamage = Math.max(
     damageDetails.minimumDamage,
@@ -171,16 +165,16 @@ export function calculateCombatHit(
     minMultiplier = 0.9,
     maxMultiplier = 1.1,
 
-    baseCriticalChance = 5,
-    minCriticalChance = 5,
-    maxCriticalChance = 35,
+    baseCriticalChance = 4,
+    minCriticalChance = 3,
+    maxCriticalChance = 28,
 
-    baseCriticalMultiplier = 1.5,
-    maxCriticalMultiplier = 2,
+    baseCriticalMultiplier = 1.45,
+    maxCriticalMultiplier = 1.85,
 
-    baseDodgeChance = 5,
-    minDodgeChance = 1,
-    maxDodgeChance = 35,
+    baseDodgeChance = 4,
+    minDodgeChance = 2,
+    maxDodgeChance = 28,
   } = params;
 
   const variableDamage = calculateVariableCombatDamage({
@@ -279,9 +273,9 @@ export function calculateDodgeDetails(params: {
   const {
     attackerPrecision,
     defenderAgility,
-    baseDodgeChance = 5,
-    minDodgeChance = 1,
-    maxDodgeChance = 35,
+    baseDodgeChance = 4,
+    minDodgeChance = 2,
+    maxDodgeChance = 28,
   } = params;
 
   const safeAttackerPrecision = Math.max(0, attackerPrecision);
@@ -289,7 +283,7 @@ export function calculateDodgeDetails(params: {
 
   const agilityAdvantage = safeDefenderAgility - safeAttackerPrecision;
 
-  const rawDodgeChance = baseDodgeChance + agilityAdvantage * 0.75;
+  const rawDodgeChance = baseDodgeChance + agilityAdvantage * 0.45;
 
   const dodgeChance = clampNumber(
     Number(rawDodgeChance.toFixed(2)),
@@ -322,11 +316,11 @@ export function calculateCriticalDetails(params: {
     attackerPrecision,
     attackerTechnique,
     defenderAgility,
-    baseCriticalChance = 5,
-    minCriticalChance = 5,
-    maxCriticalChance = 35,
-    baseCriticalMultiplier = 1.5,
-    maxCriticalMultiplier = 2,
+    baseCriticalChance = 4,
+    minCriticalChance = 3,
+    maxCriticalChance = 28,
+    baseCriticalMultiplier = 1.45,
+    maxCriticalMultiplier = 1.85,
   } = params;
 
   const safePrecision = Math.max(0, attackerPrecision);
@@ -335,9 +329,9 @@ export function calculateCriticalDetails(params: {
 
   const rawCriticalChance =
     baseCriticalChance +
-    safePrecision * 0.25 +
-    safeTechnique * 0.15 -
-    safeDefenderAgility * 0.1;
+    safePrecision * 0.18 +
+    safeTechnique * 0.12 -
+    safeDefenderAgility * 0.12;
 
   const criticalChance = clampNumber(
     Number(rawCriticalChance.toFixed(2)),
@@ -345,7 +339,7 @@ export function calculateCriticalDetails(params: {
     maxCriticalChance,
   );
 
-  const rawCriticalMultiplier = baseCriticalMultiplier + safeTechnique * 0.005;
+  const rawCriticalMultiplier = baseCriticalMultiplier + safeTechnique * 0.004;
 
   const criticalMultiplier = clampNumber(
     Number(rawCriticalMultiplier.toFixed(2)),

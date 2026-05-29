@@ -19,6 +19,18 @@ interface InventoryItemActionResponse {
   [key: string]: unknown;
 }
 
+interface InventoryBlackMarketSaleResponse extends InventoryItemActionResponse {
+  gold?: number;
+  soldItem?: {
+    itemId: string;
+    itemName: string;
+    quantity: number;
+    unitValue: number;
+    totalValue: number;
+    gold: number;
+  };
+}
+
 interface CharacterEquipmentResponse {
   equipment?: DashboardEquipmentViewModel | null;
   [key: string]: unknown;
@@ -70,6 +82,17 @@ export async function withdrawInventoryItemFromBank(
 ): Promise<InventoryItemActionResponse> {
   const response = await apiClient.post<InventoryItemActionResponse>(
     API_ENDPOINTS.inventory.withdrawFromBank,
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function sellInventoryItemToBlackMarket(
+  payload: InventoryItemActionPayload,
+): Promise<InventoryBlackMarketSaleResponse> {
+  const response = await apiClient.post<InventoryBlackMarketSaleResponse>(
+    API_ENDPOINTS.inventory.sellToBlackMarket,
     payload,
   );
 

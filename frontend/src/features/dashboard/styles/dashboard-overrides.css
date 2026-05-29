@@ -539,7 +539,7 @@
   }
 
   .dashboard-hero__content {
-    grid-template-columns: minmax(0, 1fr) minmax(13.4rem, 16rem) !important;
+    grid-template-columns: minmax(0, 1fr) minmax(20.5rem, 24rem) !important;
     grid-template-areas:
       'identity status'
       'resources resources' !important;
@@ -581,7 +581,7 @@
 
   .dashboard-hero__status {
     display: grid !important;
-    grid-template-columns: minmax(4.8rem, auto) minmax(0, 1fr) !important;
+    grid-template-columns: minmax(4.8rem, auto) minmax(13.4rem, 1fr) !important;
     align-items: center !important;
     align-self: center !important;
     gap: 0.56rem !important;
@@ -612,15 +612,17 @@
   }
 
   .dashboard-hero__wallet {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(2, minmax(6.25rem, 1fr)) !important;
     gap: 0.42rem !important;
     width: 100% !important;
+    min-width: 0 !important;
   }
 
   .dashboard-hero__currency {
     justify-content: space-between !important;
     gap: 0.36rem !important;
-    min-width: 0 !important;
+    min-width: 6.25rem !important;
+    width: 100% !important;
     min-height: 2.18rem !important;
     padding: 0.34rem 0.5rem !important;
     border-radius: 999px !important;
@@ -781,4 +783,41 @@
 .dashboard-hero__currency--cash .dashboard-hero__currency-label,
 .dashboard-hero__currency--cash > span {
   color: rgba(209, 235, 255, 0.86) !important;
+}
+
+/* Carteira do hero: mantém label, ícone e valor separados mesmo com números altos. */
+.dashboard-hero__currency {
+  flex: 0 1 auto !important;
+  min-width: 6.25rem !important;
+  max-width: 100% !important;
+}
+
+.dashboard-hero__currency > span {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.dashboard-hero__currency-label {
+  min-width: 0 !important;
+  max-width: 3.2rem !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.dashboard-hero__currency strong {
+  flex: 0 0 auto !important;
+  min-width: max-content !important;
+  letter-spacing: 0 !important;
+}
+
+@media (max-width: 520px) {
+  .dashboard-hero__currency {
+    min-width: 4.85rem !important;
+    padding-inline: 0.42rem !important;
+  }
+
+  .dashboard-hero__currency-label {
+    max-width: 2.5rem !important;
+  }
 }

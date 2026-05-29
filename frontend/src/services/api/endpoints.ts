@@ -41,6 +41,7 @@ export const API_ENDPOINTS = {
     bank: (characterId: string) => `/inventory/${characterId}/bank`,
     depositToBank: "/inventory/bank/deposit",
     withdrawFromBank: "/inventory/bank/withdraw",
+    sellToBlackMarket: "/inventory/black-market/sell",
   },
 
   equipment: {

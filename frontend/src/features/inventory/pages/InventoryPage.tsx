@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
+import goldIcon from '../../../assets/images/coins/gold.png';
 import { normalizeClassName } from '../../characters/api/characters.api';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
@@ -22,6 +23,7 @@ import {
   extractInventoryActionApiError,
   consumeInventoryItem,
   depositInventoryItemToBank,
+  sellInventoryItemToBlackMarket,
   unequipInventoryItem,
   withdrawInventoryItemFromBank,
 } from '../api/inventory.api';
@@ -244,6 +246,67 @@ function isConsumableEntry(entry: InventoryEntry) {
   return entryType === 'CONSUMABLE' || slot === 'CONSUMABLE';
 }
 
+function isBlackMarketStackableEntry(entry: InventoryEntry) {
+  const entryType = String(entry.type ?? '').toUpperCase();
+  const slot = String(entry.item.slot ?? '').toUpperCase();
+
+  return (
+    entryType !== 'EQUIPMENT' && (slot === 'MATERIAL' || slot === 'CONSUMABLE')
+  );
+}
+
+function getBlackMarketUnitValue(entry: InventoryEntry) {
+  const backendValue = Number(entry.blackMarketSellPrice);
+
+  if (Number.isFinite(backendValue) && backendValue > 0) {
+    return Math.floor(backendValue);
+  }
+
+  const tier = Math.min(10, Math.max(1, Math.floor(Number(entry.item.tier) || 1)));
+  const baseValueByTier: Record<number, number> = {
+    1: 3,
+    2: 6,
+    3: 12,
+    4: 20,
+    5: 32,
+    6: 50,
+    7: 76,
+    8: 112,
+    9: 160,
+    10: 225,
+  };
+  const rarityMultiplierByKey: Record<string, number> = {
+    COMMON: 1,
+    UNCOMMON: 1.35,
+    RARE: 1.85,
+    EPIC: 2.6,
+    LEGENDARY: 3.75,
+  };
+  const typeMultiplier = isEquipmentEntry(entry)
+    ? 8
+    : isConsumableEntry(entry)
+      ? 2
+      : 1;
+  const rarityMultiplier =
+    rarityMultiplierByKey[String(entry.item.rarity ?? 'COMMON').toUpperCase()] ??
+    1;
+
+  return Math.max(
+    1,
+    Math.floor((baseValueByTier[tier] ?? 3) * typeMultiplier * rarityMultiplier),
+  );
+}
+
+function clampSaleQuantity(entry: InventoryEntry, quantity: number) {
+  const maxQuantity = isBlackMarketStackableEntry(entry)
+    ? Math.max(0, Math.floor(Number(entry.quantity) || 0))
+    : 1;
+
+  if (maxQuantity <= 0) return 1;
+
+  return Math.max(1, Math.min(maxQuantity, Math.floor(quantity) || 1));
+}
+
 function getInventoryItemActions(
   entry: InventoryEntry | null,
   source: InventorySelectionSource,
@@ -294,6 +357,12 @@ function getInventoryItemActions(
     kind: 'deposit',
     label: 'Enviar ao banco',
     description: '',
+  });
+
+  actions.push({
+    kind: 'blackMarket',
+    label: 'Vender',
+    description: 'Converte este item em Gold sem passar pelo Mercador.',
   });
 
   return actions;
@@ -567,6 +636,223 @@ function InventoryDesktopDetailsPanel({
   );
 }
 
+interface InventoryBlackMarketSaleModalProps {
+  entry: InventoryEntry | null;
+  quantity: number;
+  feedback: InventoryItemActionFeedback | null;
+  isBusy: boolean;
+  onClose: () => void;
+  onQuantityChange: (quantity: number) => void;
+  onConfirm: () => void;
+}
+
+function InventoryBlackMarketSaleModal({
+  entry,
+  quantity,
+  feedback,
+  isBusy,
+  onClose,
+  onQuantityChange,
+  onConfirm,
+}: InventoryBlackMarketSaleModalProps) {
+  useEffect(() => {
+    if (!entry) return undefined;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [entry, onClose]);
+
+  if (!entry) return null;
+
+  const item = entry.item;
+  const itemName = item.name?.trim() || 'Item desconhecido';
+  const isStackable = isBlackMarketStackableEntry(entry);
+  const maxQuantity = isStackable
+    ? Math.max(0, entry.quantity)
+    : Math.min(1, Math.max(0, entry.quantity));
+  const unitValue = getBlackMarketUnitValue(entry);
+  const effectiveQuantity =
+    maxQuantity > 0 ? Math.min(quantity, maxQuantity) : 0;
+  const totalValue = unitValue * effectiveQuantity;
+  const canSell = maxQuantity > 0 && !isBusy;
+  const quickQuantities = [1, 5, 10].filter(
+    (quickQuantity) => quickQuantity <= Math.max(1, maxQuantity),
+  );
+
+  return (
+    <div
+      className="inventory-black-market-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="inventory-black-market-title"
+    >
+      <button
+        type="button"
+        className="inventory-black-market-modal__backdrop"
+        onClick={onClose}
+        aria-label="Fechar venda no Mercado Negro"
+      />
+
+      <section
+        className={`inventory-black-market-modal__panel rarity-${normalizeRarityClass(
+          item.rarity,
+        )}`}
+      >
+        <button
+          type="button"
+          className="inventory-black-market-modal__close"
+          onClick={onClose}
+          aria-label="Fechar"
+        >
+          ×
+        </button>
+
+        <div className="inventory-black-market-modal__hero">
+          <div
+            className="inventory-item-card__icon inventory-black-market-modal__icon"
+            aria-hidden="true"
+          >
+            <span className="inventory-item-card__glyph">
+              {getInventoryItemIcon(entry)}
+            </span>
+
+            <strong>{getInventoryItemInitials(item)}</strong>
+          </div>
+
+          <span>Mercado Negro</span>
+          <h2 id="inventory-black-market-title">{itemName}</h2>
+        </div>
+
+        <div className="inventory-black-market-modal__summary">
+          <div>
+            <span>Valor unitário</span>
+            <strong>
+              <img src={goldIcon} alt="" aria-hidden="true" />
+              {formatQuantity(unitValue)}
+            </strong>
+          </div>
+
+          <div>
+            <span>Disponível</span>
+            <strong>x{formatQuantity(maxQuantity)}</strong>
+          </div>
+
+          <div>
+            <span>Total da venda</span>
+            <strong>
+              <img src={goldIcon} alt="" aria-hidden="true" />
+              {formatQuantity(totalValue)}
+            </strong>
+          </div>
+        </div>
+
+        {isStackable ? (
+          <div className="inventory-black-market-modal__quantity">
+            <label htmlFor="inventory-black-market-quantity">
+              Quantidade para vender
+            </label>
+
+            <div className="inventory-black-market-modal__quantity-row">
+              <button
+                type="button"
+                onClick={() => onQuantityChange(quantity - 1)}
+                disabled={!canSell || quantity <= 1}
+              >
+                −
+              </button>
+
+              <input
+                id="inventory-black-market-quantity"
+                type="number"
+                min={1}
+                max={Math.max(1, maxQuantity)}
+                value={quantity}
+                disabled={!canSell}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  onQuantityChange(Number(event.target.value))
+                }
+              />
+
+              <button
+                type="button"
+                onClick={() => onQuantityChange(quantity + 1)}
+                disabled={!canSell || quantity >= maxQuantity}
+              >
+                +
+              </button>
+            </div>
+
+            <div className="inventory-black-market-modal__quick">
+              {quickQuantities.map((quickQuantity) => (
+                <button
+                  key={quickQuantity}
+                  type="button"
+                  className={quantity === quickQuantity ? 'is-active' : ''}
+                  onClick={() => onQuantityChange(quickQuantity)}
+                  disabled={!canSell}
+                >
+                  {quickQuantity}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                className={quantity === maxQuantity ? 'is-active' : ''}
+                onClick={() => onQuantityChange(maxQuantity)}
+                disabled={!canSell}
+              >
+                Máx.
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="inventory-black-market-modal__locked-quantity">
+            Este item será vendido individualmente.
+          </p>
+        )}
+
+        {feedback ? (
+          <p
+            className={`inventory-item-action-feedback inventory-item-action-feedback--${feedback.tone}`}
+            role="status"
+          >
+            {feedback.message}
+          </p>
+        ) : null}
+
+        <div className="inventory-black-market-modal__actions">
+          <button
+            type="button"
+            className="inventory-item-action-button inventory-item-action-button--blackMarket"
+            disabled={!canSell}
+            onClick={onConfirm}
+          >
+            {isBusy ? 'Vendendo...' : 'Confirmar venda'}
+          </button>
+
+          <button
+            type="button"
+            className="inventory-black-market-modal__secondary"
+            onClick={onClose}
+            disabled={isBusy}
+          >
+            Cancelar
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function InventoryPage() {
   const { characterId } = useParams();
   const [activeTab, setActiveTab] = useState<InventoryTabKey>('inventory');
@@ -581,6 +867,15 @@ export function InventoryPage() {
   const [isItemActionBusy, setIsItemActionBusy] = useState(false);
   const [itemActionFeedback, setItemActionFeedback] =
     useState<InventoryItemActionFeedback | null>(null);
+  const [blackMarketSale, setBlackMarketSale] = useState<{
+    entry: InventoryEntry;
+    quantity: number;
+  } | null>(null);
+  const [blackMarketFeedback, setBlackMarketFeedback] =
+    useState<InventoryItemActionFeedback | null>(null);
+  const [blackMarketPageFeedback, setBlackMarketPageFeedback] =
+    useState<InventoryItemActionFeedback | null>(null);
+  const [isBlackMarketBusy, setIsBlackMarketBusy] = useState(false);
   const [equipmentSnapshot, setEquipmentSnapshot] =
     useState<DashboardEquipmentViewModel | null>(null);
   const [isEquipmentLoading, setIsEquipmentLoading] = useState(false);
@@ -601,6 +896,18 @@ export function InventoryPage() {
     error: inventoryError,
     refetch,
   } = useInventory(characterId);
+
+  useEffect(() => {
+    if (!blackMarketPageFeedback) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setBlackMarketPageFeedback(null);
+    }, 5200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [blackMarketPageFeedback]);
 
   useEffect(() => {
     let isMounted = true;
@@ -826,6 +1133,18 @@ export function InventoryPage() {
 
     if (!action) return;
 
+    if (action.kind === 'blackMarket') {
+      setBlackMarketSale({
+        entry,
+        quantity: clampSaleQuantity(entry, 1),
+      });
+      setBlackMarketFeedback(null);
+      setBlackMarketPageFeedback(null);
+      setIsDetailsModalOpen(false);
+
+      return;
+    }
+
     setIsItemActionBusy(true);
     setItemActionFeedback(null);
 
@@ -904,6 +1223,92 @@ export function InventoryPage() {
     }
   }
 
+  function handleBlackMarketQuantityChange(quantity: number) {
+    setBlackMarketSale((currentSale) => {
+      if (!currentSale) return currentSale;
+
+      return {
+        ...currentSale,
+        quantity: clampSaleQuantity(currentSale.entry, quantity),
+      };
+    });
+    setBlackMarketFeedback(null);
+  }
+
+  async function handleConfirmBlackMarketSale() {
+    if (!characterId || !blackMarketSale || isBlackMarketBusy) return;
+
+    const { entry, quantity } = blackMarketSale;
+
+    setIsBlackMarketBusy(true);
+    setBlackMarketFeedback(null);
+
+    try {
+      const result = await sellInventoryItemToBlackMarket({
+        characterId,
+        itemId: entry.item.id,
+        quantity,
+      });
+
+      const soldQuantity = result.soldItem?.quantity ?? quantity;
+      const successMessage =
+        result.message ??
+        `${soldQuantity}x ${entry.item.name} vendido no Mercado Negro.`;
+      const remainingQuantity = Math.max(0, entry.quantity - soldQuantity);
+
+      setItemActionFeedback({
+        tone: 'success',
+        message: successMessage,
+      });
+
+      if (remainingQuantity <= 0) {
+        setBlackMarketSale(null);
+        setBlackMarketFeedback(null);
+        setBlackMarketPageFeedback({
+          tone: 'success',
+          message: successMessage,
+        });
+        setSelection({
+          source: 'inventory',
+          entry: null,
+          emptySlotLabel: null,
+        });
+        setIsDetailsModalOpen(false);
+      } else {
+        setBlackMarketSale({
+          entry: {
+            ...entry,
+            quantity: remainingQuantity,
+          },
+          quantity: 1,
+        });
+
+        setBlackMarketFeedback({
+          tone: 'success',
+          message: successMessage,
+        });
+      }
+
+      await Promise.allSettled([refetch(), refreshCharacterOverview()]);
+    } catch (error) {
+      const message = extractInventoryActionApiError(
+        error,
+        'Não foi possível vender este item no Mercado Negro.',
+      );
+
+      setBlackMarketFeedback({
+        tone: 'error',
+        message,
+      });
+      setItemActionFeedback({
+        tone: 'error',
+        message,
+      });
+    } finally {
+      setIsBlackMarketBusy(false);
+    }
+  }
+
   if (!characterId) {
     return <Navigate to="/characters" replace />;
   }
@@ -932,6 +1337,26 @@ export function InventoryPage() {
         className="inventory-page inventory-page--dashboard"
         aria-label="Mochila do personagem"
       >
+        {blackMarketPageFeedback ? (
+          <div
+            className={`inventory-black-market-notice inventory-black-market-notice--${blackMarketPageFeedback.tone}`}
+            role="status"
+          >
+            <div>
+              <span>Mercado Negro</span>
+              <strong>{blackMarketPageFeedback.message}</strong>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setBlackMarketPageFeedback(null)}
+              aria-label="Dispensar mensagem"
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
+
         <div className="inventory-content-layout">
           <section
             className="inventory-panel inventory-panel--items inventory-content-layout__grid"
@@ -1177,6 +1602,20 @@ export function InventoryPage() {
           actionFeedback={itemActionFeedback}
           isActionBusy={isItemActionBusy}
           onUseItem={handleUseInventoryItem}
+        />
+
+        <InventoryBlackMarketSaleModal
+          entry={blackMarketSale?.entry ?? null}
+          quantity={blackMarketSale?.quantity ?? 1}
+          feedback={blackMarketFeedback}
+          isBusy={isBlackMarketBusy}
+          onClose={() => {
+            if (isBlackMarketBusy) return;
+            setBlackMarketSale(null);
+            setBlackMarketFeedback(null);
+          }}
+          onQuantityChange={handleBlackMarketQuantityChange}
+          onConfirm={handleConfirmBlackMarketSale}
         />
       </main>
     </DashboardLayout>
