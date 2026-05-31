@@ -9,7 +9,14 @@ import {
   Item,
   ItemSlot,
 } from '@prisma/client';
-import { calculateFullStats } from '../../common/utils/stats.util';
+import {
+  AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+  AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
+} from '../../common/config/auto-combat.config';
+import {
+  calculateFullStats,
+  calculateGatheringPrimaryBonus,
+} from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdatePotionConfigDto } from './dto/update-potion-config.dto';
 import { UseConsumableDto } from './dto/use-consumable.dto';
@@ -36,6 +43,7 @@ export class ConsumablesService {
             boots: true,
           },
         },
+        gatheringSkills: true,
       },
     });
 
@@ -105,11 +113,15 @@ export class ConsumablesService {
     }
 
     const equipmentItems = this.getEquipmentItems(character);
+    const gatheringBonus = calculateGatheringPrimaryBonus(
+      character.gatheringSkills,
+    );
 
     const stats = calculateFullStats(
       character.class,
       equipmentItems,
       character.level,
+      gatheringBonus,
     );
 
     const maxHp = Math.max(
@@ -190,7 +202,10 @@ export class ConsumablesService {
         maxHp,
       },
 
-      consumable: this.mapPotionItem(item, Math.max(0, inventoryItem.quantity - 1)),
+      consumable: this.mapPotionItem(
+        item,
+        Math.max(0, inventoryItem.quantity - 1),
+      ),
 
       healing: {
         calculatedHeal: healAmount,
@@ -228,6 +243,9 @@ export class ConsumablesService {
         hpThresholdPercent: 35,
         useInManualCombat: true,
         useInAutoCombat: true,
+        autoRestEnabled: true,
+        autoRestStartHpPercent: AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+        autoRestStopHpPercent: AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
       },
       update: {},
       include: {
@@ -278,7 +296,7 @@ export class ConsumablesService {
     const nextPotionItemId =
       updatePotionConfigDto.potionItemId !== undefined
         ? updatePotionConfigDto.potionItemId
-        : existingConfig?.potionItemId ?? null;
+        : (existingConfig?.potionItemId ?? null);
 
     const nextHpThresholdPercent =
       updatePotionConfigDto.hpThresholdPercent ??
@@ -295,6 +313,21 @@ export class ConsumablesService {
       existingConfig?.useInAutoCombat ??
       true;
 
+    const nextAutoRestEnabled =
+      updatePotionConfigDto.autoRestEnabled ??
+      existingConfig?.autoRestEnabled ??
+      true;
+
+    const nextAutoRestStartHpPercent =
+      updatePotionConfigDto.autoRestStartHpPercent ??
+      existingConfig?.autoRestStartHpPercent ??
+      AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT;
+
+    const nextAutoRestStopHpPercent =
+      updatePotionConfigDto.autoRestStopHpPercent ??
+      existingConfig?.autoRestStopHpPercent ??
+      AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT;
+
     if (
       nextHpThresholdPercent < 1 ||
       nextHpThresholdPercent > 100 ||
@@ -302,6 +335,32 @@ export class ConsumablesService {
     ) {
       throw new BadRequestException(
         'O percentual de HP deve ser um número inteiro entre 1 e 100.',
+      );
+    }
+
+    if (
+      nextAutoRestStartHpPercent < 1 ||
+      nextAutoRestStartHpPercent > 99 ||
+      !Number.isInteger(nextAutoRestStartHpPercent)
+    ) {
+      throw new BadRequestException(
+        'O percentual inicial do descanso deve ser um número inteiro entre 1 e 99.',
+      );
+    }
+
+    if (
+      nextAutoRestStopHpPercent < 2 ||
+      nextAutoRestStopHpPercent > 100 ||
+      !Number.isInteger(nextAutoRestStopHpPercent)
+    ) {
+      throw new BadRequestException(
+        'O percentual final do descanso deve ser um número inteiro entre 2 e 100.',
+      );
+    }
+
+    if (nextAutoRestStopHpPercent <= nextAutoRestStartHpPercent) {
+      throw new BadRequestException(
+        'O descanso precisa terminar com uma porcentagem de HP maior do que a porcentagem inicial.',
       );
     }
 
@@ -384,6 +443,9 @@ export class ConsumablesService {
         hpThresholdPercent: nextHpThresholdPercent,
         useInManualCombat: nextUseInManualCombat,
         useInAutoCombat: nextUseInAutoCombat,
+        autoRestEnabled: nextAutoRestEnabled,
+        autoRestStartHpPercent: nextAutoRestStartHpPercent,
+        autoRestStopHpPercent: nextAutoRestStopHpPercent,
       },
       update: {
         enabled: nextEnabled,
@@ -391,6 +453,9 @@ export class ConsumablesService {
         hpThresholdPercent: nextHpThresholdPercent,
         useInManualCombat: nextUseInManualCombat,
         useInAutoCombat: nextUseInAutoCombat,
+        autoRestEnabled: nextAutoRestEnabled,
+        autoRestStartHpPercent: nextAutoRestStartHpPercent,
+        autoRestStopHpPercent: nextAutoRestStopHpPercent,
       },
       include: {
         potionItem: true,
@@ -461,8 +526,7 @@ export class ConsumablesService {
       })
       .sort((a, b) => {
         return (
-          a.item.tier - b.item.tier ||
-          a.item.name.localeCompare(b.item.name)
+          a.item.tier - b.item.tier || a.item.name.localeCompare(b.item.name)
         );
       })
       .map((inventoryItem) => {
@@ -483,6 +547,9 @@ export class ConsumablesService {
       hpThresholdPercent: number;
       useInManualCombat: boolean;
       useInAutoCombat: boolean;
+      autoRestEnabled?: boolean | null;
+      autoRestStartHpPercent?: number | null;
+      autoRestStopHpPercent?: number | null;
       potionItem?: Item | null;
     };
     availableQuantity: number;
@@ -521,6 +588,13 @@ export class ConsumablesService {
       hpThresholdPercent: config.hpThresholdPercent,
       useInManualCombat: config.useInManualCombat,
       useInAutoCombat: config.useInAutoCombat,
+      autoRestEnabled: config.autoRestEnabled ?? true,
+      autoRestStartHpPercent:
+        config.autoRestStartHpPercent ??
+        AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+      autoRestStopHpPercent:
+        config.autoRestStopHpPercent ??
+        AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
       potion,
       potionItem: potion,
     };
@@ -541,6 +615,13 @@ export class ConsumablesService {
         hpThresholdPercent: config.hpThresholdPercent,
         useInManualCombat: config.useInManualCombat,
         useInAutoCombat: config.useInAutoCombat,
+        autoRestEnabled: config.autoRestEnabled ?? true,
+        autoRestStartHpPercent:
+          config.autoRestStartHpPercent ??
+          AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+        autoRestStopHpPercent:
+          config.autoRestStopHpPercent ??
+          AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
       },
 
       potion,
@@ -557,6 +638,16 @@ export class ConsumablesService {
         canAutoUseInManualCombat,
         canAutoUseInAutoCombat,
         canAutoUse: canAutoUseInManualCombat || canAutoUseInAutoCombat,
+        restText:
+          (config.autoRestEnabled ?? true)
+            ? `Descansar entre ameaças até ${
+                config.autoRestStopHpPercent ??
+                AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT
+              }% quando HP estiver abaixo de ${
+                config.autoRestStartHpPercent ??
+                AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT
+              }%.`
+            : 'Descanso automático desativado.',
         triggerText: config.enabled
           ? `Usar automaticamente quando HP estiver em ${config.hpThresholdPercent}% ou menos.`
           : 'Uso automático desativado.',
@@ -580,6 +671,8 @@ export class ConsumablesService {
 
       usableInCombat: item.usableInCombat,
       usableOutOfCombat: item.usableOutOfCombat,
+      isSellable: item.isSellable,
+      isTradable: item.isTradable,
 
       minTier: item.minTier,
       maxTier: item.maxTier,

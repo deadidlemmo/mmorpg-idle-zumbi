@@ -179,6 +179,9 @@ export interface AutoCombatRealtimeEvent {
   potionQuantityRemaining?: number | null;
   potionUsedQuantity?: number | null;
 
+  restStartHpPercent?: number | null;
+  restStopHpPercent?: number | null;
+
   /**
    * Posição da sessão.
    */

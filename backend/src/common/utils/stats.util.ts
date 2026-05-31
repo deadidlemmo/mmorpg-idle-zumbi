@@ -2,6 +2,7 @@ import {
   calculateLevelBonusStatsByClass,
   getClassHpBonus,
 } from './level-stats.util';
+import { getGatheringStatBonus } from '../config/gathering.config';
 
 export type PrimaryStats = {
   strength: number;
@@ -38,6 +39,22 @@ type ItemStatsBonus = {
   willpowerBonus?: number | null;
 };
 
+type GatheringSkillStatsBonus = {
+  origin?: string | null;
+  level?: number | null;
+};
+
+type PrimaryStatsInput = Partial<PrimaryStats> | null | undefined;
+
+const GATHERING_STAT_BY_ORIGIN: Record<string, keyof PrimaryStats> = {
+  DESMANCHE: 'strength',
+  COLETA: 'vitality',
+  PATRULHA: 'agility',
+  ARSENAL: 'precision',
+  TECNOVARREDURA: 'technique',
+  CONTENCAO: 'willpower',
+};
+
 export function createEmptyPrimaryStats(): PrimaryStats {
   return {
     strength: 0,
@@ -47,6 +64,33 @@ export function createEmptyPrimaryStats(): PrimaryStats {
     technique: 0,
     willpower: 0,
   };
+}
+
+function normalizePrimaryStats(stats?: PrimaryStatsInput): PrimaryStats {
+  return {
+    strength: Math.max(0, Math.floor(Number(stats?.strength ?? 0))),
+    vitality: Math.max(0, Math.floor(Number(stats?.vitality ?? 0))),
+    agility: Math.max(0, Math.floor(Number(stats?.agility ?? 0))),
+    precision: Math.max(0, Math.floor(Number(stats?.precision ?? 0))),
+    technique: Math.max(0, Math.floor(Number(stats?.technique ?? 0))),
+    willpower: Math.max(0, Math.floor(Number(stats?.willpower ?? 0))),
+  };
+}
+
+export function calculateGatheringPrimaryBonus(
+  gatheringSkills?: Array<GatheringSkillStatsBonus | null | undefined> | null,
+): PrimaryStats {
+  return (gatheringSkills ?? []).reduce((total, skill) => {
+    const stat = GATHERING_STAT_BY_ORIGIN[String(skill?.origin ?? '')];
+
+    if (!stat) {
+      return total;
+    }
+
+    total[stat] += getGatheringStatBonus(Number(skill?.level ?? 1));
+
+    return total;
+  }, createEmptyPrimaryStats());
 }
 
 /**
@@ -89,19 +133,16 @@ export function getLevelPrimaryBonus(
 export function getEquipmentPrimaryBonus(
   equipmentItems: Array<ItemStatsBonus | null | undefined>,
 ): PrimaryStats {
-  return equipmentItems.filter(Boolean).reduce(
-    (total, item) => {
-      return {
-        strength: total.strength + (item?.strengthBonus ?? 0),
-        vitality: total.vitality + (item?.vitalityBonus ?? 0),
-        agility: total.agility + (item?.agilityBonus ?? 0),
-        precision: total.precision + (item?.precisionBonus ?? 0),
-        technique: total.technique + (item?.techniqueBonus ?? 0),
-        willpower: total.willpower + (item?.willpowerBonus ?? 0),
-      };
-    },
-    createEmptyPrimaryStats(),
-  );
+  return equipmentItems.filter(Boolean).reduce((total, item) => {
+    return {
+      strength: total.strength + (item?.strengthBonus ?? 0),
+      vitality: total.vitality + (item?.vitalityBonus ?? 0),
+      agility: total.agility + (item?.agilityBonus ?? 0),
+      precision: total.precision + (item?.precisionBonus ?? 0),
+      technique: total.technique + (item?.techniqueBonus ?? 0),
+      willpower: total.willpower + (item?.willpowerBonus ?? 0),
+    };
+  }, createEmptyPrimaryStats());
 }
 
 export function sumPrimaryStats(
@@ -200,6 +241,7 @@ export function calculateFullStats(
   gameClass: GameClassStats,
   equipmentItems: Array<ItemStatsBonus | null | undefined>,
   level = 1,
+  gatheringBonus?: PrimaryStatsInput,
 ) {
   const safeLevel = Math.max(1, level);
 
@@ -208,11 +250,13 @@ export function calculateFullStats(
   const levelBonusStats = getLevelPrimaryBonus(gameClass.name, safeLevel);
 
   const equipmentBonusStats = getEquipmentPrimaryBonus(equipmentItems);
+  const gatheringBonusStats = normalizePrimaryStats(gatheringBonus);
 
   const totalPrimaryStats = sumManyPrimaryStats([
     basePrimaryStats,
     levelBonusStats,
     equipmentBonusStats,
+    gatheringBonusStats,
   ]);
 
   const derivedCombatStats = calculateDerivedCombatStats(
@@ -226,6 +270,7 @@ export function calculateFullStats(
     basePrimaryStats,
     levelBonusStats,
     equipmentBonusStats,
+    gatheringBonusStats,
     totalPrimaryStats,
     derivedCombatStats,
   };

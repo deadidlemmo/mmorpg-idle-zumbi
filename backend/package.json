@@ -26,6 +26,7 @@
     "prisma:audit:economy-time": "node node_modules/tsx/dist/cli.mjs prisma/audit-economy-time.ts",
     "prisma:export:economy-csv": "node node_modules/tsx/dist/cli.mjs prisma/export-economy-csv.ts",
     "prisma:recipes:from-csv": "node node_modules/tsx/dist/cli.mjs prisma/generate-recipes-from-csv.ts",
+    "prisma:reset-characters:apprentice": "node node_modules/tsx/dist/cli.mjs prisma/reset-characters-apprentice.ts",
     "test:grant-lutador-t1": "tsx prisma/grant-lutador-tier1-items.ts",
     "prisma:cleanup-items": "node node_modules/tsx/dist/cli.mjs prisma/cleanup-old-items.ts",
     "prisma:cleanup-items:apply": "node node_modules/tsx/dist/cli.mjs prisma/cleanup-old-items.ts --apply"

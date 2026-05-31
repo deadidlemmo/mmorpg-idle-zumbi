@@ -359,11 +359,13 @@ function getInventoryItemActions(
     description: '',
   });
 
-  actions.push({
-    kind: 'blackMarket',
-    label: 'Vender',
-    description: 'Converte este item em Gold sem passar pelo Mercador.',
-  });
+  if (entry.item.isSellable !== false) {
+    actions.push({
+      kind: 'blackMarket',
+      label: 'Vender',
+      description: 'Converte este item em Gold sem passar pelo Mercador.',
+    });
+  }
 
   return actions;
 }

@@ -70,7 +70,9 @@ export function getClassStatAffinity(className: string): ClassStatAffinity {
   const affinity = CLASS_STAT_AFFINITY[className];
 
   if (!affinity) {
-    throw new Error(`Afinidade de atributos não configurada para ${className}.`);
+    throw new Error(
+      `Afinidade de atributos não configurada para ${className}.`,
+    );
   }
 
   return affinity;

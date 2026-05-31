@@ -1,6 +1,6 @@
 import {
-    GATHERING_RATE_BY_TIER,
-    MAX_GATHERING_HOURS_PER_RESOLVE,
+  GATHERING_RATE_BY_TIER,
+  MAX_GATHERING_HOURS_PER_RESOLVE,
 } from '../config/gathering.config';
 
 type CalculateGatheringRewardParams = {

@@ -283,6 +283,12 @@ export class InventoryService {
         inventoryItem.itemId,
       );
 
+      if (inventoryItem.item.isSellable === false) {
+        throw new BadRequestException(
+          'Este item é vinculado e não pode ser vendido no Mercado Negro.',
+        );
+      }
+
       const isStackable = this.isStackableForBlackMarket(inventoryItem);
       const quantity = this.getSellQuantity(
         sellItemDto.quantity,
@@ -433,6 +439,10 @@ export class InventoryService {
   private calculateBlackMarketSellValue(
     inventoryItem: InventoryEntryRecord | BankEntryRecord,
   ) {
+    if (inventoryItem.item.isSellable === false) {
+      return 0;
+    }
+
     const tier = Math.min(10, Math.max(1, Math.floor(inventoryItem.item.tier)));
     const baseValue = BLACK_MARKET_BASE_VALUE_BY_TIER[tier] ?? 3;
     const typeMultiplier =
@@ -565,6 +575,8 @@ export class InventoryService {
         maxTier: inventoryItem.item.maxTier,
 
         isCraftable: inventoryItem.item.isCraftable,
+        isSellable: inventoryItem.item.isSellable,
+        isTradable: inventoryItem.item.isTradable,
 
         class: inventoryItem.item.class
           ? {

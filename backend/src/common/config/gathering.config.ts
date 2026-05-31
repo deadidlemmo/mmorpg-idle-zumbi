@@ -20,16 +20,16 @@ export const GATHERING_AFFINITY_XP_MULTIPLIER = 1.15;
 export const GATHERING_AFFINITY_PRODUCTION_MULTIPLIER = 1.05;
 
 export const GATHERING_XP_PER_UNIT_BY_TIER: Record<number, number> = {
-  1: 2,
-  2: 4,
-  3: 7,
-  4: 10,
-  5: 14,
-  6: 19,
-  7: 25,
-  8: 32,
-  9: 40,
-  10: 50,
+  1: 4,
+  2: 6,
+  3: 9,
+  4: 12,
+  5: 16,
+  6: 21,
+  7: 27,
+  8: 34,
+  9: 43,
+  10: 53,
 };
 
 export function getGatheringXpPerUnitForTier(tier: number) {

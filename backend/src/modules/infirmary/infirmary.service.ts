@@ -5,7 +5,10 @@ import {
 } from '@nestjs/common';
 import { CharacterStatus } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
-import { calculateFullStats } from '../../common/utils/stats.util';
+import {
+  calculateFullStats,
+  calculateGatheringPrimaryBonus,
+} from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -18,11 +21,10 @@ export class InfirmaryService {
   async getStatus(userId: string, characterId: string) {
     const character = await this.findCharacterWithStats(userId, characterId);
 
-    const activityState =
-      await this.activityGuard.getCharacterActivityState({
-        characterId: character.id,
-        userId,
-      });
+    const activityState = await this.activityGuard.getCharacterActivityState({
+      characterId: character.id,
+      userId,
+    });
 
     const maxHp = this.calculateCharacterMaxHp(character);
     const currentHp = this.clampHp(character.currentHp ?? maxHp, maxHp);
@@ -152,6 +154,7 @@ export class InfirmaryService {
             boots: true,
           },
         },
+        gatheringSkills: true,
       },
     });
 
@@ -171,11 +174,15 @@ export class InfirmaryService {
       character.equipment?.pants,
       character.equipment?.boots,
     ];
+    const gatheringBonus = calculateGatheringPrimaryBonus(
+      character.gatheringSkills,
+    );
 
     const stats = calculateFullStats(
       character.class,
       equipmentItems,
       character.level,
+      gatheringBonus,
     );
 
     return stats.derivedCombatStats.maxHp;

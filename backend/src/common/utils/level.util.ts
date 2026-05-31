@@ -3,6 +3,7 @@ import {
   FUTURE_LEVEL_CAP,
   LAUNCH_LEVEL_CAP,
   LEVELS_PER_TIER,
+  LEVEL_XP_WEIGHT_BY_POSITION,
   TIER_AVERAGE_XP_PER_COMBAT,
   TIER_TARGET_DAYS,
 } from '../config/progression.config';
@@ -145,12 +146,15 @@ export function getXpRequiredForNextLevel(currentLevel: number): number {
     targetDays * EXPECTED_COMBATS_PER_DAY * averageXpPerCombat;
 
   /**
-   * Peso crescente dentro do tier.
-   * Como cada tier tem 10 níveis, a soma dos pesos é:
-   * 1 + 2 + 3 + ... + 10 = 55.
+   * Pesos por posicao dentro do tier.
+   * O inicio do tier sobe mais rapido; o fim segura a progressao idle.
    */
-  const totalTierWeight = 55;
-  const levelWeight = levelWithinTier;
+  const totalTierWeight = Object.values(LEVEL_XP_WEIGHT_BY_POSITION).reduce(
+    (total, weight) => total + weight,
+    0,
+  );
+  const levelWeight =
+    LEVEL_XP_WEIGHT_BY_POSITION[levelWithinTier] ?? levelWithinTier;
 
   const requiredXp = Math.round(
     (expectedXpInTier * levelWeight) / totalTierWeight,

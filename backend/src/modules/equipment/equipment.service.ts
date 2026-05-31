@@ -4,7 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InventoryItemType, ItemSlot, Prisma } from '@prisma/client';
-import { calculateFullStats } from '../../common/utils/stats.util';
+import {
+  calculateFullStats,
+  calculateGatheringPrimaryBonus,
+} from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EquipItemDto } from './dto/equip-item.dto';
 import { UnequipItemDto } from './dto/unequip-item.dto';
@@ -59,6 +62,7 @@ export class EquipmentService {
             boots: true,
           },
         },
+        gatheringSkills: true,
       },
     });
 
@@ -67,11 +71,15 @@ export class EquipmentService {
     }
 
     const equipmentItems = this.getEquipmentItems(character);
+    const gatheringBonus = calculateGatheringPrimaryBonus(
+      character.gatheringSkills,
+    );
 
     const stats = calculateFullStats(
       character.class,
       equipmentItems,
       character.level,
+      gatheringBonus,
     );
 
     return {
@@ -107,6 +115,7 @@ export class EquipmentService {
             boots: true,
           },
         },
+        gatheringSkills: true,
       },
     });
 
@@ -149,11 +158,15 @@ export class EquipmentService {
     }
 
     const oldEquipmentItems = this.getEquipmentItems(character);
+    const gatheringBonus = calculateGatheringPrimaryBonus(
+      character.gatheringSkills,
+    );
 
     const oldStats = calculateFullStats(
       character.class,
       oldEquipmentItems,
       character.level,
+      gatheringBonus,
     );
 
     const oldMaxHp = oldStats.derivedCombatStats.maxHp;
@@ -213,6 +226,7 @@ export class EquipmentService {
       character.class,
       newEquipmentItems,
       character.level,
+      gatheringBonus,
     );
 
     const newMaxHp = newStats.derivedCombatStats.maxHp;
@@ -285,6 +299,7 @@ export class EquipmentService {
             boots: true,
           },
         },
+        gatheringSkills: true,
       },
     });
 
@@ -306,11 +321,15 @@ export class EquipmentService {
     }
 
     const oldEquipmentItems = this.getEquipmentItems(character);
+    const gatheringBonus = calculateGatheringPrimaryBonus(
+      character.gatheringSkills,
+    );
 
     const oldStats = calculateFullStats(
       character.class,
       oldEquipmentItems,
       character.level,
+      gatheringBonus,
     );
 
     const oldMaxHp = oldStats.derivedCombatStats.maxHp;
@@ -350,6 +369,7 @@ export class EquipmentService {
       character.class,
       newEquipmentItems,
       character.level,
+      gatheringBonus,
     );
 
     const newMaxHp = newStats.derivedCombatStats.maxHp;
@@ -522,6 +542,7 @@ export class EquipmentService {
       basePrimaryStats: stats.basePrimaryStats,
       levelBonusStats: stats.levelBonusStats,
       equipmentBonusStats: stats.equipmentBonusStats,
+      gatheringBonusStats: stats.gatheringBonusStats,
       totalPrimaryStats: stats.totalPrimaryStats,
       derivedCombatStats: stats.derivedCombatStats,
     };

@@ -13,6 +13,9 @@ import {
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import {
   AUTO_COMBAT_MAX_COMBATS_PER_PROCESS,
+  AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+  AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
+  AUTO_COMBAT_REST_HEAL_PERCENT_PER_SECOND,
   AUTO_COMBAT_ROUND_DURATION_SECONDS,
   AUTO_COMBAT_SESSION_DURATION_SECONDS,
 } from '../../common/config/auto-combat.config';
@@ -27,7 +30,10 @@ import {
   calculateLevelProgress,
   getLevelProgress,
 } from '../../common/utils/level.util';
-import { calculateFullStats } from '../../common/utils/stats.util';
+import {
+  calculateFullStats,
+  calculateGatheringPrimaryBonus,
+} from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AutoCombatGateway } from './auto-combat.gateway';
 import { PreviewAutoCombatDto } from './dto/preview-auto-combat.dto';
@@ -125,6 +131,7 @@ type AutoCombatRealtimeEventType =
   | 'MOB_HIT'
   | 'DODGE'
   | 'POTION_USED'
+  | 'AUTO_REST'
   | 'MOB_DEFEATED'
   | 'PLAYER_DEFEATED';
 
@@ -183,6 +190,8 @@ type AutoCombatRealtimeEvent = {
   potionQuantityAfter?: number | null;
   potionQuantityRemaining?: number | null;
   potionUsedQuantity?: number | null;
+  restStartHpPercent?: number | null;
+  restStopHpPercent?: number | null;
 
   round?: number;
   combatIndex?: number;
@@ -252,6 +261,13 @@ type AutoPotionUseResult = {
   usedQuantity: number | null;
 };
 
+type AutoRestState = {
+  enabled: boolean;
+  startHpPercent: number;
+  stopHpPercent: number;
+  healPercentPerSecond: number;
+};
+
 type LootAccumulator = Map<
   string,
   {
@@ -282,6 +298,7 @@ type HpProcessingDetails = {
   healingReceived: number;
   healingFromPotions: number;
   healingFromLevelUp: number;
+  healingFromRest: number;
   totalHealingReceived: number;
   tookDamage: boolean;
   wasHealed: boolean;
@@ -438,6 +455,7 @@ type ProcessingSummary = {
   healingReceived?: number;
   healingFromPotions?: number;
   healingFromLevelUp?: number;
+  healingFromRest?: number;
   totalHealingReceived?: number;
   hpChange?: number;
   hpLostNet?: number;
@@ -524,6 +542,7 @@ type RealtimeRoundResult = {
   healingReceived: number;
   healingFromPotions: number;
   healingFromLevelUp: number;
+  healingFromRest: number;
   totalHealingReceived: number;
   hpChange: number;
   hpLostNet: number;
@@ -633,6 +652,7 @@ export class AutoCombatService implements OnModuleDestroy {
             boots: true,
           },
         },
+        gatheringSkills: true,
       },
     });
 
@@ -903,6 +923,7 @@ export class AutoCombatService implements OnModuleDestroy {
             item: true,
           },
         },
+        gatheringSkills: true,
       },
     });
 
@@ -1437,9 +1458,16 @@ export class AutoCombatService implements OnModuleDestroy {
                 item: true,
               },
             },
+            gatheringSkills: true,
           },
         },
         loots: true,
+        events: {
+          orderBy: {
+            sequence: 'desc',
+          },
+          take: 1,
+        },
         mobSummaries: true,
         subMap: {
           include: {
@@ -1616,6 +1644,30 @@ export class AutoCombatService implements OnModuleDestroy {
               (aggregateResult.actionsProcessed ?? 0) + 1;
 
             break;
+          }
+
+          const restResult = this.resolveAutoRestAction(
+            currentSession,
+            nextLastProcessedAt,
+            effectiveRoundDurationSeconds,
+          );
+
+          if (restResult) {
+            await this.persistRealtimeRoundResult(currentSession, restResult);
+
+            aggregateResult = this.mergeRealtimeRoundResults(
+              aggregateResult,
+              restResult,
+            );
+            aggregateResult.actionsProcessed =
+              (aggregateResult.actionsProcessed ?? 0) + 1;
+
+            currentSession = this.applyRealtimeRoundResultToSession(
+              currentSession,
+              restResult,
+            );
+
+            continue;
           }
 
           const spawnResult = await this.spawnNextMobForSession(
@@ -1894,10 +1946,12 @@ export class AutoCombatService implements OnModuleDestroy {
     },
   ): RealtimeRoundResult {
     const equipmentItems = this.getEquipmentItems(session.character);
+    const gatheringBonus = this.getGatheringBonus(session.character);
     const stats = calculateFullStats(
       session.character.class,
       equipmentItems,
       session.character.level,
+      gatheringBonus,
     );
 
     const maxHp = stats.derivedCombatStats.maxHp;
@@ -1921,6 +1975,7 @@ export class AutoCombatService implements OnModuleDestroy {
       healingReceived: 0,
       healingFromPotions: 0,
       healingFromLevelUp: 0,
+      healingFromRest: 0,
       totalHealingReceived: 0,
       hpChange: 0,
       hpLostNet: 0,
@@ -2010,6 +2065,104 @@ export class AutoCombatService implements OnModuleDestroy {
     };
   }
 
+  private resolveAutoRestAction(
+    session: any,
+    nextLastProcessedAt: Date,
+    processedSeconds: number,
+  ): RealtimeRoundResult | null {
+    const restState = this.createAutoRestState(session.character);
+
+    if (!restState.enabled) {
+      return null;
+    }
+
+    const equipmentItems = this.getEquipmentItems(session.character);
+    const gatheringBonus = this.getGatheringBonus(session.character);
+    const stats = calculateFullStats(
+      session.character.class,
+      equipmentItems,
+      session.character.level,
+      gatheringBonus,
+    );
+
+    const maxHp = Math.max(1, stats.derivedCombatStats.maxHp);
+    const initialHp = this.clampHp(session.character.currentHp ?? maxHp, maxHp);
+
+    if (initialHp <= 0) {
+      return null;
+    }
+
+    const stopHp = Math.ceil((maxHp * restState.stopHpPercent) / 100);
+    const startHp = Math.floor((maxHp * restState.startHpPercent) / 100);
+    const isContinuingRest =
+      this.wasLastSessionEventAutoRest(session) && initialHp < stopHp;
+    const shouldStartRest = initialHp <= startHp;
+
+    if (initialHp >= stopHp || (!shouldStartRest && !isContinuingRest)) {
+      return null;
+    }
+
+    const healPerSecond = Math.max(0.01, restState.healPercentPerSecond);
+    const rawHeal = Math.floor(
+      (maxHp * healPerSecond * processedSeconds) / 100,
+    );
+    const healedAmount = Math.min(stopHp - initialHp, Math.max(1, rawHeal));
+    const finalCurrentHp = this.clampHp(initialHp + healedAmount, maxHp);
+
+    if (finalCurrentHp <= initialHp) {
+      return null;
+    }
+
+    const baseResult = this.buildBaseRealtimeProcessingResult(session);
+    const hpChange = finalCurrentHp - baseResult.initialHp;
+    const hpLostNet = Math.max(0, baseResult.initialHp - finalCurrentHp);
+    const hpRecoveredNet = Math.max(0, finalCurrentHp - baseResult.initialHp);
+    const currentCombatIndex = Math.max(1, session.currentCombatIndex ?? 1);
+
+    const event: AutoCombatRealtimeEvent = {
+      characterId: session.characterId,
+      sessionId: session.id,
+      type: 'AUTO_REST',
+      message: `${session.character.name} descansou e recuperou ${healedAmount} HP.`,
+      characterCurrentHp: finalCurrentHp,
+      characterMaxHp: maxHp,
+      characterHpPercent: this.calculatePercent(finalCurrentHp, maxHp),
+      healedAmount,
+      restStartHpPercent: restState.startHpPercent,
+      restStopHpPercent: restState.stopHpPercent,
+      round: 0,
+      combatIndex: currentCombatIndex,
+      actor: 'SYSTEM',
+      target: 'PLAYER',
+      createdAt: new Date().toISOString(),
+    };
+
+    return {
+      ...baseResult,
+      processedSeconds,
+      initialHp,
+      finalCurrentHp,
+      initialMaxHp: maxHp,
+      finalMaxHp: maxHp,
+      hpLost: hpLostNet,
+      healingReceived: healedAmount,
+      healingFromRest: healedAmount,
+      totalHealingReceived: healedAmount,
+      hpChange,
+      hpLostNet,
+      hpRecoveredNet,
+      wasHealed: true,
+      finalStatus: AutoCombatSessionStatus.ACTIVE,
+      newLastProcessedAt: nextLastProcessedAt,
+      currentMobId: null,
+      currentMobHp: null,
+      currentMobMaxHp: null,
+      currentRound: 0,
+      currentCombatIndex,
+      events: [event],
+    };
+  }
+
   private appendRealtimeEventsWithLimit(
     currentEvents: AutoCombatRealtimeEvent[],
     newEvents: AutoCombatRealtimeEvent[],
@@ -2063,7 +2216,9 @@ export class AutoCombatService implements OnModuleDestroy {
       aggregate.healingFromPotions + result.healingFromPotions;
     const healingFromLevelUp =
       aggregate.healingFromLevelUp + result.healingFromLevelUp;
-    const healingReceived = healingFromPotions + healingFromLevelUp;
+    const healingFromRest = aggregate.healingFromRest + result.healingFromRest;
+    const healingReceived =
+      healingFromPotions + healingFromLevelUp + healingFromRest;
     const finalCurrentHp = result.finalCurrentHp;
     const hpChange = finalCurrentHp - aggregate.initialHp;
     const hpLostNet = Math.max(0, aggregate.initialHp - finalCurrentHp);
@@ -2090,6 +2245,7 @@ export class AutoCombatService implements OnModuleDestroy {
       healingReceived,
       healingFromPotions,
       healingFromLevelUp,
+      healingFromRest,
       totalHealingReceived: healingReceived,
       hpChange,
       hpLostNet,
@@ -2226,6 +2382,7 @@ export class AutoCombatService implements OnModuleDestroy {
         ),
       },
       loots: this.applyLootResultToSessionLoots(session.loots ?? [], result),
+      events: result.events.length > 0 ? result.events : (session.events ?? []),
     };
 
     if (!result.currentMobId) {
@@ -2233,6 +2390,23 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     return nextSession;
+  }
+
+  private wasLastSessionEventAutoRest(session: any) {
+    const events = Array.isArray(session.events) ? session.events : [];
+
+    if (events.length <= 0) {
+      return false;
+    }
+
+    const [latestEvent] = [...events].sort((leftEvent, rightEvent) => {
+      const leftSequence = Number(leftEvent?.sequence ?? 0);
+      const rightSequence = Number(rightEvent?.sequence ?? 0);
+
+      return rightSequence - leftSequence;
+    });
+
+    return String(latestEvent?.type ?? '').toUpperCase() === 'AUTO_REST';
   }
 
   private applyPotionUsageToInventoryItems(
@@ -2317,11 +2491,13 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     const equipmentItems = this.getEquipmentItems(session.character);
+    const gatheringBonus = this.getGatheringBonus(session.character);
 
     const initialStats = calculateFullStats(
       session.character.class,
       equipmentItems,
       session.character.level,
+      gatheringBonus,
     );
 
     const initialLevel = session.character.level;
@@ -2756,6 +2932,7 @@ export class AutoCombatService implements OnModuleDestroy {
           session.character.class,
           equipmentItems,
           simulatedLevel,
+          gatheringBonus,
         );
 
         const newMaxHpAfterLevelUp =
@@ -2928,6 +3105,7 @@ export class AutoCombatService implements OnModuleDestroy {
       healingReceived,
       healingFromPotions,
       healingFromLevelUp,
+      healingFromRest: 0,
       totalHealingReceived,
       hpChange,
       hpLostNet,
@@ -3523,6 +3701,7 @@ export class AutoCombatService implements OnModuleDestroy {
       healingReceived: result.healingReceived,
       healingFromPotions: result.healingFromPotions,
       healingFromLevelUp: result.healingFromLevelUp,
+      healingFromRest: result.healingFromRest,
       totalHealingReceived: result.totalHealingReceived,
       hpChange: result.hpChange,
       hpLostNet: result.hpLostNet,
@@ -3543,6 +3722,7 @@ export class AutoCombatService implements OnModuleDestroy {
         healingReceived: result.healingReceived,
         healingFromPotions: result.healingFromPotions,
         healingFromLevelUp: result.healingFromLevelUp,
+        healingFromRest: result.healingFromRest,
         totalHealingReceived: result.totalHealingReceived,
         tookDamage: result.tookDamage,
         wasHealed: result.wasHealed,
@@ -3646,6 +3826,7 @@ export class AutoCombatService implements OnModuleDestroy {
       healingReceived: 0,
       healingFromPotions: 0,
       healingFromLevelUp: 0,
+      healingFromRest: 0,
       totalHealingReceived: 0,
       hpChange: 0,
       hpLostNet: 0,
@@ -3666,6 +3847,7 @@ export class AutoCombatService implements OnModuleDestroy {
         healingReceived: 0,
         healingFromPotions: 0,
         healingFromLevelUp: 0,
+        healingFromRest: 0,
         totalHealingReceived: 0,
         tookDamage: false,
         wasHealed: false,
@@ -3782,11 +3964,13 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     const equipmentItems = this.getEquipmentItems(session.character);
+    const gatheringBonus = this.getGatheringBonus(session.character);
 
     const initialStats = calculateFullStats(
       session.character.class,
       equipmentItems,
       session.character.level,
+      gatheringBonus,
     );
 
     const initialMaxHp = initialStats.derivedCombatStats.maxHp;
@@ -3872,6 +4056,7 @@ export class AutoCombatService implements OnModuleDestroy {
           session.character.class,
           equipmentItems,
           simulatedLevel,
+          gatheringBonus,
         );
 
         simulatedMaxHp = currentStats.derivedCombatStats.maxHp;
@@ -3967,6 +4152,7 @@ export class AutoCombatService implements OnModuleDestroy {
             session.character.class,
             equipmentItems,
             simulatedLevel,
+            gatheringBonus,
           );
 
           const newMaxHpAfterLevelUp =
@@ -4344,6 +4530,8 @@ export class AutoCombatService implements OnModuleDestroy {
     potionQuantityAfter?: number | null;
     potionQuantityRemaining?: number | null;
     potionUsedQuantity?: number | null;
+    restStartHpPercent?: number | null;
+    restStopHpPercent?: number | null;
   }): AutoCombatRealtimeEvent {
     const mobCurrentHp = this.clampHp(params.mobCurrentHp, params.mobMaxHp);
     const characterCurrentHp = this.clampHp(
@@ -4412,6 +4600,8 @@ export class AutoCombatService implements OnModuleDestroy {
       potionQuantityAfter: params.potionQuantityAfter,
       potionQuantityRemaining: params.potionQuantityRemaining,
       potionUsedQuantity: params.potionUsedQuantity,
+      restStartHpPercent: params.restStartHpPercent,
+      restStopHpPercent: params.restStopHpPercent,
 
       round: params.round,
       combatIndex: params.combatIndex ?? params.context.combatIndex,
@@ -4552,6 +4742,10 @@ export class AutoCombatService implements OnModuleDestroy {
           this.autoCombatGateway.emitPotionUsed(characterId, event);
           break;
 
+        case 'AUTO_REST':
+          this.autoCombatGateway.emitAutoRest(characterId, event);
+          break;
+
         case 'MOB_DEFEATED':
           this.autoCombatGateway.emitMobDefeated(characterId, event);
           break;
@@ -4617,6 +4811,33 @@ export class AutoCombatService implements OnModuleDestroy {
       availableQuantity,
       usedQuantity: 0,
       totalHealed: 0,
+    };
+  }
+
+  private createAutoRestState(character: any): AutoRestState {
+    const config = character.potionConfig;
+    const startHpPercent = this.clampNumber(
+      Math.floor(
+        config?.autoRestStartHpPercent ??
+          AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+      ),
+      1,
+      99,
+    );
+    const stopHpPercent = this.clampNumber(
+      Math.floor(
+        config?.autoRestStopHpPercent ??
+          AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
+      ),
+      startHpPercent + 1,
+      100,
+    );
+
+    return {
+      enabled: config?.autoRestEnabled ?? true,
+      startHpPercent,
+      stopHpPercent,
+      healPercentPerSecond: AUTO_COMBAT_REST_HEAL_PERCENT_PER_SECOND,
     };
   }
 
@@ -4867,13 +5088,19 @@ export class AutoCombatService implements OnModuleDestroy {
     ];
   }
 
+  private getGatheringBonus(character: any) {
+    return calculateGatheringPrimaryBonus(character?.gatheringSkills);
+  }
+
   private calculateCharacterFighterStats(character: any): FighterStats {
     const equipmentItems = this.getEquipmentItems(character);
+    const gatheringBonus = this.getGatheringBonus(character);
 
     const stats = calculateFullStats(
       character.class,
       equipmentItems,
       character.level,
+      gatheringBonus,
     );
 
     const maxHp = stats.derivedCombatStats.maxHp;

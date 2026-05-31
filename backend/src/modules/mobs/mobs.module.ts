@@ -4,6 +4,6 @@ import { MobsService } from './mobs.service';
 
 @Module({
   controllers: [MobsController],
-  providers: [MobsService]
+  providers: [MobsService],
 })
 export class MobsModule {}

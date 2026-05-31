@@ -395,6 +395,16 @@ export class AutoCombatGateway
     );
   }
 
+  emitAutoRest(characterId: string, payload: unknown) {
+    this.clearInactiveStatusCache(characterId);
+
+    this.emitRealtimeEventToCharacter(
+      characterId,
+      'auto-combat:auto-rest',
+      payload,
+    );
+  }
+
   emitFinished(characterId: string, payload: unknown) {
     this.clearInactiveStatusCache(characterId);
     this.emitToCharacter(characterId, 'auto-combat:finished', payload);

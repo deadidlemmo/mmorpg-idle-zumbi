@@ -8,6 +8,20 @@ import type { ConsumableSeedData } from '../seed-types';
  */
 export const consumableDefinitions: ConsumableSeedData[] = [
   {
+    name: 'Poção de Vida Menor de Aprendiz',
+    description:
+      'Poção inicial vinculada ao personagem. Recupera uma pequena quantidade de HP e não pode ser vendida.',
+    tier: 1,
+    rarity: Rarity.COMMON,
+    family: 'Poção de Vida',
+    healFlat: 80,
+    healPercent: 0,
+    minTier: 1,
+    maxTier: 2,
+    isSellable: false,
+    isTradable: false,
+  },
+  {
     name: 'Poção de Vida Menor',
     description: 'Recupera uma pequena quantidade de HP.',
     tier: 1,

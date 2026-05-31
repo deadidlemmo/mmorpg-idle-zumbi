@@ -55,6 +55,7 @@ export class VendorService {
     const items = await this.prisma.item.findMany({
       where: {
         slot: ItemSlot.CONSUMABLE,
+        isTradable: true,
       },
       include: VENDOR_ITEM_INCLUDE,
       orderBy: [{ minTier: 'asc' }, { tier: 'asc' }, { name: 'asc' }],
@@ -252,6 +253,8 @@ export class VendorService {
       healPercent: item.healPercent,
       minTier: item.minTier,
       maxTier: item.maxTier,
+      isSellable: item.isSellable,
+      isTradable: item.isTradable,
       class: item.class
         ? {
             id: item.class.id,
@@ -340,7 +343,7 @@ export class VendorService {
   }
 
   private isAvailableForPurchase(item: VendorItemRecord) {
-    return item.slot === ItemSlot.CONSUMABLE;
+    return item.slot === ItemSlot.CONSUMABLE && item.isTradable !== false;
   }
 
   private normalizeQuantity(

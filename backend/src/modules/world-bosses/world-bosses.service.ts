@@ -18,7 +18,10 @@ import {
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { calculateLevelProgress } from '../../common/utils/level.util';
-import { calculateFullStats } from '../../common/utils/stats.util';
+import {
+  calculateFullStats,
+  calculateGatheringPrimaryBonus,
+} from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JoinWorldBossDto } from './dto/join-world-boss.dto';
 import { LeaveWorldBossDto } from './dto/leave-world-boss.dto';
@@ -489,7 +492,6 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
           'Não é possível sair desta Ameaça Global neste estado.',
         );
       }
-
     });
 
     return {
@@ -793,8 +795,8 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
   private isAlwaysOpenTestBoss(boss: any) {
     return Boolean(
       WORLD_BOSS_TEST_UNLOCK_ENABLED &&
-        Number(boss?.tier) === WORLD_BOSS_ALWAYS_OPEN_TEST_TIER &&
-        this.getBossSlotIndex(boss) === WORLD_BOSS_ALWAYS_OPEN_TEST_SLOT,
+      Number(boss?.tier) === WORLD_BOSS_ALWAYS_OPEN_TEST_TIER &&
+      this.getBossSlotIndex(boss) === WORLD_BOSS_ALWAYS_OPEN_TEST_SLOT,
     );
   }
 
@@ -974,6 +976,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
             boots: true,
           },
         },
+        gatheringSkills: true,
       },
     });
     const items = character.equipment
@@ -986,7 +989,15 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
           character.equipment.boots,
         ]
       : [];
-    const stats = calculateFullStats(character.class, items, character.level);
+    const gatheringBonus = calculateGatheringPrimaryBonus(
+      character.gatheringSkills,
+    );
+    const stats = calculateFullStats(
+      character.class,
+      items,
+      character.level,
+      gatheringBonus,
+    );
     const primary = stats.totalPrimaryStats;
     const derived = stats.derivedCombatStats;
     const powerScore =
@@ -1030,6 +1041,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
                     boots: true,
                   },
                 },
+                gatheringSkills: true,
               },
             },
           },
@@ -1057,10 +1069,14 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       const items = e
         ? [e.mainHand, e.offHand, e.head, e.armor, e.pants, e.boots]
         : [];
+      const gatheringBonus = calculateGatheringPrimaryBonus(
+        p.character.gatheringSkills,
+      );
       const stats = calculateFullStats(
         p.character.class,
         items,
         p.character.level,
+        gatheringBonus,
       );
       return (
         p.character.level * 12 +

@@ -415,6 +415,9 @@ model Item {
   minTier Int?
   maxTier Int?
 
+  isSellable Boolean @default(true)
+  isTradable Boolean @default(true)
+
   isCraftable Boolean @default(false)
 
   createdAt DateTime @default(now())
@@ -460,6 +463,8 @@ model Item {
   @@index([materialOrigin, requiredGatheringLevel])
   @@index([requiredGatheringLevel])
   @@index([baseGatheringRatePerHour])
+  @@index([isSellable])
+  @@index([isTradable])
   @@index([isCraftable])
   @@index([minTier, maxTier])
   @@map("items")
@@ -677,6 +682,10 @@ model CharacterPotionConfig {
 
   useInManualCombat Boolean @default(true)
   useInAutoCombat   Boolean @default(true)
+
+  autoRestEnabled        Boolean @default(true)
+  autoRestStartHpPercent Int     @default(35)
+  autoRestStopHpPercent  Int     @default(70)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

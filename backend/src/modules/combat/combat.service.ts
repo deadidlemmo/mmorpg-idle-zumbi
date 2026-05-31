@@ -16,7 +16,10 @@ import {
   calculateTierFarmPenalty,
 } from '../../common/utils/farm-penalty.util';
 import { calculateLevelProgress } from '../../common/utils/level.util';
-import { calculateFullStats } from '../../common/utils/stats.util';
+import {
+  calculateFullStats,
+  calculateGatheringPrimaryBonus,
+} from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StartCombatDto } from './dto/start-combat.dto';
 
@@ -122,6 +125,7 @@ export class CombatService {
             item: true,
           },
         },
+        gatheringSkills: true,
       },
     });
 
@@ -130,11 +134,15 @@ export class CombatService {
     }
 
     const equipmentItems = this.getEquipmentItems(character);
+    const gatheringBonus = calculateGatheringPrimaryBonus(
+      character.gatheringSkills,
+    );
 
     const oldStats = calculateFullStats(
       character.class,
       equipmentItems,
       character.level,
+      gatheringBonus,
     );
 
     const oldMaxHp = oldStats.derivedCombatStats.maxHp;
@@ -210,6 +218,7 @@ export class CombatService {
       character.class,
       equipmentItems,
       levelProgress.newLevel,
+      gatheringBonus,
     );
 
     const newMaxHp = newStats.derivedCombatStats.maxHp;

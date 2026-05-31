@@ -336,6 +336,14 @@ export function normalizePotionConfigResponse(
     enabled: Boolean(rawConfigRecord.enabled),
     potionItemId,
     hpThresholdPercent: clampNumber(rawConfigRecord.hpThresholdPercent, 1, 100) || 35,
+    autoRestEnabled:
+      typeof rawConfigRecord.autoRestEnabled === 'boolean'
+        ? rawConfigRecord.autoRestEnabled
+        : true,
+    autoRestStartHpPercent:
+      clampNumber(rawConfigRecord.autoRestStartHpPercent, 1, 99) || 35,
+    autoRestStopHpPercent:
+      clampNumber(rawConfigRecord.autoRestStopHpPercent, 2, 100) || 70,
     useInManualCombat:
       typeof rawConfigRecord.useInManualCombat === 'boolean'
         ? rawConfigRecord.useInManualCombat

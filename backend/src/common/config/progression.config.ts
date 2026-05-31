@@ -10,10 +10,11 @@ export const LEVELS_PER_TIER = 10;
 export const EXPECTED_COMBATS_PER_DAY = 7200;
 
 // Meta aproximada para o lancamento 1-50.
-// Total: 3 + 7 + 12 + 18 + 26 = 66 dias no ritmo efetivo alvo.
-// T1 sobe mais cedo para dar arranque; depois cada tier segura mais tempo.
+// Total: 2 + 7 + 12 + 18 + 26 = 65 dias no ritmo efetivo alvo.
+// T1 ficou um pouco mais curto para o inicio nao parecer travado.
+// Depois cada tier segura mais tempo.
 export const TIER_TARGET_DAYS: Record<number, number> = {
-  1: 3,
+  1: 2,
   2: 7,
   3: 12,
   4: 18,
@@ -43,4 +44,20 @@ export const TIER_AVERAGE_XP_PER_COMBAT: Record<number, number> = {
   8: 218,
   9: 312,
   10: 448,
+};
+
+// Distribui o XP dentro de cada tier com arranque mais macio.
+// O total continua preservando os dias-alvo do tier, mas os primeiros niveis
+// chegam mais cedo e os ultimos niveis do tier seguram a progressao idle.
+export const LEVEL_XP_WEIGHT_BY_POSITION: Record<number, number> = {
+  1: 0.4,
+  2: 0.8,
+  3: 1.4,
+  4: 2.4,
+  5: 3.6,
+  6: 5.2,
+  7: 7.2,
+  8: 9.4,
+  9: 11.4,
+  10: 13.6,
 };

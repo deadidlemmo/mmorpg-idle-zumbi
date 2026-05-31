@@ -52,6 +52,7 @@ export interface DashboardTopBarActivityOverride {
   progressPercent?: number | null;
   badge?: string | null;
   titleText?: string;
+  isResting?: boolean;
 }
 
 interface DashboardTopBarProps {
@@ -517,6 +518,54 @@ function getAutoCombatKills(autoCombatState: unknown): number | null {
   );
 }
 
+function getLatestAutoCombatEvent(autoCombatState: unknown): LooseRecord | null {
+  return (
+    getRecordField(autoCombatState, 'activeEvent') ??
+    getRecordField(autoCombatState, 'displayedEvent') ??
+    getRecordField(autoCombatState, 'currentEvent') ??
+    getRecordField(autoCombatState, 'lastProcessedEvent') ??
+    getRecordField(autoCombatState, 'lastEvent') ??
+    getRecordArrayField(autoCombatState, 'battleLogEvents')[0] ??
+    null
+  );
+}
+
+function getAutoCombatRestSnapshot(autoCombatState: unknown): {
+  healedAmount: number | null;
+  hpPercent: number | null;
+} | null {
+  const latestEvent = getLatestAutoCombatEvent(autoCombatState);
+  const visual = getRecordField(autoCombatState, 'visual');
+
+  const eventType = normalizeStatus(
+    getStringField(latestEvent, 'type') ??
+      getStringField(visual, 'lastEventType'),
+  );
+
+  if (eventType !== 'AUTO_REST') return null;
+
+  const characterCurrentHp =
+    getNumberField(latestEvent, 'characterCurrentHp') ??
+    getNumberField(visual, 'characterCurrentHp');
+  const characterMaxHp =
+    getNumberField(latestEvent, 'characterMaxHp') ??
+    getNumberField(visual, 'characterMaxHp');
+  const explicitHpPercent =
+    getNumberField(latestEvent, 'characterHpPercent') ??
+    getNumberField(visual, 'characterHpPercent');
+  const hpPercent =
+    explicitHpPercent !== null
+      ? clampPercent(explicitHpPercent)
+      : characterMaxHp
+        ? calculateHpPercent(characterCurrentHp, characterMaxHp)
+        : null;
+
+  return {
+    healedAmount: getNumberField(latestEvent, 'healedAmount'),
+    hpPercent,
+  };
+}
+
 function isAutoCombatActive(autoCombatState: unknown): boolean {
   const status = getRecordField(autoCombatState, 'status');
   const session = getRecordField(autoCombatState, 'session');
@@ -549,6 +598,32 @@ function buildAutoCombatActivity(
   autoCombatState: unknown,
 ): DashboardTopBarActivityViewModel | null {
   if (!isAutoCombatActive(autoCombatState)) return null;
+
+  const restSnapshot = getAutoCombatRestSnapshot(autoCombatState);
+
+  if (restSnapshot) {
+    const healedAmount =
+      restSnapshot.healedAmount !== null
+        ? Math.max(0, Math.floor(restSnapshot.healedAmount))
+        : null;
+
+    return {
+      kind: 'auto-combat',
+      title: 'Descanso automático',
+      subtitle:
+        healedAmount && healedAmount > 0
+          ? `+${formatNumber(healedAmount)} HP recuperado`
+          : 'Recuperando HP',
+      icon: 'HP',
+      progressPercent: restSnapshot.hpPercent,
+      badge:
+        healedAmount && healedAmount > 0
+          ? `+${formatNumber(healedAmount)}`
+          : null,
+      titleText: 'Descanso automático em andamento - recuperando HP.',
+      isResting: true,
+    };
+  }
 
   const mobName =
     getAutoCombatMobName(autoCombatState) ?? 'Combate automático';
@@ -949,6 +1024,7 @@ export function DashboardTopBar({
   const rootClassName = [
     'dashboard-topbar',
     `dashboard-topbar--${activity.kind}`,
+    activity.isResting ? 'dashboard-topbar--auto-resting' : '',
     isSidebarCollapsed ? 'dashboard-topbar--sidebar-collapsed' : '',
     className ?? '',
   ]

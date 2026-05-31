@@ -535,6 +535,31 @@
     rgba(126, 30, 30, 0.94);
 }
 
+.auto-combat-rest-slot__button.is-enabled {
+  border-color: rgba(86, 172, 205, 0.32);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(86, 172, 205, 0.12), transparent 6.5rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), transparent),
+    rgba(5, 9, 8, 0.46);
+}
+
+.auto-combat-potion-slot__button.auto-combat-rest-slot__button
+  .auto-combat-rest-slot__icon::before,
+.auto-combat-potion-slot__button.auto-combat-rest-slot__button.is-enabled
+  .auto-combat-rest-slot__icon::before {
+  content: 'DS';
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.auto-combat-rest-slot__icon {
+  color: #d9f3ff;
+  background:
+    radial-gradient(circle at center, rgba(86, 172, 205, 0.18), transparent 72%),
+    rgba(5, 9, 8, 0.6);
+  border-color: rgba(86, 172, 205, 0.25);
+}
+
 /* =========================================================
    PAINEL DE CONFIGURAÇÃO
    ========================================================= */
@@ -1464,6 +1489,91 @@
   opacity: 0.65;
 }
 
+.auto-combat-rest-config {
+  border-color: rgba(110, 159, 67, 0.14);
+  background:
+    radial-gradient(circle at top left, rgba(110, 159, 67, 0.065), transparent 9rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    rgba(5, 13, 9, 0.42);
+}
+
+.auto-combat-rest-config-panel--modal {
+  max-width: min(620px, calc(100vw - 1.5rem));
+}
+
+.auto-combat-rest-config-modal__grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.auto-combat-rest-config__header {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.auto-combat-rest-config__hint {
+  margin: -0.08rem 0 0.65rem;
+  color: rgba(231, 227, 216, 0.66);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.auto-combat-rest-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.44rem;
+  min-height: 38px;
+  padding: 0.36rem 0.58rem;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 950;
+  white-space: nowrap;
+  background:
+    linear-gradient(180deg, rgba(110, 159, 67, 0.14), rgba(14, 38, 19, 0.28)),
+    rgba(4, 9, 6, 0.7);
+  border: 1px solid rgba(146, 197, 88, 0.22);
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.auto-combat-rest-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #8fca5d;
+}
+
+.auto-combat-rest-toggle span {
+  color: #fff8e8;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.auto-combat-rest-threshold-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.58rem;
+}
+
+.auto-combat-rest-threshold-grid label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.58rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(231, 227, 216, 0.055);
+  border-radius: 0.74rem;
+}
+
+.auto-combat-rest-threshold-grid label > span {
+  font-size: 0.62rem;
+  line-height: 1.12;
+}
+
 /* Presets rápidos de porcentagem */
 
 .auto-combat-potion-threshold-presets,
@@ -1855,6 +1965,20 @@
 }
 
 @media (max-width: 390px) {
+  .auto-combat-rest-config__header,
+  .auto-combat-rest-threshold-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auto-combat-rest-toggle {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .auto-combat-rest-threshold-grid label {
+    grid-template-columns: minmax(0, 1fr) 70px;
+  }
+
   .auto-combat-consumable-slot__name,
   .auto-combat-consumable-slot strong {
     font-size: 0.82rem;

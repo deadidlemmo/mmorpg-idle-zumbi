@@ -78,6 +78,10 @@
   --dashboard-topbar-border-rgb: var(--dashboard-topbar-red-rgb);
 }
 
+.dashboard-topbar--auto-resting {
+  --dashboard-topbar-border-rgb: 112, 216, 152;
+}
+
 .dashboard-topbar--crafting {
   --dashboard-topbar-border-rgb: var(--dashboard-topbar-gold-rgb);
 }
@@ -290,6 +294,36 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     inset -1px 0 0 rgba(255, 255, 255, 0.07),
     0 0 10px rgba(var(--dashboard-topbar-red-rgb), 0.16);
+}
+
+.dashboard-topbar--auto-resting .dashboard-topbar__activity {
+  border-color: rgba(112, 216, 152, 0.42);
+  background:
+    radial-gradient(circle at 14% 50%, rgba(112, 216, 152, 0.22), transparent 5rem),
+    linear-gradient(90deg, rgba(12, 38, 26, 0.94), rgba(18, 32, 34, 0.92)),
+    rgba(13, 22, 20, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(7, 12, 10, 0.62),
+    0 0 18px rgba(112, 216, 152, 0.18);
+}
+
+.dashboard-topbar--auto-resting .dashboard-topbar__activity-progress {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(0, 0, 0, 0.12)),
+    rgb(18, 42, 31);
+}
+
+.dashboard-topbar--auto-resting .dashboard-topbar__activity-progress span {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent 48%, rgba(0, 0, 0, 0.18)),
+    repeating-linear-gradient(135deg, rgba(229, 255, 235, 0.08) 0 5px, transparent 5px 12px),
+    linear-gradient(90deg, rgba(36, 123, 66, 0.96), rgba(88, 184, 105, 0.95) 58%, rgba(159, 232, 121, 0.92));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 0 12px rgba(112, 216, 152, 0.26);
+  animation: dashboardTopbarRestingProgress 1.7s ease-in-out infinite;
 }
 
 .dashboard-topbar--incursion .dashboard-topbar__activity {
@@ -604,6 +638,14 @@
     rgb(88, 30, 27);
 }
 
+.dashboard-topbar--auto-resting .dashboard-topbar__activity-status-core {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.14), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    rgb(31, 111, 62);
+  animation: dashboardTopbarRestingCore 1.2s ease-in-out infinite;
+}
+
 .dashboard-topbar--crafting .dashboard-topbar__activity-status-core {
   background:
     radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.12), transparent 42%),
@@ -885,6 +927,30 @@
 
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes dashboardTopbarRestingProgress {
+  0%,
+  100% {
+    filter: saturate(1);
+  }
+
+  50% {
+    filter: saturate(1.3) brightness(1.06);
+  }
+}
+
+@keyframes dashboardTopbarRestingCore {
+  0%,
+  100% {
+    transform: scale(0.86);
+    opacity: 0.72;
+  }
+
+  50% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 

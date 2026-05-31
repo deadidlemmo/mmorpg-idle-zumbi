@@ -1,11 +1,11 @@
 import {
-    ConnectedSocket,
-    MessageBody,
-    OnGatewayConnection,
-    OnGatewayDisconnect,
-    SubscribeMessage,
-    WebSocketGateway,
-    WebSocketServer,
+  ConnectedSocket,
+  MessageBody,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import { StartGatheringDto } from './dto/start-gathering.dto';
@@ -214,7 +214,10 @@ export class GatheringGateway
     }
   }
 
-  private async joinCharacterRoom(client: GatheringSocket, characterId: string) {
+  private async joinCharacterRoom(
+    client: GatheringSocket,
+    characterId: string,
+  ) {
     const normalizedCharacterId = this.normalizeCharacterId(characterId);
 
     if (!normalizedCharacterId) {

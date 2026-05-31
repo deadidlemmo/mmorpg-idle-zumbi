@@ -15,7 +15,15 @@ import {
   MaterialOrigin,
   WorldBossEventStatus,
 } from '@prisma/client';
-import { AUTO_COMBAT_ROUND_DURATION_SECONDS } from '../../common/config/auto-combat.config';
+import {
+  AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+  AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
+  AUTO_COMBAT_ROUND_DURATION_SECONDS,
+} from '../../common/config/auto-combat.config';
+import {
+  STARTER_POTION_ITEM_NAME,
+  STARTER_POTION_KIT_QUANTITY,
+} from '../../common/config/starter-kit.config';
 import {
   GATHERING_AFFINITY_PRODUCTION_MULTIPLIER,
   GATHERING_AFFINITY_XP_MULTIPLIER,
@@ -280,6 +288,18 @@ export class CharactersService {
         starterEquipment.boots,
       ];
 
+      const starterPotion = await tx.item.findUnique({
+        where: {
+          name: STARTER_POTION_ITEM_NAME,
+        },
+      });
+
+      if (!starterPotion) {
+        throw new NotFoundException(
+          `Poção inicial "${STARTER_POTION_ITEM_NAME}" não encontrada. Rode o seed antes de criar novos personagens.`,
+        );
+      }
+
       const initialLevel = 1;
 
       const stats = calculateFullStats(
@@ -351,24 +371,38 @@ export class CharactersService {
 
           potionConfig: {
             create: {
-              enabled: false,
-              potionItemId: null,
-              hpThresholdPercent: 35,
+              enabled: true,
+              potionItemId: starterPotion.id,
+              hpThresholdPercent: AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
               useInManualCombat: true,
               useInAutoCombat: true,
+              autoRestEnabled: true,
+              autoRestStartHpPercent: AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+              autoRestStopHpPercent: AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
             },
           },
 
           inventoryItems: {
-            create: initialEquipmentItems.map((item) => ({
-              item: {
-                connect: {
-                  id: item.id,
+            create: [
+              ...initialEquipmentItems.map((item) => ({
+                item: {
+                  connect: {
+                    id: item.id,
+                  },
                 },
+                quantity: 1,
+                type: this.getInventoryItemType(item.slot),
+              })),
+              {
+                item: {
+                  connect: {
+                    id: starterPotion.id,
+                  },
+                },
+                quantity: STARTER_POTION_KIT_QUANTITY,
+                type: InventoryItemType.CONSUMABLE,
               },
-              quantity: 1,
-              type: this.getInventoryItemType(item.slot),
-            })),
+            ],
           },
         },
         include: {
@@ -404,10 +438,16 @@ export class CharactersService {
 
     const equipmentItems = this.getEquipmentItems(character);
 
+    const gatheringSkills = await this.getCharacterGatheringSkillsViewModel(
+      character.id,
+      character.class.name,
+    );
+
     const stats = calculateFullStats(
       character.class,
       equipmentItems,
       character.level,
+      gatheringSkills.totalStatBonus,
     );
 
     const calculatedMaxHp = stats.derivedCombatStats.maxHp;
@@ -420,11 +460,6 @@ export class CharactersService {
     const autoPotionConfig = this.buildPotionConfigResponse(
       character.potionConfig,
       character.inventoryItems,
-    );
-
-    const gatheringSkills = await this.getCharacterGatheringSkillsViewModel(
-      character.id,
-      character.class.name,
     );
 
     return {
@@ -484,10 +519,16 @@ export class CharactersService {
       characters.map(async (character) => {
         const equipmentItems = this.getEquipmentItems(character);
 
+        const gatheringSkills = await this.getCharacterGatheringSkillsViewModel(
+          character.id,
+          character.class.name,
+        );
+
         const stats = calculateFullStats(
           character.class,
           equipmentItems,
           character.level,
+          gatheringSkills.totalStatBonus,
         );
 
         const calculatedMaxHp = stats.derivedCombatStats.maxHp;
@@ -500,11 +541,6 @@ export class CharactersService {
         const autoPotionConfig = this.buildPotionConfigResponse(
           character.potionConfig,
           character.inventoryItems,
-        );
-
-        const gatheringSkills = await this.getCharacterGatheringSkillsViewModel(
-          character.id,
-          character.class.name,
         );
 
         return {
@@ -566,10 +602,16 @@ export class CharactersService {
 
     const equipmentItems = this.getEquipmentItems(character);
 
+    const gatheringSkills = await this.getCharacterGatheringSkillsViewModel(
+      character.id,
+      character.class.name,
+    );
+
     const stats = calculateFullStats(
       character.class,
       equipmentItems,
       character.level,
+      gatheringSkills.totalStatBonus,
     );
 
     const calculatedMaxHp = stats.derivedCombatStats.maxHp;
@@ -582,11 +624,6 @@ export class CharactersService {
     const autoPotionConfig = this.buildPotionConfigResponse(
       character.potionConfig,
       character.inventoryItems,
-    );
-
-    const gatheringSkills = await this.getCharacterGatheringSkillsViewModel(
-      character.id,
-      character.class.name,
     );
 
     return {
@@ -703,10 +740,16 @@ export class CharactersService {
 
     const equipmentItems = this.getEquipmentItems(character);
 
+    const gatheringSkills = await this.getCharacterGatheringSkillsViewModel(
+      character.id,
+      character.class.name,
+    );
+
     const stats = calculateFullStats(
       character.class,
       equipmentItems,
       character.level,
+      gatheringSkills.totalStatBonus,
     );
 
     const calculatedMaxHp = stats.derivedCombatStats.maxHp;
@@ -719,11 +762,6 @@ export class CharactersService {
     const autoPotionConfig = this.buildPotionConfigResponse(
       character.potionConfig,
       character.inventoryItems,
-    );
-
-    const gatheringSkills = await this.getCharacterGatheringSkillsViewModel(
-      character.id,
-      character.class.name,
     );
 
     return {
@@ -822,21 +860,6 @@ export class CharactersService {
     }
 
     const equipmentItems = this.getEquipmentItems(character);
-
-    const stats = calculateFullStats(
-      character.class,
-      equipmentItems,
-      character.level,
-    );
-
-    const calculatedMaxHp = stats.derivedCombatStats.maxHp;
-
-    const currentHp =
-      character.currentHp === null || character.currentHp === undefined
-        ? calculatedMaxHp
-        : this.clampHp(character.currentHp, calculatedMaxHp);
-
-    const missingHp = Math.max(0, calculatedMaxHp - currentHp);
 
     const autoPotionConfig = this.buildPotionConfigResponse(
       character.potionConfig,
@@ -1153,6 +1176,22 @@ export class CharactersService {
         character.class.name,
       ),
     ]);
+
+    const stats = calculateFullStats(
+      character.class,
+      equipmentItems,
+      character.level,
+      gatheringSkills.totalStatBonus,
+    );
+
+    const calculatedMaxHp = stats.derivedCombatStats.maxHp;
+
+    const currentHp =
+      character.currentHp === null || character.currentHp === undefined
+        ? calculatedMaxHp
+        : this.clampHp(character.currentHp, calculatedMaxHp);
+
+    const missingHp = Math.max(0, calculatedMaxHp - currentHp);
 
     const hasActiveAutoCombat = Boolean(activeAutoCombatSession);
     const hasActiveGathering = Boolean(activeGatheringSession);
@@ -2021,6 +2060,13 @@ export class CharactersService {
       hpThresholdPercent: config.hpThresholdPercent,
       useInManualCombat: config.useInManualCombat,
       useInAutoCombat: config.useInAutoCombat,
+      autoRestEnabled: config.autoRestEnabled ?? true,
+      autoRestStartHpPercent:
+        config.autoRestStartHpPercent ??
+        AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+      autoRestStopHpPercent:
+        config.autoRestStopHpPercent ??
+        AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
       potion,
       potionItem: potion,
       summary: {
@@ -2048,6 +2094,16 @@ export class CharactersService {
         triggerText: config.enabled
           ? `Usar automaticamente quando HP estiver em ${config.hpThresholdPercent}% ou menos.`
           : 'Uso automático desativado.',
+        restText:
+          (config.autoRestEnabled ?? true)
+            ? `Descansar entre ameaças até ${
+                config.autoRestStopHpPercent ??
+                AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT
+              }% quando HP estiver abaixo de ${
+                config.autoRestStartHpPercent ??
+                AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT
+              }%.`
+            : 'Descanso automático desativado.',
       },
     };
   }
@@ -2067,6 +2123,8 @@ export class CharactersService {
       usableOutOfCombat: item.usableOutOfCombat,
       minTier: item.minTier,
       maxTier: item.maxTier,
+      isSellable: item.isSellable,
+      isTradable: item.isTradable,
       availableQuantity,
     };
   }
@@ -2080,33 +2138,29 @@ export class CharactersService {
   }
 
   private buildStatsResponse(stats: any, gatheringBonus?: any) {
-    return {
-      primary: {
-        base: stats.basePrimaryStats,
-        levelBonus: stats.levelBonusStats,
-        equipmentBonus: stats.equipmentBonusStats,
-        gatheringBonus: gatheringBonus ?? {
-          strength: 0,
-          vitality: 0,
-          agility: 0,
-          precision: 0,
-          technique: 0,
-          willpower: 0,
-        },
-        total: stats.totalPrimaryStats,
-      },
-      combat: stats.derivedCombatStats,
-      basePrimaryStats: stats.basePrimaryStats,
-      levelBonusStats: stats.levelBonusStats,
-      equipmentBonusStats: stats.equipmentBonusStats,
-      gatheringBonusStats: gatheringBonus ?? {
+    const gatheringBonusStats = gatheringBonus ??
+      stats.gatheringBonusStats ?? {
         strength: 0,
         vitality: 0,
         agility: 0,
         precision: 0,
         technique: 0,
         willpower: 0,
+      };
+
+    return {
+      primary: {
+        base: stats.basePrimaryStats,
+        levelBonus: stats.levelBonusStats,
+        equipmentBonus: stats.equipmentBonusStats,
+        gatheringBonus: gatheringBonusStats,
+        total: stats.totalPrimaryStats,
       },
+      combat: stats.derivedCombatStats,
+      basePrimaryStats: stats.basePrimaryStats,
+      levelBonusStats: stats.levelBonusStats,
+      equipmentBonusStats: stats.equipmentBonusStats,
+      gatheringBonusStats,
       totalPrimaryStats: stats.totalPrimaryStats,
       derivedCombatStats: stats.derivedCombatStats,
     };

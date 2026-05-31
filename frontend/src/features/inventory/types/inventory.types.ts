@@ -62,6 +62,8 @@ export interface InventoryItemDetails {
   usableOutOfCombat?: boolean | null;
   minTier?: number | null;
   maxTier?: number | null;
+  isSellable?: boolean | null;
+  isTradable?: boolean | null;
   isCraftable?: boolean | null;
   class?: InventoryItemClassSummary | null;
   map?: InventoryItemMapSummary | null;

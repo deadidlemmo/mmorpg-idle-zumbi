@@ -129,6 +129,8 @@ export type ConsumableSeedData = {
   minTier: number;
   maxTier: number;
   isCraftable?: boolean;
+  isSellable?: boolean;
+  isTradable?: boolean;
 };
 
 export type CraftingIngredientSeedData = {

@@ -66,7 +66,8 @@ export class CreateCharacterDto {
   @IsString({ message: 'A classe deve ser um texto.' })
   @IsNotEmpty({ message: 'Informe a classe do personagem.' })
   @IsIn(AVAILABLE_CLASSES, {
-    message: 'Classe inválida. Escolha: Lutador, Assassino, Atirador ou Médico.',
+    message:
+      'Classe inválida. Escolha: Lutador, Assassino, Atirador ou Médico.',
   })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   className: string;

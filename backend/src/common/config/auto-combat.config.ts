@@ -38,6 +38,19 @@ export const AUTO_COMBAT_SESSION_DURATION_SECONDS = 6 * 60 * 60;
  */
 export const AUTO_COMBAT_ROUND_DURATION_SECONDS = 3;
 
+export const AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT = 35;
+
+export const AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT = 70;
+
+/**
+ * Cura fora da luta, entre uma ameaça e outra.
+ *
+ * 0.5% do HP máximo por segundo recupera de 35% para 70% em cerca de 70s.
+ * Isso permite idle no início sem tornar poções irrelevantes, pois descanso
+ * troca segurança por tempo sem XP, Gold ou loot.
+ */
+export const AUTO_COMBAT_REST_HEAL_PERCENT_PER_SECOND = 0.5;
+
 /**
  * Limite de segurança para evitar que uma única chamada processe combates demais.
  *

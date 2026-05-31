@@ -35,7 +35,8 @@ export class ConsumablesController {
   constructor(private readonly consumablesService: ConsumablesService) {}
 
   private getUserId(request: AuthenticatedRequest): string {
-    const userId = request.user?.id ?? request.user?.userId ?? request.user?.sub;
+    const userId =
+      request.user?.id ?? request.user?.userId ?? request.user?.sub;
 
     if (!userId) {
       throw new UnauthorizedException('Usuário não autenticado.');

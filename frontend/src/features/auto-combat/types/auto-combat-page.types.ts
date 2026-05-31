@@ -68,6 +68,9 @@ export type CharacterPotionConfigWithItem = Omit<
   DashboardPotionConfigViewModel,
   'potion' | 'potionItem'
 > & {
+  autoRestEnabled?: boolean | null;
+  autoRestStartHpPercent?: number | null;
+  autoRestStopHpPercent?: number | null;
   potion?: PotionEquipmentItem | null;
   potionItem?: PotionEquipmentItem | null;
 };
@@ -100,6 +103,9 @@ export type PotionConfigApiResponse = {
     hpThresholdPercent?: number | null;
     useInManualCombat?: boolean | null;
     useInAutoCombat?: boolean | null;
+    autoRestEnabled?: boolean | null;
+    autoRestStartHpPercent?: number | null;
+    autoRestStopHpPercent?: number | null;
   };
   potion?: PotionEquipmentItem | null;
   summary?: {
@@ -110,6 +116,7 @@ export type PotionConfigApiResponse = {
     canAutoUseInAutoCombat?: boolean;
     canAutoUse?: boolean;
     triggerText?: string;
+    restText?: string;
   };
 };
 
@@ -119,6 +126,9 @@ export type UpdatePotionConfigPayload = {
   hpThresholdPercent?: number;
   useInManualCombat?: boolean;
   useInAutoCombat?: boolean;
+  autoRestEnabled?: boolean;
+  autoRestStartHpPercent?: number;
+  autoRestStopHpPercent?: number;
 };
 
 export type CharacterProgressSource = {

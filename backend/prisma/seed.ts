@@ -361,6 +361,8 @@ async function upsertConsumableItem(data: ConsumableSeedData): Promise<Item> {
     minTier: data.minTier,
     maxTier: data.maxTier,
 
+    isSellable: data.isSellable ?? true,
+    isTradable: data.isTradable ?? true,
     isCraftable: data.isCraftable ?? false,
   };
 
