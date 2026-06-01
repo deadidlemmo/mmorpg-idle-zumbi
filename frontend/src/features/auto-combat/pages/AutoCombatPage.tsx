@@ -336,6 +336,28 @@ function getSynchronizedXpFeedbackEvent(
   return null;
 }
 
+function getXpFeedbackDisplayKey(event?: AutoCombatRealtimeEvent | null) {
+  const breakdown = getXpFeedbackBreakdown(event);
+
+  if (!event || !breakdown) {
+    return '';
+  }
+
+  const feedbackScope = getMobFeedbackScopeFromEvent(event);
+
+  if (!hasUsefulMobFeedbackScope(feedbackScope)) {
+    return getRealtimeEventKey(event);
+  }
+
+  return [
+    getMobFeedbackScopeKey(feedbackScope),
+    `total:${breakdown.totalXp}`,
+    `base:${breakdown.baseXp}`,
+    `premium:${breakdown.premiumBonusXp}`,
+    `potential:${breakdown.premiumPotentialBonusXp}`,
+  ].join('|');
+}
+
 function getMapRarityClassName(tier?: number | string | null) {
   const safeTier = Number(tier);
 
@@ -986,7 +1008,7 @@ export function AutoCombatPage() {
       return;
     }
 
-    const eventKey = getRealtimeEventKey(synchronizedXpFeedbackEvent);
+    const eventKey = getXpFeedbackDisplayKey(synchronizedXpFeedbackEvent);
 
     if (xpFeedbackEventKeyRef.current === eventKey) {
       return;
@@ -1008,16 +1030,12 @@ export function AutoCombatPage() {
 
     xpFeedbackTimeoutRef.current = window.setTimeout(() => {
       setXpFeedbackEvent((currentEvent) => {
-        if (!currentEvent || getRealtimeEventKey(currentEvent) === eventKey) {
+        if (!currentEvent || getXpFeedbackDisplayKey(currentEvent) === eventKey) {
           return null;
         }
 
         return currentEvent;
       });
-
-      if (xpFeedbackEventKeyRef.current === eventKey) {
-        xpFeedbackEventKeyRef.current = '';
-      }
 
       xpFeedbackTimeoutRef.current = null;
     }, XP_FEEDBACK_DURATION_MS);
@@ -1912,7 +1930,7 @@ export function AutoCombatPage() {
     Boolean(xpFeedbackBreakdown && xpFeedbackEvent);
   const xpFeedbackKey =
     shouldShowXpFeedback && xpFeedbackEvent
-      ? `mob-xp-${getRealtimeEventKey(xpFeedbackEvent)}`
+      ? `mob-xp-${getXpFeedbackDisplayKey(xpFeedbackEvent)}`
       : '';
   const xpFeedbackPremiumXp = xpFeedbackBreakdown?.isPremiumActive
     ? xpFeedbackBreakdown.premiumBonusXp
@@ -1920,7 +1938,7 @@ export function AutoCombatPage() {
   const shouldShowMobDeathFeedback = shouldShowXpFeedback;
   const mobDeathFeedbackKey =
     shouldShowMobDeathFeedback && xpFeedbackEvent
-      ? `mob-defeated-${getRealtimeEventKey(xpFeedbackEvent)}`
+      ? `mob-defeated-${getXpFeedbackDisplayKey(xpFeedbackEvent)}`
       : '';
 
   const playerFighterClassName = [
@@ -2806,15 +2824,15 @@ export function AutoCombatPage() {
                             aria-live="polite"
                           >
                             <strong>
-                              +{xpFeedbackBreakdown.totalXp} EXP TOTAL
+                              +{xpFeedbackBreakdown.totalXp} EXP
                             </strong>
 
                             <div className="auto-combat-xp-feedback__details">
-                              <span>Base: {xpFeedbackBreakdown.baseXp} EXP</span>
+                              <span>Base {xpFeedbackBreakdown.baseXp}</span>
 
                               <span className="auto-combat-xp-feedback__premium">
                                 <PremiumPlaceholderIcon className="auto-combat-xp-feedback__premium-icon" />
-                                + {xpFeedbackPremiumXp} EXP PREMIUM
+                                +{xpFeedbackPremiumXp} Premium
                               </span>
                             </div>
                           </div>

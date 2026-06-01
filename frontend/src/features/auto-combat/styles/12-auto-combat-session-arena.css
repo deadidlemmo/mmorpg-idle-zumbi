@@ -1123,14 +1123,14 @@
 
 .auto-combat-xp-feedback {
   position: absolute;
-  top: 0.68rem;
-  left: 50%;
+  top: 0.72rem;
+  right: 5rem;
+  left: 7.05rem;
   z-index: 9;
   display: grid;
-  width: min(15rem, calc(100% - 10.25rem));
-  min-width: 10.5rem;
-  gap: 0.24rem;
-  padding: 0.38rem 0.54rem;
+  min-width: 0;
+  gap: 0.14rem;
+  padding: 0.22rem 0.42rem;
   overflow: hidden;
   color: #edf7cf;
   text-align: center;
@@ -1143,17 +1143,17 @@
   border-radius: 0.7rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 10px 22px rgba(0, 0, 0, 0.32),
-    0 0 20px rgba(232, 184, 78, 0.2);
+    0 8px 16px rgba(0, 0, 0, 0.28),
+    0 0 14px rgba(232, 184, 78, 0.16);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.84);
-  backdrop-filter: blur(7px);
+  backdrop-filter: blur(6px);
   animation: autoCombatXpRewardFloat 5200ms ease-out both;
 }
 
 .auto-combat-xp-feedback > strong {
   color: #f0ffd6;
   font-family: var(--font-title);
-  font-size: 0.98rem;
+  font-size: 0.78rem;
   font-weight: 950;
   line-height: 1;
   letter-spacing: 0;
@@ -1164,9 +1164,9 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 0.18rem 0.34rem;
+  gap: 0.08rem 0.24rem;
   color: rgba(240, 255, 214, 0.84);
-  font-size: 0.64rem;
+  font-size: 0.52rem;
   font-weight: 850;
   line-height: 1.1;
 }
@@ -1174,12 +1174,12 @@
 .auto-combat-xp-feedback__details > span {
   display: inline-flex;
   align-items: center;
-  min-height: 18px;
+  min-height: 15px;
   white-space: nowrap;
 }
 
 .auto-combat-xp-feedback__premium {
-  gap: 0.22rem;
+  gap: 0.16rem;
   color: #ffe28c;
   font-family: var(--font-title);
   font-weight: 950;
@@ -1191,12 +1191,12 @@
 .auto-combat-xp-feedback__premium-icon.premium-placeholder-icon {
   display: inline-grid;
   place-items: center;
-  flex: 0 0 19px;
-  width: 19px;
-  height: 19px;
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
   color: #2b2108;
   font-family: var(--font-title);
-  font-size: 0.58rem;
+  font-size: 0.46rem;
   font-weight: 950;
   line-height: 1;
   background:
@@ -1301,10 +1301,10 @@
 }
 
 @keyframes autoCombatXpRewardFloat {
-  0% { opacity: 0; transform: translate3d(-50%, 6px, 0) scale(0.94); }
-  8% { opacity: 1; transform: translate3d(-50%, 0, 0) scale(1.03); }
-  82% { opacity: 1; transform: translate3d(-50%, -5px, 0) scale(1); }
-  100% { opacity: 0; transform: translate3d(-50%, -16px, 0) scale(0.98); }
+  0% { opacity: 0; transform: translate3d(0, 6px, 0) scale(0.94); }
+  8% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.03); }
+  82% { opacity: 1; transform: translate3d(0, -5px, 0) scale(1); }
+  100% { opacity: 0; transform: translate3d(0, -16px, 0) scale(0.98); }
 }
 
 @keyframes autoCombatDefeatedBadge {
@@ -2043,48 +2043,48 @@
 
 @media (max-width: 760px) {
   .auto-combat-xp-feedback {
-    top: 0.66rem;
-    width: min(13.4rem, calc(100% - 9.2rem));
-    min-width: 8.9rem;
-    gap: 0.18rem;
-    padding: 0.32rem 0.4rem;
-    border-radius: 0.64rem;
+    top: 0.68rem;
+    right: 4.4rem;
+    left: 6.45rem;
+    gap: 0.12rem;
+    padding: 0.2rem 0.34rem;
+    border-radius: 0.58rem;
   }
 
   .auto-combat-xp-feedback > strong {
-    font-size: 0.88rem;
+    font-size: 0.72rem;
   }
 
   .auto-combat-xp-feedback__details {
-    gap: 0.16rem 0.24rem;
-    font-size: 0.58rem;
+    gap: 0.06rem 0.2rem;
+    font-size: 0.5rem;
   }
 
   .auto-combat-xp-feedback__details > span {
-    min-height: 17px;
+    min-height: 14px;
   }
 
   .auto-combat-xp-feedback__premium-icon.premium-placeholder-icon {
-    flex-basis: 18px;
-    width: 18px;
-    height: 18px;
-    font-size: 0.54rem;
+    flex-basis: 14px;
+    width: 14px;
+    height: 14px;
+    font-size: 0.42rem;
   }
 }
 
 @media (max-width: 390px) {
   .auto-combat-xp-feedback {
-    top: 0.58rem;
-    width: min(12.2rem, calc(100% - 8rem));
-    min-width: 8.4rem;
-    padding: 0.3rem 0.34rem;
+    top: 2.95rem;
+    right: 0.78rem;
+    left: 0.78rem;
+    padding: 0.2rem 0.32rem;
   }
 
   .auto-combat-xp-feedback > strong {
-    font-size: 0.82rem;
+    font-size: 0.7rem;
   }
 
   .auto-combat-xp-feedback__details {
-    font-size: 0.54rem;
+    font-size: 0.5rem;
   }
 }
