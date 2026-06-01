@@ -108,7 +108,7 @@ import {
 import { selectVisibleCharacterProgress } from '../utils/visible-progress';
 
 const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
-const XP_FEEDBACK_VISIBLE_MS = 3800;
+const XP_FEEDBACK_VISIBLE_MS = 4800;
 const MAX_SHOWN_XP_FEEDBACK_KEYS = 80;
 
 type MobFeedbackScope = {
