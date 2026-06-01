@@ -17,7 +17,6 @@ import {
   AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
   AUTO_COMBAT_REST_HEAL_PERCENT_PER_SECOND,
   AUTO_COMBAT_ROUND_DURATION_SECONDS,
-  AUTO_COMBAT_SESSION_DURATION_SECONDS,
 } from '../../common/config/auto-combat.config';
 import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
 import { calculateCombatHit } from '../../common/utils/combat-damage.util';
@@ -754,9 +753,7 @@ export class AutoCombatService implements OnModuleDestroy {
     const sessionDurationSeconds = getIdleProgressLimitSeconds(
       isPremiumActive(character.user, now),
     );
-    const endsAt = new Date(
-      now.getTime() + sessionDurationSeconds * 1000,
-    );
+    const endsAt = new Date(now.getTime() + sessionDurationSeconds * 1000);
 
     /**
      * Mantém um respiro real depois do MOB_SPAWNED inicial.
@@ -999,9 +996,7 @@ export class AutoCombatService implements OnModuleDestroy {
       isPremiumActive(character.user),
     );
     const projectionSeconds = this.clampNumber(
-      Math.floor(
-        previewDto.projectionSeconds ?? maxProjectionSeconds,
-      ),
+      Math.floor(previewDto.projectionSeconds ?? maxProjectionSeconds),
       AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS,
       maxProjectionSeconds,
     );

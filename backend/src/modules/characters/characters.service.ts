@@ -835,6 +835,11 @@ export class CharactersService {
       },
       include: {
         class: true,
+        user: {
+          select: {
+            premiumUntil: true,
+          },
+        },
         map: true,
         inventoryItems: {
           include: {

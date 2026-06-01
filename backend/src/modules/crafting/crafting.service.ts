@@ -22,7 +22,9 @@ import {
   getRequiredCraftingLevelForTier,
   getUnlockedCraftingTier,
 } from '../../common/config/crafting.config';
+import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
+import { isPremiumActive } from '../../common/utils/membership.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CraftItemDto } from './dto/craft-item.dto';
 
@@ -168,6 +170,11 @@ export class CraftingService {
             name: true,
           },
         },
+        user: {
+          select: {
+            premiumUntil: true,
+          },
+        },
       },
     });
 
@@ -178,6 +185,10 @@ export class CraftingService {
     if (character.userId !== userId) {
       throw new ForbiddenException('Você não pode acessar este personagem.');
     }
+
+    const maxIdleCraftingDurationSeconds = getIdleProgressLimitSeconds(
+      isPremiumActive(character.user),
+    );
 
     const resolvedCraftingSessions =
       await this.resolveCompletedCraftingSessions(characterId);
@@ -436,10 +447,16 @@ export class CraftingService {
           this.getOriginPriority(a.origin) - this.getOriginPriority(b.origin),
       );
 
+      const maxCraftableTimesByDuration =
+        craftingDurationSeconds > 0
+          ? Math.floor(maxIdleCraftingDurationSeconds / craftingDurationSeconds)
+          : 0;
+
       const maxCraftableTimes =
         ingredients.length === 0
           ? 0
           : Math.min(
+              maxCraftableTimesByDuration,
               ...ingredients.map((ingredient) => {
                 if (ingredient.required <= 0) {
                   return 0;
@@ -481,6 +498,7 @@ export class CraftingService {
                 maxCraftableTimes,
               )
             : 0,
+        maxIdleCraftingDurationSeconds,
 
         progress: {
           percent: progressPercent,
@@ -548,6 +566,10 @@ export class CraftingService {
         slot: slot ?? null,
         craftableOnly,
         classId: null,
+      },
+      limits: {
+        maxIdleCraftingDurationSeconds,
+        maxIdleCraftingDurationHours: maxIdleCraftingDurationSeconds / 3600,
       },
       summary: {
         totalRecipes: visibleRecipes.length,
@@ -777,6 +799,11 @@ export class CraftingService {
         userId: true,
         name: true,
         status: true,
+        user: {
+          select: {
+            premiumUntil: true,
+          },
+        },
       },
     });
 
@@ -899,6 +926,20 @@ export class CraftingService {
       recipe.outputItem.tier,
       craftQuantity,
     );
+    const maxIdleCraftingDurationSeconds = getIdleProgressLimitSeconds(
+      isPremiumActive(character.user),
+    );
+
+    if (durationSeconds > maxIdleCraftingDurationSeconds) {
+      throw new BadRequestException({
+        message:
+          'Esta quantidade excede o tempo maximo de criacao idle permitido.',
+        durationSeconds,
+        maxIdleCraftingDurationSeconds,
+        maxIdleCraftingDurationHours: maxIdleCraftingDurationSeconds / 3600,
+      });
+    }
+
     const startedAt = new Date();
     const completesAt = new Date(startedAt.getTime() + durationSeconds * 1000);
 
