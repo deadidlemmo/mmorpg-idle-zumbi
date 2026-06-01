@@ -108,7 +108,7 @@ import {
 import { selectVisibleCharacterProgress } from '../utils/visible-progress';
 
 const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
-const XP_FEEDBACK_DURATION_MS = 2100;
+const XP_FEEDBACK_DURATION_MS = 5200;
 
 type MobFeedbackScope = {
   sessionId: string | null;
@@ -1847,9 +1847,14 @@ export function AutoCombatPage() {
     shouldShowXpFeedback && xpFeedbackEvent
       ? `mob-xp-${getRealtimeEventKey(xpFeedbackEvent)}`
       : '';
-  const xpFeedbackPremiumText = xpFeedbackBreakdown?.isPremiumActive
-    ? `+${xpFeedbackBreakdown.premiumBonusXp} Premium`
-    : `Com Premium: +${xpFeedbackBreakdown?.premiumPotentialBonusXp ?? 0} EXP`;
+  const xpFeedbackPremiumXp = xpFeedbackBreakdown?.isPremiumActive
+    ? xpFeedbackBreakdown.premiumBonusXp
+    : (xpFeedbackBreakdown?.premiumPotentialBonusXp ?? 0);
+  const shouldShowMobDeathFeedback = shouldShowXpFeedback;
+  const mobDeathFeedbackKey =
+    shouldShowMobDeathFeedback && xpFeedbackEvent
+      ? `mob-defeated-${getRealtimeEventKey(xpFeedbackEvent)}`
+      : '';
 
   const playerFighterClassName = [
     'auto-combat-fighter-card',
@@ -2733,14 +2738,16 @@ export function AutoCombatPage() {
                             role="status"
                             aria-live="polite"
                           >
-                            <strong>+{xpFeedbackBreakdown.totalXp} EXP</strong>
+                            <strong>
+                              +{xpFeedbackBreakdown.totalXp} EXP TOTAL
+                            </strong>
 
                             <div className="auto-combat-xp-feedback__details">
-                              <span>{xpFeedbackBreakdown.baseXp} base</span>
+                              <span>Base: {xpFeedbackBreakdown.baseXp} EXP</span>
 
                               <span className="auto-combat-xp-feedback__premium">
                                 <PremiumPlaceholderIcon className="auto-combat-xp-feedback__premium-icon" />
-                                {xpFeedbackPremiumText}
+                                + {xpFeedbackPremiumXp} EXP PREMIUM
                               </span>
                             </div>
                           </div>
@@ -2762,8 +2769,11 @@ export function AutoCombatPage() {
                           </span>
                         ) : null}
 
-                        {isMobDefeatedVisual ? (
-                          <span className="auto-combat-defeated-badge">
+                        {shouldShowMobDeathFeedback ? (
+                          <span
+                            key={mobDeathFeedbackKey}
+                            className="auto-combat-defeated-badge"
+                          >
                             Derrotado
                           </span>
                         ) : null}
