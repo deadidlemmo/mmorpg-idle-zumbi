@@ -33,12 +33,13 @@ export function AutoCombatSessionSummary({
   const premiumDisplayXp = isPremiumActive
     ? premiumBonusXp
     : premiumPotentialBonusXp;
-  const premiumLineText = isPremiumActive
-    ? `Premium: +${premiumBonusXp} EXP`
-    : `Com Premium: +${premiumPotentialBonusXp} EXP`;
   const premiumStatusText = isPremiumActive
     ? 'Bônus Premium ativo'
     : 'Premium bloqueado';
+  const premiumBreakdownLabel = isPremiumActive ? 'Premium' : 'Potencial';
+  const premiumNoteText = isPremiumActive
+    ? `Premium: +${premiumBonusXp} EXP aplicado`
+    : `Com Premium: ${premiumTotalXp} EXP total`;
 
   return (
     <article className="auto-combat-session-panel">
@@ -60,33 +61,66 @@ export function AutoCombatSessionSummary({
           <small>infectados derrotados</small>
         </div>
 
-        <div className="auto-combat-session-summary__card auto-combat-session-summary__card--xp">
-          <span>XP ganho</span>
-          <strong>{totalXpGained}</strong>
-          <small>Base: {baseXpGained} EXP</small>
+        <div
+          className={[
+            'auto-combat-session-summary__card',
+            'auto-combat-session-summary__card--xp',
+            isPremiumActive
+              ? 'auto-combat-session-summary__card--xp-premium'
+              : 'auto-combat-session-summary__card--xp-free',
+          ].join(' ')}
+        >
+          <span className="auto-combat-session-summary__xp-topline">
+            <span>XP ganho</span>
+            <small
+              className={[
+                'auto-combat-session-summary__premium-status',
+                isPremiumActive
+                  ? 'auto-combat-session-summary__premium-status--active'
+                  : 'auto-combat-session-summary__premium-status--locked',
+              ].join(' ')}
+            >
+              <PremiumPlaceholderIcon className="auto-combat-session-summary__premium-icon" />
+              <span>{premiumStatusText}</span>
+            </small>
+          </span>
+
+          <strong className="auto-combat-session-summary__xp-total">
+            <span>{totalXpGained}</span>
+            <em>EXP total</em>
+          </strong>
+
+          <span className="auto-combat-session-summary__xp-breakdown">
+            <small className="auto-combat-session-summary__xp-chip auto-combat-session-summary__xp-chip--base">
+              <span>Base</span>
+              <strong>{baseXpGained}</strong>
+              <em>EXP</em>
+            </small>
+
+            <small
+              className={[
+                'auto-combat-session-summary__xp-chip',
+                'auto-combat-session-summary__xp-chip--premium',
+                isPremiumActive
+                  ? 'auto-combat-session-summary__xp-chip--premium-active'
+                  : 'auto-combat-session-summary__xp-chip--premium-locked',
+              ].join(' ')}
+            >
+              <span>{premiumBreakdownLabel}</span>
+              <strong>+{premiumDisplayXp}</strong>
+              <em>EXP</em>
+            </small>
+          </span>
+
           <small
             className={[
-              'auto-combat-session-summary__premium-line',
+              'auto-combat-session-summary__premium-note',
               isPremiumActive
-                ? 'auto-combat-session-summary__premium-line--active'
-                : 'auto-combat-session-summary__premium-line--locked',
+                ? 'auto-combat-session-summary__premium-note--active'
+                : 'auto-combat-session-summary__premium-note--locked',
             ].join(' ')}
           >
-            <PremiumPlaceholderIcon className="auto-combat-session-summary__premium-icon" />
-            <span>{premiumLineText}</span>
-          </small>
-          <small
-            className={[
-              'auto-combat-session-summary__premium-status',
-              isPremiumActive
-                ? 'auto-combat-session-summary__premium-status--active'
-                : 'auto-combat-session-summary__premium-status--locked',
-            ].join(' ')}
-          >
-            {premiumStatusText}
-            {premiumDisplayXp > 0 && !isPremiumActive
-              ? ` (${premiumTotalXp} EXP potencial)`
-              : ''}
+            {premiumNoteText}
           </small>
         </div>
 
