@@ -154,6 +154,17 @@ function getAutoCombatLootTotalQuantity(
   }, 0);
 }
 
+function buildLootNotificationQuantityBaseline(
+  totals: Map<string, AutoCombatRewardLootViewModel>,
+) {
+  return new Map(
+    Array.from(totals.entries()).map(([itemId, loot]) => [
+      itemId,
+      getLootQuantity(loot),
+    ]),
+  );
+}
+
 export const AutoCombatRealtimeContext =
   createContext<AutoCombatRealtimeContextValue | null>(null);
 
@@ -413,6 +424,8 @@ export function AutoCombatRealtimeProvider({
   const recentEventsRequestRef = useRef(0);
   const wasBackgroundedRef = useRef(false);
   const lastInactiveStatusSignatureRef = useRef<string | null>(null);
+  const suppressLootNotificationsUntilCatchUpRef = useRef(false);
+  const lootSuppressionRequiresFreshStatusRef = useRef(false);
   const lootNotificationTrackerRef = useRef<AutoCombatLootNotificationTracker>({
     sessionId: null,
     totalsByItemId: new Map(),
@@ -436,6 +449,8 @@ export function AutoCombatRealtimeProvider({
       totalsByItemId: new Map(),
       hasBaseline: false,
     };
+    suppressLootNotificationsUntilCatchUpRef.current = false;
+    lootSuppressionRequiresFreshStatusRef.current = false;
   }, [normalizedCharacterId]);
 
   const clearScheduledReload = useCallback(() => {
@@ -544,22 +559,42 @@ export function AutoCombatRealtimeProvider({
       const sessionId = session?.id ?? null;
       const nextLootTotals = buildAutoCombatLootTotals(status);
       const tracker = lootNotificationTrackerRef.current;
+      const confirmedLootTotal = getAutoCombatLootTotalQuantity(nextLootTotals);
+      const isBackgrounded = isUiBackgrounded();
+      const shouldSuppressLootNotifications =
+        isBackgrounded || suppressLootNotificationsUntilCatchUpRef.current;
 
-      if (!tracker.hasBaseline || tracker.sessionId !== sessionId) {
+      const setCurrentLootBaseline = () => {
         lootNotificationTrackerRef.current = {
           sessionId,
-          totalsByItemId: new Map(
-            Array.from(nextLootTotals.entries()).map(([itemId, loot]) => [
-              itemId,
-              getLootQuantity(loot),
-            ]),
-          ),
+          totalsByItemId: buildLootNotificationQuantityBaseline(nextLootTotals),
           hasBaseline: true,
         };
+      };
+
+      const releaseSuppressionIfCaughtUp = () => {
+        if (
+          !isBackgrounded &&
+          !lootSuppressionRequiresFreshStatusRef.current &&
+          releasedLootTotal !== null &&
+          releasedLootTotal !== undefined &&
+          releasedLootTotal >= confirmedLootTotal
+        ) {
+          suppressLootNotificationsUntilCatchUpRef.current = false;
+        }
+      };
+
+      if (!tracker.hasBaseline || tracker.sessionId !== sessionId) {
+        setCurrentLootBaseline();
+        releaseSuppressionIfCaughtUp();
         return;
       }
 
-      const confirmedLootTotal = getAutoCombatLootTotalQuantity(nextLootTotals);
+      if (shouldSuppressLootNotifications) {
+        setCurrentLootBaseline();
+        releaseSuppressionIfCaughtUp();
+        return;
+      }
 
       if (releasedLootTotal === null || releasedLootTotal === undefined) {
         return;
@@ -660,6 +695,8 @@ export function AutoCombatRealtimeProvider({
         if (reloadRequestRef.current !== requestId) {
           return;
         }
+
+        lootSuppressionRequiresFreshStatusRef.current = false;
 
         if (overviewData) {
           dispatch({
@@ -811,6 +848,8 @@ export function AutoCombatRealtimeProvider({
 
       try {
         lastInactiveStatusSignatureRef.current = null;
+        suppressLootNotificationsUntilCatchUpRef.current = false;
+        lootSuppressionRequiresFreshStatusRef.current = false;
         clearScheduledReload();
         clearSessionVisualState();
 
@@ -941,8 +980,12 @@ export function AutoCombatRealtimeProvider({
       }
 
       if (isUiBackgrounded()) {
+        suppressLootNotificationsUntilCatchUpRef.current = true;
+        lootSuppressionRequiresFreshStatusRef.current = true;
         flushVisualQueueWithoutAnimation();
       }
+
+      lootSuppressionRequiresFreshStatusRef.current = false;
 
       dispatch({
         type: 'HYDRATE_STATUS',
@@ -963,6 +1006,7 @@ export function AutoCombatRealtimeProvider({
       flushVisualQueueWithoutAnimation();
 
       lastInactiveStatusSignatureRef.current = getStableStatusSignature(payload);
+      lootSuppressionRequiresFreshStatusRef.current = false;
 
       dispatch({
         type: 'HYDRATE_STATUS',
@@ -990,6 +1034,7 @@ export function AutoCombatRealtimeProvider({
       flushVisualQueueWithoutAnimation();
 
       lastInactiveStatusSignatureRef.current = getStableStatusSignature(payload);
+      lootSuppressionRequiresFreshStatusRef.current = false;
 
       dispatch({
         type: 'HYDRATE_STATUS',
@@ -1117,6 +1162,8 @@ export function AutoCombatRealtimeProvider({
     function handleVisibilityChange() {
       if (!isDocumentVisible()) {
         wasBackgroundedRef.current = true;
+        suppressLootNotificationsUntilCatchUpRef.current = true;
+        lootSuppressionRequiresFreshStatusRef.current = true;
         flushVisualQueueWithoutAnimation();
         return;
       }
@@ -1129,6 +1176,8 @@ export function AutoCombatRealtimeProvider({
 
     function handleWindowBlur() {
       wasBackgroundedRef.current = true;
+      suppressLootNotificationsUntilCatchUpRef.current = true;
+      lootSuppressionRequiresFreshStatusRef.current = true;
       flushVisualQueueWithoutAnimation();
     }
 
