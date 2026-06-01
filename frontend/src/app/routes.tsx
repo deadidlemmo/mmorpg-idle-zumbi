@@ -18,10 +18,12 @@ import { DashboardPlaceholderPage } from "../features/dashboard/pages/DashboardP
 import { GatheringHubPage } from "../features/gathering/pages/GatheringHubPage";
 import { GatheringOriginPage } from "../features/gathering/pages/GatheringOriginPage";
 import { GatheringRealtimeProvider } from "../features/gathering/realtime/GatheringRealtimeProvider";
+import { InfirmaryPage } from "../features/infirmary/pages/InfirmaryPage";
 import { IncursionsPage } from "../features/incursions/pages/IncursionsPage";
 import { IncursionsRealtimeProvider } from "../features/incursions/realtime/IncursionsRealtimeProvider";
 import { InventoryPage } from "../features/inventory/pages/InventoryPage";
 import { MapsSelectionPage } from "../features/maps/pages/MapsSelectionPage";
+import { MembershipPage } from "../features/membership/pages/MembershipPage";
 import { MerchantHubPage } from "../features/vendor/pages/MerchantHubPage";
 import { VendorPage } from "../features/vendor/pages/VendorPage";
 import { WorldBossesPage } from "../features/world-bosses/pages/WorldBossesPage";
@@ -152,6 +154,10 @@ export function AppRoutes() {
           <Route path="consumables" element={<MerchantHubPage />} />
 
           <Route path="consumables/:merchantId" element={<VendorPage />} />
+
+          <Route path="infirmary" element={<InfirmaryPage />} />
+
+          <Route path="membership" element={<MembershipPage />} />
 
           <Route path="maps" element={<MapsSelectionPage />} />
 

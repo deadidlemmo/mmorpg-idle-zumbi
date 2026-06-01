@@ -19,6 +19,7 @@ import {
   AUTO_COMBAT_ROUND_DURATION_SECONDS,
   AUTO_COMBAT_SESSION_DURATION_SECONDS,
 } from '../../common/config/auto-combat.config';
+import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
 import { calculateCombatHit } from '../../common/utils/combat-damage.util';
 import {
   applyDropChancePenalty,
@@ -30,6 +31,7 @@ import {
   calculateLevelProgress,
   getLevelProgress,
 } from '../../common/utils/level.util';
+import { isPremiumActive } from '../../common/utils/membership.util';
 import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
@@ -642,6 +644,11 @@ export class AutoCombatService implements OnModuleDestroy {
       },
       include: {
         class: true,
+        user: {
+          select: {
+            premiumUntil: true,
+          },
+        },
         equipment: {
           include: {
             mainHand: true,
@@ -744,8 +751,11 @@ export class AutoCombatService implements OnModuleDestroy {
     const firstMob = firstEncounter.mob;
 
     const now = new Date();
+    const sessionDurationSeconds = getIdleProgressLimitSeconds(
+      isPremiumActive(character.user, now),
+    );
     const endsAt = new Date(
-      now.getTime() + AUTO_COMBAT_SESSION_DURATION_SECONDS * 1000,
+      now.getTime() + sessionDurationSeconds * 1000,
     );
 
     /**
@@ -785,7 +795,7 @@ export class AutoCombatService implements OnModuleDestroy {
             startedAt: now,
             endsAt,
             lastProcessedAt: firstRoundReadyAt,
-            durationSeconds: AUTO_COMBAT_SESSION_DURATION_SECONDS,
+            durationSeconds: sessionDurationSeconds,
             roundDurationSeconds: AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS,
 
             currentMobId: firstMob.id,
@@ -903,6 +913,11 @@ export class AutoCombatService implements OnModuleDestroy {
       },
       include: {
         class: true,
+        user: {
+          select: {
+            premiumUntil: true,
+          },
+        },
         equipment: {
           include: {
             mainHand: true,
@@ -980,12 +995,15 @@ export class AutoCombatService implements OnModuleDestroy {
       );
     }
 
+    const maxProjectionSeconds = getIdleProgressLimitSeconds(
+      isPremiumActive(character.user),
+    );
     const projectionSeconds = this.clampNumber(
       Math.floor(
-        previewDto.projectionSeconds ?? AUTO_COMBAT_SESSION_DURATION_SECONDS,
+        previewDto.projectionSeconds ?? maxProjectionSeconds,
       ),
       AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS,
-      AUTO_COMBAT_SESSION_DURATION_SECONDS,
+      maxProjectionSeconds,
     );
 
     const now = new Date();
@@ -3985,6 +4003,9 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     const now = new Date();
+    const maxProjectionSeconds = getIdleProgressLimitSeconds(
+      isPremiumActive(session.character.user, now),
+    );
 
     const projectionSeconds = this.clampNumber(
       Math.floor(
@@ -3992,7 +4013,7 @@ export class AutoCombatService implements OnModuleDestroy {
           Math.max(0, (session.endsAt.getTime() - now.getTime()) / 1000),
       ),
       AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS,
-      AUTO_COMBAT_SESSION_DURATION_SECONDS,
+      maxProjectionSeconds,
     );
 
     if (projectionSeconds <= 0) {

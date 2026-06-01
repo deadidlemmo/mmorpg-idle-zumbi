@@ -23,7 +23,9 @@ import {
   getGatheringXpProgressPercent,
   getGatheringXpToNextLevel,
 } from '../../common/config/gathering.config';
+import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
 import { calculateGatheringReward } from '../../common/utils/gathering.util';
+import { isPremiumActive } from '../../common/utils/membership.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StartGatheringDto } from './dto/start-gathering.dto';
 
@@ -332,11 +334,13 @@ function calculateProduction(params: {
   baseGatheringRatePerHour?: number | null;
   skillLevel: number;
   isAffinity: boolean;
+  maxElapsedSeconds?: number;
 }): ProductionResult {
   const defaultReward = calculateGatheringReward({
     elapsedSeconds: params.elapsedSeconds,
     tier: params.tier,
     progressRemainder: params.progressRemainder,
+    maxElapsedSeconds: params.maxElapsedSeconds,
   });
 
   const defaultRatePerHour = Math.max(1, defaultReward.ratePerHour);
@@ -360,6 +364,7 @@ function calculateProduction(params: {
     tier: params.tier,
     progressRemainder: params.progressRemainder,
     rateMultiplier: finalRateMultiplier,
+    maxElapsedSeconds: params.maxElapsedSeconds,
   });
 
   return {
@@ -528,6 +533,11 @@ export class GatheringService {
             status: true,
             currentHp: true,
             maxHp: true,
+            user: {
+              select: {
+                premiumUntil: true,
+              },
+            },
             class: {
               select: {
                 id: true,
@@ -704,9 +714,16 @@ export class GatheringService {
     });
 
     const now = new Date();
-    const elapsedSeconds = Math.max(
+    const idleProgressLimitSeconds = getIdleProgressLimitSeconds(
+      isPremiumActive(session.character.user, now),
+    );
+    const rawElapsedSeconds = Math.max(
       0,
       (now.getTime() - session.lastResolvedAt.getTime()) / 1000,
+    );
+    const elapsedSeconds = Math.min(
+      rawElapsedSeconds,
+      idleProgressLimitSeconds,
     );
 
     const reward = calculateProduction({
@@ -716,6 +733,7 @@ export class GatheringService {
       baseGatheringRatePerHour: session.targetMaterial.baseGatheringRatePerHour,
       skillLevel: gatheringSkill.level,
       isAffinity: affinity,
+      maxElapsedSeconds: idleProgressLimitSeconds,
     });
 
     const gatheringXpPerUnit = getMaterialGatheringXpPerUnit(
@@ -1248,6 +1266,11 @@ export class GatheringService {
               status: true,
               currentHp: true,
               maxHp: true,
+              user: {
+                select: {
+                  premiumUntil: true,
+                },
+              },
               class: {
                 select: {
                   id: true,

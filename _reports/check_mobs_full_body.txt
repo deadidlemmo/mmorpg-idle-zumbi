@@ -1,0 +1,56 @@
+================================================================================
+CONFERÊNCIA DE IMAGENS FULL-BODY DOS MOBS
+Data/hora: 31/05/2026 17:09:47
+Pasta analisada: C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\frontend\src\assets\images\mobs\full-body
+================================================================================
+
+Total esperado: 120 imagens
+Total encontrado na pasta: 115 arquivos
+Imagens esperadas encontradas: 114
+Imagens esperadas faltando: 6
+Arquivos extras ou fora do padrão: 1
+
+--------------------------------------------------------------------------------
+IMAGENS FALTANDO
+--------------------------------------------------------------------------------
+Tier 1:
+  - mob1-t1.png
+Tier 3:
+  - mob3-t3.png
+Tier 6:
+  - mob8-t6.png
+Tier 7:
+  - mob5-t7.png
+Tier 8:
+  - mob1-t8.png
+Tier 9:
+  - mob11-t9.png
+
+--------------------------------------------------------------------------------
+ARQUIVOS COM EXTENSÃO DIFERENTE DE .png
+--------------------------------------------------------------------------------
+[OK] Nenhum arquivo esperado está com extensão diferente.
+
+--------------------------------------------------------------------------------
+ARQUIVOS COM NOME FORA DO PADRÃO
+--------------------------------------------------------------------------------
+  - Entubado da Triagem.png
+
+--------------------------------------------------------------------------------
+ARQUIVOS EXTRAS NA PASTA
+--------------------------------------------------------------------------------
+  - Entubado da Triagem.png
+
+--------------------------------------------------------------------------------
+NOMES COM MAIÚSCULAS/MINÚSCULAS DIFERENTES DO PADRÃO
+--------------------------------------------------------------------------------
+[OK] Nenhum problema de maiúscula/minúscula encontrado.
+
+--------------------------------------------------------------------------------
+DUPLICIDADES CONSIDERANDO NOME NORMALIZADO
+--------------------------------------------------------------------------------
+[OK] Nenhuma duplicidade encontrada.
+
+================================================================================
+Relatório salvo em: C:\Users\Neto\Desktop\Projetos\Em uso\mmorpg-idle-zumbi\_reports\check_mobs_full_body.txt
+================================================================================

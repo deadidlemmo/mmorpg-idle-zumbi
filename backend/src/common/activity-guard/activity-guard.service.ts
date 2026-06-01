@@ -663,6 +663,14 @@ export class ActivityGuardService {
       });
     }
 
+    if (state.hasActiveIncursion) {
+      throw new ConflictException({
+        message:
+          'Nao e possivel usar a enfermaria durante uma incursao ativa.',
+        activeIncursionSession: state.activeIncursionSession,
+      });
+    }
+
     if (state.hasActiveWorldBoss) {
       throw new ConflictException({
         message:

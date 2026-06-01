@@ -36,8 +36,10 @@ import {
   getGatheringXpProgressPercent,
   getGatheringXpToNextLevel,
 } from '../../common/config/gathering.config';
+import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
 import { calculateGatheringReward } from '../../common/utils/gathering.util';
 import { getLevelProgress } from '../../common/utils/level.util';
+import { isPremiumActive } from '../../common/utils/membership.util';
 import { calculateFullStats } from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCharacterDto } from './dto/create-character.dto';
@@ -489,6 +491,11 @@ export class CharactersService {
       include: {
         class: true,
         map: true,
+        user: {
+          select: {
+            premiumUntil: true,
+          },
+        },
         inventoryItems: {
           include: {
             item: true,
@@ -1215,6 +1222,7 @@ export class CharactersService {
       ? this.buildGatheringProductionPreview(
           activeGatheringSession,
           activeGatheringSkill,
+          isPremiumActive(character.user),
         )
       : null;
 
@@ -1931,8 +1939,10 @@ export class CharactersService {
   private buildGatheringProductionPreview(
     activeGatheringSession: any,
     gatheringSkill?: any | null,
+    isPremium = false,
   ) {
     const now = new Date();
+    const idleProgressLimitSeconds = getIdleProgressLimitSeconds(isPremium);
 
     const lastResolvedAt =
       activeGatheringSession.lastResolvedAt ?? activeGatheringSession.startedAt;
@@ -1941,15 +1951,20 @@ export class CharactersService {
       activeGatheringSession.progressRemainder ?? 0,
     );
 
-    const elapsedSeconds = Math.max(
+    const rawElapsedSeconds = Math.max(
       0,
       Math.floor((now.getTime() - new Date(lastResolvedAt).getTime()) / 1000),
+    );
+    const elapsedSeconds = Math.min(
+      rawElapsedSeconds,
+      idleProgressLimitSeconds,
     );
 
     const defaultReward = calculateGatheringReward({
       elapsedSeconds,
       tier: activeGatheringSession.map.tier,
       progressRemainder,
+      maxElapsedSeconds: idleProgressLimitSeconds,
     });
 
     const defaultRatePerHour = Math.max(1, defaultReward.ratePerHour);
@@ -1980,6 +1995,7 @@ export class CharactersService {
       tier: activeGatheringSession.map.tier,
       progressRemainder,
       rateMultiplier: finalRateMultiplier,
+      maxElapsedSeconds: idleProgressLimitSeconds,
     });
 
     const finalRatePerHour = Number(

@@ -313,6 +313,16 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: '$',
   },
   {
+    label: 'Enfermaria',
+    path: 'infirmary',
+    icon: '+',
+  },
+  {
+    label: 'Premium',
+    path: 'membership',
+    icon: 'P',
+  },
+  {
     label: 'Mapas',
     path: 'maps',
     icon: '◇',
@@ -333,9 +343,20 @@ const DASHBOARD_MAIN_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter((item) =>
   ['', 'auto-combat'].includes(item.path),
 );
 
-const DASHBOARD_MANAGEMENT_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter(
-  (item) => !['', 'auto-combat', 'gathering'].includes(item.path),
-);
+const DASHBOARD_MANAGEMENT_NAV_ITEMS = [
+  'inventory',
+  'equipment',
+  'crafting',
+  'consumables',
+  'infirmary',
+  'membership',
+]
+  .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
+  .filter((item): item is DashboardNavItem => Boolean(item));
+
+const DASHBOARD_WORLD_NAV_ITEMS = ['maps', 'incursions', 'world-bosses']
+  .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
+  .filter((item): item is DashboardNavItem => Boolean(item));
 
 const DASHBOARD_GATHERING_NAV_ITEM = DASHBOARD_NAV_ITEMS.find(
   (item) => item.path === 'gathering',
@@ -1476,6 +1497,31 @@ function DashboardLayoutContent({
             <span className="dashboard-sidebar__section-label">Gestão</span>
 
             {DASHBOARD_MANAGEMENT_NAV_ITEMS.map((item) => {
+              const to = `${dashboardBasePath}/${item.path}`;
+
+              return (
+                <NavLink
+                  key={item.label}
+                  to={to}
+                  onClick={closeSidebar}
+                  className={({ isActive }) =>
+                    `dashboard-sidebar__link ${isActive ? 'is-active' : ''}`
+                  }
+                >
+                  <span aria-hidden="true">{item.icon}</span>
+                  <strong>{item.label}</strong>
+                </NavLink>
+              );
+            })}
+          </section>
+
+          <section
+            className="dashboard-sidebar__nav-section"
+            aria-label="Mundo e desafios"
+          >
+            <span className="dashboard-sidebar__section-label">Mundo</span>
+
+            {DASHBOARD_WORLD_NAV_ITEMS.map((item) => {
               const to = `${dashboardBasePath}/${item.path}`;
 
               return (

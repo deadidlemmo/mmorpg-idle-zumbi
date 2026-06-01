@@ -1,11 +1,20 @@
 // Configurações centrais do combate automático idle.
 
+import {
+  FREE_IDLE_PROGRESS_LIMIT_SECONDS,
+  PREMIUM_IDLE_PROGRESS_LIMIT_SECONDS,
+} from './membership.config';
+
 /**
  * Sessão máxima de combate automático.
  *
  * 6 horas = 21.600 segundos.
  */
-export const AUTO_COMBAT_SESSION_DURATION_SECONDS = 6 * 60 * 60;
+export const AUTO_COMBAT_SESSION_DURATION_SECONDS =
+  FREE_IDLE_PROGRESS_LIMIT_SECONDS;
+
+export const AUTO_COMBAT_PREMIUM_SESSION_DURATION_SECONDS =
+  PREMIUM_IDLE_PROGRESS_LIMIT_SECONDS;
 
 /**
  * Duração real de cada rodada simulada no backend.
@@ -60,7 +69,9 @@ export const AUTO_COMBAT_REST_HEAL_PERCENT_PER_SECOND = 0.5;
  * excessivo em uma única chamada, especialmente se o personagem ficar muito
  * tempo offline.
  */
-export const AUTO_COMBAT_MAX_COMBATS_PER_PROCESS = 5000;
+export const AUTO_COMBAT_MAX_COMBATS_PER_PROCESS = Math.ceil(
+  PREMIUM_IDLE_PROGRESS_LIMIT_SECONDS / AUTO_COMBAT_ROUND_DURATION_SECONDS,
+);
 
 /**
  * Se quiser futuramente limitar processamento por chamada, pode usar este valor.
@@ -68,7 +79,7 @@ export const AUTO_COMBAT_MAX_COMBATS_PER_PROCESS = 5000;
  * Por enquanto, deixamos a sessão inteira ser processável sob demanda.
  */
 export const AUTO_COMBAT_MAX_SECONDS_PER_PROCESS =
-  AUTO_COMBAT_SESSION_DURATION_SECONDS;
+  PREMIUM_IDLE_PROGRESS_LIMIT_SECONDS;
 
 /**
  * Define se o sistema deve finalizar automaticamente a sessão ao chegar no endsAt.

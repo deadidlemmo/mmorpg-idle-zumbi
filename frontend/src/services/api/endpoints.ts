@@ -55,6 +55,14 @@ export const API_ENDPOINTS = {
     config: (characterId: string) => `/consumables/${characterId}/config`,
   },
 
+  infirmary: {
+    status: (characterId: string) => `/infirmary/${characterId}/status`,
+    start: (characterId: string) => `/infirmary/${characterId}/start`,
+    claim: (characterId: string) => `/infirmary/${characterId}/claim`,
+    cancel: (characterId: string) => `/infirmary/${characterId}/cancel`,
+    instant: (characterId: string) => `/infirmary/${characterId}/instant`,
+  },
+
   vendor: {
     shop: (characterId: string) => `/vendor/${characterId}/shop`,
     buy: (characterId: string) => `/vendor/${characterId}/buy`,

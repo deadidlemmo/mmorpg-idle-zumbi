@@ -84,6 +84,7 @@ export type AutoCombatRealtimeEventType =
   | 'MOB_HIT'
   | 'DODGE'
   | 'POTION_USED'
+  | 'AUTO_REST'
   | 'MOB_DEFEATED'
   | 'PLAYER_DEFEATED'
   | 'SESSION_STARTED'

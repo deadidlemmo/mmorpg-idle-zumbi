@@ -1,0 +1,358 @@
+.infirmary-page {
+  display: flex;
+  width: min(100%, 980px);
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 auto;
+  padding-bottom: 52px;
+}
+
+.infirmary-hero.gathering-origin-lore-card--npc {
+  min-height: 190px;
+}
+
+.infirmary-hero__portrait {
+  display: grid;
+  place-items: center;
+  color: #9eed76;
+}
+
+.infirmary-hero__image {
+  display: block;
+  width: min(100%, 230px);
+  max-height: 210px;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 22px 26px rgba(0, 0, 0, 0.45));
+}
+
+.infirmary-premium-card {
+  width: 100%;
+}
+
+.infirmary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.04fr) minmax(320px, 0.72fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.infirmary-panel,
+.infirmary-treatment-card {
+  border: 1px solid rgba(144, 206, 102, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(19, 42, 25, 0.88), rgba(3, 12, 10, 0.96)),
+    rgba(4, 13, 11, 0.96);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.3);
+}
+
+.infirmary-panel {
+  padding: 18px;
+}
+
+.infirmary-panel__heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(168, 202, 142, 0.14);
+}
+
+.infirmary-panel__heading span,
+.infirmary-treatment-card__body > span {
+  color: #9ed26d;
+  font-family: var(--font-title);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.infirmary-panel__heading strong {
+  color: #fff8dc;
+  font-family: var(--font-title);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.infirmary-vitals {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.infirmary-vitals div {
+  display: grid;
+  gap: 3px;
+}
+
+.infirmary-vitals span {
+  color: rgba(237, 235, 210, 0.58);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.infirmary-vitals strong {
+  color: #fff8dc;
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+}
+
+.infirmary-vitals__badge {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  border: 1px solid rgba(144, 206, 102, 0.28);
+  border-radius: 999px;
+  padding: 0 12px;
+  background: rgba(50, 94, 35, 0.42);
+  color: #cfffa9 !important;
+  font-family: var(--font-title);
+  font-size: 0.75rem !important;
+  font-weight: 950 !important;
+}
+
+.infirmary-vitals__badge[data-state='critical'] {
+  border-color: rgba(255, 111, 96, 0.42);
+  background: rgba(97, 35, 30, 0.46);
+  color: #ffc9b8 !important;
+}
+
+.infirmary-progress {
+  overflow: hidden;
+  height: 9px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.48);
+  box-shadow: inset 0 0 0 1px rgba(168, 202, 142, 0.08);
+}
+
+.infirmary-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, #66d17a, #c9ff8a),
+    #86d876;
+  box-shadow: 0 0 14px rgba(114, 235, 129, 0.3);
+  transition: width 0.35s ease;
+}
+
+.infirmary-progress--treatment span {
+  background:
+    linear-gradient(90deg, #f0c64f, #8ddc69),
+    #d6b947;
+}
+
+.infirmary-current-treatment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-top: 18px;
+  border: 1px solid rgba(168, 202, 142, 0.14);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.infirmary-current-treatment__icon,
+.infirmary-treatment-card__icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(230, 209, 111, 0.24);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(230, 209, 111, 0.22), transparent 70%),
+    rgba(9, 18, 13, 0.9);
+  color: #f6df77;
+}
+
+.infirmary-current-treatment span {
+  display: block;
+  color: #9ed26d;
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.infirmary-current-treatment strong {
+  display: block;
+  margin-top: 2px;
+  color: #fff8dc;
+  font-family: var(--font-title);
+  font-size: 1rem;
+}
+
+.infirmary-reason,
+.infirmary-feedback {
+  margin: 14px 0 0;
+  color: rgba(237, 235, 210, 0.72);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.infirmary-feedback {
+  border: 1px solid rgba(144, 206, 102, 0.22);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--font-title);
+  font-weight: 850;
+}
+
+.infirmary-feedback--success {
+  background: rgba(42, 91, 35, 0.34);
+  color: #dcffc4;
+}
+
+.infirmary-feedback--error {
+  border-color: rgba(255, 111, 96, 0.24);
+  background: rgba(91, 35, 31, 0.34);
+  color: #ffd2c7;
+}
+
+.infirmary-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.infirmary-treatment-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+}
+
+.infirmary-treatment-card--private {
+  border-color: rgba(230, 209, 111, 0.28);
+  background:
+    linear-gradient(145deg, rgba(56, 42, 17, 0.84), rgba(3, 12, 10, 0.96)),
+    rgba(4, 13, 11, 0.96);
+}
+
+.infirmary-treatment-card__body h3 {
+  margin: 4px 0 0;
+  color: #fff8dc;
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+}
+
+.infirmary-treatment-card__body p {
+  margin: 6px 0 0;
+  color: rgba(237, 235, 210, 0.7);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.infirmary-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffe285;
+  white-space: nowrap;
+}
+
+.infirmary-gold img {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+}
+
+.infirmary-action-button {
+  grid-column: 1 / -1;
+  min-height: 42px;
+  border: 1px solid rgba(144, 206, 102, 0.28);
+  border-radius: 8px;
+  padding: 0 16px;
+  background:
+    linear-gradient(180deg, rgba(76, 120, 53, 0.92), rgba(36, 77, 28, 0.94)),
+    rgba(46, 87, 35, 0.92);
+  color: #faffee;
+  cursor: pointer;
+  font-family: var(--font-title);
+  font-size: 0.85rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  transition:
+    border-color 0.18s ease,
+    filter 0.18s ease,
+    transform 0.18s ease;
+}
+
+.infirmary-action-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.infirmary-action-button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.65);
+  opacity: 0.48;
+}
+
+.infirmary-action-button--gold {
+  border-color: rgba(230, 209, 111, 0.32);
+  background:
+    linear-gradient(180deg, rgba(124, 91, 31, 0.96), rgba(79, 52, 17, 0.94)),
+    rgba(100, 70, 28, 0.9);
+}
+
+.infirmary-action-button--secondary {
+  border-color: rgba(230, 209, 111, 0.3);
+  background:
+    linear-gradient(180deg, rgba(64, 61, 47, 0.9), rgba(25, 31, 24, 0.95)),
+    rgba(38, 43, 35, 0.9);
+  color: #ffe9a6;
+}
+
+@media (max-width: 920px) {
+  .infirmary-page {
+    width: 100%;
+  }
+
+  .infirmary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .infirmary-page {
+    gap: 10px;
+    padding-bottom: 36px;
+  }
+
+  .infirmary-hero.gathering-origin-lore-card--npc {
+    min-height: 0;
+  }
+
+  .infirmary-hero__image {
+    width: min(100%, 150px);
+    max-height: 155px;
+  }
+
+  .infirmary-panel {
+    padding: 14px;
+  }
+
+  .infirmary-panel__heading,
+  .infirmary-vitals {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .infirmary-treatment-card {
+    padding: 12px;
+  }
+
+  .infirmary-action-button {
+    min-height: 44px;
+  }
+}

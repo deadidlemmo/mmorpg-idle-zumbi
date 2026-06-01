@@ -1223,6 +1223,10 @@ function getEventCharacterCurrentHp(event: AutoCombatRealtimeEvent) {
   return getRealtimeEventNumberField(event, 'characterCurrentHp');
 }
 
+function canRealtimeEventIncreaseCharacterHp(eventType: string | null) {
+  return eventType === 'POTION_USED' || eventType === 'AUTO_REST';
+}
+
 function shouldRejectRollbackRealtimeEvent(
   state: AutoCombatRealtimeState,
   event: AutoCombatRealtimeEvent,
@@ -1258,7 +1262,7 @@ function shouldRejectRollbackRealtimeEvent(
     }
   }
 
-  if (eventType !== 'POTION_USED') {
+  if (!canRealtimeEventIncreaseCharacterHp(eventType)) {
     const currentCharacterHp = getOptionalStatusNumber(state.character?.currentHp);
     const eventCharacterHp = getEventCharacterCurrentHp(event);
 

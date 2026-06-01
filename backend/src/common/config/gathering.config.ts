@@ -1,3 +1,8 @@
+import {
+  FREE_IDLE_PROGRESS_LIMIT_SECONDS,
+  PREMIUM_IDLE_PROGRESS_LIMIT_SECONDS,
+} from './membership.config';
+
 export const GATHERING_RATE_BY_TIER: Record<number, number> = {
   1: 90,
   2: 75,
@@ -11,7 +16,10 @@ export const GATHERING_RATE_BY_TIER: Record<number, number> = {
   10: 12,
 };
 
-export const MAX_GATHERING_HOURS_PER_RESOLVE = 24;
+export const MAX_GATHERING_HOURS_PER_RESOLVE =
+  FREE_IDLE_PROGRESS_LIMIT_SECONDS / 3600;
+export const MAX_PREMIUM_GATHERING_HOURS_PER_RESOLVE =
+  PREMIUM_IDLE_PROGRESS_LIMIT_SECONDS / 3600;
 
 export const GATHERING_LEVEL_CAP = 50;
 export const GATHERING_STAT_BONUS_PER_LEVEL = 2;
