@@ -304,6 +304,38 @@ function getXpFeedbackBreakdown(event?: AutoCombatRealtimeEvent | null) {
   };
 }
 
+function getSynchronizedXpFeedbackEvent(
+  events: Array<AutoCombatRealtimeEvent | null | undefined>,
+  visibleScope?: MobFeedbackScope | null,
+) {
+  for (const event of events) {
+    if (!getXpFeedbackBreakdown(event)) {
+      continue;
+    }
+
+    const feedbackScope = getMobFeedbackScopeFromEvent(event);
+
+    if (
+      hasUsefulMobFeedbackScope(feedbackScope) &&
+      hasUsefulMobFeedbackScope(visibleScope) &&
+      hasMobFeedbackScopeMismatch(feedbackScope, visibleScope)
+    ) {
+      continue;
+    }
+
+    if (
+      hasUsefulMobFeedbackScope(visibleScope) &&
+      !hasUsefulMobFeedbackScope(feedbackScope)
+    ) {
+      continue;
+    }
+
+    return event ?? null;
+  }
+
+  return null;
+}
+
 function getMapRarityClassName(tier?: number | string | null) {
   const safeTier = Number(tier);
 
@@ -838,6 +870,9 @@ export function AutoCombatPage() {
   const activeBattleLogEvent = showActiveSession
     ? providerActiveEvent ?? localActiveEvent
     : null;
+  const providerQueuedEvents = showActiveSession
+    ? (realtimeState.eventQueue ?? [])
+    : [];
 
   const visibleMobFeedbackScope = useMemo(
     () =>
@@ -878,6 +913,37 @@ export function AutoCombatPage() {
   const visibleMobFeedbackScopeKey = getMobFeedbackScopeKey(
     visibleMobFeedbackScope,
   );
+  const activeBattleLogEventType = normalizeRealtimeEventType(
+    activeBattleLogEvent?.type,
+  );
+  const activeBattleLogMobHp = getOptionalPositiveInteger(
+    activeBattleLogEvent?.mobCurrentHp,
+  );
+  const visualRealtimeMobHp = getOptionalPositiveInteger(
+    visualRealtimeCombat?.mobCurrentHp,
+  );
+  const canSyncXpFeedbackWithMobDeath =
+    showActiveSession &&
+    (activeBattleLogEventType === 'MOB_DEFEATED' ||
+      activeBattleLogMobHp === 0 ||
+      visualRealtimeMobHp === 0);
+  const synchronizedXpFeedbackEvent = useMemo(() => {
+    if (!canSyncXpFeedbackWithMobDeath) {
+      return null;
+    }
+
+    return getSynchronizedXpFeedbackEvent(
+      [activeBattleLogEvent, ...providerQueuedEvents, ...battleLogEvents],
+      visibleMobFeedbackScope,
+    );
+  }, [
+    activeBattleLogEvent,
+    battleLogEvents,
+    canSyncXpFeedbackWithMobDeath,
+    providerQueuedEvents,
+    visibleMobFeedbackScope,
+    visibleMobFeedbackScopeKey,
+  ]);
 
   useEffect(() => {
     if (!showActiveSession) {
@@ -914,13 +980,13 @@ export function AutoCombatPage() {
       }
     }
 
-    const xpFeedback = getXpFeedbackBreakdown(activeBattleLogEvent);
+    const xpFeedback = getXpFeedbackBreakdown(synchronizedXpFeedbackEvent);
 
-    if (!xpFeedback || !activeBattleLogEvent) {
+    if (!xpFeedback || !synchronizedXpFeedbackEvent) {
       return;
     }
 
-    const eventKey = getRealtimeEventKey(activeBattleLogEvent);
+    const eventKey = getRealtimeEventKey(synchronizedXpFeedbackEvent);
 
     if (xpFeedbackEventKeyRef.current === eventKey) {
       return;
@@ -932,7 +998,7 @@ export function AutoCombatPage() {
     }
 
     xpFeedbackShowTimeoutRef.current = window.setTimeout(() => {
-      setXpFeedbackEvent(activeBattleLogEvent);
+      setXpFeedbackEvent(synchronizedXpFeedbackEvent);
       xpFeedbackShowTimeoutRef.current = null;
     }, 0);
 
@@ -959,6 +1025,7 @@ export function AutoCombatPage() {
     activeBattleLogEvent,
     queueClearXpFeedback,
     showActiveSession,
+    synchronizedXpFeedbackEvent,
     xpFeedbackEvent,
   ]);
 
