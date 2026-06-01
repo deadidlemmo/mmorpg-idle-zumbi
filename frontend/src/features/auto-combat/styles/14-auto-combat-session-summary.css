@@ -222,51 +222,64 @@
 }
 
 .auto-combat-session-summary__card--xp {
-  justify-content: flex-start;
-  min-height: 138px;
-  padding: 0.82rem 0.86rem 0.78rem;
+  justify-content: center;
+  min-height: 82px;
+  gap: 0.22rem;
+  padding: 0.68rem 0.76rem 0.64rem;
   background:
-    radial-gradient(circle at 12% 0, rgba(239, 195, 80, 0.13), transparent 5.8rem),
+    radial-gradient(circle at 9% 0, rgba(239, 195, 80, 0.12), transparent 5.2rem),
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
     rgba(5, 9, 8, 0.34);
   border-color: rgba(229, 182, 63, 0.16);
 }
 
-.auto-combat-session-summary__xp-topline {
+.auto-combat-session-summary__xp-header {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.52rem;
+  gap: 0.48rem;
   width: 100%;
   min-width: 0;
 }
 
-.auto-combat-session-summary__xp-topline > span {
+.auto-combat-session-summary__xp-header > span {
+  display: block;
+  min-width: 0;
   color: rgba(244, 238, 220, 0.9);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.auto-combat-session-summary__premium-status {
+.auto-combat-session-summary .auto-combat-session-summary__premium-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.22rem;
+  gap: 0.2rem;
   flex: 0 1 auto;
   width: fit-content;
-  max-width: 62%;
+  max-width: 54%;
   min-width: 0;
   margin: 0;
-  padding: 0.16rem 0.34rem;
+  padding: 0.12rem 0.3rem;
   border-radius: 999px;
   border: 1px solid rgba(231, 227, 216, 0.08);
   background: rgba(255, 255, 255, 0.035);
   color: rgba(231, 227, 216, 0.68);
   font-size: 0.5rem;
   font-weight: 950;
-  line-height: 1.05;
+  line-height: 1;
   text-transform: uppercase;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.auto-combat-session-summary__premium-status > span {
+.auto-combat-session-summary .auto-combat-session-summary__premium-status > span {
   display: inline;
   min-width: 0;
   color: inherit;
@@ -277,14 +290,14 @@
   text-overflow: ellipsis;
 }
 
-.auto-combat-session-summary__premium-status--active {
+.auto-combat-session-summary .auto-combat-session-summary__premium-status--active {
   border-color: rgba(245, 197, 70, 0.36);
   background: rgba(245, 197, 70, 0.12);
   color: rgba(255, 224, 136, 0.96);
   box-shadow: 0 0 12px rgba(229, 182, 63, 0.1);
 }
 
-.auto-combat-session-summary__premium-status--locked {
+.auto-combat-session-summary .auto-combat-session-summary__premium-status--locked {
   border-color: rgba(245, 197, 70, 0.18);
   background: rgba(245, 197, 70, 0.055);
   color: rgba(226, 184, 86, 0.76);
@@ -293,8 +306,8 @@
 .auto-combat-session-summary__premium-icon.premium-placeholder-icon {
   flex: 0 0 auto;
   display: inline-flex;
-  width: 0.86rem;
-  height: 0.86rem;
+  width: 0.78rem;
+  height: 0.78rem;
   border-color: rgba(247, 207, 106, 0.7);
   background:
     radial-gradient(circle at 32% 24%, rgba(255, 248, 205, 0.86), transparent 0.26rem),
@@ -311,124 +324,78 @@
   width: 100%;
   height: 100%;
   color: #241b08;
-  font-size: 0.5rem;
+  font-size: 0.46rem;
   font-weight: 950;
   line-height: 1;
   text-shadow: none;
 }
 
-.auto-combat-session-summary__xp-total {
+.auto-combat-session-summary__premium-icon--inline.premium-placeholder-icon {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+.auto-combat-session-summary .auto-combat-session-summary__xp-value {
   display: flex;
   align-items: baseline;
-  gap: 0.36rem;
-  margin-top: 0.42rem;
-}
-
-.auto-combat-session-summary__xp-total > span {
+  gap: 0.3rem;
+  margin-top: 0.02rem;
   color: #fff8e8;
-  font-size: 1.42rem;
+  font-size: 1.18rem;
   line-height: 1;
 }
 
-.auto-combat-session-summary__xp-total > em {
+.auto-combat-session-summary__xp-value > em {
   color: rgba(229, 182, 63, 0.82);
   font-family: var(--font-title);
-  font-size: 0.58rem;
+  font-size: 0.5rem;
   font-style: normal;
   font-weight: 950;
   line-height: 1;
   text-transform: uppercase;
 }
 
-.auto-combat-session-summary__xp-breakdown {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.36rem;
-  width: 100%;
-  margin-top: 0.58rem;
-}
-
-.auto-combat-session-summary__xp-chip {
+.auto-combat-session-summary .auto-combat-session-summary__xp-details {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 0.18rem;
+  gap: 0.42rem;
+  width: 100%;
   min-width: 0;
   margin: 0;
-  padding: 0.34rem 0.42rem;
-  border: 1px solid rgba(231, 227, 216, 0.08);
-  border-radius: 0.46rem;
-  background: rgba(0, 0, 0, 0.18);
-}
-
-.auto-combat-session-summary__xp-chip > span,
-.auto-combat-session-summary__xp-chip > strong,
-.auto-combat-session-summary__xp-chip > em {
-  display: inline;
-  color: inherit;
-  font-size: inherit;
-  font-style: normal;
-  line-height: 1;
-}
-
-.auto-combat-session-summary__xp-chip > span {
-  flex: 1 1 auto;
   color: rgba(231, 227, 216, 0.58);
-  font-size: 0.55rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.auto-combat-session-summary__xp-chip > strong {
-  flex: 0 0 auto;
-  margin: 0;
-  color: #fff8e8;
-  font-family: var(--font-title);
-  font-size: 0.72rem;
-  font-weight: 950;
-}
-
-.auto-combat-session-summary__xp-chip > em {
-  flex: 0 0 auto;
-  color: rgba(231, 227, 216, 0.48);
-  font-size: 0.5rem;
-  font-weight: 900;
-}
-
-.auto-combat-session-summary__xp-chip--premium {
-  border-color: rgba(229, 182, 63, 0.18);
-  background: rgba(229, 182, 63, 0.075);
-}
-
-.auto-combat-session-summary__xp-chip--premium > span,
-.auto-combat-session-summary__xp-chip--premium > strong {
-  color: rgba(255, 224, 136, 0.94);
-}
-
-.auto-combat-session-summary__xp-chip--premium-locked {
-  border-style: dashed;
-  background: rgba(229, 182, 63, 0.04);
-  opacity: 0.86;
-}
-
-.auto-combat-session-summary__premium-note {
-  display: block;
-  width: 100%;
-  margin-top: 0.42rem;
-  color: rgba(231, 227, 216, 0.58);
-  font-size: 0.57rem;
+  font-size: 0.58rem;
   font-weight: 800;
-  line-height: 1.18;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.auto-combat-session-summary__premium-note--active {
-  color: rgba(255, 224, 136, 0.72);
+.auto-combat-session-summary__xp-details > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  min-width: 0;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  white-space: nowrap;
 }
 
-.auto-combat-session-summary__premium-note--locked {
-  color: rgba(226, 184, 86, 0.72);
+.auto-combat-session-summary__xp-details
+  > .auto-combat-session-summary__xp-premium-detail {
+  flex: 1 1 auto;
+  color: rgba(255, 224, 136, 0.88);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.auto-combat-session-summary__xp-details
+  > .auto-combat-session-summary__xp-premium-detail--locked {
+  color: rgba(226, 184, 86, 0.74);
 }
 
 /* =========================================================
@@ -448,7 +415,7 @@
   }
 
   .auto-combat-session-summary__card--xp {
-    min-height: 130px;
+    min-height: 78px;
   }
 
   .auto-combat-session-summary span {
@@ -463,16 +430,8 @@
     font-size: 0.61rem;
   }
 
-  .auto-combat-session-summary__xp-total > span {
-    font-size: 1.32rem;
-  }
-
-  .auto-combat-session-summary__xp-chip > span {
-    font-size: 0.52rem;
-  }
-
-  .auto-combat-session-summary__xp-chip > strong {
-    font-size: 0.68rem;
+  .auto-combat-session-summary .auto-combat-session-summary__xp-value {
+    font-size: 1.12rem;
   }
 }
 
@@ -507,7 +466,7 @@
   }
 
   .auto-combat-session-summary__card--xp {
-    min-height: 126px;
+    min-height: 74px;
   }
 
   .auto-combat-session-summary span {
@@ -525,41 +484,20 @@
     line-height: 1.14;
   }
 
-  .auto-combat-session-summary__xp-topline {
+  .auto-combat-session-summary__xp-header {
     gap: 0.38rem;
   }
 
-  .auto-combat-session-summary__premium-status {
+  .auto-combat-session-summary .auto-combat-session-summary__premium-status {
     max-width: 58%;
     font-size: 0.48rem;
   }
 
-  .auto-combat-session-summary__xp-total {
-    margin-top: 0.36rem;
+  .auto-combat-session-summary .auto-combat-session-summary__xp-value {
+    font-size: 1.06rem;
   }
 
-  .auto-combat-session-summary__xp-total > span {
-    font-size: 1.24rem;
-  }
-
-  .auto-combat-session-summary__xp-breakdown {
-    gap: 0.28rem;
-    margin-top: 0.48rem;
-  }
-
-  .auto-combat-session-summary__xp-chip {
-    padding: 0.3rem 0.34rem;
-  }
-
-  .auto-combat-session-summary__xp-chip > span {
-    font-size: 0.5rem;
-  }
-
-  .auto-combat-session-summary__xp-chip > strong {
-    font-size: 0.64rem;
-  }
-
-  .auto-combat-session-summary__premium-note {
+  .auto-combat-session-summary .auto-combat-session-summary__xp-details {
     font-size: 0.52rem;
   }
 }
@@ -576,7 +514,7 @@
   }
 
   .auto-combat-session-summary__card--xp {
-    min-height: 122px;
+    min-height: 70px;
   }
 
   .auto-combat-session-summary span {
@@ -591,21 +529,21 @@
     font-size: 0.54rem;
   }
 
-  .auto-combat-session-summary__premium-status > span {
+  .auto-combat-session-summary .auto-combat-session-summary__premium-status > span {
     display: none;
   }
 
-  .auto-combat-session-summary__premium-status {
+  .auto-combat-session-summary .auto-combat-session-summary__premium-status {
     max-width: none;
     padding: 0.14rem;
   }
 
-  .auto-combat-session-summary__xp-total > span {
-    font-size: 1.16rem;
+  .auto-combat-session-summary .auto-combat-session-summary__xp-value {
+    font-size: 1rem;
   }
 
-  .auto-combat-session-summary__xp-chip {
-    gap: 0.14rem;
+  .auto-combat-session-summary .auto-combat-session-summary__xp-details {
+    gap: 0.28rem;
   }
 }
 

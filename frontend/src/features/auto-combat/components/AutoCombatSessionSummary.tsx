@@ -25,21 +25,14 @@ export function AutoCombatSessionSummary({
   baseXpGained,
   premiumBonusXp,
   premiumPotentialBonusXp,
-  premiumTotalXp,
   isPremiumActive,
   totalLoot,
   potionsUsed,
 }: AutoCombatSessionSummaryProps) {
-  const premiumDisplayXp = isPremiumActive
-    ? premiumBonusXp
-    : premiumPotentialBonusXp;
-  const premiumStatusText = isPremiumActive
-    ? 'Bônus Premium ativo'
-    : 'Premium bloqueado';
-  const premiumBreakdownLabel = isPremiumActive ? 'Premium' : 'Potencial';
-  const premiumNoteText = isPremiumActive
-    ? `Premium: +${premiumBonusXp} EXP aplicado`
-    : `Com Premium: ${premiumTotalXp} EXP total`;
+  const premiumStatusText = isPremiumActive ? 'Ativo' : 'Potencial';
+  const premiumDetailText = isPremiumActive
+    ? `+${premiumBonusXp} EXP Premium`
+    : `+${premiumPotentialBonusXp} EXP com Premium`;
 
   return (
     <article className="auto-combat-session-panel">
@@ -70,7 +63,7 @@ export function AutoCombatSessionSummary({
               : 'auto-combat-session-summary__card--xp-free',
           ].join(' ')}
         >
-          <span className="auto-combat-session-summary__xp-topline">
+          <div className="auto-combat-session-summary__xp-header">
             <span>XP ganho</span>
             <small
               className={[
@@ -83,44 +76,26 @@ export function AutoCombatSessionSummary({
               <PremiumPlaceholderIcon className="auto-combat-session-summary__premium-icon" />
               <span>{premiumStatusText}</span>
             </small>
-          </span>
+          </div>
 
-          <strong className="auto-combat-session-summary__xp-total">
-            <span>{totalXpGained}</span>
+          <strong className="auto-combat-session-summary__xp-value">
+            {totalXpGained}
             <em>EXP total</em>
           </strong>
 
-          <span className="auto-combat-session-summary__xp-breakdown">
-            <small className="auto-combat-session-summary__xp-chip auto-combat-session-summary__xp-chip--base">
-              <span>Base</span>
-              <strong>{baseXpGained}</strong>
-              <em>EXP</em>
-            </small>
-
-            <small
+          <small className="auto-combat-session-summary__xp-details">
+            <span>Base: {baseXpGained} EXP</span>
+            <span
               className={[
-                'auto-combat-session-summary__xp-chip',
-                'auto-combat-session-summary__xp-chip--premium',
+                'auto-combat-session-summary__xp-premium-detail',
                 isPremiumActive
-                  ? 'auto-combat-session-summary__xp-chip--premium-active'
-                  : 'auto-combat-session-summary__xp-chip--premium-locked',
+                  ? 'auto-combat-session-summary__xp-premium-detail--active'
+                  : 'auto-combat-session-summary__xp-premium-detail--locked',
               ].join(' ')}
             >
-              <span>{premiumBreakdownLabel}</span>
-              <strong>+{premiumDisplayXp}</strong>
-              <em>EXP</em>
-            </small>
-          </span>
-
-          <small
-            className={[
-              'auto-combat-session-summary__premium-note',
-              isPremiumActive
-                ? 'auto-combat-session-summary__premium-note--active'
-                : 'auto-combat-session-summary__premium-note--locked',
-            ].join(' ')}
-          >
-            {premiumNoteText}
+              <PremiumPlaceholderIcon className="auto-combat-session-summary__premium-icon auto-combat-session-summary__premium-icon--inline" />
+              {premiumDetailText}
+            </span>
           </small>
         </div>
 
