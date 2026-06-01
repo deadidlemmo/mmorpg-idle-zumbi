@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useParams, useSearchParams } from 'react-router-dom';
+import { PremiumPlaceholderIcon } from '../../../components/PremiumPlaceholderIcon';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
 import '../../dashboard/dashboard.css';
@@ -137,6 +138,52 @@ function getRealtimeFeedbackDamage(event?: AutoCombatRealtimeEvent | null) {
   return damage > 0 ? damage : 0;
 }
 
+function getOptionalPositiveInteger(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Math.floor(Number(value));
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function getXpFeedbackBreakdown(event?: AutoCombatRealtimeEvent | null) {
+  const eventType = normalizeRealtimeEventType(event?.type);
+
+  if (!event || eventType !== 'MOB_DEFEATED') {
+    return null;
+  }
+
+  const totalXp = getOptionalPositiveInteger(event.xpGained);
+
+  if (!totalXp || totalXp <= 0) {
+    return null;
+  }
+
+  const baseXp = getOptionalPositiveInteger(event.baseXpGained) ?? totalXp;
+  const premiumBonusXp =
+    getOptionalPositiveInteger(event.premiumBonusXp) ?? 0;
+  const premiumPotentialBonusXp =
+    getOptionalPositiveInteger(event.premiumPotentialBonusXp) ?? 0;
+  const premiumTotalXp =
+    getOptionalPositiveInteger(event.premiumTotalXp) ??
+    baseXp + Math.max(premiumBonusXp, premiumPotentialBonusXp);
+
+  return {
+    baseXp,
+    totalXp,
+    premiumBonusXp,
+    premiumPotentialBonusXp,
+    premiumTotalXp,
+    isPremiumActive: Boolean(event.isPremiumActive || premiumBonusXp > 0),
+  };
+}
+
 function getMapRarityClassName(tier?: number | string | null) {
   const safeTier = Number(tier);
 
@@ -263,6 +310,8 @@ export function AutoCombatPage() {
   >([]);
   const [localActiveEvent, setLocalActiveEvent] =
     useState<AutoCombatRealtimeEvent | null>(null);
+  const [xpFeedbackEvent, setXpFeedbackEvent] =
+    useState<AutoCombatRealtimeEvent | null>(null);
 
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -274,6 +323,9 @@ export function AutoCombatPage() {
   const selectedPotionItemIdRef = useRef('');
   const hasPendingRealtimeVisualRef = useRef(false);
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
+  const xpFeedbackShowTimeoutRef = useRef<number | null>(null);
+  const xpFeedbackTimeoutRef = useRef<number | null>(null);
+  const xpFeedbackEventKeyRef = useRef('');
   const stableActiveMobRef = useRef<{
     sessionId: string | null;
     name: string;
@@ -295,9 +347,19 @@ export function AutoCombatPage() {
     setLocalSessionTotals(null);
     setLocalBattleLogEvents([]);
     setLocalActiveEvent(null);
+    setXpFeedbackEvent(null);
     setIsPotionConfigPanelOpen(false);
     setPotionConfigMessage('');
     processedPotionEventKeysRef.current.clear();
+    xpFeedbackEventKeyRef.current = '';
+    if (xpFeedbackTimeoutRef.current !== null) {
+      window.clearTimeout(xpFeedbackTimeoutRef.current);
+      xpFeedbackTimeoutRef.current = null;
+    }
+    if (xpFeedbackShowTimeoutRef.current !== null) {
+      window.clearTimeout(xpFeedbackShowTimeoutRef.current);
+      xpFeedbackShowTimeoutRef.current = null;
+    }
     stableActiveMobRef.current = null;
   }, [characterId]);
 
@@ -642,6 +704,82 @@ export function AutoCombatPage() {
   const activeBattleLogEvent = showActiveSession
     ? providerActiveEvent ?? localActiveEvent
     : null;
+
+  useEffect(() => {
+    if (!showActiveSession) {
+      xpFeedbackEventKeyRef.current = '';
+
+      if (xpFeedbackTimeoutRef.current !== null) {
+        window.clearTimeout(xpFeedbackTimeoutRef.current);
+        xpFeedbackTimeoutRef.current = null;
+      }
+
+      if (xpFeedbackShowTimeoutRef.current !== null) {
+        window.clearTimeout(xpFeedbackShowTimeoutRef.current);
+      }
+
+      xpFeedbackShowTimeoutRef.current = window.setTimeout(() => {
+        setXpFeedbackEvent(null);
+        xpFeedbackShowTimeoutRef.current = null;
+      }, 0);
+
+      return;
+    }
+
+    const xpFeedback = getXpFeedbackBreakdown(activeBattleLogEvent);
+
+    if (!xpFeedback || !activeBattleLogEvent) {
+      return;
+    }
+
+    const eventKey = getRealtimeEventKey(activeBattleLogEvent);
+
+    if (xpFeedbackEventKeyRef.current === eventKey) {
+      return;
+    }
+
+    xpFeedbackEventKeyRef.current = eventKey;
+    if (xpFeedbackShowTimeoutRef.current !== null) {
+      window.clearTimeout(xpFeedbackShowTimeoutRef.current);
+    }
+
+    xpFeedbackShowTimeoutRef.current = window.setTimeout(() => {
+      setXpFeedbackEvent(activeBattleLogEvent);
+      xpFeedbackShowTimeoutRef.current = null;
+    }, 0);
+
+    if (xpFeedbackTimeoutRef.current !== null) {
+      window.clearTimeout(xpFeedbackTimeoutRef.current);
+    }
+
+    xpFeedbackTimeoutRef.current = window.setTimeout(() => {
+      setXpFeedbackEvent((currentEvent) => {
+        if (!currentEvent || getRealtimeEventKey(currentEvent) === eventKey) {
+          return null;
+        }
+
+        return currentEvent;
+      });
+
+      if (xpFeedbackEventKeyRef.current === eventKey) {
+        xpFeedbackEventKeyRef.current = '';
+      }
+
+      xpFeedbackTimeoutRef.current = null;
+    }, 2800);
+  }, [activeBattleLogEvent, showActiveSession]);
+
+  useEffect(() => {
+    return () => {
+      if (xpFeedbackTimeoutRef.current !== null) {
+        window.clearTimeout(xpFeedbackTimeoutRef.current);
+      }
+
+      if (xpFeedbackShowTimeoutRef.current !== null) {
+        window.clearTimeout(xpFeedbackShowTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -1470,6 +1608,14 @@ export function AutoCombatPage() {
   const mobDamageKey = shouldShowMobDamage
     ? `mob-damage-${realtimeFeedbackEventKey}`
     : '';
+
+  const xpFeedbackBreakdown = getXpFeedbackBreakdown(xpFeedbackEvent);
+  const shouldShowXpFeedback =
+    showActiveSession && Boolean(xpFeedbackBreakdown && xpFeedbackEvent);
+  const xpFeedbackKey =
+    shouldShowXpFeedback && xpFeedbackEvent
+      ? `mob-xp-${getRealtimeEventKey(xpFeedbackEvent)}`
+      : '';
 
   const playerFighterClassName = [
     'auto-combat-fighter-card',
@@ -2346,6 +2492,30 @@ export function AutoCombatPage() {
                         className={mobFighterClassName}
                         data-fighter-role="mob"
                       >
+                        {shouldShowXpFeedback && xpFeedbackBreakdown ? (
+                          <div
+                            key={xpFeedbackKey}
+                            className="auto-combat-xp-feedback"
+                            role="status"
+                            aria-live="polite"
+                          >
+                            <strong>+{xpFeedbackBreakdown.totalXp} EXP</strong>
+
+                            <div className="auto-combat-xp-feedback__details">
+                              <span>Base {xpFeedbackBreakdown.baseXp}</span>
+
+                              <span className="auto-combat-xp-feedback__premium">
+                                <PremiumPlaceholderIcon className="auto-combat-xp-feedback__premium-icon" />
+                                {xpFeedbackBreakdown.isPremiumActive
+                                  ? `Premium +${xpFeedbackBreakdown.premiumBonusXp}`
+                                  : `Com Premium +${xpFeedbackBreakdown.premiumPotentialBonusXp}`}
+                              </span>
+
+                              <span>Total {xpFeedbackBreakdown.totalXp} EXP</span>
+                            </div>
+                          </div>
+                        ) : null}
+
                         {shouldShowMobDamage ? (
                           <span
                             key={mobDamageKey}

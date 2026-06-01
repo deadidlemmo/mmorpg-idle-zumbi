@@ -4,6 +4,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import discordIcon from '../../../assets/images/brand/discord.png';
 import cashIcon from '../../../assets/images/coins/cash.png';
 import goldIcon from '../../../assets/images/coins/gold.png';
+import { PremiumPlaceholderIcon } from '../../../components/PremiumPlaceholderIcon';
 import { removeAuthToken } from '../../../services/api/authToken';
 import { getOnlinePlayersStatus } from '../api/dashboard.api';
 import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
@@ -40,6 +41,7 @@ interface DashboardNavItem {
   label: string;
   path: string;
   icon: string;
+  isPremium?: boolean;
 }
 
 type DashboardGatheringOrigin =
@@ -321,6 +323,7 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     label: 'Premium',
     path: 'membership',
     icon: 'P',
+    isPremium: true,
   },
   {
     label: 'Mapas',
@@ -390,6 +393,31 @@ function DiscordMark() {
       aria-hidden="true"
       className="dashboard-sidebar__discord-icon"
     />
+  );
+}
+
+function getDashboardNavLinkClassName(
+  item: DashboardNavItem,
+  isActive: boolean,
+) {
+  return [
+    'dashboard-sidebar__link',
+    item.isPremium ? 'dashboard-sidebar__link--premium' : '',
+    isActive ? 'is-active' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function DashboardNavIcon({ item }: { item: DashboardNavItem }) {
+  return (
+    <span className="dashboard-sidebar__link-icon" aria-hidden="true">
+      {item.isPremium ? (
+        <PremiumPlaceholderIcon className="dashboard-sidebar__premium-icon" />
+      ) : (
+        item.icon
+      )}
+    </span>
   );
 }
 
@@ -1401,10 +1429,10 @@ function DashboardLayoutContent({
                   end={!item.path}
                   onClick={closeSidebar}
                   className={({ isActive }) =>
-                    `dashboard-sidebar__link ${isActive ? 'is-active' : ''}`
+                    getDashboardNavLinkClassName(item, isActive)
                   }
                 >
-                  <span aria-hidden="true">{item.icon}</span>
+                  <DashboardNavIcon item={item} />
                   <strong>{item.label}</strong>
                 </NavLink>
               );
@@ -1435,7 +1463,7 @@ function DashboardLayoutContent({
                   aria-expanded={isGatheringMenuOpen}
                   aria-controls="dashboard-gathering-subnav"
                 >
-                  <span aria-hidden="true">
+                  <span className="dashboard-sidebar__link-icon" aria-hidden="true">
                     {DASHBOARD_GATHERING_NAV_ITEM.icon}
                   </span>
                   <strong>{DASHBOARD_GATHERING_NAV_ITEM.label}</strong>
@@ -1505,10 +1533,10 @@ function DashboardLayoutContent({
                   to={to}
                   onClick={closeSidebar}
                   className={({ isActive }) =>
-                    `dashboard-sidebar__link ${isActive ? 'is-active' : ''}`
+                    getDashboardNavLinkClassName(item, isActive)
                   }
                 >
-                  <span aria-hidden="true">{item.icon}</span>
+                  <DashboardNavIcon item={item} />
                   <strong>{item.label}</strong>
                 </NavLink>
               );
@@ -1530,10 +1558,10 @@ function DashboardLayoutContent({
                   to={to}
                   onClick={closeSidebar}
                   className={({ isActive }) =>
-                    `dashboard-sidebar__link ${isActive ? 'is-active' : ''}`
+                    getDashboardNavLinkClassName(item, isActive)
                   }
                 >
-                  <span aria-hidden="true">{item.icon}</span>
+                  <DashboardNavIcon item={item} />
                   <strong>{item.label}</strong>
                 </NavLink>
               );

@@ -133,6 +133,11 @@ export interface AutoCombatRealtimeEvent {
    * EXP / level em tempo real.
    */
   xpGained?: number | null;
+  baseXpGained?: number | null;
+  premiumBonusXp?: number | null;
+  premiumPotentialBonusXp?: number | null;
+  premiumTotalXp?: number | null;
+  isPremiumActive?: boolean | null;
   characterXp?: number | null;
   characterLevel?: number | null;
   totalXp?: number | null;

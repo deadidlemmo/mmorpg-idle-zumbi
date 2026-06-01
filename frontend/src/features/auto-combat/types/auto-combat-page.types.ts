@@ -351,6 +351,11 @@ export type AutoCombatRealtimeEventLoose = AutoCombatRealtimeEvent & {
   characterXp?: number | null;
   characterLevel?: number | null;
   totalXp?: number | null;
+  baseXpGained?: number | null;
+  premiumBonusXp?: number | null;
+  premiumPotentialBonusXp?: number | null;
+  premiumTotalXp?: number | null;
+  isPremiumActive?: boolean | null;
 
   totalCombats?: number | null;
   totalRounds?: number | null;

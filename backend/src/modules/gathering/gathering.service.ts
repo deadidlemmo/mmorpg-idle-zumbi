@@ -25,7 +25,10 @@ import {
 } from '../../common/config/gathering.config';
 import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
 import { calculateGatheringReward } from '../../common/utils/gathering.util';
-import { isPremiumActive } from '../../common/utils/membership.util';
+import {
+  applyPremiumXpBonus,
+  isPremiumActive,
+} from '../../common/utils/membership.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StartGatheringDto } from './dto/start-gathering.dto';
 
@@ -183,6 +186,7 @@ function calculateSessionGatheringXp(params: {
   quantityGained: number;
   xpPerUnit: number;
   isAffinity: boolean;
+  isPremium: boolean;
 }) {
   const previousQuantity = Math.max(0, Math.floor(params.previousQuantity));
   const previousXp = Math.max(0, Math.floor(params.previousXp));
@@ -190,9 +194,13 @@ function calculateSessionGatheringXp(params: {
   const xpPerUnit = Math.max(1, Math.floor(params.xpPerUnit));
   const totalQuantity = previousQuantity + quantityGained;
   const baseTotalXp = totalQuantity * xpPerUnit;
-  const expectedTotalXp = params.isAffinity
+  const affinityAdjustedTotalXp = params.isAffinity
     ? Math.floor(baseTotalXp * GATHERING_AFFINITY_XP_MULTIPLIER)
     : baseTotalXp;
+  const expectedTotalXp = applyPremiumXpBonus(
+    affinityAdjustedTotalXp,
+    params.isPremium,
+  );
 
   return Math.max(0, expectedTotalXp - previousXp);
 }
@@ -714,9 +722,9 @@ export class GatheringService {
     });
 
     const now = new Date();
-    const idleProgressLimitSeconds = getIdleProgressLimitSeconds(
-      isPremiumActive(session.character.user, now),
-    );
+    const premiumActive = isPremiumActive(session.character.user, now);
+    const idleProgressLimitSeconds =
+      getIdleProgressLimitSeconds(premiumActive);
     const rawElapsedSeconds = Math.max(
       0,
       (now.getTime() - session.lastResolvedAt.getTime()) / 1000,
@@ -745,6 +753,7 @@ export class GatheringService {
       quantityGained: reward.quantity,
       xpPerUnit: gatheringXpPerUnit,
       isAffinity: affinity,
+      isPremium: premiumActive,
     });
 
     const gatheringProgressPreview = applyGatheringXp({

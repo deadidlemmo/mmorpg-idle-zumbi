@@ -24,7 +24,10 @@ import {
 } from '../../common/config/crafting.config';
 import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
-import { isPremiumActive } from '../../common/utils/membership.util';
+import {
+  applyPremiumXpBonus,
+  isPremiumActive,
+} from '../../common/utils/membership.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CraftItemDto } from './dto/craft-item.dto';
 
@@ -186,9 +189,9 @@ export class CraftingService {
       throw new ForbiddenException('Você não pode acessar este personagem.');
     }
 
-    const maxIdleCraftingDurationSeconds = getIdleProgressLimitSeconds(
-      isPremiumActive(character.user),
-    );
+    const premiumActive = isPremiumActive(character.user);
+    const maxIdleCraftingDurationSeconds =
+      getIdleProgressLimitSeconds(premiumActive);
 
     const resolvedCraftingSessions =
       await this.resolveCompletedCraftingSessions(characterId);
@@ -379,8 +382,9 @@ export class CraftingService {
       );
       const isUnlocked = craftingSkill.level >= requiredCraftingLevel;
       const canCraft = hasRequiredMaterials && isUnlocked;
-      const craftingXpReward = getCraftingXpRewardForTier(
-        recipe.outputItem.tier,
+      const craftingXpReward = applyPremiumXpBonus(
+        getCraftingXpRewardForTier(recipe.outputItem.tier),
+        premiumActive,
       );
       const craftingDurationSeconds = getCraftingDurationSecondsForTier(
         recipe.outputItem.tier,
@@ -920,15 +924,18 @@ export class CraftingService {
       });
     }
 
+    const premiumActive = isPremiumActive(character.user);
     const craftingXpGained =
-      getCraftingXpRewardForTier(recipe.outputItem.tier) * craftQuantity;
+      applyPremiumXpBonus(
+        getCraftingXpRewardForTier(recipe.outputItem.tier),
+        premiumActive,
+      ) * craftQuantity;
     const durationSeconds = getCraftingDurationSecondsForTier(
       recipe.outputItem.tier,
       craftQuantity,
     );
-    const maxIdleCraftingDurationSeconds = getIdleProgressLimitSeconds(
-      isPremiumActive(character.user),
-    );
+    const maxIdleCraftingDurationSeconds =
+      getIdleProgressLimitSeconds(premiumActive);
 
     if (durationSeconds > maxIdleCraftingDurationSeconds) {
       throw new BadRequestException({

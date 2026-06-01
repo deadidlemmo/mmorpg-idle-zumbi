@@ -9,7 +9,13 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     allowedHosts: [
-      'regression-diana-armed-dome.trycloudflare.com',
+      'localhost',
+      '127.0.0.1',
+      '.trycloudflare.com',
     ],
+    hmr: {
+      protocol: 'wss',
+      clientPort: 443,
+    },
   },
 })

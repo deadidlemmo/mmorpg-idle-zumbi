@@ -30,7 +30,11 @@ import {
   calculateLevelProgress,
   getLevelProgress,
 } from '../../common/utils/level.util';
-import { isPremiumActive } from '../../common/utils/membership.util';
+import {
+  applyPremiumXpBonus,
+  calculatePremiumXpBreakdown,
+  isPremiumActive,
+} from '../../common/utils/membership.util';
 import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
@@ -158,6 +162,11 @@ type AutoCombatRealtimeEvent = {
   isDodged?: boolean;
 
   xpGained?: number;
+  baseXpGained?: number;
+  premiumBonusXp?: number;
+  premiumPotentialBonusXp?: number;
+  premiumTotalXp?: number;
+  isPremiumActive?: boolean;
   characterXp?: number;
   characterLevel?: number;
 
@@ -1451,6 +1460,11 @@ export class AutoCombatService implements OnModuleDestroy {
         character: {
           include: {
             class: true,
+            user: {
+              select: {
+                premiumUntil: true,
+              },
+            },
             equipment: {
               include: {
                 mainHand: true,
@@ -2496,6 +2510,7 @@ export class AutoCombatService implements OnModuleDestroy {
     const loots: LootAccumulator = new Map();
     const mobSummaries: MobSummaryAccumulator = new Map();
     const events: AutoCombatRealtimeEvent[] = [];
+    const premiumActive = isPremiumActive(session.character.user);
 
     const currentMob = session.currentMob;
 
@@ -2659,6 +2674,11 @@ export class AutoCombatService implements OnModuleDestroy {
           mobId: payload.mobId,
           mobName: payload.mobName,
           xpGained: payload.xpGained,
+          baseXpGained: payload.baseXpGained,
+          premiumBonusXp: payload.premiumBonusXp,
+          premiumPotentialBonusXp: payload.premiumPotentialBonusXp,
+          premiumTotalXp: payload.premiumTotalXp,
+          isPremiumActive: payload.isPremiumActive,
           characterXp: payload.characterXp,
           characterLevel: payload.characterLevel,
           totalXp: payload.totalXp,
@@ -2919,10 +2939,15 @@ export class AutoCombatService implements OnModuleDestroy {
 
       const penalty = calculateTierFarmPenalty(simulatedLevel, currentMob.tier);
 
-      const finalXpReward = applyXpPenalty(
+      const baseXpReward = applyXpPenalty(
         currentMob.xpReward,
         penalty.xpMultiplier,
       );
+      const xpBreakdown = calculatePremiumXpBreakdown(
+        baseXpReward,
+        premiumActive,
+      );
+      const finalXpReward = xpBreakdown.totalXp;
 
       xpGained += finalXpReward;
 
@@ -3011,6 +3036,11 @@ export class AutoCombatService implements OnModuleDestroy {
         characterCurrentHp: playerHp,
         characterMaxHp: simulatedMaxHp,
         xpGained: finalXpReward,
+        baseXpGained: xpBreakdown.baseXp,
+        premiumBonusXp: xpBreakdown.premiumBonusXp,
+        premiumPotentialBonusXp: xpBreakdown.premiumPotentialBonusXp,
+        premiumTotalXp: xpBreakdown.premiumTotalXp,
+        isPremiumActive: xpBreakdown.isPremiumActive,
         characterXp: simulatedXp,
         characterLevel: simulatedLevel,
         ...realtimeXpPayload,
@@ -3372,6 +3402,11 @@ export class AutoCombatService implements OnModuleDestroy {
         character: {
           include: {
             class: true,
+            user: {
+              select: {
+                premiumUntil: true,
+              },
+            },
           },
         },
         subMap: {
@@ -3998,8 +4033,9 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     const now = new Date();
+    const premiumActive = isPremiumActive(session.character.user, now);
     const maxProjectionSeconds = getIdleProgressLimitSeconds(
-      isPremiumActive(session.character.user, now),
+      premiumActive,
     );
 
     const projectionSeconds = this.clampNumber(
@@ -4139,9 +4175,9 @@ export class AutoCombatService implements OnModuleDestroy {
 
         const penalty = calculateTierFarmPenalty(simulatedLevel, mob.tier);
 
-        const finalXpReward = applyXpPenalty(
-          mob.xpReward,
-          penalty.xpMultiplier,
+        const finalXpReward = applyPremiumXpBonus(
+          applyXpPenalty(mob.xpReward, penalty.xpMultiplier),
+          premiumActive,
         );
 
         totalXp += finalXpReward;
@@ -4505,6 +4541,11 @@ export class AutoCombatService implements OnModuleDestroy {
     isDodged?: boolean;
 
     xpGained?: number;
+    baseXpGained?: number;
+    premiumBonusXp?: number;
+    premiumPotentialBonusXp?: number;
+    premiumTotalXp?: number;
+    isPremiumActive?: boolean;
     characterXp?: number;
     characterLevel?: number;
 
@@ -4583,6 +4624,11 @@ export class AutoCombatService implements OnModuleDestroy {
       isDodged: params.isDodged ?? false,
 
       xpGained: params.xpGained,
+      baseXpGained: params.baseXpGained,
+      premiumBonusXp: params.premiumBonusXp,
+      premiumPotentialBonusXp: params.premiumPotentialBonusXp,
+      premiumTotalXp: params.premiumTotalXp,
+      isPremiumActive: params.isPremiumActive,
       characterXp: params.characterXp,
       characterLevel: params.characterLevel,
 

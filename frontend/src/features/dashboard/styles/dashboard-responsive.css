@@ -1206,7 +1206,7 @@
   }
 
   .dashboard-sidebar__link {
-    min-height: 38px;
+    min-height: var(--dashboard-sidebar-link-height);
   }
 
   .dashboard-sidebar__bottom {
@@ -1225,10 +1225,10 @@
   }
 
   .dashboard-sidebar__link {
-    min-height: 37px;
+    min-height: var(--dashboard-sidebar-link-height);
   }
 
   .dashboard-sidebar__subitem {
-    min-height: 32px;
+    min-height: 36px;
   }
 }
