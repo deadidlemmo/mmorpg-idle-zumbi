@@ -380,6 +380,15 @@ type AutoCombatPreview = {
   };
 };
 
+type SessionXpBreakdown = {
+  totalXpGained: number;
+  baseXpGained: number;
+  premiumBonusXp: number;
+  premiumPotentialBonusXp: number;
+  premiumTotalXp: number;
+  isPremiumActive: boolean;
+};
+
 type SessionSummary = {
   status: AutoCombatSessionStatus;
   statusText: string;
@@ -409,6 +418,11 @@ type SessionSummary = {
 
   progression: {
     totalXpGained: number;
+    baseXpGained: number;
+    premiumBonusXp: number;
+    premiumPotentialBonusXp: number;
+    premiumTotalXp: number;
+    isPremiumActive: boolean;
     xpPerMinute: number;
   };
 
@@ -3445,10 +3459,13 @@ export class AutoCombatService implements OnModuleDestroy {
       now,
     );
 
+    const xpBreakdown = await this.buildSessionXpBreakdown(session, now);
+
     const sessionSummary = this.buildSessionSummary(
       session,
       remainingSeconds,
       now,
+      xpBreakdown,
     );
 
     const currentMobHp =
@@ -3511,6 +3528,11 @@ export class AutoCombatService implements OnModuleDestroy {
         totalCombatsResolved: session.totalCombatsResolved,
         totalRoundsResolved: session.totalRoundsResolved,
         totalXpGained: session.totalXpGained,
+        baseXpGained: xpBreakdown.baseXpGained,
+        premiumBonusXp: xpBreakdown.premiumBonusXp,
+        premiumPotentialBonusXp: xpBreakdown.premiumPotentialBonusXp,
+        premiumTotalXp: xpBreakdown.premiumTotalXp,
+        isPremiumActive: xpBreakdown.isPremiumActive,
         totalPotionsUsed: session.totalPotionsUsed ?? 0,
 
         totalCombats: session.totalCombatsResolved,
@@ -3605,10 +3627,69 @@ export class AutoCombatService implements OnModuleDestroy {
     };
   }
 
+  private async buildSessionXpBreakdown(
+    session: {
+      id: string;
+      totalXpGained?: number | null;
+      character: {
+        user?: {
+          premiumUntil?: Date | string | null;
+        } | null;
+      };
+    },
+    now = new Date(),
+  ): Promise<SessionXpBreakdown> {
+    const totalXpGained = Math.max(0, Math.floor(session.totalXpGained ?? 0));
+    const isPremium = isPremiumActive(session.character.user, now);
+    const [aggregate] = await this.prisma.$queryRaw<
+      Array<{
+        baseXpGained: number | bigint | null;
+        premiumBonusXp: number | bigint | null;
+        premiumPotentialBonusXp: number | bigint | null;
+        premiumTotalXp: number | bigint | null;
+      }>
+    >(Prisma.sql`
+      SELECT
+        COALESCE(SUM(COALESCE(("payloadJson" ->> 'baseXpGained')::int, 0)), 0) AS "baseXpGained",
+        COALESCE(SUM(COALESCE(("payloadJson" ->> 'premiumBonusXp')::int, 0)), 0) AS "premiumBonusXp",
+        COALESCE(SUM(COALESCE(("payloadJson" ->> 'premiumPotentialBonusXp')::int, 0)), 0) AS "premiumPotentialBonusXp",
+        COALESCE(SUM(COALESCE(("payloadJson" ->> 'premiumTotalXp')::int, 0)), 0) AS "premiumTotalXp"
+      FROM "auto_combat_session_events"
+      WHERE "sessionId" = ${session.id}
+        AND "type" = 'MOB_DEFEATED'
+    `);
+
+    let baseXpGained = this.getJsonInteger(aggregate?.baseXpGained);
+    const premiumBonusXp = this.getJsonInteger(aggregate?.premiumBonusXp);
+    const premiumPotentialBonusXp = this.getJsonInteger(
+      aggregate?.premiumPotentialBonusXp,
+    );
+    let premiumTotalXp = this.getJsonInteger(aggregate?.premiumTotalXp);
+
+    if (baseXpGained <= 0 && totalXpGained > 0) {
+      baseXpGained = Math.max(0, totalXpGained - premiumBonusXp);
+    }
+
+    if (premiumTotalXp <= 0) {
+      premiumTotalXp =
+        baseXpGained + Math.max(premiumBonusXp, premiumPotentialBonusXp);
+    }
+
+    return {
+      totalXpGained,
+      baseXpGained,
+      premiumBonusXp,
+      premiumPotentialBonusXp,
+      premiumTotalXp,
+      isPremiumActive: isPremium,
+    };
+  }
+
   private buildSessionSummary(
     session: any,
     remainingSeconds: number,
     now = new Date(),
+    xpBreakdown?: SessionXpBreakdown,
   ): SessionSummary {
     const status = session.status as AutoCombatSessionStatus;
 
@@ -3635,6 +3716,14 @@ export class AutoCombatService implements OnModuleDestroy {
     const totalCombats = session.totalCombatsResolved ?? 0;
     const totalRounds = session.totalRoundsResolved ?? 0;
     const totalXpGained = session.totalXpGained ?? 0;
+    const progressionBreakdown = xpBreakdown ?? {
+      totalXpGained,
+      baseXpGained: totalXpGained,
+      premiumBonusXp: 0,
+      premiumPotentialBonusXp: 0,
+      premiumTotalXp: totalXpGained,
+      isPremiumActive: isPremiumActive(session.character.user, now),
+    };
     const totalPotionsUsed = session.totalPotionsUsed ?? 0;
 
     const totalLootQuantity = session.loots.reduce(
@@ -3680,6 +3769,11 @@ export class AutoCombatService implements OnModuleDestroy {
 
       progression: {
         totalXpGained,
+        baseXpGained: progressionBreakdown.baseXpGained,
+        premiumBonusXp: progressionBreakdown.premiumBonusXp,
+        premiumPotentialBonusXp: progressionBreakdown.premiumPotentialBonusXp,
+        premiumTotalXp: progressionBreakdown.premiumTotalXp,
+        isPremiumActive: progressionBreakdown.isPremiumActive,
         xpPerMinute:
           processedCombatSeconds > 0
             ? this.roundNumber((totalXpGained / processedCombatSeconds) * 60)
@@ -4034,9 +4128,7 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const now = new Date();
     const premiumActive = isPremiumActive(session.character.user, now);
-    const maxProjectionSeconds = getIdleProgressLimitSeconds(
-      premiumActive,
-    );
+    const maxProjectionSeconds = getIdleProgressLimitSeconds(premiumActive);
 
     const projectionSeconds = this.clampNumber(
       Math.floor(
@@ -5406,6 +5498,14 @@ export class AutoCombatService implements OnModuleDestroy {
 
   private clampNumber(value: number, min: number, max: number) {
     return Math.max(min, Math.min(value, max));
+  }
+
+  private getJsonInteger(value: unknown) {
+    const numberValue = Number(value ?? 0);
+
+    return Number.isFinite(numberValue)
+      ? Math.max(0, Math.floor(numberValue))
+      : 0;
   }
 
   private clampHp(currentHp: number, maxHp: number) {

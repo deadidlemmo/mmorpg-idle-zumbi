@@ -221,6 +221,96 @@
   overflow-wrap: anywhere;
 }
 
+.auto-combat-session-summary__card--xp {
+  justify-content: flex-start;
+  min-height: 118px;
+}
+
+.auto-combat-session-summary__premium-line {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: rgba(244, 215, 131, 0.9);
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+.auto-combat-session-summary__premium-line--locked {
+  color: rgba(226, 184, 86, 0.68);
+}
+
+.auto-combat-session-summary__premium-line span {
+  display: inline;
+  min-width: 0;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.auto-combat-session-summary__premium-icon.premium-placeholder-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+  border-color: rgba(247, 207, 106, 0.7);
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 248, 205, 0.86), transparent 0.28rem),
+    linear-gradient(135deg, #f6d56d, #94711f);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    0 0 8px rgba(233, 184, 62, 0.18);
+}
+
+.auto-combat-session-summary__premium-icon .premium-placeholder-icon__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #241b08;
+  font-size: 0.58rem;
+  font-weight: 950;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.auto-combat-session-summary__premium-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.34rem;
+  padding: 0.18rem 0.38rem;
+  border-radius: 999px;
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(231, 227, 216, 0.68);
+  font-size: 0.56rem;
+  font-weight: 900;
+  line-height: 1.05;
+  text-transform: uppercase;
+  white-space: normal;
+}
+
+.auto-combat-session-summary__premium-status--active {
+  border-color: rgba(245, 197, 70, 0.34);
+  background: rgba(245, 197, 70, 0.11);
+  color: rgba(255, 224, 136, 0.94);
+  box-shadow: 0 0 12px rgba(229, 182, 63, 0.08);
+}
+
+.auto-combat-session-summary__premium-status--locked {
+  border-color: rgba(245, 197, 70, 0.18);
+  background: rgba(245, 197, 70, 0.055);
+  color: rgba(226, 184, 86, 0.74);
+}
+
 /* =========================================================
    RESPONSIVO
    ========================================================= */
@@ -235,6 +325,10 @@
   .auto-combat-session-summary div {
     min-height: 78px;
     padding: 0.68rem 0.72rem 0.64rem;
+  }
+
+  .auto-combat-session-summary__card--xp {
+    min-height: 112px;
   }
 
   .auto-combat-session-summary span {
@@ -280,6 +374,10 @@
     border-radius: 0.72rem;
   }
 
+  .auto-combat-session-summary__card--xp {
+    min-height: 108px;
+  }
+
   .auto-combat-session-summary span {
     font-size: 0.66rem;
   }
@@ -294,6 +392,14 @@
     font-size: 0.58rem;
     line-height: 1.14;
   }
+
+  .auto-combat-session-summary__premium-line {
+    gap: 0.24rem;
+  }
+
+  .auto-combat-session-summary__premium-status {
+    font-size: 0.52rem;
+  }
 }
 
 @media (max-width: 390px) {
@@ -305,6 +411,10 @@
   .auto-combat-session-summary div {
     min-height: 70px;
     padding: 0.58rem 0.58rem 0.56rem;
+  }
+
+  .auto-combat-session-summary__card--xp {
+    min-height: 104px;
   }
 
   .auto-combat-session-summary span {

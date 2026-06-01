@@ -1814,6 +1814,58 @@ export function AutoCombatPage() {
     ),
   );
 
+  const baseXpGained = Math.max(
+    0,
+    Math.floor(
+      visibleSessionTotals?.baseXpGained ??
+        effectiveStatus?.sessionSummary?.progression?.baseXpGained ??
+        effectiveSession?.baseXpGained ??
+        visualRealtimeCombat?.baseXpGained ??
+        totalXpGained,
+    ),
+  );
+
+  const premiumBonusXp = Math.max(
+    0,
+    Math.floor(
+      visibleSessionTotals?.premiumBonusXp ??
+        effectiveStatus?.sessionSummary?.progression?.premiumBonusXp ??
+        effectiveSession?.premiumBonusXp ??
+        visualRealtimeCombat?.premiumBonusXp ??
+        0,
+    ),
+  );
+
+  const premiumPotentialBonusXp = Math.max(
+    0,
+    Math.floor(
+      visibleSessionTotals?.premiumPotentialBonusXp ??
+        effectiveStatus?.sessionSummary?.progression?.premiumPotentialBonusXp ??
+        effectiveSession?.premiumPotentialBonusXp ??
+        visualRealtimeCombat?.premiumPotentialBonusXp ??
+        0,
+    ),
+  );
+
+  const premiumTotalXp = Math.max(
+    0,
+    Math.floor(
+      visibleSessionTotals?.premiumTotalXp ??
+        effectiveStatus?.sessionSummary?.progression?.premiumTotalXp ??
+        effectiveSession?.premiumTotalXp ??
+        visualRealtimeCombat?.premiumTotalXp ??
+        baseXpGained + Math.max(premiumBonusXp, premiumPotentialBonusXp),
+    ),
+  );
+
+  const isPremiumActive = Boolean(
+    visibleSessionTotals?.isPremiumActive ??
+      effectiveStatus?.sessionSummary?.progression?.isPremiumActive ??
+      effectiveSession?.isPremiumActive ??
+      visualRealtimeCombat?.isPremiumActive ??
+      false,
+  );
+
   const totalLoot = Math.max(
     0,
     Math.floor(
@@ -3454,6 +3506,11 @@ export function AutoCombatPage() {
                     totalCombats={totalCombats}
                     totalKills={totalKills}
                     totalXpGained={totalXpGained}
+                    baseXpGained={baseXpGained}
+                    premiumBonusXp={premiumBonusXp}
+                    premiumPotentialBonusXp={premiumPotentialBonusXp}
+                    premiumTotalXp={premiumTotalXp}
+                    isPremiumActive={isPremiumActive}
                     totalLoot={totalLoot}
                     potionsUsed={potionsUsed}
                   />

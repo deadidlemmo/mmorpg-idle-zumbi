@@ -1215,6 +1215,40 @@ export function buildCanonicalSessionTotalsFromStatus(
       status?.sessionSummary?.progression?.totalXpGained,
     ) ?? 0;
 
+  const baseXpGained =
+    getFirstOptionalNumber(
+      session?.baseXpGained,
+      status?.sessionSummary?.progression?.baseXpGained,
+      totalXpGained,
+    ) ?? 0;
+
+  const premiumBonusXp =
+    getFirstOptionalNumber(
+      session?.premiumBonusXp,
+      status?.sessionSummary?.progression?.premiumBonusXp,
+      0,
+    ) ?? 0;
+
+  const premiumPotentialBonusXp =
+    getFirstOptionalNumber(
+      session?.premiumPotentialBonusXp,
+      status?.sessionSummary?.progression?.premiumPotentialBonusXp,
+      0,
+    ) ?? 0;
+
+  const premiumTotalXp =
+    getFirstOptionalNumber(
+      session?.premiumTotalXp,
+      status?.sessionSummary?.progression?.premiumTotalXp,
+      baseXpGained + Math.max(premiumBonusXp, premiumPotentialBonusXp),
+    ) ?? 0;
+
+  const isPremiumActive = Boolean(
+    session?.isPremiumActive ??
+      status?.sessionSummary?.progression?.isPremiumActive ??
+      false,
+  );
+
   const totalLoot =
     getFirstOptionalNumber(
       status?.sessionSummary?.loot?.totalQuantity,
@@ -1241,6 +1275,11 @@ export function buildCanonicalSessionTotalsFromStatus(
     totalRounds: Math.max(0, Math.floor(totalRounds)),
     totalKills: Math.max(0, Math.floor(totalKills)),
     totalXpGained: Math.max(0, Math.floor(totalXpGained)),
+    baseXpGained: Math.max(0, Math.floor(baseXpGained)),
+    premiumBonusXp: Math.max(0, Math.floor(premiumBonusXp)),
+    premiumPotentialBonusXp: Math.max(0, Math.floor(premiumPotentialBonusXp)),
+    premiumTotalXp: Math.max(0, Math.floor(premiumTotalXp)),
+    isPremiumActive,
     totalLoot: Math.max(0, Math.floor(totalLoot)),
     potionsUsed: Math.max(0, Math.floor(potionsUsed)),
 
@@ -1279,9 +1318,18 @@ export function buildTotalsStateFromRealtimeEvent(
 
   const currentKills = safeFallback?.totalKills ?? 0;
   const currentXpGained = safeFallback?.totalXpGained ?? 0;
+  const currentBaseXpGained = safeFallback?.baseXpGained ?? 0;
+  const currentPremiumBonusXp = safeFallback?.premiumBonusXp ?? 0;
+  const currentPremiumPotentialBonusXp =
+    safeFallback?.premiumPotentialBonusXp ?? 0;
   const currentPotionsUsed = safeFallback?.potionsUsed ?? 0;
 
   const eventXpGained = getOptionalNumber(event.xpGained);
+  const eventBaseXpGained = getOptionalNumber(looseEvent.baseXpGained);
+  const eventPremiumBonusXp = getOptionalNumber(looseEvent.premiumBonusXp);
+  const eventPremiumPotentialBonusXp = getOptionalNumber(
+    looseEvent.premiumPotentialBonusXp,
+  );
 
   const totalKills =
     getOptionalNumber(looseEvent.totalKills) ??
@@ -1292,6 +1340,27 @@ export function buildTotalsStateFromRealtimeEvent(
     (eventType === 'MOB_DEFEATED' && eventXpGained !== undefined
       ? currentXpGained + eventXpGained
       : safeFallback?.totalXpGained);
+
+  const baseXpGained =
+    eventType === 'MOB_DEFEATED' && eventBaseXpGained !== undefined
+      ? currentBaseXpGained + eventBaseXpGained
+      : safeFallback?.baseXpGained;
+
+  const premiumBonusXp =
+    eventType === 'MOB_DEFEATED' && eventPremiumBonusXp !== undefined
+      ? currentPremiumBonusXp + eventPremiumBonusXp
+      : safeFallback?.premiumBonusXp;
+
+  const premiumPotentialBonusXp =
+    eventType === 'MOB_DEFEATED' && eventPremiumPotentialBonusXp !== undefined
+      ? currentPremiumPotentialBonusXp + eventPremiumPotentialBonusXp
+      : safeFallback?.premiumPotentialBonusXp;
+
+  const premiumTotalXp =
+    baseXpGained !== undefined
+      ? baseXpGained +
+        Math.max(premiumBonusXp ?? 0, premiumPotentialBonusXp ?? 0)
+      : safeFallback?.premiumTotalXp;
 
   const potionsUsed =
     eventType === 'POTION_USED'
@@ -1344,6 +1413,29 @@ export function buildTotalsStateFromRealtimeEvent(
       totalXpGained !== undefined
         ? Math.max(0, Math.floor(totalXpGained))
         : safeFallback?.totalXpGained ?? 0,
+
+    baseXpGained:
+      baseXpGained !== undefined
+        ? Math.max(0, Math.floor(baseXpGained))
+        : safeFallback?.baseXpGained ?? 0,
+
+    premiumBonusXp:
+      premiumBonusXp !== undefined
+        ? Math.max(0, Math.floor(premiumBonusXp))
+        : safeFallback?.premiumBonusXp ?? 0,
+
+    premiumPotentialBonusXp:
+      premiumPotentialBonusXp !== undefined
+        ? Math.max(0, Math.floor(premiumPotentialBonusXp))
+        : safeFallback?.premiumPotentialBonusXp ?? 0,
+
+    premiumTotalXp:
+      premiumTotalXp !== undefined
+        ? Math.max(0, Math.floor(premiumTotalXp))
+        : safeFallback?.premiumTotalXp ?? 0,
+
+    isPremiumActive:
+      looseEvent.isPremiumActive ?? safeFallback?.isPremiumActive ?? false,
 
     totalLoot:
       getHighestOptionalNumber(looseEvent.totalLoot, safeFallback?.totalLoot, 0) ??
@@ -1475,6 +1567,30 @@ export function mergeTotalsKeepingHighest(
         current.totalXpGained,
         incoming.totalXpGained,
       ) ?? 0,
+
+    baseXpGained:
+      getHighestOptionalNumber(current.baseXpGained, incoming.baseXpGained) ?? 0,
+
+    premiumBonusXp:
+      getHighestOptionalNumber(
+        current.premiumBonusXp,
+        incoming.premiumBonusXp,
+      ) ?? 0,
+
+    premiumPotentialBonusXp:
+      getHighestOptionalNumber(
+        current.premiumPotentialBonusXp,
+        incoming.premiumPotentialBonusXp,
+      ) ?? 0,
+
+    premiumTotalXp:
+      getHighestOptionalNumber(
+        current.premiumTotalXp,
+        incoming.premiumTotalXp,
+      ) ?? 0,
+
+    isPremiumActive:
+      incoming.isPremiumActive ?? current.isPremiumActive ?? false,
 
     totalLoot:
       getHighestOptionalNumber(current.totalLoot, incoming.totalLoot) ?? 0,

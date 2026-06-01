@@ -180,6 +180,11 @@ export type RealtimeCombatState = {
   totalRounds?: number | null;
   totalKills?: number | null;
   totalXpGained?: number | null;
+  baseXpGained?: number | null;
+  premiumBonusXp?: number | null;
+  premiumPotentialBonusXp?: number | null;
+  premiumTotalXp?: number | null;
+  isPremiumActive?: boolean | null;
   totalLoot?: number | null;
   potionsUsed?: number | null;
 
@@ -218,6 +223,11 @@ export type RealtimeSessionTotalsState = {
   totalRounds?: number;
   totalKills?: number;
   totalXpGained?: number;
+  baseXpGained?: number;
+  premiumBonusXp?: number;
+  premiumPotentialBonusXp?: number;
+  premiumTotalXp?: number;
+  isPremiumActive?: boolean;
   totalLoot?: number;
   potionsUsed?: number;
 

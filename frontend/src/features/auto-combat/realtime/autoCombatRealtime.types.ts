@@ -148,6 +148,11 @@ export type AutoCombatRealtimeTotalsState = {
    * XP ganho nesta sessão.
    */
   totalXpGained?: number;
+  baseXpGained?: number;
+  premiumBonusXp?: number;
+  premiumPotentialBonusXp?: number;
+  premiumTotalXp?: number;
+  isPremiumActive?: boolean;
 
   /**
    * Quantidade total de loot coletado na sessão.

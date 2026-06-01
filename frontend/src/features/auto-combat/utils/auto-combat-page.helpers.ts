@@ -862,6 +862,42 @@ export function buildSessionTotalsFromStatus(
       0,
     ) ?? 0;
 
+  const baseXpGained =
+    getFirstOptionalNumber(
+      status?.sessionSummary?.progression?.baseXpGained,
+      session?.baseXpGained,
+      totalXpGained,
+      0,
+    ) ?? 0;
+
+  const premiumBonusXp =
+    getFirstOptionalNumber(
+      status?.sessionSummary?.progression?.premiumBonusXp,
+      session?.premiumBonusXp,
+      0,
+    ) ?? 0;
+
+  const premiumPotentialBonusXp =
+    getFirstOptionalNumber(
+      status?.sessionSummary?.progression?.premiumPotentialBonusXp,
+      session?.premiumPotentialBonusXp,
+      0,
+    ) ?? 0;
+
+  const premiumTotalXp =
+    getFirstOptionalNumber(
+      status?.sessionSummary?.progression?.premiumTotalXp,
+      session?.premiumTotalXp,
+      baseXpGained + Math.max(premiumBonusXp, premiumPotentialBonusXp),
+      0,
+    ) ?? 0;
+
+  const isPremiumActive = Boolean(
+    status?.sessionSummary?.progression?.isPremiumActive ??
+      session?.isPremiumActive ??
+      false,
+  );
+
   const totalLoot =
     getFirstOptionalNumber(
       status?.sessionSummary?.loot?.totalQuantity,
@@ -893,6 +929,11 @@ export function buildSessionTotalsFromStatus(
     totalRounds: Math.max(0, Math.floor(totalRounds)),
     totalKills: Math.max(0, Math.floor(totalKills)),
     totalXpGained: Math.max(0, Math.floor(totalXpGained)),
+    baseXpGained: Math.max(0, Math.floor(baseXpGained)),
+    premiumBonusXp: Math.max(0, Math.floor(premiumBonusXp)),
+    premiumPotentialBonusXp: Math.max(0, Math.floor(premiumPotentialBonusXp)),
+    premiumTotalXp: Math.max(0, Math.floor(premiumTotalXp)),
+    isPremiumActive,
     totalLoot: Math.max(0, Math.floor(totalLoot)),
     potionsUsed: Math.max(0, Math.floor(potionsUsed)),
     updatedAt: Date.now(),
@@ -1108,6 +1149,11 @@ export function getRealtimeCombat(state: AutoCombatRealtimeStateLoose) {
     totalRounds: totals?.totalRounds ?? null,
     totalKills: totals?.totalKills ?? null,
     totalXpGained: totals?.totalXpGained ?? null,
+    baseXpGained: totals?.baseXpGained ?? null,
+    premiumBonusXp: totals?.premiumBonusXp ?? null,
+    premiumPotentialBonusXp: totals?.premiumPotentialBonusXp ?? null,
+    premiumTotalXp: totals?.premiumTotalXp ?? null,
+    isPremiumActive: totals?.isPremiumActive ?? null,
     totalLoot: totals?.totalLoot ?? null,
     potionsUsed: totals?.potionsUsed ?? null,
 
@@ -1201,6 +1247,11 @@ export function buildZeroRealtimeSessionTotals(
     totalRounds: 0,
     totalKills: 0,
     totalXpGained: 0,
+    baseXpGained: 0,
+    premiumBonusXp: 0,
+    premiumPotentialBonusXp: 0,
+    premiumTotalXp: 0,
+    isPremiumActive: Boolean(session?.isPremiumActive ?? false),
     totalLoot: 0,
     potionsUsed: 0,
   };

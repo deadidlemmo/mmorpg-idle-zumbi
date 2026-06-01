@@ -388,6 +388,11 @@ export interface AutoCombatSessionApiViewModel {
   totalCombatsResolved?: number | null;
   totalRoundsResolved?: number | null;
   totalXpGained?: number | null;
+  baseXpGained?: number | null;
+  premiumBonusXp?: number | null;
+  premiumPotentialBonusXp?: number | null;
+  premiumTotalXp?: number | null;
+  isPremiumActive?: boolean | null;
 
   /**
    * Aliases/fallbacks usados por alguns retornos.
@@ -611,6 +616,11 @@ export interface AutoCombatSessionSummary {
 
   progression?: {
     totalXpGained?: number;
+    baseXpGained?: number;
+    premiumBonusXp?: number;
+    premiumPotentialBonusXp?: number;
+    premiumTotalXp?: number;
+    isPremiumActive?: boolean;
     xpPerMinute?: number;
   };
 
