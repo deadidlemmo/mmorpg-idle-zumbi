@@ -108,6 +108,14 @@ import {
 import { selectVisibleCharacterProgress } from '../utils/visible-progress';
 
 const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
+const XP_FEEDBACK_DURATION_MS = 2100;
+
+type MobFeedbackScope = {
+  sessionId: string | null;
+  combatIndex: number | null;
+  mobId: string | null;
+  mobName: string | null;
+};
 
 function getRealtimeFeedbackTarget(event?: AutoCombatRealtimeEvent | null) {
   const eventType = normalizeRealtimeEventType(event?.type);
@@ -150,6 +158,118 @@ function getOptionalPositiveInteger(value: unknown) {
   }
 
   return parsed;
+}
+
+function normalizeMobScopeText(value: unknown) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+
+  return normalized || null;
+}
+
+function normalizeMobScopeNumber(value: unknown) {
+  const parsed = getOptionalPositiveInteger(value);
+
+  return parsed && parsed > 0 ? parsed : null;
+}
+
+function createMobFeedbackScope(
+  params: Partial<MobFeedbackScope>,
+): MobFeedbackScope {
+  return {
+    sessionId: normalizeMobScopeText(params.sessionId),
+    combatIndex: normalizeMobScopeNumber(params.combatIndex),
+    mobId: normalizeMobScopeText(params.mobId),
+    mobName: normalizeMobScopeText(params.mobName),
+  };
+}
+
+function getMobFeedbackScopeFromEvent(
+  event?: AutoCombatRealtimeEvent | null,
+): MobFeedbackScope | null {
+  if (!event) {
+    return null;
+  }
+
+  return createMobFeedbackScope({
+    sessionId: event.sessionId,
+    combatIndex: event.combatIndex,
+    mobId: event.mobId,
+    mobName: event.mobName,
+  });
+}
+
+function getMobFeedbackScopeKey(scope?: MobFeedbackScope | null) {
+  if (!scope) {
+    return '';
+  }
+
+  return [
+    scope.sessionId ?? 'session:any',
+    scope.combatIndex ? `combat:${scope.combatIndex}` : 'combat:any',
+    scope.mobId ? `mob:${scope.mobId}` : 'mob:any',
+    scope.mobName ? `name:${scope.mobName}` : 'name:any',
+  ].join('|');
+}
+
+function hasUsefulMobFeedbackScope(scope?: MobFeedbackScope | null) {
+  return Boolean(scope?.combatIndex || scope?.mobId || scope?.mobName);
+}
+
+function hasMobFeedbackScopeMismatch(
+  feedbackScope?: MobFeedbackScope | null,
+  visibleScope?: MobFeedbackScope | null,
+) {
+  if (!feedbackScope || !visibleScope) {
+    return false;
+  }
+
+  if (
+    feedbackScope.sessionId &&
+    visibleScope.sessionId &&
+    feedbackScope.sessionId !== visibleScope.sessionId
+  ) {
+    return true;
+  }
+
+  if (
+    feedbackScope.combatIndex &&
+    visibleScope.combatIndex &&
+    feedbackScope.combatIndex !== visibleScope.combatIndex
+  ) {
+    return true;
+  }
+
+  if (
+    feedbackScope.mobId &&
+    visibleScope.mobId &&
+    feedbackScope.mobId !== visibleScope.mobId
+  ) {
+    return true;
+  }
+
+  if (
+    feedbackScope.mobName &&
+    visibleScope.mobName &&
+    feedbackScope.mobName !== visibleScope.mobName
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function shouldClearXpFeedbackForEvent(
+  event?: AutoCombatRealtimeEvent | null,
+) {
+  const eventType = normalizeRealtimeEventType(event?.type);
+
+  return (
+    eventType === 'MOB_SPAWNED' ||
+    eventType === 'PLAYER_DEFEATED' ||
+    eventType === 'SESSION_STOPPED' ||
+    eventType === 'SESSION_FINISHED' ||
+    eventType === 'SESSION_ERROR'
+  );
 }
 
 function getXpFeedbackBreakdown(event?: AutoCombatRealtimeEvent | null) {
@@ -333,6 +453,29 @@ export function AutoCombatPage() {
     level: number;
   } | null>(null);
 
+  const clearXpFeedbackTimers = useCallback(() => {
+    xpFeedbackEventKeyRef.current = '';
+
+    if (xpFeedbackTimeoutRef.current !== null) {
+      window.clearTimeout(xpFeedbackTimeoutRef.current);
+      xpFeedbackTimeoutRef.current = null;
+    }
+
+    if (xpFeedbackShowTimeoutRef.current !== null) {
+      window.clearTimeout(xpFeedbackShowTimeoutRef.current);
+      xpFeedbackShowTimeoutRef.current = null;
+    }
+  }, []);
+
+  const queueClearXpFeedback = useCallback(() => {
+    clearXpFeedbackTimers();
+
+    xpFeedbackShowTimeoutRef.current = window.setTimeout(() => {
+      setXpFeedbackEvent(null);
+      xpFeedbackShowTimeoutRef.current = null;
+    }, 0);
+  }, [clearXpFeedbackTimers]);
+
   useEffect(() => {
     autoPotionConfigRef.current = autoPotionConfig;
   }, [autoPotionConfig]);
@@ -347,21 +490,12 @@ export function AutoCombatPage() {
     setLocalSessionTotals(null);
     setLocalBattleLogEvents([]);
     setLocalActiveEvent(null);
-    setXpFeedbackEvent(null);
     setIsPotionConfigPanelOpen(false);
     setPotionConfigMessage('');
     processedPotionEventKeysRef.current.clear();
-    xpFeedbackEventKeyRef.current = '';
-    if (xpFeedbackTimeoutRef.current !== null) {
-      window.clearTimeout(xpFeedbackTimeoutRef.current);
-      xpFeedbackTimeoutRef.current = null;
-    }
-    if (xpFeedbackShowTimeoutRef.current !== null) {
-      window.clearTimeout(xpFeedbackShowTimeoutRef.current);
-      xpFeedbackShowTimeoutRef.current = null;
-    }
+    queueClearXpFeedback();
     stableActiveMobRef.current = null;
-  }, [characterId]);
+  }, [characterId, queueClearXpFeedback]);
 
   const realtimeStatus = getRealtimeStatus(realtimeState);
   const effectiveStatus = realtimeStatus ?? autoCombatStatus;
@@ -705,25 +839,79 @@ export function AutoCombatPage() {
     ? providerActiveEvent ?? localActiveEvent
     : null;
 
+  const visibleMobFeedbackScope = useMemo(
+    () =>
+      showActiveSession
+        ? createMobFeedbackScope({
+            sessionId: visualRealtimeCombat?.sessionId ?? effectiveSession?.id,
+            combatIndex:
+              visualRealtimeCombat?.combatIndex ??
+              effectiveStatus?.session?.currentCombatIndex ??
+              effectiveSession?.currentCombatIndex,
+            mobId:
+              visualRealtimeCombat?.mobId ??
+              effectiveStatus?.currentMob?.id ??
+              effectiveSession?.currentMobId ??
+              effectiveSession?.currentMob?.id,
+            mobName:
+              visualRealtimeCombat?.mobName ??
+              effectiveStatus?.currentMob?.name ??
+              effectiveSession?.currentMob?.name,
+          })
+        : null,
+    [
+      effectiveSession?.currentCombatIndex,
+      effectiveSession?.currentMob?.id,
+      effectiveSession?.currentMob?.name,
+      effectiveSession?.currentMobId,
+      effectiveSession?.id,
+      effectiveStatus?.currentMob?.id,
+      effectiveStatus?.currentMob?.name,
+      effectiveStatus?.session?.currentCombatIndex,
+      showActiveSession,
+      visualRealtimeCombat?.combatIndex,
+      visualRealtimeCombat?.mobId,
+      visualRealtimeCombat?.mobName,
+      visualRealtimeCombat?.sessionId,
+    ],
+  );
+  const visibleMobFeedbackScopeKey = getMobFeedbackScopeKey(
+    visibleMobFeedbackScope,
+  );
+
   useEffect(() => {
     if (!showActiveSession) {
-      xpFeedbackEventKeyRef.current = '';
-
-      if (xpFeedbackTimeoutRef.current !== null) {
-        window.clearTimeout(xpFeedbackTimeoutRef.current);
-        xpFeedbackTimeoutRef.current = null;
-      }
-
-      if (xpFeedbackShowTimeoutRef.current !== null) {
-        window.clearTimeout(xpFeedbackShowTimeoutRef.current);
-      }
-
-      xpFeedbackShowTimeoutRef.current = window.setTimeout(() => {
-        setXpFeedbackEvent(null);
-        xpFeedbackShowTimeoutRef.current = null;
-      }, 0);
+      queueClearXpFeedback();
 
       return;
+    }
+
+    if (shouldClearXpFeedbackForEvent(activeBattleLogEvent)) {
+      queueClearXpFeedback();
+
+      return;
+    }
+
+    if (xpFeedbackEvent && activeBattleLogEvent) {
+      const activeEventType = normalizeRealtimeEventType(
+        activeBattleLogEvent.type,
+      );
+
+      if (activeEventType !== 'MOB_DEFEATED') {
+        const feedbackScope = getMobFeedbackScopeFromEvent(xpFeedbackEvent);
+        const activeEventScope =
+          getMobFeedbackScopeFromEvent(activeBattleLogEvent);
+
+        if (
+          hasUsefulMobFeedbackScope(feedbackScope) &&
+          hasUsefulMobFeedbackScope(activeEventScope) &&
+          hasMobFeedbackScopeMismatch(feedbackScope, activeEventScope)
+        ) {
+          queueClearXpFeedback();
+
+          return;
+        }
+      }
     }
 
     const xpFeedback = getXpFeedbackBreakdown(activeBattleLogEvent);
@@ -766,8 +954,41 @@ export function AutoCombatPage() {
       }
 
       xpFeedbackTimeoutRef.current = null;
-    }, 2800);
-  }, [activeBattleLogEvent, showActiveSession]);
+    }, XP_FEEDBACK_DURATION_MS);
+  }, [
+    activeBattleLogEvent,
+    queueClearXpFeedback,
+    showActiveSession,
+    xpFeedbackEvent,
+  ]);
+
+  useEffect(() => {
+    if (!xpFeedbackEvent) {
+      return;
+    }
+
+    if (!showActiveSession) {
+      queueClearXpFeedback();
+
+      return;
+    }
+
+    const feedbackScope = getMobFeedbackScopeFromEvent(xpFeedbackEvent);
+
+    if (
+      hasUsefulMobFeedbackScope(feedbackScope) &&
+      hasUsefulMobFeedbackScope(visibleMobFeedbackScope) &&
+      hasMobFeedbackScopeMismatch(feedbackScope, visibleMobFeedbackScope)
+    ) {
+      queueClearXpFeedback();
+    }
+  }, [
+    queueClearXpFeedback,
+    showActiveSession,
+    visibleMobFeedbackScope,
+    visibleMobFeedbackScopeKey,
+    xpFeedbackEvent,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -1610,12 +1831,25 @@ export function AutoCombatPage() {
     : '';
 
   const xpFeedbackBreakdown = getXpFeedbackBreakdown(xpFeedbackEvent);
+  const xpFeedbackMobScope = getMobFeedbackScopeFromEvent(xpFeedbackEvent);
+  const xpFeedbackMatchesVisibleMob =
+    !hasUsefulMobFeedbackScope(xpFeedbackMobScope) ||
+    !hasUsefulMobFeedbackScope(visibleMobFeedbackScope) ||
+    !hasMobFeedbackScopeMismatch(
+      xpFeedbackMobScope,
+      visibleMobFeedbackScope,
+    );
   const shouldShowXpFeedback =
-    showActiveSession && Boolean(xpFeedbackBreakdown && xpFeedbackEvent);
+    showActiveSession &&
+    xpFeedbackMatchesVisibleMob &&
+    Boolean(xpFeedbackBreakdown && xpFeedbackEvent);
   const xpFeedbackKey =
     shouldShowXpFeedback && xpFeedbackEvent
       ? `mob-xp-${getRealtimeEventKey(xpFeedbackEvent)}`
       : '';
+  const xpFeedbackPremiumText = xpFeedbackBreakdown?.isPremiumActive
+    ? `+${xpFeedbackBreakdown.premiumBonusXp} Premium`
+    : `Com Premium: +${xpFeedbackBreakdown?.premiumPotentialBonusXp ?? 0} EXP`;
 
   const playerFighterClassName = [
     'auto-combat-fighter-card',
@@ -2502,16 +2736,12 @@ export function AutoCombatPage() {
                             <strong>+{xpFeedbackBreakdown.totalXp} EXP</strong>
 
                             <div className="auto-combat-xp-feedback__details">
-                              <span>Base {xpFeedbackBreakdown.baseXp}</span>
+                              <span>{xpFeedbackBreakdown.baseXp} base</span>
 
                               <span className="auto-combat-xp-feedback__premium">
                                 <PremiumPlaceholderIcon className="auto-combat-xp-feedback__premium-icon" />
-                                {xpFeedbackBreakdown.isPremiumActive
-                                  ? `Premium +${xpFeedbackBreakdown.premiumBonusXp}`
-                                  : `Com Premium +${xpFeedbackBreakdown.premiumPotentialBonusXp}`}
+                                {xpFeedbackPremiumText}
                               </span>
-
-                              <span>Total {xpFeedbackBreakdown.totalXp} EXP</span>
                             </div>
                           </div>
                         ) : null}
