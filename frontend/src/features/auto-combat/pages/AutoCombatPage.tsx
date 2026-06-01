@@ -108,6 +108,8 @@ import {
 import { selectVisibleCharacterProgress } from '../utils/visible-progress';
 
 const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
+const XP_FEEDBACK_VISIBLE_MS = 3800;
+const MAX_SHOWN_XP_FEEDBACK_KEYS = 80;
 
 type MobFeedbackScope = {
   sessionId: string | null;
@@ -263,7 +265,6 @@ function shouldClearXpFeedbackForEvent(
   const eventType = normalizeRealtimeEventType(event?.type);
 
   return (
-    eventType === 'MOB_SPAWNED' ||
     eventType === 'PLAYER_DEFEATED' ||
     eventType === 'SESSION_STOPPED' ||
     eventType === 'SESSION_FINISHED' ||
@@ -350,6 +351,9 @@ function getXpFeedbackDisplayKey(event?: AutoCombatRealtimeEvent | null) {
 
   return [
     getMobFeedbackScopeKey(feedbackScope),
+    `round:${event.round ?? 'any'}`,
+    `kills:${event.totalKills ?? 'any'}`,
+    `combats:${event.totalCombats ?? 'any'}`,
     `total:${breakdown.totalXp}`,
     `base:${breakdown.baseXp}`,
     `premium:${breakdown.premiumBonusXp}`,
@@ -496,8 +500,9 @@ export function AutoCombatPage() {
   const selectedPotionItemIdRef = useRef('');
   const hasPendingRealtimeVisualRef = useRef(false);
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
-  const xpFeedbackShowTimeoutRef = useRef<number | null>(null);
+  const xpFeedbackHideTimeoutRef = useRef<number | null>(null);
   const xpFeedbackEventKeyRef = useRef('');
+  const shownXpFeedbackEventKeysRef = useRef<Set<string>>(new Set());
   const stableActiveMobRef = useRef<{
     sessionId: string | null;
     name: string;
@@ -506,21 +511,24 @@ export function AutoCombatPage() {
   } | null>(null);
 
   const clearXpFeedbackTimers = useCallback(() => {
-    xpFeedbackEventKeyRef.current = '';
-
-    if (xpFeedbackShowTimeoutRef.current !== null) {
-      window.clearTimeout(xpFeedbackShowTimeoutRef.current);
-      xpFeedbackShowTimeoutRef.current = null;
+    if (xpFeedbackHideTimeoutRef.current !== null) {
+      window.clearTimeout(xpFeedbackHideTimeoutRef.current);
+      xpFeedbackHideTimeoutRef.current = null;
     }
   }, []);
 
-  const queueClearXpFeedback = useCallback(() => {
+  const queueClearXpFeedback = useCallback((options?: {
+    resetShownEvents?: boolean;
+  }) => {
     clearXpFeedbackTimers();
 
-    xpFeedbackShowTimeoutRef.current = window.setTimeout(() => {
-      setXpFeedbackEvent(null);
-      xpFeedbackShowTimeoutRef.current = null;
-    }, 0);
+    xpFeedbackEventKeyRef.current = '';
+
+    if (options?.resetShownEvents) {
+      shownXpFeedbackEventKeysRef.current.clear();
+    }
+
+    setXpFeedbackEvent(null);
   }, [clearXpFeedbackTimers]);
 
   useEffect(() => {
@@ -540,7 +548,7 @@ export function AutoCombatPage() {
     setIsPotionConfigPanelOpen(false);
     setPotionConfigMessage('');
     processedPotionEventKeysRef.current.clear();
-    queueClearXpFeedback();
+    queueClearXpFeedback({ resetShownEvents: true });
     stableActiveMobRef.current = null;
   }, [characterId, queueClearXpFeedback]);
 
@@ -1003,19 +1011,52 @@ export function AutoCombatPage() {
 
     const eventKey = getXpFeedbackDisplayKey(synchronizedXpFeedbackEvent);
 
-    if (xpFeedbackEventKeyRef.current === eventKey) {
+    if (
+      !eventKey ||
+      xpFeedbackEventKeyRef.current === eventKey ||
+      shownXpFeedbackEventKeysRef.current.has(eventKey)
+    ) {
       return;
     }
 
-    xpFeedbackEventKeyRef.current = eventKey;
-    if (xpFeedbackShowTimeoutRef.current !== null) {
-      window.clearTimeout(xpFeedbackShowTimeoutRef.current);
+    shownXpFeedbackEventKeysRef.current.add(eventKey);
+
+    if (
+      shownXpFeedbackEventKeysRef.current.size > MAX_SHOWN_XP_FEEDBACK_KEYS
+    ) {
+      const oldestKey = shownXpFeedbackEventKeysRef.current.values().next()
+        .value;
+
+      if (oldestKey) {
+        shownXpFeedbackEventKeysRef.current.delete(oldestKey);
+      }
     }
 
-    xpFeedbackShowTimeoutRef.current = window.setTimeout(() => {
-      setXpFeedbackEvent(synchronizedXpFeedbackEvent);
-      xpFeedbackShowTimeoutRef.current = null;
-    }, 0);
+    xpFeedbackEventKeyRef.current = eventKey;
+    if (xpFeedbackHideTimeoutRef.current !== null) {
+      window.clearTimeout(xpFeedbackHideTimeoutRef.current);
+    }
+
+    setXpFeedbackEvent(synchronizedXpFeedbackEvent);
+
+    xpFeedbackHideTimeoutRef.current = window.setTimeout(() => {
+      setXpFeedbackEvent((currentEvent) => {
+        if (
+          !currentEvent ||
+          getXpFeedbackDisplayKey(currentEvent) === eventKey
+        ) {
+          return null;
+        }
+
+        return currentEvent;
+      });
+
+      if (xpFeedbackEventKeyRef.current === eventKey) {
+        xpFeedbackEventKeyRef.current = '';
+      }
+
+      xpFeedbackHideTimeoutRef.current = null;
+    }, XP_FEEDBACK_VISIBLE_MS);
   }, [
     activeBattleLogEvent,
     queueClearXpFeedback,
@@ -1054,8 +1095,8 @@ export function AutoCombatPage() {
 
   useEffect(() => {
     return () => {
-      if (xpFeedbackShowTimeoutRef.current !== null) {
-        window.clearTimeout(xpFeedbackShowTimeoutRef.current);
+      if (xpFeedbackHideTimeoutRef.current !== null) {
+        window.clearTimeout(xpFeedbackHideTimeoutRef.current);
       }
     };
   }, []);
@@ -2797,15 +2838,15 @@ export function AutoCombatPage() {
                             aria-live="polite"
                           >
                             <strong>
-                              +{xpFeedbackBreakdown.totalXp} EXP
+                              +{xpFeedbackBreakdown.totalXp} EXP TOTAL
                             </strong>
 
                             <div className="auto-combat-xp-feedback__details">
-                              <span>Base {xpFeedbackBreakdown.baseXp}</span>
+                              <span>Base: {xpFeedbackBreakdown.baseXp} EXP</span>
 
                               <span className="auto-combat-xp-feedback__premium">
                                 <PremiumPlaceholderIcon className="auto-combat-xp-feedback__premium-icon" />
-                                +{xpFeedbackPremiumXp} Premium
+                                + {xpFeedbackPremiumXp} EXP PREMIUM
                               </span>
                             </div>
                           </div>
