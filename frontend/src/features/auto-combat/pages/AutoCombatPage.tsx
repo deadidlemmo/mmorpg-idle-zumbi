@@ -108,7 +108,6 @@ import {
 import { selectVisibleCharacterProgress } from '../utils/visible-progress';
 
 const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
-const XP_FEEDBACK_DURATION_MS = 5200;
 
 type MobFeedbackScope = {
   sessionId: string | null;
@@ -498,7 +497,6 @@ export function AutoCombatPage() {
   const hasPendingRealtimeVisualRef = useRef(false);
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
   const xpFeedbackShowTimeoutRef = useRef<number | null>(null);
-  const xpFeedbackTimeoutRef = useRef<number | null>(null);
   const xpFeedbackEventKeyRef = useRef('');
   const stableActiveMobRef = useRef<{
     sessionId: string | null;
@@ -509,11 +507,6 @@ export function AutoCombatPage() {
 
   const clearXpFeedbackTimers = useCallback(() => {
     xpFeedbackEventKeyRef.current = '';
-
-    if (xpFeedbackTimeoutRef.current !== null) {
-      window.clearTimeout(xpFeedbackTimeoutRef.current);
-      xpFeedbackTimeoutRef.current = null;
-    }
 
     if (xpFeedbackShowTimeoutRef.current !== null) {
       window.clearTimeout(xpFeedbackShowTimeoutRef.current);
@@ -1023,22 +1016,6 @@ export function AutoCombatPage() {
       setXpFeedbackEvent(synchronizedXpFeedbackEvent);
       xpFeedbackShowTimeoutRef.current = null;
     }, 0);
-
-    if (xpFeedbackTimeoutRef.current !== null) {
-      window.clearTimeout(xpFeedbackTimeoutRef.current);
-    }
-
-    xpFeedbackTimeoutRef.current = window.setTimeout(() => {
-      setXpFeedbackEvent((currentEvent) => {
-        if (!currentEvent || getXpFeedbackDisplayKey(currentEvent) === eventKey) {
-          return null;
-        }
-
-        return currentEvent;
-      });
-
-      xpFeedbackTimeoutRef.current = null;
-    }, XP_FEEDBACK_DURATION_MS);
   }, [
     activeBattleLogEvent,
     queueClearXpFeedback,
@@ -1077,10 +1054,6 @@ export function AutoCombatPage() {
 
   useEffect(() => {
     return () => {
-      if (xpFeedbackTimeoutRef.current !== null) {
-        window.clearTimeout(xpFeedbackTimeoutRef.current);
-      }
-
       if (xpFeedbackShowTimeoutRef.current !== null) {
         window.clearTimeout(xpFeedbackShowTimeoutRef.current);
       }
