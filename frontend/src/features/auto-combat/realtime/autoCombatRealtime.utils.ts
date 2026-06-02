@@ -66,12 +66,19 @@ type AutoCombatSessionLike = {
 
   currentRound?: number | null;
   currentCombatIndex?: number | null;
+  enemyInstanceId?: string | null;
+  currentEnemyInstanceId?: string | null;
+  snapshotSequence?: number | null;
+  latestEventSequence?: number | null;
 
   currentMobHp?: number | null;
   currentMobMaxHp?: number | null;
 };
 
 type RealtimeEventLoose = AutoCombatRealtimeEvent & {
+  id?: string | null;
+  eventId?: string | null;
+  enemyInstanceId?: string | null;
   createdAt?: string | null;
 
   totalCombats?: number | null;
@@ -361,12 +368,14 @@ export function getRealtimeEventKey(payload: AutoCombatRealtimeEvent) {
   const event = payload as RealtimeEventLoose;
 
   return [
+    event.eventId ?? event.id ?? 'no-event-id',
     event.sessionId ?? 'no-session',
     event.characterId ?? 'no-character',
     event.sequence ?? 'no-sequence',
     event.type ?? 'no-type',
     event.createdAt ?? 'no-created-at',
 
+    event.enemyInstanceId ?? 'no-enemy-instance',
     event.mobId ?? 'no-mob',
     event.mobName ?? 'no-mob-name',
     event.round ?? 'no-round',
@@ -406,6 +415,17 @@ export function getRealtimeEventKey(payload: AutoCombatRealtimeEvent) {
 export function getMobSpawnFingerprint(payload: AutoCombatRealtimeEvent) {
   if (!isMobSpawnedEvent(payload)) {
     return '';
+  }
+
+  const event = payload as RealtimeEventLoose;
+
+  if (event.enemyInstanceId) {
+    return [
+      event.sessionId ?? 'no-session',
+      event.characterId ?? 'no-character',
+      event.enemyInstanceId,
+      'mob-spawned',
+    ].join('|');
   }
 
   /**
@@ -468,6 +488,7 @@ export function getGenericRealtimeFingerprint(payload: AutoCombatRealtimeEvent) 
     event.sessionId ?? 'no-session',
     event.characterId ?? 'no-character',
     event.type ?? 'no-type',
+    event.enemyInstanceId ?? 'no-enemy-instance',
     event.mobId ?? 'no-mob',
     event.round ?? 'no-round',
     event.combatIndex ?? 'no-combat',
@@ -1062,6 +1083,27 @@ export function buildSessionStateFromStatus(
     currentCombatIndex:
       session.currentCombatIndex ?? safeFallback?.currentCombatIndex ?? null,
 
+    enemyInstanceId:
+      session.enemyInstanceId ??
+      session.currentEnemyInstanceId ??
+      safeFallback?.enemyInstanceId ??
+      null,
+    currentEnemyInstanceId:
+      session.currentEnemyInstanceId ??
+      session.enemyInstanceId ??
+      safeFallback?.currentEnemyInstanceId ??
+      null,
+    snapshotSequence:
+      session.snapshotSequence ??
+      status?.snapshotSequence ??
+      safeFallback?.snapshotSequence ??
+      null,
+    latestEventSequence:
+      session.latestEventSequence ??
+      status?.latestEventSequence ??
+      safeFallback?.latestEventSequence ??
+      null,
+
     updatedAt: Date.now(),
   };
 }
@@ -1117,6 +1159,12 @@ export function buildMobStateFromStatus(
     ...fallback,
 
     id: currentMob.id ?? fallback?.id ?? null,
+    enemyInstanceId:
+      currentMob.enemyInstanceId ??
+      session?.enemyInstanceId ??
+      session?.currentEnemyInstanceId ??
+      fallback?.enemyInstanceId ??
+      null,
     name: currentMob.name ?? fallback?.name ?? null,
 
     currentHp:
@@ -1162,6 +1210,7 @@ export function buildMobStateFromRealtimeEvent(
     ...fallback,
 
     id: event.mobId ?? fallback?.id ?? null,
+    enemyInstanceId: event.enemyInstanceId ?? fallback?.enemyInstanceId ?? null,
     name: event.mobName ?? fallback?.name ?? null,
 
     currentHp,

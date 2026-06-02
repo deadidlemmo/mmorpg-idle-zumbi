@@ -99,9 +99,12 @@ export type AutoCombatRealtimeActor = 'PLAYER' | 'MOB' | 'SYSTEM' | string;
 export type AutoCombatRealtimeTarget = 'PLAYER' | 'MOB' | 'SYSTEM' | string;
 
 export interface AutoCombatRealtimeEvent {
+  id?: string | null;
+  eventId?: string | null;
   characterId?: string | null;
   sessionId?: string | null;
   sequence?: number | null;
+  enemyInstanceId?: string | null;
 
   type?: AutoCombatRealtimeEventType;
   message?: string | null;
@@ -264,6 +267,7 @@ export interface AutoCombatMobViewModel {
 
 export interface AutoCombatCurrentMobViewModel {
   id?: string | null;
+  enemyInstanceId?: string | null;
   name?: string | null;
   description?: string | null;
 
@@ -411,6 +415,10 @@ export interface AutoCombatSessionApiViewModel {
   currentMobId?: string | null;
   currentMobHp?: number | null;
   currentMobMaxHp?: number | null;
+  enemyInstanceId?: string | null;
+  currentEnemyInstanceId?: string | null;
+  snapshotSequence?: number | null;
+  latestEventSequence?: number | null;
   currentMob?: AutoCombatCurrentMobViewModel | null;
 
   /**
@@ -711,6 +719,8 @@ export interface AutoCombatStatusResponse {
 
   message?: string;
   serverNow?: string | Date | null;
+  snapshotSequence?: number | null;
+  latestEventSequence?: number | null;
 
   character?: AutoCombatStatusCharacterViewModel;
 

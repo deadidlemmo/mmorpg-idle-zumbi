@@ -34,6 +34,9 @@ type UseAutoCombatSocketOptions = {
 };
 
 type AutoCombatRealtimeEventLoose = AutoCombatRealtimeEvent & {
+  id?: string | null;
+  eventId?: string | null;
+  enemyInstanceId?: string | null;
   createdAt?: string | null;
   sequence?: number | null;
 
@@ -125,11 +128,13 @@ function getRealtimeEventKey(payload: AutoCombatRealtimeEvent) {
   const event = payload as AutoCombatRealtimeEventLoose;
 
   return [
+    event.eventId ?? event.id ?? 'no-event-id',
     event.sessionId ?? 'no-session',
     event.characterId ?? 'no-character',
     event.sequence ?? 'no-sequence',
     event.type ?? 'no-type',
     event.createdAt ?? 'no-created-at',
+    event.enemyInstanceId ?? 'no-enemy-instance',
     event.mobId ?? 'no-mob',
     event.mobName ?? 'no-mob-name',
     event.round ?? 'no-round',
@@ -160,6 +165,17 @@ function getRealtimeEventKey(payload: AutoCombatRealtimeEvent) {
 function getMobSpawnFingerprint(payload: AutoCombatRealtimeEvent) {
   if (getRealtimeEventType(payload) !== 'MOB_SPAWNED') {
     return '';
+  }
+
+  const event = payload as AutoCombatRealtimeEventLoose;
+
+  if (event.enemyInstanceId) {
+    return [
+      event.sessionId ?? 'no-session',
+      event.characterId ?? 'no-character',
+      event.enemyInstanceId,
+      'mob-spawned',
+    ].join('|');
   }
 
   return [
@@ -204,6 +220,7 @@ function getGenericRealtimeFingerprint(payload: AutoCombatRealtimeEvent) {
     event.sessionId ?? 'no-session',
     event.characterId ?? 'no-character',
     event.type ?? 'no-type',
+    event.enemyInstanceId ?? 'no-enemy-instance',
     event.mobId ?? 'no-mob',
     event.round ?? 'no-round',
     event.combatIndex ?? 'no-combat',

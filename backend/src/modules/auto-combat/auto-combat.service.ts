@@ -146,6 +146,7 @@ type AutoCombatRealtimeEvent = {
   characterId?: string;
   sessionId?: string;
   sequence?: number;
+  enemyInstanceId?: string | null;
   type?: AutoCombatRealtimeEventType;
   message?: string;
 
@@ -220,6 +221,7 @@ type CombatRealtimeContext = {
   mobId: string;
   mobName: string;
   combatIndex: number;
+  enemyInstanceId?: string | null;
 };
 
 type AttackResolution = {
@@ -1174,7 +1176,13 @@ export class AutoCombatService implements OnModuleDestroy {
     return response;
   }
 
-  async getRecentEvents(userId: string, characterId: string) {
+  async getRecentEvents(
+    userId: string,
+    characterId: string,
+    options?: {
+      afterSequence?: string | number | null;
+    },
+  ) {
     const character = await this.prisma.character.findFirst({
       where: {
         id: characterId,
@@ -1239,10 +1247,17 @@ export class AutoCombatService implements OnModuleDestroy {
         session: null,
         events: [],
         latestSequence: null,
+        snapshotSequence: null,
       };
     }
 
-    const storedEvents = await this.prisma.autoCombatSessionEvent.findMany({
+    const rawAfterSequence = Number(options?.afterSequence);
+    const afterSequence =
+      Number.isFinite(rawAfterSequence) && rawAfterSequence > 0
+        ? Math.floor(rawAfterSequence)
+        : null;
+
+    const latestEvent = await this.prisma.autoCombatSessionEvent.findFirst({
       where: {
         sessionId: latestSession.id,
         characterId: character.id,
@@ -1250,10 +1265,41 @@ export class AutoCombatService implements OnModuleDestroy {
       orderBy: {
         sequence: 'desc',
       },
-      take: AUTO_COMBAT_RECENT_EVENTS_LIMIT,
+      select: {
+        sequence: true,
+      },
     });
 
-    const events = [...storedEvents].reverse().map((event) => {
+    const latestSequence = latestEvent?.sequence ?? null;
+
+    const eventWhere: Prisma.AutoCombatSessionEventWhereInput = {
+      sessionId: latestSession.id,
+      characterId: character.id,
+    };
+
+    if (afterSequence !== null) {
+      eventWhere.sequence = {
+        gt: afterSequence,
+      };
+    }
+
+    const eventOrder: Prisma.AutoCombatSessionEventOrderByWithRelationInput = {
+      sequence: afterSequence !== null ? 'asc' : 'desc',
+    };
+
+    const storedEvents = await this.prisma.autoCombatSessionEvent.findMany({
+      where: eventWhere,
+      orderBy: eventOrder,
+      take:
+        afterSequence !== null
+          ? AUTO_COMBAT_STORED_EVENTS_LIMIT
+          : AUTO_COMBAT_RECENT_EVENTS_LIMIT,
+    });
+
+    const orderedEvents =
+      afterSequence !== null ? storedEvents : [...storedEvents].reverse();
+
+    const events = orderedEvents.map((event) => {
       const payload =
         event.payloadJson &&
         typeof event.payloadJson === 'object' &&
@@ -1272,17 +1318,6 @@ export class AutoCombatService implements OnModuleDestroy {
         createdAt: event.createdAt.toISOString(),
       };
     });
-
-    const latestSequence =
-      events.length > 0
-        ? Math.max(
-            ...events.map((event) => {
-              const sequence = Number(event.sequence);
-
-              return Number.isFinite(sequence) ? sequence : 0;
-            }),
-          )
-        : null;
 
     return {
       active: latestSession.status === AutoCombatSessionStatus.ACTIVE,
@@ -1303,6 +1338,8 @@ export class AutoCombatService implements OnModuleDestroy {
       },
       events,
       latestSequence,
+      snapshotSequence: latestSequence,
+      requestedAfterSequence: afterSequence,
     };
   }
 
@@ -1838,13 +1875,12 @@ export class AutoCombatService implements OnModuleDestroy {
         : [];
 
       aggregateResult.eventsEmitted = realtimeEventsToEmit.length;
-      aggregateResult.eventsSuppressed = Math.max(
-        0,
-        aggregateResult.eventsSuppressed ?? 0,
-      ) + Math.max(
-        0,
-        aggregateResult.events.length - realtimeEventsToEmit.length,
-      );
+      aggregateResult.eventsSuppressed =
+        Math.max(0, aggregateResult.eventsSuppressed ?? 0) +
+        Math.max(
+          0,
+          aggregateResult.events.length - realtimeEventsToEmit.length,
+        );
 
       const response = await this.buildSessionResponse(session.id, {
         message: this.getProcessingResultMessage(aggregateResult),
@@ -1922,6 +1958,11 @@ export class AutoCombatService implements OnModuleDestroy {
     const totalRounds = session.totalRoundsResolved ?? 0;
     const totalXpGained = session.totalXpGained ?? 0;
     const totalPotionsUsed = session.totalPotionsUsed ?? 0;
+    const enemyInstanceId = this.buildEnemyInstanceId({
+      sessionId: session.id,
+      combatIndex,
+      mobId: mob.id,
+    });
 
     const event = this.buildRealtimeEvent({
       context: {
@@ -1930,6 +1971,7 @@ export class AutoCombatService implements OnModuleDestroy {
         mobId: mob.id,
         mobName: mob.name,
         combatIndex,
+        enemyInstanceId,
       },
       type: 'MOB_SPAWNED',
       actor: 'SYSTEM',
@@ -2681,6 +2723,11 @@ export class AutoCombatService implements OnModuleDestroy {
       mobId: currentMob.id,
       mobName: currentMob.name,
       combatIndex: currentCombatIndex,
+      enemyInstanceId: this.buildEnemyInstanceId({
+        sessionId: session.id,
+        combatIndex: currentCombatIndex,
+        mobId: currentMob.id,
+      }),
     };
 
     const playerStats: FighterStats = {
@@ -3558,6 +3605,27 @@ export class AutoCombatService implements OnModuleDestroy {
         ? session.currentMobMaxHp
         : (session.currentMob?.hp ?? null);
 
+    const snapshotSequence = await this.getLatestSessionEventSequence(
+      session.id,
+      session.characterId,
+    );
+
+    const enemyInstanceId = this.buildEnemyInstanceId({
+      sessionId: session.id,
+      combatIndex: session.currentCombatIndex,
+      mobId: session.currentMobId ?? session.currentMob?.id ?? null,
+    });
+
+    const currentMobPayload = this.buildCurrentMobStatusPayload(
+      session.currentMob,
+      currentMobHp,
+      currentMobMaxHp,
+      {
+        sessionId: session.id,
+        combatIndex: session.currentCombatIndex,
+      },
+    );
+
     const characterXpPayload = this.buildCharacterXpPayload(
       session.character.level,
       session.character.xp,
@@ -3578,6 +3646,8 @@ export class AutoCombatService implements OnModuleDestroy {
       hasActiveAutoCombat: session.status === AutoCombatSessionStatus.ACTIVE,
       message: extra?.message ?? 'Sessão carregada com sucesso.',
       serverNow: now.toISOString(),
+      snapshotSequence,
+      latestEventSequence: snapshotSequence,
 
       character: {
         id: session.character.id,
@@ -3624,18 +3694,14 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMobMaxHp,
         currentRound: session.currentRound,
         currentCombatIndex: session.currentCombatIndex,
-        currentMob: this.buildCurrentMobStatusPayload(
-          session.currentMob,
-          currentMobHp,
-          currentMobMaxHp,
-        ),
+        enemyInstanceId,
+        currentEnemyInstanceId: enemyInstanceId,
+        snapshotSequence,
+        latestEventSequence: snapshotSequence,
+        currentMob: currentMobPayload,
       },
 
-      currentMob: this.buildCurrentMobStatusPayload(
-        session.currentMob,
-        currentMobHp,
-        currentMobMaxHp,
-      ),
+      currentMob: currentMobPayload,
 
       subMap: {
         id: session.subMap.id,
@@ -3680,13 +3746,24 @@ export class AutoCombatService implements OnModuleDestroy {
     currentMob: any,
     currentMobHp: number | null,
     currentMobMaxHp: number | null,
+    options?: {
+      sessionId?: string | null;
+      combatIndex?: number | null;
+    },
   ) {
     if (!currentMob) {
       return null;
     }
 
+    const enemyInstanceId = this.buildEnemyInstanceId({
+      sessionId: options?.sessionId ?? null,
+      combatIndex: options?.combatIndex ?? null,
+      mobId: currentMob.id,
+    });
+
     return {
       id: currentMob.id,
+      enemyInstanceId,
       name: currentMob.name,
       description: currentMob.description,
       level: currentMob.level,
@@ -3703,6 +3780,47 @@ export class AutoCombatService implements OnModuleDestroy {
           ? this.calculatePercent(currentMobHp, currentMobMaxHp)
           : 0,
     };
+  }
+
+  private buildEnemyInstanceId(params: {
+    sessionId?: string | null;
+    combatIndex?: number | null;
+    mobId?: string | null;
+  }) {
+    const sessionId = String(params.sessionId ?? '').trim();
+    const mobId = String(params.mobId ?? '').trim();
+    const combatIndex = Number(params.combatIndex);
+
+    if (
+      !sessionId ||
+      !mobId ||
+      !Number.isFinite(combatIndex) ||
+      combatIndex <= 0
+    ) {
+      return null;
+    }
+
+    return `${sessionId}:${Math.floor(combatIndex)}:${mobId}`;
+  }
+
+  private async getLatestSessionEventSequence(
+    sessionId: string,
+    characterId?: string | null,
+  ) {
+    const latestEvent = await this.prisma.autoCombatSessionEvent.findFirst({
+      where: {
+        sessionId,
+        ...(characterId ? { characterId } : {}),
+      },
+      orderBy: {
+        sequence: 'desc',
+      },
+      select: {
+        sequence: true,
+      },
+    });
+
+    return latestEvent?.sequence ?? null;
   }
 
   private async buildSessionXpBreakdown(
@@ -4741,6 +4859,7 @@ export class AutoCombatService implements OnModuleDestroy {
 
     mobId?: string;
     mobName?: string;
+    enemyInstanceId?: string | null;
 
     totalCombats?: number;
     totalRounds?: number;
@@ -4768,10 +4887,20 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const mobId = params.mobId ?? params.context.mobId;
     const mobName = params.mobName ?? params.context.mobName;
+    const combatIndex = params.combatIndex ?? params.context.combatIndex;
+    const enemyInstanceId =
+      params.enemyInstanceId ??
+      params.context.enemyInstanceId ??
+      this.buildEnemyInstanceId({
+        sessionId: params.context.sessionId,
+        combatIndex,
+        mobId,
+      });
 
     return {
       characterId: params.context.characterId,
       sessionId: params.context.sessionId,
+      enemyInstanceId,
       type: params.type,
       message: params.message,
 
@@ -4836,7 +4965,7 @@ export class AutoCombatService implements OnModuleDestroy {
       restStopHpPercent: params.restStopHpPercent,
 
       round: params.round,
-      combatIndex: params.combatIndex ?? params.context.combatIndex,
+      combatIndex,
       actor: params.actor,
       target: params.target,
 

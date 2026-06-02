@@ -50,6 +50,7 @@ export type AutoCombatRealtimeState = {
   hasLoadedOnce: boolean;
 
   status: AutoCombatStatusResponse | null;
+  snapshotSequence: number | null;
 
   session: AutoCombatRealtimeSessionState | null;
   character: AutoCombatRealtimeCharacterState | null;
@@ -199,6 +200,7 @@ export const initialAutoCombatRealtimeState: AutoCombatRealtimeState = {
   hasLoadedOnce: false,
 
   status: null,
+  snapshotSequence: null,
 
   session: null,
   character: null,
@@ -234,6 +236,7 @@ export const initialAutoCombatRealtimeState: AutoCombatRealtimeState = {
 
 type StatusMobSnapshotLike = {
   id?: string | null;
+  enemyInstanceId?: string | null;
   name?: string | null;
   currentHp?: number | null;
   maxHp?: number | null;
@@ -312,7 +315,8 @@ function hasUsefulMobIdentity(mob?: StatusMobSnapshotLike | null) {
   if (!mob) return false;
 
   return Boolean(
-    mob.id ||
+    mob.enemyInstanceId ||
+      mob.id ||
       mob.name ||
       mob.currentHp !== null ||
       mob.currentHp !== undefined ||
@@ -410,6 +414,30 @@ function getStateCombatIndex(state: AutoCombatRealtimeState) {
   return combatIndex > 0 ? Math.floor(combatIndex) : null;
 }
 
+function normalizeScopeString(value?: string | null) {
+  const normalized = String(value ?? '').trim();
+
+  return normalized || null;
+}
+
+function getStatusSnapshotSequence(status: AutoCombatStatusResponse | null) {
+  const session = getStatusSession(status) as
+    | {
+        snapshotSequence?: number | null;
+        latestEventSequence?: number | null;
+      }
+    | null;
+
+  return (
+    getOptionalStatusNumber(
+      status?.snapshotSequence ??
+        status?.latestEventSequence ??
+        session?.snapshotSequence ??
+        session?.latestEventSequence,
+    ) ?? null
+  );
+}
+
 function isSameCombatScope(
   currentCombatIndex?: number | null,
   nextCombatIndex?: number | null,
@@ -426,7 +454,16 @@ function isSameMobScope(
   nextMobId?: string | null,
   currentMobName?: string | null,
   nextMobName?: string | null,
+  currentEnemyInstanceId?: string | null,
+  nextEnemyInstanceId?: string | null,
 ) {
+  const currentInstance = normalizeScopeString(currentEnemyInstanceId);
+  const nextInstance = normalizeScopeString(nextEnemyInstanceId);
+
+  if (currentInstance && nextInstance) {
+    return currentInstance === nextInstance;
+  }
+
   if (currentMobId && nextMobId) {
     return currentMobId === nextMobId;
   }
@@ -488,6 +525,8 @@ function shouldPreservePreviousMobAgainstOlderStatus(params: {
       statusMob?.id ?? null,
       currentMob?.name ?? null,
       statusMob?.name ?? null,
+      currentMob?.enemyInstanceId ?? null,
+      statusMob?.enemyInstanceId ?? null,
     )
   ) {
     return false;
@@ -772,6 +811,7 @@ function clearRealtimeRuntimeState(
     ...state,
 
     status: clearStatus ? null : state.status,
+    snapshotSequence: clearEventCaches ? null : state.snapshotSequence,
     session: clearSession ? null : state.session,
 
     mob: clearMob ? null : state.mob,
@@ -1253,6 +1293,8 @@ function shouldRejectRollbackRealtimeEvent(
     event.mobId ?? null,
     state.mob?.name ?? null,
     event.mobName ?? null,
+    state.mob?.enemyInstanceId ?? null,
+    event.enemyInstanceId ?? null,
   );
 
   if (sameCombat && sameMob) {
@@ -1617,6 +1659,7 @@ function hydrateFromStatus(
       normalizeSessionStatus(rawSession?.status) === 'ACTIVE');
 
   const sessionChanged = isNewSession(currentSessionId, nextSessionId);
+  const statusSnapshotSequence = getStatusSnapshotSequence(status);
 
   const baseState = sessionChanged
     ? clearRealtimeRuntimeState(state, {
@@ -1631,6 +1674,21 @@ function hydrateFromStatus(
         clearBattleLog: true,
       })
     : state;
+
+  if (
+    !sessionChanged &&
+    statusIsActive &&
+    statusSnapshotSequence !== null &&
+    baseState.lastAppliedEventSequence !== null &&
+    statusSnapshotSequence < baseState.lastAppliedEventSequence
+  ) {
+    return {
+      ...baseState,
+      characterId,
+      hasLoadedOnce: true,
+      updatedAt: now(),
+    };
+  }
 
   const nextTotals = buildTotalsStateFromStatus(status, null);
 
@@ -1723,6 +1781,7 @@ function hydrateFromStatus(
 
       characterId,
       status,
+      snapshotSequence: statusSnapshotSequence ?? baseState.snapshotSequence,
 
       session: nextSession,
       character: nextCharacter,
@@ -1751,6 +1810,7 @@ function hydrateFromStatus(
 
     characterId,
     status,
+    snapshotSequence: statusSnapshotSequence ?? baseState.snapshotSequence,
 
     session: nextSession,
     character: nextCharacter,
@@ -1808,6 +1868,17 @@ function applyRealtimeEventSnapshot(
     : state.potion;
 
   const nextVisual = buildVisualStateFromRealtimeEvent(event, state.visual);
+  const eventSequence = getStoredRealtimeEventSequence(event);
+  const nextSessionSequence =
+    eventSequence !== null
+      ? Math.max(
+          state.session?.latestEventSequence ??
+            state.session?.snapshotSequence ??
+            state.snapshotSequence ??
+            0,
+          eventSequence,
+        )
+      : (state.session?.latestEventSequence ?? state.session?.snapshotSequence);
 
   const nextSession: AutoCombatRealtimeSessionState | null = state.session
     ? {
@@ -1821,6 +1892,12 @@ function applyRealtimeEventSnapshot(
           event.combatIndex !== undefined && event.combatIndex !== null
             ? Math.max(1, Math.floor(toSafeNumber(event.combatIndex, 1)))
             : state.session.currentCombatIndex,
+        enemyInstanceId: event.enemyInstanceId ?? state.session.enemyInstanceId,
+        currentEnemyInstanceId:
+          event.enemyInstanceId ?? state.session.currentEnemyInstanceId,
+        snapshotSequence: nextSessionSequence ?? state.session.snapshotSequence,
+        latestEventSequence:
+          nextSessionSequence ?? state.session.latestEventSequence,
         updatedAt: now(),
       }
     : event.sessionId
@@ -1843,6 +1920,10 @@ function applyRealtimeEventSnapshot(
             event.combatIndex !== undefined && event.combatIndex !== null
               ? Math.max(1, Math.floor(toSafeNumber(event.combatIndex, 1)))
               : null,
+          enemyInstanceId: event.enemyInstanceId ?? null,
+          currentEnemyInstanceId: event.enemyInstanceId ?? null,
+          snapshotSequence: nextSessionSequence ?? null,
+          latestEventSequence: nextSessionSequence ?? null,
           updatedAt: now(),
         }
       : null;
@@ -1854,6 +1935,10 @@ function applyRealtimeEventSnapshot(
     character: nextCharacter,
     mob: nextMob,
     displayTotals: nextDisplayTotals,
+    snapshotSequence:
+      eventSequence !== null
+        ? Math.max(state.snapshotSequence ?? 0, eventSequence)
+        : state.snapshotSequence,
     visual: nextVisual,
     potion: nextPotion,
     battleLogEvents: appendBattleLogEvent(state.battleLogEvents, event),
@@ -1974,9 +2059,28 @@ function hydrateRecentEvents(
    * pelo socket, sejam enfileirados e animados novamente.
    */
   const processedMarkers = markEventsAsProcessed(state, validEvents);
+  const latestRecentSequence = validEvents.reduce<number | null>(
+    (latestSequence, event) => {
+      const eventSequence = getStoredRealtimeEventSequence(event);
+
+      if (eventSequence === null) {
+        return latestSequence;
+      }
+
+      return latestSequence === null
+        ? eventSequence
+        : Math.max(latestSequence, eventSequence);
+    },
+    null,
+  );
+  const nextSnapshotSequence =
+    latestRecentSequence !== null
+      ? Math.max(state.snapshotSequence ?? 0, latestRecentSequence)
+      : state.snapshotSequence;
 
   const didChange =
     nextBattleLogEvents !== state.battleLogEvents ||
+    nextSnapshotSequence !== state.snapshotSequence ||
     processedMarkers.processedEventKeys !== state.processedEventKeys ||
     processedMarkers.processedGenericFingerprints !==
       state.processedGenericFingerprints ||
@@ -1994,6 +2098,17 @@ function hydrateRecentEvents(
 
     characterId,
     battleLogEvents: nextBattleLogEvents,
+    snapshotSequence: nextSnapshotSequence,
+    session: state.session
+      ? {
+          ...state.session,
+          snapshotSequence:
+            nextSnapshotSequence ?? state.session.snapshotSequence ?? null,
+          latestEventSequence:
+            nextSnapshotSequence ?? state.session.latestEventSequence ?? null,
+          updatedAt: now(),
+        }
+      : state.session,
 
     ...processedMarkers,
 

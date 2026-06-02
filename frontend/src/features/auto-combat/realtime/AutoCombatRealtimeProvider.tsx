@@ -386,7 +386,7 @@ function normalizeInitialMobSpawnedEvent(params: {
       event.createdAt ??
       `initial-spawn-${sessionId ?? 'no-session'}-${
         event.combatIndex ?? 1
-      }-${event.mobId ?? event.mobName ?? 'mob'}`,
+      }-${event.enemyInstanceId ?? event.mobId ?? event.mobName ?? 'mob'}`,
   };
 }
 
@@ -829,7 +829,24 @@ export function AutoCombatRealtimeProvider({
       recentEventsRequestRef.current = requestId;
 
       try {
-        const response = await getAutoCombatRecentEvents(normalizedCharacterId);
+        const knownSequences = [
+          currentState.lastAppliedEventSequence,
+          currentState.snapshotSequence,
+          currentState.session?.latestEventSequence,
+          currentState.session?.snapshotSequence,
+        ].filter(
+          (value): value is number =>
+            typeof value === 'number' && Number.isFinite(value),
+        );
+        const afterSequence =
+          knownSequences.length > 0 ? Math.max(...knownSequences) : null;
+
+        const response = await getAutoCombatRecentEvents(
+          normalizedCharacterId,
+          {
+            afterSequence,
+          },
+        );
 
         if (recentEventsRequestRef.current !== requestId) {
           return;
@@ -854,7 +871,9 @@ export function AutoCombatRealtimeProvider({
             sessionId,
             sessionStatus: response.session?.status ?? null,
             eventsCount: events.length,
+            afterSequence,
             latestSequence: response.latestSequence,
+            snapshotSequence: response.snapshotSequence ?? null,
             firstSequence: getLooseEventSequence(events[0]),
             lastSequence: getLooseEventSequence(events[events.length - 1]),
             lastEventType: events[events.length - 1]?.type ?? null,

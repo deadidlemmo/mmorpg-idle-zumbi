@@ -5,6 +5,7 @@ import {
   Header,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -67,8 +68,15 @@ export class AutoCombatController {
   getRecentEvents(
     @Req() request: any,
     @Param('characterId') characterId: string,
+    @Query('afterSequence') afterSequence?: string,
   ) {
-    return this.autoCombatService.getRecentEvents(request.user.id, characterId);
+    return this.autoCombatService.getRecentEvents(
+      request.user.id,
+      characterId,
+      {
+        afterSequence,
+      },
+    );
   }
 
   @Post(':characterId/stop')

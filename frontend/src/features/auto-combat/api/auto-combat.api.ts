@@ -38,16 +38,19 @@ export type AutoCombatRecentEventsResponse = {
 
   events: AutoCombatRecentEvent[];
   latestSequence: number | null;
+  snapshotSequence?: number | null;
+  requestedAfterSequence?: number | null;
 };
 
 function getAutoCombatRecentEventsEndpoint(characterId: string) {
   return `/auto-combat/${characterId}/recent-events`;
 }
 
-function getNoStoreRequestConfig() {
+function getNoStoreRequestConfig(params?: Record<string, unknown>) {
   return {
     params: {
       _ts: Date.now(),
+      ...params,
     },
   };
 }
@@ -83,10 +86,17 @@ export async function getAutoCombatStatus(
 
 export async function getAutoCombatRecentEvents(
   characterId: string,
+  options?: {
+    afterSequence?: number | null;
+  },
 ): Promise<AutoCombatRecentEventsResponse> {
   const response = await apiClient.get<AutoCombatRecentEventsResponse>(
     getAutoCombatRecentEventsEndpoint(characterId),
-    getNoStoreRequestConfig(),
+    getNoStoreRequestConfig(
+      options?.afterSequence !== null && options?.afterSequence !== undefined
+        ? { afterSequence: options.afterSequence }
+        : undefined,
+    ),
   );
 
   return response.data;

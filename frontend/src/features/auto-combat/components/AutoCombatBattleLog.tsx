@@ -36,6 +36,7 @@ type BattleLogResultTone =
 type AutoCombatRealtimeEventExtra = AutoCombatRealtimeEvent & {
   id?: string | null;
   eventId?: string | null;
+  enemyInstanceId?: string | null;
   sequence?: number | string | null;
 
   characterId?: string | null;
@@ -147,6 +148,7 @@ function getEventKey(event: AutoCombatRealtimeEvent) {
     looseEvent.type ?? 'no-type',
     looseEvent.createdAt ?? 'no-created-at',
 
+    looseEvent.enemyInstanceId ?? 'no-enemy-instance',
     looseEvent.mobId ?? 'no-mob',
     looseEvent.mobName ?? 'no-mob-name',
     looseEvent.round ?? 'no-round',
@@ -189,6 +191,15 @@ function getMobSpawnDedupeKey(event: AutoCombatRealtimeEvent) {
   }
 
   const looseEvent = event as AutoCombatRealtimeEventExtra;
+
+  if (looseEvent.enemyInstanceId) {
+    return [
+      event.sessionId ?? 'no-session',
+      looseEvent.characterId ?? 'no-character',
+      looseEvent.enemyInstanceId,
+      'mob-spawned',
+    ].join('|');
+  }
 
   if (event.combatIndex !== null && event.combatIndex !== undefined) {
     return [
@@ -241,6 +252,7 @@ function getGenericDedupeKey(event: AutoCombatRealtimeEvent) {
     looseEvent.sequence ?? 'no-sequence',
     looseEvent.characterId ?? 'no-character',
     looseEvent.type ?? 'no-type',
+    looseEvent.enemyInstanceId ?? 'no-enemy-instance',
     looseEvent.mobId ?? 'no-mob',
     looseEvent.round ?? 'no-round',
     looseEvent.combatIndex ?? 'no-combat',
@@ -809,7 +821,7 @@ function getEventCombatIndex(event?: AutoCombatRealtimeEvent | null) {
 function getEventMobIdentity(event?: AutoCombatRealtimeEvent | null) {
   if (!event) return '';
 
-  return String(event.mobId ?? event.mobName ?? '').trim();
+  return String(event.enemyInstanceId ?? event.mobId ?? event.mobName ?? '').trim();
 }
 
 function shouldHideRepeatedSpawn(params: {

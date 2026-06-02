@@ -66,6 +66,7 @@ export type AutoCombatRealtimeCharacterState = {
 
 export type AutoCombatRealtimeMobState = {
   id?: string | null;
+  enemyInstanceId?: string | null;
   name?: string | null;
 
   currentHp?: number;
@@ -102,8 +103,12 @@ export type AutoCombatRealtimeSessionState = {
   /**
    * Índice do combate atual.
    * Exemplo: se 10 mobs foram abatidos, normalmente o combate atual é 11.
-   */
+  */
   currentCombatIndex?: number | null;
+  enemyInstanceId?: string | null;
+  currentEnemyInstanceId?: string | null;
+  snapshotSequence?: number | null;
+  latestEventSequence?: number | null;
 
   updatedAt?: number;
 };
