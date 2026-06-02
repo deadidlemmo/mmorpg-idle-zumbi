@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   Post,
   Req,
@@ -46,11 +47,23 @@ export class AutoCombatController {
   }
 
   @Get(':characterId/status')
+  @Header(
+    'Cache-Control',
+    'no-store, no-cache, must-revalidate, proxy-revalidate',
+  )
+  @Header('Pragma', 'no-cache')
+  @Header('Expires', '0')
   getStatus(@Req() request: any, @Param('characterId') characterId: string) {
     return this.autoCombatService.getStatus(request.user.id, characterId);
   }
 
   @Get(':characterId/recent-events')
+  @Header(
+    'Cache-Control',
+    'no-store, no-cache, must-revalidate, proxy-revalidate',
+  )
+  @Header('Pragma', 'no-cache')
+  @Header('Expires', '0')
   getRecentEvents(
     @Req() request: any,
     @Param('characterId') characterId: string,

@@ -44,6 +44,19 @@ function getAutoCombatRecentEventsEndpoint(characterId: string) {
   return `/auto-combat/${characterId}/recent-events`;
 }
 
+function getNoStoreRequestConfig() {
+  return {
+    headers: {
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+      Expires: '0',
+    },
+    params: {
+      _ts: Date.now(),
+    },
+  };
+}
+
 export async function getAutoCombatMaps(): Promise<AutoCombatMapViewModel[]> {
   const response = await apiClient.get<AutoCombatMapViewModel[]>(
     API_ENDPOINTS.maps.list,
@@ -67,6 +80,7 @@ export async function getAutoCombatStatus(
 ): Promise<AutoCombatStatusResponse> {
   const response = await apiClient.get<AutoCombatStatusResponse>(
     API_ENDPOINTS.autoCombat.status(characterId),
+    getNoStoreRequestConfig(),
   );
 
   return response.data;
@@ -77,6 +91,7 @@ export async function getAutoCombatRecentEvents(
 ): Promise<AutoCombatRecentEventsResponse> {
   const response = await apiClient.get<AutoCombatRecentEventsResponse>(
     getAutoCombatRecentEventsEndpoint(characterId),
+    getNoStoreRequestConfig(),
   );
 
   return response.data;

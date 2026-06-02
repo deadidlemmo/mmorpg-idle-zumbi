@@ -57,6 +57,8 @@ const AUTO_COMBAT_REALTIME_TICK_MS = 1000;
 const AUTO_COMBAT_STORED_EVENTS_LIMIT = 50;
 const AUTO_COMBAT_RECENT_EVENTS_LIMIT = 20;
 const AUTO_COMBAT_MAX_REALTIME_EVENTS_TO_EMIT = 20;
+const AUTO_COMBAT_STATUS_LOCK_WAIT_MS = 3000;
+const AUTO_COMBAT_STATUS_LOCK_POLL_MS = 50;
 
 const AUTO_COMBAT_CONCURRENT_PROCESSING_MESSAGE =
   'Processamento abortado: outra execução já avançou esta sessão.';
@@ -658,6 +660,19 @@ export class AutoCombatService implements OnModuleDestroy {
     this.potionUsageByCombat.clear();
   }
 
+  private async waitForProcessingLockRelease(characterId: string) {
+    const startedAt = Date.now();
+
+    while (
+      this.processingLocks.has(characterId) &&
+      Date.now() - startedAt < AUTO_COMBAT_STATUS_LOCK_WAIT_MS
+    ) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, AUTO_COMBAT_STATUS_LOCK_POLL_MS);
+      });
+    }
+  }
+
   async start(userId: string, startAutoCombatDto: StartAutoCombatDto) {
     const character = await this.prisma.character.findFirst({
       where: {
@@ -1099,14 +1114,18 @@ export class AutoCombatService implements OnModuleDestroy {
 
     if (activeSession) {
       await this.ensureResponsiveRoundDuration(activeSession.id);
-      this.startRealtimeProcessingLoop(userId, character.id);
+      const response = await this.processActiveSessionById(
+        userId,
+        activeSession.id,
+        {
+          emitRealtimeEvents: false,
+          waitForActiveProcessing: true,
+        },
+      );
 
-      const response = await this.buildSessionResponse(activeSession.id, {
-        message: 'Sessão ativa carregada.',
-        processing: this.buildEmptyProcessingSummary(),
-      });
-
-      this.autoCombatGateway.emitStatus(character.id, response);
+      if (response.active) {
+        this.startRealtimeProcessingLoop(userId, character.id);
+      }
 
       return response;
     }
@@ -1137,6 +1156,7 @@ export class AutoCombatService implements OnModuleDestroy {
       active: false,
       hasActiveAutoCombat: false,
       message: 'Nenhuma sessão de combate automático encontrada.',
+      serverNow: new Date().toISOString(),
       character: {
         id: character.id,
         name: character.name,
@@ -1535,7 +1555,14 @@ export class AutoCombatService implements OnModuleDestroy {
     });
   }
 
-  private async processActiveSessionById(userId: string, sessionId: string) {
+  private async processActiveSessionById(
+    userId: string,
+    sessionId: string,
+    options?: {
+      emitRealtimeEvents?: boolean;
+      waitForActiveProcessing?: boolean;
+    },
+  ) {
     const session = await this.loadAutoCombatSession(userId, sessionId);
 
     if (!session) {
@@ -1564,6 +1591,15 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     if (this.processingLocks.has(session.characterId)) {
+      if (options?.waitForActiveProcessing) {
+        await this.waitForProcessingLockRelease(session.characterId);
+
+        return this.buildSessionResponse(session.id, {
+          message: 'Sessão ativa sincronizada.',
+          processing: this.buildEmptyProcessingSummary(),
+        });
+      }
+
       return this.buildSessionResponse(session.id, {
         message: 'Sessão já está sendo processada.',
         processing: this.buildEmptyProcessingSummary(),
@@ -1793,6 +1829,7 @@ export class AutoCombatService implements OnModuleDestroy {
       }
 
       const shouldEmitRealtimeEvents =
+        options?.emitRealtimeEvents !== false &&
         this.shouldEmitRealtimeEventsForProcessingResult(aggregateResult);
 
       const realtimeEventsToEmit = shouldEmitRealtimeEvents
@@ -3539,6 +3576,7 @@ export class AutoCombatService implements OnModuleDestroy {
       active: session.status === AutoCombatSessionStatus.ACTIVE,
       hasActiveAutoCombat: session.status === AutoCombatSessionStatus.ACTIVE,
       message: extra?.message ?? 'Sessão carregada com sucesso.',
+      serverNow: now.toISOString(),
 
       character: {
         id: session.character.id,

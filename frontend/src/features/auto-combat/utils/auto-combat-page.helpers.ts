@@ -761,11 +761,37 @@ export function getDefaultSubMapId(params: {
   return subMaps[0]?.id ?? '';
 }
 
-export function getRemainingSeconds(status: AutoCombatStatusResponse | null) {
+function getTimestampMs(value: unknown) {
+  if (value instanceof Date) {
+    const timestamp = value.getTime();
+
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    return null;
+  }
+
+  const timestamp = new Date(value).getTime();
+
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+export function getRemainingSeconds(
+  status: AutoCombatStatusResponse | null,
+  nowMs = Date.now(),
+) {
+  const session = getSessionFromStatus(status);
+  const endsAtMs = getTimestampMs(
+    session?.endsAt ?? status?.sessionSummary?.duration?.endsAt,
+  );
+
+  if (endsAtMs !== null) {
+    return Math.max(0, Math.ceil((endsAtMs - nowMs) / 1000));
+  }
+
   return (
-    status?.session?.remainingSeconds ??
-    status?.activeSession?.remainingSeconds ??
-    status?.autoCombatSession?.remainingSeconds ??
+    session?.remainingSeconds ??
     status?.sessionSummary?.duration?.remainingSeconds ??
     0
   );

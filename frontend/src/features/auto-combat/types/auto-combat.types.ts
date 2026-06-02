@@ -709,6 +709,7 @@ export interface AutoCombatStatusResponse {
   hasActiveAutoCombat?: boolean;
 
   message?: string;
+  serverNow?: string | Date | null;
 
   character?: AutoCombatStatusCharacterViewModel;
 

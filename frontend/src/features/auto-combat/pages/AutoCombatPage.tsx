@@ -111,6 +111,22 @@ const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
 const XP_FEEDBACK_VISIBLE_MS = 4800;
 const MAX_SHOWN_XP_FEEDBACK_KEYS = 80;
 
+function getAutoCombatTimestampMs(value: unknown) {
+  if (value instanceof Date) {
+    const timestamp = value.getTime();
+
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    return null;
+  }
+
+  const timestamp = new Date(value).getTime();
+
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
 type MobFeedbackScope = {
   sessionId: string | null;
   combatIndex: number | null;
@@ -499,6 +515,7 @@ export function AutoCombatPage() {
     useRef<CharacterPotionConfigWithItem | null>(null);
   const selectedPotionItemIdRef = useRef('');
   const hasPendingRealtimeVisualRef = useRef(false);
+  const loadAutoCombatDataRequestRef = useRef(0);
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
   const xpFeedbackHideTimeoutRef = useRef<number | null>(null);
   const xpFeedbackEventKeyRef = useRef('');
@@ -581,6 +598,34 @@ export function AutoCombatPage() {
     (providerQueueLength > 0 || Boolean(providerActiveEvent));
 
   const showActiveSession = hasActiveSession || hasPendingRealtimeVisual;
+  const [sessionClockNowMs, setSessionClockNowMs] = useState(() => Date.now());
+  const [serverClockOffsetMs, setServerClockOffsetMs] = useState(0);
+  const syncedSessionNowMs = sessionClockNowMs + serverClockOffsetMs;
+
+  useEffect(() => {
+    const serverNowMs = getAutoCombatTimestampMs(effectiveStatus?.serverNow);
+
+    if (serverNowMs === null) {
+      setServerClockOffsetMs(0);
+      return;
+    }
+
+    setServerClockOffsetMs(serverNowMs - Date.now());
+  }, [effectiveStatus?.serverNow]);
+
+  useEffect(() => {
+    setSessionClockNowMs(Date.now());
+
+    if (!showActiveSession) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      setSessionClockNowMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [showActiveSession]);
 
   useEffect(() => {
     hasPendingRealtimeVisualRef.current = hasPendingRealtimeVisual;
@@ -704,6 +749,9 @@ export function AutoCombatPage() {
   const loadAutoCombatData = useCallback(async () => {
     if (!characterId) return;
 
+    const requestId = loadAutoCombatDataRequestRef.current + 1;
+    loadAutoCombatDataRequestRef.current = requestId;
+
     try {
       setErrorMessage('');
 
@@ -720,6 +768,10 @@ export function AutoCombatPage() {
         getCharacterInventoryRaw(characterId).catch(() => null),
         getCharacterPotionConfigRaw(characterId).catch(() => null),
       ]);
+
+      if (requestId !== loadAutoCombatDataRequestRef.current) {
+        return;
+      }
 
       const statusSession = getSessionFromStatus(statusData);
       const statusProgress = buildProgressFromStatus(statusData, statusSession);
@@ -801,6 +853,10 @@ export function AutoCombatPage() {
         });
       });
     } catch (error) {
+      if (requestId !== loadAutoCombatDataRequestRef.current) {
+        return;
+      }
+
       setErrorMessage(
         getApiErrorMessage(
           error,
@@ -1395,7 +1451,7 @@ export function AutoCombatPage() {
     return (
       <main className="dashboard-loading">
         <div className="loading-spinner" />
-        <span>Carregando combate automático...</span>
+        <span>Sincronizando combate...</span>
       </main>
     );
   }
@@ -1455,7 +1511,7 @@ export function AutoCombatPage() {
     : null;
   const mainThreat = selectedSubMapThreats[0] ?? null;
   const remainingSeconds = showActiveSession
-    ? getRemainingSeconds(effectiveStatus)
+    ? getRemainingSeconds(effectiveStatus, syncedSessionNowMs)
     : 0;
 
   const rawCharacterMaxHp =
