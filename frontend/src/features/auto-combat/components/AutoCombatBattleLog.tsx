@@ -115,7 +115,7 @@ function normalizeEventType(event?: AutoCombatRealtimeEvent | null) {
 function getEventSequence(event: AutoCombatRealtimeEvent) {
   const value = (event as AutoCombatRealtimeEventExtra).sequence;
 
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined) {
     return undefined;
   }
 

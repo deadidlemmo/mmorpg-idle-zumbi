@@ -1321,17 +1321,17 @@ function buildAutoCombatItemFromRealtime(params: {
   );
 
   const statusCurrentMob =
-    getStatusCurrentMob(status) ??
     realtimeCombat?.currentMob ??
     realtimeState.mob ??
+    getStatusCurrentMob(status) ??
     session.currentMob ??
     null;
 
   const locationLabel = getStatusLocationLabel(status);
 
   const mobName =
-    statusCurrentMob?.name ??
     realtimeCombat?.mobName ??
+    statusCurrentMob?.name ??
     displayedEvent?.mobName ??
     "Combate automático";
 

@@ -375,12 +375,12 @@ function getAutoCombatMobRecord(autoCombatState: unknown): LooseRecord | null {
   const autoCombatSession = getRecordField(status, 'autoCombatSession');
 
   return (
+    getRecordField(autoCombatState, 'mob') ??
+    getRecordField(autoCombatState, 'currentMob') ??
     getRecordField(status, 'currentMob') ??
     getRecordField(statusSession, 'currentMob') ??
     getRecordField(activeSession, 'currentMob') ??
     getRecordField(autoCombatSession, 'currentMob') ??
-    getRecordField(autoCombatState, 'mob') ??
-    getRecordField(autoCombatState, 'currentMob') ??
     getRecordField(status, 'mob') ??
     getRecordField(session, 'currentMob') ??
     getRecordField(session, 'mob') ??

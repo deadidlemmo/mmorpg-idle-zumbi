@@ -1231,6 +1231,16 @@ function shouldRejectRollbackRealtimeEvent(
   state: AutoCombatRealtimeState,
   event: AutoCombatRealtimeEvent,
 ) {
+  const eventSequence = getStoredRealtimeEventSequence(event);
+
+  if (
+    eventSequence !== null &&
+    (state.lastAppliedEventSequence === null ||
+      eventSequence > state.lastAppliedEventSequence)
+  ) {
+    return false;
+  }
+
   const eventType = normalizeRealtimeEventType(event);
 
   if (eventType === 'MOB_SPAWNED') {

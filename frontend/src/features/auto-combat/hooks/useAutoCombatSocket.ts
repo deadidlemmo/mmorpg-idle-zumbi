@@ -35,6 +35,7 @@ type UseAutoCombatSocketOptions = {
 
 type AutoCombatRealtimeEventLoose = AutoCombatRealtimeEvent & {
   createdAt?: string | null;
+  sequence?: number | null;
 
   characterXp?: number | null;
   characterLevel?: number | null;
@@ -126,6 +127,7 @@ function getRealtimeEventKey(payload: AutoCombatRealtimeEvent) {
   return [
     event.sessionId ?? 'no-session',
     event.characterId ?? 'no-character',
+    event.sequence ?? 'no-sequence',
     event.type ?? 'no-type',
     event.createdAt ?? 'no-created-at',
     event.mobId ?? 'no-mob',
@@ -193,6 +195,10 @@ function getPotionUsedFingerprint(payload: AutoCombatRealtimeEvent) {
 
 function getGenericRealtimeFingerprint(payload: AutoCombatRealtimeEvent) {
   const event = payload as AutoCombatRealtimeEventLoose;
+
+  if (event.sequence !== null && event.sequence !== undefined) {
+    return '';
+  }
 
   return [
     event.sessionId ?? 'no-session',

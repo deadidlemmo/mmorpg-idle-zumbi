@@ -145,6 +145,7 @@ type AutoCombatRealtimeEventType =
 type AutoCombatRealtimeEvent = {
   characterId?: string;
   sessionId?: string;
+  sequence?: number;
   type?: AutoCombatRealtimeEventType;
   message?: string;
 
@@ -4902,13 +4903,19 @@ export class AutoCombatService implements OnModuleDestroy {
       const nextSequence = (latestEvent?.sequence ?? 0) + 1;
 
       await tx.autoCombatSessionEvent.createMany({
-        data: sessionEvents.map((event, index) => ({
-          sessionId,
-          characterId: event.characterId ?? characterId,
-          type: String(event.type ?? 'UNKNOWN'),
-          sequence: nextSequence + index,
-          payloadJson: this.normalizeRealtimeEventForStorage(event),
-        })),
+        data: sessionEvents.map((event, index) => {
+          const sequence = nextSequence + index;
+
+          event.sequence = sequence;
+
+          return {
+            sessionId,
+            characterId: event.characterId ?? characterId,
+            type: String(event.type ?? 'UNKNOWN'),
+            sequence,
+            payloadJson: this.normalizeRealtimeEventForStorage(event),
+          };
+        }),
         skipDuplicates: true,
       });
 

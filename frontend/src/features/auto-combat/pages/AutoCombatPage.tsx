@@ -1048,20 +1048,22 @@ export function AutoCombatPage() {
     () =>
       showActiveSession
         ? createMobFeedbackScope({
-            sessionId: effectiveSession?.id ?? visualRealtimeCombat?.sessionId,
+            sessionId: visualRealtimeCombat?.sessionId ?? effectiveSession?.id,
             combatIndex:
+              visualRealtimeCombat?.combatIndex ??
               effectiveStatus?.session?.currentCombatIndex ??
               effectiveSession?.currentCombatIndex ??
-              visualRealtimeCombat?.combatIndex,
+              null,
             mobId:
+              visualRealtimeCombat?.mobId ??
               effectiveStatus?.currentMob?.id ??
               effectiveSession?.currentMobId ??
-              effectiveSession?.currentMob?.id ??
-              visualRealtimeCombat?.mobId,
+              effectiveSession?.currentMob?.id,
             mobName:
+              visualRealtimeCombat?.mobName ??
               effectiveStatus?.currentMob?.name ??
               effectiveSession?.currentMob?.name ??
-              visualRealtimeCombat?.mobName,
+              null,
           })
         : null,
     [
@@ -1790,8 +1792,8 @@ export function AutoCombatPage() {
   const statusActiveMob = effectiveStatus?.currentMob ?? null;
 
   const activeMobName = showActiveSession
-    ? statusActiveMob?.name ??
-      visualRealtimeCombat?.mobName ??
+    ? visualRealtimeCombat?.mobName ??
+      statusActiveMob?.name ??
       latestKilledMob?.mobName ??
       mainThreat?.mob?.name ??
       'Aguardando ameaça'
@@ -1813,19 +1815,19 @@ export function AutoCombatPage() {
     1,
     Math.floor(
       toSafeNumber(
-        statusActiveMob?.level ??
-          (
-            visualRealtimeCombat as
-              | { mobLevel?: number | string; level?: number | string }
-              | null
-              | undefined
-          )?.mobLevel ??
+        (
+          visualRealtimeCombat as
+            | { mobLevel?: number | string; level?: number | string }
+            | null
+            | undefined
+        )?.mobLevel ??
           (
             visualRealtimeCombat as
               | { mobLevel?: number | string; level?: number | string }
               | null
               | undefined
           )?.level ??
+          statusActiveMob?.level ??
           activeMobThreat?.mob?.level ??
           (
             latestKilledMob as
@@ -1850,9 +1852,9 @@ export function AutoCombatPage() {
     getMobFullBodyImage(activeMobName) ?? getMobPortraitImage(activeMobName);
 
   const rawActiveMobMaxHp = showActiveSession
-    ? statusActiveMob?.maxHp ??
+    ? visualRealtimeCombat?.mobMaxHp ??
+      statusActiveMob?.maxHp ??
       statusActiveMob?.hp ??
-      visualRealtimeCombat?.mobMaxHp ??
       activeMobThreat?.mob?.hp ??
       mainThreat?.mob?.hp ??
       0
@@ -1861,12 +1863,13 @@ export function AutoCombatPage() {
   const activeMobMaxHp = Math.max(0, toSafeNumber(rawActiveMobMaxHp, 0));
 
   const rawActiveMobCurrentHp =
-    showActiveSession && statusActiveMob?.currentHp !== undefined
-      ? statusActiveMob.currentHp
-      : showActiveSession
-        ? visualRealtimeCombat?.mobCurrentHp ??
-          (activeMobMaxHp > 0 ? activeMobMaxHp : 0)
-        : activeMobMaxHp;
+    showActiveSession && visualRealtimeCombat?.mobCurrentHp !== undefined
+      ? visualRealtimeCombat.mobCurrentHp
+      : showActiveSession && statusActiveMob?.currentHp !== undefined
+        ? statusActiveMob.currentHp
+        : showActiveSession
+          ? Math.max(0, activeMobMaxHp)
+          : activeMobMaxHp;
 
   const activeMobCurrentHp = clampNumber(
     rawActiveMobCurrentHp,

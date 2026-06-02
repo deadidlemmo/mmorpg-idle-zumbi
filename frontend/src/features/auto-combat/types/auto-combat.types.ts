@@ -101,6 +101,7 @@ export type AutoCombatRealtimeTarget = 'PLAYER' | 'MOB' | 'SYSTEM' | string;
 export interface AutoCombatRealtimeEvent {
   characterId?: string | null;
   sessionId?: string | null;
+  sequence?: number | null;
 
   type?: AutoCombatRealtimeEventType;
   message?: string | null;

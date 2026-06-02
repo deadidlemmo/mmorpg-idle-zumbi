@@ -363,6 +363,7 @@ export function getRealtimeEventKey(payload: AutoCombatRealtimeEvent) {
   return [
     event.sessionId ?? 'no-session',
     event.characterId ?? 'no-character',
+    event.sequence ?? 'no-sequence',
     event.type ?? 'no-type',
     event.createdAt ?? 'no-created-at',
 
@@ -459,6 +460,10 @@ export function getPotionUsedFingerprint(payload: AutoCombatRealtimeEvent) {
 export function getGenericRealtimeFingerprint(payload: AutoCombatRealtimeEvent) {
   const event = payload as RealtimeEventLoose;
 
+  if (event.sequence !== null && event.sequence !== undefined) {
+    return '';
+  }
+
   return [
     event.sessionId ?? 'no-session',
     event.characterId ?? 'no-character',
@@ -484,6 +489,21 @@ export function isSameRealtimeEvent(
   first: AutoCombatRealtimeEvent,
   second: AutoCombatRealtimeEvent,
 ) {
+  const firstSequence = first.sequence;
+  const secondSequence = second.sequence;
+
+  if (
+    first.sessionId &&
+    second.sessionId &&
+    first.sessionId === second.sessionId &&
+    firstSequence !== null &&
+    firstSequence !== undefined &&
+    secondSequence !== null &&
+    secondSequence !== undefined
+  ) {
+    return firstSequence === secondSequence;
+  }
+
   const firstKey = getRealtimeEventKey(first);
   const secondKey = getRealtimeEventKey(second);
 
