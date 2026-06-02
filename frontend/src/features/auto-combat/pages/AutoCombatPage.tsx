@@ -127,6 +127,50 @@ function getAutoCombatTimestampMs(value: unknown) {
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
+function hasAutoCombatTimerData(
+  status: AutoCombatStatusResponse | null,
+  expectedSessionId?: string | null,
+) {
+  const session = getSessionFromStatus(status);
+
+  if (!status || !session) return false;
+
+  if (
+    expectedSessionId &&
+    session.id &&
+    session.id !== expectedSessionId
+  ) {
+    return false;
+  }
+
+  const endsAtMs = getAutoCombatTimestampMs(
+    session.endsAt ?? status.sessionSummary?.duration?.endsAt,
+  );
+
+  if (endsAtMs !== null) return true;
+
+  return (
+    typeof session.remainingSeconds === 'number' ||
+    typeof status.sessionSummary?.duration?.remainingSeconds === 'number'
+  );
+}
+
+function pickAutoCombatTimerStatus(params: {
+  realtimeStatus: AutoCombatStatusResponse | null;
+  restStatus: AutoCombatStatusResponse | null;
+  sessionId?: string | null;
+}) {
+  if (hasAutoCombatTimerData(params.realtimeStatus, params.sessionId)) {
+    return params.realtimeStatus;
+  }
+
+  if (hasAutoCombatTimerData(params.restStatus, params.sessionId)) {
+    return params.restStatus;
+  }
+
+  return null;
+}
+
 type MobFeedbackScope = {
   sessionId: string | null;
   combatIndex: number | null;
@@ -600,10 +644,36 @@ export function AutoCombatPage() {
   const showActiveSession = hasActiveSession || hasPendingRealtimeVisual;
   const [sessionClockNowMs, setSessionClockNowMs] = useState(() => Date.now());
   const [serverClockOffsetMs, setServerClockOffsetMs] = useState(0);
+  const [stableTimerStatus, setStableTimerStatus] = useState<{
+    sessionId: string | null;
+    status: AutoCombatStatusResponse;
+  } | null>(null);
   const syncedSessionNowMs = sessionClockNowMs + serverClockOffsetMs;
+  const effectiveSessionId = effectiveSession?.id ?? null;
+  const timerStatusCandidate = useMemo(
+    () =>
+      pickAutoCombatTimerStatus({
+        realtimeStatus,
+        restStatus: autoCombatStatus,
+        sessionId: effectiveSessionId,
+      }),
+    [realtimeStatus, autoCombatStatus, effectiveSessionId],
+  );
+
+  const stableTimerStatusMatches =
+    stableTimerStatus &&
+    (!effectiveSessionId || stableTimerStatus.sessionId === effectiveSessionId);
+
+  const activeTimerStatus =
+    timerStatusCandidate ??
+    (showActiveSession && stableTimerStatusMatches
+      ? stableTimerStatus.status
+      : null);
 
   useEffect(() => {
-    const serverNowMs = getAutoCombatTimestampMs(effectiveStatus?.serverNow);
+    const serverNowMs = getAutoCombatTimestampMs(
+      activeTimerStatus?.serverNow ?? effectiveStatus?.serverNow,
+    );
 
     if (serverNowMs === null) {
       setServerClockOffsetMs(0);
@@ -626,6 +696,32 @@ export function AutoCombatPage() {
       window.clearInterval(intervalId);
     };
   }, [showActiveSession]);
+
+  useEffect(() => {
+    if (!showActiveSession) {
+      setStableTimerStatus(null);
+      return;
+    }
+
+    if (!timerStatusCandidate) return;
+
+    const timerSessionId =
+      getSessionFromStatus(timerStatusCandidate)?.id ?? effectiveSessionId;
+
+    setStableTimerStatus((currentStatus) => {
+      if (
+        currentStatus?.sessionId === timerSessionId &&
+        currentStatus.status === timerStatusCandidate
+      ) {
+        return currentStatus;
+      }
+
+      return {
+        sessionId: timerSessionId,
+        status: timerStatusCandidate,
+      };
+    });
+  }, [showActiveSession, timerStatusCandidate, effectiveSessionId]);
 
   useEffect(() => {
     hasPendingRealtimeVisualRef.current = hasPendingRealtimeVisual;
@@ -1510,8 +1606,8 @@ export function AutoCombatPage() {
     ? getLatestKilledMob(effectiveStatus)
     : null;
   const mainThreat = selectedSubMapThreats[0] ?? null;
-  const remainingSeconds = showActiveSession
-    ? getRemainingSeconds(effectiveStatus, syncedSessionNowMs)
+  const remainingSeconds = showActiveSession && activeTimerStatus
+    ? getRemainingSeconds(activeTimerStatus, syncedSessionNowMs)
     : 0;
 
   const rawCharacterMaxHp =
