@@ -29,7 +29,6 @@ export function AutoCombatSessionSummary({
   totalLoot,
   potionsUsed,
 }: AutoCombatSessionSummaryProps) {
-  const premiumStatusText = isPremiumActive ? 'Ativo' : 'Potencial';
   const premiumDetailText = isPremiumActive
     ? `+${premiumBonusXp} EXP Premium`
     : `+${premiumPotentialBonusXp} EXP com Premium`;
@@ -63,20 +62,7 @@ export function AutoCombatSessionSummary({
               : 'auto-combat-session-summary__card--xp-free',
           ].join(' ')}
         >
-          <div className="auto-combat-session-summary__xp-header">
-            <span>XP ganho</span>
-            <small
-              className={[
-                'auto-combat-session-summary__premium-status',
-                isPremiumActive
-                  ? 'auto-combat-session-summary__premium-status--active'
-                  : 'auto-combat-session-summary__premium-status--locked',
-              ].join(' ')}
-            >
-              <PremiumPlaceholderIcon className="auto-combat-session-summary__premium-icon" />
-              <span>{premiumStatusText}</span>
-            </small>
-          </div>
+          <span>XP ganho</span>
 
           <strong className="auto-combat-session-summary__xp-value">
             {totalXpGained}
