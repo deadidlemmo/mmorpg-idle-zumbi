@@ -706,11 +706,13 @@ export function AutoCombatRealtimeProvider({
           });
         }
 
-        dispatch({
-          type: 'HYDRATE_STATUS',
-          characterId: normalizedCharacterId,
-          status: statusData,
-        });
+        if (statusData) {
+          dispatch({
+            type: 'HYDRATE_STATUS',
+            characterId: normalizedCharacterId,
+            status: statusData,
+          });
+        }
 
         dispatch({
           type: 'CLEAR_ERROR',
@@ -785,7 +787,7 @@ export function AutoCombatRealtimeProvider({
           characterId: normalizedCharacterId,
           sessionId,
           events,
-          applySnapshot: true,
+          applySnapshot: false,
         });
 
         if (import.meta.env.DEV) {

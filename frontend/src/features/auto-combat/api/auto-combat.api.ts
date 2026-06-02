@@ -46,11 +46,6 @@ function getAutoCombatRecentEventsEndpoint(characterId: string) {
 
 function getNoStoreRequestConfig() {
   return {
-    headers: {
-      'Cache-Control': 'no-cache',
-      Pragma: 'no-cache',
-      Expires: '0',
-    },
     params: {
       _ts: Date.now(),
     },

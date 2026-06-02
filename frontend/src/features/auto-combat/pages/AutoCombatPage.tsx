@@ -150,8 +150,10 @@ function hasAutoCombatTimerData(
   if (endsAtMs !== null) return true;
 
   return (
-    typeof session.remainingSeconds === 'number' ||
-    typeof status.sessionSummary?.duration?.remainingSeconds === 'number'
+    (typeof session.remainingSeconds === 'number' &&
+      session.remainingSeconds > 0) ||
+    (typeof status.sessionSummary?.duration?.remainingSeconds === 'number' &&
+      status.sessionSummary.duration.remainingSeconds > 0)
   );
 }
 
@@ -560,17 +562,14 @@ export function AutoCombatPage() {
   const selectedPotionItemIdRef = useRef('');
   const hasPendingRealtimeVisualRef = useRef(false);
   const loadAutoCombatDataRequestRef = useRef(0);
+  const lastPositiveRemainingSecondsRef = useRef<{
+    sessionId: string | null;
+    seconds: number;
+  } | null>(null);
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
   const xpFeedbackHideTimeoutRef = useRef<number | null>(null);
   const xpFeedbackEventKeyRef = useRef('');
   const shownXpFeedbackEventKeysRef = useRef<Set<string>>(new Set());
-  const stableActiveMobRef = useRef<{
-    sessionId: string | null;
-    name: string;
-    normalizedName: string;
-    level: number;
-  } | null>(null);
-
   const clearXpFeedbackTimers = useCallback(() => {
     if (xpFeedbackHideTimeoutRef.current !== null) {
       window.clearTimeout(xpFeedbackHideTimeoutRef.current);
@@ -609,8 +608,8 @@ export function AutoCombatPage() {
     setIsPotionConfigPanelOpen(false);
     setPotionConfigMessage('');
     processedPotionEventKeysRef.current.clear();
+    lastPositiveRemainingSecondsRef.current = null;
     queueClearXpFeedback({ resetShownEvents: true });
-    stableActiveMobRef.current = null;
   }, [characterId, queueClearXpFeedback]);
 
   const realtimeStatus = getRealtimeStatus(realtimeState);
@@ -726,12 +725,6 @@ export function AutoCombatPage() {
   useEffect(() => {
     hasPendingRealtimeVisualRef.current = hasPendingRealtimeVisual;
   }, [hasPendingRealtimeVisual]);
-
-  useEffect(() => {
-    if (!showActiveSession) {
-      stableActiveMobRef.current = null;
-    }
-  }, [showActiveSession]);
 
   const isSocketConnected = Boolean(realtimeState.isConnected);
 
@@ -893,7 +886,9 @@ export function AutoCombatPage() {
         null;
 
       setOverview(overviewData);
-      setAutoCombatStatus(statusData);
+      if (statusData) {
+        setAutoCombatStatus(statusData);
+      }
       setMaps(mapsData);
       setAvailablePotions(normalizedPotions);
       setAutoPotionConfig(normalizedPotionConfig);
@@ -918,11 +913,11 @@ export function AutoCombatPage() {
         return pickHighestProgress(current, mergedProgress);
       });
 
-      if (isSessionActive(statusData, statusSession)) {
+      if (statusData && isSessionActive(statusData, statusSession)) {
         setLocalSessionTotals(
           buildSessionTotalsFromStatus(statusData, statusSession),
         );
-      } else {
+      } else if (statusData) {
         setLocalSessionTotals(null);
         setLocalRealtimeCombat(null);
         setLocalBattleLogEvents([]);
@@ -1053,20 +1048,20 @@ export function AutoCombatPage() {
     () =>
       showActiveSession
         ? createMobFeedbackScope({
-            sessionId: visualRealtimeCombat?.sessionId ?? effectiveSession?.id,
+            sessionId: effectiveSession?.id ?? visualRealtimeCombat?.sessionId,
             combatIndex:
-              visualRealtimeCombat?.combatIndex ??
               effectiveStatus?.session?.currentCombatIndex ??
-              effectiveSession?.currentCombatIndex,
+              effectiveSession?.currentCombatIndex ??
+              visualRealtimeCombat?.combatIndex,
             mobId:
-              visualRealtimeCombat?.mobId ??
               effectiveStatus?.currentMob?.id ??
               effectiveSession?.currentMobId ??
-              effectiveSession?.currentMob?.id,
+              effectiveSession?.currentMob?.id ??
+              visualRealtimeCombat?.mobId,
             mobName:
-              visualRealtimeCombat?.mobName ??
               effectiveStatus?.currentMob?.name ??
-              effectiveSession?.currentMob?.name,
+              effectiveSession?.currentMob?.name ??
+              visualRealtimeCombat?.mobName,
           })
         : null,
     [
@@ -1606,9 +1601,31 @@ export function AutoCombatPage() {
     ? getLatestKilledMob(effectiveStatus)
     : null;
   const mainThreat = selectedSubMapThreats[0] ?? null;
-  const remainingSeconds = showActiveSession && activeTimerStatus
+  const calculatedRemainingSeconds = showActiveSession && activeTimerStatus
     ? getRemainingSeconds(activeTimerStatus, syncedSessionNowMs)
     : 0;
+  const lastPositiveRemainingSeconds = lastPositiveRemainingSecondsRef.current;
+  const hasMatchingLastPositiveRemainingSeconds =
+    Boolean(lastPositiveRemainingSeconds) &&
+    (!effectiveSessionId ||
+      lastPositiveRemainingSeconds?.sessionId === effectiveSessionId);
+  const shouldKeepLastPositiveRemainingSeconds =
+    showActiveSession &&
+    calculatedRemainingSeconds <= 0 &&
+    hasMatchingLastPositiveRemainingSeconds &&
+    (lastPositiveRemainingSeconds?.seconds ?? 0) > 0;
+  const remainingSeconds = shouldKeepLastPositiveRemainingSeconds
+    ? lastPositiveRemainingSeconds?.seconds ?? 0
+    : calculatedRemainingSeconds;
+
+  if (showActiveSession && calculatedRemainingSeconds > 0) {
+    lastPositiveRemainingSecondsRef.current = {
+      sessionId: effectiveSessionId,
+      seconds: calculatedRemainingSeconds,
+    };
+  } else if (!showActiveSession || effectiveSessionIsTerminal) {
+    lastPositiveRemainingSecondsRef.current = null;
+  }
 
   const rawCharacterMaxHp =
     showActiveSession && visualRealtimeCombat?.characterMaxHp !== undefined
@@ -1770,18 +1787,11 @@ export function AutoCombatPage() {
     width: `${clampPercent(characterHpPercent)}%`,
   } as CSSProperties;
 
-  const activeMobSessionId = effectiveSession?.id ?? null;
-
-  const stableActiveMobForSession =
-    stableActiveMobRef.current &&
-    stableActiveMobRef.current.sessionId === activeMobSessionId
-      ? stableActiveMobRef.current
-      : null;
+  const statusActiveMob = effectiveStatus?.currentMob ?? null;
 
   const activeMobName = showActiveSession
-    ? visualRealtimeCombat?.mobName ??
-      effectiveStatus?.currentMob?.name ??
-      stableActiveMobForSession?.name ??
+    ? statusActiveMob?.name ??
+      visualRealtimeCombat?.mobName ??
       latestKilledMob?.mobName ??
       mainThreat?.mob?.name ??
       'Aguardando ameaça'
@@ -1803,21 +1813,20 @@ export function AutoCombatPage() {
     1,
     Math.floor(
       toSafeNumber(
-        (
-          visualRealtimeCombat as
-            | { mobLevel?: number | string; level?: number | string }
-            | null
-            | undefined
-        )?.mobLevel ??
+        statusActiveMob?.level ??
+          (
+            visualRealtimeCombat as
+              | { mobLevel?: number | string; level?: number | string }
+              | null
+              | undefined
+          )?.mobLevel ??
           (
             visualRealtimeCombat as
               | { mobLevel?: number | string; level?: number | string }
               | null
               | undefined
           )?.level ??
-          effectiveStatus?.currentMob?.level ??
           activeMobThreat?.mob?.level ??
-          stableActiveMobForSession?.level ??
           (
             latestKilledMob as
               | { mobLevel?: number | string; level?: number | string }
@@ -1837,27 +1846,13 @@ export function AutoCombatPage() {
     ),
   );
 
-  if (
-    showActiveSession &&
-    activeMobName &&
-    activeMobName !== 'Aguardando ameaça' &&
-    activeMobLevel > 1
-  ) {
-    stableActiveMobRef.current = {
-      sessionId: activeMobSessionId,
-      name: activeMobName,
-      normalizedName: normalizedActiveMobName,
-      level: activeMobLevel,
-    };
-  }
-
   const activeMobFullBodyImage =
     getMobFullBodyImage(activeMobName) ?? getMobPortraitImage(activeMobName);
 
   const rawActiveMobMaxHp = showActiveSession
-    ? visualRealtimeCombat?.mobMaxHp ??
-      effectiveStatus?.currentMob?.maxHp ??
-      effectiveStatus?.currentMob?.hp ??
+    ? statusActiveMob?.maxHp ??
+      statusActiveMob?.hp ??
+      visualRealtimeCombat?.mobMaxHp ??
       activeMobThreat?.mob?.hp ??
       mainThreat?.mob?.hp ??
       0
@@ -1866,10 +1861,10 @@ export function AutoCombatPage() {
   const activeMobMaxHp = Math.max(0, toSafeNumber(rawActiveMobMaxHp, 0));
 
   const rawActiveMobCurrentHp =
-    showActiveSession && visualRealtimeCombat?.mobCurrentHp !== undefined
-      ? visualRealtimeCombat.mobCurrentHp
+    showActiveSession && statusActiveMob?.currentHp !== undefined
+      ? statusActiveMob.currentHp
       : showActiveSession
-        ? effectiveStatus?.currentMob?.currentHp ??
+        ? visualRealtimeCombat?.mobCurrentHp ??
           (activeMobMaxHp > 0 ? activeMobMaxHp : 0)
         : activeMobMaxHp;
 

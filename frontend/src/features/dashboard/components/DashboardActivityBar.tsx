@@ -1330,13 +1330,21 @@ function buildAutoCombatItemFromRealtime(params: {
   const locationLabel = getStatusLocationLabel(status);
 
   const mobName =
-    displayedEvent?.mobName ??
-    realtimeCombat?.mobName ??
     statusCurrentMob?.name ??
+    realtimeCombat?.mobName ??
+    displayedEvent?.mobName ??
     "Combate automático";
 
+  const displayedEventMatchesCurrentMob =
+    !displayedEvent?.mobName ||
+    displayedEvent.mobName.trim().toLowerCase() ===
+      mobName.trim().toLowerCase();
+  const currentMobEvent = displayedEventMatchesCurrentMob
+    ? displayedEvent
+    : null;
+
   const monsterHp = buildMonsterHpSnapshot({
-    event: displayedEvent,
+    event: currentMobEvent,
     realtimeCombat,
     statusMob: statusCurrentMob,
     session,
@@ -1352,7 +1360,7 @@ function buildAutoCombatItemFromRealtime(params: {
   });
 
   const description =
-    displayedEvent?.message ??
+    currentMobEvent?.message ??
     realtimeCombat?.lastMessage ??
     realtimeCombat?.message ??
     looseStatus?.message ??
@@ -1917,6 +1925,12 @@ function buildActivityItems(params: {
   } = params;
 
   const items: ActivityBarItem[] = [];
+  const hasSyncedAutoCombatState = Boolean(
+    realtimeState.status ??
+      realtimeState.autoCombatStatus ??
+      realtimeState.session ??
+      realtimeState.activeSession,
+  );
 
   const realtimeAutoCombatItem = buildAutoCombatItemFromRealtime({
     characterId,
@@ -1926,7 +1940,7 @@ function buildActivityItems(params: {
 
   if (realtimeAutoCombatItem) {
     items.push(realtimeAutoCombatItem);
-  } else if (overview?.activity) {
+  } else if (overview?.activity && hasSyncedAutoCombatState) {
     const activeAutoCombat = overview.activity.activeAutoCombatSession ?? null;
     const activeAutoCombatSession = activeAutoCombat as
       | (DashboardAutoCombatSessionViewModel & AutoCombatSessionLike)

@@ -375,15 +375,15 @@ function getAutoCombatMobRecord(autoCombatState: unknown): LooseRecord | null {
   const autoCombatSession = getRecordField(status, 'autoCombatSession');
 
   return (
-    getRecordField(autoCombatState, 'mob') ??
-    getRecordField(autoCombatState, 'currentMob') ??
-    getRecordField(status, 'mob') ??
     getRecordField(status, 'currentMob') ??
-    getRecordField(session, 'currentMob') ??
-    getRecordField(session, 'mob') ??
     getRecordField(statusSession, 'currentMob') ??
     getRecordField(activeSession, 'currentMob') ??
     getRecordField(autoCombatSession, 'currentMob') ??
+    getRecordField(autoCombatState, 'mob') ??
+    getRecordField(autoCombatState, 'currentMob') ??
+    getRecordField(status, 'mob') ??
+    getRecordField(session, 'currentMob') ??
+    getRecordField(session, 'mob') ??
     getRecordField(status, 'lastKnownMob')
   );
 }
@@ -409,6 +409,25 @@ function getAutoCombatCurrentHpEvent(autoCombatState: unknown): LooseRecord | nu
   );
 }
 
+function autoCombatEventMatchesMob(
+  event: LooseRecord | null,
+  mob: LooseRecord | null,
+): boolean {
+  if (!event || !mob) return false;
+
+  const eventMobId = getStringField(event, 'mobId');
+  const mobId = getStringField(mob, 'id');
+
+  if (eventMobId && mobId) {
+    return eventMobId === mobId;
+  }
+
+  const eventMobName = getStringField(event, 'mobName')?.trim().toLowerCase();
+  const mobName = getStringField(mob, 'name')?.trim().toLowerCase();
+
+  return Boolean(eventMobName && mobName && eventMobName === mobName);
+}
+
 function getAutoCombatMonsterHpPercent(autoCombatState: unknown): number | null {
   const status = getRecordField(autoCombatState, 'status');
   const session = getRecordField(autoCombatState, 'session');
@@ -416,7 +435,8 @@ function getAutoCombatMonsterHpPercent(autoCombatState: unknown): number | null 
   const activeSession = getRecordField(status, 'activeSession');
   const autoCombatSession = getRecordField(status, 'autoCombatSession');
   const mob = getAutoCombatMobRecord(autoCombatState);
-  const event = getAutoCombatCurrentHpEvent(autoCombatState);
+  const rawEvent = getAutoCombatCurrentHpEvent(autoCombatState);
+  const event = autoCombatEventMatchesMob(rawEvent, mob) ? rawEvent : null;
 
   const maxHp =
     getNumberField(mob, 'maxHp') ??
