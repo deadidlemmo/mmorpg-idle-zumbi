@@ -36,6 +36,24 @@ export class AutoCombatController {
     return this.autoCombatService.start(request.user.id, startAutoCombatDto);
   }
 
+  @Post('hunt/start')
+  startHunt(
+    @Req() request: any,
+    @Body() startAutoCombatDto: StartAutoCombatDto,
+  ) {
+    return this.autoCombatService.start(request.user.id, startAutoCombatDto);
+  }
+
+  @Post(':characterId/hunt/stop')
+  stopHunt(@Req() request: any, @Param('characterId') characterId: string) {
+    return this.autoCombatService.stopHunt(request.user.id, characterId);
+  }
+
+  @Post(':characterId/battle/start')
+  startBattle(@Req() request: any, @Param('characterId') characterId: string) {
+    return this.autoCombatService.startBattle(request.user.id, characterId);
+  }
+
   @Post('preview')
   preview(
     @Req() request: any,

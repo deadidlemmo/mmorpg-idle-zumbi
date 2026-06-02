@@ -374,6 +374,8 @@ export type AutoCombatRealtimeContextValue = {
 
   reload: () => Promise<void>;
   start: (payload: StartAutoCombatPayload) => Promise<AutoCombatStatusResponse>;
+  stopHunt: () => Promise<AutoCombatStatusResponse>;
+  startBattle: () => Promise<AutoCombatStatusResponse>;
   stop: () => Promise<AutoCombatStatusResponse>;
 };
 

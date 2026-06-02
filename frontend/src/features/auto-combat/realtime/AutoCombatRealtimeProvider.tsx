@@ -16,7 +16,9 @@ import {
   getAutoCombatRecentEvents,
   getAutoCombatStatus,
   startAutoCombat,
+  startAutoCombatBattle,
   stopAutoCombat,
+  stopAutoCombatHunt,
 } from '../api/auto-combat.api';
 import { useAutoCombatSocket } from '../hooks/useAutoCombatSocket';
 import type {
@@ -1081,6 +1083,126 @@ export function AutoCombatRealtimeProvider({
     ],
   );
 
+  const stopHunt = useCallback(async () => {
+    if (!normalizedCharacterId) {
+      throw new Error('Personagem nÃ£o informado.');
+    }
+
+    try {
+      clearScheduledReload();
+      flushVisualQueueWithoutAnimation();
+
+      const response = await stopAutoCombatHunt(normalizedCharacterId);
+
+      dispatch({
+        type: 'HYDRATE_STATUS',
+        characterId: normalizedCharacterId,
+        status: response,
+      });
+
+      dispatch({
+        type: 'CLEAR_QUEUE',
+      });
+
+      dispatch({
+        type: 'CLEAR_ERROR',
+      });
+
+      scheduleReload(AFTER_START_RELOAD_DELAY_MS, {
+        reason: 'after-stop-hunt',
+      });
+
+      return response;
+    } catch (error) {
+      const message = getApiErrorMessage(
+        error,
+        'NÃ£o foi possÃ­vel parar a caÃ§a.',
+      );
+
+      dispatch({
+        type: 'SET_ERROR',
+        errorMessage: message,
+      });
+
+      throw error;
+    }
+  }, [
+    clearScheduledReload,
+    flushVisualQueueWithoutAnimation,
+    normalizedCharacterId,
+    scheduleReload,
+  ]);
+
+  const startBattle = useCallback(async () => {
+    if (!normalizedCharacterId) {
+      throw new Error('Personagem nÃ£o informado.');
+    }
+
+    try {
+      lastInactiveStatusSignatureRef.current = null;
+      suppressLootNotificationsUntilCatchUpRef.current = false;
+      lootSuppressionRequiresFreshStatusRef.current = false;
+      clearScheduledReload();
+      clearSessionVisualState();
+
+      const response = await startAutoCombatBattle(normalizedCharacterId);
+      const session = getStatusSession(response);
+      const sessionId = session?.id ?? null;
+
+      dispatch({
+        type: 'HYDRATE_STATUS',
+        characterId: normalizedCharacterId,
+        status: response,
+      });
+
+      const initialMobSpawnedEvent = buildMobSpawnedEventFromStatus({
+        status: response,
+        session,
+      });
+
+      if (initialMobSpawnedEvent && !isTerminalSessionStatus(session?.status)) {
+        const normalizedEvent = normalizeInitialMobSpawnedEvent({
+          event: initialMobSpawnedEvent,
+          characterId: normalizedCharacterId,
+          sessionId,
+        });
+
+        dispatch({
+          type: 'ENQUEUE_EVENT',
+          characterId: normalizedCharacterId,
+          event: normalizedEvent,
+        });
+      }
+
+      dispatch({
+        type: 'CLEAR_ERROR',
+      });
+
+      scheduleReload(AFTER_START_RELOAD_DELAY_MS, {
+        reason: 'after-start-battle',
+      });
+
+      return response;
+    } catch (error) {
+      const message = getApiErrorMessage(
+        error,
+        'NÃ£o foi possÃ­vel iniciar o combate.',
+      );
+
+      dispatch({
+        type: 'SET_ERROR',
+        errorMessage: message,
+      });
+
+      throw error;
+    }
+  }, [
+    clearScheduledReload,
+    clearSessionVisualState,
+    normalizedCharacterId,
+    scheduleReload,
+  ]);
+
   const stop = useCallback(async () => {
     if (!normalizedCharacterId) {
       throw new Error('Personagem não informado.');
@@ -1592,6 +1714,8 @@ export function AutoCombatRealtimeProvider({
 
       reload,
       start,
+      stopHunt,
+      startBattle,
       stop,
     };
   }, [
@@ -1603,6 +1727,8 @@ export function AutoCombatRealtimeProvider({
     clearSessionVisualState,
     reload,
     start,
+    stopHunt,
+    startBattle,
     stop,
   ]);
 

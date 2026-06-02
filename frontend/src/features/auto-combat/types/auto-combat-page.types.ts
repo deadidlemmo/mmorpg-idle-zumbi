@@ -349,6 +349,10 @@ export type AutoCombatRealtimeActions = {
     subMapId: string;
   }) => Promise<AutoCombatStatusResponse>;
 
+  stopHunt?: () => Promise<AutoCombatStatusResponse>;
+
+  startBattle?: () => Promise<AutoCombatStatusResponse>;
+
   stop?: () => Promise<AutoCombatStatusResponse>;
 
   stopAutoCombat?: (

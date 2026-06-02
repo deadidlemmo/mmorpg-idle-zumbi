@@ -23,9 +23,13 @@ export const API_ENDPOINTS = {
   autoCombat: {
     onlineCount: "/auto-combat/online-count",
     start: "/auto-combat/start",
+    startHunt: "/auto-combat/hunt/start",
     preview: "/auto-combat/preview",
     status: (characterId: string) => `/auto-combat/${characterId}/status`,
     stop: (characterId: string) => `/auto-combat/${characterId}/stop`,
+    stopHunt: (characterId: string) => `/auto-combat/${characterId}/hunt/stop`,
+    startBattle: (characterId: string) =>
+      `/auto-combat/${characterId}/battle/start`,
   },
 
   gathering: {

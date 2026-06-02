@@ -120,8 +120,30 @@ export async function startAutoCombat(
   payload: StartAutoCombatPayload,
 ): Promise<StartAutoCombatResponse> {
   const response = await apiClient.post<StartAutoCombatResponse>(
-    API_ENDPOINTS.autoCombat.start,
+    API_ENDPOINTS.autoCombat.startHunt,
     payload,
+  );
+
+  return response.data;
+}
+
+export async function stopAutoCombatHunt(
+  characterId: string,
+): Promise<StartAutoCombatResponse> {
+  const response = await apiClient.post<StartAutoCombatResponse>(
+    API_ENDPOINTS.autoCombat.stopHunt(characterId),
+    {},
+  );
+
+  return response.data;
+}
+
+export async function startAutoCombatBattle(
+  characterId: string,
+): Promise<StartAutoCombatResponse> {
+  const response = await apiClient.post<StartAutoCombatResponse>(
+    API_ENDPOINTS.autoCombat.startBattle(characterId),
+    {},
   );
 
   return response.data;

@@ -72,6 +72,12 @@ enum AutoCombatSessionStatus {
   DEFEATED
 }
 
+enum AutoCombatSessionPhase {
+  HUNTING
+  ENCOUNTER_READY
+  COMBAT_ACTIVE
+}
+
 enum MaterialOrigin {
   DESMANCHE
   COLETA
@@ -242,6 +248,8 @@ model SubMapEncounter {
   subMap SubMap @relation(fields: [subMapId], references: [id], onDelete: Cascade)
   mob    Mob    @relation(fields: [mobId], references: [id], onDelete: Cascade)
 
+  selectedAutoCombatSessions AutoCombatSession[] @relation("AutoCombatSelectedEncounter")
+
   @@unique([subMapId, mobId])
   @@index([subMapId])
   @@index([mobId])
@@ -293,6 +301,7 @@ model Character {
 
   gatheringSkills CharacterGatheringSkill[]
   craftingSkill   CharacterCraftingSkill?
+  huntingSkill    CharacterHuntingSkill?
 
   @@unique([userId, name])
   @@index([userId])
@@ -347,6 +356,25 @@ model CharacterCraftingSkill {
   @@index([characterId])
   @@index([level])
   @@map("character_crafting_skills")
+}
+
+model CharacterHuntingSkill {
+  id String @id @default(uuid())
+
+  characterId String @unique
+
+  level   Int @default(1)
+  xp      Int @default(0)
+  totalXp Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+  @@index([level])
+  @@map("character_hunting_skills")
 }
 
 model Mob {
@@ -786,6 +814,7 @@ model AutoCombatSession {
   subMapId    String
 
   status AutoCombatSessionStatus @default(ACTIVE)
+  phase  AutoCombatSessionPhase  @default(COMBAT_ACTIVE)
 
   startedAt       DateTime @default(now())
   endsAt          DateTime
@@ -796,6 +825,16 @@ model AutoCombatSession {
   durationSeconds Int @default(21600)
 
   roundDurationSeconds Int @default(1)
+
+  huntStartedAt           DateTime?
+  huntStoppedAt           DateTime?
+  lastHuntProcessedAt     DateTime?
+  huntingLevelAtStart     Int       @default(1)
+  huntingXpGained         Int       @default(0)
+  foundEnemiesCount       Int       @default(0)
+  bonusEnemiesFound       Int       @default(0)
+  selectedEncounterId     String?
+  selectedEncounterMobId  String?
 
   totalCombatsResolved Int @default(0)
   totalRoundsResolved  Int @default(0)
@@ -815,6 +854,7 @@ model AutoCombatSession {
   subMap    SubMap    @relation(fields: [subMapId], references: [id])
 
   currentMob Mob? @relation("AutoCombatCurrentMob", fields: [currentMobId], references: [id], onDelete: SetNull)
+  selectedEncounter SubMapEncounter? @relation("AutoCombatSelectedEncounter", fields: [selectedEncounterId], references: [id], onDelete: SetNull)
 
   loots        AutoCombatSessionLoot[]
   mobSummaries AutoCombatSessionMobSummary[]
@@ -823,8 +863,11 @@ model AutoCombatSession {
   @@index([characterId])
   @@index([subMapId])
   @@index([currentMobId])
+  @@index([selectedEncounterId])
   @@index([status])
+  @@index([phase])
   @@index([characterId, status])
+  @@index([characterId, status, phase])
   @@index([startedAt])
   @@index([endsAt])
   @@map("auto_combat_sessions")

@@ -722,27 +722,49 @@ export function AutoCombatPage() {
       Boolean(realtimeState.hasActiveSession) ||
       Boolean(realtimeState.hasActiveAutoCombat) ||
       isSessionActive(effectiveStatus, effectiveSession));
+  const effectiveSessionPhase = String(
+    effectiveSession?.phase ?? effectiveStatus?.phase ?? '',
+  ).toUpperCase();
+  const isBackendHuntingPhase =
+    hasActiveSession && effectiveSessionPhase === 'HUNTING';
+  const isBackendEncounterReadyPhase =
+    hasActiveSession && effectiveSessionPhase === 'ENCOUNTER_READY';
+  const isBackendHuntFlow =
+    isBackendHuntingPhase || isBackendEncounterReadyPhase;
+  const isBackendCombatPhase =
+    hasActiveSession &&
+    (effectiveSessionPhase === 'COMBAT_ACTIVE' ||
+      (!effectiveSessionPhase &&
+        Boolean(effectiveStatus?.currentMob ?? effectiveSession?.currentMob)) ||
+      Boolean(providerActiveEvent));
 
   const hasPendingRealtimeVisual =
     !effectiveSessionIsTerminal &&
-    hasActiveSession &&
+    isBackendCombatPhase &&
     (providerQueueLength > 0 || Boolean(providerActiveEvent));
 
-  const showActiveSession = hasActiveSession || hasPendingRealtimeVisual;
-  const localStartSession = getSessionFromStatus(autoCombatStatus);
-  const localStartMob = autoCombatStatus?.currentMob ?? null;
-  const canRenderLocalStartSnapshot = Boolean(
-    isActionLoading &&
-      autoCombatStatus?.active &&
-      (localStartMob?.id || localStartMob?.name) &&
+  const restActiveSession = getSessionFromStatus(autoCombatStatus);
+  const restActiveMob = autoCombatStatus?.currentMob ?? null;
+  const canRenderRestActiveSnapshot = Boolean(
+    autoCombatStatus?.active &&
+      (restActiveMob?.id || restActiveMob?.name) &&
       (!effectiveSession?.id ||
-        !localStartSession?.id ||
-        localStartSession.id === effectiveSession.id),
+        !restActiveSession?.id ||
+        restActiveSession.id === effectiveSession.id),
   );
+  const shouldDelayActiveSessionUntilStartSnapshot = Boolean(
+    isActionLoading &&
+      isBackendCombatPhase &&
+      isRealtimeSynchronizing &&
+      !canRenderRestActiveSnapshot,
+  );
+  const showActiveSession =
+    !shouldDelayActiveSessionUntilStartSnapshot &&
+    (isBackendCombatPhase || hasPendingRealtimeVisual);
   const isCombatViewSynchronizing =
     showActiveSession &&
     isRealtimeSynchronizing &&
-    !canRenderLocalStartSnapshot;
+    !canRenderRestActiveSnapshot;
   const [sessionClockNowMs, setSessionClockNowMs] = useState(() => Date.now());
   const [serverClockOffsetMs, setServerClockOffsetMs] = useState(0);
   const [stableTimerStatus, setStableTimerStatus] = useState<{
@@ -1939,7 +1961,7 @@ export function AutoCombatPage() {
   } as CSSProperties;
 
   const activeMobStatusSource =
-    canRenderLocalStartSnapshot && autoCombatStatus
+    canRenderRestActiveSnapshot && autoCombatStatus
       ? autoCombatStatus
       : effectiveStatus;
   const statusActiveMob = isCombatViewSynchronizing
@@ -2224,6 +2246,34 @@ export function AutoCombatPage() {
         0,
     ),
   );
+  const huntingSnapshot = effectiveStatus?.hunting ?? null;
+  const huntingSkill =
+    effectiveStatus?.huntingSkill ?? huntingSnapshot?.skill ?? null;
+  const foundEnemiesCount = Math.max(
+    0,
+    Math.floor(
+      toSafeNumber(
+        huntingSnapshot?.foundEnemiesCount ?? effectiveSession?.foundEnemiesCount,
+        0,
+      ),
+    ),
+  );
+  const huntingLevel = Math.max(
+    1,
+    Math.floor(
+      toSafeNumber(
+        huntingSkill?.level ?? effectiveSession?.huntingLevelAtStart,
+        1,
+      ),
+    ),
+  );
+  const huntingXpProgressPercent = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.floor(toSafeNumber(huntingSkill?.xpProgressPercent, 0)),
+    ),
+  );
 
   const canStartHunt =
     !overview?.activity?.hasActiveWorldBoss &&
@@ -2231,16 +2281,17 @@ export function AutoCombatPage() {
     Boolean(selectedSubMap) &&
     selectedMapIsUnlocked &&
     selectedSubMapIsUnlocked &&
-    !showActiveSession &&
+    !hasActiveSession &&
     characterHasHp;
 
   const canStartCombat =
-    canStartHunt &&
+    isBackendEncounterReadyPhase &&
     selectedSubMapHasActiveEncounters &&
-    hasStartedHunt &&
     !showActiveSession &&
     !isActionLoading &&
     characterHasHp;
+  const showHuntStage =
+    !showActiveSession && (isBackendHuntFlow || hasStartedHunt);
 
   const activeVisualEventType = normalizeRealtimeEventType(
     providerPublicActiveEvent?.type ?? visualRealtimeCombat?.lastEventType,
@@ -2419,7 +2470,9 @@ export function AutoCombatPage() {
     setErrorMessage('');
   }
 
-  function handleStartHunt() {
+  async function handleStartHunt() {
+    if (!characterId || !selectedSubMapId || isActionLoading) return;
+
     if (overview?.activity?.hasActiveWorldBoss) {
       setErrorMessage(
         'Você está aguardando um World Boss. Saia do lobby antes de iniciar auto-combate.',
@@ -2465,14 +2518,54 @@ export function AutoCombatPage() {
       return;
     }
 
-    setErrorMessage('');
-
     if (!selectedSubMapId && availableSubMaps[0]) {
       setSelectedSubMapId(availableSubMaps[0].id);
     }
 
-    setHasStartedHunt(true);
-    setActiveTab('battle');
+    try {
+      setIsActionLoading(true);
+      setErrorMessage('');
+
+      setLocalRealtimeCombat(null);
+      setLocalCharacterProgress(null);
+      setLocalSessionTotals(null);
+      setLocalBattleLogEvents([]);
+      setLocalActiveEvent(null);
+
+      const response = realtimeActions.startBattle
+        ? await realtimeActions.startBattle()
+        : null;
+
+      if (!response) {
+        throw new Error(
+          'O AutoCombatRealtimeProvider não expôs uma função startBattle.',
+        );
+      }
+
+      const responseSession = getSessionFromStatus(response);
+      const responseProgress = buildProgressFromStatus(response, responseSession);
+      const responseTotals = buildSessionTotalsFromStatus(
+        response,
+        responseSession,
+      );
+
+      setAutoCombatStatus(response);
+      setLocalCharacterProgress(responseProgress);
+      setLocalSessionTotals(responseTotals);
+      setHasStartedHunt(true);
+      setActiveTab('battle');
+
+      await loadAutoCombatData();
+    } catch (error) {
+      setErrorMessage(
+        getApiErrorMessage(
+          error,
+          'Não foi possível iniciar a caça. Verifique o HP, o submapa e se já existe uma atividade ativa.',
+        ),
+      );
+    } finally {
+      setIsActionLoading(false);
+    }
   }
 
   function handleResetHunt() {
@@ -2484,6 +2577,46 @@ export function AutoCombatPage() {
     setLocalSessionTotals(null);
     setLocalBattleLogEvents([]);
     setLocalActiveEvent(null);
+  }
+
+  async function handleStopHunt() {
+    if (!characterId || isActionLoading || !isBackendHuntingPhase) return;
+
+    try {
+      setIsActionLoading(true);
+      setErrorMessage('');
+
+      const response = realtimeActions.stopHunt
+        ? await realtimeActions.stopHunt()
+        : null;
+
+      if (!response) {
+        throw new Error(
+          'O AutoCombatRealtimeProvider não expôs uma função stopHunt.',
+        );
+      }
+
+      const responseSession = getSessionFromStatus(response);
+      const responseProgress = buildProgressFromStatus(response, responseSession);
+      const responseTotals = buildSessionTotalsFromStatus(
+        response,
+        responseSession,
+      );
+
+      setAutoCombatStatus(response);
+      setLocalCharacterProgress(responseProgress);
+      setLocalSessionTotals(responseTotals);
+      setHasStartedHunt(true);
+      setActiveTab('battle');
+
+      await loadAutoCombatData();
+    } catch (error) {
+      setErrorMessage(
+        getApiErrorMessage(error, 'Não foi possível parar a caça.'),
+      );
+    } finally {
+      setIsActionLoading(false);
+    }
   }
 
   function handleOpenPotionConfig(slotIndex: number) {
@@ -2682,7 +2815,7 @@ export function AutoCombatPage() {
   }
 
   async function handleStartAutoCombat() {
-    if (!characterId || !selectedSubMapId || isActionLoading) return;
+    if (!characterId || isActionLoading) return;
 
     if (overview?.activity?.hasActiveWorldBoss) {
       setErrorMessage(
@@ -2833,7 +2966,7 @@ export function AutoCombatPage() {
 
           {activeTab === 'battle' ? (
             <div className="auto-combat-tab-panel">
-              {!hasStartedHunt && !showActiveSession ? (
+              {!showHuntStage && !showActiveSession ? (
                 <article
                   className={[
                     'auto-combat-stage-card',
@@ -2964,7 +3097,7 @@ export function AutoCombatPage() {
                 </article>
               ) : null}
 
-              {hasStartedHunt && !showActiveSession ? (
+              {showHuntStage ? (
                 <article className="auto-combat-stage-card auto-combat-hunt-stage">
                   <div className="auto-combat-section-title auto-combat-section-title--small">
                     <span>Inimigos Próximos</span>
@@ -3048,6 +3181,22 @@ export function AutoCombatPage() {
                   </div>
 
                   <div className="auto-combat-preview-grid">
+                    {isBackendHuntFlow ? (
+                      <>
+                        <div>
+                          <span>Rastreados</span>
+                          <strong>{foundEnemiesCount}</strong>
+                          <small>inimigos encontrados</small>
+                        </div>
+
+                        <div>
+                          <span>Caça</span>
+                          <strong>Nv. {huntingLevel}</strong>
+                          <small>{huntingXpProgressPercent}% da maestria</small>
+                        </div>
+                      </>
+                    ) : null}
+
                     <div>
                       <span>Risco</span>
                       <strong>
@@ -3085,20 +3234,33 @@ export function AutoCombatPage() {
                   </div>
 
                   <div className="auto-combat-stage-actions">
-                    <button
-                      type="button"
-                      className="auto-combat-primary-button"
-                      disabled={!canStartCombat}
-                      onClick={handleStartAutoCombat}
-                    >
-                      {isActionLoading ? 'Processando...' : 'Iniciar combate'}
-                    </button>
+                    {isBackendHuntingPhase ? (
+                      <button
+                        type="button"
+                        className="auto-combat-primary-button"
+                        disabled={isActionLoading}
+                        onClick={handleStopHunt}
+                      >
+                        {isActionLoading ? 'Processando...' : 'Parar caça'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="auto-combat-primary-button"
+                        disabled={!canStartCombat}
+                        onClick={handleStartAutoCombat}
+                      >
+                        {isActionLoading ? 'Processando...' : 'Iniciar combate'}
+                      </button>
+                    )}
 
                     <button
                       type="button"
                       className="auto-combat-secondary-button auto-combat-secondary-button--danger"
                       disabled={isActionLoading}
-                      onClick={handleResetHunt}
+                      onClick={
+                        isBackendHuntFlow ? handleStopAutoCombat : handleResetHunt
+                      }
                     >
                       Cancelar caça
                     </button>

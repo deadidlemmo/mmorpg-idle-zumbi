@@ -98,6 +98,8 @@ export type AutoCombatRealtimeActor = 'PLAYER' | 'MOB' | 'SYSTEM' | string;
 
 export type AutoCombatRealtimeTarget = 'PLAYER' | 'MOB' | 'SYSTEM' | string;
 export type AutoCombatRealtimePhase =
+  | 'HUNTING'
+  | 'ENCOUNTER_READY'
   | 'SPAWNING'
   | 'PLAYER_TURN'
   | 'MOB_TURN'
@@ -393,6 +395,36 @@ export interface AutoCombatStatusCharacterViewModel {
   levelProgress?: AutoCombatLevelProgressViewModel | null;
 }
 
+export interface AutoCombatHuntingSkillViewModel {
+  id?: string | null;
+  characterId?: string | null;
+  level: number;
+  xp: number;
+  totalXp: number;
+  xpToNextLevel?: number | null;
+  xpProgressPercent?: number | null;
+  isAtLevelCap?: boolean | null;
+  secondsPerEnemy?: number | null;
+  bonuses?: {
+    betterEncounterChancePercent?: number | null;
+    speedPercent?: number | null;
+  } | null;
+}
+
+export interface AutoCombatHuntingViewModel {
+  phase?: AutoCombatRealtimePhase | null;
+  startedAt?: string | null;
+  stoppedAt?: string | null;
+  lastProcessedAt?: string | null;
+  foundEnemiesCount?: number | null;
+  bonusEnemiesFound?: number | null;
+  huntingXpGained?: number | null;
+  secondsPerEnemy?: number | null;
+  selectedEncounterId?: string | null;
+  selectedMob?: AutoCombatCurrentMobViewModel | null;
+  skill?: AutoCombatHuntingSkillViewModel | null;
+}
+
 export interface AutoCombatSessionApiViewModel {
   id: string;
   characterId?: string | null;
@@ -447,6 +479,15 @@ export interface AutoCombatSessionApiViewModel {
   currentMobId?: string | null;
   currentMobHp?: number | null;
   currentMobMaxHp?: number | null;
+  huntStartedAt?: string | null;
+  huntStoppedAt?: string | null;
+  lastHuntProcessedAt?: string | null;
+  huntingLevelAtStart?: number | null;
+  huntingXpGained?: number | null;
+  foundEnemiesCount?: number | null;
+  bonusEnemiesFound?: number | null;
+  selectedEncounterId?: string | null;
+  selectedEncounterMobId?: string | null;
   enemyInstanceId?: string | null;
   currentEnemyInstanceId?: string | null;
   snapshotSequence?: number | null;
@@ -773,6 +814,9 @@ export interface AutoCombatStatusResponse {
   lastSession?: AutoCombatSessionApiViewModel | null;
 
   currentMob?: AutoCombatCurrentMobViewModel | null;
+  selectedEncounter?: AutoCombatEncounterViewModel | null;
+  huntingSkill?: AutoCombatHuntingSkillViewModel | null;
+  hunting?: AutoCombatHuntingViewModel | null;
 
   subMap?: AutoCombatSubMapViewModel | null;
 
