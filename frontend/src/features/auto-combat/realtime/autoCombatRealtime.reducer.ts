@@ -705,10 +705,10 @@ function buildDisplayTotalsFromReleaseEvent(
    */
   const nextDisplayTotals = buildTotalsStateFromRealtimeEvent(
     releaseEvent,
-    state.displayTotals,
+    state.displayTotals ?? state.totals,
   );
 
-  return nextDisplayTotals ?? state.displayTotals ?? null;
+  return nextDisplayTotals ?? state.displayTotals ?? state.totals ?? null;
 }
 
 function publishDisplayTotalsIfAllowed(
@@ -730,10 +730,6 @@ function publishDisplayTotalsIfAllowed(
 
   if (forceCanonical) {
     return state.totals ?? state.displayTotals ?? null;
-  }
-
-  if (isStatusProgressAheadOfReleasedVisualState(state, state.totals)) {
-    return state.displayTotals ?? null;
   }
 
   /**
@@ -1434,36 +1430,8 @@ function mergeRecentEventsIntoBattleLog(
   );
 }
 
-function isStatusProgressAheadOfReleasedVisualState(
-  state: AutoCombatRealtimeState,
-  incomingTotals: AutoCombatRealtimeTotalsState | null,
-) {
-  if (!state.hasLoadedOnce || !incomingTotals) {
-    return false;
-  }
-
-  const incomingXpGained = incomingTotals.totalXpGained ?? 0;
-  const releasedXpGained = state.displayTotals?.totalXpGained ?? 0;
-
-  if (incomingXpGained > releasedXpGained) {
-    return true;
-  }
-
-  const incomingKills = incomingTotals.totalKills ?? incomingTotals.totalCombats ?? 0;
-  const releasedKills =
-    state.displayTotals?.totalKills ?? state.displayTotals?.totalCombats ?? 0;
-
-  return incomingKills > releasedKills;
-}
-
-function shouldDeferStatusProgress(
-  state: AutoCombatRealtimeState,
-  incomingTotals?: AutoCombatRealtimeTotalsState | null,
-) {
-  return (
-    hasPendingVisualEvents(state) ||
-    isStatusProgressAheadOfReleasedVisualState(state, incomingTotals ?? null)
-  );
+function shouldDeferStatusProgress(state: AutoCombatRealtimeState) {
+  return hasPendingVisualEvents(state);
 }
 
 function buildOverviewCharacterState(
@@ -1669,7 +1637,7 @@ function hydrateFromStatus(
   const deferCharacterProgress =
     !sessionChanged &&
     !statusIsTerminal &&
-    shouldDeferStatusProgress(baseState, nextTotals);
+    shouldDeferStatusProgress(baseState);
 
   const nextSession = buildSessionStateFromStatus(status, baseState.session);
   const nextLocation = buildLocationStateFromStatus(status, baseState.location);
@@ -1704,7 +1672,7 @@ function hydrateFromStatus(
   const deferMobProgress =
     !sessionChanged &&
     !statusIsTerminal &&
-    shouldDeferStatusProgress(baseState, nextTotals);
+    shouldDeferStatusProgress(baseState);
 
   const shouldPreservePreviousMob =
     deferMobProgress ||
@@ -1743,10 +1711,7 @@ function hydrateFromStatus(
   const canPublishStatusTotals =
     statusIsTerminal ||
     sessionChanged ||
-    (!deferCharacterProgress &&
-      !baseState.displayTotals &&
-      canPublishCanonicalDisplayTotals(baseState) &&
-      baseState.battleLogEvents.length <= 0);
+    (!deferCharacterProgress && canPublishCanonicalDisplayTotals(baseState));
 
   const nextDisplayTotals = canPublishStatusTotals
     ? nextTotals

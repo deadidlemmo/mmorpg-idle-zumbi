@@ -162,8 +162,11 @@ test('eventos atrasados não reordenam nem restauram estado antigo', () => {
 });
 
 test('status canônico não antecipa EXP antes do MOB_DEFEATED visual', () => {
+  const pendingHit = makeHit(4, 10);
   const state: AutoCombatRealtimeState = {
     ...makeState(),
+    activeEvent: pendingHit,
+    activeEventImpactApplied: true,
     character: {
       id: 'char-1',
       name: 'Sobrevivente',
@@ -415,4 +418,153 @@ test('descanso automatico pode atualizar HP visual em tempo real', () => {
   assert.equal(rested.character?.currentHp, 52);
   assert.equal(rested.character?.hpPercent, 52);
   assert.equal(rested.activeEvent, restEvent);
+});
+
+test('status canônico reconcilia totais quando não há timeline visual pendente', () => {
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    character: {
+      id: 'char-1',
+      name: 'Sobrevivente',
+      currentHp: 60,
+      maxHp: 100,
+      hpPercent: 60,
+      level: 1,
+      xp: 100,
+      totalXp: 100,
+      currentLevelXp: 100,
+      xpToNextLevel: 200,
+      xpProgressPercent: 50,
+    },
+    displayTotals: {
+      sessionId: 'session-1',
+      totalKills: 0,
+      totalCombats: 0,
+      totalRounds: 4,
+      totalXpGained: 0,
+      totalLoot: 0,
+      potionsUsed: 0,
+    },
+  };
+
+  const hydrated = autoCombatRealtimeReducer(state, {
+    type: 'HYDRATE_STATUS',
+    characterId: 'char-1',
+    status: {
+      active: true,
+      hasActiveAutoCombat: true,
+      character: {
+        id: 'char-1',
+        name: 'Sobrevivente',
+        level: 1,
+        xp: 150,
+        totalXp: 150,
+        currentHp: 90,
+        maxHp: 100,
+        currentLevelXp: 150,
+        xpToNextLevel: 200,
+        xpProgressPercent: 75,
+      },
+      session: {
+        id: 'session-1',
+        characterId: 'char-1',
+        status: 'ACTIVE',
+        currentRound: 5,
+        currentCombatIndex: 2,
+        totalCombatsResolved: 1,
+        totalRoundsResolved: 5,
+        totalXpGained: 50,
+      },
+      sessionSummary: {
+        combat: {
+          currentCombatIndex: 2,
+          totalCombats: 1,
+          totalRounds: 5,
+        },
+        mobs: { totalKills: 1 },
+        progression: {
+          totalXpGained: 50,
+          baseXpGained: 45,
+          premiumBonusXp: 5,
+          premiumPotentialBonusXp: 0,
+          premiumTotalXp: 50,
+          isPremiumActive: true,
+        },
+      },
+      currentMob: {
+        id: 'mob-2',
+        name: 'Zumbi Novo',
+        currentHp: 100,
+        maxHp: 100,
+      },
+    } as never,
+  });
+
+  assert.equal(hydrated.character?.totalXp, 150);
+  assert.equal(hydrated.character?.currentLevelXp, 150);
+  assert.equal(hydrated.character?.xpProgressPercent, 75);
+  assert.equal(hydrated.displayTotals?.totalKills, 1);
+  assert.equal(hydrated.displayTotals?.totalXpGained, 50);
+  assert.equal(hydrated.displayTotals?.baseXpGained, 45);
+  assert.equal(hydrated.displayTotals?.premiumBonusXp, 5);
+});
+
+test('MOB_DEFEATED soma Base e Premium sobre totais canônicos após F5', () => {
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    totals: {
+      sessionId: 'session-1',
+      currentCombatIndex: 16,
+      totalKills: 15,
+      totalCombats: 15,
+      totalRounds: 60,
+      totalXpGained: 75,
+      baseXpGained: 66,
+      premiumBonusXp: 9,
+      premiumPotentialBonusXp: 0,
+      premiumTotalXp: 75,
+      isPremiumActive: true,
+      totalLoot: 21,
+      potionsUsed: 0,
+    },
+    displayTotals: null,
+  };
+
+  const defeatEvent = {
+    characterId: 'char-1',
+    sessionId: 'session-1',
+    type: 'MOB_DEFEATED',
+    actor: 'PLAYER',
+    target: 'MOB',
+    mobId: 'mob-16',
+    mobName: 'Zumbi',
+    mobCurrentHp: 0,
+    mobMaxHp: 100,
+    characterCurrentHp: 90,
+    characterMaxHp: 100,
+    xpGained: 8,
+    baseXpGained: 7,
+    premiumBonusXp: 1,
+    premiumPotentialBonusXp: 0,
+    premiumTotalXp: 8,
+    isPremiumActive: true,
+    round: 61,
+    combatIndex: 16,
+    totalKills: 16,
+    totalCombats: 16,
+    totalRounds: 61,
+    totalXpGained: 83,
+    totalLoot: 21,
+    potionsUsed: 0,
+    createdAt: '2026-05-11T00:00:07.000Z',
+    sequence: 61,
+  } as AutoCombatRealtimeEvent;
+
+  const afterDefeat = enqueueAndProcess(state, defeatEvent);
+
+  assert.equal(afterDefeat.displayTotals?.totalKills, 16);
+  assert.equal(afterDefeat.displayTotals?.totalXpGained, 83);
+  assert.equal(afterDefeat.displayTotals?.baseXpGained, 73);
+  assert.equal(afterDefeat.displayTotals?.premiumBonusXp, 10);
+  assert.equal(afterDefeat.displayTotals?.premiumTotalXp, 83);
 });
