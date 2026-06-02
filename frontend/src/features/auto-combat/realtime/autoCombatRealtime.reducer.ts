@@ -1728,6 +1728,18 @@ function hydrateFromStatus(
       })
     : state;
 
+  const statusIsAuthoritativeSnapshot = Boolean(
+    statusSnapshotSequence !== null &&
+      (baseState.isSynchronizing ||
+        !baseState.hasLoadedOnce ||
+        sessionChanged ||
+        statusIsTerminal),
+  );
+  const nextLastAppliedEventSequence =
+    statusIsAuthoritativeSnapshot && statusSnapshotSequence !== null
+      ? Math.max(baseState.lastAppliedEventSequence ?? 0, statusSnapshotSequence)
+      : baseState.lastAppliedEventSequence;
+
   if (
     !sessionChanged &&
     statusIsActive &&
@@ -1846,6 +1858,7 @@ function hydrateFromStatus(
 
       activeEvent: null,
       eventQueue: [],
+      lastAppliedEventSequence: nextLastAppliedEventSequence,
 
       queuedEventKeys: [],
       queuedGenericFingerprints: [],
@@ -1873,6 +1886,7 @@ function hydrateFromStatus(
     displayTotals: nextDisplayTotals,
     location: nextLocation,
     mob: nextMob,
+    lastAppliedEventSequence: nextLastAppliedEventSequence,
 
     hasLoadedOnce: true,
     isSynchronizing: false,
@@ -1955,6 +1969,7 @@ function applyRealtimeEventSnapshot(
         latestEventSequence:
           nextSessionSequence ?? state.session.latestEventSequence,
         phase: event.phase ?? state.session.phase,
+        nextActor: event.nextActor ?? state.session.nextActor,
         lastActionAt:
           event.actionStartedAt ?? event.serverTime ?? state.session.lastActionAt,
         nextActionAt: event.nextActionAt ?? state.session.nextActionAt,
@@ -1985,6 +2000,7 @@ function applyRealtimeEventSnapshot(
           snapshotSequence: nextSessionSequence ?? null,
           latestEventSequence: nextSessionSequence ?? null,
           phase: event.phase ?? null,
+          nextActor: event.nextActor ?? null,
           lastActionAt: event.actionStartedAt ?? event.serverTime ?? null,
           nextActionAt: event.nextActionAt ?? null,
           updatedAt: now(),

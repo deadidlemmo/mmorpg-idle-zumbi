@@ -72,6 +72,7 @@ type AutoCombatSessionLike = {
   snapshotSequence?: number | null;
   latestEventSequence?: number | null;
   phase?: AutoCombatRealtimePhase | null;
+  nextActor?: AutoCombatRealtimeActor | null;
   lastActionAt?: string | null;
   nextActionAt?: string | null;
 
@@ -1148,6 +1149,8 @@ export function buildSessionStateFromStatus(
       safeFallback?.latestEventSequence ??
       null,
     phase: session.phase ?? status?.phase ?? safeFallback?.phase ?? null,
+    nextActor:
+      session.nextActor ?? status?.nextActor ?? safeFallback?.nextActor ?? null,
     lastActionAt:
       session.lastActionAt ?? status?.lastActionAt ?? safeFallback?.lastActionAt ?? null,
     nextActionAt:

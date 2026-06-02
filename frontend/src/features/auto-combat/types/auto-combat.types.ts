@@ -120,6 +120,10 @@ export interface AutoCombatRealtimeEvent {
   actionId?: string | null;
   actionOrder?: number | null;
   phase?: AutoCombatRealtimePhase | null;
+  sessionStatus?: string | null;
+  endReason?: string | null;
+  shouldRedirectToInfirmary?: boolean | null;
+  nextActor?: AutoCombatRealtimeActor | null;
   serverTime?: string | null;
   actionStartedAt?: string | null;
   nextActionAt?: string | null;
@@ -403,6 +407,8 @@ export interface AutoCombatSessionApiViewModel {
     | 'FAILED'
     | 'CANCELLED'
     | string;
+  endReason?: string | null;
+  shouldRedirectToInfirmary?: boolean | null;
 
   startedAt: string;
   endsAt?: string | null;
@@ -446,6 +452,7 @@ export interface AutoCombatSessionApiViewModel {
   snapshotSequence?: number | null;
   latestEventSequence?: number | null;
   phase?: AutoCombatRealtimePhase | null;
+  nextActor?: AutoCombatRealtimeActor | null;
   lastActionAt?: string | null;
   nextActionAt?: string | null;
   currentMob?: AutoCombatCurrentMobViewModel | null;
@@ -751,9 +758,12 @@ export interface AutoCombatStatusResponse {
   snapshotSequence?: number | null;
   latestEventSequence?: number | null;
   phase?: AutoCombatRealtimePhase | null;
+  nextActor?: AutoCombatRealtimeActor | null;
   lastActionAt?: string | null;
   nextActionAt?: string | null;
   roundDurationSeconds?: number | null;
+  endReason?: string | null;
+  shouldRedirectToInfirmary?: boolean | null;
 
   character?: AutoCombatStatusCharacterViewModel;
 

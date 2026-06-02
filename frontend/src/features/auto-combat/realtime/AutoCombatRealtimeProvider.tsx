@@ -350,7 +350,21 @@ function shouldAcceptRealtimeEvent(params: {
 }) {
   const { state, event } = params;
 
+  if (state.isSynchronizing) {
+    return false;
+  }
+
   if (isTerminalSessionStatus(state.session?.status)) {
+    return false;
+  }
+
+  const eventSequence = getLooseEventSequence(event);
+
+  if (
+    eventSequence !== null &&
+    state.lastAppliedEventSequence !== null &&
+    eventSequence <= state.lastAppliedEventSequence
+  ) {
     return false;
   }
 

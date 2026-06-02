@@ -111,6 +111,7 @@ export type AutoCombatRealtimeSessionState = {
   snapshotSequence?: number | null;
   latestEventSequence?: number | null;
   phase?: AutoCombatRealtimePhase | null;
+  nextActor?: AutoCombatRealtimeActor | null;
   lastActionAt?: string | null;
   nextActionAt?: string | null;
 

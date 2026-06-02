@@ -335,6 +335,71 @@ function shouldClearXpFeedbackForEvent(
   );
 }
 
+type AutoCombatLooseRecord = Record<string, unknown>;
+
+function getAutoCombatLooseRecord(value: unknown) {
+  return value && typeof value === 'object'
+    ? (value as AutoCombatLooseRecord)
+    : null;
+}
+
+function getAutoCombatStringField(
+  source: unknown,
+  key: string,
+): string | null {
+  const record = getAutoCombatLooseRecord(source);
+  const value = record?.[key];
+
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  return String(value);
+}
+
+function getAutoCombatBooleanField(source: unknown, key: string) {
+  const record = getAutoCombatLooseRecord(source);
+
+  return record?.[key] === true;
+}
+
+function normalizeAutoCombatStatusField(value: unknown) {
+  return String(value ?? '')
+    .trim()
+    .toUpperCase();
+}
+
+function shouldRedirectAutoCombatToInfirmary(params: {
+  status?: AutoCombatStatusResponse | null;
+  session?: unknown;
+  event?: AutoCombatRealtimeEvent | null;
+}) {
+  const { status, session, event } = params;
+  const sessionStatus = normalizeAutoCombatStatusField(
+    getAutoCombatStringField(session, 'status'),
+  );
+  const eventSessionStatus = normalizeAutoCombatStatusField(
+    event?.sessionStatus,
+  );
+  const endReason = normalizeAutoCombatStatusField(
+    status?.endReason ??
+      getAutoCombatStringField(session, 'endReason') ??
+      event?.endReason,
+  );
+  const eventType = normalizeRealtimeEventType(event?.type);
+
+  return Boolean(
+    status?.shouldRedirectToInfirmary ||
+      getAutoCombatBooleanField(session, 'shouldRedirectToInfirmary') ||
+      event?.shouldRedirectToInfirmary ||
+      status?.sessionSummary?.defeated ||
+      sessionStatus === 'DEFEATED' ||
+      eventSessionStatus === 'DEFEATED' ||
+      endReason === 'PLAYER_DEFEATED' ||
+      eventType === 'PLAYER_DEFEATED',
+  );
+}
+
 function getXpFeedbackBreakdown(event?: AutoCombatRealtimeEvent | null) {
   const eventType = normalizeRealtimeEventType(event?.type);
 
@@ -1059,6 +1124,25 @@ export function AutoCombatPage() {
       ? []
       : (realtimeState.eventQueue ?? [])
     : [];
+  const shouldRedirectToInfirmary = Boolean(
+    characterId &&
+      shouldRedirectAutoCombatToInfirmary({
+        status: effectiveStatus,
+        session: effectiveSession,
+        event: activeBattleLogEvent ?? providerActiveEvent,
+      }),
+  );
+
+  useEffect(() => {
+    if (!shouldRedirectToInfirmary) return;
+
+    setLocalRealtimeCombat(null);
+    setLocalCharacterProgress(null);
+    setLocalSessionTotals(null);
+    setLocalBattleLogEvents([]);
+    setLocalActiveEvent(null);
+    queueClearXpFeedback({ resetShownEvents: true });
+  }, [queueClearXpFeedback, shouldRedirectToInfirmary]);
 
   const visibleMobFeedbackScope = useMemo(
     () =>
@@ -1561,6 +1645,10 @@ export function AutoCombatPage() {
 
   if (!characterId) {
     return <Navigate to="/characters" replace />;
+  }
+
+  if (shouldRedirectToInfirmary) {
+    return <Navigate to={`/dashboard/${characterId}/infirmary`} replace />;
   }
 
   if (isLoading) {
