@@ -1,5 +1,4 @@
 import {
-  createContext,
   useCallback,
   useEffect,
   useMemo,
@@ -31,6 +30,7 @@ import {
   initialAutoCombatRealtimeState,
   type AutoCombatRealtimeState,
 } from './autoCombatRealtime.reducer';
+import { AutoCombatRealtimeContext } from './autoCombatRealtime.context';
 import type { AutoCombatRealtimeContextValue } from './autoCombatRealtime.types';
 import {
   buildMobSpawnedEventFromStatus,
@@ -154,6 +154,28 @@ function getAutoCombatLootTotalQuantity(
   }, 0);
 }
 
+function getAutoCombatStatusNumber(value: unknown) {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function shouldTreatStatusLootAsCatchUp(status: AutoCombatStatusResponse) {
+  const processing = status.processing;
+
+  if (!processing) {
+    return false;
+  }
+
+  return Boolean(
+    processing.catchUp ||
+      getAutoCombatStatusNumber(processing.actionsAvailable) > 1 ||
+      getAutoCombatStatusNumber(processing.actionsProcessed) > 1 ||
+      getAutoCombatStatusNumber(processing.eventsSuppressed) > 0 ||
+      processing.processingLimited,
+  );
+}
+
 function buildLootNotificationQuantityBaseline(
   totals: Map<string, AutoCombatRewardLootViewModel>,
 ) {
@@ -164,9 +186,6 @@ function buildLootNotificationQuantityBaseline(
     ]),
   );
 }
-
-export const AutoCombatRealtimeContext =
-  createContext<AutoCombatRealtimeContextValue | null>(null);
 
 function getInitialState(characterId?: string | null): AutoCombatRealtimeState {
   return {
@@ -602,8 +621,12 @@ export function AutoCombatRealtimeProvider({
       const tracker = lootNotificationTrackerRef.current;
       const confirmedLootTotal = getAutoCombatLootTotalQuantity(nextLootTotals);
       const isBackgrounded = isUiBackgrounded();
+      const isCatchUpStatusLoot = shouldTreatStatusLootAsCatchUp(status);
       const shouldSuppressLootNotifications =
-        isBackgrounded || suppressLootNotificationsUntilCatchUpRef.current;
+        isBackgrounded ||
+        isCatchUpStatusLoot ||
+        stateRef.current.isSynchronizing ||
+        suppressLootNotificationsUntilCatchUpRef.current;
 
       const setCurrentLootBaseline = () => {
         lootNotificationTrackerRef.current = {
@@ -616,6 +639,7 @@ export function AutoCombatRealtimeProvider({
       const releaseSuppressionIfCaughtUp = () => {
         if (
           !isBackgrounded &&
+          !isCatchUpStatusLoot &&
           !lootSuppressionRequiresFreshStatusRef.current &&
           releasedLootTotal !== null &&
           releasedLootTotal !== undefined &&

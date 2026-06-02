@@ -112,6 +112,17 @@ const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
 const XP_FEEDBACK_VISIBLE_MS = 4800;
 const MAX_SHOWN_XP_FEEDBACK_KEYS = 80;
 
+function preloadAutoCombatImage(imageUrl?: string | null) {
+  if (!imageUrl || typeof window === 'undefined') {
+    return;
+  }
+
+  const image = new Image();
+
+  image.decoding = 'async';
+  image.src = imageUrl;
+}
+
 function getAutoCombatTimestampMs(value: unknown) {
   if (value instanceof Date) {
     const timestamp = value.getTime();
@@ -718,8 +729,20 @@ export function AutoCombatPage() {
     (providerQueueLength > 0 || Boolean(providerActiveEvent));
 
   const showActiveSession = hasActiveSession || hasPendingRealtimeVisual;
+  const localStartSession = getSessionFromStatus(autoCombatStatus);
+  const localStartMob = autoCombatStatus?.currentMob ?? null;
+  const canRenderLocalStartSnapshot = Boolean(
+    isActionLoading &&
+      autoCombatStatus?.active &&
+      (localStartMob?.id || localStartMob?.name) &&
+      (!effectiveSession?.id ||
+        !localStartSession?.id ||
+        localStartSession.id === effectiveSession.id),
+  );
   const isCombatViewSynchronizing =
-    showActiveSession && isRealtimeSynchronizing;
+    showActiveSession &&
+    isRealtimeSynchronizing &&
+    !canRenderLocalStartSnapshot;
   const [sessionClockNowMs, setSessionClockNowMs] = useState(() => Date.now());
   const [serverClockOffsetMs, setServerClockOffsetMs] = useState(0);
   const [stableTimerStatus, setStableTimerStatus] = useState<{
@@ -1456,6 +1479,21 @@ export function AutoCombatPage() {
     });
   }, [selectedSubMap]);
 
+  const selectedSubMapThreatImages = useMemo(() => {
+    return selectedSubMapThreats
+      .map((encounter) => {
+        return (
+          getMobFullBodyImage(encounter.mob?.name) ??
+          getMobPortraitImage(encounter.mob?.name)
+        );
+      })
+      .filter((imageUrl): imageUrl is string => Boolean(imageUrl));
+  }, [selectedSubMapThreats]);
+
+  useEffect(() => {
+    selectedSubMapThreatImages.forEach(preloadAutoCombatImage);
+  }, [selectedSubMapThreatImages]);
+
   const selectedThreatDetails = useMemo(() => {
     if (!selectedThreat) return null;
 
@@ -1900,9 +1938,13 @@ export function AutoCombatPage() {
     width: `${clampPercent(characterHpPercent)}%`,
   } as CSSProperties;
 
+  const activeMobStatusSource =
+    canRenderLocalStartSnapshot && autoCombatStatus
+      ? autoCombatStatus
+      : effectiveStatus;
   const statusActiveMob = isCombatViewSynchronizing
     ? null
-    : effectiveStatus?.currentMob ?? null;
+    : activeMobStatusSource?.currentMob ?? null;
   const hasConfirmedActiveMob = Boolean(
     !isCombatViewSynchronizing &&
       (visualRealtimeCombat?.mobId ||
@@ -2968,7 +3010,8 @@ export function AutoCombatPage() {
                                 <img
                                   src={mobFullBodyImage}
                                   alt={mob?.name ?? 'Infectado'}
-                                  loading="lazy"
+                                  loading="eager"
+                                  decoding="async"
                                 />
                               ) : (
                                 <span className="auto-combat-enemy-card__portrait-fallback">
@@ -3242,6 +3285,8 @@ export function AutoCombatPage() {
                               <img
                                 src={activeMobFullBodyImage}
                                 alt={activeMobName}
+                                loading="eager"
+                                decoding="async"
                               />
                             ) : isCombatViewSynchronizing ? (
                               <span className="auto-combat-fighter-card__sync-placeholder">

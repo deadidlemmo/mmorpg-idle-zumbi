@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { AutoCombatRealtimeContext } from './AutoCombatRealtimeProvider';
+import { AutoCombatRealtimeContext } from './autoCombatRealtime.context';
 
 export function useAutoCombatRealtime() {
   const context = useContext(AutoCombatRealtimeContext);
