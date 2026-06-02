@@ -94,6 +94,7 @@ import {
   normalizePotionConfigResponse,
   normalizePotionInventoryResponse,
   normalizeRealtimeEventType,
+  normalizeSessionXpBreakdown,
   pickHighestProgress,
   resolveCharacterStats,
   resolvePotionEventItemId,
@@ -1971,7 +1972,7 @@ export function AutoCombatPage() {
         effectiveStatus?.sessionSummary?.progression?.baseXpGained ??
         effectiveSession?.baseXpGained ??
         visualRealtimeCombat?.baseXpGained ??
-        totalXpGained,
+        0,
     ),
   );
 
@@ -2015,6 +2016,15 @@ export function AutoCombatPage() {
       visualRealtimeCombat?.isPremiumActive ??
       false,
   );
+
+  const normalizedSessionXp = normalizeSessionXpBreakdown({
+    totalXpGained,
+    baseXpGained,
+    premiumBonusXp,
+    premiumPotentialBonusXp,
+    premiumTotalXp,
+    isPremiumActive,
+  });
 
   const totalLoot = Math.max(
     0,
@@ -3655,12 +3665,14 @@ export function AutoCombatPage() {
                     currentCombatIndex={currentCombatIndex}
                     totalCombats={totalCombats}
                     totalKills={totalKills}
-                    totalXpGained={totalXpGained}
-                    baseXpGained={baseXpGained}
-                    premiumBonusXp={premiumBonusXp}
-                    premiumPotentialBonusXp={premiumPotentialBonusXp}
-                    premiumTotalXp={premiumTotalXp}
-                    isPremiumActive={isPremiumActive}
+                    totalXpGained={normalizedSessionXp.totalXpGained}
+                    baseXpGained={normalizedSessionXp.baseXpGained}
+                    premiumBonusXp={normalizedSessionXp.premiumBonusXp}
+                    premiumPotentialBonusXp={
+                      normalizedSessionXp.premiumPotentialBonusXp
+                    }
+                    premiumTotalXp={normalizedSessionXp.premiumTotalXp}
+                    isPremiumActive={normalizedSessionXp.isPremiumActive}
                     totalLoot={totalLoot}
                     potionsUsed={potionsUsed}
                   />

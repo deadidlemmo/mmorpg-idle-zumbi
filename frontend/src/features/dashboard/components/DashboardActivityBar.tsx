@@ -191,6 +191,7 @@ type AutoCombatStatusLoose = AutoCombatStatusResponse & {
 
   currentMob?: AutoCombatStatusCurrentMobLike | null;
   mob?: AutoCombatStatusCurrentMobLike | null;
+  lastKnownMob?: AutoCombatStatusCurrentMobLike | null;
 
   character?: AutoCombatRealtimeCharacterLike | null;
 
@@ -219,6 +220,8 @@ type AutoCombatStatusLoose = AutoCombatStatusResponse & {
       totalCombats?: number | null;
       totalRounds?: number | null;
     } | null;
+    currentMob?: AutoCombatStatusCurrentMobLike | null;
+    lastKnownMob?: AutoCombatStatusCurrentMobLike | null;
     progression?: {
       totalXpGained?: number | null;
     } | null;
@@ -684,7 +687,14 @@ function getAutoCombatSessionFromStatus(
 function getStatusCurrentMob(status: AutoCombatStatusResponse | null) {
   const looseStatus = getLooseStatus(status);
 
-  return looseStatus?.currentMob ?? looseStatus?.mob ?? null;
+  return (
+    looseStatus?.currentMob ??
+    looseStatus?.mob ??
+    looseStatus?.sessionSummary?.currentMob ??
+    looseStatus?.lastKnownMob ??
+    looseStatus?.sessionSummary?.lastKnownMob ??
+    null
+  );
 }
 
 function getStatusLocationLabel(status: AutoCombatStatusResponse | null) {

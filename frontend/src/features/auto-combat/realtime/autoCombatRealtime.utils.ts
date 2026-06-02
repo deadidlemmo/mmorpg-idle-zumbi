@@ -1177,6 +1177,80 @@ export function buildMobStateFromRealtimeEvent(
   };
 }
 
+function normalizeSessionXpBreakdown(params: {
+  totalXpGained?: number | null;
+  baseXpGained?: number | null;
+  premiumBonusXp?: number | null;
+  premiumPotentialBonusXp?: number | null;
+  premiumTotalXp?: number | null;
+  isPremiumActive?: boolean | null;
+}) {
+  const totalXpGained = Math.max(
+    0,
+    Math.floor(toSafeNumber(params.totalXpGained, 0)),
+  );
+  let baseXpGained = Math.max(
+    0,
+    Math.floor(toSafeNumber(params.baseXpGained, 0)),
+  );
+  let premiumBonusXp = Math.max(
+    0,
+    Math.floor(toSafeNumber(params.premiumBonusXp, 0)),
+  );
+  const premiumPotentialBonusXp = Math.max(
+    0,
+    Math.floor(toSafeNumber(params.premiumPotentialBonusXp, 0)),
+  );
+
+  if (totalXpGained > 0) {
+    if (baseXpGained <= 0 && premiumBonusXp > 0) {
+      baseXpGained = Math.max(0, totalXpGained - premiumBonusXp);
+    } else if (
+      baseXpGained === totalXpGained &&
+      premiumBonusXp > 0 &&
+      totalXpGained >= premiumBonusXp
+    ) {
+      baseXpGained = totalXpGained - premiumBonusXp;
+    } else if (
+      baseXpGained > 0 &&
+      premiumBonusXp <= 0 &&
+      totalXpGained > baseXpGained
+    ) {
+      premiumBonusXp = totalXpGained - baseXpGained;
+    } else if (
+      baseXpGained > 0 &&
+      premiumBonusXp > 0 &&
+      baseXpGained + premiumBonusXp !== totalXpGained
+    ) {
+      const derivedPremiumBonusXp = totalXpGained - baseXpGained;
+
+      if (derivedPremiumBonusXp >= 0) {
+        premiumBonusXp = derivedPremiumBonusXp;
+      } else {
+        baseXpGained = Math.max(0, totalXpGained - premiumBonusXp);
+      }
+    } else if (baseXpGained <= 0 && premiumBonusXp <= 0) {
+      baseXpGained = totalXpGained;
+    }
+  }
+
+  const expectedPremiumTotalXp =
+    baseXpGained + Math.max(premiumBonusXp, premiumPotentialBonusXp);
+  const premiumTotalXp = Math.max(
+    expectedPremiumTotalXp,
+    Math.floor(toSafeNumber(params.premiumTotalXp, 0)),
+  );
+
+  return {
+    totalXpGained,
+    baseXpGained,
+    premiumBonusXp,
+    premiumPotentialBonusXp,
+    premiumTotalXp,
+    isPremiumActive: Boolean(params.isPremiumActive),
+  };
+}
+
 /**
  * Fonte canônica dos totais da sessão.
  *
@@ -1239,7 +1313,6 @@ export function buildCanonicalSessionTotalsFromStatus(
     getFirstOptionalNumber(
       session?.baseXpGained,
       status?.sessionSummary?.progression?.baseXpGained,
-      totalXpGained,
     ) ?? 0;
 
   const premiumBonusXp =
@@ -1269,6 +1342,15 @@ export function buildCanonicalSessionTotalsFromStatus(
       false,
   );
 
+  const normalizedXp = normalizeSessionXpBreakdown({
+    totalXpGained,
+    baseXpGained,
+    premiumBonusXp,
+    premiumPotentialBonusXp,
+    premiumTotalXp,
+    isPremiumActive,
+  });
+
   const totalLoot =
     getFirstOptionalNumber(
       status?.sessionSummary?.loot?.totalQuantity,
@@ -1294,12 +1376,12 @@ export function buildCanonicalSessionTotalsFromStatus(
     totalCombats: Math.max(0, Math.floor(totalCombats)),
     totalRounds: Math.max(0, Math.floor(totalRounds)),
     totalKills: Math.max(0, Math.floor(totalKills)),
-    totalXpGained: Math.max(0, Math.floor(totalXpGained)),
-    baseXpGained: Math.max(0, Math.floor(baseXpGained)),
-    premiumBonusXp: Math.max(0, Math.floor(premiumBonusXp)),
-    premiumPotentialBonusXp: Math.max(0, Math.floor(premiumPotentialBonusXp)),
-    premiumTotalXp: Math.max(0, Math.floor(premiumTotalXp)),
-    isPremiumActive,
+    totalXpGained: normalizedXp.totalXpGained,
+    baseXpGained: normalizedXp.baseXpGained,
+    premiumBonusXp: normalizedXp.premiumBonusXp,
+    premiumPotentialBonusXp: normalizedXp.premiumPotentialBonusXp,
+    premiumTotalXp: normalizedXp.premiumTotalXp,
+    isPremiumActive: normalizedXp.isPremiumActive,
     totalLoot: Math.max(0, Math.floor(totalLoot)),
     potionsUsed: Math.max(0, Math.floor(potionsUsed)),
 
