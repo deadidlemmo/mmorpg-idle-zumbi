@@ -256,6 +256,18 @@ function isUiBackgrounded() {
   return !isDocumentVisible() || !hasDocumentFocus();
 }
 
+function isBrowserOnline() {
+  if (typeof navigator === 'undefined') {
+    return true;
+  }
+
+  if (typeof navigator.onLine !== 'boolean') {
+    return true;
+  }
+
+  return navigator.onLine;
+}
+
 function shouldPollCurrentState(state: AutoCombatRealtimeState) {
   const session = state.session;
   const status = state.status;
@@ -421,8 +433,14 @@ export function AutoCombatRealtimeProvider({
   const activeEventImpactTimeoutRef = useRef<number | null>(null);
   const reloadTimeoutRef = useRef<number | null>(null);
   const reloadRequestRef = useRef(0);
+  const reloadExecutorRef = useRef<(options?: ReloadOptions) => Promise<void>>(
+    async () => undefined,
+  );
+  const pendingReloadOptionsRef = useRef<ReloadOptions | null>(null);
   const recentEventsRequestRef = useRef(0);
   const wasBackgroundedRef = useRef(false);
+  const wasSocketConnectedRef = useRef(false);
+  const wasSocketJoinedRef = useRef(false);
   const lastInactiveStatusSignatureRef = useRef<string | null>(null);
   const suppressLootNotificationsUntilCatchUpRef = useRef(false);
   const lootSuppressionRequiresFreshStatusRef = useRef(false);
@@ -451,6 +469,9 @@ export function AutoCombatRealtimeProvider({
     };
     suppressLootNotificationsUntilCatchUpRef.current = false;
     lootSuppressionRequiresFreshStatusRef.current = false;
+    pendingReloadOptionsRef.current = null;
+    wasSocketConnectedRef.current = false;
+    wasSocketJoinedRef.current = false;
   }, [normalizedCharacterId]);
 
   const clearScheduledReload = useCallback(() => {
@@ -667,9 +688,30 @@ export function AutoCombatRealtimeProvider({
 
   const reload = useCallback(
     async (options?: ReloadOptions) => {
-      void options;
+      if (!normalizedCharacterId) return;
 
-      if (!normalizedCharacterId || isLoadingRef.current) return;
+      if (!isBrowserOnline()) {
+        pendingReloadOptionsRef.current = options ?? {
+          reason: 'network-offline',
+        };
+
+        dispatch({
+          type: 'SET_CONNECTION',
+          isConnected: false,
+          isJoined: false,
+          errorMessage:
+            'Conexão indisponível. O combate será sincronizado ao reconectar.',
+        });
+
+        return;
+      }
+
+      if (isLoadingRef.current) {
+        pendingReloadOptionsRef.current = options ?? {
+          reason: 'queued-while-loading',
+        };
+        return;
+      }
 
       const currentState = stateRef.current;
 
@@ -683,6 +725,7 @@ export function AutoCombatRealtimeProvider({
 
       const requestId = reloadRequestRef.current + 1;
       reloadRequestRef.current = requestId;
+      pendingReloadOptionsRef.current = null;
 
       try {
         isLoadingRef.current = true;
@@ -728,11 +771,24 @@ export function AutoCombatRealtimeProvider({
       } finally {
         if (reloadRequestRef.current === requestId) {
           isLoadingRef.current = false;
+
+          const pendingOptions = pendingReloadOptionsRef.current;
+          pendingReloadOptionsRef.current = null;
+
+          if (pendingOptions && normalizedCharacterId) {
+            window.setTimeout(() => {
+              void reloadExecutorRef.current(pendingOptions);
+            }, 0);
+          }
         }
       }
     },
     [normalizedCharacterId],
   );
+
+  useEffect(() => {
+    reloadExecutorRef.current = reload;
+  }, [reload]);
 
   const scheduleReload = useCallback(
     (delayMs = INITIAL_RELOAD_DELAY_MS, options?: ReloadOptions) => {
@@ -985,9 +1041,9 @@ export function AutoCombatRealtimeProvider({
         suppressLootNotificationsUntilCatchUpRef.current = true;
         lootSuppressionRequiresFreshStatusRef.current = true;
         flushVisualQueueWithoutAnimation();
+      } else {
+        lootSuppressionRequiresFreshStatusRef.current = false;
       }
-
-      lootSuppressionRequiresFreshStatusRef.current = false;
 
       dispatch({
         type: 'HYDRATE_STATUS',
@@ -1133,6 +1189,41 @@ export function AutoCombatRealtimeProvider({
   ]);
 
   useEffect(() => {
+    if (!normalizedCharacterId) return;
+
+    const wasConnected = wasSocketConnectedRef.current;
+    const wasJoined = wasSocketJoinedRef.current;
+
+    wasSocketConnectedRef.current = socketState.isConnected;
+    wasSocketJoinedRef.current = socketState.isJoined;
+
+    if (wasConnected && !socketState.isConnected) {
+      suppressLootNotificationsUntilCatchUpRef.current = true;
+      lootSuppressionRequiresFreshStatusRef.current = true;
+      flushVisualQueueWithoutAnimation();
+      return;
+    }
+
+    if (!wasConnected && socketState.isConnected && !socketState.isJoined) {
+      scheduleReload(AFTER_VISIBILITY_RELOAD_DELAY_MS, {
+        reason: 'socket-connected',
+      });
+      return;
+    }
+
+    if (!wasJoined && socketState.isJoined) {
+      reconcileAfterReturningToPage('socket-rejoined');
+    }
+  }, [
+    flushVisualQueueWithoutAnimation,
+    normalizedCharacterId,
+    reconcileAfterReturningToPage,
+    scheduleReload,
+    socketState.isConnected,
+    socketState.isJoined,
+  ]);
+
+  useEffect(() => {
     if (!autoLoad || !normalizedCharacterId) return;
 
     scheduleReload(INITIAL_RELOAD_DELAY_MS, {
@@ -1209,21 +1300,63 @@ export function AutoCombatRealtimeProvider({
       reconcileAfterReturningToPage('pageshow');
     }
 
+    function handleWindowOffline() {
+      wasBackgroundedRef.current = true;
+      suppressLootNotificationsUntilCatchUpRef.current = true;
+      lootSuppressionRequiresFreshStatusRef.current = true;
+      pendingReloadOptionsRef.current = {
+        reason: 'network-online-after-offline',
+      };
+      flushVisualQueueWithoutAnimation();
+
+      dispatch({
+        type: 'SET_CONNECTION',
+        isConnected: false,
+        isJoined: false,
+        errorMessage:
+          'Conexão indisponível. O combate será sincronizado ao reconectar.',
+      });
+    }
+
+    function handleWindowOnline() {
+      if (!isDocumentVisible()) {
+        return;
+      }
+
+      wasBackgroundedRef.current = false;
+
+      const currentState = stateRef.current;
+
+      if (shouldReconcileCurrentState(currentState)) {
+        reconcileAfterReturningToPage('network-online');
+        return;
+      }
+
+      scheduleReload(AFTER_VISIBILITY_RELOAD_DELAY_MS, {
+        reason: 'network-online',
+      });
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('focus', handleWindowFocus);
     window.addEventListener('pageshow', handlePageShow);
+    window.addEventListener('offline', handleWindowOffline);
+    window.addEventListener('online', handleWindowOnline);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('offline', handleWindowOffline);
+      window.removeEventListener('online', handleWindowOnline);
     };
   }, [
     flushVisualQueueWithoutAnimation,
     normalizedCharacterId,
     reconcileAfterReturningToPage,
+    scheduleReload,
   ]);
 
   useEffect(() => {
