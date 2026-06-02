@@ -97,6 +97,17 @@ export type AutoCombatRealtimeEventType =
 export type AutoCombatRealtimeActor = 'PLAYER' | 'MOB' | 'SYSTEM' | string;
 
 export type AutoCombatRealtimeTarget = 'PLAYER' | 'MOB' | 'SYSTEM' | string;
+export type AutoCombatRealtimePhase =
+  | 'SPAWNING'
+  | 'PLAYER_TURN'
+  | 'MOB_TURN'
+  | 'MOB_DEFEATED'
+  | 'PLAYER_DEFEATED'
+  | 'RESTING'
+  | 'FINISHED'
+  | 'WAITING_NEXT_ROUND'
+  | 'IDLE'
+  | string;
 
 export interface AutoCombatRealtimeEvent {
   id?: string | null;
@@ -105,6 +116,13 @@ export interface AutoCombatRealtimeEvent {
   sessionId?: string | null;
   sequence?: number | null;
   enemyInstanceId?: string | null;
+  turnId?: string | null;
+  actionId?: string | null;
+  actionOrder?: number | null;
+  phase?: AutoCombatRealtimePhase | null;
+  serverTime?: string | null;
+  actionStartedAt?: string | null;
+  nextActionAt?: string | null;
 
   type?: AutoCombatRealtimeEventType;
   message?: string | null;
@@ -132,6 +150,14 @@ export interface AutoCombatRealtimeEvent {
   healedAmount?: number | null;
   isCritical?: boolean | null;
   isDodged?: boolean | null;
+  hpBefore?: number | null;
+  hpAfter?: number | null;
+  targetHpBefore?: number | null;
+  targetHpAfter?: number | null;
+  mobHpBefore?: number | null;
+  mobHpAfter?: number | null;
+  characterHpBefore?: number | null;
+  characterHpAfter?: number | null;
 
   /**
    * EXP / level em tempo real.
@@ -419,6 +445,9 @@ export interface AutoCombatSessionApiViewModel {
   currentEnemyInstanceId?: string | null;
   snapshotSequence?: number | null;
   latestEventSequence?: number | null;
+  phase?: AutoCombatRealtimePhase | null;
+  lastActionAt?: string | null;
+  nextActionAt?: string | null;
   currentMob?: AutoCombatCurrentMobViewModel | null;
 
   /**
@@ -721,6 +750,10 @@ export interface AutoCombatStatusResponse {
   serverNow?: string | Date | null;
   snapshotSequence?: number | null;
   latestEventSequence?: number | null;
+  phase?: AutoCombatRealtimePhase | null;
+  lastActionAt?: string | null;
+  nextActionAt?: string | null;
+  roundDurationSeconds?: number | null;
 
   character?: AutoCombatStatusCharacterViewModel;
 

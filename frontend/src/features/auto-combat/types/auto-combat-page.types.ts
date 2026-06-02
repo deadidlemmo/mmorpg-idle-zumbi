@@ -332,6 +332,7 @@ export type AutoCombatRealtimeStateLoose = {
 
   isConnected?: boolean;
   isJoined?: boolean;
+  isSynchronizing?: boolean;
   isActive?: boolean;
   hasActiveSession?: boolean;
   hasActiveAutoCombat?: boolean;

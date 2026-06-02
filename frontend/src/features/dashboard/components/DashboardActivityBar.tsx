@@ -276,6 +276,7 @@ type AutoCombatRealtimeStateLoose = {
   hasActiveAutoCombat?: boolean;
   hasActiveSession?: boolean;
 
+  isSynchronizing?: boolean;
   isConnected?: boolean;
   isJoined?: boolean;
 };
@@ -1935,18 +1936,22 @@ function buildActivityItems(params: {
   } = params;
 
   const items: ActivityBarItem[] = [];
+  const isAutoCombatSynchronizing = Boolean(realtimeState.isSynchronizing);
   const hasSyncedAutoCombatState = Boolean(
-    realtimeState.status ??
-      realtimeState.autoCombatStatus ??
-      realtimeState.session ??
-      realtimeState.activeSession,
+    !isAutoCombatSynchronizing &&
+      (realtimeState.status ??
+        realtimeState.autoCombatStatus ??
+        realtimeState.session ??
+        realtimeState.activeSession),
   );
 
-  const realtimeAutoCombatItem = buildAutoCombatItemFromRealtime({
-    characterId,
-    overview,
-    realtimeState,
-  });
+  const realtimeAutoCombatItem = isAutoCombatSynchronizing
+    ? null
+    : buildAutoCombatItemFromRealtime({
+        characterId,
+        overview,
+        realtimeState,
+      });
 
   if (realtimeAutoCombatItem) {
     items.push(realtimeAutoCombatItem);

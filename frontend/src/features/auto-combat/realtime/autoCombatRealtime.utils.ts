@@ -1,6 +1,7 @@
 import type {
   AutoCombatLevelProgressViewModel,
   AutoCombatRealtimeEvent,
+  AutoCombatRealtimePhase,
   AutoCombatStatusResponse,
 } from '../types/auto-combat.types';
 import type {
@@ -70,6 +71,9 @@ type AutoCombatSessionLike = {
   currentEnemyInstanceId?: string | null;
   snapshotSequence?: number | null;
   latestEventSequence?: number | null;
+  phase?: AutoCombatRealtimePhase | null;
+  lastActionAt?: string | null;
+  nextActionAt?: string | null;
 
   currentMobHp?: number | null;
   currentMobMaxHp?: number | null;
@@ -113,6 +117,8 @@ type RealtimeEventLoose = AutoCombatRealtimeEvent & {
  */
 export const AUTO_COMBAT_REALTIME_DEFAULT_EVENT_DELAY_MS = 950;
 export const AUTO_COMBAT_REALTIME_SPAWN_EVENT_DELAY_MS = 350;
+const AUTO_COMBAT_REALTIME_MIN_TIMELINE_DELAY_MS = 650;
+const AUTO_COMBAT_REALTIME_MAX_TIMELINE_DELAY_MS = 1500;
 
 export const AUTO_COMBAT_REALTIME_EVENT_DELAY_MS = {
   MOB_SPAWNED: AUTO_COMBAT_REALTIME_SPAWN_EVENT_DELAY_MS,
@@ -253,6 +259,24 @@ export function isDamageEvent(event?: AutoCombatRealtimeEvent | null) {
 
 export function getRealtimeEventDelay(event?: AutoCombatRealtimeEvent | null) {
   const eventType = normalizeRealtimeEventType(event);
+  const actionStartedAt = parseOptionalTimestamp(event?.actionStartedAt);
+  const nextActionAt = parseOptionalTimestamp(event?.nextActionAt);
+  const timelineDelay =
+    actionStartedAt !== null && nextActionAt !== null
+      ? nextActionAt - actionStartedAt
+      : null;
+
+  if (
+    timelineDelay !== null &&
+    timelineDelay > 0 &&
+    eventType !== 'MOB_SPAWNED'
+  ) {
+    return clampNumber(
+      timelineDelay,
+      AUTO_COMBAT_REALTIME_MIN_TIMELINE_DELAY_MS,
+      AUTO_COMBAT_REALTIME_MAX_TIMELINE_DELAY_MS,
+    );
+  }
 
   if (eventType === 'MOB_SPAWNED') {
     return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.MOB_SPAWNED;
@@ -283,6 +307,17 @@ export function getRealtimeEventDelay(event?: AutoCombatRealtimeEvent | null) {
   }
 
   return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.DEFAULT;
+}
+
+function parseOptionalTimestamp(value?: string | Date | null) {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp =
+    value instanceof Date ? value.getTime() : new Date(value).getTime();
+
+  return Number.isFinite(timestamp) ? timestamp : null;
 }
 
 export function getStatusSession(
@@ -372,8 +407,12 @@ export function getRealtimeEventKey(payload: AutoCombatRealtimeEvent) {
     event.sessionId ?? 'no-session',
     event.characterId ?? 'no-character',
     event.sequence ?? 'no-sequence',
+    event.turnId ?? 'no-turn',
+    event.actionId ?? 'no-action',
+    event.actionOrder ?? 'no-action-order',
     event.type ?? 'no-type',
     event.createdAt ?? 'no-created-at',
+    event.serverTime ?? 'no-server-time',
 
     event.enemyInstanceId ?? 'no-enemy-instance',
     event.mobId ?? 'no-mob',
@@ -489,6 +528,9 @@ export function getGenericRealtimeFingerprint(payload: AutoCombatRealtimeEvent) 
     event.characterId ?? 'no-character',
     event.type ?? 'no-type',
     event.enemyInstanceId ?? 'no-enemy-instance',
+    event.turnId ?? 'no-turn',
+    event.actionId ?? 'no-action',
+    event.actionOrder ?? 'no-action-order',
     event.mobId ?? 'no-mob',
     event.round ?? 'no-round',
     event.combatIndex ?? 'no-combat',
@@ -833,7 +875,9 @@ export function buildCharacterStateFromRealtimeEvent(
   const nextCurrentHp =
     isPlayerDefeatedEvent(event) && event.characterCurrentHp === undefined
       ? 0
-      : getOptionalNumber(event.characterCurrentHp) ?? fallback?.currentHp;
+      : getOptionalNumber(event.characterHpAfter) ??
+        getOptionalNumber(event.characterCurrentHp) ??
+        fallback?.currentHp;
 
   const hpPercent =
     nextCurrentHp !== undefined && nextMaxHp !== undefined
@@ -1103,6 +1147,11 @@ export function buildSessionStateFromStatus(
       status?.latestEventSequence ??
       safeFallback?.latestEventSequence ??
       null,
+    phase: session.phase ?? status?.phase ?? safeFallback?.phase ?? null,
+    lastActionAt:
+      session.lastActionAt ?? status?.lastActionAt ?? safeFallback?.lastActionAt ?? null,
+    nextActionAt:
+      session.nextActionAt ?? status?.nextActionAt ?? safeFallback?.nextActionAt ?? null,
 
     updatedAt: Date.now(),
   };
@@ -1198,7 +1247,10 @@ export function buildMobStateFromRealtimeEvent(
     getOptionalNumber(event.mobCurrentHp);
 
   const receivedCurrentHp =
-    getOptionalNumber(event.mobCurrentHp) ?? fallback?.currentHp ?? maxHp;
+    getOptionalNumber(event.mobHpAfter) ??
+    getOptionalNumber(event.mobCurrentHp) ??
+    fallback?.currentHp ??
+    maxHp;
 
   const currentHp = isMobDefeatedEvent(event)
     ? 0

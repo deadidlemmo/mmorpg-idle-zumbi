@@ -497,13 +497,19 @@ export function AutoCombatRealtimeProvider({
     clearScheduledActiveEvent();
 
     dispatch({
-      type: 'CLEAR_ACTIVE_EVENT',
-    });
-
-    dispatch({
       type: 'FLUSH_EVENT_QUEUE',
     });
   }, [clearScheduledActiveEvent]);
+
+  const enterSnapshotSynchronization = useCallback(() => {
+    flushVisualQueueWithoutAnimation();
+
+    dispatch({
+      type: 'SET_SYNCHRONIZING',
+      isSynchronizing: true,
+      clearCombatView: true,
+    });
+  }, [flushVisualQueueWithoutAnimation]);
 
   const hydrateOverview = useCallback(
     (overview: CharacterOverviewResponse | null) => {
@@ -739,6 +745,22 @@ export function AutoCombatRealtimeProvider({
           return;
         }
 
+        if (isUiBackgrounded()) {
+          suppressLootNotificationsUntilCatchUpRef.current = true;
+          lootSuppressionRequiresFreshStatusRef.current = true;
+          enterSnapshotSynchronization();
+
+          if (statusData) {
+            publishConfirmedLootNotifications(statusData, null);
+          }
+
+          dispatch({
+            type: 'CLEAR_ERROR',
+          });
+
+          return;
+        }
+
         lootSuppressionRequiresFreshStatusRef.current = false;
 
         if (overviewData) {
@@ -783,7 +805,11 @@ export function AutoCombatRealtimeProvider({
         }
       }
     },
-    [normalizedCharacterId],
+    [
+      enterSnapshotSynchronization,
+      normalizedCharacterId,
+      publishConfirmedLootNotifications,
+    ],
   );
 
   useEffect(() => {
@@ -855,6 +881,31 @@ export function AutoCombatRealtimeProvider({
         const events = Array.isArray(response.events) ? response.events : [];
         const sessionId = response.session?.id ?? null;
 
+        if (response.needsSnapshot) {
+          flushVisualQueueWithoutAnimation();
+
+          dispatch({
+            type: 'CLEAR_QUEUE',
+          });
+
+          void reload({
+            reason: 'recent-events-gap',
+          });
+
+          if (import.meta.env.DEV) {
+            console.debug('[auto-combat:reconcile-recent-events:gap]', {
+              reason,
+              sessionId,
+              afterSequence,
+              latestSequence: response.latestSequence,
+              oldestAvailableSequence: response.oldestAvailableSequence,
+              gapFromSequence: response.gapFromSequence,
+            });
+          }
+
+          return;
+        }
+
         dispatch({
           type: 'HYDRATE_RECENT_EVENTS',
           characterId: normalizedCharacterId,
@@ -874,6 +925,8 @@ export function AutoCombatRealtimeProvider({
             afterSequence,
             latestSequence: response.latestSequence,
             snapshotSequence: response.snapshotSequence ?? null,
+            oldestAvailableSequence: response.oldestAvailableSequence ?? null,
+            needsSnapshot: response.needsSnapshot ?? false,
             firstSequence: getLooseEventSequence(events[0]),
             lastSequence: getLooseEventSequence(events[events.length - 1]),
             lastEventType: events[events.length - 1]?.type ?? null,
@@ -888,7 +941,7 @@ export function AutoCombatRealtimeProvider({
         }
       }
     },
-    [normalizedCharacterId],
+    [flushVisualQueueWithoutAnimation, normalizedCharacterId, reload],
   );
 
   const reconcileAfterReturningToPage = useCallback(
@@ -901,7 +954,7 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
-      flushVisualQueueWithoutAnimation();
+      enterSnapshotSynchronization();
 
       void loadRecentEventsForReconciliation(reason);
 
@@ -910,7 +963,7 @@ export function AutoCombatRealtimeProvider({
       });
     },
     [
-      flushVisualQueueWithoutAnimation,
+      enterSnapshotSynchronization,
       loadRecentEventsForReconciliation,
       normalizedCharacterId,
       scheduleReload,
@@ -1059,7 +1112,9 @@ export function AutoCombatRealtimeProvider({
       if (isUiBackgrounded()) {
         suppressLootNotificationsUntilCatchUpRef.current = true;
         lootSuppressionRequiresFreshStatusRef.current = true;
-        flushVisualQueueWithoutAnimation();
+        enterSnapshotSynchronization();
+        publishConfirmedLootNotifications(payload, null);
+        return;
       } else {
         lootSuppressionRequiresFreshStatusRef.current = false;
       }
@@ -1071,8 +1126,9 @@ export function AutoCombatRealtimeProvider({
       });
     },
     [
-      flushVisualQueueWithoutAnimation,
+      enterSnapshotSynchronization,
       normalizedCharacterId,
+      publishConfirmedLootNotifications,
     ],
   );
 
@@ -1147,6 +1203,14 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
+      if (isUiBackgrounded()) {
+        lastInactiveStatusSignatureRef.current = null;
+        suppressLootNotificationsUntilCatchUpRef.current = true;
+        lootSuppressionRequiresFreshStatusRef.current = true;
+        enterSnapshotSynchronization();
+        return;
+      }
+
       lastInactiveStatusSignatureRef.current = null;
 
       dispatch({
@@ -1154,14 +1218,8 @@ export function AutoCombatRealtimeProvider({
         characterId: normalizedCharacterId,
         event: payload,
       });
-
-      if (isUiBackgrounded()) {
-        dispatch({
-          type: 'FLUSH_EVENT_QUEUE',
-        });
-      }
     },
-    [normalizedCharacterId],
+    [enterSnapshotSynchronization, normalizedCharacterId],
   );
 
   const shouldEnableSocket = shouldKeepAutoCombatSocketEnabled({
@@ -1219,7 +1277,7 @@ export function AutoCombatRealtimeProvider({
     if (wasConnected && !socketState.isConnected) {
       suppressLootNotificationsUntilCatchUpRef.current = true;
       lootSuppressionRequiresFreshStatusRef.current = true;
-      flushVisualQueueWithoutAnimation();
+      enterSnapshotSynchronization();
       return;
     }
 
@@ -1234,7 +1292,7 @@ export function AutoCombatRealtimeProvider({
       reconcileAfterReturningToPage('socket-rejoined');
     }
   }, [
-    flushVisualQueueWithoutAnimation,
+    enterSnapshotSynchronization,
     normalizedCharacterId,
     reconcileAfterReturningToPage,
     scheduleReload,
@@ -1276,7 +1334,7 @@ export function AutoCombatRealtimeProvider({
         wasBackgroundedRef.current = true;
         suppressLootNotificationsUntilCatchUpRef.current = true;
         lootSuppressionRequiresFreshStatusRef.current = true;
-        flushVisualQueueWithoutAnimation();
+        enterSnapshotSynchronization();
         return;
       }
 
@@ -1290,7 +1348,7 @@ export function AutoCombatRealtimeProvider({
       wasBackgroundedRef.current = true;
       suppressLootNotificationsUntilCatchUpRef.current = true;
       lootSuppressionRequiresFreshStatusRef.current = true;
-      flushVisualQueueWithoutAnimation();
+      enterSnapshotSynchronization();
     }
 
     function handleWindowFocus() {
@@ -1326,7 +1384,7 @@ export function AutoCombatRealtimeProvider({
       pendingReloadOptionsRef.current = {
         reason: 'network-online-after-offline',
       };
-      flushVisualQueueWithoutAnimation();
+      enterSnapshotSynchronization();
 
       dispatch({
         type: 'SET_CONNECTION',
@@ -1372,7 +1430,7 @@ export function AutoCombatRealtimeProvider({
       window.removeEventListener('online', handleWindowOnline);
     };
   }, [
-    flushVisualQueueWithoutAnimation,
+    enterSnapshotSynchronization,
     normalizedCharacterId,
     reconcileAfterReturningToPage,
     scheduleReload,
@@ -1384,11 +1442,9 @@ export function AutoCombatRealtimeProvider({
     if (isUiBackgrounded()) {
       if (state.activeEvent || state.eventQueue.length > 0) {
         dispatch({
-          type: 'CLEAR_ACTIVE_EVENT',
-        });
-
-        dispatch({
-          type: 'FLUSH_EVENT_QUEUE',
+          type: 'SET_SYNCHRONIZING',
+          isSynchronizing: true,
+          clearCombatView: true,
         });
       }
 
@@ -1401,6 +1457,9 @@ export function AutoCombatRealtimeProvider({
         0,
         Math.floor(eventDelay * ACTIVE_EVENT_IMPACT_RATIO),
       );
+      const clearDelay = state.activeEventImpactApplied
+        ? Math.max(0, eventDelay - impactDelay)
+        : eventDelay;
 
       if (!state.activeEventImpactApplied) {
         activeEventImpactTimeoutRef.current = window.setTimeout(() => {
@@ -1422,7 +1481,7 @@ export function AutoCombatRealtimeProvider({
         });
 
         activeEventTimeoutRef.current = null;
-      }, eventDelay);
+      }, clearDelay);
 
       return () => {
         clearScheduledActiveEvent();
@@ -1468,6 +1527,7 @@ export function AutoCombatRealtimeProvider({
       isJoined: state.isJoined,
       errorMessage: state.errorMessage,
       hasLoadedOnce: state.hasLoadedOnce,
+      isSynchronizing: state.isSynchronizing,
 
       status: state.status,
       session: state.session,
@@ -1483,6 +1543,7 @@ export function AutoCombatRealtimeProvider({
 
       eventQueue: state.eventQueue,
       activeEvent: state.activeEvent,
+      activeEventImpactApplied: state.activeEventImpactApplied,
       battleLogEvents: state.battleLogEvents,
 
       hydrateOverview,

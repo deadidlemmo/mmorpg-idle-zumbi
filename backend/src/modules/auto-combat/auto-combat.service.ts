@@ -76,6 +76,16 @@ type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'LETHAL';
 
 type RealtimeActor = 'PLAYER' | 'MOB' | 'SYSTEM';
 type RealtimeTarget = 'PLAYER' | 'MOB' | 'SYSTEM';
+type AutoCombatRealtimePhase =
+  | 'SPAWNING'
+  | 'PLAYER_TURN'
+  | 'MOB_TURN'
+  | 'MOB_DEFEATED'
+  | 'PLAYER_DEFEATED'
+  | 'RESTING'
+  | 'FINISHED'
+  | 'WAITING_NEXT_ROUND'
+  | 'IDLE';
 
 type FighterStats = {
   name: string;
@@ -147,6 +157,13 @@ type AutoCombatRealtimeEvent = {
   sessionId?: string;
   sequence?: number;
   enemyInstanceId?: string | null;
+  turnId?: string | null;
+  actionId?: string | null;
+  actionOrder?: number | null;
+  phase?: AutoCombatRealtimePhase;
+  serverTime?: string;
+  actionStartedAt?: string | null;
+  nextActionAt?: string | null;
   type?: AutoCombatRealtimeEventType;
   message?: string;
 
@@ -164,6 +181,14 @@ type AutoCombatRealtimeEvent = {
   healedAmount?: number;
   isCritical?: boolean;
   isDodged?: boolean;
+  hpBefore?: number | null;
+  hpAfter?: number | null;
+  targetHpBefore?: number | null;
+  targetHpAfter?: number | null;
+  mobHpBefore?: number | null;
+  mobHpAfter?: number | null;
+  characterHpBefore?: number | null;
+  characterHpAfter?: number | null;
 
   xpGained?: number;
   baseXpGained?: number;
@@ -1271,6 +1296,29 @@ export class AutoCombatService implements OnModuleDestroy {
     });
 
     const latestSequence = latestEvent?.sequence ?? null;
+    const oldestEvent =
+      afterSequence !== null && latestSequence !== null
+        ? await this.prisma.autoCombatSessionEvent.findFirst({
+            where: {
+              sessionId: latestSession.id,
+              characterId: character.id,
+            },
+            orderBy: {
+              sequence: 'asc',
+            },
+            select: {
+              sequence: true,
+            },
+          })
+        : null;
+    const oldestAvailableSequence = oldestEvent?.sequence ?? null;
+    const needsSnapshot = Boolean(
+      afterSequence !== null &&
+        latestSequence !== null &&
+        latestSequence > afterSequence &&
+        oldestAvailableSequence !== null &&
+        afterSequence + 1 < oldestAvailableSequence,
+    );
 
     const eventWhere: Prisma.AutoCombatSessionEventWhereInput = {
       sessionId: latestSession.id,
@@ -1340,6 +1388,9 @@ export class AutoCombatService implements OnModuleDestroy {
       latestSequence,
       snapshotSequence: latestSequence,
       requestedAfterSequence: afterSequence,
+      oldestAvailableSequence,
+      needsSnapshot,
+      gapFromSequence: needsSnapshot ? afterSequence : null,
     };
   }
 
@@ -1976,11 +2027,28 @@ export class AutoCombatService implements OnModuleDestroy {
       type: 'MOB_SPAWNED',
       actor: 'SYSTEM',
       target: 'MOB',
+      phase: 'SPAWNING',
+      turnId: `${session.id}:${combatIndex}:0:1`,
+      actionId: `${session.id}:${combatIndex}:0:1:MOB_SPAWNED`,
+      actionOrder: 1,
+      actionStartedAt: lastProcessedAt,
+      nextActionAt: this.addSeconds(
+        lastProcessedAt,
+        this.getEffectiveRoundDurationSeconds(session.roundDurationSeconds),
+      ),
       message: `${mob.name} apareceu.`,
       mobCurrentHp: mob.hp,
       mobMaxHp: mob.hp,
       characterCurrentHp: session.character.currentHp ?? characterStats.maxHp,
       characterMaxHp: characterStats.maxHp,
+      hpBefore: null,
+      hpAfter: mob.hp,
+      targetHpBefore: null,
+      targetHpAfter: mob.hp,
+      mobHpBefore: null,
+      mobHpAfter: mob.hp,
+      characterHpBefore: session.character.currentHp ?? characterStats.maxHp,
+      characterHpAfter: session.character.currentHp ?? characterStats.maxHp,
       damage: 0,
       isCritical: false,
       isDodged: false,
@@ -2252,23 +2320,41 @@ export class AutoCombatService implements OnModuleDestroy {
     const hpLostNet = Math.max(0, baseResult.initialHp - finalCurrentHp);
     const hpRecoveredNet = Math.max(0, finalCurrentHp - baseResult.initialHp);
     const currentCombatIndex = Math.max(1, session.currentCombatIndex ?? 1);
+    const restTurnId = `${session.id}:${currentCombatIndex}:0:1`;
+    const restCreatedAt = new Date().toISOString();
 
     const event: AutoCombatRealtimeEvent = {
       characterId: session.characterId,
       sessionId: session.id,
+      turnId: restTurnId,
+      actionId: `${restTurnId}:AUTO_REST`,
+      actionOrder: 1,
+      phase: 'RESTING',
+      serverTime: restCreatedAt,
+      actionStartedAt: nextLastProcessedAt.toISOString(),
+      nextActionAt: this.addSeconds(
+        nextLastProcessedAt,
+        this.getEffectiveRoundDurationSeconds(session.roundDurationSeconds),
+      ).toISOString(),
       type: 'AUTO_REST',
       message: `${session.character.name} descansou e recuperou ${healedAmount} HP.`,
       characterCurrentHp: finalCurrentHp,
       characterMaxHp: maxHp,
       characterHpPercent: this.calculatePercent(finalCurrentHp, maxHp),
       healedAmount,
+      hpBefore: initialHp,
+      hpAfter: finalCurrentHp,
+      targetHpBefore: initialHp,
+      targetHpAfter: finalCurrentHp,
+      characterHpBefore: initialHp,
+      characterHpAfter: finalCurrentHp,
       restStartHpPercent: restState.startHpPercent,
       restStopHpPercent: restState.stopHpPercent,
       round: 0,
       combatIndex: currentCombatIndex,
       actor: 'SYSTEM',
       target: 'PLAYER',
-      createdAt: new Date().toISOString(),
+      createdAt: restCreatedAt,
     };
 
     return {
@@ -2772,6 +2858,18 @@ export class AutoCombatService implements OnModuleDestroy {
       return previousLootTotal + getNewLootTotal();
     };
 
+    const effectiveRoundDurationSeconds =
+      this.getEffectiveRoundDurationSeconds(session.roundDurationSeconds);
+    const roundActionStartedAt = this.addSeconds(
+      session.lastProcessedAt,
+      effectiveRoundDurationSeconds,
+    );
+    const roundNextActionAt = this.addSeconds(
+      roundActionStartedAt,
+      effectiveRoundDurationSeconds,
+    );
+    let roundActionOrder = 0;
+
     const pushEvent = (
       type: AutoCombatRealtimeEventType,
       payload: Partial<AutoCombatRealtimeEvent> = {},
@@ -2792,6 +2890,17 @@ export class AutoCombatService implements OnModuleDestroy {
         payload.potionsUsed ??
         totalPotionsUsedBeforeRound + (autoPotionState?.usedQuantity ?? 0);
 
+      const resolvedRound = payload.round ?? currentRound;
+      const resolvedCombatIndex = payload.combatIndex ?? currentCombatIndex;
+      const resolvedActionOrder =
+        payload.actionOrder !== null && payload.actionOrder !== undefined
+          ? Math.max(1, Math.floor(Number(payload.actionOrder)))
+          : ++roundActionOrder;
+      const turnId =
+        payload.turnId ??
+        `${session.id}:${resolvedCombatIndex}:${resolvedRound}:${resolvedActionOrder}`;
+      const actionId = payload.actionId ?? `${turnId}:${type}`;
+
       events.push(
         this.buildRealtimeEvent({
           context,
@@ -2805,10 +2914,24 @@ export class AutoCombatService implements OnModuleDestroy {
           healedAmount: payload.healedAmount ?? 0,
           isCritical: payload.isCritical ?? false,
           isDodged: payload.isDodged ?? false,
-          round: payload.round ?? currentRound,
-          combatIndex: payload.combatIndex ?? currentCombatIndex,
+          hpBefore: payload.hpBefore,
+          hpAfter: payload.hpAfter,
+          targetHpBefore: payload.targetHpBefore,
+          targetHpAfter: payload.targetHpAfter,
+          mobHpBefore: payload.mobHpBefore,
+          mobHpAfter: payload.mobHpAfter,
+          characterHpBefore: payload.characterHpBefore,
+          characterHpAfter: payload.characterHpAfter,
+          round: resolvedRound,
+          combatIndex: resolvedCombatIndex,
           actor: payload.actor,
           target: payload.target,
+          turnId,
+          actionId,
+          actionOrder: resolvedActionOrder,
+          phase: payload.phase,
+          actionStartedAt: payload.actionStartedAt ?? roundActionStartedAt,
+          nextActionAt: payload.nextActionAt ?? roundNextActionAt,
           mobId: payload.mobId,
           mobName: payload.mobName,
           xpGained: payload.xpGained,
@@ -2868,6 +2991,7 @@ export class AutoCombatService implements OnModuleDestroy {
       potionUsedThisCombat = true;
       this.potionUsageByCombat.add(potionCombatKey);
 
+      const playerHpBeforePotion = playerHp;
       playerHp = potionResult.newHp;
       healingFromPotions += potionResult.healedAmount;
 
@@ -2888,6 +3012,15 @@ export class AutoCombatService implements OnModuleDestroy {
         healedAmount: potionResult.healedAmount,
         characterCurrentHp: playerHp,
         mobCurrentHp: mobHp,
+        hpBefore: playerHpBeforePotion,
+        hpAfter: playerHp,
+        targetHpBefore: playerHpBeforePotion,
+        targetHpAfter: playerHp,
+        characterHpBefore: playerHpBeforePotion,
+        characterHpAfter: playerHp,
+        mobHpBefore: mobHp,
+        mobHpAfter: mobHp,
+        phase: 'RESTING',
         totalCombats: totalCombatsBeforeRound,
         totalRounds: totalRoundsAfterRound,
         totalKills: totalCombatsBeforeRound,
@@ -2909,6 +3042,8 @@ export class AutoCombatService implements OnModuleDestroy {
         return;
       }
 
+      const playerHpBeforeAttack = playerHp;
+      const mobHpBeforeAttack = mobHp;
       const attack = this.resolveAttack({
         attacker: playerStats,
         defender: mobStats,
@@ -2933,6 +3068,15 @@ export class AutoCombatService implements OnModuleDestroy {
           isDodged: true,
           characterCurrentHp: playerHp,
           mobCurrentHp: mobHp,
+          hpBefore: mobHpBeforeAttack,
+          hpAfter: mobHp,
+          targetHpBefore: mobHpBeforeAttack,
+          targetHpAfter: mobHp,
+          mobHpBefore: mobHpBeforeAttack,
+          mobHpAfter: mobHp,
+          characterHpBefore: playerHpBeforeAttack,
+          characterHpAfter: playerHp,
+          phase: 'PLAYER_TURN',
         });
 
         return;
@@ -2954,6 +3098,15 @@ export class AutoCombatService implements OnModuleDestroy {
         isDodged: false,
         characterCurrentHp: playerHp,
         mobCurrentHp: mobHp,
+        hpBefore: mobHpBeforeAttack,
+        hpAfter: mobHp,
+        targetHpBefore: mobHpBeforeAttack,
+        targetHpAfter: mobHp,
+        mobHpBefore: mobHpBeforeAttack,
+        mobHpAfter: mobHp,
+        characterHpBefore: playerHpBeforeAttack,
+        characterHpAfter: playerHp,
+        phase: 'PLAYER_TURN',
       });
     };
 
@@ -2963,6 +3116,7 @@ export class AutoCombatService implements OnModuleDestroy {
       }
 
       const hpBeforeAttack = playerHp;
+      const mobHpBeforeAttack = mobHp;
 
       const attack = this.resolveAttack({
         attacker: mobStats,
@@ -2988,6 +3142,15 @@ export class AutoCombatService implements OnModuleDestroy {
           isDodged: true,
           characterCurrentHp: playerHp,
           mobCurrentHp: mobHp,
+          hpBefore: hpBeforeAttack,
+          hpAfter: playerHp,
+          targetHpBefore: hpBeforeAttack,
+          targetHpAfter: playerHp,
+          characterHpBefore: hpBeforeAttack,
+          characterHpAfter: playerHp,
+          mobHpBefore: mobHpBeforeAttack,
+          mobHpAfter: mobHp,
+          phase: 'MOB_TURN',
         });
 
         return;
@@ -3009,6 +3172,15 @@ export class AutoCombatService implements OnModuleDestroy {
         isDodged: false,
         characterCurrentHp: playerHp,
         mobCurrentHp: mobHp,
+        hpBefore: hpBeforeAttack,
+        hpAfter: playerHp,
+        targetHpBefore: hpBeforeAttack,
+        targetHpAfter: playerHp,
+        characterHpBefore: hpBeforeAttack,
+        characterHpAfter: playerHp,
+        mobHpBefore: mobHpBeforeAttack,
+        mobHpAfter: mobHp,
+        phase: 'MOB_TURN',
       });
 
       const tookRealDamage = hpBeforeAttack > playerHp;
@@ -3061,6 +3233,15 @@ export class AutoCombatService implements OnModuleDestroy {
         mobCurrentHp: mobHp,
         characterCurrentHp: 0,
         characterMaxHp: simulatedMaxHp,
+        hpBefore: null,
+        hpAfter: 0,
+        targetHpBefore: null,
+        targetHpAfter: 0,
+        characterHpBefore: null,
+        characterHpAfter: 0,
+        mobHpBefore: mobHp,
+        mobHpAfter: mobHp,
+        phase: 'PLAYER_DEFEATED',
         characterXp: simulatedXp,
         characterLevel: simulatedLevel,
         ...defeatXpPayload,
@@ -3173,6 +3354,15 @@ export class AutoCombatService implements OnModuleDestroy {
         mobCurrentHp: 0,
         characterCurrentHp: playerHp,
         characterMaxHp: simulatedMaxHp,
+        hpBefore: null,
+        hpAfter: 0,
+        targetHpBefore: null,
+        targetHpAfter: 0,
+        mobHpBefore: null,
+        mobHpAfter: 0,
+        characterHpBefore: null,
+        characterHpAfter: playerHp,
+        phase: 'MOB_DEFEATED',
         xpGained: finalXpReward,
         baseXpGained: xpBreakdown.baseXp,
         premiumBonusXp: xpBreakdown.premiumBonusXp,
@@ -3626,6 +3816,12 @@ export class AutoCombatService implements OnModuleDestroy {
       },
     );
 
+    const timeline = this.buildSessionTimelinePayload(
+      session,
+      currentMobHp,
+      now,
+    );
+
     const characterXpPayload = this.buildCharacterXpPayload(
       session.character.level,
       session.character.xp,
@@ -3648,6 +3844,10 @@ export class AutoCombatService implements OnModuleDestroy {
       serverNow: now.toISOString(),
       snapshotSequence,
       latestEventSequence: snapshotSequence,
+      phase: timeline.phase,
+      lastActionAt: timeline.lastActionAt,
+      nextActionAt: timeline.nextActionAt,
+      roundDurationSeconds: timeline.roundDurationSeconds,
 
       character: {
         id: session.character.id,
@@ -3698,6 +3898,9 @@ export class AutoCombatService implements OnModuleDestroy {
         currentEnemyInstanceId: enemyInstanceId,
         snapshotSequence,
         latestEventSequence: snapshotSequence,
+        phase: timeline.phase,
+        lastActionAt: timeline.lastActionAt,
+        nextActionAt: timeline.nextActionAt,
         currentMob: currentMobPayload,
       },
 
@@ -3801,6 +4004,94 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     return `${sessionId}:${Math.floor(combatIndex)}:${mobId}`;
+  }
+
+  private buildSessionTimelinePayload(
+    session: {
+      status: AutoCombatSessionStatus;
+      lastProcessedAt?: Date | string | null;
+      endsAt?: Date | string | null;
+      currentMobId?: string | null;
+      currentRound?: number | null;
+      roundDurationSeconds?: number | null;
+    },
+    currentMobHp: number | null,
+    now: Date,
+  ) {
+    const roundDurationSeconds = this.getEffectiveRoundDurationSeconds(
+      session.roundDurationSeconds,
+    );
+    const lastProcessedAt = session.lastProcessedAt
+      ? new Date(session.lastProcessedAt)
+      : null;
+    const endsAt = session.endsAt ? new Date(session.endsAt) : null;
+    const isActive = session.status === AutoCombatSessionStatus.ACTIVE;
+    const phase = this.getSessionPhase(session, currentMobHp);
+    const lastActionAt =
+      lastProcessedAt && Number.isFinite(lastProcessedAt.getTime())
+        ? lastProcessedAt.toISOString()
+        : null;
+
+    let nextActionAt: string | null = null;
+
+    if (
+      isActive &&
+      lastProcessedAt &&
+      Number.isFinite(lastProcessedAt.getTime())
+    ) {
+      const rawNextActionAt = this.addSeconds(
+        lastProcessedAt,
+        roundDurationSeconds,
+      );
+      const boundedNextActionAt =
+        endsAt && Number.isFinite(endsAt.getTime())
+          ? new Date(Math.min(rawNextActionAt.getTime(), endsAt.getTime()))
+          : rawNextActionAt;
+
+      if (boundedNextActionAt.getTime() > now.getTime()) {
+        nextActionAt = boundedNextActionAt.toISOString();
+      } else {
+        nextActionAt = now.toISOString();
+      }
+    }
+
+    return {
+      phase,
+      lastActionAt,
+      nextActionAt,
+      roundDurationSeconds,
+    };
+  }
+
+  private getSessionPhase(
+    session: {
+      status: AutoCombatSessionStatus;
+      currentMobId?: string | null;
+      currentRound?: number | null;
+    },
+    currentMobHp: number | null,
+  ): AutoCombatRealtimePhase {
+    if (session.status === AutoCombatSessionStatus.DEFEATED) {
+      return 'PLAYER_DEFEATED';
+    }
+
+    if (session.status !== AutoCombatSessionStatus.ACTIVE) {
+      return 'FINISHED';
+    }
+
+    if (!session.currentMobId) {
+      return 'SPAWNING';
+    }
+
+    if (currentMobHp !== null && currentMobHp <= 0) {
+      return 'MOB_DEFEATED';
+    }
+
+    if ((session.currentRound ?? 0) <= 0) {
+      return 'SPAWNING';
+    }
+
+    return 'WAITING_NEXT_ROUND';
   }
 
   private async getLatestSessionEventSequence(
@@ -4827,6 +5118,14 @@ export class AutoCombatService implements OnModuleDestroy {
     healedAmount?: number;
     isCritical?: boolean;
     isDodged?: boolean;
+    hpBefore?: number | null;
+    hpAfter?: number | null;
+    targetHpBefore?: number | null;
+    targetHpAfter?: number | null;
+    mobHpBefore?: number | null;
+    mobHpAfter?: number | null;
+    characterHpBefore?: number | null;
+    characterHpAfter?: number | null;
 
     xpGained?: number;
     baseXpGained?: number;
@@ -4856,6 +5155,12 @@ export class AutoCombatService implements OnModuleDestroy {
     combatIndex?: number;
     actor?: RealtimeActor;
     target?: RealtimeTarget;
+    turnId?: string | null;
+    actionId?: string | null;
+    actionOrder?: number | null;
+    phase?: AutoCombatRealtimePhase;
+    actionStartedAt?: string | Date | null;
+    nextActionAt?: string | Date | null;
 
     mobId?: string;
     mobName?: string;
@@ -4896,11 +5201,21 @@ export class AutoCombatService implements OnModuleDestroy {
         combatIndex,
         mobId,
       });
+    const createdAt = new Date().toISOString();
+    const actionStartedAt = this.toOptionalIsoString(params.actionStartedAt);
+    const nextActionAt = this.toOptionalIsoString(params.nextActionAt);
 
     return {
       characterId: params.context.characterId,
       sessionId: params.context.sessionId,
       enemyInstanceId,
+      turnId: params.turnId ?? null,
+      actionId: params.actionId ?? null,
+      actionOrder: params.actionOrder ?? null,
+      phase: params.phase ?? this.getRealtimePhaseFromEventType(params.type),
+      serverTime: createdAt,
+      actionStartedAt,
+      nextActionAt,
       type: params.type,
       message: params.message,
 
@@ -4921,6 +5236,14 @@ export class AutoCombatService implements OnModuleDestroy {
       healedAmount: params.healedAmount ?? 0,
       isCritical: params.isCritical ?? false,
       isDodged: params.isDodged ?? false,
+      hpBefore: params.hpBefore ?? null,
+      hpAfter: params.hpAfter ?? null,
+      targetHpBefore: params.targetHpBefore ?? params.hpBefore ?? null,
+      targetHpAfter: params.targetHpAfter ?? params.hpAfter ?? null,
+      mobHpBefore: params.mobHpBefore ?? null,
+      mobHpAfter: params.mobHpAfter ?? mobCurrentHp,
+      characterHpBefore: params.characterHpBefore ?? null,
+      characterHpAfter: params.characterHpAfter ?? characterCurrentHp,
 
       xpGained: params.xpGained,
       baseXpGained: params.baseXpGained,
@@ -4969,7 +5292,7 @@ export class AutoCombatService implements OnModuleDestroy {
       actor: params.actor,
       target: params.target,
 
-      createdAt: new Date().toISOString(),
+      createdAt,
     };
   }
 
@@ -4977,6 +5300,42 @@ export class AutoCombatService implements OnModuleDestroy {
     event: AutoCombatRealtimeEvent,
   ): Prisma.InputJsonValue {
     return JSON.parse(JSON.stringify(event)) as Prisma.InputJsonValue;
+  }
+
+  private toOptionalIsoString(value?: string | Date | null) {
+    if (!value) {
+      return null;
+    }
+
+    if (value instanceof Date) {
+      return Number.isFinite(value.getTime()) ? value.toISOString() : null;
+    }
+
+    const parsed = new Date(value);
+
+    return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
+  }
+
+  private getRealtimePhaseFromEventType(
+    type: AutoCombatRealtimeEventType,
+  ): AutoCombatRealtimePhase {
+    switch (type) {
+      case 'MOB_SPAWNED':
+        return 'SPAWNING';
+      case 'PLAYER_HIT':
+        return 'PLAYER_TURN';
+      case 'MOB_HIT':
+        return 'MOB_TURN';
+      case 'POTION_USED':
+      case 'AUTO_REST':
+        return 'RESTING';
+      case 'MOB_DEFEATED':
+        return 'MOB_DEFEATED';
+      case 'PLAYER_DEFEATED':
+        return 'PLAYER_DEFEATED';
+      default:
+        return 'IDLE';
+    }
   }
 
   private async persistRealtimeEvents(

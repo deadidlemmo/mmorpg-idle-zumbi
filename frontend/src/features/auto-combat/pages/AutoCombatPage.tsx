@@ -614,16 +614,27 @@ export function AutoCombatPage() {
   }, [characterId, queueClearXpFeedback]);
 
   const realtimeStatus = getRealtimeStatus(realtimeState);
+  const isRealtimeSynchronizing = Boolean(realtimeState.isSynchronizing);
   const effectiveStatus = realtimeStatus ?? autoCombatStatus;
   const effectiveSession = getRealtimeSession(realtimeState, effectiveStatus);
-  const providerRealtimeCombat = getRealtimeCombat(realtimeState);
+  const providerRealtimeCombat = isRealtimeSynchronizing
+    ? null
+    : getRealtimeCombat(realtimeState);
   const providerProgress = getRealtimeProgress(realtimeState);
   const providerSessionTotals = getRealtimeTotals(realtimeState);
   const providerBattleLogEvents = getRealtimeBattleLogEvents(realtimeState);
   const providerActiveEvent = getRealtimeActiveEvent(realtimeState);
-  const providerQueueLength = getRealtimeQueueLength(realtimeState);
+  const providerPublicActiveEvent =
+    !isRealtimeSynchronizing && realtimeState.activeEventImpactApplied
+      ? providerActiveEvent
+      : null;
+  const providerQueueLength = isRealtimeSynchronizing
+    ? 0
+    : getRealtimeQueueLength(realtimeState);
 
-  const visualRealtimeCombat = providerRealtimeCombat ?? localRealtimeCombat;
+  const visualRealtimeCombat = isRealtimeSynchronizing
+    ? null
+    : providerRealtimeCombat ?? localRealtimeCombat;
 
   const effectiveSessionIsTerminal = isTerminalSessionStatus(
     effectiveSession?.status,
@@ -642,6 +653,8 @@ export function AutoCombatPage() {
     (providerQueueLength > 0 || Boolean(providerActiveEvent));
 
   const showActiveSession = hasActiveSession || hasPendingRealtimeVisual;
+  const isCombatViewSynchronizing =
+    showActiveSession && isRealtimeSynchronizing;
   const [sessionClockNowMs, setSessionClockNowMs] = useState(() => Date.now());
   const [serverClockOffsetMs, setServerClockOffsetMs] = useState(0);
   const [stableTimerStatus, setStableTimerStatus] = useState<{
@@ -813,7 +826,7 @@ export function AutoCombatPage() {
   );
 
   useEffect(() => {
-    const event = providerActiveEvent;
+    const event = providerPublicActiveEvent;
 
     if (!event || normalizeRealtimeEventType(event.type) !== 'POTION_USED') {
       return;
@@ -834,7 +847,7 @@ export function AutoCombatPage() {
     }
 
     applyPotionRealtimeQuantityUpdate(event);
-  }, [providerActiveEvent, applyPotionRealtimeQuantityUpdate]);
+  }, [providerPublicActiveEvent, applyPotionRealtimeQuantityUpdate]);
 
   const loadAutoCombatData = useCallback(async () => {
     if (!characterId) return;
@@ -1039,10 +1052,12 @@ export function AutoCombatPage() {
         : [];
 
   const activeBattleLogEvent = showActiveSession
-    ? providerActiveEvent ?? localActiveEvent
+    ? providerPublicActiveEvent ?? localActiveEvent
     : null;
   const providerQueuedEvents = showActiveSession
-    ? (realtimeState.eventQueue ?? [])
+    ? isRealtimeSynchronizing
+      ? []
+      : (realtimeState.eventQueue ?? [])
     : [];
 
   const visibleMobFeedbackScope = useMemo(
@@ -1119,6 +1134,12 @@ export function AutoCombatPage() {
   ]);
 
   useEffect(() => {
+    if (isCombatViewSynchronizing) {
+      queueClearXpFeedback();
+
+      return;
+    }
+
     if (!showActiveSession) {
       queueClearXpFeedback();
 
@@ -1209,6 +1230,7 @@ export function AutoCombatPage() {
     }, XP_FEEDBACK_VISIBLE_MS);
   }, [
     activeBattleLogEvent,
+    isCombatViewSynchronizing,
     queueClearXpFeedback,
     showActiveSession,
     synchronizedXpFeedbackEvent,
@@ -1790,13 +1812,22 @@ export function AutoCombatPage() {
     width: `${clampPercent(characterHpPercent)}%`,
   } as CSSProperties;
 
-  const statusActiveMob = effectiveStatus?.currentMob ?? null;
+  const statusActiveMob = isCombatViewSynchronizing
+    ? null
+    : effectiveStatus?.currentMob ?? null;
+  const hasConfirmedActiveMob = Boolean(
+    !isCombatViewSynchronizing &&
+      (visualRealtimeCombat?.mobId ||
+        visualRealtimeCombat?.mobName ||
+        statusActiveMob?.id ||
+        statusActiveMob?.name),
+  );
 
   const activeMobName = showActiveSession
-    ? visualRealtimeCombat?.mobName ??
+    ? isCombatViewSynchronizing
+      ? 'Sincronizando combate'
+      : visualRealtimeCombat?.mobName ??
       statusActiveMob?.name ??
-      latestKilledMob?.mobName ??
-      mainThreat?.mob?.name ??
       'Aguardando ameaça'
     : mainThreat?.mob?.name ?? 'Aguardando ameaça';
 
@@ -1849,28 +1880,38 @@ export function AutoCombatPage() {
     ),
   );
 
-  const activeMobFullBodyImage =
-    getMobFullBodyImage(activeMobName) ?? getMobPortraitImage(activeMobName);
+  const activeMobFullBodyImage = isCombatViewSynchronizing
+    ? null
+    : hasConfirmedActiveMob
+      ? getMobFullBodyImage(activeMobName) ?? getMobPortraitImage(activeMobName)
+      : null;
 
   const rawActiveMobMaxHp = showActiveSession
-    ? visualRealtimeCombat?.mobMaxHp ??
-      statusActiveMob?.maxHp ??
-      statusActiveMob?.hp ??
-      activeMobThreat?.mob?.hp ??
-      mainThreat?.mob?.hp ??
-      0
+    ? isCombatViewSynchronizing
+      ? 0
+      : hasConfirmedActiveMob
+        ? visualRealtimeCombat?.mobMaxHp ??
+          statusActiveMob?.maxHp ??
+          statusActiveMob?.hp ??
+          activeMobThreat?.mob?.hp ??
+          0
+        : 0
     : activeMobThreat?.mob?.hp ?? mainThreat?.mob?.hp ?? 0;
 
   const activeMobMaxHp = Math.max(0, toSafeNumber(rawActiveMobMaxHp, 0));
 
   const rawActiveMobCurrentHp =
-    showActiveSession && visualRealtimeCombat?.mobCurrentHp !== undefined
+    isCombatViewSynchronizing
+      ? 0
+      : showActiveSession && visualRealtimeCombat?.mobCurrentHp !== undefined
       ? visualRealtimeCombat.mobCurrentHp
       : showActiveSession && statusActiveMob?.currentHp !== undefined
         ? statusActiveMob.currentHp
-        : showActiveSession
+        : showActiveSession && hasConfirmedActiveMob
           ? Math.max(0, activeMobMaxHp)
-          : activeMobMaxHp;
+          : showActiveSession
+            ? 0
+            : activeMobMaxHp;
 
   const activeMobCurrentHp = clampNumber(
     rawActiveMobCurrentHp,
@@ -1886,7 +1927,9 @@ export function AutoCombatPage() {
   } as CSSProperties;
 
   const activeMobReference = showActiveSession
-    ? visualRealtimeCombat?.combatIndex
+    ? isCombatViewSynchronizing
+      ? 'Sincronizando'
+      : visualRealtimeCombat?.combatIndex
       ? `Combate ${visualRealtimeCombat.combatIndex}${
           visualRealtimeCombat.round
             ? ` · Rodada ${visualRealtimeCombat.round}`
@@ -2070,7 +2113,7 @@ export function AutoCombatPage() {
     characterHasHp;
 
   const activeVisualEventType = normalizeRealtimeEventType(
-    providerActiveEvent?.type ?? visualRealtimeCombat?.lastEventType,
+    providerPublicActiveEvent?.type ?? visualRealtimeCombat?.lastEventType,
   );
 
   const latestRealtimeEvent = showActiveSession
@@ -2190,6 +2233,7 @@ export function AutoCombatPage() {
       : '',
     shouldShowMobDodge ? 'is-dodging' : '',
     isMobDefeatedVisual ? 'is-defeated' : '',
+    isCombatViewSynchronizing ? 'is-syncing' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -3089,9 +3133,11 @@ export function AutoCombatPage() {
                           </span>
                         ) : null}
 
-                        <span className="auto-combat-fighter-card__level-badge auto-combat-fighter-card__level-badge--mob">
-                          Nv. {activeMobLevel}
-                        </span>
+                        {hasConfirmedActiveMob ? (
+                          <span className="auto-combat-fighter-card__level-badge auto-combat-fighter-card__level-badge--mob">
+                            Nv. {activeMobLevel}
+                          </span>
+                        ) : null}
 
                         <div className="auto-combat-fighter-card__identity auto-combat-fighter-card__identity--mob">
                           <div
@@ -3109,6 +3155,14 @@ export function AutoCombatPage() {
                                 src={activeMobFullBodyImage}
                                 alt={activeMobName}
                               />
+                            ) : isCombatViewSynchronizing ? (
+                              <span className="auto-combat-fighter-card__sync-placeholder">
+                                Sincronizando
+                              </span>
+                            ) : showActiveSession && !hasConfirmedActiveMob ? (
+                              <span className="auto-combat-fighter-card__sync-placeholder">
+                                Aguardando
+                              </span>
                             ) : (
                               <span className="auto-combat-fighter-card__mob-placeholder">
                                 ☣

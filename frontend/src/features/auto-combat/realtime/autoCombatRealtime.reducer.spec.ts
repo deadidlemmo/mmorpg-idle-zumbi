@@ -72,14 +72,22 @@ function enqueueAndProcess(
   });
 }
 
-test('processa dano visual junto com o evento ativo', () => {
+test('agenda dano visual antes de aplicar o impacto', () => {
   const event = makeHit(1, 70);
   const started = enqueueAndProcess(makeState(), event);
 
   assert.equal(started.activeEvent, event);
-  assert.equal(started.activeEventImpactApplied, true);
-  assert.equal(started.mob?.currentHp, 70);
-  assert.equal(started.battleLogEvents.at(0), event);
+  assert.equal(started.activeEventImpactApplied, false);
+  assert.equal(started.mob?.currentHp, 100);
+  assert.equal(started.battleLogEvents.length, 0);
+
+  const impacted = autoCombatRealtimeReducer(started, {
+    type: 'APPLY_ACTIVE_EVENT_IMPACT',
+  });
+
+  assert.equal(impacted.activeEventImpactApplied, true);
+  assert.equal(impacted.mob?.currentHp, 70);
+  assert.equal(impacted.battleLogEvents.at(0), event);
 });
 
 test('status durante evento ativo não faz rollback do HP visual', () => {
@@ -108,8 +116,24 @@ test('status durante evento ativo não faz rollback do HP visual', () => {
     } as never,
   });
 
-  assert.equal(hydrated.mob?.currentHp, 70);
-  assert.equal(hydrated.activeEventImpactApplied, true);
+  assert.equal(hydrated.mob?.currentHp, 100);
+  assert.equal(hydrated.activeEventImpactApplied, false);
+});
+
+test('ressincronizacao limpa mob visual antigo sem apagar sessao ativa', () => {
+  const state = makeState();
+  const syncing = autoCombatRealtimeReducer(state, {
+    type: 'SET_SYNCHRONIZING',
+    isSynchronizing: true,
+    clearCombatView: true,
+  });
+
+  assert.equal(syncing.isSynchronizing, true);
+  assert.equal(syncing.session?.id, state.session?.id);
+  assert.equal(syncing.mob, null);
+  assert.equal(syncing.visual, null);
+  assert.equal(syncing.activeEvent, null);
+  assert.equal(syncing.eventQueue.length, 0);
 });
 
 test('múltiplas ações em autocombat avançam em sequência monotônica', () => {
@@ -329,7 +353,10 @@ test('POTION_USED não herda EXP canônica pendente de status antes do abate', (
     sequence: 6,
   } as AutoCombatRealtimeEvent;
 
-  const afterDefeat = enqueueAndProcess(afterPotion, defeatEvent);
+  const afterDefeat = autoCombatRealtimeReducer(
+    enqueueAndProcess(afterPotion, defeatEvent),
+    { type: 'APPLY_ACTIVE_EVENT_IMPACT' },
+  );
 
   assert.equal(afterDefeat.character?.totalXp, 150);
   assert.equal(afterDefeat.character?.currentLevelXp, 150);
@@ -413,7 +440,10 @@ test('descanso automatico pode atualizar HP visual em tempo real', () => {
     sequence: 2,
   } as AutoCombatRealtimeEvent;
 
-  const rested = enqueueAndProcess(damagedState, restEvent);
+  const rested = autoCombatRealtimeReducer(
+    enqueueAndProcess(damagedState, restEvent),
+    { type: 'APPLY_ACTIVE_EVENT_IMPACT' },
+  );
 
   assert.equal(rested.character?.currentHp, 52);
   assert.equal(rested.character?.hpPercent, 52);
@@ -560,7 +590,10 @@ test('MOB_DEFEATED soma Base e Premium sobre totais canônicos após F5', () => 
     sequence: 61,
   } as AutoCombatRealtimeEvent;
 
-  const afterDefeat = enqueueAndProcess(state, defeatEvent);
+  const afterDefeat = autoCombatRealtimeReducer(
+    enqueueAndProcess(state, defeatEvent),
+    { type: 'APPLY_ACTIVE_EVENT_IMPACT' },
+  );
 
   assert.equal(afterDefeat.displayTotals?.totalKills, 16);
   assert.equal(afterDefeat.displayTotals?.totalXpGained, 83);

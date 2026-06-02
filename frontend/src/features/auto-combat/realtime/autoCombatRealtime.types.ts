@@ -5,6 +5,7 @@ import type {
 } from '../../dashboard/types/dashboard.types';
 import type {
   AutoCombatRealtimeEvent,
+  AutoCombatRealtimePhase,
   AutoCombatStatusResponse,
   StartAutoCombatPayload,
 } from '../types/auto-combat.types';
@@ -109,6 +110,9 @@ export type AutoCombatRealtimeSessionState = {
   currentEnemyInstanceId?: string | null;
   snapshotSequence?: number | null;
   latestEventSequence?: number | null;
+  phase?: AutoCombatRealtimePhase | null;
+  lastActionAt?: string | null;
+  nextActionAt?: string | null;
 
   updatedAt?: number;
 };
@@ -331,6 +335,7 @@ export type AutoCombatRealtimeContextValue = {
   isJoined: boolean;
   errorMessage: string;
   hasLoadedOnce: boolean;
+  isSynchronizing: boolean;
 
   status: AutoCombatStatusResponse | null;
   session: AutoCombatRealtimeSessionState | null;
@@ -356,6 +361,7 @@ export type AutoCombatRealtimeContextValue = {
 
   eventQueue: AutoCombatRealtimeEvent[];
   activeEvent: AutoCombatRealtimeEvent | null;
+  activeEventImpactApplied: boolean;
   battleLogEvents: AutoCombatRealtimeEvent[];
 
   hydrateOverview: (overview: CharacterOverviewResponse | null) => void;

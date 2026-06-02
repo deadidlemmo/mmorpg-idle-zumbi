@@ -126,6 +126,12 @@ function getNumberField(record: unknown, key: string): number | null {
   return getNumber(record[key]);
 }
 
+function getBooleanField(record: unknown, key: string): boolean {
+  if (!isRecord(record)) return false;
+
+  return record[key] === true;
+}
+
 function normalizeStatus(value: unknown): string {
   return String(value ?? '').trim().toUpperCase();
 }
@@ -617,10 +623,26 @@ function isAutoCombatActive(autoCombatState: unknown): boolean {
   return false;
 }
 
+function isAutoCombatSynchronizing(autoCombatState: unknown): boolean {
+  return getBooleanField(autoCombatState, 'isSynchronizing');
+}
+
 function buildAutoCombatActivity(
   autoCombatState: unknown,
 ): DashboardTopBarActivityViewModel | null {
   if (!isAutoCombatActive(autoCombatState)) return null;
+
+  if (isAutoCombatSynchronizing(autoCombatState)) {
+    return {
+      kind: 'auto-combat',
+      title: 'Sincronizando combate',
+      subtitle: 'Atualizando estado em tempo real',
+      icon: 'AC',
+      progressPercent: null,
+      badge: null,
+      titleText: 'Sincronizando combate automÃ¡tico com o servidor.',
+    };
+  }
 
   const restSnapshot = getAutoCombatRestSnapshot(autoCombatState);
 

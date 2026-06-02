@@ -40,6 +40,9 @@ export type AutoCombatRecentEventsResponse = {
   latestSequence: number | null;
   snapshotSequence?: number | null;
   requestedAfterSequence?: number | null;
+  oldestAvailableSequence?: number | null;
+  needsSnapshot?: boolean;
+  gapFromSequence?: number | null;
 };
 
 function getAutoCombatRecentEventsEndpoint(characterId: string) {

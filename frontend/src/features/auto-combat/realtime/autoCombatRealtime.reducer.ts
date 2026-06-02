@@ -48,6 +48,7 @@ export type AutoCombatRealtimeState = {
   errorMessage: string;
 
   hasLoadedOnce: boolean;
+  isSynchronizing: boolean;
 
   status: AutoCombatStatusResponse | null;
   snapshotSequence: number | null;
@@ -136,6 +137,11 @@ export type AutoCombatRealtimeAction =
       type: 'CLEAR_ERROR';
     }
   | {
+      type: 'SET_SYNCHRONIZING';
+      isSynchronizing: boolean;
+      clearCombatView?: boolean;
+    }
+  | {
       type: 'HYDRATE_OVERVIEW';
       characterId: string;
       overview: CharacterOverviewResponse | null;
@@ -198,6 +204,7 @@ export const initialAutoCombatRealtimeState: AutoCombatRealtimeState = {
   errorMessage: '',
 
   hasLoadedOnce: false,
+  isSynchronizing: false,
 
   status: null,
   snapshotSequence: null,
@@ -1137,6 +1144,22 @@ function getRealtimeEventCreatedAtTimestamp(event: AutoCombatRealtimeEvent) {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
+function getRealtimeEventServerTimestamp(event: AutoCombatRealtimeEvent) {
+  const serverTime =
+    getRealtimeEventStringField(event, 'serverTime') ??
+    getRealtimeEventStringField(event, 'actionStartedAt');
+
+  if (!serverTime) {
+    return getRealtimeEventCreatedAtTimestamp(event);
+  }
+
+  const timestamp = new Date(serverTime).getTime();
+
+  return Number.isFinite(timestamp)
+    ? timestamp
+    : getRealtimeEventCreatedAtTimestamp(event);
+}
+
 function getRealtimeEventAppliedTimestamp(event: AutoCombatRealtimeEvent) {
   const timestamp = getRealtimeEventCreatedAtTimestamp(event);
 
@@ -1171,6 +1194,20 @@ function getEventCurrentRoundNumber(event?: AutoCombatRealtimeEvent | null) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function getEventActionOrderNumber(event?: AutoCombatRealtimeEvent | null) {
+  if (!event) return null;
+
+  const value = getRealtimeEventUnknownField(event, 'actionOrder');
+
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function compareRealtimeEventsChronologically(
   firstEvent: AutoCombatRealtimeEvent,
   secondEvent: AutoCombatRealtimeEvent,
@@ -1180,13 +1217,6 @@ function compareRealtimeEventsChronologically(
 
   if (firstSequence !== null && secondSequence !== null) {
     return firstSequence - secondSequence;
-  }
-
-  const firstTimestamp = getRealtimeEventCreatedAtTimestamp(firstEvent);
-  const secondTimestamp = getRealtimeEventCreatedAtTimestamp(secondEvent);
-
-  if (firstTimestamp !== secondTimestamp) {
-    return firstTimestamp - secondTimestamp;
   }
 
   const firstCombatIndex = getEventCombatIndexNumber(firstEvent) ?? 0;
@@ -1201,6 +1231,22 @@ function compareRealtimeEventsChronologically(
 
   if (firstRound !== secondRound) {
     return firstRound - secondRound;
+  }
+
+  const firstActionOrder = getEventActionOrderNumber(firstEvent);
+  const secondActionOrder = getEventActionOrderNumber(secondEvent);
+
+  if (firstActionOrder !== null && secondActionOrder !== null) {
+    if (firstActionOrder !== secondActionOrder) {
+      return firstActionOrder - secondActionOrder;
+    }
+  }
+
+  const firstTimestamp = getRealtimeEventServerTimestamp(firstEvent);
+  const secondTimestamp = getRealtimeEventServerTimestamp(secondEvent);
+
+  if (firstTimestamp !== secondTimestamp) {
+    return firstTimestamp - secondTimestamp;
   }
 
   return getBattleLogTypeOrderFromRealtimeEvent(firstEvent) -
@@ -1252,11 +1298,17 @@ function shouldRejectOutOfOrderEvent(
 }
 
 function getEventMobCurrentHp(event: AutoCombatRealtimeEvent) {
-  return getRealtimeEventNumberField(event, 'mobCurrentHp');
+  return (
+    getRealtimeEventNumberField(event, 'mobHpAfter') ??
+    getRealtimeEventNumberField(event, 'mobCurrentHp')
+  );
 }
 
 function getEventCharacterCurrentHp(event: AutoCombatRealtimeEvent) {
-  return getRealtimeEventNumberField(event, 'characterCurrentHp');
+  return (
+    getRealtimeEventNumberField(event, 'characterHpAfter') ??
+    getRealtimeEventNumberField(event, 'characterCurrentHp')
+  );
 }
 
 function canRealtimeEventIncreaseCharacterHp(eventType: string | null) {
@@ -1640,6 +1692,7 @@ function hydrateFromStatus(
       characterId,
       status: null,
       hasLoadedOnce: true,
+      isSynchronizing: false,
       updatedAt: now(),
     };
   }
@@ -1733,21 +1786,22 @@ function hydrateFromStatus(
     shouldDeferStatusProgress(baseState);
 
   const shouldPreservePreviousMob =
-    deferMobProgress ||
-    shouldPreservePreviousMobOnActiveStatus({
-      baseState,
-      status,
-      statusIsActive,
-      statusIsTerminal,
-      sessionChanged,
-    }) ||
-    shouldPreservePreviousMobAgainstOlderStatus({
-      baseState,
-      status,
-      statusIsActive,
-      statusIsTerminal,
-      sessionChanged,
-    });
+    !baseState.isSynchronizing &&
+    (deferMobProgress ||
+      shouldPreservePreviousMobOnActiveStatus({
+        baseState,
+        status,
+        statusIsActive,
+        statusIsTerminal,
+        sessionChanged,
+      }) ||
+      shouldPreservePreviousMobAgainstOlderStatus({
+        baseState,
+        status,
+        statusIsActive,
+        statusIsTerminal,
+        sessionChanged,
+      }));
 
   const nextMob = shouldPreservePreviousMob
     ? baseState.mob
@@ -1801,6 +1855,7 @@ function hydrateFromStatus(
       isJoined: false,
 
       hasLoadedOnce: true,
+      isSynchronizing: false,
       updatedAt: now(),
     };
   }
@@ -1820,6 +1875,7 @@ function hydrateFromStatus(
     mob: nextMob,
 
     hasLoadedOnce: true,
+    isSynchronizing: false,
 
     isJoined: statusIsActive ? true : baseState.isJoined,
 
@@ -1898,6 +1954,10 @@ function applyRealtimeEventSnapshot(
         snapshotSequence: nextSessionSequence ?? state.session.snapshotSequence,
         latestEventSequence:
           nextSessionSequence ?? state.session.latestEventSequence,
+        phase: event.phase ?? state.session.phase,
+        lastActionAt:
+          event.actionStartedAt ?? event.serverTime ?? state.session.lastActionAt,
+        nextActionAt: event.nextActionAt ?? state.session.nextActionAt,
         updatedAt: now(),
       }
     : event.sessionId
@@ -1924,6 +1984,9 @@ function applyRealtimeEventSnapshot(
           currentEnemyInstanceId: event.enemyInstanceId ?? null,
           snapshotSequence: nextSessionSequence ?? null,
           latestEventSequence: nextSessionSequence ?? null,
+          phase: event.phase ?? null,
+          lastActionAt: event.actionStartedAt ?? event.serverTime ?? null,
+          nextActionAt: event.nextActionAt ?? null,
           updatedAt: now(),
         }
       : null;
@@ -2156,7 +2219,10 @@ function enqueueRealtimeEvent(
   }
 
   const queuedMarkers = markEventAsQueued(state, event);
-  const nextQueue = limitArray([...state.eventQueue, event], MAX_QUEUE_SIZE);
+  const nextQueue = limitArray(
+    sortRealtimeEventsChronologically([...state.eventQueue, event]),
+    MAX_QUEUE_SIZE,
+  );
 
   return {
     ...state,
@@ -2187,6 +2253,97 @@ function discardQueuedEvent(
   return {
     ...nextState,
     displayTotals: publishDisplayTotalsIfAllowed(nextState),
+  };
+}
+
+function getEventTarget(event: AutoCombatRealtimeEvent) {
+  return String(event.target ?? '').trim().toUpperCase();
+}
+
+function getEventMobBeforeHp(event: AutoCombatRealtimeEvent) {
+  const target = getEventTarget(event);
+
+  return (
+    getRealtimeEventNumberField(event, 'mobHpBefore') ??
+    (target === 'MOB'
+      ? getRealtimeEventNumberField(event, 'targetHpBefore') ??
+        getRealtimeEventNumberField(event, 'hpBefore')
+      : null)
+  );
+}
+
+function getEventCharacterBeforeHp(event: AutoCombatRealtimeEvent) {
+  const target = getEventTarget(event);
+
+  return (
+    getRealtimeEventNumberField(event, 'characterHpBefore') ??
+    (target === 'PLAYER'
+      ? getRealtimeEventNumberField(event, 'targetHpBefore') ??
+        getRealtimeEventNumberField(event, 'hpBefore')
+      : null)
+  );
+}
+
+function clampRealtimeHp(currentHp: number, maxHp: number) {
+  return Math.max(0, Math.min(currentHp, Math.max(0, maxHp)));
+}
+
+function calculateRealtimeHpPercent(currentHp: number, maxHp: number) {
+  if (maxHp <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, (currentHp / maxHp) * 100));
+}
+
+function buildMobStateBeforeRealtimeImpact(
+  event: AutoCombatRealtimeEvent,
+  fallback: AutoCombatRealtimeMobState | null,
+): AutoCombatRealtimeMobState | null {
+  const beforeHp = getEventMobBeforeHp(event);
+
+  if (beforeHp === null) {
+    return fallback;
+  }
+
+  const maxHp =
+    getRealtimeEventNumberField(event, 'mobMaxHp') ?? fallback?.maxHp ?? beforeHp;
+  const currentHp = clampRealtimeHp(beforeHp, maxHp);
+
+  return {
+    ...fallback,
+    id: event.mobId ?? fallback?.id ?? null,
+    enemyInstanceId: event.enemyInstanceId ?? fallback?.enemyInstanceId ?? null,
+    name: event.mobName ?? fallback?.name ?? null,
+    currentHp,
+    maxHp,
+    hpPercent: calculateRealtimeHpPercent(currentHp, maxHp),
+    updatedAt: now(),
+  };
+}
+
+function buildCharacterStateBeforeRealtimeImpact(
+  event: AutoCombatRealtimeEvent,
+  fallback: AutoCombatRealtimeCharacterState | null,
+): AutoCombatRealtimeCharacterState | null {
+  const beforeHp = getEventCharacterBeforeHp(event);
+
+  if (beforeHp === null) {
+    return fallback;
+  }
+
+  const maxHp =
+    getRealtimeEventNumberField(event, 'characterMaxHp') ??
+    fallback?.maxHp ??
+    beforeHp;
+  const currentHp = clampRealtimeHp(beforeHp, maxHp);
+
+  return {
+    ...fallback,
+    currentHp,
+    maxHp,
+    hpPercent: calculateRealtimeHpPercent(currentHp, maxHp),
+    updatedAt: now(),
   };
 }
 
@@ -2231,33 +2388,15 @@ function processRealtimeEvent(
 
   const nextQueue = state.eventQueue.slice(1);
 
-  /**
-   * PROCESS_NEXT_EVENT coloca a cena/animação no ar e aplica o snapshot do
-   * mesmo evento no mesmo reducer pass. Assim HP, cura de poção e label
-   * flutuante mudam juntos, sem o atraso visual entre feedback e barra.
-   */
-  const stagedState: AutoCombatRealtimeState = {
+  // Mantem o frame anterior em cena; o snapshot final entra no impacto.
+  return {
     ...state,
 
     activeEvent: event,
     activeEventImpactApplied: false,
     eventQueue: nextQueue,
-
-    ...processedMarkers,
-    ...queuedMarkers,
-
-    hasLoadedOnce: true,
-    updatedAt: now(),
-  };
-
-  const impactedState = applyRealtimeEventSnapshot(stagedState, event);
-
-  return {
-    ...impactedState,
-
-    activeEvent: event,
-    activeEventImpactApplied: true,
-    eventQueue: nextQueue,
+    character: buildCharacterStateBeforeRealtimeImpact(event, state.character),
+    mob: buildMobStateBeforeRealtimeImpact(event, state.mob),
 
     ...processedMarkers,
     ...queuedMarkers,
@@ -2351,6 +2490,46 @@ export function autoCombatRealtimeReducer(
       return {
         ...state,
         errorMessage: '',
+        updatedAt: now(),
+      };
+    }
+
+    case 'SET_SYNCHRONIZING': {
+      const shouldClearCombatView = Boolean(action.clearCombatView);
+      const hasCombatViewToClear = Boolean(
+        state.mob ||
+          state.visual ||
+          state.activeEvent ||
+          state.eventQueue.length > 0 ||
+          state.queuedEventKeys.length > 0 ||
+          state.queuedGenericFingerprints.length > 0 ||
+          state.queuedMobSpawnFingerprints.length > 0 ||
+          state.queuedPotionUsedFingerprints.length > 0,
+      );
+
+      if (
+        state.isSynchronizing === action.isSynchronizing &&
+        (!shouldClearCombatView || !hasCombatViewToClear)
+      ) {
+        return state;
+      }
+
+      return {
+        ...state,
+        isSynchronizing: action.isSynchronizing,
+        ...(shouldClearCombatView
+          ? {
+              mob: null,
+              visual: null,
+              activeEvent: null,
+              activeEventImpactApplied: false,
+              eventQueue: [],
+              queuedEventKeys: [],
+              queuedGenericFingerprints: [],
+              queuedMobSpawnFingerprints: [],
+              queuedPotionUsedFingerprints: [],
+            }
+          : null),
         updatedAt: now(),
       };
     }
