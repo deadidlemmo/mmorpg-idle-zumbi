@@ -1792,10 +1792,20 @@ export class AutoCombatService implements OnModuleDestroy {
         aggregateResult.currentRound = 0;
       }
 
-      aggregateResult.eventsEmitted = aggregateResult.events.length;
+      const shouldEmitRealtimeEvents =
+        this.shouldEmitRealtimeEventsForProcessingResult(aggregateResult);
+
+      const realtimeEventsToEmit = shouldEmitRealtimeEvents
+        ? aggregateResult.events
+        : [];
+
+      aggregateResult.eventsEmitted = realtimeEventsToEmit.length;
       aggregateResult.eventsSuppressed = Math.max(
         0,
         aggregateResult.eventsSuppressed ?? 0,
+      ) + Math.max(
+        0,
+        aggregateResult.events.length - realtimeEventsToEmit.length,
       );
 
       const response = await this.buildSessionResponse(session.id, {
@@ -1803,9 +1813,12 @@ export class AutoCombatService implements OnModuleDestroy {
         processing: this.buildProcessingSummary(aggregateResult, true),
       });
 
-      this.emitRealtimeEvents(session.characterId, aggregateResult.events, {
-        persist: false,
-      });
+      if (realtimeEventsToEmit.length > 0) {
+        this.emitRealtimeEvents(session.characterId, realtimeEventsToEmit, {
+          persist: false,
+        });
+      }
+
       this.autoCombatGateway.emitSessionUpdated(session.characterId, response);
       this.autoCombatGateway.emitStatus(session.characterId, response);
 
@@ -2072,7 +2085,7 @@ export class AutoCombatService implements OnModuleDestroy {
       mobSummaries: new Map(),
 
       events: [],
-      catchUp: true,
+      catchUp: (options?.actionsAvailable ?? 0) > 1,
       actionsAvailable: options?.actionsAvailable ?? 0,
       actionsProcessed: 0,
       processingLimited: options?.processingLimited ?? false,
@@ -2210,6 +2223,32 @@ export class AutoCombatService implements OnModuleDestroy {
   ) {
     return [...currentEvents, ...newEvents].slice(
       -AUTO_COMBAT_MAX_REALTIME_EVENTS_TO_EMIT,
+    );
+  }
+
+  private shouldEmitRealtimeEventsForProcessingResult(
+    result: RealtimeRoundResult,
+  ) {
+    const actionsAvailable = Math.max(
+      0,
+      Math.floor(result.actionsAvailable ?? 0),
+    );
+
+    const actionsProcessed = Math.max(
+      0,
+      Math.floor(result.actionsProcessed ?? 0),
+    );
+
+    /**
+     * Eventos realtime devem representar apenas o combate que o jogador esta
+     * vendo. Quando ha mais de uma acao pendente, o backend esta fazendo
+     * catch-up de tempo acumulado; nesse caso persistimos e atualizamos o
+     * snapshot, mas nao reencenamos mortes/loot/EXP antigos no card do mob.
+     */
+    return (
+      actionsAvailable <= 1 &&
+      actionsProcessed <= 1 &&
+      !result.processingLimited
     );
   }
 
