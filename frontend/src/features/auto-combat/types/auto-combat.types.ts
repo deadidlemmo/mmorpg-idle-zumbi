@@ -79,6 +79,7 @@ export interface AutoCombatLevelProgressViewModel {
    ========================================================= */
 
 export type AutoCombatRealtimeEventType =
+  | 'HUNT_TARGET_FOUND'
   | 'MOB_SPAWNED'
   | 'PLAYER_HIT'
   | 'MOB_HIT'
@@ -117,6 +118,7 @@ export interface AutoCombatRealtimeEvent {
   characterId?: string | null;
   sessionId?: string | null;
   sequence?: number | null;
+  eventKey?: string | null;
   enemyInstanceId?: string | null;
   turnId?: string | null;
   actionId?: string | null;
@@ -223,6 +225,17 @@ export interface AutoCombatRealtimeEvent {
 
   restStartHpPercent?: number | null;
   restStopHpPercent?: number | null;
+
+  huntCycleKey?: string | null;
+  huntSequence?: number | null;
+  foundAt?: string | null;
+  nextFindAt?: string | null;
+  secondsPerFind?: number | null;
+  selectedEncounterId?: string | null;
+  targetEncounterId?: string | null;
+  targetMobId?: string | null;
+  huntingXpGained?: number | null;
+  foundEnemiesCount?: number | null;
 
   /**
    * Posição da sessão.
@@ -416,12 +429,27 @@ export interface AutoCombatHuntingViewModel {
   startedAt?: string | null;
   stoppedAt?: string | null;
   lastProcessedAt?: string | null;
+  lastFindAt?: string | null;
+  nextFindAt?: string | null;
   foundEnemiesCount?: number | null;
   bonusEnemiesFound?: number | null;
   huntingXpGained?: number | null;
   secondsPerEnemy?: number | null;
+  secondsPerFind?: number | null;
+  elapsedSeconds?: number | null;
+  remainingSeconds?: number | null;
+  progressPercent?: number | null;
+  foundEnemySequence?: number | null;
+  currentTargetSequence?: number | null;
+  huntSequence?: number | null;
+  lastHuntEventSequence?: number | null;
   selectedEncounterId?: string | null;
+  targetEncounterId?: string | null;
+  targetMobId?: string | null;
   selectedMob?: AutoCombatCurrentMobViewModel | null;
+  targetMob?: AutoCombatCurrentMobViewModel | null;
+  currentTarget?: AutoCombatEncounterViewModel | null;
+  targetEncounter?: AutoCombatEncounterViewModel | null;
   skill?: AutoCombatHuntingSkillViewModel | null;
 }
 

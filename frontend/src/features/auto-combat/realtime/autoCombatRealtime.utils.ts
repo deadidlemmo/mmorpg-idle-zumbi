@@ -402,6 +402,11 @@ export function shouldIgnoreFallbackForNewSession(
 
 export function getRealtimeEventKey(payload: AutoCombatRealtimeEvent) {
   const event = payload as RealtimeEventLoose;
+  const stableEventKey = event.eventKey ?? event.huntCycleKey ?? null;
+
+  if (stableEventKey) {
+    return `event-key:${stableEventKey}`;
+  }
 
   return [
     event.eventId ?? event.id ?? 'no-event-id',

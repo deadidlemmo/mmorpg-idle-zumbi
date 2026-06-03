@@ -53,6 +53,7 @@ export interface DashboardTopBarActivityOverride {
   badge?: string | null;
   titleText?: string;
   isResting?: boolean;
+  isHunting?: boolean;
 }
 
 interface DashboardTopBarProps {
@@ -486,6 +487,29 @@ function getAutoCombatMobName(autoCombatState: unknown): string | null {
   );
 }
 
+function getAutoCombatSessionRecord(autoCombatState: unknown): LooseRecord | null {
+  const status = getRecordField(autoCombatState, 'status');
+
+  return (
+    getRecordField(autoCombatState, 'session') ??
+    getRecordField(autoCombatState, 'activeSession') ??
+    getRecordField(status, 'session') ??
+    getRecordField(status, 'activeSession') ??
+    getRecordField(status, 'autoCombatSession') ??
+    null
+  );
+}
+
+function getAutoCombatHuntingRecord(autoCombatState: unknown): LooseRecord | null {
+  const status = getRecordField(autoCombatState, 'status');
+
+  return (
+    getRecordField(autoCombatState, 'hunting') ??
+    getRecordField(status, 'hunting') ??
+    null
+  );
+}
+
 function getRecordArrayField(record: unknown, key: string): LooseRecord[] {
   if (!isRecord(record)) return [];
 
@@ -557,6 +581,45 @@ function getLatestAutoCombatEvent(autoCombatState: unknown): LooseRecord | null 
     getRecordArrayField(autoCombatState, 'battleLogEvents')[0] ??
     null
   );
+}
+
+function isAutoCombatHunting(autoCombatState: unknown): boolean {
+  const status = getRecordField(autoCombatState, 'status');
+  const session = getAutoCombatSessionRecord(autoCombatState);
+  const hunting = getAutoCombatHuntingRecord(autoCombatState);
+  const latestEvent = getLatestAutoCombatEvent(autoCombatState);
+  const phase = normalizeStatus(
+    getStringField(session, 'phase') ??
+      getStringField(hunting, 'phase') ??
+      getStringField(status, 'phase') ??
+      getStringField(latestEvent, 'phase') ??
+      getStringField(latestEvent, 'type'),
+  );
+
+  return phase === 'HUNTING' || phase === 'HUNT_TARGET_FOUND';
+}
+
+function getAutoCombatHuntingFoundCount(autoCombatState: unknown): number {
+  const status = getRecordField(autoCombatState, 'status');
+  const session = getAutoCombatSessionRecord(autoCombatState);
+  const hunting = getAutoCombatHuntingRecord(autoCombatState);
+  const latestEvent = getLatestAutoCombatEvent(autoCombatState);
+  const foundCount =
+    getNumberField(hunting, 'foundEnemiesCount') ??
+    getNumberField(hunting, 'foundEnemySequence') ??
+    getNumberField(session, 'foundEnemiesCount') ??
+    getNumberField(status, 'foundEnemiesCount') ??
+    getNumberField(latestEvent, 'foundEnemiesCount') ??
+    0;
+
+  return Math.max(0, Math.floor(foundCount));
+}
+
+function getAutoCombatHuntingProgress(autoCombatState: unknown): number | null {
+  const hunting = getAutoCombatHuntingRecord(autoCombatState);
+  const progressPercent = getNumberField(hunting, 'progressPercent');
+
+  return progressPercent !== null ? clampPercent(progressPercent) : null;
 }
 
 function getAutoCombatRestSnapshot(autoCombatState: unknown): {
@@ -631,6 +694,26 @@ function buildAutoCombatActivity(
   autoCombatState: unknown,
 ): DashboardTopBarActivityViewModel | null {
   if (!isAutoCombatActive(autoCombatState)) return null;
+
+  if (isAutoCombatHunting(autoCombatState)) {
+    const foundEnemiesCount = getAutoCombatHuntingFoundCount(autoCombatState);
+    const foundLabel =
+      foundEnemiesCount === 1
+        ? '1 rastreado'
+        : `${formatNumber(foundEnemiesCount)} rastreados`;
+
+    return {
+      kind: 'auto-combat',
+      title: 'Rastreando',
+      subtitle:
+        foundEnemiesCount > 0 ? foundLabel : 'Nenhuma ameaca rastreada',
+      icon: 'AC',
+      progressPercent: getAutoCombatHuntingProgress(autoCombatState),
+      badge: formatNumber(foundEnemiesCount),
+      titleText: `AutoCombat em caca - ${foundLabel}.`,
+      isHunting: true,
+    };
+  }
 
   if (isAutoCombatSynchronizing(autoCombatState)) {
     return {
@@ -1070,6 +1153,7 @@ export function DashboardTopBar({
     'dashboard-topbar',
     `dashboard-topbar--${activity.kind}`,
     activity.isResting ? 'dashboard-topbar--auto-resting' : '',
+    activity.isHunting ? 'dashboard-topbar--auto-hunting' : '',
     isSidebarCollapsed ? 'dashboard-topbar--sidebar-collapsed' : '',
     className ?? '',
   ]

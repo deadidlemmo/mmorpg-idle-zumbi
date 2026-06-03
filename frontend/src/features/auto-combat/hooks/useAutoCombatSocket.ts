@@ -126,6 +126,11 @@ function isTerminalStatus(status?: string | null) {
 
 function getRealtimeEventKey(payload: AutoCombatRealtimeEvent) {
   const event = payload as AutoCombatRealtimeEventLoose;
+  const stableEventKey = event.eventKey ?? event.huntCycleKey ?? null;
+
+  if (stableEventKey) {
+    return `event-key:${stableEventKey}`;
+  }
 
   return [
     event.eventId ?? event.id ?? 'no-event-id',

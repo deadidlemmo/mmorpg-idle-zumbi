@@ -191,6 +191,39 @@
   display: none;
 }
 
+.dashboard-activity-bar__item--auto-combat-hunting {
+  --activity-rgb: 110, 159, 67;
+  background:
+    radial-gradient(
+      circle at 4% 50%,
+      rgba(var(--activity-rgb), 0.24),
+      transparent 9rem
+    ),
+    radial-gradient(
+      circle at 96% 8%,
+      rgba(255, 255, 255, 0.048),
+      transparent 12rem
+    ),
+    linear-gradient(
+      135deg,
+      rgba(22, 38, 27, 0.96),
+      rgba(13, 22, 22, 0.98) 48%,
+      rgba(7, 11, 11, 0.98)
+    );
+}
+
+.dashboard-activity-bar--expanded
+  .dashboard-activity-bar__item--without-metrics {
+  grid-template-columns: 56px minmax(0, 1fr);
+}
+
+.dashboard-activity-bar__item--auto-combat-hunting
+  .dashboard-activity-bar__progress-block,
+.dashboard-activity-bar__item--auto-combat-hunting
+  .dashboard-activity-bar__compact-track-block {
+  display: grid;
+}
+
 .dashboard-activity-bar__item--gathering {
   --activity-rgb: 86, 175, 87;
 }
@@ -941,6 +974,15 @@
   align-items: center;
   gap: 0.72rem;
   min-width: 0;
+}
+
+.dashboard-activity-bar--minimized
+  .dashboard-activity-bar__item--without-metrics
+  .dashboard-activity-bar__compact,
+.dashboard-activity-bar--collapsed
+  .dashboard-activity-bar__item--without-metrics
+  .dashboard-activity-bar__compact {
+  grid-template-columns: minmax(150px, 0.88fr) minmax(230px, 1.35fr);
 }
 
 .dashboard-activity-bar__compact-main {

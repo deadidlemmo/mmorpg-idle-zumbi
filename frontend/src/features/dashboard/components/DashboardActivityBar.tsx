@@ -37,6 +37,7 @@ interface DashboardActivityBarProps {
 type ActivityBarItem = {
   key: string;
   type: "auto-combat" | "gathering" | "crafting" | "incursion" | "world-boss";
+  autoCombatMode?: "combat" | "hunting";
   icon: string;
   title: string;
   description: string;
@@ -45,6 +46,7 @@ type ActivityBarItem = {
   progressValueLabel?: string | null;
   progressTone?: "default" | "monster-hp";
   showProgressTrack?: boolean;
+  showMetrics?: boolean;
   primaryMetric: string;
   primaryMetricLabel?: string | null;
   secondaryMetric: string;
@@ -94,6 +96,7 @@ type AutoCombatSessionLike = {
   id?: string | null;
   characterId?: string | null;
   status?: string | null;
+  phase?: string | null;
 
   currentMobId?: string | null;
   currentMobHp?: number | null;
@@ -113,6 +116,23 @@ type AutoCombatSessionLike = {
 
   totalPotionsUsed?: number | null;
   potionsUsed?: number | null;
+
+  huntStartedAt?: string | null;
+  lastHuntProcessedAt?: string | null;
+  huntingXpGained?: number | null;
+  foundEnemiesCount?: number | null;
+  bonusEnemiesFound?: number | null;
+};
+
+type AutoCombatHuntingLike = {
+  phase?: string | null;
+  foundEnemiesCount?: number | null;
+  foundEnemySequence?: number | null;
+  huntingXpGained?: number | null;
+  progressPercent?: number | null;
+  remainingSeconds?: number | null;
+  secondsPerEnemy?: number | null;
+  secondsPerFind?: number | null;
 };
 
 type AutoCombatRealtimeVisualLike = {
@@ -199,6 +219,7 @@ type AutoCombatStatusLoose = AutoCombatStatusResponse & {
   activeSession?: AutoCombatSessionLike | null;
   autoCombatSession?: AutoCombatSessionLike | null;
   lastSession?: AutoCombatSessionLike | null;
+  hunting?: AutoCombatHuntingLike | null;
 
   subMap?: {
     name?: string | null;
@@ -251,6 +272,7 @@ type AutoCombatRealtimeStateLoose = {
   mob?: AutoCombatStatusCurrentMobLike | null;
   character?: AutoCombatRealtimeCharacterLike | null;
   visual?: AutoCombatRealtimeVisualLike | null;
+  hunting?: AutoCombatHuntingLike | null;
 
   combat?: AutoCombatRealtimeCombatLike | null;
   realtimeCombat?: AutoCombatRealtimeCombatLike | null;
@@ -1063,6 +1085,95 @@ function getRealtimeDisplayedEvent(
   return null;
 }
 
+function getStatusHunting(status: AutoCombatStatusResponse | null) {
+  return getLooseStatus(status)?.hunting ?? null;
+}
+
+function isAutoCombatHuntingPhase(params: {
+  realtimeState?: AutoCombatRealtimeStateLoose | null;
+  status?: AutoCombatStatusResponse | null;
+  session?: AutoCombatSessionLike | null;
+  event?: AutoCombatRealtimeEvent | null;
+}) {
+  const { realtimeState, status, session, event } = params;
+  const statusHunting = getStatusHunting(status ?? null);
+  const phase = normalizeStatus(
+    session?.phase ??
+      realtimeState?.session?.phase ??
+      realtimeState?.activeSession?.phase ??
+      status?.phase ??
+      statusHunting?.phase ??
+      event?.phase ??
+      event?.type,
+  );
+
+  return phase === "HUNTING" || phase === "HUNT_TARGET_FOUND";
+}
+
+function getHuntingFoundEnemiesCount(params: {
+  realtimeState?: AutoCombatRealtimeStateLoose | null;
+  status?: AutoCombatStatusResponse | null;
+  session?: AutoCombatSessionLike | null;
+  event?: AutoCombatRealtimeEvent | null;
+}) {
+  const { realtimeState, status, session, event } = params;
+  const statusHunting = getStatusHunting(status ?? null);
+  const foundEnemiesCount =
+    getFirstValidNumber(
+      realtimeState?.hunting?.foundEnemiesCount,
+      realtimeState?.hunting?.foundEnemySequence,
+      statusHunting?.foundEnemiesCount,
+      statusHunting?.foundEnemySequence,
+      session?.foundEnemiesCount,
+      event?.foundEnemiesCount,
+      0,
+    ) ?? 0;
+
+  return Math.max(0, Math.floor(foundEnemiesCount));
+}
+
+function getHuntingProgressPercent(params: {
+  realtimeState?: AutoCombatRealtimeStateLoose | null;
+  status?: AutoCombatStatusResponse | null;
+}) {
+  const { realtimeState, status } = params;
+  const statusHunting = getStatusHunting(status ?? null);
+
+  return clampPercent(
+    getFirstValidNumber(
+      realtimeState?.hunting?.progressPercent,
+      statusHunting?.progressPercent,
+      0,
+    ),
+  );
+}
+
+function getHuntingRemainingLabel(params: {
+  realtimeState?: AutoCombatRealtimeStateLoose | null;
+  status?: AutoCombatStatusResponse | null;
+}) {
+  const { realtimeState, status } = params;
+  const statusHunting = getStatusHunting(status ?? null);
+  const remainingSeconds = getFirstValidNumber(
+    realtimeState?.hunting?.remainingSeconds,
+    statusHunting?.remainingSeconds,
+  );
+
+  if (remainingSeconds === undefined) {
+    return "tempo real";
+  }
+
+  const seconds = Math.max(0, Math.ceil(remainingSeconds));
+
+  return seconds <= 0 ? "agora" : `${seconds}s`;
+}
+
+function formatHuntingFoundEnemies(value: unknown) {
+  const amount = Math.max(0, Math.floor(toSafeNumber(value, 0)));
+
+  return `${formatCompactNumber(amount)} ${amount === 1 ? "rastreado" : "rastreados"}`;
+}
+
 function buildTotalsFromStatusFallback(params: {
   status: AutoCombatStatusResponse | null;
   session: AutoCombatSessionLike | null;
@@ -1331,14 +1442,66 @@ function buildAutoCombatItemFromRealtime(params: {
     sessionId,
   );
 
+  const locationLabel = getStatusLocationLabel(status);
+  const isHunting = isAutoCombatHuntingPhase({
+    realtimeState,
+    status,
+    session,
+    event: displayedEvent,
+  });
+
+  if (isHunting) {
+    const foundEnemiesCount = getHuntingFoundEnemiesCount({
+      realtimeState,
+      status,
+      session,
+      event: displayedEvent,
+    });
+    const progressPercent = getHuntingProgressPercent({
+      realtimeState,
+      status,
+    });
+    const foundLabel = formatHuntingFoundEnemies(foundEnemiesCount);
+    const remainingLabel = getHuntingRemainingLabel({
+      realtimeState,
+      status,
+    });
+
+    return {
+      key: `auto-combat-${session.id ?? "active"}-hunting`,
+      type: "auto-combat",
+      autoCombatMode: "hunting",
+      icon: "AC",
+      title: "Rastreando",
+      description:
+        foundEnemiesCount > 0
+          ? `${foundLabel} nesta caca`
+          : "Buscando ameacas na rota",
+      progressLabel: "Proximo rastreio",
+      progressPercent,
+      progressValueLabel: `${floorPercent(progressPercent)}%`,
+      primaryMetric: "Rastreando",
+      primaryMetricLabel: "Status",
+      secondaryMetric: foundLabel,
+      secondaryMetricLabel: "Ameacas",
+      indicatorMetric: formatSessionCountIndicator(foundEnemiesCount),
+      indicatorLabel: `Ameacas rastreadas: ${formatSessionCountIndicator(
+        foundEnemiesCount,
+      )}`,
+      href: `/dashboard/${characterId}/auto-combat`,
+      monsterMetaLabel: `${locationLabel} - ${remainingLabel}`,
+      killsMetric: foundLabel,
+      combatMetric: "Caca",
+      showMetrics: false,
+    };
+  }
+
   const statusCurrentMob =
     realtimeCombat?.currentMob ??
     realtimeState.mob ??
     getStatusCurrentMob(status) ??
     session.currentMob ??
     null;
-
-  const locationLabel = getStatusLocationLabel(status);
 
   const mobName =
     realtimeCombat?.mobName ??
@@ -1482,6 +1645,47 @@ function buildAutoCombatItemFromOverview(params: {
     status: null,
     overview,
   });
+
+  if (
+    isAutoCombatHuntingPhase({
+      status: null,
+      session,
+    })
+  ) {
+    const foundEnemiesCount = getHuntingFoundEnemiesCount({
+      status: null,
+      session,
+    });
+    const foundLabel = formatHuntingFoundEnemies(foundEnemiesCount);
+
+    return {
+      key: `auto-combat-${session.id ?? "active"}-hunting`,
+      type: "auto-combat",
+      autoCombatMode: "hunting",
+      icon: "AC",
+      title: "Rastreando",
+      description:
+        foundEnemiesCount > 0
+          ? `${foundLabel} nesta caca`
+          : "Buscando ameacas na rota",
+      progressLabel: "Proximo rastreio",
+      progressPercent: 0,
+      progressValueLabel: "0%",
+      primaryMetric: "Rastreando",
+      primaryMetricLabel: "Status",
+      secondaryMetric: foundLabel,
+      secondaryMetricLabel: "Ameacas",
+      indicatorMetric: formatSessionCountIndicator(foundEnemiesCount),
+      indicatorLabel: `Ameacas rastreadas: ${formatSessionCountIndicator(
+        foundEnemiesCount,
+      )}`,
+      href: `/dashboard/${characterId}/auto-combat`,
+      monsterMetaLabel: locationLabel,
+      killsMetric: foundLabel,
+      combatMetric: "Caca",
+      showMetrics: false,
+    };
+  }
 
   return {
     key: `auto-combat-${session.id ?? "active"}`,
@@ -1937,15 +2141,26 @@ function buildActivityItems(params: {
 
   const items: ActivityBarItem[] = [];
   const isAutoCombatSynchronizing = Boolean(realtimeState.isSynchronizing);
+  const realtimeAutoCombatStatus = getRealtimeStatus(realtimeState);
+  const realtimeAutoCombatSession = getRealtimeSession(
+    realtimeState,
+    realtimeAutoCombatStatus,
+  );
+  const isRealtimeAutoCombatHunting = isAutoCombatHuntingPhase({
+    realtimeState,
+    status: realtimeAutoCombatStatus,
+    session: realtimeAutoCombatSession,
+  });
   const hasSyncedAutoCombatState = Boolean(
-    !isAutoCombatSynchronizing &&
+    (!isAutoCombatSynchronizing || isRealtimeAutoCombatHunting) &&
       (realtimeState.status ??
         realtimeState.autoCombatStatus ??
         realtimeState.session ??
         realtimeState.activeSession),
   );
 
-  const realtimeAutoCombatItem = isAutoCombatSynchronizing
+  const realtimeAutoCombatItem =
+    isAutoCombatSynchronizing && !isRealtimeAutoCombatHunting
     ? null
     : buildAutoCombatItemFromRealtime({
         characterId,
@@ -2310,19 +2525,24 @@ export function DashboardActivityBar({
       aria-label="Atividades em andamento"
     >
       {activityItems.map((item, index) => {
+        const isAutoCombatHunting =
+          item.type === "auto-combat" && item.autoCombatMode === "hunting";
         const progressPercent = clampPercent(item.progressPercent);
         const progressPercentLabel = floorPercent(progressPercent);
         const progressValueLabel =
           item.progressValueLabel ?? `${progressPercentLabel}%`;
         const shouldShowProgressTrack = item.showProgressTrack !== false;
         const progressHeaderLabel =
-          item.type === "auto-combat"
+          item.type === "auto-combat" && !isAutoCombatHunting
             ? `${item.progressLabel} • ${progressValueLabel}`
             : item.progressLabel;
         const shouldShowProgressValue =
-          shouldShowProgressTrack && item.type !== "auto-combat";
+          shouldShowProgressTrack &&
+          (item.type !== "auto-combat" || isAutoCombatHunting);
         const isMonsterHpTrack =
-          item.type === "auto-combat" || item.progressTone === "monster-hp";
+          (item.type === "auto-combat" && !isAutoCombatHunting) ||
+          item.progressTone === "monster-hp";
+        const shouldShowMetrics = item.showMetrics !== false;
         const progressStyle = {
           width: `${progressPercent}%`,
         };
@@ -2350,13 +2570,19 @@ export function DashboardActivityBar({
             className={[
               "dashboard-activity-bar__item",
               `dashboard-activity-bar__item--${item.type}`,
+              isAutoCombatHunting
+                ? "dashboard-activity-bar__item--auto-combat-hunting"
+                : "",
+              !shouldShowMetrics
+                ? "dashboard-activity-bar__item--without-metrics"
+                : "",
               isFirstItem ? "dashboard-activity-bar__item--has-toggle" : "",
             ]
               .filter(Boolean)
               .join(" ")}
             style={itemStyle}
           >
-            {item.type === "auto-combat" ? (
+            {item.type === "auto-combat" && !isAutoCombatHunting ? (
               <span
                 className="dashboard-activity-bar__monster-hp-backdrop"
                 aria-hidden="true"
@@ -2421,7 +2647,9 @@ export function DashboardActivityBar({
                 <div className="dashboard-activity-bar__top">
                   <div className="dashboard-activity-bar__title-block">
                     <span className="dashboard-activity-bar__eyebrow">
-                      {item.type === "auto-combat"
+                      {isAutoCombatHunting
+                        ? "Rastreamento ativo"
+                        : item.type === "auto-combat"
                         ? "Sessão ativa"
                         : item.type === "incursion"
                           ? "Incursão ativa"
@@ -2450,7 +2678,9 @@ export function DashboardActivityBar({
                   ) : null}
                 </div>
 
-                {item.type === "auto-combat" && item.characterName ? (
+                {item.type === "auto-combat" &&
+                !isAutoCombatHunting &&
+                item.characterName ? (
                   <div className="dashboard-activity-bar__character-strip">
                     <div className="dashboard-activity-bar__character-main">
                       <strong>{item.characterName}</strong>
@@ -2515,6 +2745,7 @@ export function DashboardActivityBar({
                 ) : null}
               </div>
 
+              {shouldShowMetrics ? (
               <div className="dashboard-activity-bar__metrics">
                 {item.type === "auto-combat" ? (
                   <>
@@ -2549,11 +2780,14 @@ export function DashboardActivityBar({
                   </>
                 )}
               </div>
+              ) : null}
 
               <div className="dashboard-activity-bar__compact">
                 <div className="dashboard-activity-bar__compact-main">
                   <span>
-                    {item.type === "auto-combat"
+                    {isAutoCombatHunting
+                      ? "Rastreamento ativo"
+                      : item.type === "auto-combat"
                       ? "Sessão ativa"
                       : item.type === "incursion"
                         ? "Incursão ativa"
@@ -2589,6 +2823,7 @@ export function DashboardActivityBar({
                   </div>
                 ) : null}
 
+                {shouldShowMetrics ? (
                 <div className="dashboard-activity-bar__compact-stats">
                   {item.type === "auto-combat" ? (
                     <>
@@ -2627,6 +2862,7 @@ export function DashboardActivityBar({
                     </>
                   )}
                 </div>
+                ) : null}
               </div>
             </Link>
 

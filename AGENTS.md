@@ -281,6 +281,9 @@ Antes de criar uma atividade nova, atualize o guard para bloquear combinacoes in
 - Rodada atual: 3 segundos.
 - Duracao free: 6h; premium: 12h.
 - Sessao ativa unica por personagem deve ser preservada.
+- Fase de caca usa proficiencia `CharacterHuntingSkill`, cap 50.
+- Caca nivel 1 rastreia 1 ameaca a cada 15s e concede 5 XP de caca por ameaca.
+- Level de caca reduz gradualmente o tempo por ameaca ate piso de 6s; curva de XP deve considerar jogador deixando 24h cacando sem upar facil demais.
 - Eventos de realtime sao persistidos em `AutoCombatSessionEvent`.
 - Frontend processa fila visual; cuidado com volume/frequencia de eventos.
 

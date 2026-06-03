@@ -1398,6 +1398,14 @@ function updateAppliedEventClock(
 }
 
 function getStoredRealtimeEventStableKey(event: AutoCombatRealtimeEvent) {
+  const eventKey =
+    getRealtimeEventStringField(event, 'eventKey') ??
+    getRealtimeEventStringField(event, 'huntCycleKey');
+
+  if (eventKey) {
+    return `event-key:${eventKey}`;
+  }
+
   const eventId = getStoredRealtimeEventId(event);
 
   if (eventId) {

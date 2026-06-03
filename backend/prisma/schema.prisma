@@ -923,6 +923,7 @@ model AutoCombatSessionEvent {
   type String
 
   sequence Int
+  eventKey String?
 
   payloadJson Json
 
@@ -932,6 +933,7 @@ model AutoCombatSessionEvent {
   character Character         @relation(fields: [characterId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, sequence])
+  @@unique([sessionId, eventKey])
   @@index([sessionId])
   @@index([characterId])
   @@index([type])

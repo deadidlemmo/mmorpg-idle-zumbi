@@ -761,6 +761,8 @@ export function AutoCombatPage() {
   const showActiveSession =
     !shouldDelayActiveSessionUntilStartSnapshot &&
     (isBackendCombatPhase || hasPendingRealtimeVisual);
+  const showHuntStage =
+    !showActiveSession && (isBackendHuntFlow || hasStartedHunt);
   const isCombatViewSynchronizing =
     showActiveSession &&
     isRealtimeSynchronizing &&
@@ -804,12 +806,12 @@ export function AutoCombatPage() {
     }
 
     setServerClockOffsetMs(serverNowMs - Date.now());
-  }, [effectiveStatus?.serverNow]);
+  }, [activeTimerStatus?.serverNow, effectiveStatus?.serverNow]);
 
   useEffect(() => {
     setSessionClockNowMs(Date.now());
 
-    if (!showActiveSession) return undefined;
+    if (!showActiveSession && !showHuntStage) return undefined;
 
     const intervalId = window.setInterval(() => {
       setSessionClockNowMs(Date.now());
@@ -818,7 +820,7 @@ export function AutoCombatPage() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [showActiveSession]);
+  }, [showActiveSession, showHuntStage]);
 
   useEffect(() => {
     if (!showActiveSession) {
@@ -2274,6 +2276,150 @@ export function AutoCombatPage() {
       Math.floor(toSafeNumber(huntingSkill?.xpProgressPercent, 0)),
     ),
   );
+  const trackedEncounter =
+    huntingSnapshot?.currentTarget ??
+    huntingSnapshot?.targetEncounter ??
+    effectiveStatus?.selectedEncounter ??
+    null;
+  const trackedThreatMob = trackedEncounter?.mob ?? null;
+  const trackedThreatImage =
+    getMobFullBodyImage(trackedThreatMob?.name) ??
+    getMobPortraitImage(trackedThreatMob?.name);
+  const trackedThreatChance = trackedEncounter
+    ? getThreatWeightPercent(trackedEncounter, selectedSubMapThreats)
+    : null;
+  const huntingTargetSequence = Math.max(
+    1,
+    Math.floor(
+      toSafeNumber(
+        huntingSnapshot?.currentTargetSequence ??
+          huntingSnapshot?.foundEnemySequence ??
+          foundEnemiesCount,
+        foundEnemiesCount > 0 ? foundEnemiesCount : 1,
+      ),
+    ),
+  );
+  const trackedThreatStateLabel = isBackendEncounterReadyPhase
+    ? 'Ameaça localizada'
+    : foundEnemiesCount > 0
+      ? `Ameaça rastreada #${huntingTargetSequence}`
+      : 'Rastreando ameaça';
+  const trackedThreatDescription = isBackendEncounterReadyPhase
+    ? 'Alvo pronto. Inicie o combate quando quiser enfrentar esta ameaça.'
+    : foundEnemiesCount > 0
+      ? 'A caça mantém este alvo rastreado enquanto busca o próximo encontro.'
+      : 'A caça começou e está seguindo rastros para confirmar o primeiro alvo.';
+  const huntingSecondsPerFind = Math.max(
+    1,
+    Math.floor(
+      toSafeNumber(
+        huntingSnapshot?.secondsPerFind ??
+          huntingSnapshot?.secondsPerEnemy ??
+          huntingSkill?.secondsPerEnemy,
+        12,
+      ),
+    ),
+  );
+  const huntStartedAtMs =
+    getAutoCombatTimestampMs(
+      huntingSnapshot?.startedAt ??
+        effectiveSession?.huntStartedAt ??
+        effectiveSession?.startedAt,
+    ) ?? syncedSessionNowMs;
+  const huntLastFindAtMs =
+    getAutoCombatTimestampMs(
+      huntingSnapshot?.lastFindAt ??
+        huntingSnapshot?.lastProcessedAt ??
+        effectiveSession?.lastHuntProcessedAt,
+    ) ?? huntStartedAtMs;
+  const huntNextFindAtMs = getAutoCombatTimestampMs(
+    huntingSnapshot?.nextFindAt,
+  );
+  const hasAuthoritativeHuntWindow =
+    huntNextFindAtMs !== null &&
+    huntNextFindAtMs > huntLastFindAtMs &&
+    huntLastFindAtMs > 0;
+  const huntingWindowSeconds = hasAuthoritativeHuntWindow
+    ? Math.max(1, Math.round((huntNextFindAtMs - huntLastFindAtMs) / 1000))
+    : huntingSecondsPerFind;
+  const huntElapsedSinceLastSeconds = Math.max(
+    0,
+    hasAuthoritativeHuntWindow
+      ? Math.floor((syncedSessionNowMs - huntLastFindAtMs) / 1000)
+      : Math.floor(
+          toSafeNumber(
+            huntingSnapshot?.elapsedSeconds,
+            (syncedSessionNowMs - huntLastFindAtMs) / 1000,
+          ),
+        ),
+  );
+  const hasPendingHuntProcessing =
+    !isBackendEncounterReadyPhase &&
+    huntElapsedSinceLastSeconds >= huntingWindowSeconds;
+  const huntCycleElapsedSeconds = hasPendingHuntProcessing
+    ? huntingWindowSeconds
+    : huntElapsedSinceLastSeconds;
+  const huntProgressPercent = isBackendEncounterReadyPhase
+    ? 100
+    : clampNumber(
+        (huntCycleElapsedSeconds / huntingWindowSeconds) * 100,
+        0,
+        100,
+      );
+  const huntRemainingSeconds = isBackendEncounterReadyPhase
+    ? 0
+    : hasPendingHuntProcessing
+      ? 0
+      : hasAuthoritativeHuntWindow
+        ? Math.max(
+            1,
+            Math.ceil((huntNextFindAtMs - syncedSessionNowMs) / 1000),
+          )
+        : Math.max(1, Math.ceil(huntingWindowSeconds - huntCycleElapsedSeconds));
+  const huntProgressStatusText = isBackendEncounterReadyPhase
+    ? 'Ameaça pronta para combate'
+    : hasPendingHuntProcessing
+      ? 'Confirmando rastreio...'
+      : `Próximo rastreio em ${huntRemainingSeconds}s`;
+  const huntProgressStyle = {
+    '--hunt-progress': `${huntProgressPercent}%`,
+  } as CSSProperties;
+  const huntingSkillProgressStyle = {
+    '--hunt-skill-progress': `${huntingXpProgressPercent}%`,
+  } as CSSProperties;
+  const huntingSkillCurrentXp = Math.max(
+    0,
+    Math.floor(toSafeNumber(huntingSkill?.xp, 0)),
+  );
+  const huntingSkillXpToNext = Math.max(
+    0,
+    Math.floor(toSafeNumber(huntingSkill?.xpToNextLevel, 0)),
+  );
+  const huntingSkillXpLabel = huntingSkill?.isAtLevelCap
+    ? 'Nível máximo'
+    : huntingSkillXpToNext > 0
+      ? `${huntingSkillCurrentXp} / ${huntingSkillXpToNext} XP`
+      : `${huntingXpProgressPercent}% do nível`;
+  const huntingSpeedPercent = Math.max(
+    0,
+    Math.floor(toSafeNumber(huntingSkill?.bonuses?.speedPercent, 0)),
+  );
+  const huntingSpeedLabel =
+    huntingSpeedPercent > 0
+      ? `${huntingSpeedPercent}% mais rápida`
+      : `${huntingSecondsPerFind}s por rastreio`;
+  const huntingActivityTitle = isBackendEncounterReadyPhase
+    ? 'Ameaça localizada'
+    : hasPendingHuntProcessing
+      ? 'Confirmando rastreio'
+    : isBackendHuntingPhase
+      ? 'Caça em andamento'
+      : 'Preparando caça';
+  const huntingActivityDetail = trackedThreatMob?.name
+    ? `${trackedThreatMob.name} #${huntingTargetSequence}`
+    : isBackendHuntingPhase
+      ? 'Rastreando rota'
+      : 'Nenhum alvo confirmado';
 
   const canStartHunt =
     !overview?.activity?.hasActiveWorldBoss &&
@@ -2290,9 +2436,6 @@ export function AutoCombatPage() {
     !showActiveSession &&
     !isActionLoading &&
     characterHasHp;
-  const showHuntStage =
-    !showActiveSession && (isBackendHuntFlow || hasStartedHunt);
-
   const activeVisualEventType = normalizeRealtimeEventType(
     providerPublicActiveEvent?.type ?? visualRealtimeCombat?.lastEventType,
   );
@@ -2532,13 +2675,21 @@ export function AutoCombatPage() {
       setLocalBattleLogEvents([]);
       setLocalActiveEvent(null);
 
-      const response = realtimeActions.startBattle
-        ? await realtimeActions.startBattle()
-        : null;
+      const response = realtimeActions.start
+        ? await realtimeActions.start({
+            characterId,
+            subMapId: selectedSubMapId,
+          })
+        : realtimeActions.startAutoCombat
+          ? await realtimeActions.startAutoCombat({
+              characterId,
+              subMapId: selectedSubMapId,
+            })
+          : null;
 
       if (!response) {
         throw new Error(
-          'O AutoCombatRealtimeProvider não expôs uma função startBattle.',
+          'O AutoCombatRealtimeProvider não expôs uma função start/startAutoCombat.',
         );
       }
 
@@ -2857,21 +3008,13 @@ export function AutoCombatPage() {
       setLocalBattleLogEvents([]);
       setLocalActiveEvent(null);
 
-      const response = realtimeActions.start
-        ? await realtimeActions.start({
-            characterId,
-            subMapId: selectedSubMapId,
-          })
-        : realtimeActions.startAutoCombat
-          ? await realtimeActions.startAutoCombat({
-              characterId,
-              subMapId: selectedSubMapId,
-            })
-          : null;
+      const response = realtimeActions.startBattle
+        ? await realtimeActions.startBattle()
+        : null;
 
       if (!response) {
         throw new Error(
-          'O AutoCombatRealtimeProvider não expôs uma função start/startAutoCombat.',
+          'O AutoCombatRealtimeProvider não expôs uma função startBattle.',
         );
       }
 
@@ -3099,8 +3242,148 @@ export function AutoCombatPage() {
 
               {showHuntStage ? (
                 <article className="auto-combat-stage-card auto-combat-hunt-stage">
+                  <div
+                    className={[
+                      'auto-combat-hunt-tracker',
+                      trackedThreatMob
+                        ? 'auto-combat-hunt-tracker--has-target'
+                        : 'auto-combat-hunt-tracker--searching',
+                      isBackendEncounterReadyPhase
+                        ? 'auto-combat-hunt-tracker--ready'
+                        : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <div className="auto-combat-hunt-tracker__visual">
+                      {trackedThreatMob && trackedThreatImage ? (
+                        <img
+                          src={trackedThreatImage}
+                          alt={trackedThreatMob.name ?? 'Ameaça localizada'}
+                          loading="eager"
+                          decoding="async"
+                        />
+                      ) : (
+                        <span>?</span>
+                      )}
+                    </div>
+
+                    <div className="auto-combat-hunt-tracker__content">
+                      <span>{trackedThreatStateLabel}</span>
+
+                      <strong>
+                        {trackedThreatMob?.name ?? 'Procurando ameaça'}
+                      </strong>
+
+                      <p>{trackedThreatDescription}</p>
+
+                      <div className="auto-combat-hunt-tracker__chips">
+                        {trackedThreatMob ? (
+                          <>
+                            <small>Nv. {trackedThreatMob.level ?? '—'}</small>
+                            <small>XP {trackedThreatMob.xpReward ?? '—'}</small>
+                            {trackedThreatChance !== null ? (
+                              <small>{trackedThreatChance}% encontro</small>
+                            ) : null}
+                          </>
+                        ) : null}
+                        <small>Caça Nv. {huntingLevel}</small>
+                      </div>
+
+                      <div
+                        className="auto-combat-hunt-scan"
+                        style={huntProgressStyle}
+                      >
+                        <div className="auto-combat-hunt-scan__track">
+                          <i />
+                        </div>
+
+                        <div className="auto-combat-hunt-scan__footer">
+                          <span>{huntProgressStatusText}</span>
+                          <strong>{Math.round(huntProgressPercent)}%</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="auto-combat-hunt-tracker__status">
+                      <span>
+                        {isBackendEncounterReadyPhase
+                          ? 'Localizado'
+                          : 'Caçando'}
+                      </span>
+                      <strong>
+                        {foundEnemiesCount > 0 ? foundEnemiesCount : '...'}
+                      </strong>
+                      <small>
+                        {foundEnemiesCount > 0 ? 'rastreados' : 'buscando'}
+                      </small>
+                    </div>
+                  </div>
+
+                  <aside
+                    className="auto-combat-hunt-side"
+                    aria-label="Resumo da caça"
+                  >
+                    <div className="auto-combat-hunt-side__section-title">
+                      <span>Atividade atual</span>
+                    </div>
+
+                    <div className="auto-combat-hunt-activity-card">
+                      <div className="auto-combat-hunt-activity-card__icon">
+                        CA
+                      </div>
+                      <div className="auto-combat-hunt-activity-card__body">
+                        <strong>{huntingActivityTitle}</strong>
+                        <span>{huntingActivityDetail}</span>
+                        <small>{huntProgressStatusText}</small>
+                      </div>
+                      <em>
+                        {isBackendEncounterReadyPhase
+                          ? 'OK'
+                          : `${Math.round(huntProgressPercent)}%`}
+                      </em>
+                    </div>
+
+                    <div className="auto-combat-hunt-side__section-title">
+                      <span>Sua proficiência</span>
+                    </div>
+
+                    <div
+                      className="auto-combat-hunt-skill-card"
+                      style={huntingSkillProgressStyle}
+                    >
+                      <div className="auto-combat-hunt-skill-card__top">
+                        <div className="auto-combat-hunt-skill-card__icon">
+                          CA
+                        </div>
+
+                        <div className="auto-combat-hunt-skill-card__heading">
+                          <span>
+                            <strong>Caça</strong>
+                            <em>Nv. {huntingLevel}</em>
+                          </span>
+                          <small>Rastreia ameaças antes do combate.</small>
+                        </div>
+                      </div>
+
+                      <div className="auto-combat-hunt-skill-card__track">
+                        <i />
+                      </div>
+
+                      <div className="auto-combat-hunt-skill-card__metrics">
+                        <span>{huntingSkillXpLabel}</span>
+                        <strong>{huntingXpProgressPercent}%</strong>
+                      </div>
+
+                      <div className="auto-combat-hunt-skill-card__details">
+                        <span>{huntingSpeedLabel}</span>
+                        <span>{foundEnemiesCount} rastreados</span>
+                      </div>
+                    </div>
+                  </aside>
+
                   <div className="auto-combat-section-title auto-combat-section-title--small">
-                    <span>Inimigos Próximos</span>
+                    <span>Possíveis ameaças da área</span>
                   </div>
 
                   {selectedSubMapThreats.length > 0 ? (
