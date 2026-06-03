@@ -337,21 +337,42 @@
 }
 
 .auto-combat-hunt-side {
-  display: grid;
-  align-content: start;
-  gap: 0.72rem;
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+  gap: 0.82rem;
+}
+
+.auto-combat-hunt-side--stacked {
+  gap: 0.78rem;
+}
+
+.auto-combat-hunt-side-section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.52rem;
+}
+
+.auto-combat-hunt-side-section--progress {
+  margin-top: 0.08rem;
+  padding-top: 0.1rem;
 }
 
 .auto-combat-hunt-side__section-title {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(18px, 1fr) auto minmax(18px, 1fr);
   align-items: center;
-  gap: 0.65rem;
-  color: var(--accent-green);
+  gap: 0.56rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0.04rem 0 0;
+  color: rgba(174, 218, 120, 0.88);
   font-family: var(--font-title);
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 950;
-  letter-spacing: 0.12em;
+  line-height: 1;
+  letter-spacing: 0.14em;
   text-align: center;
   text-transform: uppercase;
 }
@@ -359,13 +380,37 @@
 .auto-combat-hunt-side__section-title::before,
 .auto-combat-hunt-side__section-title::after {
   content: '';
+  display: block;
   height: 1px;
-  flex: 1;
-  background: linear-gradient(90deg, transparent, rgba(127, 187, 91, 0.2));
+  min-width: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(110, 159, 67, 0.24),
+    rgba(232, 184, 78, 0.12),
+    transparent
+  );
 }
 
 .auto-combat-hunt-side__section-title::after {
-  background: linear-gradient(90deg, rgba(127, 187, 91, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(232, 184, 78, 0.12),
+    rgba(110, 159, 67, 0.24),
+    transparent
+  );
+}
+
+.auto-combat-hunt-side__section-title span {
+  display: inline-flex;
+  min-width: max-content;
+  align-items: center;
+  justify-content: center;
+  color: rgba(174, 218, 120, 0.9);
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.62),
+    0 0 8px rgba(110, 159, 67, 0.16);
 }
 
 .auto-combat-hunt-activity-card,
@@ -1555,8 +1600,6 @@
   }
 
   .auto-combat-hunt-side {
-    position: sticky;
-    top: 1rem;
     grid-column: 2;
     grid-row: 1 / span 6;
   }

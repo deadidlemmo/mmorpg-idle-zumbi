@@ -3321,65 +3321,69 @@ export function AutoCombatPage() {
                   </div>
 
                   <aside
-                    className="auto-combat-hunt-side"
+                    className="auto-combat-hunt-side auto-combat-hunt-side--stacked"
                     aria-label="Resumo da caça"
                   >
-                    <div className="auto-combat-hunt-side__section-title">
-                      <span>Atividade atual</span>
-                    </div>
-
-                    <div className="auto-combat-hunt-activity-card">
-                      <div className="auto-combat-hunt-activity-card__icon">
-                        CA
+                    <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--current">
+                      <div className="auto-combat-hunt-side__section-title">
+                        <span>Atividade atual</span>
                       </div>
-                      <div className="auto-combat-hunt-activity-card__body">
-                        <strong>{huntingActivityTitle}</strong>
-                        <span>{huntingActivityDetail}</span>
-                        <small>{huntProgressStatusText}</small>
-                      </div>
-                      <em>
-                        {isBackendEncounterReadyPhase
-                          ? 'OK'
-                          : `${Math.round(huntProgressPercent)}%`}
-                      </em>
-                    </div>
 
-                    <div className="auto-combat-hunt-side__section-title">
-                      <span>Sua proficiência</span>
-                    </div>
-
-                    <div
-                      className="auto-combat-hunt-skill-card"
-                      style={huntingSkillProgressStyle}
-                    >
-                      <div className="auto-combat-hunt-skill-card__top">
-                        <div className="auto-combat-hunt-skill-card__icon">
+                      <div className="auto-combat-hunt-activity-card">
+                        <div className="auto-combat-hunt-activity-card__icon">
                           CA
                         </div>
+                        <div className="auto-combat-hunt-activity-card__body">
+                          <strong>{huntingActivityTitle}</strong>
+                          <span>{huntingActivityDetail}</span>
+                          <small>{huntProgressStatusText}</small>
+                        </div>
+                        <em>
+                          {isBackendEncounterReadyPhase
+                            ? 'OK'
+                            : `${Math.round(huntProgressPercent)}%`}
+                        </em>
+                      </div>
+                    </section>
 
-                        <div className="auto-combat-hunt-skill-card__heading">
-                          <span>
-                            <strong>Caça</strong>
-                            <em>Nv. {huntingLevel}</em>
-                          </span>
-                          <small>Rastreia ameaças antes do combate.</small>
+                    <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--progress">
+                      <div className="auto-combat-hunt-side__section-title">
+                        <span>Sua proficiência</span>
+                      </div>
+
+                      <div
+                        className="auto-combat-hunt-skill-card"
+                        style={huntingSkillProgressStyle}
+                      >
+                        <div className="auto-combat-hunt-skill-card__top">
+                          <div className="auto-combat-hunt-skill-card__icon">
+                            CA
+                          </div>
+
+                          <div className="auto-combat-hunt-skill-card__heading">
+                            <span>
+                              <strong>Caça</strong>
+                              <em>Nv. {huntingLevel}</em>
+                            </span>
+                            <small>Rastreia ameaças antes do combate.</small>
+                          </div>
+                        </div>
+
+                        <div className="auto-combat-hunt-skill-card__track">
+                          <i />
+                        </div>
+
+                        <div className="auto-combat-hunt-skill-card__metrics">
+                          <span>{huntingSkillXpLabel}</span>
+                          <strong>{huntingXpProgressPercent}%</strong>
+                        </div>
+
+                        <div className="auto-combat-hunt-skill-card__details">
+                          <span>{huntingSpeedLabel}</span>
+                          <span>{foundEnemiesCount} rastreados</span>
                         </div>
                       </div>
-
-                      <div className="auto-combat-hunt-skill-card__track">
-                        <i />
-                      </div>
-
-                      <div className="auto-combat-hunt-skill-card__metrics">
-                        <span>{huntingSkillXpLabel}</span>
-                        <strong>{huntingXpProgressPercent}%</strong>
-                      </div>
-
-                      <div className="auto-combat-hunt-skill-card__details">
-                        <span>{huntingSpeedLabel}</span>
-                        <span>{foundEnemiesCount} rastreados</span>
-                      </div>
-                    </div>
+                    </section>
                   </aside>
 
                   <div className="auto-combat-section-title auto-combat-section-title--small">
