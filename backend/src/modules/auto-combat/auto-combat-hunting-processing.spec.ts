@@ -130,11 +130,11 @@ describe('AutoCombatService hunting processing', () => {
 
     await (service as any).processHuntingSession(session);
 
-    const expectedFoundEnemies =
-      (6 * 60 * 60) / LEVEL_1_HUNTING_SECONDS_PER_ENEMY;
+    const expectedFoundEnemies = 600;
     expect(tx.autoCombatSession.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
+          phase: AutoCombatSessionPhase.ENCOUNTER_READY,
           foundEnemiesCount: {
             increment: expectedFoundEnemies,
           },
@@ -150,10 +150,10 @@ describe('AutoCombatService hunting processing', () => {
 
     expect(createManyPayload.skipDuplicates).toBe(true);
     expect(createManyPayload.data).toHaveLength(HUNTING_MAX_EVENTS_PER_PROCESS);
-    expect(createManyPayload.data[0].eventKey).toBe('session-1:hunt:941');
+    expect(createManyPayload.data[0].eventKey).toBe('session-1:hunt:101');
     expect(
       createManyPayload.data[createManyPayload.data.length - 1].eventKey,
-    ).toBe('session-1:hunt:1440');
+    ).toBe('session-1:hunt:600');
 
     const foundCountIncrements =
       tx.autoCombatSessionMobSummary.upsert.mock.calls.reduce(
@@ -189,14 +189,138 @@ describe('AutoCombatService hunting processing', () => {
     expect((service as any).getHuntingSecondsPerEnemy(progress.level)).toBe(13);
   });
 
+  it('seleciona o proximo combate apenas entre mobs rastreados pendentes', () => {
+    const { service } = createServiceHarness();
+    const session = createSession({
+      selectedEncounterMobId: 'mob-1',
+      huntBatch: {
+        id: 'hunt-batch-1',
+        selectedEncounterMobId: 'mob-1',
+        mobs: [
+          {
+            mobId: 'mob-1',
+            encounterId: 'encounter-1',
+            foundCount: 1,
+            remainingCount: 0,
+            weightSnapshot: 100,
+          },
+          {
+            mobId: 'mob-2',
+            encounterId: 'encounter-2',
+            foundCount: 2,
+            remainingCount: 2,
+            weightSnapshot: 100,
+          },
+        ],
+      },
+    });
+
+    const encounter = (service as any).getNextCombatEncounter(session);
+
+    expect(encounter.mobId).toBe('mob-2');
+  });
+
+  it('detecta quando o ultimo abate zera a fila rastreada', () => {
+    const { service } = createServiceHarness();
+    const session = createSession({
+      huntBatch: {
+        id: 'hunt-batch-1',
+        mobs: [
+          {
+            mobId: 'mob-1',
+            encounterId: 'encounter-1',
+            foundCount: 1,
+            remainingCount: 1,
+            weightSnapshot: 100,
+          },
+        ],
+      },
+    });
+
+    expect(
+      (service as any).getTrackedEnemiesRemainingAfterKill(
+        session,
+        'mob-1',
+        1,
+      ),
+    ).toBe(0);
+  });
+
+  it('nao seleciona novo mob quando toda fila rastreada foi consumida', () => {
+    const { service } = createServiceHarness();
+    const session = createSession({
+      huntBatch: {
+        id: 'hunt-batch-1',
+        mobs: [
+          {
+            mobId: 'mob-1',
+            encounterId: 'encounter-1',
+            foundCount: 1,
+            remainingCount: 0,
+            weightSnapshot: 100,
+          },
+          {
+            mobId: 'mob-2',
+            encounterId: 'encounter-2',
+            foundCount: 2,
+            remainingCount: 0,
+            weightSnapshot: 100,
+          },
+        ],
+      },
+    });
+
+    expect((service as any).getTrackedEnemiesRemaining(session)).toBe(0);
+    expect((service as any).getNextCombatEncounter(session)).toBeNull();
+  });
+
+  it('decrementa a fila rastreada em memoria ao abater mobs do batch', () => {
+    const { service } = createServiceHarness();
+    const result = {
+      mobSummaries: new Map([
+        [
+          'mob-1',
+          {
+            kills: 1,
+          },
+        ],
+      ]),
+    };
+
+    const updatedMobs = (service as any).applyMobSummaryResultToHuntBatchMobs(
+      [
+        {
+          mobId: 'mob-1',
+          remainingCount: 2,
+        },
+        {
+          mobId: 'mob-2',
+          remainingCount: 3,
+        },
+      ],
+      result,
+    );
+
+    expect(updatedMobs).toEqual([
+      {
+        mobId: 'mob-1',
+        remainingCount: 1,
+      },
+      {
+        mobId: 'mob-2',
+        remainingCount: 3,
+      },
+    ]);
+  });
+
   it('finaliza a caca quando o limite da sessao e atingido durante o processamento', async () => {
     const { service, tx, gateway } = createServiceHarness();
     const now = new Date('2026-06-02T12:00:00.000Z');
     const session = createSession({
-      startedAt: new Date(now.getTime() - 24_000),
-      huntStartedAt: new Date(now.getTime() - 24_000),
-      lastProcessedAt: new Date(now.getTime() - 24_000),
-      lastHuntProcessedAt: new Date(now.getTime() - 24_000),
+      startedAt: new Date(now.getTime() - 90_000),
+      huntStartedAt: new Date(now.getTime() - 90_000),
+      lastProcessedAt: new Date(now.getTime() - 90_000),
+      lastHuntProcessedAt: new Date(now.getTime() - 90_000),
       endsAt: now,
     });
 

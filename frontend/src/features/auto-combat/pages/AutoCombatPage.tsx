@@ -184,6 +184,53 @@ function pickAutoCombatTimerStatus(params: {
   return null;
 }
 
+function getHuntSequence(status: AutoCombatStatusResponse | null) {
+  return toSafeNumber(
+    status?.hunting?.huntSequence ??
+      status?.hunting?.lastHuntEventSequence ??
+      status?.huntBatch?.huntSequence,
+    0,
+  );
+}
+
+function getHuntFoundCount(status: AutoCombatStatusResponse | null) {
+  return toSafeNumber(
+    status?.hunting?.foundEnemiesCount ??
+      status?.huntBatch?.foundEnemiesCount ??
+      status?.session?.foundEnemiesCount,
+    0,
+  );
+}
+
+function pickAutoCombatEffectiveStatus(params: {
+  realtimeStatus: AutoCombatStatusResponse | null;
+  restStatus: AutoCombatStatusResponse | null;
+}) {
+  const { realtimeStatus, restStatus } = params;
+
+  if (!realtimeStatus) return restStatus;
+  if (!restStatus) return realtimeStatus;
+
+  const realtimePhase = String(realtimeStatus.phase ?? '').toUpperCase();
+  const restPhase = String(restStatus.phase ?? '').toUpperCase();
+
+  if (realtimePhase === 'HUNTING' && restPhase === 'HUNTING') {
+    const realtimeHuntSequence = getHuntSequence(realtimeStatus);
+    const restHuntSequence = getHuntSequence(restStatus);
+
+    if (restHuntSequence > realtimeHuntSequence) return restStatus;
+
+    if (
+      restHuntSequence === realtimeHuntSequence &&
+      getHuntFoundCount(restStatus) > getHuntFoundCount(realtimeStatus)
+    ) {
+      return restStatus;
+    }
+  }
+
+  return realtimeStatus;
+}
+
 type MobFeedbackScope = {
   sessionId: string | null;
   combatIndex: number | null;
@@ -689,7 +736,10 @@ export function AutoCombatPage() {
 
   const realtimeStatus = getRealtimeStatus(realtimeState);
   const isRealtimeSynchronizing = Boolean(realtimeState.isSynchronizing);
-  const effectiveStatus = realtimeStatus ?? autoCombatStatus;
+  const effectiveStatus = pickAutoCombatEffectiveStatus({
+    realtimeStatus,
+    restStatus: autoCombatStatus,
+  });
   const effectiveSession = getRealtimeSession(realtimeState, effectiveStatus);
   const providerRealtimeCombat = isRealtimeSynchronizing
     ? null
@@ -1479,14 +1529,24 @@ export function AutoCombatPage() {
   }, [hasActiveSession, providerActiveEvent]);
 
   useEffect(() => {
-    if (!hasActiveSession || isSocketConnected) return;
+    if (!hasActiveSession) return;
+
+    const shouldPollActiveSession =
+      !isSocketConnected || isBackendHuntingPhase;
+
+    if (!shouldPollActiveSession) return;
 
     const intervalId = window.setInterval(() => {
       loadAutoCombatData();
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, [hasActiveSession, isSocketConnected, loadAutoCombatData]);
+  }, [
+    hasActiveSession,
+    isBackendHuntingPhase,
+    isSocketConnected,
+    loadAutoCombatData,
+  ]);
 
   const currentSelectionLevel =
     visibleCharacterProgress?.level ?? character?.level ?? 1;
@@ -2275,6 +2335,46 @@ export function AutoCombatPage() {
       ),
     ),
   );
+  const maxTrackedEnemies = Math.max(
+    0,
+    Math.floor(
+      toSafeNumber(
+        huntingSnapshot?.maxTrackedEnemies ??
+          effectiveStatus?.huntCapacity?.maxTrackedEnemies ??
+          effectiveStatus?.huntBatch?.maxTrackedEnemies ??
+          effectiveSession?.maxTrackedEnemies ??
+          huntingSkill?.maxTrackedEnemies,
+        0,
+      ),
+    ),
+  );
+  const remainingHuntCapacity = Math.max(
+    0,
+    Math.floor(
+      toSafeNumber(
+        huntingSnapshot?.remainingCapacity ??
+          effectiveStatus?.huntCapacity?.remainingCapacity ??
+          effectiveStatus?.huntBatch?.remainingCapacity ??
+          effectiveSession?.remainingHuntCapacity,
+        maxTrackedEnemies > 0 ? maxTrackedEnemies - foundEnemiesCount : 0,
+      ),
+    ),
+  );
+  const isHuntLimitReached = Boolean(
+    huntingSnapshot?.isLimitReached ??
+      effectiveStatus?.huntCapacity?.isLimitReached ??
+      effectiveStatus?.huntBatch?.isLimitReached ??
+      effectiveSession?.isHuntLimitReached ??
+      (maxTrackedEnemies > 0 && foundEnemiesCount >= maxTrackedEnemies),
+  );
+  const huntingCapacityLabel =
+    maxTrackedEnemies > 0
+      ? `${foundEnemiesCount} / ${maxTrackedEnemies}`
+      : `${foundEnemiesCount}`;
+  const huntingCapacityDetail =
+    maxTrackedEnemies > 0
+      ? `${remainingHuntCapacity} vaga(s) restantes`
+      : 'limite do mapa indisponível';
   const huntingLevel = Math.max(
     1,
     Math.floor(
@@ -2441,11 +2541,13 @@ export function AutoCombatPage() {
             Math.ceil((huntNextFindAtMs - syncedSessionNowMs) / 1000),
           )
         : Math.max(1, Math.ceil(huntingWindowSeconds - huntCycleElapsedSeconds));
-  const huntProgressStatusText = isBackendEncounterReadyPhase
-    ? 'Ameaça pronta para combate'
-    : hasPendingHuntProcessing
-      ? 'Confirmando rastreio...'
-      : `Próximo rastreio em ${huntRemainingSeconds}s`;
+  const huntProgressStatusText = isHuntLimitReached
+    ? 'Limite do mapa atingido'
+    : isBackendEncounterReadyPhase
+      ? 'Ameaça pronta para combate'
+      : hasPendingHuntProcessing
+        ? 'Confirmando rastreio...'
+        : `Próximo rastreio em ${huntRemainingSeconds}s`;
   const huntProgressStyle = {
     '--hunt-progress': `${huntProgressPercent}%`,
   } as CSSProperties;
@@ -2486,12 +2588,18 @@ export function AutoCombatPage() {
       ? 'Rastreando rota'
       : 'Nenhum alvo confirmado';
 
+  const canResumeHunt =
+    isBackendEncounterReadyPhase &&
+    !isHuntLimitReached &&
+    !showActiveSession &&
+    characterHasHp;
+
   const canStartHunt =
     !overview?.activity?.hasActiveWorldBoss &&
     Boolean(selectedMap) &&
     selectedMapIsUnlocked &&
-    !hasActiveSession &&
-    characterHasHp;
+    characterHasHp &&
+    (!hasActiveSession || canResumeHunt);
 
   const canTravelToSelectedMap =
     !overview?.activity?.hasActiveWorldBoss &&
@@ -2765,7 +2873,11 @@ export function AutoCombatPage() {
     }
 
     if (!canStartHunt) {
-      setErrorMessage('Não foi possível iniciar a caça com a seleção atual.');
+      setErrorMessage(
+        isHuntLimitReached
+          ? 'Limite de rastreio atingido neste mapa. Inicie o combate para liberar a caça.'
+          : 'Não foi possível iniciar a caça com a seleção atual.',
+      );
       return;
     }
 
@@ -3392,6 +3504,7 @@ export function AutoCombatPage() {
                           </>
                         ) : null}
                         <small>Caça Nv. {huntingLevel}</small>
+                        <small>{huntingCapacityLabel} rastreados</small>
                       </div>
 
                       <div
@@ -3416,13 +3529,13 @@ export function AutoCombatPage() {
                           : 'Caçando'}
                       </span>
                       <strong>
-                        {foundEnemiesCount > 0 ? foundEnemiesCount : '...'}
+                        {foundEnemiesCount > 0 ? huntingCapacityLabel : '...'}
                       </strong>
                       <small>
                         {isBackendEncounterReadyPhase
-                          ? 'total da caça'
+                          ? huntingCapacityDetail
                           : foundEnemiesCount > 0
-                            ? 'rastreados'
+                            ? huntingCapacityDetail
                             : 'buscando'}
                       </small>
                     </div>
@@ -3488,7 +3601,7 @@ export function AutoCombatPage() {
 
                         <div className="auto-combat-hunt-skill-card__details">
                           <span>{huntingSpeedLabel}</span>
-                          <span>{foundEnemiesCount} rastreados</span>
+                          <span>{huntingCapacityLabel} rastreados</span>
                         </div>
                       </div>
                     </section>
@@ -3626,8 +3739,8 @@ export function AutoCombatPage() {
                       <>
                         <div>
                           <span>Rastreados</span>
-                          <strong>{foundEnemiesCount}</strong>
-                          <small>inimigos encontrados</small>
+                          <strong>{huntingCapacityLabel}</strong>
+                          <small>{huntingCapacityDetail}</small>
                         </div>
 
                         <div>
@@ -3685,14 +3798,33 @@ export function AutoCombatPage() {
                         {isActionLoading ? 'Processando...' : 'Parar caça'}
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        className="auto-combat-primary-button"
-                        disabled={!canStartCombat}
-                        onClick={handleStartAutoCombat}
-                      >
-                        {isActionLoading ? 'Processando...' : 'Iniciar combate'}
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="auto-combat-primary-button"
+                          disabled={!canStartCombat}
+                          onClick={handleStartAutoCombat}
+                        >
+                          {isActionLoading
+                            ? 'Processando...'
+                            : 'Iniciar combate'}
+                        </button>
+
+                        {isBackendEncounterReadyPhase ? (
+                          <button
+                            type="button"
+                            className="auto-combat-secondary-button"
+                            disabled={!canStartHunt || isActionLoading}
+                            onClick={handleStartHunt}
+                          >
+                            {isActionLoading
+                              ? 'Processando...'
+                              : isHuntLimitReached
+                                ? 'Limite atingido'
+                                : 'Caçar mais'}
+                          </button>
+                        ) : null}
+                      </>
                     )}
 
                     <button

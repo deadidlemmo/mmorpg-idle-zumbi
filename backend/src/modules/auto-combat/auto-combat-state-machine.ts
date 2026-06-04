@@ -6,6 +6,7 @@ const AUTO_COMBAT_ALLOWED_PHASE_TRANSITIONS: Record<
 > = {
   [AutoCombatSessionPhase.HUNTING]: [AutoCombatSessionPhase.ENCOUNTER_READY],
   [AutoCombatSessionPhase.ENCOUNTER_READY]: [
+    AutoCombatSessionPhase.HUNTING,
     AutoCombatSessionPhase.COMBAT_ACTIVE,
   ],
   [AutoCombatSessionPhase.COMBAT_ACTIVE]: [],

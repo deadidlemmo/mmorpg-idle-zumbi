@@ -238,6 +238,11 @@ export interface AutoCombatRealtimeEvent {
   targetMobId?: string | null;
   huntingXpGained?: number | null;
   foundEnemiesCount?: number | null;
+  maxTrackedEnemies?: number | null;
+  remainingHuntCapacity?: number | null;
+  remainingCapacity?: number | null;
+  isHuntLimitReached?: boolean | null;
+  isLimitReached?: boolean | null;
 
   /**
    * Posição da sessão.
@@ -426,6 +431,7 @@ export interface AutoCombatHuntingSkillViewModel {
   xpProgressPercent?: number | null;
   isAtLevelCap?: boolean | null;
   secondsPerEnemy?: number | null;
+  maxTrackedEnemies?: number | null;
   bonuses?: {
     betterEncounterChancePercent?: number | null;
     speedPercent?: number | null;
@@ -442,6 +448,9 @@ export interface AutoCombatHuntingViewModel {
   lastFindAt?: string | null;
   nextFindAt?: string | null;
   foundEnemiesCount?: number | null;
+  maxTrackedEnemies?: number | null;
+  remainingCapacity?: number | null;
+  isLimitReached?: boolean | null;
   bonusEnemiesFound?: number | null;
   huntingXpGained?: number | null;
   secondsPerEnemy?: number | null;
@@ -528,6 +537,9 @@ export interface AutoCombatSessionApiViewModel {
   huntingLevelAtStart?: number | null;
   huntingXpGained?: number | null;
   foundEnemiesCount?: number | null;
+  maxTrackedEnemies?: number | null;
+  remainingHuntCapacity?: number | null;
+  isHuntLimitReached?: boolean | null;
   bonusEnemiesFound?: number | null;
   selectedEncounterId?: string | null;
   selectedEncounterMobId?: string | null;
@@ -603,6 +615,9 @@ export interface AutoCombatHuntBatchViewModel {
   huntingLevelAtStart?: number | null;
   huntingXpGained?: number | null;
   foundEnemiesCount?: number | null;
+  maxTrackedEnemies?: number | null;
+  remainingCapacity?: number | null;
+  isLimitReached?: boolean | null;
   bonusEnemiesFound?: number | null;
   selectedEncounterId?: string | null;
   selectedEncounterMobId?: string | null;
@@ -907,6 +922,11 @@ export interface AutoCombatStatusResponse {
   huntBatch?: AutoCombatHuntBatchViewModel | null;
   huntingSkill?: AutoCombatHuntingSkillViewModel | null;
   hunting?: AutoCombatHuntingViewModel | null;
+  huntCapacity?: {
+    maxTrackedEnemies?: number | null;
+    remainingCapacity?: number | null;
+    isLimitReached?: boolean | null;
+  } | null;
 
   subMap?: AutoCombatSubMapViewModel | null;
   map?: AutoCombatMapSummaryViewModel | null;

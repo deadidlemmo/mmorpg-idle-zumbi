@@ -17,6 +17,12 @@ describe('auto-combat-state-machine', () => {
     expect(
       isAutoCombatPhaseTransitionAllowed(
         AutoCombatSessionPhase.ENCOUNTER_READY,
+        AutoCombatSessionPhase.HUNTING,
+      ),
+    ).toBe(true);
+    expect(
+      isAutoCombatPhaseTransitionAllowed(
+        AutoCombatSessionPhase.ENCOUNTER_READY,
         AutoCombatSessionPhase.COMBAT_ACTIVE,
       ),
     ).toBe(true);
