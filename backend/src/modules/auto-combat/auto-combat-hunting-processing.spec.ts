@@ -65,6 +65,9 @@ function createServiceHarness(updateCount = 1) {
     characterHuntingSkill: {
       update: jest.fn().mockResolvedValue({}),
     },
+    autoCombatSessionMobSummary: {
+      upsert: jest.fn().mockResolvedValue({}),
+    },
     autoCombatSessionEvent: {
       findFirst: jest.fn().mockResolvedValue(null),
       createMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -146,15 +149,19 @@ describe('AutoCombatService hunting processing', () => {
       tx.autoCombatSessionEvent.createMany.mock.calls[0][0];
 
     expect(createManyPayload.skipDuplicates).toBe(true);
-    expect(createManyPayload.data).toHaveLength(
-      HUNTING_MAX_EVENTS_PER_PROCESS,
-    );
-    expect(createManyPayload.data[0].eventKey).toBe(
-      'session-1:hunt:941',
-    );
+    expect(createManyPayload.data).toHaveLength(HUNTING_MAX_EVENTS_PER_PROCESS);
+    expect(createManyPayload.data[0].eventKey).toBe('session-1:hunt:941');
     expect(
       createManyPayload.data[createManyPayload.data.length - 1].eventKey,
     ).toBe('session-1:hunt:1440');
+
+    const foundCountIncrements =
+      tx.autoCombatSessionMobSummary.upsert.mock.calls.reduce(
+        (total: number, call: any[]) => total + call[0].create.foundCount,
+        0,
+      );
+
+    expect(foundCountIncrements).toBe(expectedFoundEnemies);
   });
 
   it('mantem progressao de caca moderada para dificil em 24h offline', () => {
@@ -162,8 +169,7 @@ describe('AutoCombatService hunting processing', () => {
     const levelOneSecondsPerEnemy = (service as any).getHuntingSecondsPerEnemy(
       1,
     );
-    const foundEnemiesIn24h =
-      (24 * 60 * 60) / levelOneSecondsPerEnemy;
+    const foundEnemiesIn24h = (24 * 60 * 60) / levelOneSecondsPerEnemy;
     const progress = (service as any).calculateHuntingSkillProgress(
       {
         id: 'hunting-skill-1',
@@ -180,9 +186,7 @@ describe('AutoCombatService hunting processing', () => {
     expect(progress.level).toBe(7);
     expect(progress.xp).toBe(3291);
     expect(progress.xpToNextLevel).toBe(9644);
-    expect((service as any).getHuntingSecondsPerEnemy(progress.level)).toBe(
-      13,
-    );
+    expect((service as any).getHuntingSecondsPerEnemy(progress.level)).toBe(13);
   });
 
   it('finaliza a caca quando o limite da sessao e atingido durante o processamento', async () => {
@@ -213,11 +217,12 @@ describe('AutoCombatService hunting processing', () => {
     const { service, tx } = createServiceHarness(0);
     const session = createSession();
 
-    await expect((service as any).processHuntingSession(session)).rejects.toThrow(
-      'Processamento abortado',
-    );
+    await expect(
+      (service as any).processHuntingSession(session),
+    ).rejects.toThrow('Processamento abortado');
 
     expect(tx.characterHuntingSkill.update).not.toHaveBeenCalled();
+    expect(tx.autoCombatSessionMobSummary.upsert).not.toHaveBeenCalled();
     expect(tx.autoCombatSessionEvent.createMany).not.toHaveBeenCalled();
   });
 });

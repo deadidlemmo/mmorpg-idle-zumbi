@@ -115,6 +115,15 @@ export class ActivityGuardService {
           startedAt: true,
           endsAt: true,
           lastProcessedAt: true,
+          mapId: true,
+          subMapId: true,
+          map: {
+            select: {
+              id: true,
+              name: true,
+              tier: true,
+            },
+          },
           subMap: {
             select: {
               id: true,
@@ -630,6 +639,57 @@ export class ActivityGuardService {
       throw new ConflictException({
         message:
           'Este personagem está em uma Ameaça Global. Saia da atividade antes de iniciar combate manual.',
+        activeWorldBoss: state.activeWorldBossParticipation,
+      });
+    }
+
+    return state;
+  }
+
+  async ensureCanTravelMap(params: ActivityGuardParams) {
+    const state = await this.getCharacterActivityState(params);
+
+    this.ensureCharacterIsActive(
+      state.character.status,
+      'Apenas personagens ativos podem trocar de mapa.',
+    );
+
+    if (state.hasActiveAutoCombat) {
+      throw new ConflictException({
+        message:
+          'Você não pode trocar de mapa enquanto está caçando ou em combate. Encerre o auto-combate antes de viajar.',
+        activeAutoCombat: state.activeAutoCombatSession,
+      });
+    }
+
+    if (state.hasActiveGathering) {
+      throw new ConflictException({
+        message:
+          'Você não pode trocar de mapa enquanto está em gathering. Encerre a coleta antes de viajar.',
+        activeGathering: state.activeGatheringSession,
+      });
+    }
+
+    if (state.hasActiveCrafting) {
+      throw new ConflictException({
+        message:
+          'Você não pode trocar de mapa enquanto está fabricando um item. Aguarde a criação finalizar antes de viajar.',
+        activeCrafting: state.activeCraftingSession,
+      });
+    }
+
+    if (state.hasActiveIncursion) {
+      throw new ConflictException({
+        message:
+          'Você não pode trocar de mapa enquanto está em uma incursão ativa. Aguarde finalizar antes de viajar.',
+        activeIncursion: state.activeIncursionSession,
+      });
+    }
+
+    if (state.hasActiveWorldBoss) {
+      throw new ConflictException({
+        message:
+          'Você não pode trocar de mapa enquanto está em uma Ameaça Global. Saia da atividade antes de viajar.',
         activeWorldBoss: state.activeWorldBossParticipation,
       });
     }

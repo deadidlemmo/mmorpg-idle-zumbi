@@ -5,8 +5,13 @@ export class PreviewAutoCombatDto {
   @IsUUID()
   characterId: string;
 
+  @IsOptional()
   @IsUUID()
-  subMapId: string;
+  subMapId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  mapId?: string;
 
   @IsOptional()
   @Type(() => Number)

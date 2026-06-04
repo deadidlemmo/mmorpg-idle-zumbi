@@ -83,6 +83,7 @@ export type AutoCombatRealtimeMobState = {
 export type AutoCombatRealtimeSessionState = {
   id?: string | null;
   characterId?: string | null;
+  mapId?: string | null;
   subMapId?: string | null;
 
   status?: AutoCombatRealtimeSessionStatus | null;

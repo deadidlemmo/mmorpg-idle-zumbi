@@ -41,6 +41,7 @@ import { calculateGatheringReward } from '../../common/utils/gathering.util';
 import { getLevelProgress } from '../../common/utils/level.util';
 import { isPremiumActive } from '../../common/utils/membership.util';
 import { calculateFullStats } from '../../common/utils/stats.util';
+import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCharacterDto } from './dto/create-character.dto';
 
@@ -166,7 +167,10 @@ const CLASS_GATHERING_AFFINITIES: Record<string, ValidGatheringOrigin[]> = {
 
 @Injectable()
 export class CharactersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityGuard: ActivityGuardService,
+  ) {}
 
   async create(userId: string, createCharacterDto: CreateCharacterDto) {
     const characterName = this.normalizeCharacterName(createCharacterDto.name);
@@ -672,6 +676,11 @@ export class CharactersService {
       );
     }
 
+    await this.activityGuard.ensureCanTravelMap({
+      userId,
+      characterId: character.id,
+    });
+
     const gameMap = await this.prisma.gameMap.findUnique({
       where: {
         id: mapId,
@@ -906,6 +915,8 @@ export class CharactersService {
           lastProcessedAt: true,
           durationSeconds: true,
           roundDurationSeconds: true,
+          mapId: true,
+          subMapId: true,
 
           currentMobId: true,
           currentMobHp: true,
@@ -934,6 +945,17 @@ export class CharactersService {
               defense: true,
               speed: true,
               xpReward: true,
+            },
+          },
+
+          map: {
+            select: {
+              id: true,
+              name: true,
+              tier: true,
+              minLevel: true,
+              maxLevel: true,
+              description: true,
             },
           },
 
@@ -1700,6 +1722,15 @@ export class CharactersService {
   }
 
   private formatActiveAutoCombatSession(activeAutoCombatSession: any) {
+    const activeMap =
+      activeAutoCombatSession.map ?? activeAutoCombatSession.subMap?.map ?? null;
+    const formattedActiveMap = activeMap ? this.formatMap(activeMap) : null;
+    const formattedSubMap = activeAutoCombatSession.subMap
+      ? {
+          ...activeAutoCombatSession.subMap,
+          map: formattedActiveMap ?? activeAutoCombatSession.subMap.map ?? null,
+        }
+      : null;
     const currentMobMaxHp =
       activeAutoCombatSession.currentMobMaxHp ??
       activeAutoCombatSession.currentMob?.hp ??
@@ -1749,6 +1780,10 @@ export class CharactersService {
 
     return {
       ...activeAutoCombatSession,
+      mapId: activeAutoCombatSession.mapId ?? activeMap?.id ?? null,
+      subMapId: activeAutoCombatSession.subMapId ?? formattedSubMap?.id ?? null,
+      map: formattedActiveMap,
+      subMap: formattedSubMap,
       totalKills,
       currentMobHp,
       currentMobMaxHp,
@@ -1758,6 +1793,9 @@ export class CharactersService {
 
   private buildAutoCombatPreview(activeAutoCombatSession: any) {
     const now = new Date();
+    const activeMap =
+      activeAutoCombatSession.map ?? activeAutoCombatSession.subMap?.map ?? null;
+    const formattedActiveMap = activeMap ? this.formatMap(activeMap) : null;
 
     const startedAt = new Date(activeAutoCombatSession.startedAt);
 
@@ -1882,19 +1920,11 @@ export class CharactersService {
             tier: activeAutoCombatSession.subMap.tier,
             minLevel: activeAutoCombatSession.subMap.minLevel,
             maxLevel: activeAutoCombatSession.subMap.maxLevel,
+            map: formattedActiveMap,
           }
         : null,
 
-      map: activeAutoCombatSession.subMap?.map
-        ? {
-            id: activeAutoCombatSession.subMap.map.id,
-            name: activeAutoCombatSession.subMap.map.name,
-            tier: activeAutoCombatSession.subMap.map.tier,
-            minLevel: activeAutoCombatSession.subMap.map.minLevel,
-            maxLevel: activeAutoCombatSession.subMap.map.maxLevel,
-            description: activeAutoCombatSession.subMap.map.description,
-          }
-        : null,
+      map: formattedActiveMap,
 
       elapsedTotalSeconds,
       elapsedTotalMinutes: Math.floor(elapsedTotalSeconds / 60),

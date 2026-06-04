@@ -376,6 +376,7 @@ export interface DashboardAutoCombatPreviewViewModel {
 export interface DashboardAutoCombatSessionViewModel {
   id: string;
   characterId?: string;
+  mapId?: string | null;
   subMapId?: string;
 
   status: DashboardAutoCombatSessionStatus;
@@ -422,6 +423,7 @@ export interface DashboardAutoCombatSessionViewModel {
   mobSummaries?: DashboardAutoCombatMobSummaryViewModel[];
 
   subMap?: DashboardSubMapViewModel | null;
+  map?: DashboardMapViewModel | null;
 
   combatPreview?: DashboardAutoCombatPreviewViewModel | null;
 }

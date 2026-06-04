@@ -1105,6 +1105,12 @@ export function buildSessionStateFromStatus(
 
     id: incomingSessionId ?? safeFallback?.id ?? null,
     characterId: session.characterId ?? safeFallback?.characterId ?? null,
+    mapId:
+      session.mapId ??
+      status?.currentMapId ??
+      status?.hunting?.mapId ??
+      safeFallback?.mapId ??
+      null,
     subMapId: session.subMapId ?? safeFallback?.subMapId ?? null,
 
     status: session.status ?? safeFallback?.status ?? null,
@@ -1170,21 +1176,38 @@ export function buildLocationStateFromStatus(
   fallback?: AutoCombatRealtimeLocationState | null,
 ): AutoCombatRealtimeLocationState | null {
   const subMap = status?.subMap;
+  const map = status?.map ?? subMap?.map ?? null;
+  const session = getStatusSession(status);
+  const hunting = status?.hunting ?? null;
 
-  if (!subMap) return fallback ?? null;
+  if (!map && !subMap && !status?.currentMapId && !session?.mapId) {
+    return fallback ?? null;
+  }
 
   return {
     ...fallback,
 
-    subMapId: subMap.id ?? fallback?.subMapId ?? null,
-    subMapName: subMap.name ?? fallback?.subMapName ?? null,
+    subMapId:
+      subMap?.id ??
+      status?.currentSubMapId ??
+      session?.subMapId ??
+      hunting?.subMapId ??
+      fallback?.subMapId ??
+      null,
+    subMapName: subMap?.name ?? fallback?.subMapName ?? null,
 
-    mapId: subMap.map?.id ?? fallback?.mapId ?? null,
-    mapName: subMap.map?.name ?? subMap.mapName ?? fallback?.mapName ?? null,
+    mapId:
+      map?.id ??
+      status?.currentMapId ??
+      session?.mapId ??
+      hunting?.mapId ??
+      fallback?.mapId ??
+      null,
+    mapName: map?.name ?? subMap?.mapName ?? fallback?.mapName ?? null,
 
-    tier: subMap.tier ?? subMap.map?.tier ?? fallback?.tier ?? null,
-    minLevel: subMap.minLevel ?? fallback?.minLevel ?? null,
-    maxLevel: subMap.maxLevel ?? fallback?.maxLevel ?? null,
+    tier: map?.tier ?? subMap?.tier ?? fallback?.tier ?? null,
+    minLevel: map?.minLevel ?? subMap?.minLevel ?? fallback?.minLevel ?? null,
+    maxLevel: map?.maxLevel ?? subMap?.maxLevel ?? fallback?.maxLevel ?? null,
   };
 }
 

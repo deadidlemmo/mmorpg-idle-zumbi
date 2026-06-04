@@ -2,7 +2,10 @@ import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { PremiumPlaceholderIcon } from '../../../components/PremiumPlaceholderIcon';
-import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
+import {
+  getCharacterOverview,
+  updateCharacterCurrentMap,
+} from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
 import '../../dashboard/dashboard.css';
 import type { CharacterOverviewResponse } from '../../dashboard/types/dashboard.types';
@@ -54,16 +57,14 @@ import {
   buildZeroRealtimeSessionTotals,
   clampNumber,
   clampPercent,
-  flattenCombatSubMaps,
   formatPotionHeal,
   formatRiskLabel,
   formatSeconds,
   formatSessionStatus,
-  getActiveEncounters,
+  getActiveEncountersForMap,
   getApiErrorMessage,
   getCharacterInventoryRaw,
   getCharacterPotionConfigRaw,
-  getDefaultSubMapId,
   getGameMapMaxLevel,
   getGameMapMinLevel,
   getLatestKilledMob,
@@ -83,8 +84,6 @@ import {
   getRealtimeTotals,
   getRemainingSeconds,
   getSessionFromStatus,
-  getSubMapLabel,
-  getSubMapsForMap,
   getThreatWeightPercent,
   getVisibleCombatMaps,
   isDamageRealtimeEvent,
@@ -591,7 +590,6 @@ export function AutoCombatPage() {
   const [autoCombatStatus, setAutoCombatStatus] =
     useState<AutoCombatStatusResponse | null>(null);
   const [selectedMapId, setSelectedMapId] = useState('');
-  const [selectedSubMapId, setSelectedSubMapId] = useState('');
   const [selectedThreat, setSelectedThreat] =
     useState<AutoCombatEncounterViewModel | null>(null);
   const [preparationPreview, setPreparationPreview] =
@@ -722,6 +720,20 @@ export function AutoCombatPage() {
       Boolean(realtimeState.hasActiveSession) ||
       Boolean(realtimeState.hasActiveAutoCombat) ||
       isSessionActive(effectiveStatus, effectiveSession));
+  const activeSessionSubMapId = hasActiveSession
+    ? (effectiveSession?.subMapId ??
+      effectiveStatus?.currentSubMapId ??
+      effectiveStatus?.hunting?.subMapId ??
+      effectiveStatus?.subMap?.id ??
+      null)
+    : null;
+  const activeSessionMapId = hasActiveSession
+    ? (effectiveSession?.mapId ??
+      effectiveStatus?.currentMapId ??
+      effectiveStatus?.hunting?.mapId ??
+      effectiveStatus?.subMap?.map?.id ??
+      null)
+    : null;
   const effectiveSessionPhase = String(
     effectiveSession?.phase ?? effectiveStatus?.phase ?? '',
   ).toUpperCase();
@@ -763,6 +775,8 @@ export function AutoCombatPage() {
     (isBackendCombatPhase || hasPendingRealtimeVisual);
   const showHuntStage =
     !showActiveSession && (isBackendHuntFlow || hasStartedHunt);
+  const showTravelEmptyStage = showHuntStage && !isBackendHuntFlow;
+  const showTrackedHuntStage = showHuntStage && isBackendHuntFlow;
   const isCombatViewSynchronizing =
     showActiveSession &&
     isRealtimeSynchronizing &&
@@ -1044,30 +1058,44 @@ export function AutoCombatPage() {
           buildSessionTotalsFromStatus(statusData, statusSession),
         );
       } else if (statusData) {
+        setHasStartedHunt(false);
         setLocalSessionTotals(null);
         setLocalRealtimeCombat(null);
         setLocalBattleLogEvents([]);
         setLocalActiveEvent(null);
       }
 
-      const characterLevel =
-        mergedProgress?.level ?? overviewData.character.level ?? 1;
-
-      setSelectedSubMapId((currentValue) => {
-        const availableSubMaps = flattenCombatSubMaps(mapsData, characterLevel);
+      setSelectedMapId((currentValue) => {
+        const activeStatusMapId =
+          statusData && isSessionActive(statusData, statusSession)
+            ? (statusSession?.mapId ??
+              statusData.currentMapId ??
+              statusData.hunting?.mapId ??
+              statusData.subMap?.map?.id ??
+              null)
+            : null;
 
         if (
-          currentValue &&
-          availableSubMaps.some((subMap) => subMap.id === currentValue)
+          activeStatusMapId &&
+          mapsData.some((gameMap) => gameMap.id === activeStatusMapId)
         ) {
+          return activeStatusMapId;
+        }
+
+        if (currentValue && mapsData.some((gameMap) => gameMap.id === currentValue)) {
           return currentValue;
         }
 
-        return getDefaultSubMapId({
-          maps: mapsData,
-          characterLevel,
-          status: statusData,
-        });
+        const requestedMap = requestedMapId
+          ? mapsData.find((gameMap) => gameMap.id === requestedMapId) ?? null
+          : null;
+        const requestedSubMapParent = requestedSubMapId
+          ? mapsData.find((gameMap) => {
+              return gameMap.subMaps?.some((subMap) => subMap.id === requestedSubMapId);
+            }) ?? null
+          : null;
+
+        return requestedMap?.id ?? requestedSubMapParent?.id ?? mapsData[0]?.id ?? '';
       });
     } catch (error) {
       if (requestId !== loadAutoCombatDataRequestRef.current) {
@@ -1467,44 +1495,50 @@ export function AutoCombatPage() {
     return getVisibleCombatMaps(maps);
   }, [maps]);
 
+  const resolvedActiveSessionMapId = useMemo(() => {
+    if (!hasActiveSession) return null;
+
+    if (activeSessionMapId) return activeSessionMapId;
+
+    if (!activeSessionSubMapId) return null;
+
+    return (
+      availableMaps.find((gameMap) => {
+        return gameMap.subMaps?.some((subMap) => {
+          return subMap.id === activeSessionSubMapId;
+        });
+      })?.id ?? null
+    );
+  }, [
+    activeSessionMapId,
+    activeSessionSubMapId,
+    availableMaps,
+    hasActiveSession,
+  ]);
+
+  const isMapSelectionLocked = hasActiveSession;
+  const effectiveSelectedMapId = isMapSelectionLocked
+    ? (resolvedActiveSessionMapId ?? selectedMapId)
+    : selectedMapId;
+
   const selectedMap = useMemo(() => {
     const mapBySelectedId = availableMaps.find((gameMap) => {
-      return gameMap.id === selectedMapId;
+      return gameMap.id === effectiveSelectedMapId;
     });
 
     if (mapBySelectedId) return mapBySelectedId;
 
-    if (selectedSubMapId) {
-      const mapBySubMap = availableMaps.find((gameMap) => {
-        return gameMap.subMaps?.some((subMap) => subMap.id === selectedSubMapId);
-      });
-
-      if (mapBySubMap) return mapBySubMap;
-    }
-
     return availableMaps[0] ?? null;
-  }, [availableMaps, selectedMapId, selectedSubMapId]);
+  }, [availableMaps, effectiveSelectedMapId]);
 
-  const availableSubMaps = useMemo(() => {
-    if (selectedMap) {
-      return getSubMapsForMap(selectedMap, currentSelectionLevel);
-    }
-
-    return flattenCombatSubMaps(maps, currentSelectionLevel);
-  }, [maps, selectedMap, currentSelectionLevel]);
-
-  const selectedSubMap = useMemo(() => {
-    return availableSubMaps.find((subMap) => subMap.id === selectedSubMapId);
-  }, [availableSubMaps, selectedSubMapId]);
-
-  const selectedSubMapThreats = useMemo(() => {
-    return getActiveEncounters(selectedSubMap).sort((a, b) => {
+  const selectedMapThreats = useMemo(() => {
+    return getActiveEncountersForMap(selectedMap).sort((a, b) => {
       return (b.weight ?? 0) - (a.weight ?? 0);
     });
-  }, [selectedSubMap]);
+  }, [selectedMap]);
 
-  const selectedSubMapThreatImages = useMemo(() => {
-    return selectedSubMapThreats
+  const selectedMapThreatImages = useMemo(() => {
+    return selectedMapThreats
       .map((encounter) => {
         return (
           getMobFullBodyImage(encounter.mob?.name) ??
@@ -1512,25 +1546,25 @@ export function AutoCombatPage() {
         );
       })
       .filter((imageUrl): imageUrl is string => Boolean(imageUrl));
-  }, [selectedSubMapThreats]);
+  }, [selectedMapThreats]);
 
   useEffect(() => {
-    selectedSubMapThreatImages.forEach(preloadAutoCombatImage);
-  }, [selectedSubMapThreatImages]);
+    selectedMapThreatImages.forEach(preloadAutoCombatImage);
+  }, [selectedMapThreatImages]);
 
   const selectedThreatDetails = useMemo(() => {
     if (!selectedThreat) return null;
 
     return (
-      selectedSubMapThreats.find((encounter) => {
+      selectedMapThreats.find((encounter) => {
         return encounter.id === selectedThreat.id;
       }) ?? selectedThreat
     );
-  }, [selectedSubMapThreats, selectedThreat]);
+  }, [selectedMapThreats, selectedThreat]);
 
   const selectedThreatMob = selectedThreatDetails?.mob ?? null;
   const selectedThreatChance = selectedThreatDetails
-    ? getThreatWeightPercent(selectedThreatDetails, selectedSubMapThreats)
+    ? getThreatWeightPercent(selectedThreatDetails, selectedMapThreats)
     : null;
   const selectedThreatImage =
     getMobFullBodyImage(selectedThreatMob?.name) ??
@@ -1541,12 +1575,7 @@ export function AutoCombatPage() {
     ? currentSelectionLevel >= getGameMapMinLevel(selectedMap)
     : false;
 
-  const selectedSubMapIsUnlocked = selectedSubMap
-    ? currentSelectionLevel >=
-      (selectedSubMap.minLevel ?? getGameMapMinLevel(selectedMap))
-    : false;
-
-  const selectedSubMapHasActiveEncounters = selectedSubMapThreats.length > 0;
+  const selectedMapHasActiveEncounters = selectedMapThreats.length > 0;
 
   useEffect(() => {
     if (!selectedThreat) return;
@@ -1599,6 +1628,14 @@ export function AutoCombatPage() {
   useEffect(() => {
     if (maps.length <= 0) return;
 
+    if (isMapSelectionLocked) {
+      if (resolvedActiveSessionMapId && selectedMapId !== resolvedActiveSessionMapId) {
+        setSelectedMapId(resolvedActiveSessionMapId);
+      }
+
+      return;
+    }
+
     const requestedMap = requestedMapId
       ? maps.find((gameMap) => gameMap.id === requestedMapId) ?? null
       : null;
@@ -1614,38 +1651,19 @@ export function AutoCombatPage() {
         setSelectedMapId('');
       }
 
-      if (selectedSubMapId) {
-        setSelectedSubMapId('');
-      }
-
       return;
     }
 
     if (selectedMapId !== nextMap.id) {
       setSelectedMapId(nextMap.id);
     }
-
-    const mapSubMaps = getSubMapsForMap(nextMap, currentSelectionLevel);
-
-    if (
-      selectedSubMapId &&
-      mapSubMaps.some((subMap) => subMap.id === selectedSubMapId)
-    ) {
-      return;
-    }
-
-    const requestedSubMap = requestedSubMapId
-      ? mapSubMaps.find((subMap) => subMap.id === requestedSubMapId)
-      : null;
-
-    setSelectedSubMapId(requestedSubMap?.id ?? mapSubMaps[0]?.id ?? '');
   }, [
     maps,
     availableMaps,
+    isMapSelectionLocked,
+    resolvedActiveSessionMapId,
     selectedMap,
     selectedMapId,
-    selectedSubMapId,
-    currentSelectionLevel,
     requestedMapId,
     requestedSubMapId,
   ]);
@@ -1654,15 +1672,15 @@ export function AutoCombatPage() {
     let isMounted = true;
 
     async function loadPreview() {
-      if (!characterId || !selectedSubMapId || !hasStartedHunt) {
+      if (!characterId || !selectedMap?.id || !hasStartedHunt) {
         setPreparationPreview(null);
         return;
       }
 
       if (
         showActiveSession ||
-        !selectedSubMapIsUnlocked ||
-        !selectedSubMapHasActiveEncounters
+        !selectedMapIsUnlocked ||
+        !selectedMapHasActiveEncounters
       ) {
         setPreparationPreview(null);
         return;
@@ -1673,7 +1691,7 @@ export function AutoCombatPage() {
 
         const data = await previewAutoCombat({
           characterId,
-          subMapId: selectedSubMapId,
+          mapId: selectedMap.id,
           projectionSeconds: 1800,
         });
 
@@ -1698,11 +1716,11 @@ export function AutoCombatPage() {
     };
   }, [
     characterId,
-    selectedSubMapId,
+    selectedMap?.id,
     hasStartedHunt,
     showActiveSession,
-    selectedSubMapIsUnlocked,
-    selectedSubMapHasActiveEncounters,
+    selectedMapIsUnlocked,
+    selectedMapHasActiveEncounters,
   ]);
 
   if (!characterId) {
@@ -1775,7 +1793,7 @@ export function AutoCombatPage() {
   const latestKilledMob = showActiveSession
     ? getLatestKilledMob(effectiveStatus)
     : null;
-  const mainThreat = selectedSubMapThreats[0] ?? null;
+  const mainThreat = selectedMapThreats[0] ?? null;
   const calculatedRemainingSeconds = showActiveSession && activeTimerStatus
     ? getRemainingSeconds(activeTimerStatus, syncedSessionNowMs)
     : 0;
@@ -1905,15 +1923,13 @@ export function AutoCombatPage() {
     character.levelProgress?.isAtLevelCap ??
     undefined;
 
-  const activeSessionMapName = showActiveSession
+  const activeSessionMapName = hasActiveSession
     ? effectiveStatus?.subMap?.map?.name
     : undefined;
 
   const currentLayoutMapName =
     activeSessionMapName ??
     selectedMap?.name ??
-    selectedSubMap?.map?.name ??
-    selectedSubMap?.mapName ??
     character.currentMapName;
 
   const layoutCharacter: CharacterViewModelWithLayoutFields = {
@@ -1941,14 +1957,13 @@ export function AutoCombatPage() {
 
   const selectedMapName =
     selectedMap?.name ??
-    selectedSubMap?.map?.name ??
-    selectedSubMap?.mapName ??
     layoutCharacter.currentMapName;
+  const mapSelectValue = selectedMap?.id ?? effectiveSelectedMapId;
 
   const selectedMapImage = getMapImageByName(selectedMapName);
   const selectedMapVisualStyle = buildMapVisualStyle(selectedMapImage);
   const selectedMapRarityClassName = getMapRarityClassName(
-    selectedSubMap?.tier ?? selectedMap?.tier,
+    selectedMap?.tier,
   );
 
   const characterHasHp = currentCharacterHp > 0;
@@ -1988,7 +2003,7 @@ export function AutoCombatPage() {
   const normalizedActiveMobName = activeMobName.trim().toLowerCase();
 
   const activeMobThreat =
-    selectedSubMapThreats.find((encounter) => {
+    selectedMapThreats.find((encounter) => {
       const encounterMobName = encounter.mob?.name;
 
       return Boolean(
@@ -2286,8 +2301,58 @@ export function AutoCombatPage() {
     getMobFullBodyImage(trackedThreatMob?.name) ??
     getMobPortraitImage(trackedThreatMob?.name);
   const trackedThreatChance = trackedEncounter
-    ? getThreatWeightPercent(trackedEncounter, selectedSubMapThreats)
+    ? getThreatWeightPercent(trackedEncounter, selectedMapThreats)
     : null;
+  const trackedThreatFoundCount = Math.max(
+    0,
+    Math.floor(
+      toSafeNumber(
+        huntingSnapshot?.targetFoundCount ??
+          huntingSnapshot?.currentTargetFoundCount ??
+          trackedEncounter?.huntFoundCount ??
+          trackedEncounter?.foundCount ??
+          trackedThreatMob?.huntFoundCount ??
+          trackedThreatMob?.foundCount,
+        0,
+      ),
+    ),
+  );
+  const shouldShowTrackedThreatFoundCount =
+    isBackendEncounterReadyPhase && trackedThreatFoundCount > 0;
+  const trackedThreatFoundCountChipLabel =
+    trackedThreatFoundCount === 1
+      ? '1 deste mob'
+      : `${trackedThreatFoundCount} deste mob`;
+  const huntFoundCountByMobId = new Map<string, number>();
+
+  for (const foundMob of effectiveStatus?.sessionSummary?.mobs?.found ?? []) {
+    const safeFoundCount = Math.max(
+      0,
+      Math.floor(toSafeNumber(foundMob.foundCount, 0)),
+    );
+
+    if (!foundMob.mobId || safeFoundCount <= 0) {
+      continue;
+    }
+
+    huntFoundCountByMobId.set(
+      foundMob.mobId,
+      Math.max(
+        huntFoundCountByMobId.get(foundMob.mobId) ?? 0,
+        safeFoundCount,
+      ),
+    );
+  }
+
+  if (trackedThreatMob?.id && trackedThreatFoundCount > 0) {
+    huntFoundCountByMobId.set(
+      trackedThreatMob.id,
+      Math.max(
+        huntFoundCountByMobId.get(trackedThreatMob.id) ?? 0,
+        trackedThreatFoundCount,
+      ),
+    );
+  }
   const huntingTargetSequence = Math.max(
     1,
     Math.floor(
@@ -2424,15 +2489,19 @@ export function AutoCombatPage() {
   const canStartHunt =
     !overview?.activity?.hasActiveWorldBoss &&
     Boolean(selectedMap) &&
-    Boolean(selectedSubMap) &&
     selectedMapIsUnlocked &&
-    selectedSubMapIsUnlocked &&
     !hasActiveSession &&
     characterHasHp;
 
+  const canTravelToSelectedMap =
+    !overview?.activity?.hasActiveWorldBoss &&
+    Boolean(selectedMap) &&
+    selectedMapIsUnlocked &&
+    !hasActiveSession;
+
   const canStartCombat =
     isBackendEncounterReadyPhase &&
-    selectedSubMapHasActiveEncounters &&
+    selectedMapHasActiveEncounters &&
     !showActiveSession &&
     !isActionLoading &&
     characterHasHp;
@@ -2588,33 +2657,86 @@ export function AutoCombatPage() {
   }
 
   function handleMapChange(mapId: string) {
-    const nextMap = maps.find((gameMap) => gameMap.id === mapId) ?? null;
-    const nextSubMaps = getSubMapsForMap(nextMap, currentSelectionLevel);
+    if (isMapSelectionLocked) {
+      setErrorMessage(
+        'Você não pode trocar de mapa enquanto está caçando ou em combate. Cancele ou encerre a atividade atual antes de viajar.',
+      );
+      return;
+    }
 
     setSelectedMapId(mapId);
-    setSelectedSubMapId(nextSubMaps[0]?.id ?? '');
     setPreparationPreview(null);
     setHasStartedHunt(false);
     setErrorMessage('');
   }
 
-  function handleSubMapChange(subMapId: string) {
-    const parentMap = maps.find((gameMap) => {
-      return gameMap.subMaps?.some((subMap) => subMap.id === subMapId);
-    });
-
-    if (parentMap?.id && parentMap.id !== selectedMapId) {
-      setSelectedMapId(parentMap.id);
+  async function handleTravelToMap() {
+    if (
+      !characterId ||
+      !overview ||
+      !selectedMap ||
+      isActionLoading
+    ) {
+      return;
     }
 
-    setSelectedSubMapId(subMapId);
-    setPreparationPreview(null);
-    setHasStartedHunt(false);
-    setErrorMessage('');
+    if (overview?.activity?.hasActiveWorldBoss) {
+      setErrorMessage(
+        'Você está aguardando um World Boss. Saia do lobby antes de viajar para outra rota de caça.',
+      );
+      return;
+    }
+
+    if (!selectedMapIsUnlocked) {
+      setErrorMessage(
+        `Este mapa libera no nível ${getGameMapMinLevel(selectedMap)}.`,
+      );
+      return;
+    }
+
+    if (!canTravelToSelectedMap) {
+      setErrorMessage(
+        'Não foi possível viajar com a seleção atual. Verifique se já existe uma atividade ativa.',
+      );
+      return;
+    }
+
+    const currentMapId =
+      overview.character.currentMap?.id ??
+      overview.character.map?.id ??
+      overview.progression?.currentMap?.id ??
+      null;
+
+    try {
+      setIsActionLoading(true);
+      setErrorMessage('');
+      setPreparationPreview(null);
+
+      if (selectedMap.id !== currentMapId) {
+        const updatedOverview = await updateCharacterCurrentMap(
+          characterId,
+          selectedMap.id,
+        );
+
+        setOverview(updatedOverview);
+      }
+
+      setHasStartedHunt(true);
+      setActiveTab('battle');
+    } catch (error) {
+      setErrorMessage(
+        getApiErrorMessage(
+          error,
+          'Não foi possível viajar para este mapa agora.',
+        ),
+      );
+    } finally {
+      setIsActionLoading(false);
+    }
   }
 
   async function handleStartHunt() {
-    if (!characterId || !selectedSubMapId || isActionLoading) return;
+    if (!characterId || !selectedMap?.id || isActionLoading) return;
 
     if (overview?.activity?.hasActiveWorldBoss) {
       setErrorMessage(
@@ -2642,27 +2764,9 @@ export function AutoCombatPage() {
       return;
     }
 
-    if (!selectedSubMap) {
-      setErrorMessage('Nenhum submapa disponível para o mapa selecionado.');
-      return;
-    }
-
-    if (!selectedSubMapIsUnlocked) {
-      setErrorMessage(
-        `Este submapa libera no nível ${
-          selectedSubMap.minLevel ?? getGameMapMinLevel(selectedMap)
-        }.`,
-      );
-      return;
-    }
-
     if (!canStartHunt) {
       setErrorMessage('Não foi possível iniciar a caça com a seleção atual.');
       return;
-    }
-
-    if (!selectedSubMapId && availableSubMaps[0]) {
-      setSelectedSubMapId(availableSubMaps[0].id);
     }
 
     try {
@@ -2678,12 +2782,12 @@ export function AutoCombatPage() {
       const response = realtimeActions.start
         ? await realtimeActions.start({
             characterId,
-            subMapId: selectedSubMapId,
+            mapId: selectedMap.id,
           })
         : realtimeActions.startAutoCombat
           ? await realtimeActions.startAutoCombat({
               characterId,
-              subMapId: selectedSubMapId,
+              mapId: selectedMap.id,
             })
           : null;
 
@@ -2711,7 +2815,7 @@ export function AutoCombatPage() {
       setErrorMessage(
         getApiErrorMessage(
           error,
-          'Não foi possível iniciar a caça. Verifique o HP, o submapa e se já existe uma atividade ativa.',
+          'Não foi possível iniciar a caça. Verifique o HP, o mapa e se já existe uma atividade ativa.',
         ),
       );
     } finally {
@@ -2982,18 +3086,9 @@ export function AutoCombatPage() {
       return;
     }
 
-    if (!selectedSubMapIsUnlocked) {
+    if (!selectedMapHasActiveEncounters) {
       setErrorMessage(
-        `Este submapa libera no nível ${
-          selectedSubMap?.minLevel ?? getGameMapMinLevel(selectedMap)
-        }.`,
-      );
-      return;
-    }
-
-    if (!selectedSubMapHasActiveEncounters) {
-      setErrorMessage(
-        'Este submapa ainda não possui inimigos cadastrados para o auto-combate.',
+        'Este mapa ainda não possui inimigos cadastrados para o auto-combate.',
       );
       return;
     }
@@ -3036,7 +3131,7 @@ export function AutoCombatPage() {
       setErrorMessage(
         getApiErrorMessage(
           error,
-          'Não foi possível iniciar o combate automático. Verifique o HP, o submapa e se já existe uma sessão ativa.',
+          'Não foi possível iniciar o combate automático. Verifique o HP, o mapa e se já existe uma sessão ativa.',
         ),
       );
     } finally {
@@ -3136,40 +3231,33 @@ export function AutoCombatPage() {
 
                       <strong>{selectedMapName}</strong>
 
-                      {selectedSubMap?.name ? (
-                        <small>{selectedSubMap.name}</small>
-                      ) : null}
-
                       <div className="auto-combat-map-meta auto-combat-map-meta--visual">
                         <div>
                           <span>Tier</span>
                           <strong>
-                            {selectedSubMap?.tier ?? selectedMap?.tier ?? '—'}
+                            {selectedMap?.tier ?? '—'}
                           </strong>
                         </div>
 
                         <div>
                           <span>Nível</span>
                           <strong>
-                            {selectedSubMap?.minLevel && selectedSubMap.maxLevel
-                              ? `${selectedSubMap.minLevel}-${selectedSubMap.maxLevel}`
-                              : selectedMap
-                                ? `${getGameMapMinLevel(selectedMap)}-${getGameMapMaxLevel(selectedMap)}`
-                                : '—'}
+                            {selectedMap
+                              ? `${getGameMapMinLevel(selectedMap)}-${getGameMapMaxLevel(selectedMap)}`
+                              : '—'}
                           </strong>
                         </div>
                       </div>
                     </div>
 
                     <div className="auto-combat-map-preview__content">
-                      <span>Preparação da incursão</span>
+                      <span>Preparação da caçada</span>
 
                       <strong>{selectedMapName}</strong>
 
                       <p>
                         {selectedMap?.description ??
-                          selectedSubMap?.description ??
-                          'Escolha um submapa disponível e inicie a caça para revelar os infectados próximos.'}
+                          'Escolha um mapa disponível e inicie a caça para revelar os infectados próximos.'}
                       </p>
 
                       <label className="auto-combat-field auto-combat-field--map">
@@ -3177,11 +3265,11 @@ export function AutoCombatPage() {
 
                         <div className="auto-combat-select-shell">
                           <select
-                            value={selectedMapId}
+                            value={mapSelectValue}
                             onChange={(event) =>
                               handleMapChange(event.target.value)
                             }
-                            disabled={isActionLoading}
+                            disabled={isActionLoading || isMapSelectionLocked}
                           >
                             {availableMaps.length <= 0 ? (
                               <option value="">Nenhum mapa disponível</option>
@@ -3196,43 +3284,19 @@ export function AutoCombatPage() {
                         </div>
                       </label>
 
-                      <label className="auto-combat-field auto-combat-field--submap">
-                        <span>Submapa</span>
-
-                        <div className="auto-combat-select-shell">
-                          <select
-                            value={selectedSubMapId}
-                            onChange={(event) =>
-                              handleSubMapChange(event.target.value)
-                            }
-                            disabled={isActionLoading || !selectedMap}
-                          >
-                            {availableSubMaps.length <= 0 ? (
-                              <option value="">Nenhum submapa disponível</option>
-                            ) : null}
-
-                            {availableSubMaps.map((subMap) => (
-                              <option key={subMap.id} value={subMap.id}>
-                                {getSubMapLabel(subMap)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </label>
-
                       <div className="auto-combat-stage-actions">
                         <button
                           type="button"
                           className="auto-combat-primary-button"
-                          disabled={!canStartHunt || isActionLoading}
+                          disabled={!canTravelToSelectedMap || isActionLoading}
                           title={
                             overview?.activity?.hasActiveWorldBoss
                               ? 'Você já está em um World Boss.'
                               : undefined
                           }
-                          onClick={handleStartHunt}
+                          onClick={handleTravelToMap}
                         >
-                          Iniciar caça
+                          {isActionLoading ? 'Viajando...' : 'Viajar'}
                         </button>
                       </div>
                     </div>
@@ -3240,7 +3304,31 @@ export function AutoCombatPage() {
                 </article>
               ) : null}
 
-              {showHuntStage ? (
+              {showTravelEmptyStage ? (
+                <article className="auto-combat-stage-card auto-combat-hunt-stage auto-combat-hunt-stage--empty">
+                  <span className="auto-combat-hunt-empty__eyebrow">
+                    Rastreamento da área
+                  </span>
+
+                  <strong>Nenhuma ameaça rastreada</strong>
+
+                  <p>
+                    Rota selecionada. Inicie uma caçada para localizar
+                    infectados neste mapa.
+                  </p>
+
+                  <button
+                    type="button"
+                    className="auto-combat-primary-button"
+                    disabled={!canStartHunt || isActionLoading}
+                    onClick={handleStartHunt}
+                  >
+                    {isActionLoading ? 'Iniciando...' : 'Iniciar Caçada'}
+                  </button>
+                </article>
+              ) : null}
+
+              {showTrackedHuntStage ? (
                 <article className="auto-combat-stage-card auto-combat-hunt-stage">
                   <div
                     className={[
@@ -3266,6 +3354,17 @@ export function AutoCombatPage() {
                       ) : (
                         <span>?</span>
                       )}
+
+                      {shouldShowTrackedThreatFoundCount ? (
+                        <div className="auto-combat-hunt-tracker__found-badge">
+                          <strong>{trackedThreatFoundCount}</strong>
+                          <span>
+                            {trackedThreatFoundCount === 1
+                              ? 'encontrado'
+                              : 'encontrados'}
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="auto-combat-hunt-tracker__content">
@@ -3284,6 +3383,11 @@ export function AutoCombatPage() {
                             <small>XP {trackedThreatMob.xpReward ?? '—'}</small>
                             {trackedThreatChance !== null ? (
                               <small>{trackedThreatChance}% encontro</small>
+                            ) : null}
+                            {shouldShowTrackedThreatFoundCount ? (
+                              <small className="auto-combat-hunt-tracker__chip--found">
+                                {trackedThreatFoundCountChipLabel}
+                              </small>
                             ) : null}
                           </>
                         ) : null}
@@ -3315,7 +3419,11 @@ export function AutoCombatPage() {
                         {foundEnemiesCount > 0 ? foundEnemiesCount : '...'}
                       </strong>
                       <small>
-                        {foundEnemiesCount > 0 ? 'rastreados' : 'buscando'}
+                        {isBackendEncounterReadyPhase
+                          ? 'total da caça'
+                          : foundEnemiesCount > 0
+                            ? 'rastreados'
+                            : 'buscando'}
                       </small>
                     </div>
                   </div>
@@ -3390,18 +3498,43 @@ export function AutoCombatPage() {
                     <span>Possíveis ameaças da área</span>
                   </div>
 
-                  {selectedSubMapThreats.length > 0 ? (
+                  {selectedMapThreats.length > 0 ? (
                     <div className="auto-combat-enemy-grid">
-                      {selectedSubMapThreats.map((encounter) => {
+                      {selectedMapThreats.map((encounter) => {
                         const mob = encounter.mob;
                         const mobFullBodyImage =
                           getMobFullBodyImage(mob?.name) ??
                           getMobPortraitImage(mob?.name);
+                        const mobId = mob?.id ?? encounter.mobId;
+                        const cardFoundCount =
+                          isBackendEncounterReadyPhase && mobId
+                            ? huntFoundCountByMobId.get(mobId) ?? 0
+                            : 0;
+                        const shouldShowCardFoundCount = cardFoundCount > 0;
+                        const cardFoundCountLabel =
+                          cardFoundCount === 1
+                            ? '1 encontrado'
+                            : `${cardFoundCount} encontrados`;
+                        const isTrackedThreatCard =
+                          isBackendEncounterReadyPhase &&
+                          Boolean(trackedEncounter) &&
+                          (encounter.id === trackedEncounter?.id ||
+                            mob?.id === trackedThreatMob?.id);
 
                         return (
                           <article
                             key={encounter.id}
-                            className="auto-combat-enemy-card"
+                            className={[
+                              'auto-combat-enemy-card',
+                              shouldShowCardFoundCount
+                                ? 'auto-combat-enemy-card--found'
+                                : '',
+                              isTrackedThreatCard
+                                ? 'auto-combat-enemy-card--tracked-found'
+                                : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
                             role="button"
                             tabIndex={0}
                             aria-label={`Ver detalhes de ${mob?.name ?? 'Infectado'}`}
@@ -3415,6 +3548,27 @@ export function AutoCombatPage() {
                               setSelectedThreat(encounter);
                             }}
                           >
+                            {shouldShowCardFoundCount ? (
+                              <div
+                                className={[
+                                  'auto-combat-enemy-card__found-count',
+                                  isTrackedThreatCard
+                                    ? 'auto-combat-enemy-card__found-count--tracked'
+                                    : 'auto-combat-enemy-card__found-count--secondary',
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
+                                aria-label={`${cardFoundCountLabel} nesta caça`}
+                              >
+                                <strong>{cardFoundCount}</strong>
+                                <span>
+                                  {cardFoundCount === 1
+                                    ? 'encontrado'
+                                    : 'encontrados'}
+                                </span>
+                              </div>
+                            ) : null}
+
                             <div
                               className={[
                                 'auto-combat-enemy-card__portrait',
@@ -3456,7 +3610,7 @@ export function AutoCombatPage() {
                       <strong>Nenhum inimigo encontrado</strong>
 
                       <p>
-                        Este submapa está cadastrado, mas ainda não possui
+                        Este mapa está cadastrado, mas ainda não possui
                         encontros ativos. Quando os mobs forem vinculados ao
                         seed/backend, ele ficará disponível para combate.
                       </p>

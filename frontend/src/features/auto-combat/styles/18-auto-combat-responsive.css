@@ -845,6 +845,19 @@
     font-size: 1.05rem;
   }
 
+  .auto-combat-hunt-stage--empty {
+    min-height: 190px;
+    padding: 1.2rem;
+  }
+
+  .auto-combat-hunt-stage--empty > strong {
+    font-size: 1.12rem;
+  }
+
+  .auto-combat-hunt-stage--empty > p {
+    font-size: 0.86rem;
+  }
+
   .auto-combat-preview-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.42rem;

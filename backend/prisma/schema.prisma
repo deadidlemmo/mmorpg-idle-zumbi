@@ -78,6 +78,13 @@ enum AutoCombatSessionPhase {
   COMBAT_ACTIVE
 }
 
+enum AutoCombatHuntBatchStatus {
+  HUNTING
+  READY
+  CONSUMED
+  CANCELLED
+}
+
 enum MaterialOrigin {
   DESMANCHE
   COLETA
@@ -192,14 +199,16 @@ model GameMap {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  characters        Character[]
-  mobs              Mob[]
-  items             Item[]
-  subMaps           SubMap[]
-  gatheringSessions GatheringSession[]
-  incursions        Incursion[]
-  worldBosses       WorldBoss[]
-  worldBossEvents   WorldBossEvent[]
+  characters            Character[]
+  mobs                  Mob[]
+  items                 Item[]
+  subMaps               SubMap[]
+  gatheringSessions     GatheringSession[]
+  autoCombatSessions    AutoCombatSession[]
+  autoCombatHuntBatches AutoCombatHuntBatch[]
+  incursions            Incursion[]
+  worldBosses           WorldBoss[]
+  worldBossEvents       WorldBossEvent[]
 
   @@index([tier])
   @@index([minLevel, maxLevel])
@@ -248,7 +257,9 @@ model SubMapEncounter {
   subMap SubMap @relation(fields: [subMapId], references: [id], onDelete: Cascade)
   mob    Mob    @relation(fields: [mobId], references: [id], onDelete: Cascade)
 
-  selectedAutoCombatSessions AutoCombatSession[] @relation("AutoCombatSelectedEncounter")
+  selectedAutoCombatSessions    AutoCombatSession[]      @relation("AutoCombatSelectedEncounter")
+  selectedAutoCombatHuntBatches AutoCombatHuntBatch[]    @relation("AutoCombatHuntBatchSelectedEncounter")
+  autoCombatHuntBatchMobs       AutoCombatHuntBatchMob[]
 
   @@unique([subMapId, mobId])
   @@index([subMapId])
@@ -287,17 +298,19 @@ model Character {
   class GameClass @relation(fields: [classId], references: [id])
   map   GameMap?  @relation(fields: [mapId], references: [id])
 
-  inventoryItems          InventoryItem[]
-  bankItems               BankItem[]
-  equipment               Equipment?
-  potionConfig            CharacterPotionConfig?
-  combats                 Combat[]
-  autoCombatSessions      AutoCombatSession[]
-  autoCombatSessionEvents AutoCombatSessionEvent[]
-  gatheringSessions       GatheringSession[]
-  craftingSessions        CraftingSession[]
-  incursionSessions       CharacterIncursionSession[]
-  worldBossParticipations WorldBossParticipant[]
+  inventoryItems            InventoryItem[]
+  bankItems                 BankItem[]
+  equipment                 Equipment?
+  potionConfig              CharacterPotionConfig?
+  combats                   Combat[]
+  autoCombatSessions        AutoCombatSession[]
+  autoCombatSessionEvents   AutoCombatSessionEvent[]
+  autoCombatHuntBatches     AutoCombatHuntBatch[]
+  autoCombatHuntBatchEvents AutoCombatHuntBatchEvent[]
+  gatheringSessions         GatheringSession[]
+  craftingSessions          CraftingSession[]
+  incursionSessions         CharacterIncursionSession[]
+  worldBossParticipations   WorldBossParticipant[]
 
   gatheringSkills CharacterGatheringSkill[]
   craftingSkill   CharacterCraftingSkill?
@@ -399,8 +412,9 @@ model Mob {
   combats Combat[]
   drops   MobDrop[]
 
-  subMapEncounters    SubMapEncounter[]
-  autoCombatSummaries AutoCombatSessionMobSummary[]
+  subMapEncounters        SubMapEncounter[]
+  autoCombatSummaries     AutoCombatSessionMobSummary[]
+  autoCombatHuntBatchMobs AutoCombatHuntBatchMob[]
 
   currentAutoCombatSessions AutoCombatSession[] @relation("AutoCombatCurrentMob")
 
@@ -811,6 +825,7 @@ model AutoCombatSession {
   id String @id @default(uuid())
 
   characterId String
+  mapId       String
   subMapId    String
 
   status AutoCombatSessionStatus @default(ACTIVE)
@@ -826,15 +841,15 @@ model AutoCombatSession {
 
   roundDurationSeconds Int @default(1)
 
-  huntStartedAt           DateTime?
-  huntStoppedAt           DateTime?
-  lastHuntProcessedAt     DateTime?
-  huntingLevelAtStart     Int       @default(1)
-  huntingXpGained         Int       @default(0)
-  foundEnemiesCount       Int       @default(0)
-  bonusEnemiesFound       Int       @default(0)
-  selectedEncounterId     String?
-  selectedEncounterMobId  String?
+  huntStartedAt          DateTime?
+  huntStoppedAt          DateTime?
+  lastHuntProcessedAt    DateTime?
+  huntingLevelAtStart    Int       @default(1)
+  huntingXpGained        Int       @default(0)
+  foundEnemiesCount      Int       @default(0)
+  bonusEnemiesFound      Int       @default(0)
+  selectedEncounterId    String?
+  selectedEncounterMobId String?
 
   totalCombatsResolved Int @default(0)
   totalRoundsResolved  Int @default(0)
@@ -851,16 +866,19 @@ model AutoCombatSession {
   updatedAt DateTime @updatedAt
 
   character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  map       GameMap   @relation(fields: [mapId], references: [id], onDelete: Cascade)
   subMap    SubMap    @relation(fields: [subMapId], references: [id])
 
-  currentMob Mob? @relation("AutoCombatCurrentMob", fields: [currentMobId], references: [id], onDelete: SetNull)
+  currentMob        Mob?             @relation("AutoCombatCurrentMob", fields: [currentMobId], references: [id], onDelete: SetNull)
   selectedEncounter SubMapEncounter? @relation("AutoCombatSelectedEncounter", fields: [selectedEncounterId], references: [id], onDelete: SetNull)
 
   loots        AutoCombatSessionLoot[]
   mobSummaries AutoCombatSessionMobSummary[]
   events       AutoCombatSessionEvent[]
+  huntBatch    AutoCombatHuntBatch?
 
   @@index([characterId])
+  @@index([mapId])
   @@index([subMapId])
   @@index([currentMobId])
   @@index([selectedEncounterId])
@@ -871,6 +889,108 @@ model AutoCombatSession {
   @@index([startedAt])
   @@index([endsAt])
   @@map("auto_combat_sessions")
+}
+
+model AutoCombatHuntBatch {
+  id String @id @default(uuid())
+
+  characterId String
+  mapId       String
+  sessionId   String? @unique
+
+  status AutoCombatHuntBatchStatus @default(HUNTING)
+
+  startedAt       DateTime  @default(now())
+  stoppedAt       DateTime?
+  consumedAt      DateTime?
+  cancelledAt     DateTime?
+  lastProcessedAt DateTime
+
+  huntingLevelAtStart Int @default(1)
+  huntingXpGained     Int @default(0)
+  foundEnemiesCount   Int @default(0)
+  bonusEnemiesFound   Int @default(0)
+
+  selectedEncounterId    String?
+  selectedEncounterMobId String?
+  huntSequence           Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  character         Character          @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  map               GameMap            @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  session           AutoCombatSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  selectedEncounter SubMapEncounter?   @relation("AutoCombatHuntBatchSelectedEncounter", fields: [selectedEncounterId], references: [id], onDelete: SetNull)
+
+  mobs   AutoCombatHuntBatchMob[]
+  events AutoCombatHuntBatchEvent[]
+
+  @@index([characterId])
+  @@index([mapId])
+  @@index([status])
+  @@index([characterId, mapId])
+  @@index([characterId, status])
+  @@index([characterId, mapId, status])
+  @@index([selectedEncounterId])
+  @@map("auto_combat_hunt_batches")
+}
+
+model AutoCombatHuntBatchMob {
+  id String @id @default(uuid())
+
+  batchId     String
+  mobId       String
+  encounterId String?
+
+  foundCount     Int @default(0)
+  remainingCount Int @default(0)
+  weightSnapshot Int @default(100)
+
+  firstFoundAt DateTime?
+  lastFoundAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  batch     AutoCombatHuntBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  mob       Mob                 @relation(fields: [mobId], references: [id], onDelete: Cascade)
+  encounter SubMapEncounter?    @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, mobId])
+  @@index([batchId])
+  @@index([mobId])
+  @@index([encounterId])
+  @@map("auto_combat_hunt_batch_mobs")
+}
+
+model AutoCombatHuntBatchEvent {
+  id String @id @default(uuid())
+
+  batchId     String
+  characterId String
+  sessionId   String?
+
+  type String
+
+  sequence Int
+  cycleKey String?
+
+  payloadJson Json
+
+  createdAt DateTime @default(now())
+
+  batch     AutoCombatHuntBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  character Character           @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, sequence])
+  @@unique([batchId, cycleKey])
+  @@index([batchId])
+  @@index([characterId])
+  @@index([sessionId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("auto_combat_hunt_batch_events")
 }
 
 model AutoCombatSessionLoot {
@@ -899,8 +1019,9 @@ model AutoCombatSessionMobSummary {
   sessionId String
   mobId     String
 
-  kills    Int @default(0)
-  xpGained Int @default(0)
+  kills      Int @default(0)
+  xpGained   Int @default(0)
+  foundCount Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

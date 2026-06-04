@@ -341,12 +341,14 @@ export type AutoCombatRealtimeStateLoose = {
 export type AutoCombatRealtimeActions = {
   start?: (payload: {
     characterId: string;
-    subMapId: string;
+    subMapId?: string;
+    mapId?: string;
   }) => Promise<AutoCombatStatusResponse>;
 
   startAutoCombat?: (payload: {
     characterId: string;
-    subMapId: string;
+    subMapId?: string;
+    mapId?: string;
   }) => Promise<AutoCombatStatusResponse>;
 
   stopHunt?: () => Promise<AutoCombatStatusResponse>;

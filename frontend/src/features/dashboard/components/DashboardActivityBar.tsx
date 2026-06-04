@@ -95,8 +95,13 @@ type AutoCombatStatusCurrentMobLike = {
 type AutoCombatSessionLike = {
   id?: string | null;
   characterId?: string | null;
+  mapId?: string | null;
   status?: string | null;
   phase?: string | null;
+  map?: {
+    id?: string | null;
+    name?: string | null;
+  } | null;
 
   currentMobId?: string | null;
   currentMobHp?: number | null;
@@ -224,9 +229,14 @@ type AutoCombatStatusLoose = AutoCombatStatusResponse & {
   subMap?: {
     name?: string | null;
     map?: {
+      id?: string | null;
       name?: string | null;
     } | null;
     mapName?: string | null;
+  } | null;
+  map?: {
+    id?: string | null;
+    name?: string | null;
   } | null;
 
   sessionSummary?: {
@@ -721,9 +731,15 @@ function getStatusCurrentMob(status: AutoCombatStatusResponse | null) {
 }
 
 function getStatusLocationLabel(status: AutoCombatStatusResponse | null) {
-  const subMap = getLooseStatus(status)?.subMap ?? null;
+  const looseStatus = getLooseStatus(status);
+  const subMap = looseStatus?.subMap ?? null;
+  const session = getAutoCombatSessionFromStatus(status);
   const subMapName = subMap?.name;
-  const mapName = subMap?.map?.name ?? subMap?.mapName;
+  const mapName =
+    looseStatus?.map?.name ??
+    session?.map?.name ??
+    subMap?.map?.name ??
+    subMap?.mapName;
 
   if (mapName && subMapName) {
     return `${mapName} • ${subMapName}`;
@@ -1602,6 +1618,10 @@ function buildAutoCombatItemFromOverview(params: {
 
       combatPreview?: {
         label?: string | null;
+        map?: {
+          id?: string | null;
+          name?: string | null;
+        } | null;
         currentMob?: AutoCombatStatusCurrentMobLike | null;
         currentMobHp?: number | null;
         currentMobMaxHp?: number | null;
@@ -1624,7 +1644,11 @@ function buildAutoCombatItemFromOverview(params: {
   });
 
   const subMapName = session.subMap?.name;
-  const mapName = session.subMap?.map?.name ?? session.subMap?.mapName;
+  const mapName =
+    session.map?.name ??
+    session.combatPreview?.map?.name ??
+    session.subMap?.map?.name ??
+    session.subMap?.mapName;
 
   const locationLabel =
     mapName && subMapName

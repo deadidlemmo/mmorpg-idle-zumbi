@@ -1590,6 +1590,15 @@ function buildOverviewLocationState(
   const progression = overview.progression as
     | Record<string, unknown>
     | undefined;
+  const activity = overview.activity as Record<string, unknown> | undefined;
+  const activeAutoCombatSession = activity?.activeAutoCombatSession as
+    | Record<string, unknown>
+    | null
+    | undefined;
+  const activeAutoCombatMap = activeAutoCombatSession?.map as
+    | Record<string, unknown>
+    | null
+    | undefined;
 
   const currentMap = character.currentMap as
     | Record<string, unknown>
@@ -1604,15 +1613,17 @@ function buildOverviewLocationState(
     | undefined;
 
   const mapName =
-    typeof character.currentMapName === 'string'
-      ? character.currentMapName
-      : typeof currentMap?.name === 'string'
-        ? currentMap.name
-        : typeof map?.name === 'string'
-          ? map.name
-          : typeof progressionCurrentMap?.name === 'string'
-            ? progressionCurrentMap.name
-            : fallback?.mapName ?? null;
+    typeof activeAutoCombatMap?.name === 'string'
+      ? activeAutoCombatMap.name
+      : typeof character.currentMapName === 'string'
+        ? character.currentMapName
+        : typeof currentMap?.name === 'string'
+          ? currentMap.name
+          : typeof map?.name === 'string'
+            ? map.name
+            : typeof progressionCurrentMap?.name === 'string'
+              ? progressionCurrentMap.name
+              : fallback?.mapName ?? null;
 
   if (!mapName && !fallback) {
     return null;
@@ -1622,24 +1633,30 @@ function buildOverviewLocationState(
     ...fallback,
 
     mapId:
-      typeof currentMap?.id === 'string'
-        ? currentMap.id
-        : typeof map?.id === 'string'
-          ? map.id
-          : typeof progressionCurrentMap?.id === 'string'
-            ? progressionCurrentMap.id
-            : fallback?.mapId ?? null,
+      typeof activeAutoCombatSession?.mapId === 'string'
+        ? activeAutoCombatSession.mapId
+        : typeof activeAutoCombatMap?.id === 'string'
+          ? activeAutoCombatMap.id
+          : typeof currentMap?.id === 'string'
+            ? currentMap.id
+            : typeof map?.id === 'string'
+              ? map.id
+              : typeof progressionCurrentMap?.id === 'string'
+                ? progressionCurrentMap.id
+                : fallback?.mapId ?? null,
 
     mapName,
 
     tier:
-      typeof currentMap?.tier === 'number'
-        ? currentMap.tier
-        : typeof map?.tier === 'number'
-          ? map.tier
-          : typeof progressionCurrentMap?.tier === 'number'
-            ? progressionCurrentMap.tier
-            : fallback?.tier ?? null,
+      typeof activeAutoCombatMap?.tier === 'number'
+        ? activeAutoCombatMap.tier
+        : typeof currentMap?.tier === 'number'
+          ? currentMap.tier
+          : typeof map?.tier === 'number'
+            ? map.tier
+            : typeof progressionCurrentMap?.tier === 'number'
+              ? progressionCurrentMap.tier
+              : fallback?.tier ?? null,
   };
 }
 

@@ -204,7 +204,9 @@ type RealtimeStateLoose = {
   } | null;
 
   location?: {
+    mapId?: string | null;
     mapName?: string | null;
+    subMapId?: string | null;
     subMapName?: string | null;
   } | null;
 
@@ -221,21 +223,37 @@ type RealtimeStateLoose = {
     session?: {
       id?: string | null;
       status?: string | null;
+      mapId?: string | null;
+      map?: {
+        name?: string | null;
+      } | null;
     } | null;
 
     activeSession?: {
       id?: string | null;
       status?: string | null;
+      mapId?: string | null;
+      map?: {
+        name?: string | null;
+      } | null;
     } | null;
 
     autoCombatSession?: {
       id?: string | null;
       status?: string | null;
+      mapId?: string | null;
+      map?: {
+        name?: string | null;
+      } | null;
     } | null;
 
     lastSession?: {
       id?: string | null;
       status?: string | null;
+      mapId?: string | null;
+      map?: {
+        name?: string | null;
+      } | null;
     } | null;
 
     sessionSummary?: {
@@ -248,20 +266,34 @@ type RealtimeStateLoose = {
     subMap?: {
       name?: string | null;
       map?: {
+        id?: string | null;
         name?: string | null;
       } | null;
       mapName?: string | null;
+    } | null;
+
+    map?: {
+      id?: string | null;
+      name?: string | null;
     } | null;
   } | null;
 
   activeSession?: {
     id?: string | null;
     status?: string | null;
+    mapId?: string | null;
+    map?: {
+      name?: string | null;
+    } | null;
   } | null;
 
   session?: {
     id?: string | null;
     status?: string | null;
+    mapId?: string | null;
+    map?: {
+      name?: string | null;
+    } | null;
   } | null;
 
   isActive?: boolean | null;
@@ -1031,9 +1063,16 @@ function buildHeroCharacterFromRealtimeState(params: {
     ) ?? character.maxHp;
 
   const statusSubMap = realtimeState.status?.subMap;
+  const statusSession = getStatusSession(realtimeState.status);
   const locationMapName = realtimeState.location?.mapName ?? undefined;
   const statusMapName =
-    statusSubMap?.map?.name ?? statusSubMap?.mapName ?? undefined;
+    realtimeState.status?.map?.name ??
+    statusSession?.map?.name ??
+    realtimeState.activeSession?.map?.name ??
+    realtimeState.session?.map?.name ??
+    statusSubMap?.map?.name ??
+    statusSubMap?.mapName ??
+    undefined;
 
   const nextCurrentMapName =
     (realtimeSessionIsActive ? statusMapName ?? locationMapName : undefined) ??

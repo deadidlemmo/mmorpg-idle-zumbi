@@ -643,6 +643,42 @@ export function getActiveEncounters(subMap?: AutoCombatSubMapViewModel | null) {
     });
 }
 
+export function getActiveEncountersForMap(
+  gameMap?: AutoCombatMapViewModel | null,
+) {
+  const encountersByMobId = new Map<string, AutoCombatEncounterViewModel>();
+
+  for (const subMap of gameMap?.subMaps ?? []) {
+    for (const encounter of getActiveEncounters(subMap)) {
+      const mobId = encounter.mob?.id ?? encounter.mobId ?? encounter.id;
+      const current = encountersByMobId.get(mobId);
+
+      if (!current) {
+        encountersByMobId.set(mobId, {
+          ...encounter,
+          weight: Math.max(0, toSafeNumber(encounter.weight, 0)),
+        });
+        continue;
+      }
+
+      encountersByMobId.set(mobId, {
+        ...current,
+        weight:
+          Math.max(0, toSafeNumber(current.weight, 0)) +
+          Math.max(0, toSafeNumber(encounter.weight, 0)),
+      });
+    }
+  }
+
+  return Array.from(encountersByMobId.values()).sort((a, b) => {
+    return (
+      toSafeNumber(a.mob?.level, 0) - toSafeNumber(b.mob?.level, 0) ||
+      toSafeNumber(a.mob?.tier, 0) - toSafeNumber(b.mob?.tier, 0) ||
+      (a.mob?.name ?? '').localeCompare(b.mob?.name ?? '')
+    );
+  });
+}
+
 export function getFallbackLevelRangeFromTier(tier?: number | null) {
   const safeTier = Math.max(1, Math.floor(toSafeNumber(tier, 1)));
   const minLevel = (safeTier - 1) * 10 + 1;

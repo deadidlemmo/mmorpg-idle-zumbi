@@ -7,12 +7,14 @@ import type {
 
 export interface StartAutoCombatPayload {
   characterId: string;
-  subMapId: string;
+  subMapId?: string;
+  mapId?: string;
 }
 
 export interface PreviewAutoCombatPayload {
   characterId: string;
-  subMapId: string;
+  subMapId?: string;
+  mapId?: string;
   projectionSeconds?: number;
   iterations?: number;
 }
@@ -302,6 +304,8 @@ export interface AutoCombatMobViewModel {
   currentHp?: number | null;
   maxHp?: number | null;
   hpPercent?: number | null;
+  foundCount?: number | null;
+  huntFoundCount?: number | null;
 
   iconUrl?: string | null;
   imageUrl?: string | null;
@@ -328,6 +332,8 @@ export interface AutoCombatCurrentMobViewModel {
   currentHp?: number | null;
   maxHp?: number | null;
   hpPercent?: number | null;
+  foundCount?: number | null;
+  huntFoundCount?: number | null;
 
   iconUrl?: string | null;
   imageUrl?: string | null;
@@ -341,6 +347,8 @@ export interface AutoCombatEncounterViewModel {
 
   weight: number;
   isActive: boolean;
+  foundCount?: number | null;
+  huntFoundCount?: number | null;
 
   mob?: AutoCombatMobViewModel | null;
 }
@@ -425,6 +433,8 @@ export interface AutoCombatHuntingSkillViewModel {
 }
 
 export interface AutoCombatHuntingViewModel {
+  mapId?: string | null;
+  subMapId?: string | null;
   phase?: AutoCombatRealtimePhase | null;
   startedAt?: string | null;
   stoppedAt?: string | null;
@@ -446,17 +456,22 @@ export interface AutoCombatHuntingViewModel {
   selectedEncounterId?: string | null;
   targetEncounterId?: string | null;
   targetMobId?: string | null;
+  targetFoundCount?: number | null;
+  currentTargetFoundCount?: number | null;
   selectedMob?: AutoCombatCurrentMobViewModel | null;
   targetMob?: AutoCombatCurrentMobViewModel | null;
   currentTarget?: AutoCombatEncounterViewModel | null;
   targetEncounter?: AutoCombatEncounterViewModel | null;
+  trackedMonsters?: AutoCombatTrackedMonsterViewModel[];
   skill?: AutoCombatHuntingSkillViewModel | null;
 }
 
 export interface AutoCombatSessionApiViewModel {
   id: string;
   characterId?: string | null;
+  mapId?: string | null;
   subMapId?: string | null;
+  map?: AutoCombatMapSummaryViewModel | null;
 
   status:
     | DashboardAutoCombatSessionStatus
@@ -555,11 +570,50 @@ export interface AutoCombatRewardMobViewModel {
   mobTier: number;
   kills: number;
   xpGained: number;
+  foundCount?: number | null;
+}
+
+export interface AutoCombatFoundMobViewModel {
+  mobId: string;
+  mobName: string;
+  mobLevel: number;
+  mobTier: number;
+  foundCount: number;
+  remainingCount?: number | null;
+  encounterId?: string | null;
+  weightSnapshot?: number | null;
+  firstFoundAt?: string | null;
+  lastFoundAt?: string | null;
+  mob?: AutoCombatCurrentMobViewModel | null;
+}
+
+export type AutoCombatTrackedMonsterViewModel = AutoCombatFoundMobViewModel;
+
+export interface AutoCombatHuntBatchViewModel {
+  id: string;
+  characterId?: string | null;
+  mapId?: string | null;
+  sessionId?: string | null;
+  status?: 'HUNTING' | 'READY' | 'CONSUMED' | 'CANCELLED' | string;
+  startedAt?: string | null;
+  stoppedAt?: string | null;
+  consumedAt?: string | null;
+  cancelledAt?: string | null;
+  lastProcessedAt?: string | null;
+  huntingLevelAtStart?: number | null;
+  huntingXpGained?: number | null;
+  foundEnemiesCount?: number | null;
+  bonusEnemiesFound?: number | null;
+  selectedEncounterId?: string | null;
+  selectedEncounterMobId?: string | null;
+  huntSequence?: number | null;
+  mobs?: AutoCombatTrackedMonsterViewModel[];
 }
 
 export interface AutoCombatRewardsViewModel {
   loots: AutoCombatRewardLootViewModel[];
   mobs: AutoCombatRewardMobViewModel[];
+  trackedMonsters?: AutoCombatTrackedMonsterViewModel[];
 }
 
 /* =========================================================
@@ -756,8 +810,11 @@ export interface AutoCombatSessionSummary {
 
   mobs?: {
     totalKills?: number;
+    totalFound?: number;
     uniqueMobs?: number;
+    uniqueFoundMobs?: number;
     kills?: AutoCombatRewardMobViewModel[];
+    found?: AutoCombatFoundMobViewModel[];
   };
 }
 
@@ -821,6 +878,9 @@ export interface PreviewAutoCombatResponse {
 export interface AutoCombatStatusResponse {
   active?: boolean;
   hasActiveAutoCombat?: boolean;
+  currentMapId?: string | null;
+  currentSubMapId?: string | null;
+  canTravel?: boolean | null;
 
   message?: string;
   serverNow?: string | Date | null;
@@ -843,10 +903,13 @@ export interface AutoCombatStatusResponse {
 
   currentMob?: AutoCombatCurrentMobViewModel | null;
   selectedEncounter?: AutoCombatEncounterViewModel | null;
+  trackedMonsters?: AutoCombatTrackedMonsterViewModel[];
+  huntBatch?: AutoCombatHuntBatchViewModel | null;
   huntingSkill?: AutoCombatHuntingSkillViewModel | null;
   hunting?: AutoCombatHuntingViewModel | null;
 
   subMap?: AutoCombatSubMapViewModel | null;
+  map?: AutoCombatMapSummaryViewModel | null;
 
   rewards?: AutoCombatRewardsViewModel;
   sessionSummary?: AutoCombatSessionSummary;

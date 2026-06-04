@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
+  AutoCombatHuntBatchStatus,
   AutoCombatSessionPhase,
   AutoCombatSessionStatus,
   CharacterStatus,
@@ -95,6 +96,24 @@ describe('AutoCombat status concurrency (e2e)', () => {
         sequence: 'asc',
       },
     });
+    const huntSummary =
+      await prisma.autoCombatSessionMobSummary.findUniqueOrThrow({
+        where: {
+          sessionId_mobId: {
+            sessionId: fixture.session.id,
+            mobId: fixture.mob.id,
+          },
+        },
+      });
+    const huntBatch = await prisma.autoCombatHuntBatch.findUniqueOrThrow({
+      where: {
+        sessionId: fixture.session.id,
+      },
+      include: {
+        mobs: true,
+        events: true,
+      },
+    });
 
     expect(session.phase).toBe(AutoCombatSessionPhase.HUNTING);
     expect(session.status).toBe(AutoCombatSessionStatus.ACTIVE);
@@ -105,6 +124,18 @@ describe('AutoCombat status concurrency (e2e)', () => {
     expect(huntEvents).toHaveLength(1);
     expect(huntEvents[0].eventKey).toBe(`${fixture.session.id}:hunt:1`);
     expect(huntEvents[0].sequence).toBe(1);
+    expect(huntSummary.foundCount).toBe(1);
+    expect(huntSummary.kills).toBe(0);
+    expect(huntBatch.status).toBe(AutoCombatHuntBatchStatus.HUNTING);
+    expect(huntBatch.mapId).toBe(fixture.gameMap.id);
+    expect(huntBatch.foundEnemiesCount).toBe(1);
+    expect(huntBatch.huntSequence).toBe(1);
+    expect(huntBatch.mobs).toHaveLength(1);
+    expect(huntBatch.mobs[0].mobId).toBe(fixture.mob.id);
+    expect(huntBatch.mobs[0].foundCount).toBe(1);
+    expect(huntBatch.mobs[0].remainingCount).toBe(1);
+    expect(huntBatch.events).toHaveLength(1);
+    expect(huntBatch.events[0].cycleKey).toBe(`${fixture.session.id}:hunt:1`);
   });
 
   async function createActiveHuntingSessionFixture() {
@@ -214,6 +245,7 @@ describe('AutoCombat status concurrency (e2e)', () => {
     const session = await prisma.autoCombatSession.create({
       data: {
         characterId: character.id,
+        mapId: gameMap.id,
         subMapId: subMap.id,
         status: AutoCombatSessionStatus.ACTIVE,
         phase: AutoCombatSessionPhase.HUNTING,
@@ -239,9 +271,29 @@ describe('AutoCombat status concurrency (e2e)', () => {
     });
     createdIds.sessionId = session.id;
 
+    await prisma.autoCombatHuntBatch.create({
+      data: {
+        characterId: character.id,
+        mapId: gameMap.id,
+        sessionId: session.id,
+        status: AutoCombatHuntBatchStatus.HUNTING,
+        startedAt: lastProcessedAt,
+        lastProcessedAt,
+        huntingLevelAtStart: 1,
+        huntingXpGained: 0,
+        foundEnemiesCount: 0,
+        bonusEnemiesFound: 0,
+        selectedEncounterId: encounter.id,
+        selectedEncounterMobId: mob.id,
+        huntSequence: 0,
+      },
+    });
+
     return {
       user,
       character,
+      gameMap,
+      mob,
       session,
     };
   }
