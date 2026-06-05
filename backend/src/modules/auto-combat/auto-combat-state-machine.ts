@@ -9,7 +9,9 @@ const AUTO_COMBAT_ALLOWED_PHASE_TRANSITIONS: Record<
     AutoCombatSessionPhase.HUNTING,
     AutoCombatSessionPhase.COMBAT_ACTIVE,
   ],
-  [AutoCombatSessionPhase.COMBAT_ACTIVE]: [],
+  [AutoCombatSessionPhase.COMBAT_ACTIVE]: [
+    AutoCombatSessionPhase.ENCOUNTER_READY,
+  ],
 };
 
 export function isAutoCombatPhaseTransitionAllowed(

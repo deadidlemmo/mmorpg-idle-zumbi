@@ -211,6 +211,53 @@ function createMobLookupKeys(mobName?: string | null) {
   return lookupKeys;
 }
 
+function parseSequentialMobAssetKey(value?: string | null) {
+  const normalizedKey = normalizeMobAssetKey(value);
+  const match = /^mob(\d+)-t(\d+)$/i.exec(normalizedKey);
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    mobNumber: Number(match[1]),
+    tierNumber: Number(match[2]),
+  };
+}
+
+export function getMobProgressionSortRank(
+  mobName?: string | null,
+  assetKey?: string | null,
+) {
+  const directAssetRank = parseSequentialMobAssetKey(assetKey);
+
+  if (directAssetRank) {
+    return {
+      tier: directAssetRank.tierNumber,
+      mob: directAssetRank.mobNumber,
+      key: normalizeMobAssetKey(assetKey),
+    };
+  }
+
+  const normalizedName = normalizeMobAssetKey(mobName);
+  const sequentialAssetKey = mobAssetKeyByNormalizedName[normalizedName];
+  const mappedAssetRank = parseSequentialMobAssetKey(sequentialAssetKey);
+
+  if (mappedAssetRank) {
+    return {
+      tier: mappedAssetRank.tierNumber,
+      mob: mappedAssetRank.mobNumber,
+      key: sequentialAssetKey,
+    };
+  }
+
+  return {
+    tier: Number.MAX_SAFE_INTEGER,
+    mob: Number.MAX_SAFE_INTEGER,
+    key: normalizedName,
+  };
+}
+
 function buildAssetMap(images: Record<string, string>) {
   const assetMap = new Map<string, string>();
 

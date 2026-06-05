@@ -571,6 +571,73 @@ function getAutoCombatKills(autoCombatState: unknown): number | null {
   );
 }
 
+function getAutoCombatBattleProgress(autoCombatState: unknown): {
+  mobName: string;
+  total: number;
+  remaining: number;
+  defeated: number;
+  progressPercent: number | null;
+} | null {
+  const status = getRecordField(autoCombatState, 'status');
+  const session = getAutoCombatSessionRecord(autoCombatState);
+  const statusCurrentMob = getRecordField(status, 'currentMob');
+  const sessionCurrentMob = getRecordField(session, 'currentMob');
+  const selection =
+    getRecordField(status, 'battleSelection') ??
+    getRecordField(session, 'battleSelection');
+  const progressRecord =
+    getRecordField(status, 'battleProgress') ??
+    getRecordField(session, 'battleProgress') ??
+    getRecordField(statusCurrentMob, 'battleProgress') ??
+    getRecordField(sessionCurrentMob, 'battleProgress');
+  const selectionMob = getRecordField(selection, 'mob');
+  const total =
+    getNumberField(selection, 'total') ??
+    getNumberField(session, 'battleTargetTotal') ??
+    getNumberField(status, 'battleTargetTotal');
+  const remaining =
+    getNumberField(selection, 'remaining') ??
+    getNumberField(session, 'battleTargetRemaining') ??
+    getNumberField(status, 'battleTargetRemaining');
+  const explicitDefeated = getNumberField(selection, 'defeated');
+  const safeTotal = Math.max(0, Math.floor(total ?? 0));
+
+  if (safeTotal <= 0) return null;
+
+  const safeRemaining = Math.max(
+    0,
+    Math.min(safeTotal, Math.floor(remaining ?? safeTotal)),
+  );
+
+  if (safeRemaining <= 0) return null;
+
+  const safeDefeated = Math.max(
+    0,
+    Math.min(
+      safeTotal,
+      Math.floor(explicitDefeated ?? safeTotal - safeRemaining),
+    ),
+  );
+
+  const mobName =
+    getStringField(selectionMob, 'name') ??
+    getStringField(selection, 'mobName') ??
+    getAutoCombatMobName(autoCombatState);
+
+  if (!mobName) return null;
+
+  return {
+    mobName,
+    total: safeTotal,
+    remaining: safeRemaining,
+    defeated: safeDefeated,
+    progressPercent:
+      progressRecord && getNumberField(progressRecord, 'progressPercent') !== null
+        ? clampPercent(getNumberField(progressRecord, 'progressPercent'))
+        : null,
+  };
+}
+
 function getLatestAutoCombatEvent(autoCombatState: unknown): LooseRecord | null {
   return (
     getRecordField(autoCombatState, 'activeEvent') ??
@@ -596,7 +663,11 @@ function isAutoCombatHunting(autoCombatState: unknown): boolean {
       getStringField(latestEvent, 'type'),
   );
 
-  return phase === 'HUNTING' || phase === 'HUNT_TARGET_FOUND';
+  return (
+    phase === 'HUNTING' ||
+    phase === 'ENCOUNTER_READY' ||
+    phase === 'HUNT_TARGET_FOUND'
+  );
 }
 
 function getAutoCombatHuntingFoundCount(autoCombatState: unknown): number {
@@ -661,6 +732,8 @@ function getAutoCombatRestSnapshot(autoCombatState: unknown): {
 function isAutoCombatActive(autoCombatState: unknown): boolean {
   const status = getRecordField(autoCombatState, 'status');
   const session = getRecordField(autoCombatState, 'session');
+  const hunting = getAutoCombatHuntingRecord(autoCombatState);
+  const latestEvent = getLatestAutoCombatEvent(autoCombatState);
 
   const statusActive = status?.active;
   const hasActiveAutoCombat = status?.hasActiveAutoCombat;
@@ -670,8 +743,20 @@ function isAutoCombatActive(autoCombatState: unknown): boolean {
     getStringField(getRecordField(status, 'session'), 'status') ??
     getStringField(getRecordField(status, 'activeSession'), 'status') ??
     getStringField(getRecordField(status, 'autoCombatSession'), 'status');
+  const sessionPhase = normalizeStatus(
+    getStringField(session, 'phase') ??
+      getStringField(hunting, 'phase') ??
+      getStringField(status, 'phase') ??
+      getStringField(latestEvent, 'phase') ??
+      getStringField(latestEvent, 'type'),
+  );
+  const hasActivePhase =
+    sessionPhase === 'HUNTING' ||
+    sessionPhase === 'ENCOUNTER_READY' ||
+    sessionPhase === 'COMBAT_ACTIVE' ||
+    sessionPhase === 'HUNT_TARGET_FOUND';
 
-  if (statusActive === true || hasActiveAutoCombat === true) {
+  if (statusActive === true || hasActiveAutoCombat === true || hasActivePhase) {
     return true;
   }
 
@@ -750,6 +835,30 @@ function buildAutoCombatActivity(
           : null,
       titleText: 'Descanso automático em andamento - recuperando HP.',
       isResting: true,
+    };
+  }
+
+  const battleProgress = getAutoCombatBattleProgress(autoCombatState);
+
+  if (battleProgress) {
+    const progressPercent =
+      battleProgress.progressPercent ??
+      getAutoCombatMonsterHpPercent(autoCombatState);
+    const mobPortraitUrl = getMobPortraitImage(battleProgress.mobName);
+
+    return {
+      kind: 'auto-combat',
+      title: battleProgress.mobName,
+      subtitle: `${formatNumber(battleProgress.defeated)}/${formatNumber(
+        battleProgress.total,
+      )} abatidos do lote`,
+      imageUrl: mobPortraitUrl,
+      icon: 'AC',
+      progressPercent,
+      badge: formatNumber(battleProgress.remaining),
+      titleText: `Combate automatico em andamento - ${formatNumber(
+        battleProgress.defeated,
+      )}/${formatNumber(battleProgress.total)} abatidos do lote.`,
     };
   }
 

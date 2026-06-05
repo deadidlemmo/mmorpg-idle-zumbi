@@ -1,5 +1,6 @@
 import type {
   AutoCombatLevelProgressViewModel,
+  AutoCombatBattleProgressViewModel,
   AutoCombatRealtimeEvent,
   AutoCombatRealtimePhase,
   AutoCombatStatusResponse,
@@ -1149,6 +1150,27 @@ export function buildSessionStateFromStatus(
       session.enemyInstanceId ??
       safeFallback?.currentEnemyInstanceId ??
       null,
+    battleTargetMobId:
+      session.battleTargetMobId ?? safeFallback?.battleTargetMobId ?? null,
+    battleTargetEncounterId:
+      session.battleTargetEncounterId ??
+      safeFallback?.battleTargetEncounterId ??
+      null,
+    battleTargetTotal:
+      session.battleTargetTotal ?? safeFallback?.battleTargetTotal ?? null,
+    battleTargetRemaining:
+      session.battleTargetRemaining ??
+      safeFallback?.battleTargetRemaining ??
+      null,
+    battleSelection:
+      session.battleSelection ??
+      status?.battleSelection ??
+      safeFallback?.battleSelection ??
+      null,
+    battleProgress: normalizeBattleProgress(
+      session.battleProgress ?? status?.battleProgress,
+      safeFallback?.battleProgress,
+    ),
     snapshotSequence:
       session.snapshotSequence ??
       status?.snapshotSequence ??
@@ -1225,6 +1247,11 @@ export function buildMobStateFromStatus(
 
   if (!currentMob) return fallback ?? null;
 
+  const battleProgress = normalizeBattleProgress(
+    currentMob.battleProgress ?? status?.battleProgress ?? session?.battleProgress,
+    fallback?.battleProgress,
+  );
+
   const maxHp =
     getOptionalNumber(currentMob.maxHp) ??
     getOptionalNumber(currentMob.hp) ??
@@ -1260,6 +1287,7 @@ export function buildMobStateFromStatus(
       (currentHp !== undefined && maxHp !== undefined
         ? calculatePercent(currentHp, maxHp)
         : fallback?.hpPercent),
+    battleProgress,
 
     level: currentMob.level ?? fallback?.level ?? null,
     tier: currentMob.tier ?? fallback?.tier ?? null,
@@ -1288,6 +1316,22 @@ export function buildMobStateFromRealtimeEvent(
     : receivedCurrentHp !== undefined && maxHp !== undefined
       ? clampNumber(receivedCurrentHp, 0, Math.max(0, maxHp))
       : receivedCurrentHp;
+  const battleProgress = normalizeBattleProgress(
+    {
+      progressSeconds: event.battleProgressSeconds,
+      progressPercent: event.battleProgressPercent,
+      estimatedKillTimeSeconds: event.estimatedKillTimeSeconds,
+      baseKillTimeSeconds: event.baseKillTimeSeconds,
+      playerOffensivePower: event.playerOffensivePower,
+      monsterRecommendedPower: event.monsterRecommendedPower,
+      killsPerMinute: event.killsPerMinute,
+      killsPerHour: event.killsPerHour,
+      difficultyLabel: event.difficultyLabel,
+      mobIndex: event.mobIndex,
+      tier: fallback?.battleProgress?.tier,
+    },
+    fallback?.battleProgress,
+  );
 
   return {
     ...fallback,
@@ -1304,8 +1348,66 @@ export function buildMobStateFromRealtimeEvent(
       (currentHp !== undefined && maxHp !== undefined
         ? calculatePercent(currentHp, maxHp)
         : fallback?.hpPercent),
+    battleProgress,
 
     updatedAt: Date.now(),
+  };
+}
+
+function normalizeBattleProgress(
+  value?: AutoCombatBattleProgressViewModel | null,
+  fallback?: AutoCombatBattleProgressViewModel | null,
+): AutoCombatBattleProgressViewModel | null {
+  if (!value && !fallback) {
+    return null;
+  }
+
+  const estimatedKillTimeSeconds =
+    getOptionalNumber(value?.estimatedKillTimeSeconds) ??
+    getOptionalNumber(fallback?.estimatedKillTimeSeconds) ??
+    null;
+  const progressSeconds =
+    getOptionalNumber(value?.progressSeconds) ??
+    getOptionalNumber(fallback?.progressSeconds) ??
+    null;
+  const progressPercent =
+    getOptionalNumber(value?.progressPercent) ??
+    (progressSeconds !== null && estimatedKillTimeSeconds
+      ? calculatePercent(progressSeconds, estimatedKillTimeSeconds)
+      : getOptionalNumber(fallback?.progressPercent)) ??
+    null;
+
+  return {
+    progressSeconds,
+    progressPercent,
+    estimatedKillTimeSeconds,
+    baseKillTimeSeconds:
+      getOptionalNumber(value?.baseKillTimeSeconds) ??
+      getOptionalNumber(fallback?.baseKillTimeSeconds) ??
+      null,
+    playerOffensivePower:
+      getOptionalNumber(value?.playerOffensivePower) ??
+      getOptionalNumber(fallback?.playerOffensivePower) ??
+      null,
+    monsterRecommendedPower:
+      getOptionalNumber(value?.monsterRecommendedPower) ??
+      getOptionalNumber(fallback?.monsterRecommendedPower) ??
+      null,
+    killsPerMinute:
+      getOptionalNumber(value?.killsPerMinute) ??
+      getOptionalNumber(fallback?.killsPerMinute) ??
+      null,
+    killsPerHour:
+      getOptionalNumber(value?.killsPerHour) ??
+      getOptionalNumber(fallback?.killsPerHour) ??
+      null,
+    difficultyLabel: value?.difficultyLabel ?? fallback?.difficultyLabel ?? null,
+    mobIndex:
+      getOptionalNumber(value?.mobIndex) ??
+      getOptionalNumber(fallback?.mobIndex) ??
+      null,
+    tier:
+      getOptionalNumber(value?.tier) ?? getOptionalNumber(fallback?.tier) ?? null,
   };
 }
 

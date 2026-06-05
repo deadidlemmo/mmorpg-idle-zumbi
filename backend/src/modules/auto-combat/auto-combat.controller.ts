@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AutoCombatGateway } from './auto-combat.gateway';
 import { AutoCombatService } from './auto-combat.service';
 import { PreviewAutoCombatDto } from './dto/preview-auto-combat.dto';
+import { StartAutoCombatBattleDto } from './dto/start-auto-combat-battle.dto';
 import { StartAutoCombatDto } from './dto/start-auto-combat.dto';
 
 @Controller('auto-combat')
@@ -50,8 +51,16 @@ export class AutoCombatController {
   }
 
   @Post(':characterId/battle/start')
-  startBattle(@Req() request: any, @Param('characterId') characterId: string) {
-    return this.autoCombatService.startBattle(request.user.id, characterId);
+  startBattle(
+    @Req() request: any,
+    @Param('characterId') characterId: string,
+    @Body() startBattleDto: StartAutoCombatBattleDto,
+  ) {
+    return this.autoCombatService.startBattle(
+      request.user.id,
+      characterId,
+      startBattleDto,
+    );
   }
 
   @Post('preview')

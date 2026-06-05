@@ -986,6 +986,7 @@ function buildHeroCharacterFromRealtimeState(params: {
   const realtimeSession = getRealtimeSession(realtimeState);
   const realtimeSessionId = realtimeSession?.id ?? null;
   const realtimeSessionIsActive = isRealtimeSessionActive(realtimeState);
+  const statusSession = getStatusSession(realtimeState.status);
 
   const rawRealtimeCharacter = realtimeState.character ?? {};
   const realtimeCharacter =
@@ -998,6 +999,16 @@ function buildHeroCharacterFromRealtimeState(params: {
   const progress = getProgressForCurrentSession(realtimeState, realtimeSessionId);
   const combat = getCombatForCurrentSession(realtimeState, realtimeSessionId);
   const statusHp = realtimeState.status?.sessionSummary?.hp ?? null;
+  const baseCurrentHp = getFirstValidNumber(character.currentHp);
+  const shouldIgnoreTerminalDefeatHp =
+    !realtimeSessionIsActive &&
+    normalizeStatus(statusSession?.status) === 'DEFEATED' &&
+    baseCurrentHp !== undefined &&
+    baseCurrentHp > 0;
+  const statusCharacterForHp = shouldIgnoreTerminalDefeatHp
+    ? {}
+    : statusCharacter;
+  const statusHpForHero = shouldIgnoreTerminalDefeatHp ? null : statusHp;
   const hasPendingVisualEvents = Boolean(
     realtimeSessionIsActive &&
       (realtimeState.activeEvent || (realtimeState.eventQueue?.length ?? 0) > 0),
@@ -1048,8 +1059,8 @@ function buildHeroCharacterFromRealtimeState(params: {
     getFirstValidNumber(
       realtimeSessionIsActive ? combat?.characterCurrentHp : undefined,
       realtimeSessionIsActive ? realtimeCharacter.currentHp : undefined,
-      statusCharacter.currentHp,
-      statusHp?.current,
+      statusCharacterForHp.currentHp,
+      statusHpForHero?.current,
       character.currentHp,
     ) ?? character.currentHp;
 
@@ -1057,13 +1068,12 @@ function buildHeroCharacterFromRealtimeState(params: {
     getFirstValidNumber(
       realtimeSessionIsActive ? combat?.characterMaxHp : undefined,
       realtimeSessionIsActive ? realtimeCharacter.maxHp : undefined,
-      statusCharacter.maxHp,
-      statusHp?.max,
+      statusCharacterForHp.maxHp,
+      statusHpForHero?.max,
       character.maxHp,
     ) ?? character.maxHp;
 
   const statusSubMap = realtimeState.status?.subMap;
-  const statusSession = getStatusSession(realtimeState.status);
   const locationMapName = realtimeState.location?.mapName ?? undefined;
   const statusMapName =
     realtimeState.status?.map?.name ??

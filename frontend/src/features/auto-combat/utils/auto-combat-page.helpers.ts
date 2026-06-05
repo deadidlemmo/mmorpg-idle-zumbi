@@ -22,6 +22,7 @@ import type {
 } from '../types/auto-combat-page.types';
 import type {
   AutoCombatEncounterViewModel,
+  AutoCombatBattleProgressViewModel,
   AutoCombatMapViewModel,
   AutoCombatRealtimeEvent,
   AutoCombatSessionApiViewModel,
@@ -1257,6 +1258,12 @@ export function getRealtimeCombat(state: AutoCombatRealtimeStateLoose) {
     null;
   const status = getRealtimeStatus(state);
   const session = state.session ?? state.activeSession ?? getSessionFromStatus(status);
+  const mobWithBattleProgress = mob as
+    | { battleProgress?: AutoCombatBattleProgressViewModel | null }
+    | null
+    | undefined;
+  const battleProgress =
+    mobWithBattleProgress?.battleProgress ?? session?.battleProgress ?? null;
 
   if (!mob && !character && !visual && !totals && !session) {
     return null;
@@ -1288,6 +1295,18 @@ export function getRealtimeCombat(state: AutoCombatRealtimeStateLoose) {
     round: session?.currentRound ?? null,
     combatIndex:
       session?.currentCombatIndex ?? totals?.currentCombatIndex ?? null,
+    battleProgressSeconds: battleProgress?.progressSeconds ?? null,
+    battleProgressPercent: battleProgress?.progressPercent ?? null,
+    estimatedKillTimeSeconds:
+      battleProgress?.estimatedKillTimeSeconds ?? null,
+    baseKillTimeSeconds: battleProgress?.baseKillTimeSeconds ?? null,
+    playerOffensivePower: battleProgress?.playerOffensivePower ?? null,
+    monsterRecommendedPower:
+      battleProgress?.monsterRecommendedPower ?? null,
+    killsPerMinute: battleProgress?.killsPerMinute ?? null,
+    killsPerHour: battleProgress?.killsPerHour ?? null,
+    difficultyLabel: battleProgress?.difficultyLabel ?? null,
+    mobIndex: battleProgress?.mobIndex ?? null,
 
     totalCombats: totals?.totalCombats ?? null,
     totalRounds: totals?.totalRounds ?? null,
@@ -1302,8 +1321,8 @@ export function getRealtimeCombat(state: AutoCombatRealtimeStateLoose) {
     potionsUsed: totals?.potionsUsed ?? null,
 
     updatedAt:
-      visual?.updatedAt ??
       mob?.updatedAt ??
+      visual?.updatedAt ??
       character?.updatedAt ??
       totals?.updatedAt ??
       Date.now(),

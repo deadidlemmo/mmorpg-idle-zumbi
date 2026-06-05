@@ -2,17 +2,18 @@ import type {
   DashboardCharacterViewModel,
   DashboardEquipmentItem,
   DashboardPotionConfigViewModel,
-} from '../../dashboard/types/dashboard.types';
+} from "../../dashboard/types/dashboard.types";
 import type {
   AutoCombatRealtimeEvent,
   AutoCombatSessionApiViewModel,
   AutoCombatStatusResponse,
-} from './auto-combat.types';
+  StartAutoCombatBattlePayload,
+} from "./auto-combat.types";
 
-export type AutoCombatTab = 'battle' | 'stats';
+export type AutoCombatTab = "battle" | "stats";
 
-export type RealtimeActor = 'PLAYER' | 'MOB' | 'SYSTEM';
-export type RealtimeTarget = 'PLAYER' | 'MOB' | 'SYSTEM';
+export type RealtimeActor = "PLAYER" | "MOB" | "SYSTEM";
+export type RealtimeTarget = "PLAYER" | "MOB" | "SYSTEM";
 
 export type LooseLevelProgressSource = {
   level?: number | null;
@@ -66,7 +67,7 @@ export type PotionEquipmentItem = DashboardEquipmentItem & {
 
 export type CharacterPotionConfigWithItem = Omit<
   DashboardPotionConfigViewModel,
-  'potion' | 'potionItem'
+  "potion" | "potionItem"
 > & {
   autoRestEnabled?: boolean | null;
   autoRestStartHpPercent?: number | null;
@@ -77,7 +78,7 @@ export type CharacterPotionConfigWithItem = Omit<
 
 export type CharacterWithSinglePotionConfig = Omit<
   CharacterViewModelWithLayoutFields,
-  'potionConfig' | 'potionConfigs' | 'autoPotionConfig'
+  "potionConfig" | "potionConfigs" | "autoPotionConfig"
 > & {
   potionConfig?: CharacterPotionConfigWithItem | null;
   potionConfigs?: CharacterPotionConfigWithItem[];
@@ -175,6 +176,16 @@ export type RealtimeCombatState = {
 
   round?: number | null;
   combatIndex?: number | null;
+  battleProgressSeconds?: number | null;
+  battleProgressPercent?: number | null;
+  estimatedKillTimeSeconds?: number | null;
+  baseKillTimeSeconds?: number | null;
+  playerOffensivePower?: number | null;
+  monsterRecommendedPower?: number | null;
+  killsPerMinute?: number | null;
+  killsPerHour?: number | null;
+  difficultyLabel?: string | null;
+  mobIndex?: number | null;
 
   totalCombats?: number | null;
   totalRounds?: number | null;
@@ -353,13 +364,13 @@ export type AutoCombatRealtimeActions = {
 
   stopHunt?: () => Promise<AutoCombatStatusResponse>;
 
-  startBattle?: () => Promise<AutoCombatStatusResponse>;
+  startBattle?: (
+    payload?: StartAutoCombatBattlePayload,
+  ) => Promise<AutoCombatStatusResponse>;
 
   stop?: () => Promise<AutoCombatStatusResponse>;
 
-  stopAutoCombat?: (
-    characterId?: string,
-  ) => Promise<AutoCombatStatusResponse>;
+  stopAutoCombat?: (characterId?: string) => Promise<AutoCombatStatusResponse>;
 };
 
 export type AutoCombatRealtimeEventLoose = AutoCombatRealtimeEvent & {

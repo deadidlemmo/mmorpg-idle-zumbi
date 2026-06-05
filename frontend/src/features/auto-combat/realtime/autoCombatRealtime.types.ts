@@ -1,28 +1,31 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
-} from '../../dashboard/types/dashboard.types';
+} from "../../dashboard/types/dashboard.types";
 import type {
   AutoCombatRealtimeEvent,
   AutoCombatRealtimePhase,
   AutoCombatStatusResponse,
+  AutoCombatBattleProgressViewModel,
+  AutoCombatBattleSelectionViewModel,
+  StartAutoCombatBattlePayload,
   StartAutoCombatPayload,
-} from '../types/auto-combat.types';
-import type { AutoCombatRealtimeState as AutoCombatRealtimeReducerState } from './autoCombatRealtime.reducer';
+} from "../types/auto-combat.types";
+import type { AutoCombatRealtimeState as AutoCombatRealtimeReducerState } from "./autoCombatRealtime.reducer";
 
 export type AutoCombatRealtimeSessionStatus =
-  | 'ACTIVE'
-  | 'STOPPED'
-  | 'FINISHED'
-  | 'DEFEATED'
-  | 'FAILED'
-  | 'CANCELLED'
+  | "ACTIVE"
+  | "STOPPED"
+  | "FINISHED"
+  | "DEFEATED"
+  | "FAILED"
+  | "CANCELLED"
   | string;
 
-export type AutoCombatRealtimeActor = 'PLAYER' | 'MOB' | 'SYSTEM' | string;
+export type AutoCombatRealtimeActor = "PLAYER" | "MOB" | "SYSTEM" | string;
 
-export type AutoCombatRealtimeTarget = 'PLAYER' | 'MOB' | 'SYSTEM' | string;
+export type AutoCombatRealtimeTarget = "PLAYER" | "MOB" | "SYSTEM" | string;
 
 export type AutoCombatRealtimeDelayMap = {
   MOB_SPAWNED: number;
@@ -76,6 +79,7 @@ export type AutoCombatRealtimeMobState = {
 
   level?: number | null;
   tier?: number | null;
+  battleProgress?: AutoCombatBattleProgressViewModel | null;
 
   updatedAt?: number;
 };
@@ -105,10 +109,16 @@ export type AutoCombatRealtimeSessionState = {
   /**
    * Índice do combate atual.
    * Exemplo: se 10 mobs foram abatidos, normalmente o combate atual é 11.
-  */
+   */
   currentCombatIndex?: number | null;
   enemyInstanceId?: string | null;
   currentEnemyInstanceId?: string | null;
+  battleTargetMobId?: string | null;
+  battleTargetEncounterId?: string | null;
+  battleTargetTotal?: number | null;
+  battleTargetRemaining?: number | null;
+  battleSelection?: AutoCombatBattleSelectionViewModel | null;
+  battleProgress?: AutoCombatBattleProgressViewModel | null;
   snapshotSequence?: number | null;
   latestEventSequence?: number | null;
   phase?: AutoCombatRealtimePhase | null;
@@ -279,53 +289,52 @@ export type AutoCombatRealtimeHydrateOverviewPayload = {
 
 export type AutoCombatRealtimeHydrateStatusPayload = {
   status: AutoCombatStatusResponse | null;
-  source?: 'socket' | 'api' | 'start' | 'stop' | 'fallback';
+  source?: "socket" | "api" | "start" | "stop" | "fallback";
 };
 
-export type AutoCombatRealtimeSetSocketStatePayload = Partial<
-  AutoCombatRealtimeSocketState
->;
+export type AutoCombatRealtimeSetSocketStatePayload =
+  Partial<AutoCombatRealtimeSocketState>;
 
 export type AutoCombatRealtimeAction =
   | {
-      type: 'RESET_CHARACTER';
+      type: "RESET_CHARACTER";
       characterId: string | null;
     }
   | {
-      type: 'HYDRATE_FROM_OVERVIEW';
+      type: "HYDRATE_FROM_OVERVIEW";
       payload: AutoCombatRealtimeHydrateOverviewPayload;
     }
   | {
-      type: 'HYDRATE_FROM_STATUS';
+      type: "HYDRATE_FROM_STATUS";
       payload: AutoCombatRealtimeHydrateStatusPayload;
     }
   | {
-      type: 'ENQUEUE_EVENT';
+      type: "ENQUEUE_EVENT";
       event: AutoCombatRealtimeEvent;
     }
   | {
-      type: 'PROCESS_NEXT_EVENT';
+      type: "PROCESS_NEXT_EVENT";
     }
   | {
-      type: 'FINISH_EVENT_PROCESSING';
+      type: "FINISH_EVENT_PROCESSING";
       eventKey?: string;
     }
   | {
-      type: 'CLEAR_QUEUE';
+      type: "CLEAR_QUEUE";
     }
   | {
-      type: 'CLEAR_SESSION';
+      type: "CLEAR_SESSION";
     }
   | {
-      type: 'SET_SOCKET_STATE';
+      type: "SET_SOCKET_STATE";
       payload: AutoCombatRealtimeSetSocketStatePayload;
     }
   | {
-      type: 'SET_ERROR';
+      type: "SET_ERROR";
       message: string;
     }
   | {
-      type: 'CLEAR_ERROR';
+      type: "CLEAR_ERROR";
     };
 
 export type AutoCombatRealtimeContextValue = {
@@ -376,7 +385,9 @@ export type AutoCombatRealtimeContextValue = {
   reload: () => Promise<void>;
   start: (payload: StartAutoCombatPayload) => Promise<AutoCombatStatusResponse>;
   stopHunt: () => Promise<AutoCombatStatusResponse>;
-  startBattle: () => Promise<AutoCombatStatusResponse>;
+  startBattle: (
+    payload?: StartAutoCombatBattlePayload,
+  ) => Promise<AutoCombatStatusResponse>;
   stop: () => Promise<AutoCombatStatusResponse>;
 };
 
@@ -389,7 +400,7 @@ export const AUTO_COMBAT_REALTIME_INITIAL_SOCKET_STATE: AutoCombatRealtimeSocket
   {
     isConnected: false,
     isJoined: false,
-    errorMessage: '',
+    errorMessage: "",
   };
 
 export const AUTO_COMBAT_REALTIME_INITIAL_STATE: AutoCombatRealtimeState = {

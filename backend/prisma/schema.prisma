@@ -841,15 +841,19 @@ model AutoCombatSession {
 
   roundDurationSeconds Int @default(1)
 
-  huntStartedAt          DateTime?
-  huntStoppedAt          DateTime?
-  lastHuntProcessedAt    DateTime?
-  huntingLevelAtStart    Int       @default(1)
-  huntingXpGained        Int       @default(0)
-  foundEnemiesCount      Int       @default(0)
-  bonusEnemiesFound      Int       @default(0)
-  selectedEncounterId    String?
-  selectedEncounterMobId String?
+  huntStartedAt           DateTime?
+  huntStoppedAt           DateTime?
+  lastHuntProcessedAt     DateTime?
+  huntingLevelAtStart     Int       @default(1)
+  huntingXpGained         Int       @default(0)
+  foundEnemiesCount       Int       @default(0)
+  bonusEnemiesFound       Int       @default(0)
+  selectedEncounterId     String?
+  selectedEncounterMobId  String?
+  battleTargetMobId       String?
+  battleTargetEncounterId String?
+  battleTargetTotal       Int       @default(0)
+  battleTargetRemaining   Int       @default(0)
 
   totalCombatsResolved Int @default(0)
   totalRoundsResolved  Int @default(0)
@@ -859,6 +863,12 @@ model AutoCombatSession {
   currentMobId       String?
   currentMobHp       Int?
   currentMobMaxHp    Int?
+  killProgressSeconds       Float @default(0)
+  estimatedKillTimeSeconds  Float?
+  baseKillTimeSeconds       Float?
+  playerOffensivePower      Float?
+  monsterRecommendedPower   Float?
+  currentMobIndex           Int?
   currentRound       Int     @default(0)
   currentCombatIndex Int     @default(1)
 
@@ -882,6 +892,8 @@ model AutoCombatSession {
   @@index([subMapId])
   @@index([currentMobId])
   @@index([selectedEncounterId])
+  @@index([battleTargetMobId])
+  @@index([battleTargetEncounterId])
   @@index([status])
   @@index([phase])
   @@index([characterId, status])

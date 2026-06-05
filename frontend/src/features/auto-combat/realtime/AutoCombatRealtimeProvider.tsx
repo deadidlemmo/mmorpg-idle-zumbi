@@ -5,13 +5,13 @@ import {
   useReducer,
   useRef,
   type ReactNode,
-} from 'react';
-import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
+} from "react";
+import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import {
   useLootNotifications,
   type LootNotificationPayload,
-} from '../../loot-notifications/lootNotificationContext';
-import type { CharacterOverviewResponse } from '../../dashboard/types/dashboard.types';
+} from "../../loot-notifications/lootNotificationContext";
+import type { CharacterOverviewResponse } from "../../dashboard/types/dashboard.types";
 import {
   getAutoCombatRecentEvents,
   getAutoCombatStatus,
@@ -19,28 +19,29 @@ import {
   startAutoCombatBattle,
   stopAutoCombat,
   stopAutoCombatHunt,
-} from '../api/auto-combat.api';
-import { useAutoCombatSocket } from '../hooks/useAutoCombatSocket';
+} from "../api/auto-combat.api";
+import { useAutoCombatSocket } from "../hooks/useAutoCombatSocket";
 import type {
   AutoCombatRealtimeEvent,
   AutoCombatRewardLootViewModel,
   AutoCombatStatusResponse,
+  StartAutoCombatBattlePayload,
   StartAutoCombatPayload,
-} from '../types/auto-combat.types';
+} from "../types/auto-combat.types";
 import {
   autoCombatRealtimeReducer,
   initialAutoCombatRealtimeState,
   type AutoCombatRealtimeState,
-} from './autoCombatRealtime.reducer';
-import { AutoCombatRealtimeContext } from './autoCombatRealtime.context';
-import type { AutoCombatRealtimeContextValue } from './autoCombatRealtime.types';
+} from "./autoCombatRealtime.reducer";
+import { AutoCombatRealtimeContext } from "./autoCombatRealtime.context";
+import type { AutoCombatRealtimeContextValue } from "./autoCombatRealtime.types";
 import {
   buildMobSpawnedEventFromStatus,
   getRealtimeEventDelay,
   getStatusSession,
   isStatusActive,
   isTerminalSessionStatus,
-} from './autoCombatRealtime.utils';
+} from "./autoCombatRealtime.utils";
 
 interface AutoCombatRealtimeProviderProps {
   characterId?: string | null;
@@ -94,7 +95,7 @@ function getLootQuantity(loot: AutoCombatRewardLootViewModel) {
 function getLootItemName(loot: AutoCombatRewardLootViewModel) {
   const looseLoot = loot as AutoCombatLootWithOptionalIcon;
 
-  return String(looseLoot.itemName ?? looseLoot.item?.name ?? 'Item').trim();
+  return String(looseLoot.itemName ?? looseLoot.item?.name ?? "Item").trim();
 }
 
 function getLootImageUrl(loot: AutoCombatRewardLootViewModel) {
@@ -109,7 +110,7 @@ function getLootImageUrl(loot: AutoCombatRewardLootViewModel) {
     looseLoot.iconPath ??
     looseLoot.icon;
 
-  if (typeof possibleImage !== 'string') {
+  if (typeof possibleImage !== "string") {
     return null;
   }
 
@@ -171,10 +172,10 @@ function shouldTreatStatusLootAsCatchUp(status: AutoCombatStatusResponse) {
 
   return Boolean(
     processing.catchUp ||
-      getAutoCombatStatusNumber(processing.actionsAvailable) > 1 ||
-      getAutoCombatStatusNumber(processing.actionsProcessed) > 1 ||
-      getAutoCombatStatusNumber(processing.eventsSuppressed) > 0 ||
-      processing.processingLimited,
+    getAutoCombatStatusNumber(processing.actionsAvailable) > 1 ||
+    getAutoCombatStatusNumber(processing.actionsProcessed) > 1 ||
+    getAutoCombatStatusNumber(processing.eventsSuppressed) > 0 ||
+    processing.processingLimited,
   );
 }
 
@@ -210,7 +211,7 @@ function getApiErrorMessage(error: unknown, fallback: string) {
   const message = apiError.response?.data?.message;
 
   if (Array.isArray(message)) {
-    return message.join(' ');
+    return message.join(" ");
   }
 
   return message ?? apiError.message ?? fallback;
@@ -254,19 +255,19 @@ function isSameSession(
 }
 
 function isDocumentVisible() {
-  if (typeof document === 'undefined') {
+  if (typeof document === "undefined") {
     return true;
   }
 
-  return document.visibilityState === 'visible';
+  return document.visibilityState === "visible";
 }
 
 function hasDocumentFocus() {
-  if (typeof document === 'undefined') {
+  if (typeof document === "undefined") {
     return true;
   }
 
-  if (typeof document.hasFocus !== 'function') {
+  if (typeof document.hasFocus !== "function") {
     return true;
   }
 
@@ -278,11 +279,11 @@ function isUiBackgrounded() {
 }
 
 function isBrowserOnline() {
-  if (typeof navigator === 'undefined') {
+  if (typeof navigator === "undefined") {
     return true;
   }
 
-  if (typeof navigator.onLine !== 'boolean') {
+  if (typeof navigator.onLine !== "boolean") {
     return true;
   }
 
@@ -419,9 +420,9 @@ function normalizeInitialMobSpawnedEvent(params: {
     characterId: event.characterId ?? characterId,
     createdAt:
       event.createdAt ??
-      `initial-spawn-${sessionId ?? 'no-session'}-${
+      `initial-spawn-${sessionId ?? "no-session"}-${
         event.combatIndex ?? 1
-      }-${event.enemyInstanceId ?? event.mobId ?? event.mobName ?? 'mob'}`,
+      }-${event.enemyInstanceId ?? event.mobId ?? event.mobName ?? "mob"}`,
   };
 }
 
@@ -429,7 +430,7 @@ function getLooseEventSequence(event?: AutoCombatRealtimeEvent | null) {
   const value = (event as unknown as { sequence?: unknown } | null | undefined)
     ?.sequence;
 
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     return null;
   }
 
@@ -439,7 +440,7 @@ function getLooseEventSequence(event?: AutoCombatRealtimeEvent | null) {
 }
 
 function getStableStatusSignature(status: AutoCombatStatusResponse | null) {
-  if (!status) return 'null';
+  if (!status) return "null";
 
   try {
     return JSON.stringify(status);
@@ -492,7 +493,7 @@ export function AutoCombatRealtimeProvider({
 
   useEffect(() => {
     dispatch({
-      type: 'SET_CHARACTER_ID',
+      type: "SET_CHARACTER_ID",
       characterId: normalizedCharacterId,
     });
 
@@ -532,7 +533,7 @@ export function AutoCombatRealtimeProvider({
     clearScheduledActiveEvent();
 
     dispatch({
-      type: 'FLUSH_EVENT_QUEUE',
+      type: "FLUSH_EVENT_QUEUE",
     });
   }, [clearScheduledActiveEvent]);
 
@@ -540,7 +541,7 @@ export function AutoCombatRealtimeProvider({
     flushVisualQueueWithoutAnimation();
 
     dispatch({
-      type: 'SET_SYNCHRONIZING',
+      type: "SET_SYNCHRONIZING",
       isSynchronizing: true,
       clearCombatView: true,
     });
@@ -551,7 +552,7 @@ export function AutoCombatRealtimeProvider({
       if (!normalizedCharacterId) return;
 
       dispatch({
-        type: 'HYDRATE_OVERVIEW',
+        type: "HYDRATE_OVERVIEW",
         characterId: normalizedCharacterId,
         overview,
       });
@@ -564,7 +565,7 @@ export function AutoCombatRealtimeProvider({
       if (!normalizedCharacterId) return;
 
       dispatch({
-        type: 'HYDRATE_STATUS',
+        type: "HYDRATE_STATUS",
         characterId: normalizedCharacterId,
         status,
       });
@@ -590,7 +591,7 @@ export function AutoCombatRealtimeProvider({
       lastInactiveStatusSignatureRef.current = null;
 
       dispatch({
-        type: 'ENQUEUE_EVENT',
+        type: "ENQUEUE_EVENT",
         characterId: normalizedCharacterId,
         event,
       });
@@ -600,7 +601,7 @@ export function AutoCombatRealtimeProvider({
 
   const clearRealtimeQueue = useCallback(() => {
     dispatch({
-      type: 'CLEAR_QUEUE',
+      type: "CLEAR_QUEUE",
     });
   }, []);
 
@@ -608,13 +609,15 @@ export function AutoCombatRealtimeProvider({
     clearScheduledActiveEvent();
 
     dispatch({
-      type: 'CLEAR_SESSION_VISUAL_STATE',
+      type: "CLEAR_SESSION_VISUAL_STATE",
     });
   }, [clearScheduledActiveEvent]);
 
-
   const publishConfirmedLootNotifications = useCallback(
-    (status: AutoCombatStatusResponse | null, releasedLootTotal?: number | null) => {
+    (
+      status: AutoCombatStatusResponse | null,
+      releasedLootTotal?: number | null,
+    ) => {
       if (!normalizedCharacterId || !status) return;
 
       const session = getStatusSession(status);
@@ -690,19 +693,19 @@ export function AutoCombatRealtimeProvider({
 
         lootBatch.push({
           idempotencyKey: [
-            'auto-combat',
+            "auto-combat",
             normalizedCharacterId,
-            sessionId ?? 'no-session',
+            sessionId ?? "no-session",
             itemId,
             previousQuantity,
             nextQuantity,
-          ].join('|'),
+          ].join("|"),
           itemId,
           itemName: getLootItemName(loot),
           quantity: receivedQuantity,
           imageUrl: getLootImageUrl(loot),
           rarity: loot.rarity,
-          source: 'auto-combat',
+          source: "auto-combat",
         });
       }
 
@@ -738,15 +741,15 @@ export function AutoCombatRealtimeProvider({
 
       if (!isBrowserOnline()) {
         pendingReloadOptionsRef.current = options ?? {
-          reason: 'network-offline',
+          reason: "network-offline",
         };
 
         dispatch({
-          type: 'SET_CONNECTION',
+          type: "SET_CONNECTION",
           isConnected: false,
           isJoined: false,
           errorMessage:
-            'Conexão indisponível. O combate será sincronizado ao reconectar.',
+            "Conexão indisponível. O combate será sincronizado ao reconectar.",
         });
 
         return;
@@ -754,7 +757,7 @@ export function AutoCombatRealtimeProvider({
 
       if (isLoadingRef.current) {
         pendingReloadOptionsRef.current = options ?? {
-          reason: 'queued-while-loading',
+          reason: "queued-while-loading",
         };
         return;
       }
@@ -795,7 +798,7 @@ export function AutoCombatRealtimeProvider({
           }
 
           dispatch({
-            type: 'CLEAR_ERROR',
+            type: "CLEAR_ERROR",
           });
 
           return;
@@ -805,7 +808,7 @@ export function AutoCombatRealtimeProvider({
 
         if (overviewData) {
           dispatch({
-            type: 'HYDRATE_OVERVIEW',
+            type: "HYDRATE_OVERVIEW",
             characterId: normalizedCharacterId,
             overview: overviewData,
           });
@@ -813,21 +816,21 @@ export function AutoCombatRealtimeProvider({
 
         if (statusData) {
           dispatch({
-            type: 'HYDRATE_STATUS',
+            type: "HYDRATE_STATUS",
             characterId: normalizedCharacterId,
             status: statusData,
           });
         }
 
         dispatch({
-          type: 'CLEAR_ERROR',
+          type: "CLEAR_ERROR",
         });
       } catch (error) {
         dispatch({
-          type: 'SET_ERROR',
+          type: "SET_ERROR",
           errorMessage: getApiErrorMessage(
             error,
-            'Não foi possível carregar o estado em tempo real do auto-combate.',
+            "Não foi possível carregar o estado em tempo real do auto-combate.",
           ),
         });
       } finally {
@@ -902,7 +905,7 @@ export function AutoCombatRealtimeProvider({
           currentState.session?.snapshotSequence,
         ].filter(
           (value): value is number =>
-            typeof value === 'number' && Number.isFinite(value),
+            typeof value === "number" && Number.isFinite(value),
         );
         const afterSequence =
           knownSequences.length > 0 ? Math.max(...knownSequences) : null;
@@ -925,15 +928,15 @@ export function AutoCombatRealtimeProvider({
           flushVisualQueueWithoutAnimation();
 
           dispatch({
-            type: 'CLEAR_QUEUE',
+            type: "CLEAR_QUEUE",
           });
 
           void reload({
-            reason: 'recent-events-gap',
+            reason: "recent-events-gap",
           });
 
           if (import.meta.env.DEV) {
-            console.debug('[auto-combat:reconcile-recent-events:gap]', {
+            console.debug("[auto-combat:reconcile-recent-events:gap]", {
               reason,
               sessionId,
               afterSequence,
@@ -947,7 +950,7 @@ export function AutoCombatRealtimeProvider({
         }
 
         dispatch({
-          type: 'HYDRATE_RECENT_EVENTS',
+          type: "HYDRATE_RECENT_EVENTS",
           characterId: normalizedCharacterId,
           sessionId,
           events,
@@ -955,7 +958,7 @@ export function AutoCombatRealtimeProvider({
         });
 
         if (import.meta.env.DEV) {
-          console.debug('[auto-combat:reconcile-recent-events]', {
+          console.debug("[auto-combat:reconcile-recent-events]", {
             reason,
             active: response.active,
             hasActiveAutoCombat: response.hasActiveAutoCombat,
@@ -974,7 +977,7 @@ export function AutoCombatRealtimeProvider({
         }
       } catch (error) {
         if (import.meta.env.DEV) {
-          console.debug('[auto-combat:reconcile-recent-events:error]', {
+          console.debug("[auto-combat:reconcile-recent-events:error]", {
             reason,
             error,
           });
@@ -1013,7 +1016,7 @@ export function AutoCombatRealtimeProvider({
   const start = useCallback(
     async (payload: StartAutoCombatPayload) => {
       if (!normalizedCharacterId) {
-        throw new Error('Personagem não informado.');
+        throw new Error("Personagem não informado.");
       }
 
       try {
@@ -1028,7 +1031,7 @@ export function AutoCombatRealtimeProvider({
         const sessionId = session?.id ?? null;
 
         dispatch({
-          type: 'HYDRATE_STATUS',
+          type: "HYDRATE_STATUS",
           characterId: normalizedCharacterId,
           status: response,
         });
@@ -1038,7 +1041,10 @@ export function AutoCombatRealtimeProvider({
           session,
         });
 
-        if (initialMobSpawnedEvent && !isTerminalSessionStatus(session?.status)) {
+        if (
+          initialMobSpawnedEvent &&
+          !isTerminalSessionStatus(session?.status)
+        ) {
           const normalizedEvent = normalizeInitialMobSpawnedEvent({
             event: initialMobSpawnedEvent,
             characterId: normalizedCharacterId,
@@ -1046,29 +1052,29 @@ export function AutoCombatRealtimeProvider({
           });
 
           dispatch({
-            type: 'ENQUEUE_EVENT',
+            type: "ENQUEUE_EVENT",
             characterId: normalizedCharacterId,
             event: normalizedEvent,
           });
         }
 
         dispatch({
-          type: 'CLEAR_ERROR',
+          type: "CLEAR_ERROR",
         });
 
         scheduleReload(AFTER_START_RELOAD_DELAY_MS, {
-          reason: 'after-start',
+          reason: "after-start",
         });
 
         return response;
       } catch (error) {
         const message = getApiErrorMessage(
           error,
-          'Não foi possível iniciar o combate automático.',
+          "Não foi possível iniciar o combate automático.",
         );
 
         dispatch({
-          type: 'SET_ERROR',
+          type: "SET_ERROR",
           errorMessage: message,
         });
 
@@ -1085,7 +1091,7 @@ export function AutoCombatRealtimeProvider({
 
   const stopHunt = useCallback(async () => {
     if (!normalizedCharacterId) {
-      throw new Error('Personagem nÃ£o informado.');
+      throw new Error("Personagem nÃ£o informado.");
     }
 
     try {
@@ -1095,32 +1101,32 @@ export function AutoCombatRealtimeProvider({
       const response = await stopAutoCombatHunt(normalizedCharacterId);
 
       dispatch({
-        type: 'HYDRATE_STATUS',
+        type: "HYDRATE_STATUS",
         characterId: normalizedCharacterId,
         status: response,
       });
 
       dispatch({
-        type: 'CLEAR_QUEUE',
+        type: "CLEAR_QUEUE",
       });
 
       dispatch({
-        type: 'CLEAR_ERROR',
+        type: "CLEAR_ERROR",
       });
 
       scheduleReload(AFTER_START_RELOAD_DELAY_MS, {
-        reason: 'after-stop-hunt',
+        reason: "after-stop-hunt",
       });
 
       return response;
     } catch (error) {
       const message = getApiErrorMessage(
         error,
-        'NÃ£o foi possÃ­vel parar a caÃ§a.',
+        "NÃ£o foi possÃ­vel parar a caÃ§a.",
       );
 
       dispatch({
-        type: 'SET_ERROR',
+        type: "SET_ERROR",
         errorMessage: message,
       });
 
@@ -1133,79 +1139,83 @@ export function AutoCombatRealtimeProvider({
     scheduleReload,
   ]);
 
-  const startBattle = useCallback(async () => {
-    if (!normalizedCharacterId) {
-      throw new Error('Personagem nÃ£o informado.');
-    }
-
-    try {
-      lastInactiveStatusSignatureRef.current = null;
-      suppressLootNotificationsUntilCatchUpRef.current = false;
-      lootSuppressionRequiresFreshStatusRef.current = false;
-      clearScheduledReload();
-      clearSessionVisualState();
-
-      const response = await startAutoCombatBattle(normalizedCharacterId);
-      const session = getStatusSession(response);
-      const sessionId = session?.id ?? null;
-
-      dispatch({
-        type: 'HYDRATE_STATUS',
-        characterId: normalizedCharacterId,
-        status: response,
-      });
-
-      const initialMobSpawnedEvent = buildMobSpawnedEventFromStatus({
-        status: response,
-        session,
-      });
-
-      if (initialMobSpawnedEvent && !isTerminalSessionStatus(session?.status)) {
-        const normalizedEvent = normalizeInitialMobSpawnedEvent({
-          event: initialMobSpawnedEvent,
-          characterId: normalizedCharacterId,
-          sessionId,
-        });
-
-        dispatch({
-          type: 'ENQUEUE_EVENT',
-          characterId: normalizedCharacterId,
-          event: normalizedEvent,
-        });
+  const startBattle = useCallback(
+    async (payload?: StartAutoCombatBattlePayload) => {
+      if (!normalizedCharacterId) {
+        throw new Error("Personagem nÃ£o informado.");
       }
 
-      dispatch({
-        type: 'CLEAR_ERROR',
-      });
+      try {
+        lastInactiveStatusSignatureRef.current = null;
+        suppressLootNotificationsUntilCatchUpRef.current = false;
+        lootSuppressionRequiresFreshStatusRef.current = false;
+        clearScheduledReload();
+        clearSessionVisualState();
 
-      scheduleReload(AFTER_START_RELOAD_DELAY_MS, {
-        reason: 'after-start-battle',
-      });
+        const response = await startAutoCombatBattle(
+          normalizedCharacterId,
+          payload,
+        );
+        const session = getStatusSession(response);
+        const sessionId = session?.id ?? null;
 
-      return response;
-    } catch (error) {
-      const message = getApiErrorMessage(
-        error,
-        'NÃ£o foi possÃ­vel iniciar o combate.',
-      );
+        dispatch({
+          type: "HYDRATE_STATUS",
+          characterId: normalizedCharacterId,
+          status: response,
+        });
 
-      dispatch({
-        type: 'SET_ERROR',
-        errorMessage: message,
-      });
+        const initialMobSpawnedEvent = buildMobSpawnedEventFromStatus({
+          status: response,
+          session,
+        });
 
-      throw error;
-    }
-  }, [
-    clearScheduledReload,
-    clearSessionVisualState,
-    normalizedCharacterId,
-    scheduleReload,
-  ]);
+        if (
+          initialMobSpawnedEvent &&
+          !isTerminalSessionStatus(session?.status)
+        ) {
+          const normalizedEvent = normalizeInitialMobSpawnedEvent({
+            event: initialMobSpawnedEvent,
+            characterId: normalizedCharacterId,
+            sessionId,
+          });
+
+          dispatch({
+            type: "ENQUEUE_EVENT",
+            characterId: normalizedCharacterId,
+            event: normalizedEvent,
+          });
+        }
+
+        dispatch({
+          type: "CLEAR_ERROR",
+        });
+
+        return response;
+      } catch (error) {
+        const message = getApiErrorMessage(
+          error,
+          "NÃ£o foi possÃ­vel iniciar o combate.",
+        );
+
+        dispatch({
+          type: "SET_ERROR",
+          errorMessage: message,
+        });
+
+        throw error;
+      }
+    },
+    [
+      clearScheduledReload,
+      clearSessionVisualState,
+      normalizedCharacterId,
+    ],
+  );
 
   const stop = useCallback(async () => {
     if (!normalizedCharacterId) {
-      throw new Error('Personagem não informado.');
+      throw new Error("Personagem não informado.");
     }
 
     try {
@@ -1213,20 +1223,21 @@ export function AutoCombatRealtimeProvider({
 
       const response = await stopAutoCombat(normalizedCharacterId);
 
-      lastInactiveStatusSignatureRef.current = getStableStatusSignature(response);
+      lastInactiveStatusSignatureRef.current =
+        getStableStatusSignature(response);
 
       dispatch({
-        type: 'HYDRATE_STATUS',
+        type: "HYDRATE_STATUS",
         characterId: normalizedCharacterId,
         status: response,
       });
 
       dispatch({
-        type: 'CLEAR_QUEUE',
+        type: "CLEAR_QUEUE",
       });
 
       dispatch({
-        type: 'CLEAR_ERROR',
+        type: "CLEAR_ERROR",
       });
 
       clearScheduledReload();
@@ -1235,11 +1246,11 @@ export function AutoCombatRealtimeProvider({
     } catch (error) {
       const message = getApiErrorMessage(
         error,
-        'Não foi possível parar o combate automático.',
+        "Não foi possível parar o combate automático.",
       );
 
       dispatch({
-        type: 'SET_ERROR',
+        type: "SET_ERROR",
         errorMessage: message,
       });
 
@@ -1280,7 +1291,7 @@ export function AutoCombatRealtimeProvider({
       }
 
       dispatch({
-        type: 'HYDRATE_STATUS',
+        type: "HYDRATE_STATUS",
         characterId: normalizedCharacterId,
         status: payload,
       });
@@ -1298,17 +1309,18 @@ export function AutoCombatRealtimeProvider({
 
       flushVisualQueueWithoutAnimation();
 
-      lastInactiveStatusSignatureRef.current = getStableStatusSignature(payload);
+      lastInactiveStatusSignatureRef.current =
+        getStableStatusSignature(payload);
       lootSuppressionRequiresFreshStatusRef.current = false;
 
       dispatch({
-        type: 'HYDRATE_STATUS',
+        type: "HYDRATE_STATUS",
         characterId: normalizedCharacterId,
         status: payload,
       });
 
       dispatch({
-        type: 'CLEAR_QUEUE',
+        type: "CLEAR_QUEUE",
       });
 
       clearScheduledReload();
@@ -1326,17 +1338,18 @@ export function AutoCombatRealtimeProvider({
 
       flushVisualQueueWithoutAnimation();
 
-      lastInactiveStatusSignatureRef.current = getStableStatusSignature(payload);
+      lastInactiveStatusSignatureRef.current =
+        getStableStatusSignature(payload);
       lootSuppressionRequiresFreshStatusRef.current = false;
 
       dispatch({
-        type: 'HYDRATE_STATUS',
+        type: "HYDRATE_STATUS",
         characterId: normalizedCharacterId,
         status: payload,
       });
 
       dispatch({
-        type: 'CLEAR_QUEUE',
+        type: "CLEAR_QUEUE",
       });
 
       clearScheduledReload();
@@ -1374,7 +1387,7 @@ export function AutoCombatRealtimeProvider({
       lastInactiveStatusSignatureRef.current = null;
 
       dispatch({
-        type: 'ENQUEUE_EVENT',
+        type: "ENQUEUE_EVENT",
         characterId: normalizedCharacterId,
         event: payload,
       });
@@ -1406,7 +1419,7 @@ export function AutoCombatRealtimeProvider({
 
     onError: (message) => {
       dispatch({
-        type: 'SET_ERROR',
+        type: "SET_ERROR",
         errorMessage: message,
       });
     },
@@ -1414,16 +1427,12 @@ export function AutoCombatRealtimeProvider({
 
   useEffect(() => {
     dispatch({
-      type: 'SET_CONNECTION',
+      type: "SET_CONNECTION",
       isConnected: socketState.isConnected,
       isJoined: socketState.isJoined,
       errorMessage: socketState.errorMessage,
     });
-  }, [
-    socketState.isConnected,
-    socketState.isJoined,
-    socketState.errorMessage,
-  ]);
+  }, [socketState.isConnected, socketState.isJoined, socketState.errorMessage]);
 
   useEffect(() => {
     if (!normalizedCharacterId) return;
@@ -1443,13 +1452,13 @@ export function AutoCombatRealtimeProvider({
 
     if (!wasConnected && socketState.isConnected && !socketState.isJoined) {
       scheduleReload(AFTER_VISIBILITY_RELOAD_DELAY_MS, {
-        reason: 'socket-connected',
+        reason: "socket-connected",
       });
       return;
     }
 
     if (!wasJoined && socketState.isJoined) {
-      reconcileAfterReturningToPage('socket-rejoined');
+      reconcileAfterReturningToPage("socket-rejoined");
     }
   }, [
     enterSnapshotSynchronization,
@@ -1464,7 +1473,7 @@ export function AutoCombatRealtimeProvider({
     if (!autoLoad || !normalizedCharacterId) return;
 
     scheduleReload(INITIAL_RELOAD_DELAY_MS, {
-      reason: 'initial-load',
+      reason: "initial-load",
     });
   }, [autoLoad, normalizedCharacterId, scheduleReload]);
 
@@ -1472,19 +1481,30 @@ export function AutoCombatRealtimeProvider({
     if (!autoLoad || !normalizedCharacterId || refreshMs <= 0) return;
 
     const intervalId = window.setInterval(() => {
+      if (socketState.isConnected && socketState.isJoined) {
+        return;
+      }
+
       const currentState = stateRef.current;
 
       if (!shouldPollCurrentState(currentState)) {
         return;
       }
 
-      void reload({ reason: 'polling' });
+      void reload({ reason: "polling" });
     }, refreshMs);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [autoLoad, normalizedCharacterId, refreshMs, reload]);
+  }, [
+    autoLoad,
+    normalizedCharacterId,
+    refreshMs,
+    reload,
+    socketState.isConnected,
+    socketState.isJoined,
+  ]);
 
   useEffect(() => {
     if (!normalizedCharacterId) return;
@@ -1500,7 +1520,7 @@ export function AutoCombatRealtimeProvider({
 
       if (wasBackgroundedRef.current) {
         wasBackgroundedRef.current = false;
-        reconcileAfterReturningToPage('visibility-return');
+        reconcileAfterReturningToPage("visibility-return");
       }
     }
 
@@ -1518,14 +1538,14 @@ export function AutoCombatRealtimeProvider({
 
       if (wasBackgroundedRef.current) {
         wasBackgroundedRef.current = false;
-        reconcileAfterReturningToPage('window-focus-after-background');
+        reconcileAfterReturningToPage("window-focus-after-background");
         return;
       }
 
       const currentState = stateRef.current;
 
       if (currentState.activeEvent || currentState.eventQueue.length > 0) {
-        reconcileAfterReturningToPage('window-focus-with-pending-events');
+        reconcileAfterReturningToPage("window-focus-with-pending-events");
       }
     }
 
@@ -1534,7 +1554,7 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
-      reconcileAfterReturningToPage('pageshow');
+      reconcileAfterReturningToPage("pageshow");
     }
 
     function handleWindowOffline() {
@@ -1542,16 +1562,16 @@ export function AutoCombatRealtimeProvider({
       suppressLootNotificationsUntilCatchUpRef.current = true;
       lootSuppressionRequiresFreshStatusRef.current = true;
       pendingReloadOptionsRef.current = {
-        reason: 'network-online-after-offline',
+        reason: "network-online-after-offline",
       };
       enterSnapshotSynchronization();
 
       dispatch({
-        type: 'SET_CONNECTION',
+        type: "SET_CONNECTION",
         isConnected: false,
         isJoined: false,
         errorMessage:
-          'Conexão indisponível. O combate será sincronizado ao reconectar.',
+          "Conexão indisponível. O combate será sincronizado ao reconectar.",
       });
     }
 
@@ -1565,29 +1585,29 @@ export function AutoCombatRealtimeProvider({
       const currentState = stateRef.current;
 
       if (shouldReconcileCurrentState(currentState)) {
-        reconcileAfterReturningToPage('network-online');
+        reconcileAfterReturningToPage("network-online");
         return;
       }
 
       scheduleReload(AFTER_VISIBILITY_RELOAD_DELAY_MS, {
-        reason: 'network-online',
+        reason: "network-online",
       });
     }
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleWindowBlur);
-    window.addEventListener('focus', handleWindowFocus);
-    window.addEventListener('pageshow', handlePageShow);
-    window.addEventListener('offline', handleWindowOffline);
-    window.addEventListener('online', handleWindowOnline);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("focus", handleWindowFocus);
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("offline", handleWindowOffline);
+    window.addEventListener("online", handleWindowOnline);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleWindowBlur);
-      window.removeEventListener('focus', handleWindowFocus);
-      window.removeEventListener('pageshow', handlePageShow);
-      window.removeEventListener('offline', handleWindowOffline);
-      window.removeEventListener('online', handleWindowOnline);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("focus", handleWindowFocus);
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("offline", handleWindowOffline);
+      window.removeEventListener("online", handleWindowOnline);
     };
   }, [
     enterSnapshotSynchronization,
@@ -1602,7 +1622,7 @@ export function AutoCombatRealtimeProvider({
     if (isUiBackgrounded()) {
       if (state.activeEvent || state.eventQueue.length > 0) {
         dispatch({
-          type: 'SET_SYNCHRONIZING',
+          type: "SET_SYNCHRONIZING",
           isSynchronizing: true,
           clearCombatView: true,
         });
@@ -1624,7 +1644,7 @@ export function AutoCombatRealtimeProvider({
       if (!state.activeEventImpactApplied) {
         activeEventImpactTimeoutRef.current = window.setTimeout(() => {
           dispatch({
-            type: 'APPLY_ACTIVE_EVENT_IMPACT',
+            type: "APPLY_ACTIVE_EVENT_IMPACT",
           });
 
           activeEventImpactTimeoutRef.current = null;
@@ -1633,11 +1653,11 @@ export function AutoCombatRealtimeProvider({
 
       activeEventTimeoutRef.current = window.setTimeout(() => {
         dispatch({
-          type: 'APPLY_ACTIVE_EVENT_IMPACT',
+          type: "APPLY_ACTIVE_EVENT_IMPACT",
         });
 
         dispatch({
-          type: 'CLEAR_ACTIVE_EVENT',
+          type: "CLEAR_ACTIVE_EVENT",
         });
 
         activeEventTimeoutRef.current = null;
@@ -1651,7 +1671,7 @@ export function AutoCombatRealtimeProvider({
     if (state.eventQueue.length > 0) {
       activeEventTimeoutRef.current = window.setTimeout(() => {
         dispatch({
-          type: 'PROCESS_NEXT_EVENT',
+          type: "PROCESS_NEXT_EVENT",
         });
 
         activeEventTimeoutRef.current = null;

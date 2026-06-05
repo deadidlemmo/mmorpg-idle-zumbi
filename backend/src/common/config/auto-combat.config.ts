@@ -85,3 +85,17 @@ export const AUTO_COMBAT_MAX_SECONDS_PER_PROCESS =
  * Define se o sistema deve finalizar automaticamente a sessão ao chegar no endsAt.
  */
 export const AUTO_COMBAT_FINISH_SESSION_WHEN_TIME_ENDS = true;
+
+export const AUTO_COMBAT_TTK_MIN_SECONDS = 1;
+export const AUTO_COMBAT_TTK_MAX_SECONDS = 300;
+export const AUTO_COMBAT_TTK_POWER_EXPONENT = 0.75;
+
+export const AUTO_COMBAT_TTK_BASE_TIMES_BY_MOB_INDEX = [
+  5, 6, 7, 8, 10, 12, 14, 17, 20, 24, 29, 35,
+] as const;
+
+export const AUTO_COMBAT_TTK_POWER_MULTIPLIERS_BY_MOB_INDEX = [
+  0.7, 0.82, 0.95, 1.1, 1.28, 1.48, 1.72, 2, 2.32, 2.7, 3.15, 3.7,
+] as const;
+
+export const AUTO_COMBAT_TTK_PROGRESS_UPDATES_PER_SECOND = 4;

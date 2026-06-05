@@ -3,7 +3,7 @@ import type {
   DashboardEquipmentItem,
   DashboardItemRarity,
   DashboardSubMapViewModel,
-} from '../../dashboard/types/dashboard.types';
+} from "../../dashboard/types/dashboard.types";
 
 export interface StartAutoCombatPayload {
   characterId: string;
@@ -81,37 +81,37 @@ export interface AutoCombatLevelProgressViewModel {
    ========================================================= */
 
 export type AutoCombatRealtimeEventType =
-  | 'HUNT_TARGET_FOUND'
-  | 'MOB_SPAWNED'
-  | 'PLAYER_HIT'
-  | 'MOB_HIT'
-  | 'DODGE'
-  | 'POTION_USED'
-  | 'AUTO_REST'
-  | 'MOB_DEFEATED'
-  | 'PLAYER_DEFEATED'
-  | 'SESSION_STARTED'
-  | 'SESSION_UPDATED'
-  | 'SESSION_FINISHED'
-  | 'SESSION_STOPPED'
-  | 'SESSION_ERROR'
+  | "HUNT_TARGET_FOUND"
+  | "MOB_SPAWNED"
+  | "PLAYER_HIT"
+  | "MOB_HIT"
+  | "DODGE"
+  | "POTION_USED"
+  | "AUTO_REST"
+  | "MOB_DEFEATED"
+  | "PLAYER_DEFEATED"
+  | "SESSION_STARTED"
+  | "SESSION_UPDATED"
+  | "SESSION_FINISHED"
+  | "SESSION_STOPPED"
+  | "SESSION_ERROR"
   | string;
 
-export type AutoCombatRealtimeActor = 'PLAYER' | 'MOB' | 'SYSTEM' | string;
+export type AutoCombatRealtimeActor = "PLAYER" | "MOB" | "SYSTEM" | string;
 
-export type AutoCombatRealtimeTarget = 'PLAYER' | 'MOB' | 'SYSTEM' | string;
+export type AutoCombatRealtimeTarget = "PLAYER" | "MOB" | "SYSTEM" | string;
 export type AutoCombatRealtimePhase =
-  | 'HUNTING'
-  | 'ENCOUNTER_READY'
-  | 'SPAWNING'
-  | 'PLAYER_TURN'
-  | 'MOB_TURN'
-  | 'MOB_DEFEATED'
-  | 'PLAYER_DEFEATED'
-  | 'RESTING'
-  | 'FINISHED'
-  | 'WAITING_NEXT_ROUND'
-  | 'IDLE'
+  | "HUNTING"
+  | "ENCOUNTER_READY"
+  | "SPAWNING"
+  | "PLAYER_TURN"
+  | "MOB_TURN"
+  | "MOB_DEFEATED"
+  | "PLAYER_DEFEATED"
+  | "RESTING"
+  | "FINISHED"
+  | "WAITING_NEXT_ROUND"
+  | "IDLE"
   | string;
 
 export interface AutoCombatRealtimeEvent {
@@ -145,6 +145,20 @@ export interface AutoCombatRealtimeEvent {
   mobCurrentHp?: number | null;
   mobMaxHp?: number | null;
   mobHpPercent?: number | null;
+  battleProgressSeconds?: number | null;
+  battleProgressPercent?: number | null;
+  estimatedKillTimeSeconds?: number | null;
+  baseKillTimeSeconds?: number | null;
+  playerOffensivePower?: number | null;
+  monsterRecommendedPower?: number | null;
+  killsPerMinute?: number | null;
+  killsPerHour?: number | null;
+  difficultyLabel?: string | null;
+  mobIndex?: number | null;
+  battleTargetMobId?: string | null;
+  battleTargetEncounterId?: string | null;
+  battleTargetTotal?: number | null;
+  battleTargetRemaining?: number | null;
 
   /**
    * Estado do personagem.
@@ -290,6 +304,20 @@ export interface AutoCombatMobDropViewModel {
   item?: AutoCombatMobDropItemViewModel | null;
 }
 
+export interface AutoCombatBattleProgressViewModel {
+  progressSeconds?: number | null;
+  progressPercent?: number | null;
+  estimatedKillTimeSeconds?: number | null;
+  baseKillTimeSeconds?: number | null;
+  playerOffensivePower?: number | null;
+  monsterRecommendedPower?: number | null;
+  killsPerMinute?: number | null;
+  killsPerHour?: number | null;
+  difficultyLabel?: string | null;
+  mobIndex?: number | null;
+  tier?: number | null;
+}
+
 export interface AutoCombatMobViewModel {
   id: string;
   name: string;
@@ -309,6 +337,7 @@ export interface AutoCombatMobViewModel {
   currentHp?: number | null;
   maxHp?: number | null;
   hpPercent?: number | null;
+  battleProgress?: AutoCombatBattleProgressViewModel | null;
   foundCount?: number | null;
   huntFoundCount?: number | null;
 
@@ -337,6 +366,7 @@ export interface AutoCombatCurrentMobViewModel {
   currentHp?: number | null;
   maxHp?: number | null;
   hpPercent?: number | null;
+  battleProgress?: AutoCombatBattleProgressViewModel | null;
   foundCount?: number | null;
   huntFoundCount?: number | null;
 
@@ -475,6 +505,15 @@ export interface AutoCombatHuntingViewModel {
   skill?: AutoCombatHuntingSkillViewModel | null;
 }
 
+export interface AutoCombatBattleSelectionViewModel {
+  mobId?: string | null;
+  encounterId?: string | null;
+  total?: number | null;
+  remaining?: number | null;
+  defeated?: number | null;
+  mob?: AutoCombatCurrentMobViewModel | null;
+}
+
 export interface AutoCombatSessionApiViewModel {
   id: string;
   characterId?: string | null;
@@ -484,12 +523,12 @@ export interface AutoCombatSessionApiViewModel {
 
   status:
     | DashboardAutoCombatSessionStatus
-    | 'ACTIVE'
-    | 'STOPPED'
-    | 'FINISHED'
-    | 'DEFEATED'
-    | 'FAILED'
-    | 'CANCELLED'
+    | "ACTIVE"
+    | "STOPPED"
+    | "FINISHED"
+    | "DEFEATED"
+    | "FAILED"
+    | "CANCELLED"
     | string;
   endReason?: string | null;
   shouldRedirectToInfirmary?: boolean | null;
@@ -531,6 +570,13 @@ export interface AutoCombatSessionApiViewModel {
   currentMobId?: string | null;
   currentMobHp?: number | null;
   currentMobMaxHp?: number | null;
+  killProgressSeconds?: number | null;
+  estimatedKillTimeSeconds?: number | null;
+  baseKillTimeSeconds?: number | null;
+  playerOffensivePower?: number | null;
+  monsterRecommendedPower?: number | null;
+  currentMobIndex?: number | null;
+  battleProgress?: AutoCombatBattleProgressViewModel | null;
   huntStartedAt?: string | null;
   huntStoppedAt?: string | null;
   lastHuntProcessedAt?: string | null;
@@ -543,6 +589,11 @@ export interface AutoCombatSessionApiViewModel {
   bonusEnemiesFound?: number | null;
   selectedEncounterId?: string | null;
   selectedEncounterMobId?: string | null;
+  battleTargetMobId?: string | null;
+  battleTargetEncounterId?: string | null;
+  battleTargetTotal?: number | null;
+  battleTargetRemaining?: number | null;
+  battleSelection?: AutoCombatBattleSelectionViewModel | null;
   enemyInstanceId?: string | null;
   currentEnemyInstanceId?: string | null;
   snapshotSequence?: number | null;
@@ -606,7 +657,7 @@ export interface AutoCombatHuntBatchViewModel {
   characterId?: string | null;
   mapId?: string | null;
   sessionId?: string | null;
-  status?: 'HUNTING' | 'READY' | 'CONSUMED' | 'CANCELLED' | string;
+  status?: "HUNTING" | "READY" | "CONSUMED" | "CANCELLED" | string;
   startedAt?: string | null;
   stoppedAt?: string | null;
   consumedAt?: string | null;
@@ -771,7 +822,7 @@ export interface AutoCombatProcessingSummary {
    ========================================================= */
 
 export interface AutoCombatSessionSummary {
-  status?: DashboardAutoCombatSessionStatus | 'DEFEATED' | string;
+  status?: DashboardAutoCombatSessionStatus | "DEFEATED" | string;
   statusText?: string;
 
   isActive?: boolean;
@@ -837,7 +888,7 @@ export interface AutoCombatSessionSummary {
    PREVIEW / PROJEÇÃO DA CAÇA
    ========================================================= */
 
-export type AutoCombatRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'LETHAL';
+export type AutoCombatRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "LETHAL";
 
 export interface AutoCombatProjectionPreview {
   averageCombatDurationSeconds?: number;
@@ -917,6 +968,8 @@ export interface AutoCombatStatusResponse {
   lastSession?: AutoCombatSessionApiViewModel | null;
 
   currentMob?: AutoCombatCurrentMobViewModel | null;
+  battleProgress?: AutoCombatBattleProgressViewModel | null;
+  battleSelection?: AutoCombatBattleSelectionViewModel | null;
   selectedEncounter?: AutoCombatEncounterViewModel | null;
   trackedMonsters?: AutoCombatTrackedMonsterViewModel[];
   huntBatch?: AutoCombatHuntBatchViewModel | null;
@@ -939,5 +992,11 @@ export interface AutoCombatStatusResponse {
 }
 
 export type StartAutoCombatResponse = AutoCombatStatusResponse;
+
+export type StartAutoCombatBattlePayload = {
+  mobId?: string;
+  encounterId?: string;
+  quantity?: number;
+};
 
 export type StopAutoCombatResponse = AutoCombatStatusResponse;

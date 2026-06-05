@@ -1,34 +1,34 @@
-import type { CSSProperties } from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useParams, useSearchParams } from 'react-router-dom';
-import { PremiumPlaceholderIcon } from '../../../components/PremiumPlaceholderIcon';
+import type { CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, useParams, useSearchParams } from "react-router-dom";
+import { PremiumPlaceholderIcon } from "../../../components/PremiumPlaceholderIcon";
 import {
   getCharacterOverview,
   updateCharacterCurrentMap,
-} from '../../dashboard/api/dashboard.api';
-import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
-import '../../dashboard/dashboard.css';
-import type { CharacterOverviewResponse } from '../../dashboard/types/dashboard.types';
+} from "../../dashboard/api/dashboard.api";
+import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
+import type { DashboardTopBarActivityOverride } from "../../dashboard/components/DashboardTopBar";
+import "../../dashboard/dashboard.css";
+import type { CharacterOverviewResponse } from "../../dashboard/types/dashboard.types";
 import {
   getAutoCombatMaps,
   getAutoCombatStatus,
-  previewAutoCombat,
-} from '../api/auto-combat.api';
+} from "../api/auto-combat.api";
 import {
   buildMapVisualStyle,
   getMapImageByName,
-} from '../assets/auto-combat-map-assets';
-import '../auto-combat-mob-images.css';
-import '../auto-combat.css';
-import { AutoCombatBattleLog } from '../components/AutoCombatBattleLog';
-import { AutoCombatSessionSummary } from '../components/AutoCombatSessionSummary';
-import { AutoCombatStatsTab } from '../components/AutoCombatStatsTab';
-import { AutoCombatTabs } from '../components/AutoCombatTabs';
-import { getRealtimeEventKey } from '../realtime/autoCombatRealtime.utils';
+} from "../assets/auto-combat-map-assets";
+import "../auto-combat-mob-images.css";
+import "../auto-combat.css";
+import { AutoCombatBattleLog } from "../components/AutoCombatBattleLog";
+import { AutoCombatSessionSummary } from "../components/AutoCombatSessionSummary";
+import { AutoCombatStatsTab } from "../components/AutoCombatStatsTab";
+import { AutoCombatTabs } from "../components/AutoCombatTabs";
+import { getRealtimeEventKey } from "../realtime/autoCombatRealtime.utils";
 import {
   useAutoCombatRealtime,
   useAutoCombatRealtimeState,
-} from '../realtime/useAutoCombatRealtime';
+} from "../realtime/useAutoCombatRealtime";
 import type {
   AutoCombatRealtimeStateLoose,
   AutoCombatTab,
@@ -41,14 +41,15 @@ import type {
   RealtimeCharacterProgressState,
   RealtimeCombatState,
   RealtimeSessionTotalsState,
-} from '../types/auto-combat-page.types';
+} from "../types/auto-combat-page.types";
 import type {
   AutoCombatEncounterViewModel,
   AutoCombatMapViewModel,
-  AutoCombatProjectionPreview,
   AutoCombatRealtimeEvent,
   AutoCombatStatusResponse,
-} from '../types/auto-combat.types';
+  AutoCombatTrackedMonsterViewModel,
+  StartAutoCombatBattlePayload,
+} from "../types/auto-combat.types";
 import {
   buildCharacterViewModel,
   buildProgressFromSource,
@@ -58,7 +59,6 @@ import {
   clampNumber,
   clampPercent,
   formatPotionHeal,
-  formatRiskLabel,
   formatSeconds,
   formatSessionStatus,
   getActiveEncountersForMap,
@@ -100,26 +100,76 @@ import {
   resolvePotionQuantityAfter,
   toSafeNumber,
   updateCharacterPotionConfigRaw,
-} from '../utils/auto-combat-page.helpers';
+} from "../utils/auto-combat-page.helpers";
 import {
   getMobFullBodyImage,
   getMobPortraitImage,
-} from '../utils/mobAssets';
-import { selectVisibleCharacterProgress } from '../utils/visible-progress';
+  getMobProgressionSortRank,
+} from "../utils/mobAssets";
+import { selectVisibleCharacterProgress } from "../utils/visible-progress";
 
 const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
 const XP_FEEDBACK_VISIBLE_MS = 4800;
 const MAX_SHOWN_XP_FEEDBACK_KEYS = 80;
 
 function preloadAutoCombatImage(imageUrl?: string | null) {
-  if (!imageUrl || typeof window === 'undefined') {
+  if (!imageUrl || typeof window === "undefined") {
     return;
   }
 
   const image = new Image();
 
-  image.decoding = 'async';
+  image.decoding = "async";
   image.src = imageUrl;
+}
+
+function compareAutoCombatThreatsByProgression(
+  first: AutoCombatEncounterViewModel,
+  second: AutoCombatEncounterViewModel,
+) {
+  const firstMob = first.mob;
+  const secondMob = second.mob;
+  const firstRank = getMobProgressionSortRank(
+    firstMob?.name,
+    firstMob?.assetKey,
+  );
+  const secondRank = getMobProgressionSortRank(
+    secondMob?.name,
+    secondMob?.assetKey,
+  );
+  const tierDifference =
+    toSafeNumber(firstMob?.tier, firstRank.tier) -
+    toSafeNumber(secondMob?.tier, secondRank.tier);
+
+  if (tierDifference !== 0) {
+    return tierDifference;
+  }
+
+  if (firstRank.tier !== secondRank.tier) {
+    return firstRank.tier - secondRank.tier;
+  }
+
+  if (
+    firstRank.mob !== Number.MAX_SAFE_INTEGER &&
+    secondRank.mob !== Number.MAX_SAFE_INTEGER &&
+    firstRank.mob !== secondRank.mob
+  ) {
+    return firstRank.mob - secondRank.mob;
+  }
+
+  const levelDifference =
+    toSafeNumber(firstMob?.level, firstRank.mob) -
+    toSafeNumber(secondMob?.level, secondRank.mob);
+
+  if (levelDifference !== 0) {
+    return levelDifference;
+  }
+
+  return String(firstMob?.name ?? "").localeCompare(
+    String(secondMob?.name ?? ""),
+    "pt-BR",
+    { sensitivity: "base" },
+  );
 }
 
 function getAutoCombatTimestampMs(value: unknown) {
@@ -129,7 +179,7 @@ function getAutoCombatTimestampMs(value: unknown) {
     return Number.isFinite(timestamp) ? timestamp : null;
   }
 
-  if (typeof value !== 'string' && typeof value !== 'number') {
+  if (typeof value !== "string" && typeof value !== "number") {
     return null;
   }
 
@@ -146,11 +196,7 @@ function hasAutoCombatTimerData(
 
   if (!status || !session) return false;
 
-  if (
-    expectedSessionId &&
-    session.id &&
-    session.id !== expectedSessionId
-  ) {
+  if (expectedSessionId && session.id && session.id !== expectedSessionId) {
     return false;
   }
 
@@ -161,9 +207,9 @@ function hasAutoCombatTimerData(
   if (endsAtMs !== null) return true;
 
   return (
-    (typeof session.remainingSeconds === 'number' &&
+    (typeof session.remainingSeconds === "number" &&
       session.remainingSeconds > 0) ||
-    (typeof status.sessionSummary?.duration?.remainingSeconds === 'number' &&
+    (typeof status.sessionSummary?.duration?.remainingSeconds === "number" &&
       status.sessionSummary.duration.remainingSeconds > 0)
   );
 }
@@ -211,10 +257,10 @@ function pickAutoCombatEffectiveStatus(params: {
   if (!realtimeStatus) return restStatus;
   if (!restStatus) return realtimeStatus;
 
-  const realtimePhase = String(realtimeStatus.phase ?? '').toUpperCase();
-  const restPhase = String(restStatus.phase ?? '').toUpperCase();
+  const realtimePhase = String(realtimeStatus.phase ?? "").toUpperCase();
+  const restPhase = String(restStatus.phase ?? "").toUpperCase();
 
-  if (realtimePhase === 'HUNTING' && restPhase === 'HUNTING') {
+  if (realtimePhase === "HUNTING" && restPhase === "HUNTING") {
     const realtimeHuntSequence = getHuntSequence(realtimeStatus);
     const restHuntSequence = getHuntSequence(restStatus);
 
@@ -242,16 +288,16 @@ function getRealtimeFeedbackTarget(event?: AutoCombatRealtimeEvent | null) {
   const eventType = normalizeRealtimeEventType(event?.type);
   const eventTarget = normalizeRealtimeEventType(event?.target);
 
-  if (eventTarget === 'PLAYER' || eventTarget === 'MOB') {
+  if (eventTarget === "PLAYER" || eventTarget === "MOB") {
     return eventTarget;
   }
 
-  if (eventType === 'PLAYER_HIT') {
-    return 'MOB';
+  if (eventType === "PLAYER_HIT") {
+    return "MOB";
   }
 
-  if (eventType === 'MOB_HIT') {
-    return 'PLAYER';
+  if (eventType === "MOB_HIT") {
+    return "PLAYER";
   }
 
   return null;
@@ -267,8 +313,23 @@ function getRealtimeFeedbackDamage(event?: AutoCombatRealtimeEvent | null) {
   return damage > 0 ? damage : 0;
 }
 
+function isAutoCombatBattleVisualEvent(event?: AutoCombatRealtimeEvent | null) {
+  const eventType = normalizeRealtimeEventType(event?.type);
+
+  return (
+    eventType === "MOB_SPAWNED" ||
+    eventType === "PLAYER_HIT" ||
+    eventType === "MOB_HIT" ||
+    eventType === "DODGE" ||
+    eventType === "POTION_USED" ||
+    eventType === "AUTO_REST" ||
+    eventType === "MOB_DEFEATED" ||
+    eventType === "PLAYER_DEFEATED"
+  );
+}
+
 function getOptionalPositiveInteger(value: unknown) {
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     return null;
   }
 
@@ -282,7 +343,9 @@ function getOptionalPositiveInteger(value: unknown) {
 }
 
 function normalizeMobScopeText(value: unknown) {
-  const normalized = String(value ?? '').trim().toLowerCase();
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
 
   return normalized || null;
 }
@@ -321,15 +384,15 @@ function getMobFeedbackScopeFromEvent(
 
 function getMobFeedbackScopeKey(scope?: MobFeedbackScope | null) {
   if (!scope) {
-    return '';
+    return "";
   }
 
   return [
-    scope.sessionId ?? 'session:any',
-    scope.combatIndex ? `combat:${scope.combatIndex}` : 'combat:any',
-    scope.mobId ? `mob:${scope.mobId}` : 'mob:any',
-    scope.mobName ? `name:${scope.mobName}` : 'name:any',
-  ].join('|');
+    scope.sessionId ?? "session:any",
+    scope.combatIndex ? `combat:${scope.combatIndex}` : "combat:any",
+    scope.mobId ? `mob:${scope.mobId}` : "mob:any",
+    scope.mobName ? `name:${scope.mobName}` : "name:any",
+  ].join("|");
 }
 
 function hasUsefulMobFeedbackScope(scope?: MobFeedbackScope | null) {
@@ -379,35 +442,30 @@ function hasMobFeedbackScopeMismatch(
   return false;
 }
 
-function shouldClearXpFeedbackForEvent(
-  event?: AutoCombatRealtimeEvent | null,
-) {
+function shouldClearXpFeedbackForEvent(event?: AutoCombatRealtimeEvent | null) {
   const eventType = normalizeRealtimeEventType(event?.type);
 
   return (
-    eventType === 'PLAYER_DEFEATED' ||
-    eventType === 'SESSION_STOPPED' ||
-    eventType === 'SESSION_FINISHED' ||
-    eventType === 'SESSION_ERROR'
+    eventType === "PLAYER_DEFEATED" ||
+    eventType === "SESSION_STOPPED" ||
+    eventType === "SESSION_FINISHED" ||
+    eventType === "SESSION_ERROR"
   );
 }
 
 type AutoCombatLooseRecord = Record<string, unknown>;
 
 function getAutoCombatLooseRecord(value: unknown) {
-  return value && typeof value === 'object'
+  return value && typeof value === "object"
     ? (value as AutoCombatLooseRecord)
     : null;
 }
 
-function getAutoCombatStringField(
-  source: unknown,
-  key: string,
-): string | null {
+function getAutoCombatStringField(source: unknown, key: string): string | null {
   const record = getAutoCombatLooseRecord(source);
   const value = record?.[key];
 
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     return null;
   }
 
@@ -421,7 +479,7 @@ function getAutoCombatBooleanField(source: unknown, key: string) {
 }
 
 function normalizeAutoCombatStatusField(value: unknown) {
-  return String(value ?? '')
+  return String(value ?? "")
     .trim()
     .toUpperCase();
 }
@@ -432,35 +490,59 @@ function shouldRedirectAutoCombatToInfirmary(params: {
   event?: AutoCombatRealtimeEvent | null;
 }) {
   const { status, session, event } = params;
+  const characterCurrentHp = getOptionalPositiveInteger(
+    status?.character?.currentHp,
+  );
+  const eventCharacterHp =
+    getOptionalPositiveInteger(event?.characterCurrentHp) ??
+    getOptionalPositiveInteger(event?.characterHpAfter);
+
+  if (characterCurrentHp !== null && characterCurrentHp > 0) {
+    return false;
+  }
+
   const sessionStatus = normalizeAutoCombatStatusField(
-    getAutoCombatStringField(session, 'status'),
+    getAutoCombatStringField(session, "status"),
   );
   const eventSessionStatus = normalizeAutoCombatStatusField(
     event?.sessionStatus,
   );
   const endReason = normalizeAutoCombatStatusField(
     status?.endReason ??
-      getAutoCombatStringField(session, 'endReason') ??
+      getAutoCombatStringField(session, "endReason") ??
       event?.endReason,
   );
   const eventType = normalizeRealtimeEventType(event?.type);
-
-  return Boolean(
+  const hasDefeatSignal = Boolean(
     status?.shouldRedirectToInfirmary ||
-      getAutoCombatBooleanField(session, 'shouldRedirectToInfirmary') ||
+      getAutoCombatBooleanField(session, "shouldRedirectToInfirmary") ||
       event?.shouldRedirectToInfirmary ||
       status?.sessionSummary?.defeated ||
-      sessionStatus === 'DEFEATED' ||
-      eventSessionStatus === 'DEFEATED' ||
-      endReason === 'PLAYER_DEFEATED' ||
-      eventType === 'PLAYER_DEFEATED',
+      sessionStatus === "DEFEATED" ||
+      eventSessionStatus === "DEFEATED" ||
+      endReason === "PLAYER_DEFEATED" ||
+      eventType === "PLAYER_DEFEATED",
   );
+
+  if (!hasDefeatSignal) {
+    return false;
+  }
+
+  if (characterCurrentHp !== null) {
+    return characterCurrentHp <= 0;
+  }
+
+  if (eventCharacterHp !== null) {
+    return eventCharacterHp <= 0;
+  }
+
+  return true;
 }
 
 function getXpFeedbackBreakdown(event?: AutoCombatRealtimeEvent | null) {
   const eventType = normalizeRealtimeEventType(event?.type);
 
-  if (!event || eventType !== 'MOB_DEFEATED') {
+  if (!event || eventType !== "MOB_DEFEATED") {
     return null;
   }
 
@@ -471,8 +553,7 @@ function getXpFeedbackBreakdown(event?: AutoCombatRealtimeEvent | null) {
   }
 
   const baseXp = getOptionalPositiveInteger(event.baseXpGained) ?? totalXp;
-  const premiumBonusXp =
-    getOptionalPositiveInteger(event.premiumBonusXp) ?? 0;
+  const premiumBonusXp = getOptionalPositiveInteger(event.premiumBonusXp) ?? 0;
   const premiumPotentialBonusXp =
     getOptionalPositiveInteger(event.premiumPotentialBonusXp) ?? 0;
   const premiumTotalXp =
@@ -525,7 +606,7 @@ function getXpFeedbackDisplayKey(event?: AutoCombatRealtimeEvent | null) {
   const breakdown = getXpFeedbackBreakdown(event);
 
   if (!event || !breakdown) {
-    return '';
+    return "";
   }
 
   const feedbackScope = getMobFeedbackScopeFromEvent(event);
@@ -536,35 +617,35 @@ function getXpFeedbackDisplayKey(event?: AutoCombatRealtimeEvent | null) {
 
   return [
     getMobFeedbackScopeKey(feedbackScope),
-    `round:${event.round ?? 'any'}`,
-    `kills:${event.totalKills ?? 'any'}`,
-    `combats:${event.totalCombats ?? 'any'}`,
+    `round:${event.round ?? "any"}`,
+    `kills:${event.totalKills ?? "any"}`,
+    `combats:${event.totalCombats ?? "any"}`,
     `total:${breakdown.totalXp}`,
     `base:${breakdown.baseXp}`,
     `premium:${breakdown.premiumBonusXp}`,
     `potential:${breakdown.premiumPotentialBonusXp}`,
-  ].join('|');
+  ].join("|");
 }
 
 function getMapRarityClassName(tier?: number | string | null) {
   const safeTier = Number(tier);
 
   if (!Number.isFinite(safeTier)) {
-    return 'auto-combat-map-rarity-common';
+    return "auto-combat-map-rarity-common";
   }
 
-  if (safeTier >= 9) return 'auto-combat-map-rarity-legendary';
-  if (safeTier >= 7) return 'auto-combat-map-rarity-epic';
-  if (safeTier >= 5) return 'auto-combat-map-rarity-rare';
-  if (safeTier >= 3) return 'auto-combat-map-rarity-uncommon';
+  if (safeTier >= 9) return "auto-combat-map-rarity-legendary";
+  if (safeTier >= 7) return "auto-combat-map-rarity-epic";
+  if (safeTier >= 5) return "auto-combat-map-rarity-rare";
+  if (safeTier >= 3) return "auto-combat-map-rarity-uncommon";
 
-  return 'auto-combat-map-rarity-common';
+  return "auto-combat-map-rarity-common";
 }
 
 function getLootInitials(name?: string | null) {
-  const cleanName = String(name ?? '').trim();
+  const cleanName = String(name ?? "").trim();
 
-  if (!cleanName) return '??';
+  if (!cleanName) return "??";
 
   const words = cleanName
     .split(/\s+/)
@@ -573,30 +654,30 @@ function getLootInitials(name?: string | null) {
 
   return words
     .map((word) => word.charAt(0))
-    .join('')
+    .join("")
     .toUpperCase();
 }
 
 function getLootRarityClassName(rarity?: string | null) {
-  const normalizedRarity = String(rarity ?? 'common').toLowerCase();
+  const normalizedRarity = String(rarity ?? "common").toLowerCase();
 
-  if (normalizedRarity.includes('legendary')) {
-    return 'auto-combat-threat-loot-card--legendary';
+  if (normalizedRarity.includes("legendary")) {
+    return "auto-combat-threat-loot-card--legendary";
   }
 
-  if (normalizedRarity.includes('epic')) {
-    return 'auto-combat-threat-loot-card--epic';
+  if (normalizedRarity.includes("epic")) {
+    return "auto-combat-threat-loot-card--epic";
   }
 
-  if (normalizedRarity.includes('rare')) {
-    return 'auto-combat-threat-loot-card--rare';
+  if (normalizedRarity.includes("rare")) {
+    return "auto-combat-threat-loot-card--rare";
   }
 
-  if (normalizedRarity.includes('uncommon')) {
-    return 'auto-combat-threat-loot-card--uncommon';
+  if (normalizedRarity.includes("uncommon")) {
+    return "auto-combat-threat-loot-card--uncommon";
   }
 
-  return 'auto-combat-threat-loot-card--common';
+  return "auto-combat-threat-loot-card--common";
 }
 
 function formatDropChance(chance?: number | null) {
@@ -620,14 +701,14 @@ function formatDropQuantity(
 export function AutoCombatPage() {
   const { characterId } = useParams();
   const [searchParams] = useSearchParams();
-  const requestedMapId = searchParams.get('mapId') ?? '';
-  const requestedSubMapId = searchParams.get('subMapId') ?? '';
+  const requestedMapId = searchParams.get("mapId") ?? "";
+  const requestedSubMapId = searchParams.get("subMapId") ?? "";
   const realtimeContext = useAutoCombatRealtime();
   const realtimeActions = getRealtimeActions(realtimeContext);
   const realtimeState =
     useAutoCombatRealtimeState() as AutoCombatRealtimeStateLoose;
 
-  const [activeTab, setActiveTab] = useState<AutoCombatTab>('battle');
+  const [activeTab, setActiveTab] = useState<AutoCombatTab>("battle");
   const [hasStartedHunt, setHasStartedHunt] = useState(false);
 
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
@@ -636,12 +717,11 @@ export function AutoCombatPage() {
   const [maps, setMaps] = useState<AutoCombatMapViewModel[]>([]);
   const [autoCombatStatus, setAutoCombatStatus] =
     useState<AutoCombatStatusResponse | null>(null);
-  const [selectedMapId, setSelectedMapId] = useState('');
+  const [selectedMapId, setSelectedMapId] = useState("");
   const [selectedThreat, setSelectedThreat] =
     useState<AutoCombatEncounterViewModel | null>(null);
-  const [preparationPreview, setPreparationPreview] =
-    useState<AutoCombatProjectionPreview | null>(null);
-
+  const [selectedBattleQuantity, setSelectedBattleQuantity] = useState(1);
+  const [isStopHuntConfirmOpen, setIsStopHuntConfirmOpen] = useState(false);
   const [availablePotions, setAvailablePotions] = useState<
     PotionInventoryOption[]
   >([]);
@@ -650,15 +730,15 @@ export function AutoCombatPage() {
   const [isPotionConfigPanelOpen, setIsPotionConfigPanelOpen] = useState(false);
   const [isRestConfigPanelOpen, setIsRestConfigPanelOpen] = useState(false);
   const [selectedPotionSlotIndex, setSelectedPotionSlotIndex] = useState(0);
-  const [selectedPotionItemId, setSelectedPotionItemId] = useState('');
+  const [selectedPotionItemId, setSelectedPotionItemId] = useState("");
   const [potionThresholdPercent, setPotionThresholdPercent] = useState(35);
   const [autoRestEnabled, setAutoRestEnabled] = useState(true);
   const [autoRestStartHpPercent, setAutoRestStartHpPercent] = useState(35);
   const [autoRestStopHpPercent, setAutoRestStopHpPercent] = useState(70);
   const [isPotionConfigLoading, setIsPotionConfigLoading] = useState(false);
   const [isRestConfigLoading, setIsRestConfigLoading] = useState(false);
-  const [potionConfigMessage, setPotionConfigMessage] = useState('');
-  const [restConfigMessage, setRestConfigMessage] = useState('');
+  const [potionConfigMessage, setPotionConfigMessage] = useState("");
+  const [restConfigMessage, setRestConfigMessage] = useState("");
 
   const [localRealtimeCombat, setLocalRealtimeCombat] =
     useState<RealtimeCombatState | null>(null);
@@ -674,14 +754,14 @@ export function AutoCombatPage() {
   const [xpFeedbackEvent, setXpFeedbackEvent] =
     useState<AutoCombatRealtimeEvent | null>(null);
 
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const autoPotionConfigRef =
-    useRef<CharacterPotionConfigWithItem | null>(null);
-  const selectedPotionItemIdRef = useRef('');
+  const autoPotionConfigRef = useRef<CharacterPotionConfigWithItem | null>(
+    null,
+  );
+  const selectedPotionItemIdRef = useRef("");
   const hasPendingRealtimeVisualRef = useRef(false);
   const loadAutoCombatDataRequestRef = useRef(0);
   const lastPositiveRemainingSecondsRef = useRef<{
@@ -690,7 +770,7 @@ export function AutoCombatPage() {
   } | null>(null);
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
   const xpFeedbackHideTimeoutRef = useRef<number | null>(null);
-  const xpFeedbackEventKeyRef = useRef('');
+  const xpFeedbackEventKeyRef = useRef("");
   const shownXpFeedbackEventKeysRef = useRef<Set<string>>(new Set());
   const clearXpFeedbackTimers = useCallback(() => {
     if (xpFeedbackHideTimeoutRef.current !== null) {
@@ -699,19 +779,20 @@ export function AutoCombatPage() {
     }
   }, []);
 
-  const queueClearXpFeedback = useCallback((options?: {
-    resetShownEvents?: boolean;
-  }) => {
-    clearXpFeedbackTimers();
+  const queueClearXpFeedback = useCallback(
+    (options?: { resetShownEvents?: boolean }) => {
+      clearXpFeedbackTimers();
 
-    xpFeedbackEventKeyRef.current = '';
+      xpFeedbackEventKeyRef.current = "";
 
-    if (options?.resetShownEvents) {
-      shownXpFeedbackEventKeysRef.current.clear();
-    }
+      if (options?.resetShownEvents) {
+        shownXpFeedbackEventKeysRef.current.clear();
+      }
 
-    setXpFeedbackEvent(null);
-  }, [clearXpFeedbackTimers]);
+      setXpFeedbackEvent(null);
+    },
+    [clearXpFeedbackTimers],
+  );
 
   useEffect(() => {
     autoPotionConfigRef.current = autoPotionConfig;
@@ -728,7 +809,7 @@ export function AutoCombatPage() {
     setLocalBattleLogEvents([]);
     setLocalActiveEvent(null);
     setIsPotionConfigPanelOpen(false);
-    setPotionConfigMessage('');
+    setPotionConfigMessage("");
     processedPotionEventKeysRef.current.clear();
     lastPositiveRemainingSecondsRef.current = null;
     queueClearXpFeedback({ resetShownEvents: true });
@@ -752,13 +833,19 @@ export function AutoCombatPage() {
     !isRealtimeSynchronizing && realtimeState.activeEventImpactApplied
       ? providerActiveEvent
       : null;
+  const providerQueuedEventsRaw = isRealtimeSynchronizing
+    ? []
+    : (realtimeState.eventQueue ?? []);
   const providerQueueLength = isRealtimeSynchronizing
     ? 0
-    : getRealtimeQueueLength(realtimeState);
+    : providerQueuedEventsRaw.length || getRealtimeQueueLength(realtimeState);
+  const hasPendingCombatVisualEvent =
+    isAutoCombatBattleVisualEvent(providerActiveEvent) ||
+    providerQueuedEventsRaw.some(isAutoCombatBattleVisualEvent);
 
   const visualRealtimeCombat = isRealtimeSynchronizing
     ? null
-    : providerRealtimeCombat ?? localRealtimeCombat;
+    : (providerRealtimeCombat ?? localRealtimeCombat);
 
   const effectiveSessionIsTerminal = isTerminalSessionStatus(
     effectiveSession?.status,
@@ -785,48 +872,101 @@ export function AutoCombatPage() {
       null)
     : null;
   const effectiveSessionPhase = String(
-    effectiveSession?.phase ?? effectiveStatus?.phase ?? '',
+    effectiveSession?.phase ?? effectiveStatus?.phase ?? "",
   ).toUpperCase();
   const isBackendHuntingPhase =
-    hasActiveSession && effectiveSessionPhase === 'HUNTING';
+    hasActiveSession && effectiveSessionPhase === "HUNTING";
   const isBackendEncounterReadyPhase =
-    hasActiveSession && effectiveSessionPhase === 'ENCOUNTER_READY';
+    hasActiveSession && effectiveSessionPhase === "ENCOUNTER_READY";
   const isBackendHuntFlow =
     isBackendHuntingPhase || isBackendEncounterReadyPhase;
   const isBackendCombatPhase =
     hasActiveSession &&
-    (effectiveSessionPhase === 'COMBAT_ACTIVE' ||
+    !isBackendHuntFlow &&
+    (effectiveSessionPhase === "COMBAT_ACTIVE" ||
+      effectiveSessionPhase === "PLAYER_TURN" ||
+      effectiveSessionPhase === "MOB_TURN" ||
+      effectiveSessionPhase === "WAITING_NEXT_ROUND" ||
+      effectiveSessionPhase === "MOB_DEFEATED" ||
+      effectiveSessionPhase === "SPAWNING" ||
       (!effectiveSessionPhase &&
         Boolean(effectiveStatus?.currentMob ?? effectiveSession?.currentMob)) ||
-      Boolean(providerActiveEvent));
+      (!effectiveSessionPhase && Boolean(providerActiveEvent)));
 
   const hasPendingRealtimeVisual =
     !effectiveSessionIsTerminal &&
-    isBackendCombatPhase &&
-    (providerQueueLength > 0 || Boolean(providerActiveEvent));
+    (isBackendCombatPhase || effectiveSessionPhase === "ENCOUNTER_READY") &&
+    (hasPendingCombatVisualEvent ||
+      (isBackendCombatPhase &&
+        (providerQueueLength > 0 || Boolean(providerActiveEvent))));
 
   const restActiveSession = getSessionFromStatus(autoCombatStatus);
   const restActiveMob = autoCombatStatus?.currentMob ?? null;
   const canRenderRestActiveSnapshot = Boolean(
     autoCombatStatus?.active &&
-      (restActiveMob?.id || restActiveMob?.name) &&
-      (!effectiveSession?.id ||
-        !restActiveSession?.id ||
-        restActiveSession.id === effectiveSession.id),
+    (restActiveMob?.id || restActiveMob?.name) &&
+    (!effectiveSession?.id ||
+      !restActiveSession?.id ||
+      restActiveSession.id === effectiveSession.id),
   );
   const shouldDelayActiveSessionUntilStartSnapshot = Boolean(
     isActionLoading &&
-      isBackendCombatPhase &&
-      isRealtimeSynchronizing &&
-      !canRenderRestActiveSnapshot,
+    isBackendCombatPhase &&
+    isRealtimeSynchronizing &&
+    !canRenderRestActiveSnapshot,
   );
   const showActiveSession =
     !shouldDelayActiveSessionUntilStartSnapshot &&
     (isBackendCombatPhase || hasPendingRealtimeVisual);
+  const activeBattleSelection =
+    effectiveStatus?.battleSelection ?? effectiveSession?.battleSelection ?? null;
+  const activeBattleTargetMobId =
+    effectiveSession?.battleTargetMobId ?? activeBattleSelection?.mobId ?? null;
+  const activeBattleTargetEncounterId =
+    effectiveSession?.battleTargetEncounterId ??
+    activeBattleSelection?.encounterId ??
+    null;
+  const activeBattleTargetTotal = Math.max(
+    0,
+    Math.floor(
+      toSafeNumber(
+        effectiveSession?.battleTargetTotal ?? activeBattleSelection?.total,
+        0,
+      ),
+    ),
+  );
+  const activeBattleTargetRemaining = Math.max(
+    0,
+    Math.floor(
+      toSafeNumber(
+        effectiveSession?.battleTargetRemaining ??
+          activeBattleSelection?.remaining,
+        0,
+      ),
+    ),
+  );
+  const activeBattleTargetDefeated = Math.max(
+    0,
+    activeBattleTargetTotal - activeBattleTargetRemaining,
+  );
+  const showInlineHuntBattle =
+    showActiveSession &&
+    Boolean(
+      activeBattleTargetMobId ||
+        activeBattleTargetEncounterId ||
+        activeBattleTargetTotal > 0 ||
+        activeBattleSelection?.mob,
+    );
+  const showArenaActiveSession = showActiveSession && !showInlineHuntBattle;
   const showHuntStage =
-    !showActiveSession && (isBackendHuntFlow || hasStartedHunt);
-  const showTravelEmptyStage = showHuntStage && !isBackendHuntFlow;
-  const showTrackedHuntStage = showHuntStage && isBackendHuntFlow;
+    (!showActiveSession || showInlineHuntBattle) &&
+    (isBackendHuntFlow || hasStartedHunt || showInlineHuntBattle);
+  const showTravelEmptyStage =
+    showHuntStage && !isBackendHuntFlow && !showInlineHuntBattle;
+  const showTrackedHuntStage =
+    showHuntStage && (isBackendHuntFlow || showInlineHuntBattle);
+  const showHuntTrackerCard =
+    showTrackedHuntStage && isBackendHuntingPhase && !showInlineHuntBattle;
   const isCombatViewSynchronizing =
     showActiveSession &&
     isRealtimeSynchronizing &&
@@ -877,14 +1017,15 @@ export function AutoCombatPage() {
 
     if (!showActiveSession && !showHuntStage) return undefined;
 
+    const intervalMs = showActiveSession && isBackendCombatPhase ? 200 : 1000;
     const intervalId = window.setInterval(() => {
       setSessionClockNowMs(Date.now());
-    }, 1000);
+    }, intervalMs);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [showActiveSession, showHuntStage]);
+  }, [isBackendCombatPhase, showActiveSession, showHuntStage]);
 
   useEffect(() => {
     if (!showActiveSession) {
@@ -969,7 +1110,7 @@ export function AutoCombatPage() {
 
         const currentPotion = getPotionItem(currentConfig);
         const currentPotionId =
-          currentPotion?.id ?? currentConfig.potionItemId ?? '';
+          currentPotion?.id ?? currentConfig.potionItemId ?? "";
 
         if (!currentPotion || currentPotionId !== potionItemId) {
           return currentConfig;
@@ -1004,7 +1145,7 @@ export function AutoCombatPage() {
   useEffect(() => {
     const event = providerPublicActiveEvent;
 
-    if (!event || normalizeRealtimeEventType(event.type) !== 'POTION_USED') {
+    if (!event || normalizeRealtimeEventType(event.type) !== "POTION_USED") {
       return;
     }
 
@@ -1032,7 +1173,7 @@ export function AutoCombatPage() {
     loadAutoCombatDataRequestRef.current = requestId;
 
     try {
-      setErrorMessage('');
+      setErrorMessage("");
 
       const [
         overviewData,
@@ -1083,16 +1224,24 @@ export function AutoCombatPage() {
       setAvailablePotions(normalizedPotions);
       setAutoPotionConfig(normalizedPotionConfig);
 
-      setSelectedPotionItemId(normalizedPotionConfig?.potionItemId ?? '');
+      setSelectedPotionItemId(normalizedPotionConfig?.potionItemId ?? "");
       setPotionThresholdPercent(
         clampNumber(normalizedPotionConfig?.hpThresholdPercent ?? 35, 1, 100),
       );
       setAutoRestEnabled(normalizedPotionConfig?.autoRestEnabled ?? true);
       setAutoRestStartHpPercent(
-        clampNumber(normalizedPotionConfig?.autoRestStartHpPercent ?? 35, 1, 99),
+        clampNumber(
+          normalizedPotionConfig?.autoRestStartHpPercent ?? 35,
+          1,
+          99,
+        ),
       );
       setAutoRestStopHpPercent(
-        clampNumber(normalizedPotionConfig?.autoRestStopHpPercent ?? 70, 2, 100),
+        clampNumber(
+          normalizedPotionConfig?.autoRestStopHpPercent ?? 70,
+          2,
+          100,
+        ),
       );
 
       setLocalCharacterProgress((current) => {
@@ -1132,20 +1281,27 @@ export function AutoCombatPage() {
           return activeStatusMapId;
         }
 
-        if (currentValue && mapsData.some((gameMap) => gameMap.id === currentValue)) {
+        if (
+          currentValue &&
+          mapsData.some((gameMap) => gameMap.id === currentValue)
+        ) {
           return currentValue;
         }
 
         const requestedMap = requestedMapId
-          ? mapsData.find((gameMap) => gameMap.id === requestedMapId) ?? null
+          ? (mapsData.find((gameMap) => gameMap.id === requestedMapId) ?? null)
           : null;
         const requestedSubMapParent = requestedSubMapId
-          ? mapsData.find((gameMap) => {
-              return gameMap.subMaps?.some((subMap) => subMap.id === requestedSubMapId);
-            }) ?? null
+          ? (mapsData.find((gameMap) => {
+              return gameMap.subMaps?.some(
+                (subMap) => subMap.id === requestedSubMapId,
+              );
+            }) ?? null)
           : null;
 
-        return requestedMap?.id ?? requestedSubMapParent?.id ?? mapsData[0]?.id ?? '';
+        return (
+          requestedMap?.id ?? requestedSubMapParent?.id ?? mapsData[0]?.id ?? ""
+        );
       });
     } catch (error) {
       if (requestId !== loadAutoCombatDataRequestRef.current) {
@@ -1155,7 +1311,7 @@ export function AutoCombatPage() {
       setErrorMessage(
         getApiErrorMessage(
           error,
-          'Não foi possível carregar os dados do combate automático.',
+          "Não foi possível carregar os dados do combate automático.",
         ),
       );
     }
@@ -1228,10 +1384,10 @@ export function AutoCombatPage() {
       : null;
 
   const visibleSessionTotals = hasActiveSession
-    ? visibleRealtimeSessionTotals ??
+    ? (visibleRealtimeSessionTotals ??
       visibleLocalSessionTotals ??
       visibleZeroSessionTotals ??
-      statusSessionTotals
+      statusSessionTotals)
     : null;
 
   const battleLogEvents =
@@ -1242,15 +1398,18 @@ export function AutoCombatPage() {
         : [];
 
   const activeBattleLogEvent = showActiveSession
-    ? providerPublicActiveEvent ?? localActiveEvent
+    ? (providerPublicActiveEvent ?? localActiveEvent)
     : null;
   const providerQueuedEvents = showActiveSession
     ? isRealtimeSynchronizing
       ? []
-      : (realtimeState.eventQueue ?? [])
+      : providerQueuedEventsRaw
     : [];
+  const shouldDeferInfirmaryRedirect =
+    isLoading || isRealtimeSynchronizing || !effectiveStatus;
   const shouldRedirectToInfirmary = Boolean(
     characterId &&
+      !shouldDeferInfirmaryRedirect &&
       shouldRedirectAutoCombatToInfirmary({
         status: effectiveStatus,
         session: effectiveSession,
@@ -1321,7 +1480,7 @@ export function AutoCombatPage() {
   );
   const canSyncXpFeedbackWithMobDeath =
     showActiveSession &&
-    (activeBattleLogEventType === 'MOB_DEFEATED' ||
+    (activeBattleLogEventType === "MOB_DEFEATED" ||
       activeBattleLogMobHp === 0 ||
       visualRealtimeMobHp === 0);
   const synchronizedXpFeedbackEvent = useMemo(() => {
@@ -1366,7 +1525,7 @@ export function AutoCombatPage() {
         activeBattleLogEvent.type,
       );
 
-      if (activeEventType !== 'MOB_DEFEATED') {
+      if (activeEventType !== "MOB_DEFEATED") {
         const feedbackScope = getMobFeedbackScopeFromEvent(xpFeedbackEvent);
         const activeEventScope =
           getMobFeedbackScopeFromEvent(activeBattleLogEvent);
@@ -1401,11 +1560,10 @@ export function AutoCombatPage() {
 
     shownXpFeedbackEventKeysRef.current.add(eventKey);
 
-    if (
-      shownXpFeedbackEventKeysRef.current.size > MAX_SHOWN_XP_FEEDBACK_KEYS
-    ) {
-      const oldestKey = shownXpFeedbackEventKeysRef.current.values().next()
-        .value;
+    if (shownXpFeedbackEventKeysRef.current.size > MAX_SHOWN_XP_FEEDBACK_KEYS) {
+      const oldestKey = shownXpFeedbackEventKeysRef.current
+        .values()
+        .next().value;
 
       if (oldestKey) {
         shownXpFeedbackEventKeysRef.current.delete(oldestKey);
@@ -1432,7 +1590,7 @@ export function AutoCombatPage() {
       });
 
       if (xpFeedbackEventKeyRef.current === eventKey) {
-        xpFeedbackEventKeyRef.current = '';
+        xpFeedbackEventKeyRef.current = "";
       }
 
       xpFeedbackHideTimeoutRef.current = null;
@@ -1531,8 +1689,7 @@ export function AutoCombatPage() {
   useEffect(() => {
     if (!hasActiveSession) return;
 
-    const shouldPollActiveSession =
-      !isSocketConnected || isBackendHuntingPhase;
+    const shouldPollActiveSession = !isSocketConnected && isBackendHuntingPhase;
 
     if (!shouldPollActiveSession) return;
 
@@ -1592,9 +1749,9 @@ export function AutoCombatPage() {
   }, [availableMaps, effectiveSelectedMapId]);
 
   const selectedMapThreats = useMemo(() => {
-    return getActiveEncountersForMap(selectedMap).sort((a, b) => {
-      return (b.weight ?? 0) - (a.weight ?? 0);
-    });
+    return getActiveEncountersForMap(selectedMap).sort(
+      compareAutoCombatThreatsByProgression,
+    );
   }, [selectedMap]);
 
   const selectedMapThreatImages = useMemo(() => {
@@ -1641,15 +1798,15 @@ export function AutoCombatPage() {
     if (!selectedThreat) return;
 
     function handleThreatModalKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         setSelectedThreat(null);
       }
     }
 
-    window.addEventListener('keydown', handleThreatModalKeyDown);
+    window.addEventListener("keydown", handleThreatModalKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleThreatModalKeyDown);
+      window.removeEventListener("keydown", handleThreatModalKeyDown);
     };
   }, [selectedThreat]);
 
@@ -1657,15 +1814,15 @@ export function AutoCombatPage() {
     if (!isPotionConfigPanelOpen) return;
 
     function handlePotionConfigModalKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         setIsPotionConfigPanelOpen(false);
       }
     }
 
-    window.addEventListener('keydown', handlePotionConfigModalKeyDown);
+    window.addEventListener("keydown", handlePotionConfigModalKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handlePotionConfigModalKeyDown);
+      window.removeEventListener("keydown", handlePotionConfigModalKeyDown);
     };
   }, [isPotionConfigPanelOpen]);
 
@@ -1673,15 +1830,15 @@ export function AutoCombatPage() {
     if (!isRestConfigPanelOpen) return;
 
     function handleRestConfigModalKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         setIsRestConfigPanelOpen(false);
       }
     }
 
-    window.addEventListener('keydown', handleRestConfigModalKeyDown);
+    window.addEventListener("keydown", handleRestConfigModalKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleRestConfigModalKeyDown);
+      window.removeEventListener("keydown", handleRestConfigModalKeyDown);
     };
   }, [isRestConfigPanelOpen]);
 
@@ -1689,7 +1846,10 @@ export function AutoCombatPage() {
     if (maps.length <= 0) return;
 
     if (isMapSelectionLocked) {
-      if (resolvedActiveSessionMapId && selectedMapId !== resolvedActiveSessionMapId) {
+      if (
+        resolvedActiveSessionMapId &&
+        selectedMapId !== resolvedActiveSessionMapId
+      ) {
         setSelectedMapId(resolvedActiveSessionMapId);
       }
 
@@ -1697,18 +1857,25 @@ export function AutoCombatPage() {
     }
 
     const requestedMap = requestedMapId
-      ? maps.find((gameMap) => gameMap.id === requestedMapId) ?? null
+      ? (maps.find((gameMap) => gameMap.id === requestedMapId) ?? null)
       : null;
     const requestedSubMapParent = requestedSubMapId
-      ? maps.find((gameMap) => {
-          return gameMap.subMaps?.some((subMap) => subMap.id === requestedSubMapId);
-        }) ?? null
+      ? (maps.find((gameMap) => {
+          return gameMap.subMaps?.some(
+            (subMap) => subMap.id === requestedSubMapId,
+          );
+        }) ?? null)
       : null;
-    const nextMap = selectedMap ?? requestedMap ?? requestedSubMapParent ?? availableMaps[0] ?? null;
+    const nextMap =
+      selectedMap ??
+      requestedMap ??
+      requestedSubMapParent ??
+      availableMaps[0] ??
+      null;
 
     if (!nextMap) {
       if (selectedMapId) {
-        setSelectedMapId('');
+        setSelectedMapId("");
       }
 
       return;
@@ -1726,61 +1893,6 @@ export function AutoCombatPage() {
     selectedMapId,
     requestedMapId,
     requestedSubMapId,
-  ]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadPreview() {
-      if (!characterId || !selectedMap?.id || !hasStartedHunt) {
-        setPreparationPreview(null);
-        return;
-      }
-
-      if (
-        showActiveSession ||
-        !selectedMapIsUnlocked ||
-        !selectedMapHasActiveEncounters
-      ) {
-        setPreparationPreview(null);
-        return;
-      }
-
-      try {
-        setIsPreviewLoading(true);
-
-        const data = await previewAutoCombat({
-          characterId,
-          mapId: selectedMap.id,
-          projectionSeconds: 1800,
-        });
-
-        if (isMounted) {
-          setPreparationPreview(data.combatPreview ?? null);
-        }
-      } catch {
-        if (isMounted) {
-          setPreparationPreview(null);
-        }
-      } finally {
-        if (isMounted) {
-          setIsPreviewLoading(false);
-        }
-      }
-    }
-
-    loadPreview();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    characterId,
-    selectedMap?.id,
-    hasStartedHunt,
-    showActiveSession,
-    selectedMapIsUnlocked,
-    selectedMapHasActiveEncounters,
   ]);
 
   if (!characterId) {
@@ -1804,7 +1916,8 @@ export function AutoCombatPage() {
     return <Navigate to="/characters" replace />;
   }
 
-  const characterWithPotionConfig = character as CharacterWithSinglePotionConfig;
+  const characterWithPotionConfig =
+    character as CharacterWithSinglePotionConfig;
 
   const fallbackPotionConfig =
     characterWithPotionConfig.autoPotionConfig ??
@@ -1843,7 +1956,7 @@ export function AutoCombatPage() {
 
   const potionOptionsCountLabel =
     potionOptions.length === 1
-      ? '1 opção no inventário'
+      ? "1 opção no inventário"
       : `${potionOptions.length} opções no inventário`;
 
   const potionSlots = Array.from({ length: 1 }, () => {
@@ -1854,9 +1967,10 @@ export function AutoCombatPage() {
     ? getLatestKilledMob(effectiveStatus)
     : null;
   const mainThreat = selectedMapThreats[0] ?? null;
-  const calculatedRemainingSeconds = showActiveSession && activeTimerStatus
-    ? getRemainingSeconds(activeTimerStatus, syncedSessionNowMs)
-    : 0;
+  const calculatedRemainingSeconds =
+    showActiveSession && activeTimerStatus
+      ? getRemainingSeconds(activeTimerStatus, syncedSessionNowMs)
+      : 0;
   const lastPositiveRemainingSeconds = lastPositiveRemainingSecondsRef.current;
   const hasMatchingLastPositiveRemainingSeconds =
     Boolean(lastPositiveRemainingSeconds) &&
@@ -1868,7 +1982,7 @@ export function AutoCombatPage() {
     hasMatchingLastPositiveRemainingSeconds &&
     (lastPositiveRemainingSeconds?.seconds ?? 0) > 0;
   const remainingSeconds = shouldKeepLastPositiveRemainingSeconds
-    ? lastPositiveRemainingSeconds?.seconds ?? 0
+    ? (lastPositiveRemainingSeconds?.seconds ?? 0)
     : calculatedRemainingSeconds;
 
   if (showActiveSession && calculatedRemainingSeconds > 0) {
@@ -1884,9 +1998,9 @@ export function AutoCombatPage() {
     showActiveSession && visualRealtimeCombat?.characterMaxHp !== undefined
       ? visualRealtimeCombat.characterMaxHp
       : hasActiveSession
-        ? effectiveStatus?.character?.maxHp ??
+        ? (effectiveStatus?.character?.maxHp ??
           effectiveStatus?.sessionSummary?.hp?.max ??
-          character.maxHp
+          character.maxHp)
         : character.maxHp;
 
   const currentCharacterMaxHp = Math.max(
@@ -1898,9 +2012,9 @@ export function AutoCombatPage() {
     showActiveSession && visualRealtimeCombat?.characterCurrentHp !== undefined
       ? visualRealtimeCombat.characterCurrentHp
       : hasActiveSession
-        ? effectiveStatus?.character?.currentHp ??
+        ? (effectiveStatus?.character?.currentHp ??
           effectiveStatus?.sessionSummary?.hp?.current ??
-          character.currentHp
+          character.currentHp)
         : character.currentHp;
 
   const currentCharacterHp = clampNumber(
@@ -1918,13 +2032,13 @@ export function AutoCombatPage() {
   const currentCharacterXp =
     visibleCharacterProgress?.xp ??
     (showActiveSession
-      ? character.totalXp ?? character.xp ?? 0
-      : effectiveStatus?.character?.totalXp ??
+      ? (character.totalXp ?? character.xp ?? 0)
+      : (effectiveStatus?.character?.totalXp ??
         effectiveStatus?.character?.levelProgress?.totalXp ??
         effectiveStatus?.character?.xp ??
         character.totalXp ??
         character.xp ??
-        0);
+        0));
 
   const currentLevelXp =
     visibleCharacterProgress?.currentLevelXp ??
@@ -1988,9 +2102,7 @@ export function AutoCombatPage() {
     : undefined;
 
   const currentLayoutMapName =
-    activeSessionMapName ??
-    selectedMap?.name ??
-    character.currentMapName;
+    activeSessionMapName ?? selectedMap?.name ?? character.currentMapName;
 
   const layoutCharacter: CharacterViewModelWithLayoutFields = {
     ...character,
@@ -2015,16 +2127,12 @@ export function AutoCombatPage() {
 
   const characterBattleImage = layoutCharacter.avatarUrl ?? null;
 
-  const selectedMapName =
-    selectedMap?.name ??
-    layoutCharacter.currentMapName;
+  const selectedMapName = selectedMap?.name ?? layoutCharacter.currentMapName;
   const mapSelectValue = selectedMap?.id ?? effectiveSelectedMapId;
 
   const selectedMapImage = getMapImageByName(selectedMapName);
   const selectedMapVisualStyle = buildMapVisualStyle(selectedMapImage);
-  const selectedMapRarityClassName = getMapRarityClassName(
-    selectedMap?.tier,
-  );
+  const selectedMapRarityClassName = getMapRarityClassName(selectedMap?.tier);
 
   const characterHasHp = currentCharacterHp > 0;
 
@@ -2043,22 +2151,22 @@ export function AutoCombatPage() {
       : effectiveStatus;
   const statusActiveMob = isCombatViewSynchronizing
     ? null
-    : activeMobStatusSource?.currentMob ?? null;
+    : (activeMobStatusSource?.currentMob ?? null);
   const hasConfirmedActiveMob = Boolean(
     !isCombatViewSynchronizing &&
-      (visualRealtimeCombat?.mobId ||
-        visualRealtimeCombat?.mobName ||
-        statusActiveMob?.id ||
-        statusActiveMob?.name),
+    (visualRealtimeCombat?.mobId ||
+      visualRealtimeCombat?.mobName ||
+      statusActiveMob?.id ||
+      statusActiveMob?.name),
   );
 
   const activeMobName = showActiveSession
     ? isCombatViewSynchronizing
-      ? 'Sincronizando combate'
-      : visualRealtimeCombat?.mobName ??
-      statusActiveMob?.name ??
-      'Aguardando ameaça'
-    : mainThreat?.mob?.name ?? 'Aguardando ameaça';
+      ? "Sincronizando combate"
+      : (visualRealtimeCombat?.mobName ??
+        statusActiveMob?.name ??
+        "Aguardando ameaça")
+    : (mainThreat?.mob?.name ?? "Aguardando ameaça");
 
   const normalizedActiveMobName = activeMobName.trim().toLowerCase();
 
@@ -2068,7 +2176,7 @@ export function AutoCombatPage() {
 
       return Boolean(
         encounterMobName &&
-          encounterMobName.trim().toLowerCase() === normalizedActiveMobName,
+        encounterMobName.trim().toLowerCase() === normalizedActiveMobName,
       );
     }) ?? null;
 
@@ -2112,27 +2220,27 @@ export function AutoCombatPage() {
   const activeMobFullBodyImage = isCombatViewSynchronizing
     ? null
     : hasConfirmedActiveMob
-      ? getMobFullBodyImage(activeMobName) ?? getMobPortraitImage(activeMobName)
+      ? (getMobFullBodyImage(activeMobName) ??
+        getMobPortraitImage(activeMobName))
       : null;
 
   const rawActiveMobMaxHp = showActiveSession
     ? isCombatViewSynchronizing
       ? 0
       : hasConfirmedActiveMob
-        ? visualRealtimeCombat?.mobMaxHp ??
+        ? (visualRealtimeCombat?.mobMaxHp ??
           statusActiveMob?.maxHp ??
           statusActiveMob?.hp ??
           activeMobThreat?.mob?.hp ??
-          0
+          0)
         : 0
-    : activeMobThreat?.mob?.hp ?? mainThreat?.mob?.hp ?? 0;
+    : (activeMobThreat?.mob?.hp ?? mainThreat?.mob?.hp ?? 0);
 
   const activeMobMaxHp = Math.max(0, toSafeNumber(rawActiveMobMaxHp, 0));
 
-  const rawActiveMobCurrentHp =
-    isCombatViewSynchronizing
-      ? 0
-      : showActiveSession && visualRealtimeCombat?.mobCurrentHp !== undefined
+  const rawActiveMobCurrentHp = isCombatViewSynchronizing
+    ? 0
+    : showActiveSession && visualRealtimeCombat?.mobCurrentHp !== undefined
       ? visualRealtimeCombat.mobCurrentHp
       : showActiveSession && statusActiveMob?.currentHp !== undefined
         ? statusActiveMob.currentHp
@@ -2155,38 +2263,171 @@ export function AutoCombatPage() {
     width: `${clampPercent(activeMobHpPercent)}%`,
   } as CSSProperties;
 
+  const activeBattleProgressSource =
+    statusActiveMob?.battleProgress ??
+    effectiveStatus?.battleProgress ??
+    effectiveSession?.battleProgress ??
+    null;
+  const visualBattleProgress = visualRealtimeCombat as
+    | {
+        battleProgressSeconds?: number | string | null;
+        battleProgressPercent?: number | string | null;
+        estimatedKillTimeSeconds?: number | string | null;
+        killsPerMinute?: number | string | null;
+        killsPerHour?: number | string | null;
+        difficultyLabel?: string | null;
+        updatedAt?: number | string | null;
+      }
+    | null
+    | undefined;
+  const activeEstimatedKillTimeSeconds = Math.max(
+    0,
+    toSafeNumber(
+      visualBattleProgress?.estimatedKillTimeSeconds ??
+        activeBattleProgressSource?.estimatedKillTimeSeconds,
+      0,
+    ),
+  );
+  const activeKillProgressSnapshotSeconds = clampNumber(
+    toSafeNumber(
+      visualBattleProgress?.battleProgressSeconds ??
+        activeBattleProgressSource?.progressSeconds,
+      0,
+    ),
+    0,
+    activeEstimatedKillTimeSeconds || Number.MAX_SAFE_INTEGER,
+  );
+  const activeBattleProgressAnchorMs =
+    toSafeNumber(visualBattleProgress?.updatedAt, 0) ||
+    getAutoCombatTimestampMs(
+      activeTimerStatus?.serverNow ?? effectiveStatus?.serverNow,
+    ) ||
+    sessionClockNowMs;
+  const activeBattleProgressClockMs =
+    toSafeNumber(visualBattleProgress?.updatedAt, 0)
+      ? sessionClockNowMs
+      : syncedSessionNowMs;
+  const activeKillProgressElapsedSeconds =
+    activeEstimatedKillTimeSeconds > 0 &&
+    showActiveSession &&
+    !isCombatViewSynchronizing
+      ? Math.max(
+          0,
+          (activeBattleProgressClockMs - activeBattleProgressAnchorMs) / 1000,
+        )
+      : 0;
+  const activeKillProgressCeilingSeconds =
+    activeEstimatedKillTimeSeconds > 0
+      ? activeEstimatedKillTimeSeconds * 0.995
+      : Number.MAX_SAFE_INTEGER;
+  const activeKillProgressSeconds = clampNumber(
+    activeKillProgressSnapshotSeconds + activeKillProgressElapsedSeconds,
+    0,
+    activeKillProgressCeilingSeconds,
+  );
+  const activeKillProgressPercent =
+    activeEstimatedKillTimeSeconds > 0
+      ? clampPercent(
+          (activeKillProgressSeconds / activeEstimatedKillTimeSeconds) * 100,
+        )
+      : activeMobHpPercent;
+  const hasTtkBattleProgress =
+    showActiveSession && activeEstimatedKillTimeSeconds > 0;
+  const activeKillRemainingSeconds = hasTtkBattleProgress
+    ? clampNumber(
+        activeEstimatedKillTimeSeconds - activeKillProgressSeconds,
+        0,
+        activeEstimatedKillTimeSeconds,
+      )
+    : 0;
+  const activeKillRemainingPercent = hasTtkBattleProgress
+    ? clampPercent(100 - activeKillProgressPercent)
+    : clampPercent(activeMobHpPercent);
+  const activeBattleProgressStyle = {
+    width: `${activeKillRemainingPercent}%`,
+  } as CSSProperties;
+  const formatTtkSeconds = (value: number) =>
+    value >= 10 ? `${Math.round(value)}s` : `${value.toFixed(1)}s`;
+  const activeKillProgressLabel = hasTtkBattleProgress
+    ? `${formatTtkSeconds(activeKillRemainingSeconds)} restantes`
+    : "Aguardando";
+  const activeKillsPerMinute = toSafeNumber(
+    visualBattleProgress?.killsPerMinute ??
+      activeBattleProgressSource?.killsPerMinute,
+    0,
+  );
+  const activeDifficultyLabel =
+    visualBattleProgress?.difficultyLabel ??
+    activeBattleProgressSource?.difficultyLabel ??
+    null;
+  const activeBatchTotalEstimatedSeconds =
+    hasTtkBattleProgress && activeBattleTargetTotal > 0
+      ? activeBattleTargetTotal * activeEstimatedKillTimeSeconds
+      : 0;
+  const activeBatchRemainingEstimatedSeconds =
+    hasTtkBattleProgress && activeBattleTargetRemaining > 0
+      ? Math.max(0, activeBattleTargetRemaining - 1) *
+          activeEstimatedKillTimeSeconds +
+        activeKillRemainingSeconds
+      : 0;
+  const activeBatchElapsedEstimatedSeconds =
+    activeBatchTotalEstimatedSeconds > 0
+      ? clampNumber(
+          activeBatchTotalEstimatedSeconds -
+            activeBatchRemainingEstimatedSeconds,
+          0,
+          activeBatchTotalEstimatedSeconds,
+        )
+      : 0;
+  const activeBatchElapsedLabel =
+    activeBatchTotalEstimatedSeconds > 0
+      ? formatSeconds(activeBatchElapsedEstimatedSeconds)
+      : "Calculando";
+  const activeBatchTotalLabel =
+    activeBatchTotalEstimatedSeconds > 0
+      ? formatSeconds(activeBatchTotalEstimatedSeconds)
+      : null;
+  const activeBattleRateLabel =
+    activeKillsPerMinute > 0
+      ? `${activeKillsPerMinute.toFixed(1)} abates/min`
+      : "Calculando ritmo";
+  const activeBattleBatchLabel =
+    activeBattleTargetTotal > 0
+      ? `${activeBattleTargetDefeated}/${activeBattleTargetTotal} abatidos`
+      : "Batalha em andamento";
+
   const activeMobReference = showActiveSession
     ? isCombatViewSynchronizing
-      ? 'Sincronizando'
+      ? "Sincronizando"
       : visualRealtimeCombat?.combatIndex
-      ? `Combate ${visualRealtimeCombat.combatIndex}${
-          visualRealtimeCombat.round
-            ? ` · Rodada ${visualRealtimeCombat.round}`
-            : ''
-        }`
-      : effectiveStatus?.session?.currentCombatIndex
-        ? `Combate ${effectiveStatus.session.currentCombatIndex}${
-            effectiveStatus.session.currentRound
-              ? ` · Rodada ${effectiveStatus.session.currentRound}`
-              : ''
+        ? `Combate ${visualRealtimeCombat.combatIndex}${
+            visualRealtimeCombat.round
+              ? ` · Rodada ${visualRealtimeCombat.round}`
+              : ""
           }`
-        : activeMobThreat?.mob
-          ? `Nv. ${activeMobThreat.mob.level}`
-          : mainThreat?.mob
-            ? `Nv. ${mainThreat.mob.level}`
-            : latestKilledMob
-              ? `${latestKilledMob.kills} abate(s)`
-              : '—'
+        : effectiveStatus?.session?.currentCombatIndex
+          ? `Combate ${effectiveStatus.session.currentCombatIndex}${
+              effectiveStatus.session.currentRound
+                ? ` · Rodada ${effectiveStatus.session.currentRound}`
+                : ""
+            }`
+          : activeMobThreat?.mob
+            ? `Nv. ${activeMobThreat.mob.level}`
+            : mainThreat?.mob
+              ? `Nv. ${mainThreat.mob.level}`
+              : latestKilledMob
+                ? `${latestKilledMob.kills} abate(s)`
+                : "—"
     : activeMobThreat?.mob
       ? `Nv. ${activeMobThreat.mob.level}`
       : mainThreat?.mob
         ? `Nv. ${mainThreat.mob.level}`
-        : '—';
+        : "—";
 
   const sessionStatusText = showActiveSession
-    ? effectiveStatus?.sessionSummary?.statusText ??
-      formatSessionStatus(effectiveSession?.status)
-    : 'Sem sessão ativa';
+    ? (effectiveStatus?.sessionSummary?.statusText ??
+      formatSessionStatus(effectiveSession?.status))
+    : "Sem sessão ativa";
 
   const totalKills = Math.max(
     0,
@@ -2283,10 +2524,10 @@ export function AutoCombatPage() {
 
   const isPremiumActive = Boolean(
     visibleSessionTotals?.isPremiumActive ??
-      effectiveStatus?.sessionSummary?.progression?.isPremiumActive ??
-      effectiveSession?.isPremiumActive ??
-      visualRealtimeCombat?.isPremiumActive ??
-      false,
+    effectiveStatus?.sessionSummary?.progression?.isPremiumActive ??
+    effectiveSession?.isPremiumActive ??
+    visualRealtimeCombat?.isPremiumActive ??
+    false,
   );
 
   const normalizedSessionXp = normalizeSessionXpBreakdown({
@@ -2330,7 +2571,8 @@ export function AutoCombatPage() {
     0,
     Math.floor(
       toSafeNumber(
-        huntingSnapshot?.foundEnemiesCount ?? effectiveSession?.foundEnemiesCount,
+        huntingSnapshot?.foundEnemiesCount ??
+          effectiveSession?.foundEnemiesCount,
         0,
       ),
     ),
@@ -2362,19 +2604,15 @@ export function AutoCombatPage() {
   );
   const isHuntLimitReached = Boolean(
     huntingSnapshot?.isLimitReached ??
-      effectiveStatus?.huntCapacity?.isLimitReached ??
-      effectiveStatus?.huntBatch?.isLimitReached ??
-      effectiveSession?.isHuntLimitReached ??
-      (maxTrackedEnemies > 0 && foundEnemiesCount >= maxTrackedEnemies),
+    effectiveStatus?.huntCapacity?.isLimitReached ??
+    effectiveStatus?.huntBatch?.isLimitReached ??
+    effectiveSession?.isHuntLimitReached ??
+    (maxTrackedEnemies > 0 && foundEnemiesCount >= maxTrackedEnemies),
   );
   const huntingCapacityLabel =
     maxTrackedEnemies > 0
       ? `${foundEnemiesCount} / ${maxTrackedEnemies}`
       : `${foundEnemiesCount}`;
-  const huntingCapacityDetail =
-    maxTrackedEnemies > 0
-      ? `${remainingHuntCapacity} vaga(s) restantes`
-      : 'limite do mapa indisponível';
   const huntingLevel = Math.max(
     1,
     Math.floor(
@@ -2386,10 +2624,7 @@ export function AutoCombatPage() {
   );
   const huntingXpProgressPercent = Math.max(
     0,
-    Math.min(
-      100,
-      Math.floor(toSafeNumber(huntingSkill?.xpProgressPercent, 0)),
-    ),
+    Math.min(100, Math.floor(toSafeNumber(huntingSkill?.xpProgressPercent, 0))),
   );
   const trackedEncounter =
     huntingSnapshot?.currentTarget ??
@@ -2400,9 +2635,6 @@ export function AutoCombatPage() {
   const trackedThreatImage =
     getMobFullBodyImage(trackedThreatMob?.name) ??
     getMobPortraitImage(trackedThreatMob?.name);
-  const trackedThreatChance = trackedEncounter
-    ? getThreatWeightPercent(trackedEncounter, selectedMapThreats)
-    : null;
   const trackedThreatFoundCount = Math.max(
     0,
     Math.floor(
@@ -2417,34 +2649,101 @@ export function AutoCombatPage() {
       ),
     ),
   );
-  const shouldShowTrackedThreatFoundCount =
-    isBackendEncounterReadyPhase && trackedThreatFoundCount > 0;
-  const trackedThreatFoundCountChipLabel =
-    trackedThreatFoundCount === 1
-      ? '1 deste mob'
-      : `${trackedThreatFoundCount} deste mob`;
-  const huntFoundCountByMobId = new Map<string, number>();
-
-  for (const foundMob of effectiveStatus?.sessionSummary?.mobs?.found ?? []) {
-    const safeFoundCount = Math.max(
+  const shouldUseTrackedThreatCards =
+    isBackendEncounterReadyPhase || showInlineHuntBattle;
+  const trackedMonstersForSelection: AutoCombatTrackedMonsterViewModel[] = (
+    effectiveStatus?.trackedMonsters ??
+    effectiveStatus?.huntBatch?.mobs ??
+    effectiveStatus?.rewards?.trackedMonsters ??
+    huntingSnapshot?.trackedMonsters ??
+    []
+  ).filter((trackedMonster) => {
+    const remainingCount = Math.max(
       0,
-      Math.floor(toSafeNumber(foundMob.foundCount, 0)),
+      Math.floor(
+        toSafeNumber(
+          trackedMonster.remainingCount ?? trackedMonster.foundCount,
+          0,
+        ),
+      ),
     );
 
-    if (!foundMob.mobId || safeFoundCount <= 0) {
+    return remainingCount > 0;
+  });
+  const trackedThreatRemainingCount = Math.max(
+    0,
+    Math.floor(
+      toSafeNumber(
+        trackedThreatMob?.id || trackedEncounter?.id
+          ? trackedMonstersForSelection.find((trackedMonster) => {
+              return (
+                trackedMonster.mobId === trackedThreatMob?.id ||
+                trackedMonster.encounterId === trackedEncounter?.id
+              );
+            })?.remainingCount
+          : null,
+        0,
+      ),
+    ),
+  );
+  const trackedThreatDisplayCount =
+    shouldUseTrackedThreatCards && trackedThreatRemainingCount > 0
+      ? trackedThreatRemainingCount
+      : trackedThreatFoundCount;
+  const shouldShowTrackedThreatFoundCount =
+    shouldUseTrackedThreatCards && trackedThreatDisplayCount > 0;
+  const huntFoundCountByMobId = new Map<string, number>();
+
+  for (const trackedMonster of trackedMonstersForSelection) {
+    const safeRemainingCount = Math.max(
+      0,
+      Math.floor(
+        toSafeNumber(
+          trackedMonster.remainingCount ?? trackedMonster.foundCount,
+          0,
+        ),
+      ),
+    );
+
+    if (!trackedMonster.mobId || safeRemainingCount <= 0) {
       continue;
     }
 
     huntFoundCountByMobId.set(
-      foundMob.mobId,
+      trackedMonster.mobId,
       Math.max(
-        huntFoundCountByMobId.get(foundMob.mobId) ?? 0,
-        safeFoundCount,
+        huntFoundCountByMobId.get(trackedMonster.mobId) ?? 0,
+        safeRemainingCount,
       ),
     );
   }
 
-  if (trackedThreatMob?.id && trackedThreatFoundCount > 0) {
+  if (!shouldUseTrackedThreatCards) {
+    for (const foundMob of effectiveStatus?.sessionSummary?.mobs?.found ?? []) {
+      const safeFoundCount = Math.max(
+        0,
+        Math.floor(toSafeNumber(foundMob.foundCount, 0)),
+      );
+
+      if (!foundMob.mobId || safeFoundCount <= 0) {
+        continue;
+      }
+
+      huntFoundCountByMobId.set(
+        foundMob.mobId,
+        Math.max(
+          huntFoundCountByMobId.get(foundMob.mobId) ?? 0,
+          safeFoundCount,
+        ),
+      );
+    }
+  }
+
+  if (
+    !shouldUseTrackedThreatCards &&
+    trackedThreatMob?.id &&
+    trackedThreatFoundCount > 0
+  ) {
     huntFoundCountByMobId.set(
       trackedThreatMob.id,
       Math.max(
@@ -2453,6 +2752,95 @@ export function AutoCombatPage() {
       ),
     );
   }
+  const displayedThreats = (
+    shouldUseTrackedThreatCards
+      ? trackedMonstersForSelection.map((trackedMonster) => {
+        const matchingEncounter = selectedMapThreats.find((encounter) => {
+          return (
+            encounter.id === trackedMonster.encounterId ||
+            encounter.mobId === trackedMonster.mobId
+          );
+        });
+        const trackedMob = trackedMonster.mob;
+        const safeMobId =
+          trackedMonster.mobId ?? trackedMob?.id ?? matchingEncounter?.mobId;
+        const safeEncounterId =
+          trackedMonster.encounterId ??
+          matchingEncounter?.id ??
+          safeMobId ??
+          "tracked-threat";
+        const safeRemainingCount = Math.max(
+          0,
+          Math.floor(
+            toSafeNumber(
+              trackedMonster.remainingCount ?? trackedMonster.foundCount,
+              0,
+            ),
+          ),
+        );
+
+        return {
+          ...(matchingEncounter ?? {
+            id: safeEncounterId,
+            subMapId: selectedMap?.subMaps?.[0]?.id ?? "",
+            mobId: safeMobId ?? safeEncounterId,
+            weight: trackedMonster.weightSnapshot ?? 100,
+            isActive: true,
+          }),
+          id: safeEncounterId,
+          mobId: safeMobId ?? safeEncounterId,
+          foundCount: safeRemainingCount,
+          huntFoundCount: safeRemainingCount,
+          mob:
+            matchingEncounter?.mob ??
+            (trackedMob
+              ? {
+                  id: trackedMob.id ?? safeMobId ?? safeEncounterId,
+                  name: trackedMob.name ?? trackedMonster.mobName,
+                  description: trackedMob.description ?? null,
+                  level: trackedMob.level ?? trackedMonster.mobLevel ?? 1,
+                  tier: trackedMob.tier ?? trackedMonster.mobTier ?? 1,
+                  hp: trackedMob.hp ?? trackedMob.maxHp ?? 1,
+                  attack: trackedMob.attack ?? 0,
+                  defense: trackedMob.defense ?? 0,
+                  speed: trackedMob.speed ?? 0,
+                  xpReward: trackedMob.xpReward ?? 0,
+                  currentHp: trackedMob.currentHp ?? trackedMob.hp ?? null,
+                  maxHp: trackedMob.maxHp ?? trackedMob.hp ?? null,
+                  hpPercent: trackedMob.hpPercent ?? null,
+                  foundCount: safeRemainingCount,
+                  huntFoundCount: safeRemainingCount,
+                  iconUrl: trackedMob.iconUrl ?? null,
+                  imageUrl: trackedMob.imageUrl ?? null,
+                  assetKey: trackedMob.assetKey ?? null,
+                  drops: [],
+                }
+              : null),
+        } as AutoCombatEncounterViewModel;
+      })
+      : selectedMapThreats
+  ).sort(compareAutoCombatThreatsByProgression);
+  const selectedThreatRemainingCount = Math.max(
+    0,
+    Math.floor(
+      toSafeNumber(
+        selectedThreatMob?.id
+          ? huntFoundCountByMobId.get(selectedThreatMob.id)
+          : null,
+        selectedThreatDetails?.huntFoundCount ??
+          selectedThreatDetails?.foundCount ??
+          selectedThreatMob?.huntFoundCount ??
+          selectedThreatMob?.foundCount ??
+          0,
+      ),
+    ),
+  );
+  const normalizedSelectedBattleQuantity =
+    selectedThreatRemainingCount > 0
+      ? clampNumber(selectedBattleQuantity, 1, selectedThreatRemainingCount)
+      : 1;
+  const canBattleSelectedThreat =
+    isBackendEncounterReadyPhase && selectedThreatRemainingCount > 0;
   const huntingTargetSequence = Math.max(
     1,
     Math.floor(
@@ -2464,16 +2852,6 @@ export function AutoCombatPage() {
       ),
     ),
   );
-  const trackedThreatStateLabel = isBackendEncounterReadyPhase
-    ? 'Ameaça localizada'
-    : foundEnemiesCount > 0
-      ? `Ameaça rastreada #${huntingTargetSequence}`
-      : 'Rastreando ameaça';
-  const trackedThreatDescription = isBackendEncounterReadyPhase
-    ? 'Alvo pronto. Inicie o combate quando quiser enfrentar esta ameaça.'
-    : foundEnemiesCount > 0
-      ? 'A caça mantém este alvo rastreado enquanto busca o próximo encontro.'
-      : 'A caça começou e está seguindo rastros para confirmar o primeiro alvo.';
   const huntingSecondsPerFind = Math.max(
     1,
     Math.floor(
@@ -2524,35 +2902,72 @@ export function AutoCombatPage() {
   const huntCycleElapsedSeconds = hasPendingHuntProcessing
     ? huntingWindowSeconds
     : huntElapsedSinceLastSeconds;
-  const huntProgressPercent = isBackendEncounterReadyPhase
-    ? 100
-    : clampNumber(
-        (huntCycleElapsedSeconds / huntingWindowSeconds) * 100,
-        0,
-        100,
-      );
+  const huntProgressPercent = showInlineHuntBattle
+    ? activeBattleTargetTotal > 0
+      ? clampNumber(
+          (activeBattleTargetDefeated / activeBattleTargetTotal) * 100,
+          0,
+          100,
+        )
+      : 0
+    : isBackendEncounterReadyPhase
+      ? 100
+      : clampNumber(
+          (huntCycleElapsedSeconds / huntingWindowSeconds) * 100,
+          0,
+          100,
+        );
   const huntRemainingSeconds = isBackendEncounterReadyPhase
     ? 0
     : hasPendingHuntProcessing
       ? 0
       : hasAuthoritativeHuntWindow
-        ? Math.max(
+        ? Math.max(1, Math.ceil((huntNextFindAtMs - syncedSessionNowMs) / 1000))
+        : Math.max(
             1,
-            Math.ceil((huntNextFindAtMs - syncedSessionNowMs) / 1000),
-          )
-        : Math.max(1, Math.ceil(huntingWindowSeconds - huntCycleElapsedSeconds));
-  const huntProgressStatusText = isHuntLimitReached
-    ? 'Limite do mapa atingido'
-    : isBackendEncounterReadyPhase
-      ? 'Ameaça pronta para combate'
-      : hasPendingHuntProcessing
-        ? 'Confirmando rastreio...'
-        : `Próximo rastreio em ${huntRemainingSeconds}s`;
+            Math.ceil(huntingWindowSeconds - huntCycleElapsedSeconds),
+          );
+  const huntTotalElapsedSeconds = Math.max(
+    0,
+    Math.floor((syncedSessionNowMs - huntStartedAtMs) / 1000),
+  );
+  const huntingXpGained = Math.max(
+    0,
+    Math.floor(
+      toSafeNumber(
+        huntingSnapshot?.huntingXpGained ??
+          effectiveStatus?.huntBatch?.huntingXpGained ??
+          effectiveSession?.huntingXpGained,
+        0,
+      ),
+    ),
+  );
+  const huntingXpPerSecond =
+    huntTotalElapsedSeconds > 0
+      ? huntingXpGained / huntTotalElapsedSeconds
+      : 0;
+  const huntingXpPerSecondLabel =
+    huntingXpPerSecond >= 10
+      ? huntingXpPerSecond.toFixed(1)
+      : huntingXpPerSecond.toFixed(2);
+  const huntingFoundLabel = foundEnemiesCount.toLocaleString("pt-BR");
+  const huntingRemainingLabel = remainingHuntCapacity.toLocaleString("pt-BR");
+  const huntProgressStatusText = showInlineHuntBattle
+    ? activeBattleTargetTotal > 0
+      ? `${activeBattleTargetDefeated}/${activeBattleTargetTotal} abatidos`
+      : "Batalha em andamento"
+    : isHuntLimitReached
+      ? "Limite do mapa atingido"
+      : isBackendEncounterReadyPhase
+        ? "Ameaça pronta para combate"
+        : hasPendingHuntProcessing
+          ? "Confirmando rastreio..."
+          : `Próximo rastreio em ${huntRemainingSeconds}s`;
   const huntProgressStyle = {
-    '--hunt-progress': `${huntProgressPercent}%`,
+    "--hunt-progress": `${huntProgressPercent}%`,
   } as CSSProperties;
   const huntingSkillProgressStyle = {
-    '--hunt-skill-progress': `${huntingXpProgressPercent}%`,
+    "--hunt-skill-progress": `${huntingXpProgressPercent}%`,
   } as CSSProperties;
   const huntingSkillCurrentXp = Math.max(
     0,
@@ -2563,7 +2978,7 @@ export function AutoCombatPage() {
     Math.floor(toSafeNumber(huntingSkill?.xpToNextLevel, 0)),
   );
   const huntingSkillXpLabel = huntingSkill?.isAtLevelCap
-    ? 'Nível máximo'
+    ? "Nível máximo"
     : huntingSkillXpToNext > 0
       ? `${huntingSkillCurrentXp} / ${huntingSkillXpToNext} XP`
       : `${huntingXpProgressPercent}% do nível`;
@@ -2575,18 +2990,68 @@ export function AutoCombatPage() {
     huntingSpeedPercent > 0
       ? `${huntingSpeedPercent}% mais rápida`
       : `${huntingSecondsPerFind}s por rastreio`;
-  const huntingActivityTitle = isBackendEncounterReadyPhase
-    ? 'Ameaça localizada'
-    : hasPendingHuntProcessing
-      ? 'Confirmando rastreio'
-    : isBackendHuntingPhase
-      ? 'Caça em andamento'
-      : 'Preparando caça';
-  const huntingActivityDetail = trackedThreatMob?.name
-    ? `${trackedThreatMob.name} #${huntingTargetSequence}`
-    : isBackendHuntingPhase
-      ? 'Rastreando rota'
-      : 'Nenhum alvo confirmado';
+  const huntingActivityTitle = showInlineHuntBattle
+    ? "Combatendo lote"
+    : isBackendEncounterReadyPhase
+      ? "Ameaça localizada"
+      : hasPendingHuntProcessing
+        ? "Confirmando rastreio"
+        : isBackendHuntingPhase
+          ? "Caça em andamento"
+          : "Preparando caça";
+  const huntingActivityDetail = showInlineHuntBattle
+    ? activeBattleTargetTotal > 0
+      ? `${activeMobName} • ${activeBattleTargetRemaining}/${activeBattleTargetTotal} restantes`
+      : activeMobName
+    : trackedThreatMob?.name
+      ? `${trackedThreatMob.name} #${huntingTargetSequence}`
+      : isBackendHuntingPhase
+        ? "Rastreando rota"
+        : "Nenhum alvo confirmado";
+
+  const autoCombatTopBarActivityOverride: DashboardTopBarActivityOverride | null =
+    showInlineHuntBattle
+      ? {
+          kind: "auto-combat",
+          title: activeMobName,
+          subtitle:
+            activeBattleTargetTotal > 0
+              ? `${activeBattleTargetDefeated}/${activeBattleTargetTotal} abatidos do lote`
+              : sessionStatusText,
+          imageUrl: getMobPortraitImage(activeMobName),
+          icon: "AC",
+          progressPercent: hasTtkBattleProgress
+            ? activeKillProgressPercent
+            : activeMobHpPercent,
+          badge:
+            activeBattleTargetRemaining > 0
+              ? `${activeBattleTargetRemaining}`
+              : null,
+          titleText:
+            activeBattleTargetTotal > 0
+              ? `Combate automatico em andamento - ${activeBattleTargetDefeated}/${activeBattleTargetTotal} abatidos do lote.`
+              : "Combate automatico em andamento.",
+        }
+      : isBackendHuntingPhase || isBackendEncounterReadyPhase
+        ? {
+            kind: "auto-combat",
+            title: isBackendEncounterReadyPhase
+              ? "AmeaÃ§as rastreadas"
+              : "Rastreando",
+            subtitle:
+              foundEnemiesCount > 0
+                ? `${foundEnemiesCount} rastreado${foundEnemiesCount === 1 ? "" : "s"}`
+                : huntingActivityDetail,
+            icon: "AC",
+            progressPercent: huntProgressPercent,
+            badge: foundEnemiesCount > 0 ? `${foundEnemiesCount}` : null,
+            titleText:
+              foundEnemiesCount > 0
+                ? `AutoCombat em caca - ${foundEnemiesCount} rastreado${foundEnemiesCount === 1 ? "" : "s"}.`
+                : "AutoCombat em caca - rastreando rota.",
+            isHunting: true,
+          }
+        : null;
 
   const canResumeHunt =
     isBackendEncounterReadyPhase &&
@@ -2608,7 +3073,7 @@ export function AutoCombatPage() {
     !hasActiveSession;
 
   const canStartCombat =
-    isBackendEncounterReadyPhase &&
+    !isBackendEncounterReadyPhase &&
     selectedMapHasActiveEncounters &&
     !showActiveSession &&
     !isActionLoading &&
@@ -2618,7 +3083,7 @@ export function AutoCombatPage() {
   );
 
   const latestRealtimeEvent = showActiveSession
-    ? activeBattleLogEvent ?? battleLogEvents[0] ?? null
+    ? (activeBattleLogEvent ?? battleLogEvents[0] ?? null)
     : null;
 
   const latestRealtimeEventType = normalizeRealtimeEventType(
@@ -2626,7 +3091,7 @@ export function AutoCombatPage() {
   );
 
   const isAutoRestingVisual =
-    showActiveSession && latestRealtimeEventType === 'AUTO_REST';
+    showActiveSession && latestRealtimeEventType === "AUTO_REST";
 
   const autoRestHealedAmount = isAutoRestingVisual
     ? Math.max(0, Math.floor(Number(latestRealtimeEvent?.healedAmount ?? 0)))
@@ -2634,25 +3099,27 @@ export function AutoCombatPage() {
 
   const isMobDefeatedVisual =
     showActiveSession &&
-    (activeVisualEventType === 'MOB_DEFEATED' ||
+    (activeVisualEventType === "MOB_DEFEATED" ||
       (activeMobMaxHp > 0 && activeMobCurrentHp <= 0));
 
   const isPlayerDefeatedVisual =
     showActiveSession &&
-    (activeVisualEventType === 'PLAYER_DEFEATED' ||
+    (activeVisualEventType === "PLAYER_DEFEATED" ||
       (currentCharacterMaxHp > 0 && currentCharacterHp <= 0));
 
   const realtimeFeedbackEvent = showActiveSession ? activeBattleLogEvent : null;
-  const realtimeFeedbackTarget = getRealtimeFeedbackTarget(realtimeFeedbackEvent);
+  const realtimeFeedbackTarget = getRealtimeFeedbackTarget(
+    realtimeFeedbackEvent,
+  );
   const latestDamageAmount = getRealtimeFeedbackDamage(realtimeFeedbackEvent);
   const isRealtimeFeedbackCritical = Boolean(realtimeFeedbackEvent?.isCritical);
   const isRealtimeFeedbackDodged = Boolean(
     realtimeFeedbackEvent?.isDodged ||
-      normalizeRealtimeEventType(realtimeFeedbackEvent?.type) === 'DODGE',
+    normalizeRealtimeEventType(realtimeFeedbackEvent?.type) === "DODGE",
   );
   const realtimeFeedbackEventKey = realtimeFeedbackEvent
     ? getRealtimeEventKey(realtimeFeedbackEvent)
-    : '';
+    : "";
 
   const canShowFloatingDamage =
     showActiveSession &&
@@ -2660,40 +3127,37 @@ export function AutoCombatPage() {
     latestDamageAmount > 0;
 
   const shouldShowPlayerDamage =
-    canShowFloatingDamage && realtimeFeedbackTarget === 'PLAYER';
+    canShowFloatingDamage && realtimeFeedbackTarget === "PLAYER";
 
   const shouldShowMobDamage =
-    canShowFloatingDamage && realtimeFeedbackTarget === 'MOB';
+    canShowFloatingDamage && realtimeFeedbackTarget === "MOB";
 
   const shouldShowPlayerDodge =
     showActiveSession &&
     Boolean(realtimeFeedbackEvent) &&
-    realtimeFeedbackTarget === 'PLAYER' &&
+    realtimeFeedbackTarget === "PLAYER" &&
     isRealtimeFeedbackDodged;
 
   const shouldShowMobDodge =
     showActiveSession &&
     Boolean(realtimeFeedbackEvent) &&
-    realtimeFeedbackTarget === 'MOB' &&
+    realtimeFeedbackTarget === "MOB" &&
     isRealtimeFeedbackDodged;
 
   const playerDamageKey = shouldShowPlayerDamage
     ? `player-damage-${realtimeFeedbackEventKey}`
-    : '';
+    : "";
 
   const mobDamageKey = shouldShowMobDamage
     ? `mob-damage-${realtimeFeedbackEventKey}`
-    : '';
+    : "";
 
   const xpFeedbackBreakdown = getXpFeedbackBreakdown(xpFeedbackEvent);
   const xpFeedbackMobScope = getMobFeedbackScopeFromEvent(xpFeedbackEvent);
   const xpFeedbackMatchesVisibleMob =
     !hasUsefulMobFeedbackScope(xpFeedbackMobScope) ||
     !hasUsefulMobFeedbackScope(visibleMobFeedbackScope) ||
-    !hasMobFeedbackScopeMismatch(
-      xpFeedbackMobScope,
-      visibleMobFeedbackScope,
-    );
+    !hasMobFeedbackScopeMismatch(xpFeedbackMobScope, visibleMobFeedbackScope);
   const shouldShowXpFeedback =
     showActiveSession &&
     xpFeedbackMatchesVisibleMob &&
@@ -2701,7 +3165,7 @@ export function AutoCombatPage() {
   const xpFeedbackKey =
     shouldShowXpFeedback && xpFeedbackEvent
       ? `mob-xp-${getXpFeedbackDisplayKey(xpFeedbackEvent)}`
-      : '';
+      : "";
   const xpFeedbackPremiumXp = xpFeedbackBreakdown?.isPremiumActive
     ? xpFeedbackBreakdown.premiumBonusXp
     : (xpFeedbackBreakdown?.premiumPotentialBonusXp ?? 0);
@@ -2709,35 +3173,33 @@ export function AutoCombatPage() {
   const mobDeathFeedbackKey =
     shouldShowMobDeathFeedback && xpFeedbackEvent
       ? `mob-defeated-${getXpFeedbackDisplayKey(xpFeedbackEvent)}`
-      : '';
+      : "";
 
   const playerFighterClassName = [
-    'auto-combat-fighter-card',
-    'auto-combat-fighter-card--player',
-    shouldShowPlayerDamage ? 'is-hit' : '',
+    "auto-combat-fighter-card",
+    "auto-combat-fighter-card--player",
+    shouldShowPlayerDamage ? "is-hit" : "",
     shouldShowPlayerDamage && isRealtimeFeedbackCritical
-      ? 'is-critical-hit'
-      : '',
-    shouldShowPlayerDodge ? 'is-dodging' : '',
-    isAutoRestingVisual ? 'is-resting' : '',
-    isPlayerDefeatedVisual ? 'is-defeated' : '',
+      ? "is-critical-hit"
+      : "",
+    shouldShowPlayerDodge ? "is-dodging" : "",
+    isAutoRestingVisual ? "is-resting" : "",
+    isPlayerDefeatedVisual ? "is-defeated" : "",
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   const mobFighterClassName = [
-    'auto-combat-fighter-card',
-    'auto-combat-fighter-card--mob',
-    shouldShowMobDamage ? 'is-hit' : '',
-    shouldShowMobDamage && isRealtimeFeedbackCritical
-      ? 'is-critical-hit'
-      : '',
-    shouldShowMobDodge ? 'is-dodging' : '',
-    isMobDefeatedVisual ? 'is-defeated' : '',
-    isCombatViewSynchronizing ? 'is-syncing' : '',
+    "auto-combat-fighter-card",
+    "auto-combat-fighter-card--mob",
+    shouldShowMobDamage ? "is-hit" : "",
+    shouldShowMobDamage && isRealtimeFeedbackCritical ? "is-critical-hit" : "",
+    shouldShowMobDodge ? "is-dodging" : "",
+    isMobDefeatedVisual ? "is-defeated" : "",
+    isCombatViewSynchronizing ? "is-syncing" : "",
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   const configuredPotionQuantity = getPotionQuantity(
     currentPotionConfig,
@@ -2748,17 +3210,17 @@ export function AutoCombatPage() {
     potion: PotionEquipmentItem | PotionInventoryOption | null | undefined,
   ) {
     if (!potion) {
-      return 'Cura não informada';
+      return "Cura não informada";
     }
 
     const formattedHeal = formatPotionHeal(potion).trim();
 
     if (!formattedHeal) {
-      return 'Cura não informada';
+      return "Cura não informada";
     }
 
     if (/^cura\b/i.test(formattedHeal)) {
-      return formattedHeal.replace(/^cura\s*/i, 'Cura: ');
+      return formattedHeal.replace(/^cura\s*/i, "Cura: ");
     }
 
     return `Cura: ${formattedHeal}`;
@@ -2767,30 +3229,24 @@ export function AutoCombatPage() {
   function handleMapChange(mapId: string) {
     if (isMapSelectionLocked) {
       setErrorMessage(
-        'Você não pode trocar de mapa enquanto está caçando ou em combate. Cancele ou encerre a atividade atual antes de viajar.',
+        "Você não pode trocar de mapa enquanto está caçando ou em combate. Cancele ou encerre a atividade atual antes de viajar.",
       );
       return;
     }
 
     setSelectedMapId(mapId);
-    setPreparationPreview(null);
     setHasStartedHunt(false);
-    setErrorMessage('');
+    setErrorMessage("");
   }
 
   async function handleTravelToMap() {
-    if (
-      !characterId ||
-      !overview ||
-      !selectedMap ||
-      isActionLoading
-    ) {
+    if (!characterId || !overview || !selectedMap || isActionLoading) {
       return;
     }
 
     if (overview?.activity?.hasActiveWorldBoss) {
       setErrorMessage(
-        'Você está aguardando um World Boss. Saia do lobby antes de viajar para outra rota de caça.',
+        "Você está aguardando um World Boss. Saia do lobby antes de viajar para outra rota de caça.",
       );
       return;
     }
@@ -2804,7 +3260,7 @@ export function AutoCombatPage() {
 
     if (!canTravelToSelectedMap) {
       setErrorMessage(
-        'Não foi possível viajar com a seleção atual. Verifique se já existe uma atividade ativa.',
+        "Não foi possível viajar com a seleção atual. Verifique se já existe uma atividade ativa.",
       );
       return;
     }
@@ -2817,8 +3273,7 @@ export function AutoCombatPage() {
 
     try {
       setIsActionLoading(true);
-      setErrorMessage('');
-      setPreparationPreview(null);
+      setErrorMessage("");
 
       if (selectedMap.id !== currentMapId) {
         const updatedOverview = await updateCharacterCurrentMap(
@@ -2830,12 +3285,14 @@ export function AutoCombatPage() {
       }
 
       setHasStartedHunt(true);
-      setActiveTab('battle');
+      setActiveTab("battle");
+      setIsStopHuntConfirmOpen(false);
     } catch (error) {
+      setIsStopHuntConfirmOpen(false);
       setErrorMessage(
         getApiErrorMessage(
           error,
-          'Não foi possível viajar para este mapa agora.',
+          "Não foi possível viajar para este mapa agora.",
         ),
       );
     } finally {
@@ -2848,20 +3305,20 @@ export function AutoCombatPage() {
 
     if (overview?.activity?.hasActiveWorldBoss) {
       setErrorMessage(
-        'Você está aguardando um World Boss. Saia do lobby antes de iniciar auto-combate.',
+        "Você está aguardando um World Boss. Saia do lobby antes de iniciar auto-combate.",
       );
       return;
     }
 
     if (!characterHasHp) {
       setErrorMessage(
-        'Este personagem está sem HP. Use a enfermaria ou uma cura antes de iniciar uma nova caça.',
+        "Este personagem está sem HP. Use a enfermaria ou uma cura antes de iniciar uma nova caça.",
       );
       return;
     }
 
     if (!selectedMap) {
-      setErrorMessage('Nenhum mapa disponível para o nível atual.');
+      setErrorMessage("Nenhum mapa disponível para o nível atual.");
       return;
     }
 
@@ -2875,15 +3332,15 @@ export function AutoCombatPage() {
     if (!canStartHunt) {
       setErrorMessage(
         isHuntLimitReached
-          ? 'Limite de rastreio atingido neste mapa. Inicie o combate para liberar a caça.'
-          : 'Não foi possível iniciar a caça com a seleção atual.',
+          ? "Limite de rastreio atingido neste mapa. Inicie o combate para liberar a caça."
+          : "Não foi possível iniciar a caça com a seleção atual.",
       );
       return;
     }
 
     try {
       setIsActionLoading(true);
-      setErrorMessage('');
+      setErrorMessage("");
 
       setLocalRealtimeCombat(null);
       setLocalCharacterProgress(null);
@@ -2905,12 +3362,15 @@ export function AutoCombatPage() {
 
       if (!response) {
         throw new Error(
-          'O AutoCombatRealtimeProvider não expôs uma função start/startAutoCombat.',
+          "O AutoCombatRealtimeProvider não expôs uma função start/startAutoCombat.",
         );
       }
 
       const responseSession = getSessionFromStatus(response);
-      const responseProgress = buildProgressFromStatus(response, responseSession);
+      const responseProgress = buildProgressFromStatus(
+        response,
+        responseSession,
+      );
       const responseTotals = buildSessionTotalsFromStatus(
         response,
         responseSession,
@@ -2920,14 +3380,14 @@ export function AutoCombatPage() {
       setLocalCharacterProgress(responseProgress);
       setLocalSessionTotals(responseTotals);
       setHasStartedHunt(true);
-      setActiveTab('battle');
+      setActiveTab("battle");
 
       await loadAutoCombatData();
     } catch (error) {
       setErrorMessage(
         getApiErrorMessage(
           error,
-          'Não foi possível iniciar a caça. Verifique o HP, o mapa e se já existe uma atividade ativa.',
+          "Não foi possível iniciar a caça. Verifique o HP, o mapa e se já existe uma atividade ativa.",
         ),
       );
     } finally {
@@ -2935,23 +3395,12 @@ export function AutoCombatPage() {
     }
   }
 
-  function handleResetHunt() {
-    if (showActiveSession) return;
-
-    setHasStartedHunt(false);
-    setPreparationPreview(null);
-    setLocalRealtimeCombat(null);
-    setLocalSessionTotals(null);
-    setLocalBattleLogEvents([]);
-    setLocalActiveEvent(null);
-  }
-
   async function handleStopHunt() {
     if (!characterId || isActionLoading || !isBackendHuntingPhase) return;
 
     try {
       setIsActionLoading(true);
-      setErrorMessage('');
+      setErrorMessage("");
 
       const response = realtimeActions.stopHunt
         ? await realtimeActions.stopHunt()
@@ -2959,12 +3408,15 @@ export function AutoCombatPage() {
 
       if (!response) {
         throw new Error(
-          'O AutoCombatRealtimeProvider não expôs uma função stopHunt.',
+          "O AutoCombatRealtimeProvider não expôs uma função stopHunt.",
         );
       }
 
       const responseSession = getSessionFromStatus(response);
-      const responseProgress = buildProgressFromStatus(response, responseSession);
+      const responseProgress = buildProgressFromStatus(
+        response,
+        responseSession,
+      );
       const responseTotals = buildSessionTotalsFromStatus(
         response,
         responseSession,
@@ -2974,12 +3426,12 @@ export function AutoCombatPage() {
       setLocalCharacterProgress(responseProgress);
       setLocalSessionTotals(responseTotals);
       setHasStartedHunt(true);
-      setActiveTab('battle');
+      setActiveTab("battle");
 
       await loadAutoCombatData();
     } catch (error) {
       setErrorMessage(
-        getApiErrorMessage(error, 'Não foi possível parar a caça.'),
+        getApiErrorMessage(error, "Não foi possível parar a caça."),
       );
     } finally {
       setIsActionLoading(false);
@@ -2992,22 +3444,22 @@ export function AutoCombatPage() {
 
     if (isClickingCurrentOpenSlot) {
       setIsPotionConfigPanelOpen(false);
-      setPotionConfigMessage('');
+      setPotionConfigMessage("");
       return;
     }
 
     setSelectedPotionSlotIndex(slotIndex);
-    setPotionConfigMessage('');
+    setPotionConfigMessage("");
     setIsRestConfigPanelOpen(false);
-    setRestConfigMessage('');
+    setRestConfigMessage("");
 
     if (slotIndex > 0) {
       setPotionConfigMessage(
-        'No backend atual existe 1 configuração de poção automática por personagem. Este slot reserva já abre a mesma configuração principal.',
+        "No backend atual existe 1 configuração de poção automática por personagem. Este slot reserva já abre a mesma configuração principal.",
       );
     }
 
-    setSelectedPotionItemId(currentPotionConfig?.potionItemId ?? '');
+    setSelectedPotionItemId(currentPotionConfig?.potionItemId ?? "");
     setPotionThresholdPercent(
       clampNumber(currentPotionConfig?.hpThresholdPercent ?? 35, 1, 100),
     );
@@ -3025,14 +3477,14 @@ export function AutoCombatPage() {
 
     if (!selectedPotionItemId) {
       setPotionConfigMessage(
-        'Selecione uma poção antes de salvar a configuração automática.',
+        "Selecione uma poção antes de salvar a configuração automática.",
       );
       return;
     }
 
     try {
       setIsPotionConfigLoading(true);
-      setPotionConfigMessage('');
+      setPotionConfigMessage("");
 
       const response = await updateCharacterPotionConfigRaw(characterId, {
         enabled: shouldEnable,
@@ -3051,7 +3503,7 @@ export function AutoCombatPage() {
       );
       setIsPotionConfigPanelOpen(false);
       setPotionConfigMessage(
-        response.message ?? 'Configuração de poção atualizada com sucesso.',
+        response.message ?? "Configuração de poção atualizada com sucesso.",
       );
 
       await loadAutoCombatData();
@@ -3059,7 +3511,7 @@ export function AutoCombatPage() {
       setPotionConfigMessage(
         getApiErrorMessage(
           error,
-          'Não foi possível salvar a configuração de poção.',
+          "Não foi possível salvar a configuração de poção.",
         ),
       );
     } finally {
@@ -3072,7 +3524,7 @@ export function AutoCombatPage() {
 
     try {
       setIsPotionConfigLoading(true);
-      setPotionConfigMessage('');
+      setPotionConfigMessage("");
 
       const response = await updateCharacterPotionConfigRaw(characterId, {
         enabled: false,
@@ -3087,16 +3539,16 @@ export function AutoCombatPage() {
       const normalized = normalizePotionConfigResponse(response);
 
       setAutoPotionConfig(normalized);
-      setSelectedPotionItemId('');
+      setSelectedPotionItemId("");
       setIsPotionConfigPanelOpen(false);
-      setPotionConfigMessage('Poção removida da configuração automática.');
+      setPotionConfigMessage("Poção removida da configuração automática.");
 
       await loadAutoCombatData();
     } catch (error) {
       setPotionConfigMessage(
         getApiErrorMessage(
           error,
-          'Não foi possível remover a poção configurada.',
+          "Não foi possível remover a poção configurada.",
         ),
       );
     } finally {
@@ -3106,8 +3558,8 @@ export function AutoCombatPage() {
 
   function handleOpenRestConfig() {
     setIsPotionConfigPanelOpen(false);
-    setPotionConfigMessage('');
-    setRestConfigMessage('');
+    setPotionConfigMessage("");
+    setRestConfigMessage("");
     setAutoRestEnabled(currentPotionConfig?.autoRestEnabled ?? true);
     setAutoRestStartHpPercent(
       clampNumber(currentPotionConfig?.autoRestStartHpPercent ?? 35, 1, 99),
@@ -3134,7 +3586,7 @@ export function AutoCombatPage() {
 
     try {
       setIsRestConfigLoading(true);
-      setRestConfigMessage('');
+      setRestConfigMessage("");
 
       const response = await updateCharacterPotionConfigRaw(characterId, {
         enabled: existingPotionEnabled,
@@ -3165,7 +3617,7 @@ export function AutoCombatPage() {
       );
       setIsRestConfigPanelOpen(false);
       setRestConfigMessage(
-        response.message ?? 'Configuração de descanso atualizada com sucesso.',
+        response.message ?? "Configuração de descanso atualizada com sucesso.",
       );
 
       await loadAutoCombatData();
@@ -3173,7 +3625,7 @@ export function AutoCombatPage() {
       setRestConfigMessage(
         getApiErrorMessage(
           error,
-          'Não foi possível salvar a configuração de descanso.',
+          "Não foi possível salvar a configuração de descanso.",
         ),
       );
     } finally {
@@ -3181,33 +3633,35 @@ export function AutoCombatPage() {
     }
   }
 
-  async function handleStartAutoCombat() {
+  async function handleStartAutoCombat(
+    battleSelection?: StartAutoCombatBattlePayload,
+  ) {
     if (!characterId || isActionLoading) return;
 
     if (overview?.activity?.hasActiveWorldBoss) {
       setErrorMessage(
-        'Você está aguardando um World Boss. Saia do lobby antes de iniciar auto-combate.',
+        "Você está aguardando um World Boss. Saia do lobby antes de iniciar auto-combate.",
       );
       return;
     }
 
     if (!characterHasHp) {
       setErrorMessage(
-        'Este personagem está sem HP. Use a enfermaria ou uma cura antes de iniciar o combate.',
+        "Este personagem está sem HP. Use a enfermaria ou uma cura antes de iniciar o combate.",
       );
       return;
     }
 
     if (!selectedMapHasActiveEncounters) {
       setErrorMessage(
-        'Este mapa ainda não possui inimigos cadastrados para o auto-combate.',
+        "Este mapa ainda não possui inimigos cadastrados para o auto-combate.",
       );
       return;
     }
 
     try {
       setIsActionLoading(true);
-      setErrorMessage('');
+      setErrorMessage("");
 
       setLocalRealtimeCombat(null);
       setLocalCharacterProgress(null);
@@ -3216,17 +3670,20 @@ export function AutoCombatPage() {
       setLocalActiveEvent(null);
 
       const response = realtimeActions.startBattle
-        ? await realtimeActions.startBattle()
+        ? await realtimeActions.startBattle(battleSelection)
         : null;
 
       if (!response) {
         throw new Error(
-          'O AutoCombatRealtimeProvider não expôs uma função startBattle.',
+          "O AutoCombatRealtimeProvider não expôs uma função startBattle.",
         );
       }
 
       const responseSession = getSessionFromStatus(response);
-      const responseProgress = buildProgressFromStatus(response, responseSession);
+      const responseProgress = buildProgressFromStatus(
+        response,
+        responseSession,
+      );
       const responseTotals = buildSessionTotalsFromStatus(
         response,
         responseSession,
@@ -3236,14 +3693,14 @@ export function AutoCombatPage() {
       setLocalCharacterProgress(responseProgress);
       setLocalSessionTotals(responseTotals);
       setHasStartedHunt(true);
-      setActiveTab('battle');
-
-      await loadAutoCombatData();
+      setActiveTab("battle");
+      setSelectedThreat(null);
+      setSelectedBattleQuantity(1);
     } catch (error) {
       setErrorMessage(
         getApiErrorMessage(
           error,
-          'Não foi possível iniciar o combate automático. Verifique o HP, o mapa e se já existe uma sessão ativa.',
+          "Não foi possível iniciar o combate automático. Verifique o HP, o mapa e se já existe uma sessão ativa.",
         ),
       );
     } finally {
@@ -3256,7 +3713,7 @@ export function AutoCombatPage() {
 
     try {
       setIsActionLoading(true);
-      setErrorMessage('');
+      setErrorMessage("");
 
       const response = realtimeActions.stop
         ? await realtimeActions.stop()
@@ -3266,12 +3723,15 @@ export function AutoCombatPage() {
 
       if (!response) {
         throw new Error(
-          'O AutoCombatRealtimeProvider não expôs uma função stop/stopAutoCombat.',
+          "O AutoCombatRealtimeProvider não expôs uma função stop/stopAutoCombat.",
         );
       }
 
       const responseSession = getSessionFromStatus(response);
-      const responseProgress = buildProgressFromStatus(response, responseSession);
+      const responseProgress = buildProgressFromStatus(
+        response,
+        responseSession,
+      );
 
       setAutoCombatStatus(response);
       setLocalCharacterProgress((current) =>
@@ -3283,14 +3743,14 @@ export function AutoCombatPage() {
       setLocalBattleLogEvents([]);
       setLocalActiveEvent(null);
       setHasStartedHunt(false);
-      setActiveTab('battle');
+      setActiveTab("battle");
 
       await loadAutoCombatData();
     } catch (error) {
       setErrorMessage(
         getApiErrorMessage(
           error,
-          'Não foi possível parar o combate automático.',
+          "Não foi possível parar o combate automático.",
         ),
       );
     } finally {
@@ -3299,7 +3759,10 @@ export function AutoCombatPage() {
   }
 
   return (
-    <DashboardLayout character={layoutCharacter}>
+    <DashboardLayout
+      character={layoutCharacter}
+      topBarActivityOverride={autoCombatTopBarActivityOverride}
+    >
       <div className="auto-combat-page">
         {errorMessage ? (
           <div className="auto-combat-alert" role="alert">
@@ -3314,29 +3777,29 @@ export function AutoCombatPage() {
 
           <AutoCombatTabs activeTab={activeTab} onChange={setActiveTab} />
 
-          {activeTab === 'battle' ? (
+          {activeTab === "battle" ? (
             <div className="auto-combat-tab-panel">
               {!showHuntStage && !showActiveSession ? (
                 <article
                   className={[
-                    'auto-combat-stage-card',
-                    'auto-combat-map-stage',
+                    "auto-combat-stage-card",
+                    "auto-combat-map-stage",
                     selectedMapRarityClassName,
                   ]
                     .filter(Boolean)
-                    .join(' ')}
+                    .join(" ")}
                 >
                   <div className="auto-combat-map-preview">
                     <div
                       className={[
-                        'auto-combat-map-preview__visual',
+                        "auto-combat-map-preview__visual",
                         selectedMapRarityClassName,
                         selectedMapImage
-                          ? 'auto-combat-map-preview__visual--with-image'
-                          : '',
+                          ? "auto-combat-map-preview__visual--with-image"
+                          : "",
                       ]
                         .filter(Boolean)
-                        .join(' ')}
+                        .join(" ")}
                       style={selectedMapVisualStyle}
                     >
                       <span>Zona atual</span>
@@ -3346,9 +3809,7 @@ export function AutoCombatPage() {
                       <div className="auto-combat-map-meta auto-combat-map-meta--visual">
                         <div>
                           <span>Tier</span>
-                          <strong>
-                            {selectedMap?.tier ?? '—'}
-                          </strong>
+                          <strong>{selectedMap?.tier ?? "—"}</strong>
                         </div>
 
                         <div>
@@ -3356,7 +3817,7 @@ export function AutoCombatPage() {
                           <strong>
                             {selectedMap
                               ? `${getGameMapMinLevel(selectedMap)}-${getGameMapMaxLevel(selectedMap)}`
-                              : '—'}
+                              : "—"}
                           </strong>
                         </div>
                       </div>
@@ -3369,7 +3830,7 @@ export function AutoCombatPage() {
 
                       <p>
                         {selectedMap?.description ??
-                          'Escolha um mapa disponível e inicie a caça para revelar os infectados próximos.'}
+                          "Escolha um mapa disponível e inicie a caça para revelar os infectados próximos."}
                       </p>
 
                       <label className="auto-combat-field auto-combat-field--map">
@@ -3403,12 +3864,12 @@ export function AutoCombatPage() {
                           disabled={!canTravelToSelectedMap || isActionLoading}
                           title={
                             overview?.activity?.hasActiveWorldBoss
-                              ? 'Você já está em um World Boss.'
+                              ? "Você já está em um World Boss."
                               : undefined
                           }
                           onClick={handleTravelToMap}
                         >
-                          {isActionLoading ? 'Viajando...' : 'Viajar'}
+                          {isActionLoading ? "Viajando..." : "Viajar"}
                         </button>
                       </div>
                     </div>
@@ -3435,31 +3896,43 @@ export function AutoCombatPage() {
                     disabled={!canStartHunt || isActionLoading}
                     onClick={handleStartHunt}
                   >
-                    {isActionLoading ? 'Iniciando...' : 'Iniciar Caçada'}
+                    {isActionLoading ? "Iniciando..." : "Iniciar Caçada"}
                   </button>
                 </article>
               ) : null}
 
               {showTrackedHuntStage ? (
-                <article className="auto-combat-stage-card auto-combat-hunt-stage">
-                  <div
-                    className={[
-                      'auto-combat-hunt-tracker',
-                      trackedThreatMob
-                        ? 'auto-combat-hunt-tracker--has-target'
-                        : 'auto-combat-hunt-tracker--searching',
-                      isBackendEncounterReadyPhase
-                        ? 'auto-combat-hunt-tracker--ready'
-                        : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
+                <article
+                  className={[
+                    "auto-combat-stage-card",
+                    "auto-combat-hunt-stage",
+                    showInlineHuntBattle
+                      ? "auto-combat-hunt-stage--battle-focused"
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {showHuntTrackerCard ? (
+                    <div
+                      className={[
+                        "auto-combat-hunt-tracker",
+                        "auto-combat-hunt-tracker--active-panel",
+                        trackedThreatMob
+                          ? "auto-combat-hunt-tracker--has-target"
+                          : "auto-combat-hunt-tracker--searching",
+                        isBackendEncounterReadyPhase
+                          ? "auto-combat-hunt-tracker--ready"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
                     <div className="auto-combat-hunt-tracker__visual">
                       {trackedThreatMob && trackedThreatImage ? (
                         <img
                           src={trackedThreatImage}
-                          alt={trackedThreatMob.name ?? 'Ameaça localizada'}
+                          alt={trackedThreatMob.name ?? "Ameaça localizada"}
                           loading="eager"
                           decoding="async"
                         />
@@ -3469,42 +3942,37 @@ export function AutoCombatPage() {
 
                       {shouldShowTrackedThreatFoundCount ? (
                         <div className="auto-combat-hunt-tracker__found-badge">
-                          <strong>{trackedThreatFoundCount}</strong>
+                          <strong>{trackedThreatDisplayCount}</strong>
                           <span>
-                            {trackedThreatFoundCount === 1
-                              ? 'encontrado'
-                              : 'encontrados'}
+                            {trackedThreatDisplayCount === 1
+                              ? "encontrado"
+                              : "encontrados"}
                           </span>
                         </div>
                       ) : null}
                     </div>
 
                     <div className="auto-combat-hunt-tracker__content">
-                      <span>{trackedThreatStateLabel}</span>
+                      <div className="auto-combat-hunt-tracker__metrics">
+                        <div>
+                          <span>Tempo</span>
+                          <strong>{formatSeconds(huntTotalElapsedSeconds)}</strong>
+                        </div>
 
-                      <strong>
-                        {trackedThreatMob?.name ?? 'Procurando ameaça'}
-                      </strong>
+                        <div className="auto-combat-hunt-tracker__metric--primary">
+                          <span>Encontrados</span>
+                          <strong>{huntingFoundLabel}</strong>
+                        </div>
 
-                      <p>{trackedThreatDescription}</p>
+                        <div>
+                          <span>Restantes</span>
+                          <strong>{huntingRemainingLabel}</strong>
+                        </div>
 
-                      <div className="auto-combat-hunt-tracker__chips">
-                        {trackedThreatMob ? (
-                          <>
-                            <small>Nv. {trackedThreatMob.level ?? '—'}</small>
-                            <small>XP {trackedThreatMob.xpReward ?? '—'}</small>
-                            {trackedThreatChance !== null ? (
-                              <small>{trackedThreatChance}% encontro</small>
-                            ) : null}
-                            {shouldShowTrackedThreatFoundCount ? (
-                              <small className="auto-combat-hunt-tracker__chip--found">
-                                {trackedThreatFoundCountChipLabel}
-                              </small>
-                            ) : null}
-                          </>
-                        ) : null}
-                        <small>Caça Nv. {huntingLevel}</small>
-                        <small>{huntingCapacityLabel} rastreados</small>
+                        <div>
+                          <span>EXP/s</span>
+                          <strong>{huntingXpPerSecondLabel}</strong>
+                        </div>
                       </div>
 
                       <div
@@ -3520,52 +3988,119 @@ export function AutoCombatPage() {
                           <strong>{Math.round(huntProgressPercent)}%</strong>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="auto-combat-hunt-tracker__status">
-                      <span>
-                        {isBackendEncounterReadyPhase
-                          ? 'Localizado'
-                          : 'Caçando'}
-                      </span>
-                      <strong>
-                        {foundEnemiesCount > 0 ? huntingCapacityLabel : '...'}
-                      </strong>
-                      <small>
-                        {isBackendEncounterReadyPhase
-                          ? huntingCapacityDetail
-                          : foundEnemiesCount > 0
-                            ? huntingCapacityDetail
-                            : 'buscando'}
-                      </small>
+                      <div className="auto-combat-hunt-tracker__actions">
+                        <button
+                          type="button"
+                          className="auto-combat-hunt-tracker__stop"
+                          disabled={isActionLoading}
+                          onClick={() => setIsStopHuntConfirmOpen(true)}
+                        >
+                          {isActionLoading ? "Processando..." : "Parar Caça"}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                    </div>
+                  ) : null}
 
                   <aside
                     className="auto-combat-hunt-side auto-combat-hunt-side--stacked"
                     aria-label="Resumo da caça"
                   >
-                    <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--current">
-                      <div className="auto-combat-hunt-side__section-title">
-                        <span>Atividade atual</span>
-                      </div>
+                    {showInlineHuntBattle ? (
+                      <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--battle">
+                        <div className="auto-combat-hunt-side__section-title">
+                          <span>Batalha</span>
+                        </div>
 
-                      <div className="auto-combat-hunt-activity-card">
-                        <div className="auto-combat-hunt-activity-card__icon">
-                          CA
+                        <div className="auto-combat-hunt-battle-card">
+                          <div className="auto-combat-hunt-battle-card__top">
+                            <div className="auto-combat-hunt-battle-card__portrait">
+                              {activeMobFullBodyImage ? (
+                                <img
+                                  src={activeMobFullBodyImage}
+                                  alt={activeMobName}
+                                  loading="eager"
+                                  decoding="async"
+                                />
+                              ) : (
+                                <span>AC</span>
+                              )}
+                            </div>
+
+                            <div className="auto-combat-hunt-battle-card__body">
+                              <strong>{activeMobName}</strong>
+                              <span>{activeBattleBatchLabel}</span>
+                            </div>
+
+                            <div className="auto-combat-hunt-battle-card__time">
+                              <strong>{activeBatchElapsedLabel}</strong>
+                              {activeBatchTotalLabel ? (
+                                <span>de {activeBatchTotalLabel}</span>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <div className="auto-combat-hunt-battle-card__track">
+                            <i>
+                              <b style={activeBattleProgressStyle} />
+                            </i>
+                          </div>
+
+                          <div className="auto-combat-hunt-battle-card__meta">
+                            <span>{activeKillProgressLabel}</span>
+                            <strong>{activeBattleRateLabel}</strong>
+                          </div>
+
+                          {activeDifficultyLabel ? (
+                            <div className="auto-combat-hunt-battle-card__difficulty">
+                              {activeDifficultyLabel}
+                            </div>
+                          ) : null}
+
+                          <div className="auto-combat-hunt-battle-card__actions">
+                            <button
+                              type="button"
+                              className="auto-combat-hunt-battle-card__button"
+                              onClick={() => setActiveTab("stats")}
+                            >
+                              Status
+                            </button>
+
+                            <button
+                              type="button"
+                              className="auto-combat-hunt-battle-card__button auto-combat-hunt-battle-card__button--danger"
+                              disabled={isActionLoading || !hasActiveSession}
+                              onClick={handleStopAutoCombat}
+                            >
+                              {isActionLoading ? "..." : "Parar"}
+                            </button>
+                          </div>
                         </div>
-                        <div className="auto-combat-hunt-activity-card__body">
-                          <strong>{huntingActivityTitle}</strong>
-                          <span>{huntingActivityDetail}</span>
-                          <small>{huntProgressStatusText}</small>
+                      </section>
+                    ) : !showHuntTrackerCard ? (
+                      <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--current">
+                        <div className="auto-combat-hunt-side__section-title">
+                          <span>Atividade atual</span>
                         </div>
-                        <em>
-                          {isBackendEncounterReadyPhase
-                            ? 'OK'
-                            : `${Math.round(huntProgressPercent)}%`}
-                        </em>
-                      </div>
-                    </section>
+
+                        <div className="auto-combat-hunt-activity-card">
+                          <div className="auto-combat-hunt-activity-card__icon">
+                            CA
+                          </div>
+                          <div className="auto-combat-hunt-activity-card__body">
+                            <strong>{huntingActivityTitle}</strong>
+                            <span>{huntingActivityDetail}</span>
+                            <small>{huntProgressStatusText}</small>
+                          </div>
+                          <em>
+                            {isBackendEncounterReadyPhase
+                              ? "OK"
+                              : `${Math.round(huntProgressPercent)}%`}
+                          </em>
+                        </div>
+                      </section>
+                    ) : null}
 
                     <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--progress">
                       <div className="auto-combat-hunt-side__section-title">
@@ -3607,96 +4142,324 @@ export function AutoCombatPage() {
                     </section>
                   </aside>
 
+                  {showInlineHuntBattle ? (
+                    <section
+                      className="auto-combat-inline-battle"
+                      aria-label="Batalha da caÃ§a em andamento"
+                    >
+                      <div className="auto-combat-inline-battle__header">
+                        <span>Alvo atual</span>
+
+                        <div className="auto-combat-inline-battle__metrics">
+                          {activeBattleTargetTotal > 0 ? (
+                            <>
+                              <em>{activeBattleTargetDefeated} derrotados</em>
+                              <em>{activeBattleTargetRemaining} restantes</em>
+                            </>
+                          ) : (
+                            <em>{sessionStatusText}</em>
+                          )}
+                        </div>
+                      </div>
+
+                      <div
+                        className={[
+                          "auto-combat-inline-battle__mob-card",
+                          shouldShowMobDamage ? "is-hit" : "",
+                          isRealtimeFeedbackCritical ? "is-critical-hit" : "",
+                          shouldShowMobDeathFeedback ? "is-defeated" : "",
+                          isCombatViewSynchronizing ? "is-syncing" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        {shouldShowXpFeedback && xpFeedbackBreakdown ? (
+                          <div
+                            key={xpFeedbackKey}
+                            className="auto-combat-xp-feedback auto-combat-inline-battle__xp"
+                            role="status"
+                            aria-live="polite"
+                          >
+                            <strong>
+                              +{xpFeedbackBreakdown.totalXp} EXP TOTAL
+                            </strong>
+
+                            <div className="auto-combat-xp-feedback__details">
+                              <span>
+                                Base: {xpFeedbackBreakdown.baseXp} EXP
+                              </span>
+
+                              <span className="auto-combat-xp-feedback__premium">
+                                <PremiumPlaceholderIcon className="auto-combat-xp-feedback__premium-icon" />
+                                + {xpFeedbackPremiumXp} EXP PREMIUM
+                              </span>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {shouldShowMobDamage ? (
+                          <span
+                            key={mobDamageKey}
+                            className={[
+                              "auto-combat-floating-damage",
+                              isRealtimeFeedbackCritical ? "is-critical" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                          >
+                            -{latestDamageAmount} HP
+                          </span>
+                        ) : null}
+
+                        {shouldShowMobDeathFeedback ? (
+                          <span
+                            key={mobDeathFeedbackKey}
+                            className="auto-combat-defeated-badge"
+                          >
+                            Derrotado
+                          </span>
+                        ) : null}
+
+                        {hasConfirmedActiveMob ? (
+                          <span className="auto-combat-fighter-card__level-badge auto-combat-fighter-card__level-badge--mob">
+                            Nv. {activeMobLevel}
+                          </span>
+                        ) : null}
+
+                        <div className="auto-combat-inline-battle__mob-visual">
+                          {activeMobFullBodyImage ? (
+                            <img
+                              src={activeMobFullBodyImage}
+                              alt={activeMobName}
+                              loading="eager"
+                              decoding="async"
+                            />
+                          ) : isCombatViewSynchronizing ? (
+                            <span className="auto-combat-fighter-card__sync-placeholder">
+                              Sincronizando
+                            </span>
+                          ) : showActiveSession && !hasConfirmedActiveMob ? (
+                            <span className="auto-combat-fighter-card__sync-placeholder">
+                              Aguardando
+                            </span>
+                          ) : (
+                            <span className="auto-combat-fighter-card__mob-placeholder">
+                              â˜£
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="auto-combat-inline-battle__mob-heading">
+                          <span>AmeaÃ§a atual</span>
+                          <strong>{activeMobName}</strong>
+                        </div>
+
+                        <div
+                          className={[
+                            "auto-combat-resource",
+                            hasTtkBattleProgress
+                              ? "auto-combat-resource--countdown"
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        >
+                          <div>
+                            <span>
+                              {hasTtkBattleProgress ? "Abate" : "HP"}
+                            </span>
+                            <strong>
+                              {hasTtkBattleProgress
+                                ? activeKillProgressLabel
+                                : activeMobMaxHp > 0
+                                  ? `${activeMobCurrentHp}/${activeMobMaxHp}`
+                                  : activeMobReference}
+                            </strong>
+                          </div>
+
+                          <i>
+                            <b
+                              style={
+                                hasTtkBattleProgress
+                                  ? activeBattleProgressStyle
+                                  : activeMobHpStyle
+                              }
+                            />
+                          </i>
+
+                          {hasTtkBattleProgress ? (
+                            <small className="auto-combat-resource__hint">
+                              {activeKillsPerMinute > 0
+                                ? `${activeKillsPerMinute.toFixed(1)} abates/min`
+                                : "Calculando ritmo"}
+                              {activeDifficultyLabel
+                                ? ` · ${activeDifficultyLabel}`
+                                : ""}
+                            </small>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="auto-combat-inline-battle__footer">
+                        <div className="auto-combat-inline-battle__player-hp">
+                          <span>HP do sobrevivente</span>
+                          <strong>
+                            {currentCharacterHp}/{currentCharacterMaxHp}
+                          </strong>
+                          <i>
+                            <b style={characterHpStyle} />
+                          </i>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="auto-combat-secondary-button auto-combat-secondary-button--danger"
+                          disabled={isActionLoading || !hasActiveSession}
+                          onClick={handleStopAutoCombat}
+                        >
+                          {isActionLoading ? "Processando..." : "Parar sessÃ£o"}
+                        </button>
+                      </div>
+
+                      {isAutoRestingVisual ? (
+                        <div
+                          className="auto-combat-resting-callout"
+                          role="status"
+                          aria-live="polite"
+                        >
+                          <span
+                            className="auto-combat-resting-callout__pulse"
+                            aria-hidden="true"
+                          />
+
+                          <div className="auto-combat-resting-callout__copy">
+                            <strong>Descanso automÃ¡tico</strong>
+                            <span>Recuperando HP antes de continuar.</span>
+                          </div>
+
+                          <em>
+                            {autoRestHealedAmount > 0
+                              ? `+${autoRestHealedAmount} HP`
+                              : `${currentCharacterHp}/${currentCharacterMaxHp} HP`}
+                          </em>
+                        </div>
+                      ) : null}
+                    </section>
+                  ) : null}
+
+                  <>
                   <div className="auto-combat-section-title auto-combat-section-title--small">
-                    <span>Possíveis ameaças da área</span>
+                    <span>
+                      {showInlineHuntBattle
+                        ? "Ameaças restantes"
+                        : "Possíveis ameaças da área"}
+                    </span>
                   </div>
 
-                  {selectedMapThreats.length > 0 ? (
-                    <div className="auto-combat-enemy-grid">
-                      {selectedMapThreats.map((encounter) => {
+                  {displayedThreats.length > 0 ? (
+                    <div
+                      className={[
+                        "auto-combat-enemy-grid",
+                        isBackendHuntFlow
+                          ? "auto-combat-enemy-grid--compact"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      {displayedThreats.map((encounter) => {
                         const mob = encounter.mob;
                         const mobFullBodyImage =
                           getMobFullBodyImage(mob?.name) ??
                           getMobPortraitImage(mob?.name);
                         const mobId = mob?.id ?? encounter.mobId;
                         const cardFoundCount =
-                          isBackendEncounterReadyPhase && mobId
-                            ? huntFoundCountByMobId.get(mobId) ?? 0
+                          shouldUseTrackedThreatCards && mobId
+                            ? (huntFoundCountByMobId.get(mobId) ?? 0)
                             : 0;
                         const shouldShowCardFoundCount = cardFoundCount > 0;
                         const cardFoundCountLabel =
                           cardFoundCount === 1
-                            ? '1 encontrado'
+                            ? "1 encontrado"
                             : `${cardFoundCount} encontrados`;
                         const isTrackedThreatCard =
-                          isBackendEncounterReadyPhase &&
-                          Boolean(trackedEncounter) &&
-                          (encounter.id === trackedEncounter?.id ||
-                            mob?.id === trackedThreatMob?.id);
+                          shouldUseTrackedThreatCards &&
+                          ((Boolean(trackedEncounter) &&
+                            (encounter.id === trackedEncounter?.id ||
+                              mob?.id === trackedThreatMob?.id)) ||
+                            encounter.id === activeBattleTargetEncounterId ||
+                            mobId === activeBattleTargetMobId);
 
                         return (
                           <article
                             key={encounter.id}
                             className={[
-                              'auto-combat-enemy-card',
+                              "auto-combat-enemy-card",
+                              isBackendHuntFlow
+                                ? "auto-combat-enemy-card--compact"
+                                : "",
                               shouldShowCardFoundCount
-                                ? 'auto-combat-enemy-card--found'
-                                : '',
+                                ? "auto-combat-enemy-card--found"
+                                : "",
                               isTrackedThreatCard
-                                ? 'auto-combat-enemy-card--tracked-found'
-                                : '',
+                                ? "auto-combat-enemy-card--tracked-found"
+                                : "",
                             ]
                               .filter(Boolean)
-                              .join(' ')}
+                              .join(" ")}
                             role="button"
                             tabIndex={0}
-                            aria-label={`Ver detalhes de ${mob?.name ?? 'Infectado'}`}
-                            onClick={() => setSelectedThreat(encounter)}
+                            aria-label={`Ver detalhes de ${mob?.name ?? "Infectado"}`}
+                            onClick={() => {
+                              setSelectedBattleQuantity(1);
+                              setSelectedThreat(encounter);
+                            }}
                             onKeyDown={(event) => {
-                              if (event.key !== 'Enter' && event.key !== ' ') {
+                              if (event.key !== "Enter" && event.key !== " ") {
                                 return;
                               }
 
                               event.preventDefault();
+                              setSelectedBattleQuantity(1);
                               setSelectedThreat(encounter);
                             }}
                           >
                             {shouldShowCardFoundCount ? (
                               <div
                                 className={[
-                                  'auto-combat-enemy-card__found-count',
+                                  "auto-combat-enemy-card__found-count",
                                   isTrackedThreatCard
-                                    ? 'auto-combat-enemy-card__found-count--tracked'
-                                    : 'auto-combat-enemy-card__found-count--secondary',
+                                    ? "auto-combat-enemy-card__found-count--tracked"
+                                    : "auto-combat-enemy-card__found-count--secondary",
                                 ]
                                   .filter(Boolean)
-                                  .join(' ')}
+                                  .join(" ")}
                                 aria-label={`${cardFoundCountLabel} nesta caça`}
                               >
                                 <strong>{cardFoundCount}</strong>
                                 <span>
                                   {cardFoundCount === 1
-                                    ? 'encontrado'
-                                    : 'encontrados'}
+                                    ? "encontrado"
+                                    : "encontrados"}
                                 </span>
                               </div>
                             ) : null}
 
                             <div
                               className={[
-                                'auto-combat-enemy-card__portrait',
-                                'auto-combat-enemy-card__portrait--fullbody',
+                                "auto-combat-enemy-card__portrait",
+                                "auto-combat-enemy-card__portrait--fullbody",
                                 mobFullBodyImage
-                                  ? 'auto-combat-enemy-card__portrait--loaded'
-                                  : '',
+                                  ? "auto-combat-enemy-card__portrait--loaded"
+                                  : "",
                               ]
                                 .filter(Boolean)
-                                .join(' ')}
+                                .join(" ")}
                             >
                               {mobFullBodyImage ? (
                                 <img
                                   src={mobFullBodyImage}
-                                  alt={mob?.name ?? 'Infectado'}
+                                  alt={mob?.name ?? "Infectado"}
                                   loading="eager"
                                   decoding="async"
                                 />
@@ -3710,7 +4473,7 @@ export function AutoCombatPage() {
                             <div className="auto-combat-enemy-card__content">
                               <span>Ameaça próxima</span>
 
-                              <strong>{mob?.name ?? 'Infectado'}</strong>
+                              <strong>{mob?.name ?? "Infectado"}</strong>
                             </div>
                           </article>
                         );
@@ -3729,85 +4492,26 @@ export function AutoCombatPage() {
                       </p>
                     </div>
                   )}
+                  </>
 
-                  <div className="auto-combat-section-title auto-combat-section-title--small auto-combat-preview-divider">
-                    <span>Prévia da caça</span>
-                  </div>
-
-                  <div className="auto-combat-preview-grid">
-                    {isBackendHuntFlow ? (
-                      <>
-                        <div>
-                          <span>Rastreados</span>
-                          <strong>{huntingCapacityLabel}</strong>
-                          <small>{huntingCapacityDetail}</small>
-                        </div>
-
-                        <div>
-                          <span>Caça</span>
-                          <strong>Nv. {huntingLevel}</strong>
-                          <small>{huntingXpProgressPercent}% da maestria</small>
-                        </div>
-                      </>
-                    ) : null}
-
-                    <div>
-                      <span>Risco</span>
-                      <strong>
-                        {isPreviewLoading
-                          ? 'Calculando...'
-                          : formatRiskLabel(preparationPreview?.risk?.level)}
-                      </strong>
-                      <small>Perigo da caça</small>
-                    </div>
-
-                    <div>
-                      <span>XP/min</span>
-                      <strong>
-                        {isPreviewLoading
-                          ? '...'
-                          : preparationPreview?.xpPerMinute ?? '—'}
-                      </strong>
-                      <small>Experiência média</small>
-                    </div>
-
-                    <div>
-                      <span>HP esperado</span>
-                      <strong>
-                        {isPreviewLoading
-                          ? '...'
-                          : preparationPreview?.hp?.expectedFinalPercent !==
-                              undefined
-                            ? `${Math.round(
-                                preparationPreview.hp.expectedFinalPercent,
-                              )}%`
-                            : '—'}
-                      </strong>
-                      <small>Vida ao final</small>
-                    </div>
-                  </div>
-
+                  {!showInlineHuntBattle ? (
+                    <>
                   <div className="auto-combat-stage-actions">
-                    {isBackendHuntingPhase ? (
-                      <button
-                        type="button"
-                        className="auto-combat-primary-button"
-                        disabled={isActionLoading}
-                        onClick={handleStopHunt}
-                      >
-                        {isActionLoading ? 'Processando...' : 'Parar caça'}
-                      </button>
-                    ) : (
+                    {!isBackendHuntingPhase ? (
                       <>
                         <button
                           type="button"
                           className="auto-combat-primary-button"
-                          disabled={!canStartCombat}
-                          onClick={handleStartAutoCombat}
+                          disabled={
+                            isBackendEncounterReadyPhase || !canStartCombat
+                          }
+                          onClick={() => handleStartAutoCombat()}
                         >
-                          {isActionLoading
-                            ? 'Processando...'
-                            : 'Iniciar combate'}
+                          {isBackendEncounterReadyPhase
+                            ? "Escolha um mob"
+                            : isActionLoading
+                              ? "Processando..."
+                              : "Iniciar combate"}
                         </button>
 
                         {isBackendEncounterReadyPhase ? (
@@ -3818,39 +4522,30 @@ export function AutoCombatPage() {
                             onClick={handleStartHunt}
                           >
                             {isActionLoading
-                              ? 'Processando...'
+                              ? "Processando..."
                               : isHuntLimitReached
-                                ? 'Limite atingido'
-                                : 'Caçar mais'}
+                                ? "Limite atingido"
+                                : "Continuar caçada"}
                           </button>
                         ) : null}
                       </>
-                    )}
-
-                    <button
-                      type="button"
-                      className="auto-combat-secondary-button auto-combat-secondary-button--danger"
-                      disabled={isActionLoading}
-                      onClick={
-                        isBackendHuntFlow ? handleStopAutoCombat : handleResetHunt
-                      }
-                    >
-                      Cancelar caça
-                    </button>
+                    ) : null}
                   </div>
+                    </>
+                  ) : null}
                 </article>
               ) : null}
 
-              {showActiveSession ? (
+              {showArenaActiveSession ? (
                 <div
                   className={[
-                    'auto-combat-session-stage',
+                    "auto-combat-session-stage",
                     !SHOW_AUTO_COMBAT_BATTLE_LOG
-                      ? 'auto-combat-session-stage--battle-log-hidden'
-                      : '',
+                      ? "auto-combat-session-stage--battle-log-hidden"
+                      : "",
                   ]
                     .filter(Boolean)
-                    .join(' ')}
+                    .join(" ")}
                 >
                   <article className="auto-combat-arena-card">
                     <div className="auto-combat-arena-card__top">
@@ -3863,19 +4558,19 @@ export function AutoCombatPage() {
                       <div
                         className={playerFighterClassName}
                         data-fighter-role="player"
-                        data-has-avatar={characterBattleImage ? 'true' : 'false'}
+                        data-has-avatar={
+                          characterBattleImage ? "true" : "false"
+                        }
                       >
                         {shouldShowPlayerDamage ? (
                           <span
                             key={playerDamageKey}
                             className={[
-                              'auto-combat-floating-damage',
-                              isRealtimeFeedbackCritical
-                                ? 'is-critical'
-                                : '',
+                              "auto-combat-floating-damage",
+                              isRealtimeFeedbackCritical ? "is-critical" : "",
                             ]
                               .filter(Boolean)
-                              .join(' ')}
+                              .join(" ")}
                           >
                             -{latestDamageAmount} HP
                           </span>
@@ -3893,24 +4588,24 @@ export function AutoCombatPage() {
 
                         <div
                           className={[
-                            'auto-combat-fighter-card__identity',
-                            'auto-combat-fighter-card__identity--player',
+                            "auto-combat-fighter-card__identity",
+                            "auto-combat-fighter-card__identity--player",
                             characterBattleImage
-                              ? 'auto-combat-fighter-card__identity--player-with-avatar'
-                              : 'auto-combat-fighter-card__identity--player-empty',
+                              ? "auto-combat-fighter-card__identity--player-with-avatar"
+                              : "auto-combat-fighter-card__identity--player-empty",
                           ]
                             .filter(Boolean)
-                            .join(' ')}
+                            .join(" ")}
                         >
                           <div
                             className={[
-                              'auto-combat-fighter-card__character-image',
+                              "auto-combat-fighter-card__character-image",
                               characterBattleImage
-                                ? 'auto-combat-fighter-card__character-image--loaded'
-                                : 'auto-combat-fighter-card__character-image--empty',
+                                ? "auto-combat-fighter-card__character-image--loaded"
+                                : "auto-combat-fighter-card__character-image--empty",
                             ]
                               .filter(Boolean)
-                              .join(' ')}
+                              .join(" ")}
                             aria-hidden={!characterBattleImage}
                           >
                             {characterBattleImage ? (
@@ -3932,7 +4627,16 @@ export function AutoCombatPage() {
                           </div>
                         </div>
 
-                        <div className="auto-combat-resource">
+                          <div
+                            className={[
+                              "auto-combat-resource",
+                              hasTtkBattleProgress
+                                ? "auto-combat-resource--countdown"
+                                : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                          >
                           <div>
                             <span>HP</span>
                             <strong>
@@ -3964,7 +4668,9 @@ export function AutoCombatPage() {
                             </strong>
 
                             <div className="auto-combat-xp-feedback__details">
-                              <span>Base: {xpFeedbackBreakdown.baseXp} EXP</span>
+                              <span>
+                                Base: {xpFeedbackBreakdown.baseXp} EXP
+                              </span>
 
                               <span className="auto-combat-xp-feedback__premium">
                                 <PremiumPlaceholderIcon className="auto-combat-xp-feedback__premium-icon" />
@@ -3978,13 +4684,11 @@ export function AutoCombatPage() {
                           <span
                             key={mobDamageKey}
                             className={[
-                              'auto-combat-floating-damage',
-                              isRealtimeFeedbackCritical
-                                ? 'is-critical'
-                                : '',
+                              "auto-combat-floating-damage",
+                              isRealtimeFeedbackCritical ? "is-critical" : "",
                             ]
                               .filter(Boolean)
-                              .join(' ')}
+                              .join(" ")}
                           >
                             -{latestDamageAmount} HP
                           </span>
@@ -4008,13 +4712,13 @@ export function AutoCombatPage() {
                         <div className="auto-combat-fighter-card__identity auto-combat-fighter-card__identity--mob">
                           <div
                             className={[
-                              'auto-combat-fighter-card__mob-image',
+                              "auto-combat-fighter-card__mob-image",
                               activeMobFullBodyImage
-                                ? 'auto-combat-fighter-card__mob-image--loaded'
-                                : 'auto-combat-fighter-card__mob-image--empty',
+                                ? "auto-combat-fighter-card__mob-image--loaded"
+                                : "auto-combat-fighter-card__mob-image--empty",
                             ]
                               .filter(Boolean)
-                              .join(' ')}
+                              .join(" ")}
                           >
                             {activeMobFullBodyImage ? (
                               <img
@@ -4044,19 +4748,49 @@ export function AutoCombatPage() {
                           </div>
                         </div>
 
-                        <div className="auto-combat-resource">
+                        <div
+                          className={[
+                            "auto-combat-resource",
+                            hasTtkBattleProgress
+                              ? "auto-combat-resource--countdown"
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        >
                           <div>
-                            <span>HP</span>
+                            <span>
+                              {hasTtkBattleProgress ? "Abate" : "HP"}
+                            </span>
                             <strong>
-                              {activeMobMaxHp > 0
-                                ? `${activeMobCurrentHp}/${activeMobMaxHp}`
-                                : activeMobReference}
+                              {hasTtkBattleProgress
+                                ? activeKillProgressLabel
+                                : activeMobMaxHp > 0
+                                  ? `${activeMobCurrentHp}/${activeMobMaxHp}`
+                                  : activeMobReference}
                             </strong>
                           </div>
 
                           <i>
-                            <b style={activeMobHpStyle} />
+                            <b
+                              style={
+                                hasTtkBattleProgress
+                                  ? activeBattleProgressStyle
+                                  : activeMobHpStyle
+                              }
+                            />
                           </i>
+
+                          {hasTtkBattleProgress ? (
+                            <small className="auto-combat-resource__hint">
+                              {activeKillsPerMinute > 0
+                                ? `${activeKillsPerMinute.toFixed(1)} abates/min`
+                                : "Calculando ritmo"}
+                              {activeDifficultyLabel
+                                ? ` · ${activeDifficultyLabel}`
+                                : ""}
+                            </small>
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -4094,7 +4828,7 @@ export function AutoCombatPage() {
                         disabled={isActionLoading || !hasActiveSession}
                         onClick={handleStopAutoCombat}
                       >
-                        {isActionLoading ? 'Processando...' : 'Parar sessão'}
+                        {isActionLoading ? "Processando..." : "Parar sessão"}
                       </button>
                     </div>
                   </article>
@@ -4115,96 +4849,98 @@ export function AutoCombatPage() {
                         <strong>Cura e descanso</strong>
                       </div>
 
-                      <small>Configure a poção e o descanso em slots separados.</small>
+                      <small>
+                        Configure a poção e o descanso em slots separados.
+                      </small>
                     </div>
 
                     <div className="auto-combat-potion-slot-grid">
-                    {potionSlots.map((potionConfig, index) => {
-                      const potionItem = getPotionItem(potionConfig);
-                      const potionQuantity = configuredPotionQuantity;
-                      const hasConfiguredPotion = Boolean(potionItem);
-                      const isEnabled = hasConfiguredPotion;
+                      {potionSlots.map((potionConfig, index) => {
+                        const potionItem = getPotionItem(potionConfig);
+                        const potionQuantity = configuredPotionQuantity;
+                        const hasConfiguredPotion = Boolean(potionItem);
+                        const isEnabled = hasConfiguredPotion;
 
-                      return (
-                        <div
-                          key={potionConfig?.id ?? `auto-potion-${index}`}
-                          className="auto-combat-potion-slot"
-                        >
-                          <button
-                            type="button"
-                            className={[
-                              'auto-combat-potion-slot__button',
-                              isEnabled ? 'is-enabled' : 'is-empty',
-                              index === selectedPotionSlotIndex &&
-                              isPotionConfigPanelOpen
-                                ? 'is-selected'
-                                : '',
-                            ]
-                              .filter(Boolean)
-                              .join(' ')}
-                            onClick={() => handleOpenPotionConfig(index)}
+                        return (
+                          <div
+                            key={potionConfig?.id ?? `auto-potion-${index}`}
+                            className="auto-combat-potion-slot"
                           >
-                          <div className="auto-combat-potion-slot__icon">
-                            ✚
-                          </div>
-
-                          <div className="auto-combat-consumable-slot__body">
-                            <span className="auto-combat-consumable-slot__eyebrow">
-                              Poção automática
-                            </span>
-
-                            <strong>
-                              {potionItem
-                                ? getPotionName(potionConfig)
-                                : 'Configurar'}
-                            </strong>
-
-                            <span>
-                              {potionItem
-                                ? getPotionDescription(potionConfig)
-                                : 'Clique para escolher uma poção e definir o gatilho de HP.'}
-                            </span>
-
-                            <small className="auto-combat-consumable-slot__meta">
-                              {potionItem
-                                ? `HP <= ${currentPotionConfig?.hpThresholdPercent ?? potionThresholdPercent}% · x${potionQuantity}`
-                                : 'Escolher poção'}
-                            </small>
-                          </div>
-
-                          <em className="auto-combat-consumable-slot__action">
-                            {hasConfiguredPotion ? 'Editar' : 'Configurar'}
-                          </em>
-                          </button>
-
-                          {hasConfiguredPotion ? (
                             <button
                               type="button"
-                              className="auto-combat-potion-slot__remove"
-                              aria-label="Remover poção automática"
-                              disabled={isPotionConfigLoading}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                void handleClearPotionConfig();
-                              }}
+                              className={[
+                                "auto-combat-potion-slot__button",
+                                isEnabled ? "is-enabled" : "is-empty",
+                                index === selectedPotionSlotIndex &&
+                                isPotionConfigPanelOpen
+                                  ? "is-selected"
+                                  : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                              onClick={() => handleOpenPotionConfig(index)}
                             >
-                              X
+                              <div className="auto-combat-potion-slot__icon">
+                                ✚
+                              </div>
+
+                              <div className="auto-combat-consumable-slot__body">
+                                <span className="auto-combat-consumable-slot__eyebrow">
+                                  Poção automática
+                                </span>
+
+                                <strong>
+                                  {potionItem
+                                    ? getPotionName(potionConfig)
+                                    : "Configurar"}
+                                </strong>
+
+                                <span>
+                                  {potionItem
+                                    ? getPotionDescription(potionConfig)
+                                    : "Clique para escolher uma poção e definir o gatilho de HP."}
+                                </span>
+
+                                <small className="auto-combat-consumable-slot__meta">
+                                  {potionItem
+                                    ? `HP <= ${currentPotionConfig?.hpThresholdPercent ?? potionThresholdPercent}% · x${potionQuantity}`
+                                    : "Escolher poção"}
+                                </small>
+                              </div>
+
+                              <em className="auto-combat-consumable-slot__action">
+                                {hasConfiguredPotion ? "Editar" : "Configurar"}
+                              </em>
                             </button>
-                          ) : null}
-                        </div>
-                      );
-                    })}
+
+                            {hasConfiguredPotion ? (
+                              <button
+                                type="button"
+                                className="auto-combat-potion-slot__remove"
+                                aria-label="Remover poção automática"
+                                disabled={isPotionConfigLoading}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void handleClearPotionConfig();
+                                }}
+                              >
+                                X
+                              </button>
+                            ) : null}
+                          </div>
+                        );
+                      })}
                       <div className="auto-combat-potion-slot auto-combat-rest-slot">
                         <button
                           type="button"
                           className={[
-                            'auto-combat-potion-slot__button',
-                            'auto-combat-rest-slot__button',
-                            autoRestEnabled ? 'is-enabled' : 'is-empty',
-                            isRestConfigPanelOpen ? 'is-selected' : '',
+                            "auto-combat-potion-slot__button",
+                            "auto-combat-rest-slot__button",
+                            autoRestEnabled ? "is-enabled" : "is-empty",
+                            isRestConfigPanelOpen ? "is-selected" : "",
                           ]
                             .filter(Boolean)
-                            .join(' ')}
+                            .join(" ")}
                           onClick={handleOpenRestConfig}
                         >
                           <div className="auto-combat-potion-slot__icon auto-combat-rest-slot__icon" />
@@ -4215,19 +4951,21 @@ export function AutoCombatPage() {
                             </span>
 
                             <strong>
-                              {autoRestEnabled ? 'Descanso ativo' : 'Configurar'}
+                              {autoRestEnabled
+                                ? "Descanso ativo"
+                                : "Configurar"}
                             </strong>
 
                             <span>
                               {autoRestEnabled
-                                ? 'Pausa a caça só quando o HP chegar no gatilho baixo.'
-                                : 'Configure quando parar e quando voltar a caçar.'}
+                                ? "Pausa a caça só quando o HP chegar no gatilho baixo."
+                                : "Configure quando parar e quando voltar a caçar."}
                             </span>
 
                             <small className="auto-combat-consumable-slot__meta">
                               {autoRestEnabled
                                 ? `HP <= ${autoRestStartHpPercent}% · volta em ${autoRestStopHpPercent}%`
-                                : 'Sem descanso'}
+                                : "Sem descanso"}
                             </small>
                           </div>
 
@@ -4274,92 +5012,109 @@ export function AutoCombatPage() {
                           </button>
                         </div>
 
-                      <div className="auto-combat-potion-config-grid auto-combat-potion-config-grid--minimal">
-                        <section className="auto-combat-potion-picker">
-                          <div className="auto-combat-potion-picker__header">
-                            <div className="auto-combat-potion-picker__title">
-                              <span>Poções disponíveis</span>
-                              <strong>
-                                {potionOptions.length > 0
-                                  ? potionOptionsCountLabel
-                                  : 'Inventário sem poções'}
-                              </strong>
-                            </div>
-
-                          </div>
-
-                          {potionOptions.length > 0 ? (
-                            <div className="auto-combat-potion-grid">
-                              {potionOptions.map((potion) => {
-                                const potionId = potion.itemId;
-                                const potionQuantity = Math.max(
-                                  0,
-                                  toSafeNumber(potion.quantity, 0),
-                                );
-                                const isSelectedPotion =
-                                  selectedPotionItemId === potionId;
-                                const isUnavailable = potionQuantity <= 0;
-
-                                return (
-                                  <button
-                                    key={potionId}
-                                    type="button"
-                                    className={[
-                                      'auto-combat-potion-option',
-                                      isSelectedPotion ? 'is-selected' : '',
-                                      isUnavailable ? 'is-unavailable' : '',
-                                    ]
-                                      .filter(Boolean)
-                                      .join(' ')}
-                                    disabled={
-                                      isPotionConfigLoading || isUnavailable
-                                    }
-                                    onClick={() => {
-                                      setSelectedPotionItemId(potionId);
-                                      setPotionConfigMessage('');
-                                    }}
-                                  >
-                                    <span className="auto-combat-potion-option__icon">
-                                      ✚
-                                    </span>
-
-                                    <span className="auto-combat-potion-option__content">
-                                      <strong>{potion.name}</strong>
-                                      <small>{getPotionHealLabel(potion)}</small>
-                                    </span>
-
-                                    <span className="auto-combat-potion-option__quantity">
-                                      x{potionQuantity}
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="auto-combat-potion-grid auto-combat-potion-grid--empty">
-                              <div className="auto-combat-potion-empty-state">
-                                <span className="auto-combat-potion-empty-state__icon">
-                                  +
-                                </span>
-                                <strong>Inventário sem poções</strong>
-                                <p>
-                                  Nenhuma poção de cura foi encontrada no
-                                  inventário deste personagem.
-                                </p>
+                        <div className="auto-combat-potion-config-grid auto-combat-potion-config-grid--minimal">
+                          <section className="auto-combat-potion-picker">
+                            <div className="auto-combat-potion-picker__header">
+                              <div className="auto-combat-potion-picker__title">
+                                <span>Poções disponíveis</span>
+                                <strong>
+                                  {potionOptions.length > 0
+                                    ? potionOptionsCountLabel
+                                    : "Inventário sem poções"}
+                                </strong>
                               </div>
                             </div>
-                          )}
-                        </section>
 
-                        <section className="auto-combat-potion-threshold auto-combat-potion-threshold--minimal">
-                          <div className="auto-combat-potion-threshold__header">
-                            <div>
-                              <span>Usar quando o HP estiver em</span>
-                              <strong>{potionThresholdPercent}% ou menos</strong>
+                            {potionOptions.length > 0 ? (
+                              <div className="auto-combat-potion-grid">
+                                {potionOptions.map((potion) => {
+                                  const potionId = potion.itemId;
+                                  const potionQuantity = Math.max(
+                                    0,
+                                    toSafeNumber(potion.quantity, 0),
+                                  );
+                                  const isSelectedPotion =
+                                    selectedPotionItemId === potionId;
+                                  const isUnavailable = potionQuantity <= 0;
+
+                                  return (
+                                    <button
+                                      key={potionId}
+                                      type="button"
+                                      className={[
+                                        "auto-combat-potion-option",
+                                        isSelectedPotion ? "is-selected" : "",
+                                        isUnavailable ? "is-unavailable" : "",
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" ")}
+                                      disabled={
+                                        isPotionConfigLoading || isUnavailable
+                                      }
+                                      onClick={() => {
+                                        setSelectedPotionItemId(potionId);
+                                        setPotionConfigMessage("");
+                                      }}
+                                    >
+                                      <span className="auto-combat-potion-option__icon">
+                                        ✚
+                                      </span>
+
+                                      <span className="auto-combat-potion-option__content">
+                                        <strong>{potion.name}</strong>
+                                        <small>
+                                          {getPotionHealLabel(potion)}
+                                        </small>
+                                      </span>
+
+                                      <span className="auto-combat-potion-option__quantity">
+                                        x{potionQuantity}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="auto-combat-potion-grid auto-combat-potion-grid--empty">
+                                <div className="auto-combat-potion-empty-state">
+                                  <span className="auto-combat-potion-empty-state__icon">
+                                    +
+                                  </span>
+                                  <strong>Inventário sem poções</strong>
+                                  <p>
+                                    Nenhuma poção de cura foi encontrada no
+                                    inventário deste personagem.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </section>
+
+                          <section className="auto-combat-potion-threshold auto-combat-potion-threshold--minimal">
+                            <div className="auto-combat-potion-threshold__header">
+                              <div>
+                                <span>Usar quando o HP estiver em</span>
+                                <strong>
+                                  {potionThresholdPercent}% ou menos
+                                </strong>
+                              </div>
+
+                              <input
+                                type="number"
+                                min={1}
+                                max={100}
+                                value={potionThresholdPercent}
+                                disabled={isPotionConfigLoading}
+                                onChange={(event) =>
+                                  setPotionThresholdPercent(
+                                    clampNumber(event.target.value, 1, 100),
+                                  )
+                                }
+                              />
                             </div>
 
                             <input
-                              type="number"
+                              type="range"
                               min={1}
                               max={100}
                               value={potionThresholdPercent}
@@ -4370,70 +5125,59 @@ export function AutoCombatPage() {
                                 )
                               }
                             />
-                          </div>
 
-                          <input
-                            type="range"
-                            min={1}
-                            max={100}
-                            value={potionThresholdPercent}
+                            <div className="auto-combat-potion-threshold__presets">
+                              {[25, 35, 50, 65].map((value) => (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  className={
+                                    potionThresholdPercent === value
+                                      ? "is-selected"
+                                      : ""
+                                  }
+                                  aria-pressed={
+                                    potionThresholdPercent === value
+                                  }
+                                  disabled={isPotionConfigLoading}
+                                  onClick={() =>
+                                    setPotionThresholdPercent(value)
+                                  }
+                                >
+                                  {value}%
+                                </button>
+                              ))}
+                            </div>
+                          </section>
+                        </div>
+
+                        {potionConfigMessage ? (
+                          <p className="auto-combat-potion-config-message">
+                            {potionConfigMessage}
+                          </p>
+                        ) : null}
+
+                        <div className="auto-combat-potion-config-actions auto-combat-potion-config-actions--minimal">
+                          <button
+                            type="button"
+                            className="auto-combat-primary-button"
                             disabled={isPotionConfigLoading}
-                            onChange={(event) =>
-                              setPotionThresholdPercent(
-                                clampNumber(event.target.value, 1, 100),
-                              )
-                            }
-                          />
+                            onClick={handleSavePotionConfig}
+                          >
+                            {isPotionConfigLoading
+                              ? "Salvando..."
+                              : "Salvar configuração"}
+                          </button>
 
-                          <div className="auto-combat-potion-threshold__presets">
-                            {[25, 35, 50, 65].map((value) => (
-                              <button
-                                key={value}
-                                type="button"
-                                className={
-                                  potionThresholdPercent === value
-                                    ? 'is-selected'
-                                    : ''
-                                }
-                                aria-pressed={potionThresholdPercent === value}
-                                disabled={isPotionConfigLoading}
-                                onClick={() => setPotionThresholdPercent(value)}
-                              >
-                                {value}%
-                              </button>
-                            ))}
-                          </div>
-                        </section>
-
-                      </div>
-
-                      {potionConfigMessage ? (
-                        <p className="auto-combat-potion-config-message">
-                          {potionConfigMessage}
-                        </p>
-                      ) : null}
-
-                      <div className="auto-combat-potion-config-actions auto-combat-potion-config-actions--minimal">
-                        <button
-                          type="button"
-                          className="auto-combat-primary-button"
-                          disabled={isPotionConfigLoading}
-                          onClick={handleSavePotionConfig}
-                        >
-                          {isPotionConfigLoading
-                            ? 'Salvando...'
-                            : 'Salvar configuração'}
-                        </button>
-
-                        <button
-                          type="button"
-                          className="auto-combat-secondary-button auto-combat-secondary-button--danger"
-                          disabled={isPotionConfigLoading}
-                          onClick={handleClearPotionConfig}
-                        >
-                          Remover
-                        </button>
-                      </div>
+                          <button
+                            type="button"
+                            className="auto-combat-secondary-button auto-combat-secondary-button--danger"
+                            disabled={isPotionConfigLoading}
+                            onClick={handleClearPotionConfig}
+                          >
+                            Remover
+                          </button>
+                        </div>
                       </article>
                     </div>
                   ) : null}
@@ -4480,8 +5224,8 @@ export function AutoCombatPage() {
                                 <span>Estado</span>
                                 <strong>
                                   {autoRestEnabled
-                                    ? 'Descanso automático ativo'
-                                    : 'Descanso automático desativado'}
+                                    ? "Descanso automático ativo"
+                                    : "Descanso automático desativado"}
                                 </strong>
                               </div>
 
@@ -4565,8 +5309,8 @@ export function AutoCombatPage() {
                             onClick={() => void handleSaveRestConfig()}
                           >
                             {isRestConfigLoading
-                              ? 'Salvando...'
-                              : 'Salvar descanso'}
+                              ? "Salvando..."
+                              : "Salvar descanso"}
                           </button>
 
                           <button
@@ -4606,6 +5350,88 @@ export function AutoCombatPage() {
           )}
         </section>
       </div>
+
+      {isStopHuntConfirmOpen ? (
+        <div
+          className="auto-combat-hunt-stop-modal-backdrop"
+          role="presentation"
+          onClick={() => {
+            if (!isActionLoading) {
+              setIsStopHuntConfirmOpen(false);
+            }
+          }}
+        >
+          <article
+            className="auto-combat-hunt-stop-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="auto-combat-hunt-stop-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="auto-combat-hunt-stop-modal__header">
+              <div>
+                <span className="auto-combat-hunt-stop-modal__icon">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <strong id="auto-combat-hunt-stop-modal-title">
+                  Parar caça
+                </strong>
+              </div>
+
+              <button
+                type="button"
+                className="auto-combat-hunt-stop-modal__close"
+                aria-label="Fechar confirmação"
+                disabled={isActionLoading}
+                onClick={() => setIsStopHuntConfirmOpen(false)}
+              >
+                ×
+              </button>
+            </header>
+
+            <div className="auto-combat-hunt-stop-modal__body">
+              <div className="auto-combat-hunt-stop-modal__notice">
+                <span aria-hidden="true">i</span>
+                <p>
+                  Os inimigos que você já rastreou ficarão prontos para
+                  batalha imediatamente.
+                </p>
+              </div>
+
+              <div className="auto-combat-hunt-stop-modal__notice">
+                <span aria-hidden="true">i</span>
+                <p>
+                  Você pode voltar para a caça quando quiser, desde que ainda
+                  não tenha atingido o limite. Novos inimigos encontrados serão
+                  somados aos que você já rastreou.
+                </p>
+              </div>
+            </div>
+
+            <footer className="auto-combat-hunt-stop-modal__actions">
+              <button
+                type="button"
+                className="auto-combat-hunt-stop-modal__button auto-combat-hunt-stop-modal__button--secondary"
+                disabled={isActionLoading}
+                onClick={() => setIsStopHuntConfirmOpen(false)}
+              >
+                Fechar
+              </button>
+
+              <button
+                type="button"
+                className="auto-combat-hunt-stop-modal__button auto-combat-hunt-stop-modal__button--danger"
+                disabled={isActionLoading}
+                onClick={handleStopHunt}
+              >
+                {isActionLoading ? "Parando..." : "Parar Caça"}
+              </button>
+            </footer>
+          </article>
+        </div>
+      ) : null}
 
       {selectedThreatDetails && selectedThreatMob ? (
         <div
@@ -4649,13 +5475,99 @@ export function AutoCombatPage() {
             </div>
 
             <div className="auto-combat-threat-modal__pills">
-              <span>XP {selectedThreatMob.xpReward ?? '—'}</span>
-              <span>Nível {selectedThreatMob.level ?? '—'}</span>
-              <span>HP {selectedThreatMob.hp ?? '—'}</span>
+              <span>XP {selectedThreatMob.xpReward ?? "—"}</span>
+              <span>Nível {selectedThreatMob.level ?? "—"}</span>
+              <span>HP {selectedThreatMob.hp ?? "—"}</span>
               {selectedThreatChance !== null ? (
                 <span>{selectedThreatChance}% encontro</span>
               ) : null}
             </div>
+
+            {canBattleSelectedThreat ? (
+              <div className="auto-combat-threat-modal__battle-select">
+                <div className="auto-combat-threat-modal__battle-copy">
+                  <span>Disponíveis</span>
+                  <strong>{selectedThreatRemainingCount}</strong>
+                  <small>Escolha quantos deste mob deseja enfrentar.</small>
+                </div>
+
+                <div className="auto-combat-threat-modal__quantity">
+                  <button
+                    type="button"
+                    aria-label="Diminuir quantidade"
+                    onClick={() =>
+                      setSelectedBattleQuantity((currentQuantity) =>
+                        clampNumber(
+                          currentQuantity - 1,
+                          1,
+                          selectedThreatRemainingCount,
+                        ),
+                      )
+                    }
+                  >
+                    -
+                  </button>
+
+                  <input
+                    type="number"
+                    min={1}
+                    max={selectedThreatRemainingCount}
+                    value={normalizedSelectedBattleQuantity}
+                    onChange={(event) => {
+                      setSelectedBattleQuantity(
+                        clampNumber(
+                          Number(event.target.value) || 1,
+                          1,
+                          selectedThreatRemainingCount,
+                        ),
+                      );
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    aria-label="Aumentar quantidade"
+                    onClick={() =>
+                      setSelectedBattleQuantity((currentQuantity) =>
+                        clampNumber(
+                          currentQuantity + 1,
+                          1,
+                          selectedThreatRemainingCount,
+                        ),
+                      )
+                    }
+                  >
+                    +
+                  </button>
+
+                  <button
+                    type="button"
+                    className="auto-combat-threat-modal__max-button"
+                    onClick={() =>
+                      setSelectedBattleQuantity(selectedThreatRemainingCount)
+                    }
+                  >
+                    Máx.
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  className="auto-combat-primary-button auto-combat-threat-modal__battle-button"
+                  disabled={isActionLoading}
+                  onClick={() =>
+                    handleStartAutoCombat({
+                      mobId:
+                        selectedThreatMob.id ?? selectedThreatDetails.mobId,
+                      encounterId: selectedThreatDetails.id,
+                      quantity: normalizedSelectedBattleQuantity,
+                    })
+                  }
+                >
+                  {isActionLoading ? "Processando..." : "Batalhar"}
+                </button>
+              </div>
+            ) : null}
 
             <div className="auto-combat-threat-modal__divider">
               <span>Loot possível</span>
@@ -4664,16 +5576,16 @@ export function AutoCombatPage() {
             {selectedThreatDrops.length > 0 ? (
               <div className="auto-combat-threat-modal__loot-grid">
                 {selectedThreatDrops.map((drop) => {
-                  const itemName = drop.item?.name ?? 'Item desconhecido';
+                  const itemName = drop.item?.name ?? "Item desconhecido";
                   const chanceLabel = formatDropChance(drop.dropChance);
 
                   return (
                     <div
                       key={drop.id}
                       className={[
-                        'auto-combat-threat-loot-card',
+                        "auto-combat-threat-loot-card",
                         getLootRarityClassName(drop.item?.rarity),
-                      ].join(' ')}
+                      ].join(" ")}
                       title={itemName}
                     >
                       {chanceLabel ? (
@@ -4692,10 +5604,7 @@ export function AutoCombatPage() {
                       <strong>{itemName}</strong>
 
                       <small>
-                        {formatDropQuantity(
-                          drop.minQuantity,
-                          drop.maxQuantity,
-                        )}
+                        {formatDropQuantity(drop.minQuantity, drop.maxQuantity)}
                       </small>
                     </div>
                   );

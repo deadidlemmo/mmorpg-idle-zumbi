@@ -1974,6 +1974,30 @@ function applyRealtimeEventSnapshot(
           eventSequence,
         )
       : (state.session?.latestEventSequence ?? state.session?.snapshotSequence);
+  const eventBattleTargetTotal = getRealtimeEventNumberField(
+    event,
+    'battleTargetTotal',
+  );
+  const eventBattleTargetRemaining = getRealtimeEventNumberField(
+    event,
+    'battleTargetRemaining',
+  );
+  const derivedBattleTargetRemaining =
+    eventBattleTargetRemaining !== null
+      ? Math.max(0, Math.floor(eventBattleTargetRemaining))
+      : eventType === 'MOB_DEFEATED' &&
+          state.session?.battleTargetRemaining !== null &&
+          state.session?.battleTargetRemaining !== undefined
+        ? Math.max(
+            0,
+            Math.floor(toSafeNumber(state.session.battleTargetRemaining, 0)) -
+              1,
+          )
+        : state.session?.battleTargetRemaining;
+  const nextSessionPhase = resolveRealtimeSessionPhaseFromEvent(
+    event,
+    state.session?.phase,
+  );
 
   const nextSession: AutoCombatRealtimeSessionState | null = state.session
     ? {
@@ -1990,10 +2014,52 @@ function applyRealtimeEventSnapshot(
         enemyInstanceId: event.enemyInstanceId ?? state.session.enemyInstanceId,
         currentEnemyInstanceId:
           event.enemyInstanceId ?? state.session.currentEnemyInstanceId,
+        battleTargetMobId:
+          event.battleTargetMobId ??
+          event.mobId ??
+          state.session.battleTargetMobId,
+        battleTargetEncounterId:
+          event.battleTargetEncounterId ??
+          state.session.battleTargetEncounterId,
+        battleTargetTotal:
+          eventBattleTargetTotal !== null
+            ? Math.max(0, Math.floor(eventBattleTargetTotal))
+            : state.session.battleTargetTotal,
+        battleTargetRemaining: derivedBattleTargetRemaining,
+        battleSelection: state.session.battleSelection
+          ? {
+              ...state.session.battleSelection,
+              total:
+                eventBattleTargetTotal !== null
+                  ? Math.max(0, Math.floor(eventBattleTargetTotal))
+                  : state.session.battleSelection.total,
+              remaining:
+                derivedBattleTargetRemaining !== null &&
+                derivedBattleTargetRemaining !== undefined
+                  ? derivedBattleTargetRemaining
+                  : state.session.battleSelection.remaining,
+              defeated:
+                (eventBattleTargetTotal !== null
+                  ? Math.max(0, Math.floor(eventBattleTargetTotal))
+                  : state.session.battleSelection.total) !== undefined &&
+                derivedBattleTargetRemaining !== null &&
+                derivedBattleTargetRemaining !== undefined
+                  ? Math.max(
+                      0,
+                      Math.floor(
+                        (eventBattleTargetTotal !== null
+                          ? Math.max(0, Math.floor(eventBattleTargetTotal))
+                          : state.session.battleSelection.total ?? 0) -
+                          derivedBattleTargetRemaining,
+                      ),
+                    )
+                  : state.session.battleSelection.defeated,
+            }
+          : state.session.battleSelection,
         snapshotSequence: nextSessionSequence ?? state.session.snapshotSequence,
         latestEventSequence:
           nextSessionSequence ?? state.session.latestEventSequence,
-        phase: event.phase ?? state.session.phase,
+        phase: nextSessionPhase,
         nextActor: event.nextActor ?? state.session.nextActor,
         lastActionAt:
           event.actionStartedAt ?? event.serverTime ?? state.session.lastActionAt,
@@ -2022,9 +2088,21 @@ function applyRealtimeEventSnapshot(
               : null,
           enemyInstanceId: event.enemyInstanceId ?? null,
           currentEnemyInstanceId: event.enemyInstanceId ?? null,
+          battleTargetMobId: event.battleTargetMobId ?? event.mobId ?? null,
+          battleTargetEncounterId: event.battleTargetEncounterId ?? null,
+          battleTargetTotal:
+            eventBattleTargetTotal !== null
+              ? Math.max(0, Math.floor(eventBattleTargetTotal))
+              : null,
+          battleTargetRemaining:
+            derivedBattleTargetRemaining !== null &&
+            derivedBattleTargetRemaining !== undefined
+              ? derivedBattleTargetRemaining
+              : null,
+          battleSelection: null,
           snapshotSequence: nextSessionSequence ?? null,
           latestEventSequence: nextSessionSequence ?? null,
-          phase: event.phase ?? null,
+          phase: nextSessionPhase,
           nextActor: event.nextActor ?? null,
           lastActionAt: event.actionStartedAt ?? event.serverTime ?? null,
           nextActionAt: event.nextActionAt ?? null,
@@ -2097,6 +2175,53 @@ function flushEventQueueWithoutAnimation(
     displayTotals: publishDisplayTotalsIfAllowed(nextState),
     updatedAt: now(),
   };
+}
+
+function resolveRealtimeSessionPhaseFromEvent(
+  event: AutoCombatRealtimeEvent,
+  currentPhase?: string | null,
+) {
+  const eventType = normalizeRealtimeEventType(event);
+  const sessionStatus = String(event.sessionStatus ?? '').trim().toUpperCase();
+  const battleTargetRemaining = getRealtimeEventNumberField(
+    event,
+    'battleTargetRemaining',
+  );
+
+  if (
+    eventType === 'PLAYER_DEFEATED' ||
+    event.shouldRedirectToInfirmary === true ||
+    sessionStatus === 'DEFEATED'
+  ) {
+    return 'PLAYER_DEFEATED';
+  }
+
+  if (
+    sessionStatus === 'FINISHED' ||
+    sessionStatus === 'STOPPED' ||
+    sessionStatus === 'CANCELLED' ||
+    sessionStatus === 'FAILED'
+  ) {
+    return 'FINISHED';
+  }
+
+  if (eventType === 'MOB_DEFEATED') {
+    return battleTargetRemaining !== null && battleTargetRemaining <= 0
+      ? 'ENCOUNTER_READY'
+      : 'COMBAT_ACTIVE';
+  }
+
+  if (
+    eventType === 'MOB_SPAWNED' ||
+    eventType === 'PLAYER_HIT' ||
+    eventType === 'MOB_HIT' ||
+    eventType === 'DODGE' ||
+    eventType === 'POTION_USED'
+  ) {
+    return 'COMBAT_ACTIVE';
+  }
+
+  return event.phase ?? currentPhase ?? null;
 }
 
 function hydrateRecentEvents(

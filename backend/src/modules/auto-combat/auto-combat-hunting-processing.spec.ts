@@ -238,11 +238,7 @@ describe('AutoCombatService hunting processing', () => {
     });
 
     expect(
-      (service as any).getTrackedEnemiesRemainingAfterKill(
-        session,
-        'mob-1',
-        1,
-      ),
+      (service as any).getTrackedEnemiesRemainingAfterKill(session, 'mob-1', 1),
     ).toBe(0);
   });
 
@@ -311,6 +307,99 @@ describe('AutoCombatService hunting processing', () => {
         remainingCount: 3,
       },
     ]);
+  });
+
+  it('respeita a selecao de mob e quantidade ao iniciar batalha', () => {
+    const { service } = createServiceHarness();
+    const session = createSession({
+      huntBatch: {
+        id: 'hunt-batch-1',
+        mobs: [
+          {
+            mobId: 'mob-1',
+            encounterId: 'encounter-1',
+            foundCount: 5,
+            remainingCount: 5,
+            weightSnapshot: 100,
+          },
+          {
+            mobId: 'mob-2',
+            encounterId: 'encounter-2',
+            foundCount: 3,
+            remainingCount: 3,
+            weightSnapshot: 100,
+          },
+        ],
+      },
+    });
+
+    const selection = (service as any).resolveBattleSelection(session, {
+      mobId: 'mob-2',
+      quantity: 2,
+    });
+
+    expect(selection.encounter.mobId).toBe('mob-2');
+    expect(selection.quantity).toBe(2);
+    expect(selection.availableCount).toBe(3);
+  });
+
+  it('bloqueia batalha com quantidade maior que a fila rastreada', () => {
+    const { service } = createServiceHarness();
+    const session = createSession({
+      huntBatch: {
+        id: 'hunt-batch-1',
+        mobs: [
+          {
+            mobId: 'mob-1',
+            encounterId: 'encounter-1',
+            foundCount: 2,
+            remainingCount: 2,
+            weightSnapshot: 100,
+          },
+        ],
+      },
+    });
+
+    expect(() =>
+      (service as any).resolveBattleSelection(session, {
+        mobId: 'mob-1',
+        quantity: 3,
+      }),
+    ).toThrow();
+  });
+
+  it('zera apenas o alvo de batalha selecionado sem consumir toda fila', () => {
+    const { service } = createServiceHarness();
+    const session = createSession({
+      battleTargetMobId: 'mob-1',
+      battleTargetRemaining: 1,
+      huntBatch: {
+        id: 'hunt-batch-1',
+        mobs: [
+          {
+            mobId: 'mob-1',
+            encounterId: 'encounter-1',
+            foundCount: 2,
+            remainingCount: 2,
+            weightSnapshot: 100,
+          },
+          {
+            mobId: 'mob-2',
+            encounterId: 'encounter-2',
+            foundCount: 3,
+            remainingCount: 3,
+            weightSnapshot: 100,
+          },
+        ],
+      },
+    });
+
+    expect(
+      (service as any).getBattleTargetRemainingAfterKill(session, 'mob-1', 1),
+    ).toBe(0);
+    expect(
+      (service as any).getTrackedEnemiesRemainingAfterKill(session, 'mob-1', 1),
+    ).toBe(4);
   });
 
   it('finaliza a caca quando o limite da sessao e atingido durante o processamento', async () => {

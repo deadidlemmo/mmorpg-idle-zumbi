@@ -1,15 +1,16 @@
-import { apiClient } from '../../../services/api/apiClient';
-import { API_ENDPOINTS } from '../../../services/api/endpoints';
+import { apiClient } from "../../../services/api/apiClient";
+import { API_ENDPOINTS } from "../../../services/api/endpoints";
 import type {
   AutoCombatMapViewModel,
   AutoCombatRealtimeEvent,
   AutoCombatStatusResponse,
   PreviewAutoCombatPayload,
   PreviewAutoCombatResponse,
+  StartAutoCombatBattlePayload,
   StartAutoCombatPayload,
   StartAutoCombatResponse,
   StopAutoCombatResponse,
-} from '../types/auto-combat.types';
+} from "../types/auto-combat.types";
 
 export type AutoCombatRecentEvent = AutoCombatRealtimeEvent & {
   id?: string;
@@ -140,10 +141,11 @@ export async function stopAutoCombatHunt(
 
 export async function startAutoCombatBattle(
   characterId: string,
+  payload?: StartAutoCombatBattlePayload,
 ): Promise<StartAutoCombatResponse> {
   const response = await apiClient.post<StartAutoCombatResponse>(
     API_ENDPOINTS.autoCombat.startBattle(characterId),
-    {},
+    payload ?? {},
   );
 
   return response.data;

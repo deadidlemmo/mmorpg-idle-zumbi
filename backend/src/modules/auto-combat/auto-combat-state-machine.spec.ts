@@ -28,6 +28,12 @@ describe('auto-combat-state-machine', () => {
     ).toBe(true);
     expect(
       isAutoCombatPhaseTransitionAllowed(
+        AutoCombatSessionPhase.COMBAT_ACTIVE,
+        AutoCombatSessionPhase.ENCOUNTER_READY,
+      ),
+    ).toBe(true);
+    expect(
+      isAutoCombatPhaseTransitionAllowed(
         AutoCombatSessionPhase.HUNTING,
         AutoCombatSessionPhase.COMBAT_ACTIVE,
       ),
