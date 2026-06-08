@@ -147,6 +147,10 @@ export interface AutoCombatRealtimeEvent {
   mobHpPercent?: number | null;
   battleProgressSeconds?: number | null;
   battleProgressPercent?: number | null;
+  cycleStartedAt?: string | number | Date | null;
+  cycleDurationMs?: number | null;
+  cycleDurationSeconds?: number | null;
+  progressUpdatedAt?: string | number | Date | null;
   estimatedKillTimeSeconds?: number | null;
   baseKillTimeSeconds?: number | null;
   playerOffensivePower?: number | null;
@@ -252,6 +256,11 @@ export interface AutoCombatRealtimeEvent {
   targetMobId?: string | null;
   huntingXpGained?: number | null;
   foundEnemiesCount?: number | null;
+  availableEnemiesCount?: number | null;
+  remainingEnemiesCount?: number | null;
+  hasPreservedTrackedEnemies?: boolean | null;
+  preservedTrackedEnemiesCount?: number | null;
+  autoCombatRecovery?: AutoCombatRecoveryViewModel | null;
   maxTrackedEnemies?: number | null;
   remainingHuntCapacity?: number | null;
   remainingCapacity?: number | null;
@@ -307,6 +316,11 @@ export interface AutoCombatMobDropViewModel {
 export interface AutoCombatBattleProgressViewModel {
   progressSeconds?: number | null;
   progressPercent?: number | null;
+  cycleStartedAt?: string | number | Date | null;
+  cycleDurationMs?: number | null;
+  cycleDurationSeconds?: number | null;
+  progressUpdatedAt?: string | number | Date | null;
+  serverNow?: string | number | Date | null;
   estimatedKillTimeSeconds?: number | null;
   baseKillTimeSeconds?: number | null;
   playerOffensivePower?: number | null;
@@ -316,6 +330,34 @@ export interface AutoCombatBattleProgressViewModel {
   difficultyLabel?: string | null;
   mobIndex?: number | null;
   tier?: number | null;
+}
+
+export type AutoCombatRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "LETHAL";
+
+export interface AutoCombatSurvivalProjectionViewModel {
+  riskLevel?: AutoCombatRiskLevel | string | null;
+  expectedDamagePerKill?: number | null;
+  expectedMobHitDamage?: number | null;
+  expectedDodgeChancePercent?: number | null;
+  expectedCriticalChancePercent?: number | null;
+  expectedCriticalMultiplier?: number | null;
+  projectedKills?: number | null;
+  safeKillsWithoutPotions?: number | null;
+  safeKillsWithPotions?: number | null;
+  extraKillsFromPotions?: number | null;
+  expectedPotionsUsed?: number | null;
+  availablePotions?: number | null;
+  potionHealAmount?: number | null;
+  potionTriggerPercent?: number | null;
+  projectedFinalHp?: number | null;
+  projectedFinalHpPercent?: number | null;
+  willSurviveProjection?: boolean | null;
+  hpLimited?: boolean | null;
+  estimatedKillTimeSeconds?: number | null;
+  killsPerMinute?: number | null;
+  difficultyLabel?: string | null;
+  potionItemId?: string | null;
+  potionItemName?: string | null;
 }
 
 export interface AutoCombatMobViewModel {
@@ -338,6 +380,7 @@ export interface AutoCombatMobViewModel {
   maxHp?: number | null;
   hpPercent?: number | null;
   battleProgress?: AutoCombatBattleProgressViewModel | null;
+  survivalProjection?: AutoCombatSurvivalProjectionViewModel | null;
   foundCount?: number | null;
   huntFoundCount?: number | null;
 
@@ -367,6 +410,7 @@ export interface AutoCombatCurrentMobViewModel {
   maxHp?: number | null;
   hpPercent?: number | null;
   battleProgress?: AutoCombatBattleProgressViewModel | null;
+  survivalProjection?: AutoCombatSurvivalProjectionViewModel | null;
   foundCount?: number | null;
   huntFoundCount?: number | null;
 
@@ -478,6 +522,8 @@ export interface AutoCombatHuntingViewModel {
   lastFindAt?: string | null;
   nextFindAt?: string | null;
   foundEnemiesCount?: number | null;
+  availableEnemiesCount?: number | null;
+  remainingEnemiesCount?: number | null;
   maxTrackedEnemies?: number | null;
   remainingCapacity?: number | null;
   isLimitReached?: boolean | null;
@@ -514,6 +560,18 @@ export interface AutoCombatBattleSelectionViewModel {
   mob?: AutoCombatCurrentMobViewModel | null;
 }
 
+export interface AutoCombatRecoveryViewModel {
+  hasPreservedTrackedEnemies?: boolean | null;
+  preservedTrackedEnemiesCount?: number | null;
+  huntBatchId?: string | null;
+  sessionId?: string | null;
+  mapId?: string | null;
+  subMapId?: string | null;
+  mapName?: string | null;
+  subMapName?: string | null;
+  defeatedAt?: string | null;
+}
+
 export interface AutoCombatSessionApiViewModel {
   id: string;
   characterId?: string | null;
@@ -532,6 +590,9 @@ export interface AutoCombatSessionApiViewModel {
     | string;
   endReason?: string | null;
   shouldRedirectToInfirmary?: boolean | null;
+  hasPreservedTrackedEnemies?: boolean | null;
+  preservedTrackedEnemiesCount?: number | null;
+  autoCombatRecovery?: AutoCombatRecoveryViewModel | null;
 
   startedAt: string;
   endsAt?: string | null;
@@ -583,6 +644,8 @@ export interface AutoCombatSessionApiViewModel {
   huntingLevelAtStart?: number | null;
   huntingXpGained?: number | null;
   foundEnemiesCount?: number | null;
+  availableEnemiesCount?: number | null;
+  remainingEnemiesCount?: number | null;
   maxTrackedEnemies?: number | null;
   remainingHuntCapacity?: number | null;
   isHuntLimitReached?: boolean | null;
@@ -666,6 +729,11 @@ export interface AutoCombatHuntBatchViewModel {
   huntingLevelAtStart?: number | null;
   huntingXpGained?: number | null;
   foundEnemiesCount?: number | null;
+  availableEnemiesCount?: number | null;
+  remainingEnemiesCount?: number | null;
+  hasPreservedTrackedEnemies?: boolean | null;
+  preservedTrackedEnemiesCount?: number | null;
+  autoCombatRecovery?: AutoCombatRecoveryViewModel | null;
   maxTrackedEnemies?: number | null;
   remainingCapacity?: number | null;
   isLimitReached?: boolean | null;
@@ -888,8 +956,6 @@ export interface AutoCombatSessionSummary {
    PREVIEW / PROJEÇÃO DA CAÇA
    ========================================================= */
 
-export type AutoCombatRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "LETHAL";
-
 export interface AutoCombatProjectionPreview {
   averageCombatDurationSeconds?: number;
   averageRoundsPerCombat?: number;
@@ -959,6 +1025,9 @@ export interface AutoCombatStatusResponse {
   roundDurationSeconds?: number | null;
   endReason?: string | null;
   shouldRedirectToInfirmary?: boolean | null;
+  hasPreservedTrackedEnemies?: boolean | null;
+  preservedTrackedEnemiesCount?: number | null;
+  autoCombatRecovery?: AutoCombatRecoveryViewModel | null;
 
   character?: AutoCombatStatusCharacterViewModel;
 
@@ -978,6 +1047,8 @@ export interface AutoCombatStatusResponse {
   huntCapacity?: {
     maxTrackedEnemies?: number | null;
     remainingCapacity?: number | null;
+    availableEnemiesCount?: number | null;
+    remainingEnemiesCount?: number | null;
     isLimitReached?: boolean | null;
   } | null;
 

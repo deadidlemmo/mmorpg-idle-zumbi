@@ -1,9 +1,5 @@
 import {
-  ActivityStatus,
-  AutoCombatSessionStatus,
   CharacterStatus,
-  CombatStatus,
-  IncursionSessionStatus,
   InventoryItemType,
   ItemSlot,
   MaterialOrigin,
@@ -240,65 +236,41 @@ async function resetCharacters() {
       const equipmentItems = Object.values(starterEquipment);
       const stats = calculateFullStats(character.class, equipmentItems, 1);
       const maxHp = stats.derivedCombatStats.maxHp;
-      const now = new Date();
+      await tx.autoCombatHuntBatch.deleteMany({
+        where: {
+          characterId: character.id,
+        },
+      });
 
       await Promise.all([
-        tx.combat.updateMany({
+        tx.combat.deleteMany({
           where: {
             characterId: character.id,
-            status: CombatStatus.IN_PROGRESS,
-          },
-          data: {
-            status: CombatStatus.CANCELLED,
-            finishedAt: now,
           },
         }),
-        tx.autoCombatSession.updateMany({
+        tx.autoCombatSession.deleteMany({
           where: {
             characterId: character.id,
-            status: AutoCombatSessionStatus.ACTIVE,
-          },
-          data: {
-            status: AutoCombatSessionStatus.STOPPED,
-            finishedAt: now,
           },
         }),
-        tx.gatheringSession.updateMany({
+        tx.gatheringSession.deleteMany({
           where: {
             characterId: character.id,
-            status: ActivityStatus.ACTIVE,
-          },
-          data: {
-            status: ActivityStatus.STOPPED,
-            lastResolvedAt: now,
           },
         }),
-        tx.craftingSession.updateMany({
+        tx.craftingSession.deleteMany({
           where: {
             characterId: character.id,
-            status: ActivityStatus.ACTIVE,
-          },
-          data: {
-            status: ActivityStatus.STOPPED,
           },
         }),
-        tx.characterIncursionSession.updateMany({
+        tx.characterIncursionSession.deleteMany({
           where: {
             characterId: character.id,
-            status: IncursionSessionStatus.ACTIVE,
-          },
-          data: {
-            status: IncursionSessionStatus.CANCELLED,
-            completedAt: now,
           },
         }),
-        tx.worldBossParticipant.updateMany({
+        tx.worldBossParticipant.deleteMany({
           where: {
             characterId: character.id,
-            leftAt: null,
-          },
-          data: {
-            leftAt: now,
           },
         }),
       ]);
@@ -389,6 +361,23 @@ async function resetCharacters() {
         },
       });
 
+      await tx.characterHuntingSkill.upsert({
+        where: {
+          characterId: character.id,
+        },
+        update: {
+          level: 1,
+          xp: 0,
+          totalXp: 0,
+        },
+        create: {
+          characterId: character.id,
+          level: 1,
+          xp: 0,
+          totalXp: 0,
+        },
+      });
+
       await tx.characterPotionConfig.upsert({
         where: {
           characterId: character.id,
@@ -429,6 +418,8 @@ async function resetCharacters() {
           currentHp: maxHp,
           maxHp,
           mapId: initialMap.id,
+          infirmaryStartedAt: null,
+          infirmaryEndsAt: null,
           deletedAt: null,
         },
       });

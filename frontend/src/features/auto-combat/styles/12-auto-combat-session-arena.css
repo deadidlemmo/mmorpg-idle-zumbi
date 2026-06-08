@@ -1013,6 +1013,10 @@
   transition: width 260ms ease;
 }
 
+.auto-combat-resource--countdown i b {
+  transition: width 940ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .auto-combat-fighter-card--player .auto-combat-resource {
   border-color: rgba(110, 159, 67, 0.1);
 }

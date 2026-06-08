@@ -9,6 +9,7 @@ import type {
   AutoCombatStatusResponse,
   AutoCombatBattleProgressViewModel,
   AutoCombatBattleSelectionViewModel,
+  AutoCombatRecoveryViewModel,
   StartAutoCombatBattlePayload,
   StartAutoCombatPayload,
 } from "../types/auto-combat.types";
@@ -119,6 +120,9 @@ export type AutoCombatRealtimeSessionState = {
   battleTargetRemaining?: number | null;
   battleSelection?: AutoCombatBattleSelectionViewModel | null;
   battleProgress?: AutoCombatBattleProgressViewModel | null;
+  hasPreservedTrackedEnemies?: boolean | null;
+  preservedTrackedEnemiesCount?: number | null;
+  autoCombatRecovery?: AutoCombatRecoveryViewModel | null;
   snapshotSequence?: number | null;
   latestEventSequence?: number | null;
   phase?: AutoCombatRealtimePhase | null;

@@ -28,6 +28,18 @@ export interface InfirmaryCostViewModel {
   durationSeconds?: number;
 }
 
+export interface InfirmaryAutoCombatRecoveryViewModel {
+  hasPreservedTrackedEnemies?: boolean | null;
+  preservedTrackedEnemiesCount?: number | null;
+  huntBatchId?: string | null;
+  sessionId?: string | null;
+  mapId?: string | null;
+  subMapId?: string | null;
+  mapName?: string | null;
+  mapTier?: number | null;
+  defeatedAt?: string | null;
+}
+
 export interface InfirmaryStatusViewModel {
   canUse: boolean;
   canHeal: boolean;
@@ -46,6 +58,9 @@ export interface InfirmaryStatusViewModel {
   hasActiveCrafting?: boolean;
   hasActiveIncursion?: boolean;
   hasActiveWorldBoss: boolean;
+  hasPreservedTrackedEnemies?: boolean | null;
+  preservedTrackedEnemiesCount?: number | null;
+  autoCombatRecovery?: InfirmaryAutoCombatRecoveryViewModel | null;
   costs: {
     free: InfirmaryCostViewModel;
     instant: InfirmaryCostViewModel;
@@ -57,5 +72,6 @@ export interface InfirmaryStatusResponse {
   message?: string;
   character: InfirmaryCharacterSnapshot;
   infirmary: InfirmaryStatusViewModel;
+  autoCombatRecovery?: InfirmaryAutoCombatRecoveryViewModel | null;
   cost?: InfirmaryCostViewModel;
 }

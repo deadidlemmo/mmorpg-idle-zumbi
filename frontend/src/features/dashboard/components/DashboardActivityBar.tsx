@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router-dom";
+import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.png";
 import { useAutoCombatRealtimeState } from "../../auto-combat/realtime/useAutoCombatRealtime";
 import type {
   AutoCombatRealtimeEvent,
@@ -126,18 +127,28 @@ type AutoCombatSessionLike = {
   lastHuntProcessedAt?: string | null;
   huntingXpGained?: number | null;
   foundEnemiesCount?: number | null;
+  availableEnemiesCount?: number | null;
+  remainingEnemiesCount?: number | null;
   bonusEnemiesFound?: number | null;
+};
+
+type AutoCombatTrackedMonsterLike = {
+  foundCount?: number | null;
+  remainingCount?: number | null;
 };
 
 type AutoCombatHuntingLike = {
   phase?: string | null;
   foundEnemiesCount?: number | null;
+  availableEnemiesCount?: number | null;
+  remainingEnemiesCount?: number | null;
   foundEnemySequence?: number | null;
   huntingXpGained?: number | null;
   progressPercent?: number | null;
   remainingSeconds?: number | null;
   secondsPerEnemy?: number | null;
   secondsPerFind?: number | null;
+  trackedMonsters?: AutoCombatTrackedMonsterLike[] | null;
 };
 
 type AutoCombatRealtimeVisualLike = {
@@ -225,6 +236,20 @@ type AutoCombatStatusLoose = AutoCombatStatusResponse & {
   autoCombatSession?: AutoCombatSessionLike | null;
   lastSession?: AutoCombatSessionLike | null;
   hunting?: AutoCombatHuntingLike | null;
+  trackedMonsters?: AutoCombatTrackedMonsterLike[] | null;
+  huntBatch?: {
+    foundEnemiesCount?: number | null;
+    availableEnemiesCount?: number | null;
+    remainingEnemiesCount?: number | null;
+    mobs?: AutoCombatTrackedMonsterLike[] | null;
+  } | null;
+  huntCapacity?: {
+    maxTrackedEnemies?: number | null;
+    remainingCapacity?: number | null;
+    availableEnemiesCount?: number | null;
+    remainingEnemiesCount?: number | null;
+    isLimitReached?: boolean | null;
+  } | null;
 
   subMap?: {
     name?: string | null;
@@ -267,6 +292,7 @@ type AutoCombatStatusLoose = AutoCombatStatusResponse & {
   rewards?: {
     mobs?: Array<{ kills?: number | null }> | null;
     loots?: Array<{ quantity?: number | null }> | null;
+    trackedMonsters?: AutoCombatTrackedMonsterLike[] | null;
   } | null;
 };
 
@@ -1133,9 +1159,43 @@ function getHuntingFoundEnemiesCount(params: {
   event?: AutoCombatRealtimeEvent | null;
 }) {
   const { realtimeState, status, session, event } = params;
+  const looseStatus = getLooseStatus(status ?? null);
   const statusHunting = getStatusHunting(status ?? null);
+  const trackedSources = [
+    realtimeState?.hunting?.trackedMonsters,
+    looseStatus?.trackedMonsters,
+    statusHunting?.trackedMonsters,
+    looseStatus?.huntBatch?.mobs,
+    looseStatus?.rewards?.trackedMonsters,
+  ];
+  const trackedSource = trackedSources.find(
+    (source): source is AutoCombatTrackedMonsterLike[] =>
+      Array.isArray(source) && source.length > 0,
+  );
+  const trackedRemainingCount = trackedSource
+    ? trackedSource.reduce((total, trackedMonster) => {
+        const count = getFirstValidNumber(
+          trackedMonster.remainingCount,
+          trackedMonster.foundCount,
+          0,
+        );
+
+        return total + Math.max(0, Math.floor(count ?? 0));
+      }, 0)
+    : undefined;
   const foundEnemiesCount =
     getFirstValidNumber(
+      trackedRemainingCount,
+      realtimeState?.hunting?.availableEnemiesCount,
+      realtimeState?.hunting?.remainingEnemiesCount,
+      statusHunting?.availableEnemiesCount,
+      statusHunting?.remainingEnemiesCount,
+      looseStatus?.huntCapacity?.availableEnemiesCount,
+      looseStatus?.huntCapacity?.remainingEnemiesCount,
+      looseStatus?.huntBatch?.availableEnemiesCount,
+      looseStatus?.huntBatch?.remainingEnemiesCount,
+      session?.availableEnemiesCount,
+      session?.remainingEnemiesCount,
       realtimeState?.hunting?.foundEnemiesCount,
       realtimeState?.hunting?.foundEnemySequence,
       statusHunting?.foundEnemiesCount,
@@ -1488,6 +1548,8 @@ function buildAutoCombatItemFromRealtime(params: {
       type: "auto-combat",
       autoCombatMode: "hunting",
       icon: "AC",
+      imageUrl: huntingActivityIcon,
+      imageAlt: "Caça",
       title: "Rastreando",
       description:
         foundEnemiesCount > 0
@@ -1687,6 +1749,8 @@ function buildAutoCombatItemFromOverview(params: {
       type: "auto-combat",
       autoCombatMode: "hunting",
       icon: "AC",
+      imageUrl: huntingActivityIcon,
+      imageAlt: "Caça",
       title: "Rastreando",
       description:
         foundEnemiesCount > 0
@@ -2636,6 +2700,9 @@ export function DashboardActivityBar({
                 className={[
                   "dashboard-activity-bar__icon",
                   item.imageUrl ? "dashboard-activity-bar__icon--portrait" : "",
+                  isAutoCombatHunting && item.imageUrl
+                    ? "dashboard-activity-bar__icon--hunting"
+                    : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -2653,7 +2720,7 @@ export function DashboardActivityBar({
                       display: "block",
                       width: "100%",
                       height: "100%",
-                      objectFit: "cover",
+                      objectFit: isAutoCombatHunting ? "contain" : "cover",
                       objectPosition: "center",
                       borderRadius: "inherit",
                       filter:

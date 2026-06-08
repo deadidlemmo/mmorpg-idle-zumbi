@@ -1,15 +1,27 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from 'react';
+import { flushSync } from 'react-dom';
 import { X } from 'lucide-react';
 import {
   connectWorldBossSocket,
   type WorldBossSocket,
 } from '../../../services/websocket/socketClient';
+import {
+  getBattleTargetDisplayCounts,
+  getRepeatingBattleTimelineProgress,
+  getRepeatingCycleProgress,
+  getRepeatingSecondTickFillPercent,
+  getServerClientOffsetMs,
+  getSecondTickCycleProgress,
+  getTimestampMs,
+  type BattleTimelineSource,
+} from '../../auto-combat/utils/battle-timeline';
 import { getMobPortraitImage } from '../../auto-combat/utils/mobAssets';
 import { useAutoCombatRealtime } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import { useCraftingRealtime } from '../../crafting/realtime/useCraftingRealtime';
@@ -50,10 +62,18 @@ export interface DashboardTopBarActivityOverride {
   icon?: ReactNode;
   imageUrl?: string | null;
   progressPercent?: number | null;
+  progressTimeline?: {
+    key?: string | null;
+    durationSeconds: number;
+    elapsedSeconds: number;
+    direction?: 'drain' | 'fill';
+    timingFunction?: string;
+  } | null;
   badge?: string | null;
   titleText?: string;
   isResting?: boolean;
   isHunting?: boolean;
+  isBattle?: boolean;
 }
 
 interface DashboardTopBarProps {
@@ -107,6 +127,12 @@ function getNumber(value: unknown): number | null {
   return parsed;
 }
 
+function getField(record: unknown, key: string): unknown {
+  if (!isRecord(record)) return undefined;
+
+  return record[key];
+}
+
 function getRecordField(record: unknown, key: string): LooseRecord | null {
   if (!isRecord(record)) return null;
 
@@ -125,12 +151,6 @@ function getNumberField(record: unknown, key: string): number | null {
   if (!isRecord(record)) return null;
 
   return getNumber(record[key]);
-}
-
-function getBooleanField(record: unknown, key: string): boolean {
-  if (!isRecord(record)) return false;
-
-  return record[key] === true;
 }
 
 function normalizeStatus(value: unknown): string {
@@ -528,6 +548,21 @@ function sumNumberField(records: LooseRecord[], key: string): number | null {
   return Number.isFinite(total) ? total : null;
 }
 
+function sumTrackedRemainingCount(records: LooseRecord[]): number | null {
+  if (records.length <= 0) return null;
+
+  const total = records.reduce((sum, record) => {
+    const count =
+      getNumberField(record, 'remainingCount') ??
+      getNumberField(record, 'foundCount') ??
+      0;
+
+    return sum + Math.max(0, Math.floor(count));
+  }, 0);
+
+  return Number.isFinite(total) ? total : null;
+}
+
 function normalizeKillCount(value: number | null): number | null {
   if (value === null) return null;
 
@@ -571,12 +606,16 @@ function getAutoCombatKills(autoCombatState: unknown): number | null {
   );
 }
 
-function getAutoCombatBattleProgress(autoCombatState: unknown): {
+function getAutoCombatBattleProgress(
+  autoCombatState: unknown,
+  nowMs: number,
+): {
   mobName: string;
   total: number;
   remaining: number;
   defeated: number;
   progressPercent: number | null;
+  progressTimeline: DashboardTopBarActivityOverride['progressTimeline'];
 } | null {
   const status = getRecordField(autoCombatState, 'status');
   const session = getAutoCombatSessionRecord(autoCombatState);
@@ -590,6 +629,46 @@ function getAutoCombatBattleProgress(autoCombatState: unknown): {
     getRecordField(session, 'battleProgress') ??
     getRecordField(statusCurrentMob, 'battleProgress') ??
     getRecordField(sessionCurrentMob, 'battleProgress');
+  const serverNow = (
+    getField(progressRecord, 'serverNow') ??
+    getField(status, 'serverNow') ??
+    getField(session, 'serverNow')
+  ) as BattleTimelineSource['serverNow'];
+  const syncedNowMs = nowMs + getServerClientOffsetMs(serverNow, nowMs);
+  const timelineSource: BattleTimelineSource | null = progressRecord
+    ? {
+        cycleStartedAt: getField(progressRecord, 'cycleStartedAt') as
+          | BattleTimelineSource['cycleStartedAt']
+          | undefined,
+        cycleDurationMs: getField(progressRecord, 'cycleDurationMs') as
+          | BattleTimelineSource['cycleDurationMs']
+          | undefined,
+        cycleDurationSeconds: getField(
+          progressRecord,
+          'cycleDurationSeconds',
+        ) as BattleTimelineSource['cycleDurationSeconds'] | undefined,
+        progressSeconds: getField(progressRecord, 'progressSeconds') as
+          | BattleTimelineSource['progressSeconds']
+          | undefined,
+        estimatedKillTimeSeconds: getField(
+          progressRecord,
+          'estimatedKillTimeSeconds',
+        ) as BattleTimelineSource['estimatedKillTimeSeconds'] | undefined,
+        progressUpdatedAt: getField(progressRecord, 'progressUpdatedAt') as
+          | BattleTimelineSource['progressUpdatedAt']
+          | undefined,
+        serverNow,
+      }
+    : null;
+  const battleTimelineProgress = getRepeatingBattleTimelineProgress({
+    source: timelineSource,
+    nowMs: syncedNowMs,
+    fallbackServerNow: serverNow,
+    fallbackProgressUpdatedAt: serverNow,
+  });
+  const battleSecondTickProgress = getSecondTickCycleProgress(
+    battleTimelineProgress,
+  );
   const selectionMob = getRecordField(selection, 'mob');
   const total =
     getNumberField(selection, 'total') ??
@@ -618,6 +697,12 @@ function getAutoCombatBattleProgress(autoCombatState: unknown): {
       Math.floor(explicitDefeated ?? safeTotal - safeRemaining),
     ),
   );
+  const displayCounts = getBattleTargetDisplayCounts({
+    total: safeTotal,
+    remaining: safeRemaining,
+    defeated: safeDefeated,
+    completedCycles: 0,
+  });
 
   const mobName =
     getStringField(selectionMob, 'name') ??
@@ -626,15 +711,19 @@ function getAutoCombatBattleProgress(autoCombatState: unknown): {
 
   if (!mobName) return null;
 
+  const progressPercent = battleSecondTickProgress
+    ? battleSecondTickProgress.progressPercent
+    : progressRecord && getNumberField(progressRecord, 'progressPercent') !== null
+      ? clampPercent(getNumberField(progressRecord, 'progressPercent'))
+      : null;
+
   return {
     mobName,
-    total: safeTotal,
-    remaining: safeRemaining,
-    defeated: safeDefeated,
-    progressPercent:
-      progressRecord && getNumberField(progressRecord, 'progressPercent') !== null
-        ? clampPercent(getNumberField(progressRecord, 'progressPercent'))
-        : null,
+    total: displayCounts.total,
+    remaining: displayCounts.remaining,
+    defeated: displayCounts.defeated,
+    progressPercent,
+    progressTimeline: null,
   };
 }
 
@@ -665,17 +754,59 @@ function isAutoCombatHunting(autoCombatState: unknown): boolean {
 
   return (
     phase === 'HUNTING' ||
-    phase === 'ENCOUNTER_READY' ||
     phase === 'HUNT_TARGET_FOUND'
   );
+}
+
+function isAutoCombatEncounterReady(autoCombatState: unknown): boolean {
+  const status = getRecordField(autoCombatState, 'status');
+  const session = getAutoCombatSessionRecord(autoCombatState);
+  const hunting = getAutoCombatHuntingRecord(autoCombatState);
+  const latestEvent = getLatestAutoCombatEvent(autoCombatState);
+  const phase = normalizeStatus(
+    getStringField(session, 'phase') ??
+      getStringField(hunting, 'phase') ??
+      getStringField(status, 'phase') ??
+      getStringField(latestEvent, 'phase') ??
+      getStringField(latestEvent, 'type'),
+  );
+
+  return phase === 'ENCOUNTER_READY';
 }
 
 function getAutoCombatHuntingFoundCount(autoCombatState: unknown): number {
   const status = getRecordField(autoCombatState, 'status');
   const session = getAutoCombatSessionRecord(autoCombatState);
   const hunting = getAutoCombatHuntingRecord(autoCombatState);
+  const huntBatch =
+    getRecordField(autoCombatState, 'huntBatch') ??
+    getRecordField(status, 'huntBatch');
+  const huntCapacity =
+    getRecordField(autoCombatState, 'huntCapacity') ??
+    getRecordField(status, 'huntCapacity');
+  const rewards =
+    getRecordField(autoCombatState, 'rewards') ??
+    getRecordField(status, 'rewards');
   const latestEvent = getLatestAutoCombatEvent(autoCombatState);
+  const trackedRecords =
+    [
+      getRecordArrayField(autoCombatState, 'trackedMonsters'),
+      getRecordArrayField(status, 'trackedMonsters'),
+      getRecordArrayField(hunting, 'trackedMonsters'),
+      getRecordArrayField(huntBatch, 'mobs'),
+      getRecordArrayField(rewards, 'trackedMonsters'),
+    ].find((records) => records.length > 0) ?? [];
+  const trackedRemainingCount = sumTrackedRemainingCount(trackedRecords);
   const foundCount =
+    trackedRemainingCount ??
+    getNumberField(hunting, 'availableEnemiesCount') ??
+    getNumberField(hunting, 'remainingEnemiesCount') ??
+    getNumberField(huntCapacity, 'availableEnemiesCount') ??
+    getNumberField(huntCapacity, 'remainingEnemiesCount') ??
+    getNumberField(huntBatch, 'availableEnemiesCount') ??
+    getNumberField(huntBatch, 'remainingEnemiesCount') ??
+    getNumberField(session, 'availableEnemiesCount') ??
+    getNumberField(session, 'remainingEnemiesCount') ??
     getNumberField(hunting, 'foundEnemiesCount') ??
     getNumberField(hunting, 'foundEnemySequence') ??
     getNumberField(session, 'foundEnemiesCount') ??
@@ -686,11 +817,67 @@ function getAutoCombatHuntingFoundCount(autoCombatState: unknown): number {
   return Math.max(0, Math.floor(foundCount));
 }
 
-function getAutoCombatHuntingProgress(autoCombatState: unknown): number | null {
+function getAutoCombatHuntingProgress(
+  autoCombatState: unknown,
+  nowMs: number,
+): {
+  progressPercent: number | null;
+  progressTimeline: DashboardTopBarActivityOverride['progressTimeline'];
+} {
+  const status = getRecordField(autoCombatState, 'status');
+  const session = getAutoCombatSessionRecord(autoCombatState);
   const hunting = getAutoCombatHuntingRecord(autoCombatState);
   const progressPercent = getNumberField(hunting, 'progressPercent');
+  const serverNow = (
+    getField(hunting, 'serverNow') ??
+    getField(status, 'serverNow') ??
+    getField(session, 'serverNow')
+  ) as BattleTimelineSource['serverNow'];
+  const syncedNowMs = nowMs + getServerClientOffsetMs(serverNow, nowMs);
+  const lastFindAtMs =
+    getTimestampMs(
+      (getField(hunting, 'lastFindAt') ??
+        getField(hunting, 'lastProcessedAt') ??
+        getField(session, 'lastHuntProcessedAt') ??
+        getField(hunting, 'startedAt') ??
+        getField(session, 'huntStartedAt') ??
+        getField(session, 'startedAt')) as BattleTimelineSource['cycleStartedAt'],
+    ) ?? null;
+  const nextFindAtMs = getTimestampMs(
+    getField(hunting, 'nextFindAt') as BattleTimelineSource['cycleStartedAt'],
+  );
+  const secondsPerFind =
+    getNumberField(hunting, 'secondsPerFind') ??
+    getNumberField(hunting, 'secondsPerEnemy') ??
+    getNumberField(session, 'secondsPerFind');
+  const durationMs =
+    lastFindAtMs !== null && nextFindAtMs !== null && nextFindAtMs > lastFindAtMs
+      ? nextFindAtMs - lastFindAtMs
+      : secondsPerFind && secondsPerFind > 0
+        ? secondsPerFind * 1000
+        : null;
+  const timelineProgress =
+    lastFindAtMs !== null && durationMs !== null && durationMs > 0
+      ? getRepeatingCycleProgress({
+          nowMs: syncedNowMs,
+          cycleStartedAtMs: lastFindAtMs,
+          cycleDurationMs: durationMs,
+        })
+      : null;
 
-  return progressPercent !== null ? clampPercent(progressPercent) : null;
+  return {
+    progressPercent:
+      timelineProgress && durationMs
+        ? getRepeatingSecondTickFillPercent({
+            cycleElapsedMs: timelineProgress.cycleElapsedMs,
+            cycleDurationMs: durationMs,
+            completedCycles: timelineProgress.completedCycles,
+          })
+        : progressPercent !== null
+          ? clampPercent(progressPercent)
+          : null,
+    progressTimeline: null,
+  };
 }
 
 function getAutoCombatRestSnapshot(autoCombatState: unknown): {
@@ -752,7 +939,6 @@ function isAutoCombatActive(autoCombatState: unknown): boolean {
   );
   const hasActivePhase =
     sessionPhase === 'HUNTING' ||
-    sessionPhase === 'ENCOUNTER_READY' ||
     sessionPhase === 'COMBAT_ACTIVE' ||
     sessionPhase === 'HUNT_TARGET_FOUND';
 
@@ -771,17 +957,17 @@ function isAutoCombatActive(autoCombatState: unknown): boolean {
   return false;
 }
 
-function isAutoCombatSynchronizing(autoCombatState: unknown): boolean {
-  return getBooleanField(autoCombatState, 'isSynchronizing');
-}
-
 function buildAutoCombatActivity(
   autoCombatState: unknown,
+  nowMs: number,
 ): DashboardTopBarActivityViewModel | null {
   if (!isAutoCombatActive(autoCombatState)) return null;
 
+  if (isAutoCombatEncounterReady(autoCombatState)) return null;
+
   if (isAutoCombatHunting(autoCombatState)) {
     const foundEnemiesCount = getAutoCombatHuntingFoundCount(autoCombatState);
+    const huntingProgress = getAutoCombatHuntingProgress(autoCombatState, nowMs);
     const foundLabel =
       foundEnemiesCount === 1
         ? '1 rastreado'
@@ -793,22 +979,11 @@ function buildAutoCombatActivity(
       subtitle:
         foundEnemiesCount > 0 ? foundLabel : 'Nenhuma ameaca rastreada',
       icon: 'AC',
-      progressPercent: getAutoCombatHuntingProgress(autoCombatState),
+      progressPercent: huntingProgress.progressPercent,
+      progressTimeline: huntingProgress.progressTimeline,
       badge: formatNumber(foundEnemiesCount),
       titleText: `AutoCombat em caca - ${foundLabel}.`,
       isHunting: true,
-    };
-  }
-
-  if (isAutoCombatSynchronizing(autoCombatState)) {
-    return {
-      kind: 'auto-combat',
-      title: 'Sincronizando combate',
-      subtitle: 'Atualizando estado em tempo real',
-      icon: 'AC',
-      progressPercent: null,
-      badge: null,
-      titleText: 'Sincronizando combate automÃ¡tico com o servidor.',
     };
   }
 
@@ -838,27 +1013,32 @@ function buildAutoCombatActivity(
     };
   }
 
-  const battleProgress = getAutoCombatBattleProgress(autoCombatState);
+  const battleProgress = getAutoCombatBattleProgress(autoCombatState, nowMs);
 
   if (battleProgress) {
     const progressPercent =
-      battleProgress.progressPercent ??
-      getAutoCombatMonsterHpPercent(autoCombatState);
+      battleProgress.progressPercent !== null
+        ? clampPercent(100 - battleProgress.progressPercent)
+        : getAutoCombatMonsterHpPercent(autoCombatState);
     const mobPortraitUrl = getMobPortraitImage(battleProgress.mobName);
 
     return {
       kind: 'auto-combat',
-      title: battleProgress.mobName,
-      subtitle: `${formatNumber(battleProgress.defeated)}/${formatNumber(
-        battleProgress.total,
-      )} abatidos do lote`,
+      title: 'Em combate',
+      subtitle: `${battleProgress.mobName} - ${formatNumber(
+        battleProgress.defeated,
+      )}/${formatNumber(battleProgress.total)} abatidos`,
       imageUrl: mobPortraitUrl,
       icon: 'AC',
       progressPercent,
-      badge: formatNumber(battleProgress.remaining),
-      titleText: `Combate automatico em andamento - ${formatNumber(
+      progressTimeline: battleProgress.progressTimeline,
+      badge: formatNumber(battleProgress.defeated),
+      titleText: `Combatendo ${battleProgress.mobName} - ${formatNumber(
         battleProgress.defeated,
-      )}/${formatNumber(battleProgress.total)} abatidos do lote.`,
+      )}/${formatNumber(battleProgress.total)} abatidos. ${formatNumber(
+        battleProgress.remaining,
+      )} restantes.`,
+      isBattle: true,
     };
   }
 
@@ -871,12 +1051,13 @@ function buildAutoCombatActivity(
 
   return {
     kind: 'auto-combat',
-    title: mobName,
-    subtitle: `${formatNumber(kills)} monstros mortos`,
+    title: 'Em combate',
+    subtitle: `${mobName} - ${formatNumber(kills)} monstros mortos`,
     imageUrl: mobPortraitUrl,
     icon: '☠',
     progressPercent: monsterHpPercent,
     badge: formatNumber(kills),
+    isBattle: true,
     titleText: `Combate automático em andamento • ${formatNumber(
       kills,
     )} monstros mortos`,
@@ -1071,17 +1252,17 @@ function getResourceClassName(resource: DashboardTopBarResource): string {
     .join(' ');
 }
 
-function getActivityStopTitle(kind: DashboardTopBarActivityKind): string {
+function getActivityStopTitle(activity: DashboardTopBarActivityViewModel): string {
   const titles: Record<DashboardTopBarActivityKind, string> = {
     idle: 'Nenhuma atividade ativa',
     gathering: 'Parar coleta',
-    'auto-combat': 'Parar combate automÃ¡tico',
+    'auto-combat': activity.isHunting ? 'Parar rastreio' : 'Parar combate',
     crafting: 'Cancelar criaÃ§Ã£o',
     incursion: 'Cancelar incursÃ£o',
     'world-boss': 'Sair do World Boss',
   };
 
-  return titles[kind] ?? 'Encerrar atividade';
+  return titles[activity.kind] ?? 'Encerrar atividade';
 }
 
 export function DashboardTopBar({
@@ -1102,6 +1283,10 @@ export function DashboardTopBar({
   const incursionsState = incursionsRealtime.state;
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isStoppingActivity, setIsStoppingActivity] = useState(false);
+  const [suppressProgressTransition, setSuppressProgressTransition] =
+    useState(false);
+  const [progressSnapVersion, setProgressSnapVersion] = useState(0);
+  const suppressProgressTransitionTimeoutRef = useRef<number | null>(null);
   const [worldBossStatus, setWorldBossStatus] =
     useState<WorldBossStatusResponse | null>(() =>
       characterId ? (worldBossStatusCache.get(characterId) ?? null) : null,
@@ -1114,6 +1299,89 @@ export function DashboardTopBar({
 
     return () => {
       window.clearInterval(intervalId);
+    };
+  }, []);
+
+  const autoCombatClockSyncKey = useMemo(() => {
+    const status = getRecordField(autoCombatState, 'status');
+    const session = getAutoCombatSessionRecord(autoCombatState);
+    const event = getLatestAutoCombatEvent(autoCombatState);
+    const statusCurrentMob = getRecordField(status, 'currentMob');
+    const sessionCurrentMob = getRecordField(session, 'currentMob');
+    const progress =
+      getRecordField(status, 'battleProgress') ??
+      getRecordField(session, 'battleProgress') ??
+      getRecordField(statusCurrentMob, 'battleProgress') ??
+      getRecordField(sessionCurrentMob, 'battleProgress');
+
+    return [
+      getField(event, 'eventId'),
+      getField(event, 'sequence'),
+      getField(event, 'type'),
+      getField(event, 'createdAt'),
+      getField(progress, 'cycleStartedAt'),
+      getField(progress, 'progressUpdatedAt'),
+      getField(progress, 'progressSeconds'),
+      getField(session, 'currentMobId'),
+      getField(session, 'currentCombatIndex'),
+      getField(session, 'battleTargetRemaining'),
+      getField(session, 'lastProcessedAt'),
+    ]
+      .map((value) => String(value ?? ''))
+      .join('|');
+  }, [autoCombatState]);
+
+  useEffect(() => {
+    if (!isAutoCombatActive(autoCombatState)) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setNowMs(Date.now());
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [autoCombatClockSyncKey, autoCombatState]);
+
+  useEffect(() => {
+    const snapProgressToCurrentTime = () => {
+      if (document.visibilityState === 'hidden') {
+        setSuppressProgressTransition(true);
+        return;
+      }
+
+      flushSync(() => {
+        setSuppressProgressTransition(true);
+        setNowMs(Date.now());
+        setProgressSnapVersion((current) => current + 1);
+      });
+
+      if (suppressProgressTransitionTimeoutRef.current !== null) {
+        window.clearTimeout(suppressProgressTransitionTimeoutRef.current);
+      }
+
+      suppressProgressTransitionTimeoutRef.current = window.setTimeout(() => {
+        setSuppressProgressTransition(false);
+        suppressProgressTransitionTimeoutRef.current = null;
+      }, 240);
+    };
+
+    document.addEventListener('visibilitychange', snapProgressToCurrentTime);
+    window.addEventListener('focus', snapProgressToCurrentTime);
+    window.addEventListener('pageshow', snapProgressToCurrentTime);
+
+    return () => {
+      document.removeEventListener(
+        'visibilitychange',
+        snapProgressToCurrentTime,
+      );
+      window.removeEventListener('focus', snapProgressToCurrentTime);
+      window.removeEventListener('pageshow', snapProgressToCurrentTime);
+
+      if (suppressProgressTransitionTimeoutRef.current !== null) {
+        window.clearTimeout(suppressProgressTransitionTimeoutRef.current);
+        suppressProgressTransitionTimeoutRef.current = null;
+      }
     };
   }, []);
 
@@ -1239,7 +1507,7 @@ export function DashboardTopBar({
     return (
       activityOverride ??
       worldBossActivity ??
-      buildAutoCombatActivity(autoCombatState) ??
+      buildAutoCombatActivity(autoCombatState, nowMs) ??
       buildGatheringActivity(gatheringState) ??
       buildCraftingActivity(craftingState) ??
       buildIncursionActivity(incursionsState) ??
@@ -1251,6 +1519,7 @@ export function DashboardTopBar({
     craftingState,
     gatheringState,
     incursionsState,
+    nowMs,
     worldBossActivity,
   ]);
 
@@ -1258,22 +1527,82 @@ export function DashboardTopBar({
     return buildVisibleResources(resources);
   }, [resources]);
 
+  const activityProgressPercent = clampPercent(activity.progressPercent);
+  const shouldSnapActivityProgress =
+    !activity.progressTimeline &&
+    ((activity.isHunting && activityProgressPercent <= 0.05) ||
+      (activity.isBattle && activityProgressPercent >= 99.95));
+
   const rootClassName = [
     'dashboard-topbar',
     `dashboard-topbar--${activity.kind}`,
     activity.isResting ? 'dashboard-topbar--auto-resting' : '',
     activity.isHunting ? 'dashboard-topbar--auto-hunting' : '',
+    activity.isBattle ? 'dashboard-topbar--auto-battle' : '',
+    shouldSnapActivityProgress ? 'dashboard-topbar--activity-progress-snap' : '',
+    suppressProgressTransition ? 'dashboard-topbar--snap-progress' : '',
     isSidebarCollapsed ? 'dashboard-topbar--sidebar-collapsed' : '',
     className ?? '',
   ]
     .filter(Boolean)
     .join(' ');
+  const activityTimeline =
+    activity.progressTimeline &&
+    Number.isFinite(activity.progressTimeline.durationSeconds) &&
+    activity.progressTimeline.durationSeconds > 0
+      ? {
+          durationSeconds: activity.progressTimeline.durationSeconds,
+          elapsedSeconds: Math.max(
+            0,
+            Math.min(
+              activity.progressTimeline.elapsedSeconds,
+              activity.progressTimeline.durationSeconds,
+            ),
+          ),
+          direction: activity.progressTimeline.direction ?? 'drain',
+          timingFunction: activity.progressTimeline.timingFunction,
+        }
+      : null;
+  const activityTimelineKey = activityTimeline
+    ? (activity.progressTimeline?.key ??
+      `${activity.kind}:${activityTimeline.direction}:${activityTimeline.durationSeconds}:${activityTimeline.elapsedSeconds}`)
+    : null;
+  // Keep the CSS animation anchored until the battle cycle key changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const activityAnimationTimeline = useMemo(() => activityTimeline, [
+    activityTimelineKey,
+    progressSnapVersion,
+  ]);
+  const activityProgressElementKey =
+    activityTimelineKey !== null
+      ? `${activityTimelineKey}:${progressSnapVersion}`
+      : 'activity-static-progress';
+  const activityProgressStyle = activityAnimationTimeline
+    ? {
+        width: '100%',
+        transformOrigin: 'left center',
+        animationName:
+          activityAnimationTimeline.direction === 'fill'
+            ? 'dashboardTopbarActivityFill'
+            : 'dashboardTopbarActivityDrain',
+        animationDuration: `${activityAnimationTimeline.durationSeconds}s`,
+        animationDelay: `${-activityAnimationTimeline.elapsedSeconds}s`,
+        animationTimingFunction:
+          activityAnimationTimeline.timingFunction ?? 'linear',
+        animationFillMode: 'both',
+        animationIterationCount: 'infinite',
+        transitionDuration: '0ms',
+      }
+    : {
+        width: `${activityProgressPercent}%`,
+        transitionDuration: suppressProgressTransition ? '0ms' : undefined,
+      };
 
   const activityCanBeStopped = (() => {
     if (activity.kind === 'idle') return false;
 
     if (activity.kind === 'auto-combat') {
-      return Boolean(buildAutoCombatActivity(autoCombatState));
+      return Boolean(buildAutoCombatActivity(autoCombatState, nowMs));
     }
 
     if (activity.kind === 'gathering') {
@@ -1300,7 +1629,7 @@ export function DashboardTopBar({
   })();
   const canStopActivity = activityCanBeStopped && !isStoppingActivity;
 
-  const stopActivityTitle = getActivityStopTitle(activity.kind);
+  const stopActivityTitle = getActivityStopTitle(activity);
 
   function handleRefresh() {
     if (!onRefresh) return;
@@ -1319,7 +1648,11 @@ export function DashboardTopBar({
 
     try {
       if (activity.kind === 'auto-combat') {
-        await autoCombatRealtime.stop();
+        if (activity.isHunting) {
+          await autoCombatRealtime.stopHunt();
+        } else {
+          await autoCombatRealtime.stop();
+        }
       } else if (activity.kind === 'gathering') {
         await gatheringRealtime.stop();
       } else if (activity.kind === 'crafting') {
@@ -1357,14 +1690,21 @@ export function DashboardTopBar({
         aria-label="Atividade atual"
         title={activity.titleText}
       >
-        {activity.progressPercent !== null &&
-        activity.progressPercent !== undefined ? (
-          <span className="dashboard-topbar__activity-progress" aria-hidden="true">
-            <span
-              style={{
-                width: `${clampPercent(activity.progressPercent)}%`,
-              }}
-            />
+        {(activity.progressPercent !== null &&
+          activity.progressPercent !== undefined) ||
+        activityAnimationTimeline ? (
+          <span
+            className={[
+              'dashboard-topbar__activity-progress',
+              activityAnimationTimeline
+                ? 'dashboard-topbar__activity-progress--timeline'
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            aria-hidden="true"
+          >
+            <span key={activityProgressElementKey} style={activityProgressStyle} />
           </span>
         ) : null}
 
@@ -1381,10 +1721,10 @@ export function DashboardTopBar({
           )}
         </span>
 
-        <span className="dashboard-topbar__activity-copy">
-          <strong title={activity.title}>{activity.title}</strong>
-          <small>{activity.subtitle}</small>
-        </span>
+              <span className="dashboard-topbar__activity-copy">
+                <strong title={activity.title}>{activity.title}</strong>
+                {activity.subtitle ? <small>{activity.subtitle}</small> : null}
+              </span>
 
         <span className="dashboard-topbar__activity-status" aria-hidden="true">
           <span className="dashboard-topbar__activity-status-ring" />

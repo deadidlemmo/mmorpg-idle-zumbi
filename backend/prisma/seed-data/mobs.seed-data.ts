@@ -1,7 +1,7 @@
 import type { MobSeedData } from '../seed-types';
 import { buildMobCombatStats, type MobType } from './mob-stats.seed-data';
 
-type MobBaseSeedData = {
+export type MobBaseSeedData = {
   name: string;
   aliases?: string[];
   tier: number;
@@ -11,6 +11,57 @@ type MobBaseSeedData = {
   orderNoSubmap: number;
   mobType: MobType;
 };
+
+const ACTIVE_AUTO_COMBAT_ORDERS = new Set([1, 4]);
+
+const BASE_ENCOUNTER_WEIGHT_BY_ORDER = new Map([
+  [1, 40],
+  [2, 30],
+  [3, 20],
+  [4, 10],
+]);
+
+const ELITE_ENCOUNTER_WEIGHT = 15;
+
+export function isActiveAutoCombatMob(
+  mob: Pick<MobBaseSeedData, 'orderNoSubmap'>,
+) {
+  return ACTIVE_AUTO_COMBAT_ORDERS.has(mob.orderNoSubmap);
+}
+
+export function getBaseAutoCombatEncounterWeight(
+  mob: Pick<MobBaseSeedData, 'mobType' | 'orderNoSubmap'>,
+) {
+  if (mob.orderNoSubmap === 4 && mob.mobType === 'ELITE') {
+    return ELITE_ENCOUNTER_WEIGHT;
+  }
+
+  return BASE_ENCOUNTER_WEIGHT_BY_ORDER.get(mob.orderNoSubmap) ?? 0;
+}
+
+export function getAbsorbedAutoCombatMobOrder(
+  mob: Pick<MobBaseSeedData, 'orderNoSubmap'>,
+) {
+  if (mob.orderNoSubmap === 1) return 2;
+  if (mob.orderNoSubmap === 4) return 3;
+
+  return null;
+}
+
+export function getActiveAutoCombatEncounterWeight(mob: MobBaseSeedData) {
+  if (!isActiveAutoCombatMob(mob)) return 0;
+
+  const absorbedOrder = getAbsorbedAutoCombatMobOrder(mob);
+
+  if (absorbedOrder === null) {
+    return getBaseAutoCombatEncounterWeight(mob);
+  }
+
+  return (
+    getBaseAutoCombatEncounterWeight(mob) +
+    (BASE_ENCOUNTER_WEIGHT_BY_ORDER.get(absorbedOrder) ?? 0)
+  );
+}
 
 export const mobBaseDefinitions: MobBaseSeedData[] = [
   {

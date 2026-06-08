@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ShieldCheck, Timer, WalletCards } from 'lucide-react';
+import { ShieldCheck, Swords, Timer, WalletCards } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import goldIcon from '../../../assets/images/coins/gold.png';
 import npcInfirmaryCelia from '../../../assets/images/npcs/npc_coleta_dona_celia.png';
@@ -280,6 +280,25 @@ export function InfirmaryPage() {
     : instantCost <= 0
       ? 'Nenhum atendimento necessario no momento.'
       : 'Cura total na hora. Custa';
+  const autoCombatRecovery =
+    status?.infirmary.autoCombatRecovery ?? status?.autoCombatRecovery ?? null;
+  const preservedTrackedEnemiesCount = Math.max(
+    0,
+    Math.floor(Number(autoCombatRecovery?.preservedTrackedEnemiesCount) || 0),
+  );
+  const hasPreservedTrackedEnemies = Boolean(
+    autoCombatRecovery?.hasPreservedTrackedEnemies &&
+      preservedTrackedEnemiesCount > 0,
+  );
+  const autoCombatReturnUrl = autoCombatRecovery?.mapId
+    ? `/dashboard/${safeCharacterId}/auto-combat?mapId=${encodeURIComponent(
+        autoCombatRecovery.mapId,
+      )}&resume=preserved`
+    : `/dashboard/${safeCharacterId}/auto-combat?resume=preserved`;
+  const canReturnToPreservedCombat =
+    hasPreservedTrackedEnemies &&
+    !status?.infirmary.isDefeated &&
+    !hasActiveTreatment;
 
   return (
     <DashboardLayout character={character} hideHero>
@@ -406,6 +425,45 @@ export function InfirmaryPage() {
             <p className="infirmary-reason">
               {status?.infirmary.reason ?? 'Carregando situacao medica.'}
             </p>
+
+            {hasPreservedTrackedEnemies ? (
+              <div
+                className="infirmary-auto-combat-recovery"
+                role="status"
+                aria-live="polite"
+              >
+                <div className="infirmary-auto-combat-recovery__icon">
+                  <Swords size={20} />
+                </div>
+
+                <div className="infirmary-auto-combat-recovery__body">
+                  <span>Combate interrompido</span>
+                  <strong>
+                    {preservedTrackedEnemiesCount} ameaça
+                    {preservedTrackedEnemiesCount === 1 ? '' : 's'} preservada
+                    {preservedTrackedEnemiesCount === 1 ? '' : 's'}
+                  </strong>
+                  <p>
+                    {canReturnToPreservedCombat
+                      ? 'O sobrevivente já pode voltar e resolver os infectados que ficaram rastreados.'
+                      : 'Recupere o sobrevivente para voltar e continuar de onde a batalha parou.'}
+                  </p>
+                </div>
+
+                {canReturnToPreservedCombat ? (
+                  <Link
+                    to={autoCombatReturnUrl}
+                    className="infirmary-action-button infirmary-action-button--combat"
+                  >
+                    Voltar ao combate
+                  </Link>
+                ) : (
+                  <span className="infirmary-auto-combat-recovery__pending">
+                    Aguardando alta
+                  </span>
+                )}
+              </div>
+            ) : null}
 
             {feedbackMessage ? (
               <p className="infirmary-feedback infirmary-feedback--success">

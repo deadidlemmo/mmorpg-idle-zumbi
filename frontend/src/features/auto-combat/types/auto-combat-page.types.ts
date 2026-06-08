@@ -178,6 +178,11 @@ export type RealtimeCombatState = {
   combatIndex?: number | null;
   battleProgressSeconds?: number | null;
   battleProgressPercent?: number | null;
+  cycleStartedAt?: string | number | Date | null;
+  cycleDurationMs?: number | null;
+  cycleDurationSeconds?: number | null;
+  progressUpdatedAt?: string | number | Date | null;
+  serverNow?: string | number | Date | null;
   estimatedKillTimeSeconds?: number | null;
   baseKillTimeSeconds?: number | null;
   playerOffensivePower?: number | null;

@@ -62,6 +62,92 @@
   }
 }
 
+@keyframes autoCombatMobBodyDamageShake {
+  0% {
+    filter: brightness(1);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+
+  14% {
+    filter: brightness(1.12) saturate(1.05);
+    transform: translate3d(-3px, 1px, 0) rotate(-0.45deg) scale(1.01, 0.992);
+  }
+
+  28% {
+    transform: translate3d(4px, -1px, 0) rotate(0.52deg) scale(0.996, 1.006);
+  }
+
+  46% {
+    filter: brightness(1.06) saturate(1.03);
+    transform: translate3d(-2px, 0, 0) rotate(-0.28deg) scale(1.004, 0.998);
+  }
+
+  64% {
+    transform: translate3d(2px, 0, 0) rotate(0.22deg) scale(1);
+  }
+
+  100% {
+    filter: brightness(1);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes autoCombatMobBodyCriticalShake {
+  0% {
+    filter: brightness(1);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+
+  12% {
+    filter: brightness(1.18) saturate(1.08);
+    transform: translate3d(-5px, 1px, 0) rotate(-0.7deg) scale(1.016, 0.988);
+  }
+
+  26% {
+    transform: translate3d(6px, -1px, 0) rotate(0.78deg) scale(0.992, 1.01);
+  }
+
+  44% {
+    transform: translate3d(-4px, 0, 0) rotate(-0.48deg) scale(1.008, 0.996);
+  }
+
+  62% {
+    filter: brightness(1.08) saturate(1.04);
+    transform: translate3d(3px, 0, 0) rotate(0.34deg) scale(1);
+  }
+
+  100% {
+    filter: brightness(1);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+.auto-combat-mob-damage-shake {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  max-width: 100%;
+  transform-origin: 50% 82%;
+  will-change: transform, filter;
+}
+
+.auto-combat-mob-damage-shake.is-impacting {
+  animation: autoCombatMobBodyDamageShake 360ms cubic-bezier(0.22, 0.82, 0.22, 1) both;
+}
+
+.auto-combat-mob-damage-shake.is-critical-impact {
+  animation: autoCombatMobBodyCriticalShake 440ms cubic-bezier(0.18, 0.86, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auto-combat-mob-damage-shake.is-impacting,
+  .auto-combat-mob-damage-shake.is-critical-impact {
+    animation: none;
+  }
+}
+
 @keyframes autoCombatDodgeSlide {
   0% {
     transform: translate3d(0, 0, 0);

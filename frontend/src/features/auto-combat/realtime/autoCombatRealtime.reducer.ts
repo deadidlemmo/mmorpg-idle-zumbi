@@ -1713,9 +1713,18 @@ function hydrateFromStatus(
 ): AutoCombatRealtimeState {
   if (!status) {
     return {
-      ...state,
+      ...clearRealtimeRuntimeState(state, {
+        clearStatus: true,
+        clearSession: true,
+        clearMob: true,
+        clearTotals: true,
+        clearDisplayTotals: true,
+        clearVisual: true,
+        clearPotion: true,
+        clearEventCaches: true,
+        clearBattleLog: true,
+      }),
       characterId,
-      status: null,
       hasLoadedOnce: true,
       isSynchronizing: false,
       updatedAt: now(),
@@ -1735,6 +1744,32 @@ function hydrateFromStatus(
     !statusIsTerminal &&
     (isStatusActive(status) ||
       normalizeSessionStatus(rawSession?.status) === 'ACTIVE');
+
+  if (!rawSession && !statusIsActive) {
+    return {
+      ...clearRealtimeRuntimeState(state, {
+        clearStatus: false,
+        clearSession: true,
+        clearMob: true,
+        clearTotals: true,
+        clearDisplayTotals: true,
+        clearVisual: true,
+        clearPotion: true,
+        clearEventCaches: true,
+        clearBattleLog: true,
+      }),
+      characterId,
+      status,
+      snapshotSequence:
+        getStatusSnapshotSequence(status) ?? state.snapshotSequence,
+      character: buildCharacterStateFromStatus(status, state.character),
+      location: buildLocationStateFromStatus(status, state.location),
+      hasLoadedOnce: true,
+      isSynchronizing: false,
+      isJoined: false,
+      updatedAt: now(),
+    };
+  }
 
   const sessionChanged = isNewSession(currentSessionId, nextSessionId);
   const statusSnapshotSequence = getStatusSnapshotSequence(status);
@@ -2685,8 +2720,11 @@ export function autoCombatRealtimeReducer(
         isSynchronizing: action.isSynchronizing,
         ...(shouldClearCombatView
           ? {
-              mob: null,
-              visual: null,
+              /**
+               * Sincronizacao deve descartar eventos pendentes, mas preservar
+               * o ultimo snapshot de mob/sessao para a UI derivar progresso
+               * por timestamp absoluto enquanto o refetch chega.
+               */
               activeEvent: null,
               activeEventImpactApplied: false,
               eventQueue: [],

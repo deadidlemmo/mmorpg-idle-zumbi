@@ -200,6 +200,75 @@
   line-height: 1.45;
 }
 
+.infirmary-auto-combat-recovery {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-top: 14px;
+  border: 1px solid rgba(230, 209, 111, 0.28);
+  border-radius: 8px;
+  padding: 12px;
+  background:
+    linear-gradient(135deg, rgba(75, 55, 22, 0.4), rgba(14, 33, 21, 0.32)),
+    rgba(0, 0, 0, 0.22);
+}
+
+.infirmary-auto-combat-recovery__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(230, 209, 111, 0.3);
+  border-radius: 8px;
+  background: rgba(35, 26, 12, 0.68);
+  color: #ffe285;
+}
+
+.infirmary-auto-combat-recovery__body {
+  min-width: 0;
+}
+
+.infirmary-auto-combat-recovery__body span {
+  display: block;
+  color: #ffe285;
+  font-family: var(--font-title);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.infirmary-auto-combat-recovery__body strong {
+  display: block;
+  margin-top: 2px;
+  color: #fff8dc;
+  font-family: var(--font-title);
+  font-size: 1.02rem;
+  line-height: 1.08;
+}
+
+.infirmary-auto-combat-recovery__body p {
+  margin: 5px 0 0;
+  color: rgba(237, 235, 210, 0.72);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.infirmary-auto-combat-recovery__pending {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  border: 1px solid rgba(168, 202, 142, 0.16);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: rgba(237, 235, 210, 0.62);
+  font-family: var(--font-title);
+  font-size: 0.74rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .infirmary-feedback {
   border: 1px solid rgba(144, 206, 102, 0.22);
   border-radius: 8px;
@@ -305,6 +374,20 @@
     rgba(100, 70, 28, 0.9);
 }
 
+.infirmary-action-button--combat {
+  grid-column: auto;
+  min-height: 36px;
+  align-self: center;
+  padding: 0 12px;
+  border-color: rgba(230, 209, 111, 0.35);
+  background:
+    linear-gradient(180deg, rgba(230, 209, 111, 0.22), rgba(73, 54, 18, 0.72)),
+    rgba(39, 27, 11, 0.9);
+  color: #fff8dc;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 .infirmary-action-button--secondary {
   border-color: rgba(230, 209, 111, 0.3);
   background:
@@ -350,6 +433,17 @@
 
   .infirmary-treatment-card {
     padding: 12px;
+  }
+
+  .infirmary-auto-combat-recovery {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .infirmary-action-button--combat,
+  .infirmary-auto-combat-recovery__pending {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: center;
   }
 
   .infirmary-action-button {

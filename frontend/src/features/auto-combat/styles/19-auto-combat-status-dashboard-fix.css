@@ -6,6 +6,16 @@
   width: 100%;
 }
 
+.auto-combat-status-tab-stack {
+  display: grid;
+  width: 100%;
+  gap: 1rem;
+}
+
+.auto-combat-mobile-status-hunt-card {
+  display: none;
+}
+
 .auto-combat-character-stats-panel {
   width: 100%;
 }
@@ -24,6 +34,27 @@
 
 .auto-combat-tab-panel--stats .character-stat-card__value {
   font-family: var(--font-title);
+}
+
+@media (max-width: 920px) {
+  .auto-combat-status-tab-stack {
+    gap: 0.92rem;
+  }
+
+  .auto-combat-mobile-status-hunt-card {
+    display: flex;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto 0.2rem;
+  }
+
+  .auto-combat-mobile-status-hunt-card .auto-combat-hunt-side__section-title {
+    margin-top: 0;
+  }
+
+  .auto-combat-mobile-status-hunt-card .auto-combat-hunt-skill-card {
+    width: 100%;
+  }
 }
 
 @media (max-width: 620px) {

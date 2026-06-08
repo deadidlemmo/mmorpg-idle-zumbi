@@ -101,6 +101,18 @@ export function formatSeconds(seconds?: number | null) {
   return `${remainingSeconds}s`;
 }
 
+export function formatClockSeconds(seconds?: number | null) {
+  if (seconds === null || seconds === undefined) return '--:--:--';
+
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainingSeconds = safeSeconds % 60;
+  const pad = (value: number) => String(value).padStart(2, '0');
+
+  return `${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}`;
+}
+
 export function formatSessionStatus(status?: string | null) {
   const labels: Record<string, string> = {
     ACTIVE: 'Sessão ativa',
@@ -1297,6 +1309,11 @@ export function getRealtimeCombat(state: AutoCombatRealtimeStateLoose) {
       session?.currentCombatIndex ?? totals?.currentCombatIndex ?? null,
     battleProgressSeconds: battleProgress?.progressSeconds ?? null,
     battleProgressPercent: battleProgress?.progressPercent ?? null,
+    cycleStartedAt: battleProgress?.cycleStartedAt ?? null,
+    cycleDurationMs: battleProgress?.cycleDurationMs ?? null,
+    cycleDurationSeconds: battleProgress?.cycleDurationSeconds ?? null,
+    progressUpdatedAt: battleProgress?.progressUpdatedAt ?? null,
+    serverNow: battleProgress?.serverNow ?? null,
     estimatedKillTimeSeconds:
       battleProgress?.estimatedKillTimeSeconds ?? null,
     baseKillTimeSeconds: battleProgress?.baseKillTimeSeconds ?? null,

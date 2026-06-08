@@ -35,6 +35,16 @@ describe('auto-combat TTK util', () => {
     expect(stronger).toBeLessThan(baseline);
   });
 
+  it('rounds kill time up to a whole second', () => {
+    expect(
+      calculateAutoCombatTtkSeconds({
+        baseKillTimeSeconds: 10,
+        recommendedPower: 100,
+        playerOffensivePower: 150,
+      }),
+    ).toBe(8);
+  });
+
   it('increases kill time when player power is lower', () => {
     const baseline = calculateAutoCombatTtkSeconds({
       baseKillTimeSeconds: 10,

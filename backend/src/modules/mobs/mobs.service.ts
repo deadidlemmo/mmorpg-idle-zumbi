@@ -7,6 +7,13 @@ export class MobsService {
 
   async findAll() {
     return this.prisma.mob.findMany({
+      where: {
+        subMapEncounters: {
+          some: {
+            isActive: true,
+          },
+        },
+      },
       orderBy: [
         {
           tier: 'asc',

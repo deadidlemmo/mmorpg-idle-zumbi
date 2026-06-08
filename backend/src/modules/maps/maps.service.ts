@@ -40,6 +40,13 @@ export class MapsService {
           },
         },
         mobs: {
+          where: {
+            subMapEncounters: {
+              some: {
+                isActive: true,
+              },
+            },
+          },
           orderBy: [
             {
               level: 'asc',
@@ -96,6 +103,13 @@ export class MapsService {
           },
         },
         mobs: {
+          where: {
+            subMapEncounters: {
+              some: {
+                isActive: true,
+              },
+            },
+          },
           orderBy: [
             {
               level: 'asc',

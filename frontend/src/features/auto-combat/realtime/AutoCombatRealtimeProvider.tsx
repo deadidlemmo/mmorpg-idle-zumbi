@@ -788,7 +788,9 @@ export function AutoCombatRealtimeProvider({
           return;
         }
 
-        if (isUiBackgrounded()) {
+        const isBackgrounded = isUiBackgrounded();
+
+        if (isBackgrounded) {
           suppressLootNotificationsUntilCatchUpRef.current = true;
           lootSuppressionRequiresFreshStatusRef.current = true;
           enterSnapshotSynchronization();
@@ -797,14 +799,9 @@ export function AutoCombatRealtimeProvider({
             publishConfirmedLootNotifications(statusData, null);
           }
 
-          dispatch({
-            type: "CLEAR_ERROR",
-          });
-
-          return;
+        } else {
+          lootSuppressionRequiresFreshStatusRef.current = false;
         }
-
-        lootSuppressionRequiresFreshStatusRef.current = false;
 
         if (overviewData) {
           dispatch({
@@ -1280,12 +1277,13 @@ export function AutoCombatRealtimeProvider({
         lastInactiveStatusSignatureRef.current = null;
       }
 
-      if (isUiBackgrounded()) {
+      const isBackgrounded = isUiBackgrounded();
+
+      if (isBackgrounded) {
         suppressLootNotificationsUntilCatchUpRef.current = true;
         lootSuppressionRequiresFreshStatusRef.current = true;
         enterSnapshotSynchronization();
         publishConfirmedLootNotifications(payload, null);
-        return;
       } else {
         lootSuppressionRequiresFreshStatusRef.current = false;
       }
@@ -1381,6 +1379,9 @@ export function AutoCombatRealtimeProvider({
         suppressLootNotificationsUntilCatchUpRef.current = true;
         lootSuppressionRequiresFreshStatusRef.current = true;
         enterSnapshotSynchronization();
+        scheduleReload(0, {
+          reason: "background-realtime-event",
+        });
         return;
       }
 
@@ -1392,7 +1393,7 @@ export function AutoCombatRealtimeProvider({
         event: payload,
       });
     },
-    [enterSnapshotSynchronization, normalizedCharacterId],
+    [enterSnapshotSynchronization, normalizedCharacterId, scheduleReload],
   );
 
   const shouldEnableSocket = shouldKeepAutoCombatSocketEnabled({

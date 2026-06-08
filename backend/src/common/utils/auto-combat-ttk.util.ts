@@ -37,10 +37,12 @@ export function clampAutoCombatTtkSeconds(value: number) {
     return AUTO_COMBAT_TTK_MAX_SECONDS;
   }
 
-  return Math.min(
+  const clamped = Math.min(
     AUTO_COMBAT_TTK_MAX_SECONDS,
     Math.max(AUTO_COMBAT_TTK_MIN_SECONDS, value),
   );
+
+  return Math.ceil(clamped);
 }
 
 export function getAutoCombatMobIndex(mob: AutoCombatTtkMobInput) {
@@ -82,7 +84,8 @@ export function getAutoCombatRecommendedPower(params: {
 
   return Math.max(
     1,
-    tierBasePower * AUTO_COMBAT_TTK_POWER_MULTIPLIERS_BY_MOB_INDEX[safeIndex - 1],
+    tierBasePower *
+      AUTO_COMBAT_TTK_POWER_MULTIPLIERS_BY_MOB_INDEX[safeIndex - 1],
   );
 }
 
@@ -97,8 +100,7 @@ export function calculatePlayerOffensivePower(stats: AutoCombatTtkStatsInput) {
   const hitChance = Math.min(1.35, Math.max(0.65, 0.85 + precision / 220));
   const critChance = Math.min(0.65, Math.max(0, technique / 300));
   const critDamageMultiplier = 1.5 + Math.min(0.75, agility / 400);
-  const averageCritMultiplier =
-    1 + critChance * (critDamageMultiplier - 1);
+  const averageCritMultiplier = 1 + critChance * (critDamageMultiplier - 1);
 
   return Math.max(1, attack * attackSpeed * hitChance * averageCritMultiplier);
 }
@@ -177,8 +179,6 @@ export function calculateAutoCombatTtk(params: {
     monsterRecommendedPower: recommendedPower,
     killsPerMinute: 60 / estimatedKillTimeSeconds,
     killsPerHour: 3600 / estimatedKillTimeSeconds,
-    difficultyLabel: getAutoCombatTtkDifficultyLabel(
-      estimatedKillTimeSeconds,
-    ),
+    difficultyLabel: getAutoCombatTtkDifficultyLabel(estimatedKillTimeSeconds),
   };
 }

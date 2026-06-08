@@ -1,14 +1,19 @@
 import { Rarity } from '@prisma/client';
 import type { MobDropItemSeedData, MobDropTableSeedData } from '../seed-types';
-import { mobBaseDefinitions } from './mobs.seed-data';
+import {
+  getAbsorbedAutoCombatMobOrder,
+  isActiveAutoCombatMob,
+  mobBaseDefinitions,
+  type MobBaseSeedData,
+} from './mobs.seed-data';
 
 /**
  * Itens e tabelas de drop dos mobs.
  *
  * A economia de drops segue uma matriz simetrica:
- * - 12 mobs canonicos por tier.
- * - todo mob dropa 1 residuo da faixa de tier.
- * - todo mob dropa 1 biomaterial.
+ * - 12 mobs cadastrados por tier, com 6 ativos no auto-combate.
+ * - todo mob ativo dropa 1 residuo da faixa de tier.
+ * - todo mob ativo dropa os biomateriais dele e do mob removido pareado.
  * - elites dropam tambem 1 nucleo infectado de elite.
  * - cada familia de biomaterial aparece 2 vezes por tier, totalizando 20 fontes por familia.
  * - Biomaterial Cortante tem chance dobrada porque existem 2x mais receitas de arma principal.
@@ -143,7 +148,8 @@ function buildMobDropItems(): MobDropItemSeedData[] {
     ...DROP_RARITY_BANDS.map((band) => ({
       name: band.residueName,
       slug: slugify(band.residueName),
-      description: 'Resíduo Infecto obtido de mobs. Uso: Crafting por faixa de tier.',
+      description:
+        'Resíduo Infecto obtido de mobs. Uso: Crafting por faixa de tier.',
       tier: band.itemTier,
       rarity: band.rarity,
       family: 'Resíduo Infecto',
@@ -153,56 +159,131 @@ function buildMobDropItems(): MobDropItemSeedData[] {
   ];
 }
 
-export const mobDropItemDefinitions: MobDropItemSeedData[] = buildMobDropItems();
+export const mobDropItemDefinitions: MobDropItemSeedData[] =
+  buildMobDropItems();
+
+type MobDropEntry = MobDropTableSeedData['drops'][number];
+
+type MobDropSource = {
+  mob: MobBaseSeedData;
+  rarity: MobDropTableSeedData['rarity'];
+  drops: MobDropEntry[];
+};
+
+function getMobDefinitionKey(
+  mob: Pick<MobBaseSeedData, 'mapName' | 'subMapName' | 'orderNoSubmap'>,
+) {
+  return `${mob.mapName}::${mob.subMapName}::${mob.orderNoSubmap}`;
+}
+
+function buildBaseDropsForMob(
+  mob: MobBaseSeedData,
+  tierMobIndex: number,
+): Pick<MobDropSource, 'rarity' | 'drops'> {
+  const band = getDropRarityBand(mob.tier);
+  const biomaterialFamily = getBiomaterialFamilyForMob(mob.tier, tierMobIndex);
+  const drops: MobDropEntry[] = [
+    {
+      itemName: band.residueName,
+      dropType: 'RESIDUE',
+      dropChance: 45,
+      minQuantity: 1,
+      maxQuantity: 2,
+    },
+    {
+      itemName: getBiomaterialName(biomaterialFamily, mob.tier),
+      dropType: 'BIOMATERIAL',
+      dropChance: BIOMATERIAL_DROP_CHANCE_BY_FAMILY[biomaterialFamily],
+      minQuantity: 1,
+      maxQuantity: 1,
+    },
+  ];
+
+  if (mob.mobType === 'ELITE') {
+    drops.push({
+      itemName: band.eliteCoreName,
+      dropType: 'ELITE_CORE',
+      dropChance: 25,
+      minQuantity: 1,
+      maxQuantity: 1,
+    });
+  }
+
+  return {
+    rarity: band.rarity,
+    drops,
+  };
+}
+
+function mergeMobDrops(drops: MobDropEntry[]) {
+  const mergedDropsByItemName = new Map<string, MobDropEntry>();
+
+  for (const drop of drops) {
+    const currentDrop = mergedDropsByItemName.get(drop.itemName);
+
+    if (!currentDrop) {
+      mergedDropsByItemName.set(drop.itemName, drop);
+      continue;
+    }
+
+    mergedDropsByItemName.set(drop.itemName, {
+      ...currentDrop,
+      dropChance: Math.max(currentDrop.dropChance, drop.dropChance),
+      minQuantity: Math.min(currentDrop.minQuantity, drop.minQuantity),
+      maxQuantity: Math.max(currentDrop.maxQuantity, drop.maxQuantity),
+    });
+  }
+
+  return Array.from(mergedDropsByItemName.values());
+}
 
 const tierMobCounters = new Map<number, number>();
 
-export const mobDropTables: MobDropTableSeedData[] = mobBaseDefinitions.map(
-  (mob) => {
-    const band = getDropRarityBand(mob.tier);
-    const tierMobIndex = tierMobCounters.get(mob.tier) ?? 0;
-    tierMobCounters.set(mob.tier, tierMobIndex + 1);
+const mobDropSources: MobDropSource[] = mobBaseDefinitions.map((mob) => {
+  const tierMobIndex = tierMobCounters.get(mob.tier) ?? 0;
+  tierMobCounters.set(mob.tier, tierMobIndex + 1);
 
-    const biomaterialFamily = getBiomaterialFamilyForMob(
-      mob.tier,
-      tierMobIndex,
-    );
-    const drops: MobDropTableSeedData['drops'] = [
-      {
-        itemName: band.residueName,
-        dropType: 'RESIDUE',
-        dropChance: 45,
-        minQuantity: 1,
-        maxQuantity: 2,
-      },
-      {
-        itemName: getBiomaterialName(biomaterialFamily, mob.tier),
-        dropType: 'BIOMATERIAL',
-        dropChance: BIOMATERIAL_DROP_CHANCE_BY_FAMILY[biomaterialFamily],
-        minQuantity: 1,
-        maxQuantity: 1,
-      },
-    ];
+  const baseDrops = buildBaseDropsForMob(mob, tierMobIndex);
 
-    if (mob.mobType === 'ELITE') {
-      drops.push({
-        itemName: band.eliteCoreName,
-        dropType: 'ELITE_CORE',
-        dropChance: 25,
-        minQuantity: 1,
-        maxQuantity: 1,
-      });
-    }
+  return {
+    mob,
+    rarity: baseDrops.rarity,
+    drops: baseDrops.drops,
+  };
+});
+
+const mobDropSourceByDefinitionKey = new Map(
+  mobDropSources.map((source) => [getMobDefinitionKey(source.mob), source]),
+);
+
+export const mobDropTables: MobDropTableSeedData[] = mobDropSources
+  .filter((source) => isActiveAutoCombatMob(source.mob))
+  .map((source) => {
+    const absorbedOrder = getAbsorbedAutoCombatMobOrder(source.mob);
+    const absorbedSource =
+      absorbedOrder === null
+        ? null
+        : mobDropSourceByDefinitionKey.get(
+            getMobDefinitionKey({
+              mapName: source.mob.mapName,
+              subMapName: source.mob.subMapName,
+              orderNoSubmap: absorbedOrder,
+            }),
+          );
+
+    const drops = mergeMobDrops([
+      ...source.drops,
+      ...(absorbedSource?.drops ?? []),
+    ]);
 
     return {
-      tier: mob.tier,
-      mapName: mob.mapName,
-      subMapName: mob.subMapName,
-      orderNoSubmap: mob.orderNoSubmap,
-      mobType: mob.mobType,
-      mobName: mob.name,
-      rarity: band.rarity,
+      tier: source.mob.tier,
+      mapName: source.mob.mapName,
+      subMapName: source.mob.subMapName,
+      orderNoSubmap: source.mob.orderNoSubmap,
+      mobType: source.mob.mobType,
+      mobName: source.mob.name,
+      rarity: source.rarity,
       drops,
     };
-  },
-);
+  });

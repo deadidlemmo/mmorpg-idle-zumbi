@@ -1165,26 +1165,39 @@
 @media (min-width: 761px) {
   .auto-combat-hunt-stage--battle-focused
     .auto-combat-enemy-grid.auto-combat-enemy-grid--compact {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.54rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.68rem;
   }
 
   .auto-combat-hunt-stage--battle-focused
     .auto-combat-enemy-grid--compact
     .auto-combat-enemy-card {
-    min-height: 154px;
-    padding: 0.5rem 0.44rem 0.46rem;
-    border-radius: 0.68rem;
+    min-height: 224px;
+    justify-content: center;
+    gap: 0.48rem;
+    padding: 1rem 0.72rem 0.74rem;
+    border-radius: 0.84rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card--with-found-count {
+    min-height: 236px;
+    justify-content: space-between;
+    gap: 0;
+    padding: 2.9rem 0.72rem 0.74rem;
   }
 
   .auto-combat-hunt-stage--battle-focused
     .auto-combat-enemy-grid--compact
     .auto-combat-enemy-card__found-count {
-    top: 0.38rem;
-    right: 0.38rem;
-    min-height: 21px;
-    padding: 0.12rem 0.38rem;
-    font-size: 0.48rem;
+    top: 0.92rem;
+    right: auto;
+    left: 50%;
+    width: clamp(7.2rem, 58%, 8.6rem);
+    min-height: 30px;
+    padding: 0.22rem 0.62rem;
+    transform: translateX(-50%);
   }
 
   .auto-combat-hunt-stage--battle-focused
@@ -1193,9 +1206,10 @@
   .auto-combat-hunt-stage--battle-focused
     .auto-combat-enemy-grid--compact
     .auto-combat-enemy-card__portrait--fullbody {
-    height: 82px;
-    min-height: 82px;
-    margin: 0.82rem auto 0.2rem;
+    height: 132px;
+    min-height: 132px;
+    align-items: center;
+    margin: 0 auto 0.42rem;
   }
 
   .auto-combat-hunt-stage--battle-focused
@@ -1204,27 +1218,30 @@
   .auto-combat-hunt-stage--battle-focused
     .auto-combat-enemy-grid--compact
     .auto-combat-enemy-card__portrait--fullbody img {
-    height: 90px;
-    max-width: min(92px, 100%);
+    width: auto;
+    height: auto;
+    max-width: min(158px, 88%);
+    max-height: 132px;
+    object-position: center center;
   }
 
   .auto-combat-hunt-stage--battle-focused
     .auto-combat-enemy-grid--compact
     .auto-combat-enemy-card__content {
-    gap: 0.14rem;
+    gap: 0.2rem;
   }
 
   .auto-combat-hunt-stage--battle-focused
     .auto-combat-enemy-grid--compact
     .auto-combat-enemy-card__content > span {
-    font-size: 0.46rem;
+    font-size: 0.5rem;
   }
 
   .auto-combat-hunt-stage--battle-focused
     .auto-combat-enemy-grid--compact
     .auto-combat-enemy-card__content > strong {
     min-height: 2em;
-    font-size: clamp(0.62rem, 0.72vw, 0.72rem);
+    font-size: clamp(0.74rem, 0.86vw, 0.86rem);
   }
 }
 
@@ -1245,5 +1262,179 @@
   .auto-combat-hunt-stage--battle-focused
     .auto-combat-enemy-grid.auto-combat-enemy-grid--compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Ajuste final: os cards de mobs devem ser compactos no fluxo de batalha. */
+@media (min-width: 761px) {
+  .auto-combat-hunt-stage.auto-combat-hunt-stage--battle-focused {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+    gap: 0.95rem 1rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle {
+    min-height: 300px;
+    padding: 0.84rem 0.9rem 0.92rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__header {
+    width: min(100%, 420px);
+    gap: 0.48rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__metrics em {
+    min-height: 27px;
+    padding: 0.3rem 0.58rem;
+    font-size: 0.64rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__mob-card {
+    width: min(100%, 348px);
+    min-height: 0;
+    height: auto;
+    margin-top: 0.42rem;
+    padding: 0.9rem 0.84rem 0.82rem;
+    gap: 0.42rem;
+    border-color: rgba(211, 196, 96, 0.34);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 12px 26px rgba(0, 0, 0, 0.2),
+      0 0 16px rgba(211, 196, 96, 0.055);
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__mob-card .auto-combat-fighter-card__level-badge {
+    top: 0.48rem;
+    right: 0.48rem;
+    min-width: 48px;
+    height: 24px;
+    min-height: 24px;
+    padding: 0 0.42rem;
+    font-size: 0.54rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__mob-visual {
+    min-height: 184px;
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__mob-visual::before {
+    width: min(76%, 12rem);
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__mob-visual img {
+    height: 176px;
+    max-width: min(100%, 194px);
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__mob-heading span {
+    color: rgba(231, 227, 216, 0.68);
+    font-size: 0.62rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__mob-heading strong {
+    font-size: clamp(1.12rem, 1.45vw, 1.32rem);
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__ttk-strip {
+    gap: 0.28rem;
+    margin-top: 0.08rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__ttk-strip i {
+    height: 7px;
+  }
+
+  .auto-combat-hunt-stage--battle-focused .auto-combat-inline-battle__ttk-strip span {
+    font-size: 0.64rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid.auto-combat-enemy-grid--compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: minmax(188px, auto);
+    gap: 0.62rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card {
+    height: auto;
+    min-height: 224px;
+    justify-content: center;
+    gap: 0.48rem;
+    padding: 1rem 0.72rem 0.74rem;
+    overflow: hidden;
+    border-radius: 0.72rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card--with-found-count {
+    min-height: 236px;
+    justify-content: space-between;
+    gap: 0;
+    padding: 2.9rem 0.72rem 0.74rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card__found-count {
+    top: 0.92rem;
+    right: auto;
+    left: 50%;
+    width: clamp(7.2rem, 58%, 8.6rem);
+    min-height: 30px;
+    padding: 0.22rem 0.62rem;
+    transform: translateX(-50%);
+  }
+
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card__found-count strong {
+    font-size: 0.82rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card__found-count span {
+    font-size: 0.64rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card__portrait,
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card__portrait--fullbody {
+    height: 132px;
+    min-height: 132px;
+    align-items: center;
+    margin: 0 auto 0.42rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card__portrait img,
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card__portrait--fullbody img {
+    width: auto;
+    height: auto;
+    max-width: min(158px, 88%);
+    max-height: 132px;
+    object-position: center center;
+  }
+
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card__content > span {
+    font-size: 0.46rem;
+  }
+
+  .auto-combat-hunt-stage--battle-focused
+    .auto-combat-enemy-grid--compact
+    .auto-combat-enemy-card__content > strong {
+    min-height: 1.85em;
+    font-size: clamp(0.68rem, 0.78vw, 0.78rem);
+    line-height: 0.95;
   }
 }

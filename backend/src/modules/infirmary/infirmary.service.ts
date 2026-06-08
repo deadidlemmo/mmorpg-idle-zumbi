@@ -4,7 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CharacterStatus } from '@prisma/client';
+import {
+  AutoCombatHuntBatchStatus,
+  AutoCombatSessionStatus,
+  CharacterStatus,
+} from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import {
   calculateFullStats,
@@ -30,8 +34,15 @@ export class InfirmaryService {
       characterId: character.id,
       userId,
     });
+    const autoCombatRecovery = await this.buildAutoCombatRecoveryState(
+      character.id,
+    );
 
-    return this.buildStatusResponse(character, activityState);
+    return this.buildStatusResponse(
+      character,
+      activityState,
+      autoCombatRecovery,
+    );
   }
 
   async startTreatment(userId: string, characterId: string) {
@@ -256,7 +267,13 @@ export class InfirmaryService {
     return this.findCharacterWithStats(userId, character.id);
   }
 
-  private buildStatusResponse(character: any, activityState: any) {
+  private buildStatusResponse(
+    character: any,
+    activityState: any,
+    autoCombatRecovery: Awaited<
+      ReturnType<InfirmaryService['buildAutoCombatRecoveryState']>
+    >,
+  ) {
     const maxHp = this.calculateCharacterMaxHp(character);
     const currentHp = this.clampHp(character.currentHp ?? maxHp, maxHp);
     const missingHp = Math.max(0, maxHp - currentHp);
@@ -322,6 +339,11 @@ export class InfirmaryService {
         activeIncursionSession: activityState.activeIncursionSession,
         activeWorldBossParticipation:
           activityState.activeWorldBossParticipation,
+        hasPreservedTrackedEnemies:
+          autoCombatRecovery.hasPreservedTrackedEnemies,
+        preservedTrackedEnemiesCount:
+          autoCombatRecovery.preservedTrackedEnemiesCount,
+        autoCombatRecovery,
         costs: {
           free: {
             type: 'SUS',
@@ -340,6 +362,93 @@ export class InfirmaryService {
           currency: 'GOLD',
         },
       },
+      autoCombatRecovery,
+    };
+  }
+
+  private async buildAutoCombatRecoveryState(characterId: string) {
+    const huntBatch = await this.prisma.autoCombatHuntBatch.findFirst({
+      where: {
+        characterId,
+        status: AutoCombatHuntBatchStatus.READY,
+        mobs: {
+          some: {
+            remainingCount: {
+              gt: 0,
+            },
+          },
+        },
+        session: {
+          is: {
+            status: AutoCombatSessionStatus.DEFEATED,
+          },
+        },
+      },
+      select: {
+        id: true,
+        mapId: true,
+        sessionId: true,
+        updatedAt: true,
+        map: {
+          select: {
+            id: true,
+            name: true,
+            tier: true,
+          },
+        },
+        session: {
+          select: {
+            id: true,
+            subMapId: true,
+            finishedAt: true,
+          },
+        },
+        mobs: {
+          where: {
+            remainingCount: {
+              gt: 0,
+            },
+          },
+          select: {
+            remainingCount: true,
+          },
+        },
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
+
+    const preservedTrackedEnemiesCount =
+      huntBatch?.mobs.reduce(
+        (total, mob) =>
+          total + Math.max(0, Math.floor(Number(mob.remainingCount) || 0)),
+        0,
+      ) ?? 0;
+    const hasPreservedTrackedEnemies = preservedTrackedEnemiesCount > 0;
+
+    return {
+      hasPreservedTrackedEnemies,
+      preservedTrackedEnemiesCount,
+      huntBatchId: hasPreservedTrackedEnemies ? huntBatch?.id ?? null : null,
+      sessionId: hasPreservedTrackedEnemies
+        ? huntBatch?.sessionId ?? huntBatch?.session?.id ?? null
+        : null,
+      mapId: hasPreservedTrackedEnemies ? huntBatch?.mapId ?? null : null,
+      subMapId: hasPreservedTrackedEnemies
+        ? huntBatch?.session?.subMapId ?? null
+        : null,
+      mapName: hasPreservedTrackedEnemies
+        ? huntBatch?.map?.name ?? null
+        : null,
+      mapTier: hasPreservedTrackedEnemies
+        ? huntBatch?.map?.tier ?? null
+        : null,
+      defeatedAt: hasPreservedTrackedEnemies
+        ? (huntBatch?.session?.finishedAt?.toISOString?.() ??
+          huntBatch?.session?.finishedAt ??
+          null)
+        : null,
     };
   }
 

@@ -25,6 +25,10 @@ import {
 import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
 import { calculateCombatHit } from '../../common/utils/combat-damage.util';
 import {
+  projectAutoCombatSurvival,
+  type AutoCombatSurvivalProjection,
+} from '../../common/utils/auto-combat-survival.util';
+import {
   applyDropChancePenalty,
   applyXpPenalty,
   calculateTierFarmPenalty,
@@ -206,6 +210,10 @@ type AutoCombatRealtimeEvent = {
   mobHpPercent?: number;
   battleProgressSeconds?: number;
   battleProgressPercent?: number;
+  cycleStartedAt?: string | null;
+  cycleDurationMs?: number;
+  cycleDurationSeconds?: number;
+  progressUpdatedAt?: string | null;
   estimatedKillTimeSeconds?: number;
   baseKillTimeSeconds?: number;
   playerOffensivePower?: number;
@@ -465,6 +473,14 @@ type AutoCombatPreview = {
     totalCombatsSimulated: number;
     fullRemainingSessionProjected: boolean;
   };
+};
+
+type AutoCombatMobSurvivalProjection = AutoCombatSurvivalProjection & {
+  estimatedKillTimeSeconds: number;
+  killsPerMinute: number;
+  difficultyLabel: string;
+  potionItemId: string | null;
+  potionItemName: string | null;
 };
 
 type SessionXpBreakdown = {
@@ -988,7 +1004,7 @@ export class AutoCombatService implements OnModuleDestroy {
     const subMap = huntTarget.subMap;
     const huntEncounters = huntTarget.encounters;
 
-    const activeSession = await this.prisma.autoCombatSession.findFirst({
+    let activeSession = await this.prisma.autoCombatSession.findFirst({
       where: {
         characterId: character.id,
         status: AutoCombatSessionStatus.ACTIVE,
@@ -997,6 +1013,28 @@ export class AutoCombatService implements OnModuleDestroy {
         startedAt: 'desc',
       },
     });
+
+    if (
+      activeSession &&
+      activeSession.phase !== AutoCombatSessionPhase.ENCOUNTER_READY &&
+      activeSession.endsAt.getTime() <= Date.now()
+    ) {
+      const expiredResponse = await this.processActiveSessionById(
+        userId,
+        activeSession.id,
+        {
+          emitRealtimeEvents: false,
+          waitForActiveProcessing: true,
+        },
+      );
+
+      if (!expiredResponse.active) {
+        this.stopRealtimeProcessingLoop(character.id);
+        activeSession = null;
+      } else {
+        return expiredResponse;
+      }
+    }
 
     if (activeSession) {
       if (activeSession.mapId !== huntTarget.map.id) {
@@ -1016,7 +1054,7 @@ export class AutoCombatService implements OnModuleDestroy {
         }
 
         const huntingSkill = await this.getOrCreateHuntingSkill(character.id);
-        const foundEnemiesCount = Math.max(
+        const totalFoundEnemiesCount = Math.max(
           0,
           Math.floor(
             Number(
@@ -1025,11 +1063,14 @@ export class AutoCombatService implements OnModuleDestroy {
             ) || 0,
           ),
         );
+        const trackedEnemiesRemaining =
+          this.getTrackedEnemiesRemaining(loadedSession) ??
+          totalFoundEnemiesCount;
         const maxTrackedEnemies = this.getHuntingMaxTrackedEnemies(
           huntingSkill.level,
         );
 
-        if (foundEnemiesCount >= maxTrackedEnemies) {
+        if (trackedEnemiesRemaining >= maxTrackedEnemies) {
           const limitResponse = await this.buildSessionResponse(
             activeSession.id,
             {
@@ -1046,6 +1087,10 @@ export class AutoCombatService implements OnModuleDestroy {
         }
 
         const now = new Date();
+        const sessionDurationSeconds = getIdleProgressLimitSeconds(
+          isPremiumActive(character.user, now),
+        );
+        const endsAt = new Date(now.getTime() + sessionDurationSeconds * 1000);
 
         try {
           await this.prisma.$transaction(async (tx) => {
@@ -1056,6 +1101,9 @@ export class AutoCombatService implements OnModuleDestroy {
               {
                 lastProcessedAt: now,
                 lastHuntProcessedAt: now,
+                huntStartedAt: now,
+                endsAt,
+                durationSeconds: sessionDurationSeconds,
                 currentMobId: null,
                 currentMobHp: null,
                 currentMobMaxHp: null,
@@ -1069,8 +1117,10 @@ export class AutoCombatService implements OnModuleDestroy {
                 loadedSession.huntBatch,
                 AutoCombatHuntBatchStatus.HUNTING,
                 {
+                  startedAt: now,
                   lastProcessedAt: now,
                   stoppedAt: null,
+                  cancelledAt: null,
                 },
               );
             }
@@ -1176,16 +1226,31 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     const huntingSkill = await this.getOrCreateHuntingSkill(character.id);
-    const initialTrackedEncounter = this.rollEncounter(huntEncounters, {
-      huntingLevel: huntingSkill.level,
-      foundEnemiesCount: 0,
-    });
-
     const now = new Date();
     const sessionDurationSeconds = getIdleProgressLimitSeconds(
       isPremiumActive(character.user, now),
     );
     const endsAt = new Date(now.getTime() + sessionDurationSeconds * 1000);
+    const resumedTrackedBatchResponse =
+      await this.resumeDefeatedHuntBatchIfAvailable({
+        userId,
+        character,
+        mapId: huntTarget.map.id,
+        characterStats,
+        huntingLevel: huntingSkill.level,
+        now,
+        endsAt,
+        sessionDurationSeconds,
+      });
+
+    if (resumedTrackedBatchResponse) {
+      return resumedTrackedBatchResponse;
+    }
+
+    const initialTrackedEncounter = this.rollEncounter(huntEncounters, {
+      huntingLevel: huntingSkill.level,
+      foundEnemiesCount: 0,
+    });
 
     /**
      * Mantém um respiro real depois do MOB_SPAWNED inicial.
@@ -1324,6 +1389,151 @@ export class AutoCombatService implements OnModuleDestroy {
     this.autoCombatGateway.emitStatus(character.id, response);
     this.startRealtimeProcessingLoop(userId, character.id);
     this.scheduleImmediateSessionProcessing(userId, session.id, character.id);
+
+    return response;
+  }
+
+  private async resumeDefeatedHuntBatchIfAvailable(params: {
+    userId: string;
+    character: any;
+    mapId: string;
+    characterStats: {
+      hp: number;
+      maxHp: number;
+    };
+    huntingLevel: number;
+    now: Date;
+    endsAt: Date;
+    sessionDurationSeconds: number;
+  }) {
+    const huntBatch = await this.prisma.autoCombatHuntBatch.findFirst({
+      where: {
+        characterId: params.character.id,
+        mapId: params.mapId,
+        status: AutoCombatHuntBatchStatus.READY,
+        mobs: {
+          some: {
+            remainingCount: {
+              gt: 0,
+            },
+          },
+        },
+        session: {
+          is: {
+            status: AutoCombatSessionStatus.DEFEATED,
+          },
+        },
+      },
+      include: {
+        session: true,
+        selectedEncounter: true,
+        mobs: {
+          include: {
+            mob: true,
+            encounter: true,
+          },
+          orderBy: {
+            updatedAt: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
+
+    if (!huntBatch?.session) {
+      return null;
+    }
+
+    const defeatedSession = huntBatch.session;
+    const pendingSelection = this.getHuntBatchPendingMobSelection(huntBatch);
+
+    if (!pendingSelection) {
+      return null;
+    }
+
+    const resumedSession = await this.prisma.$transaction(async (tx) => {
+      await this.activityGuard.ensureCanStartAutoCombat({
+        userId: params.userId,
+        characterId: params.character.id,
+        client: tx,
+        lockCharacter: true,
+      });
+
+      await tx.character.update({
+        where: {
+          id: params.character.id,
+        },
+        data: {
+          mapId: params.mapId,
+          maxHp: params.characterStats.maxHp,
+          currentHp: params.characterStats.hp,
+        },
+      });
+
+      const createdSession = await tx.autoCombatSession.create({
+        data: {
+          characterId: params.character.id,
+          mapId: params.mapId,
+          subMapId: defeatedSession.subMapId,
+          status: AutoCombatSessionStatus.ACTIVE,
+          phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+          startedAt: params.now,
+          endsAt: params.endsAt,
+          lastProcessedAt: params.now,
+          durationSeconds: params.sessionDurationSeconds,
+          roundDurationSeconds: AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS,
+
+          huntStartedAt: huntBatch.startedAt,
+          huntStoppedAt: params.now,
+          lastHuntProcessedAt: params.now,
+          huntingLevelAtStart:
+            huntBatch.huntingLevelAtStart ?? params.huntingLevel,
+          huntingXpGained: huntBatch.huntingXpGained ?? 0,
+          foundEnemiesCount: huntBatch.foundEnemiesCount ?? 0,
+          bonusEnemiesFound: huntBatch.bonusEnemiesFound ?? 0,
+          selectedEncounterId: pendingSelection.encounterId,
+          selectedEncounterMobId: pendingSelection.mobId,
+
+          currentMobId: null,
+          currentMobHp: null,
+          currentMobMaxHp: null,
+          currentRound: 0,
+          currentCombatIndex: 1,
+        },
+      });
+
+      await tx.autoCombatHuntBatch.update({
+        where: {
+          id: huntBatch.id,
+        },
+        data: {
+          sessionId: createdSession.id,
+          status: AutoCombatHuntBatchStatus.READY,
+          consumedAt: null,
+          cancelledAt: null,
+          stoppedAt: params.now,
+          lastProcessedAt: params.now,
+          selectedEncounterId: pendingSelection.encounterId,
+          selectedEncounterMobId: pendingSelection.mobId,
+        },
+      });
+
+      return createdSession;
+    });
+
+    this.clearPotionUsageForSession(resumedSession.id);
+
+    const response = await this.buildSessionResponse(resumedSession.id, {
+      message:
+        'AmeaÃ§as rastreadas preservadas. Inicie o combate quando estiver pronto.',
+      processing: this.buildEmptyProcessingSummary(),
+    });
+
+    this.stopRealtimeProcessingLoop(params.character.id);
+    this.autoCombatGateway.emitSessionUpdated(params.character.id, response);
+    this.autoCombatGateway.emitStatus(params.character.id, response);
 
     return response;
   }
@@ -1611,10 +1821,18 @@ export class AutoCombatService implements OnModuleDestroy {
       };
     }
 
-    await this.processActiveSessionById(userId, activeSession.id, {
-      emitRealtimeEvents: false,
-      waitForActiveProcessing: true,
-    });
+    const processedResponse = await this.processActiveSessionById(
+      userId,
+      activeSession.id,
+      {
+        emitRealtimeEvents: false,
+        waitForActiveProcessing: true,
+      },
+    );
+
+    if (!processedResponse.active) {
+      return processedResponse;
+    }
 
     const session = await this.loadAutoCombatSession(userId, activeSession.id);
 
@@ -2966,12 +3184,14 @@ export class AutoCombatService implements OnModuleDestroy {
         Number(huntBatch?.foundEnemiesCount ?? session.foundEnemiesCount) || 0,
       ),
     );
+    const previousTrackedEnemiesRemaining =
+      this.getTrackedEnemiesRemaining(session) ?? previousFoundEnemiesCount;
     const maxTrackedEnemies = this.getHuntingMaxTrackedEnemies(
       huntingSkill.level,
     );
     const remainingHuntCapacity = Math.max(
       0,
-      maxTrackedEnemies - previousFoundEnemiesCount,
+      maxTrackedEnemies - previousTrackedEnemiesRemaining,
     );
     const rawEnemiesFoundNow = Math.floor(elapsedSeconds / secondsPerEnemy);
     const enemiesFoundNow = Math.min(rawEnemiesFoundNow, remainingHuntCapacity);
@@ -4098,23 +4318,34 @@ export class AutoCombatService implements OnModuleDestroy {
     };
 
     if (session.huntBatch?.mobs?.length) {
+      const terminalHuntBatchUpdateData = this.buildTerminalHuntBatchUpdateData(
+        session,
+        result,
+      );
+      const hasTerminalHuntBatchUpdate = Boolean(terminalHuntBatchUpdateData);
+      const shouldMarkHuntBatchReady =
+        result.finalStatus === AutoCombatSessionStatus.ACTIVE &&
+        resultPhase === AutoCombatSessionPhase.ENCOUNTER_READY;
       nextSession.huntBatch = {
         ...session.huntBatch,
         status:
-          result.finalStatus === AutoCombatSessionStatus.ACTIVE &&
-          resultPhase === AutoCombatSessionPhase.ENCOUNTER_READY
+          terminalHuntBatchUpdateData?.status ??
+          (shouldMarkHuntBatchReady
             ? AutoCombatHuntBatchStatus.READY
-            : session.huntBatch.status,
-        consumedAt:
-          result.finalStatus === AutoCombatSessionStatus.ACTIVE &&
-          resultPhase === AutoCombatSessionPhase.ENCOUNTER_READY
+            : session.huntBatch.status),
+        consumedAt: hasTerminalHuntBatchUpdate
+          ? terminalHuntBatchUpdateData?.consumedAt
+          : shouldMarkHuntBatchReady
             ? null
             : session.huntBatch.consumedAt,
+        cancelledAt: hasTerminalHuntBatchUpdate
+          ? terminalHuntBatchUpdateData?.cancelledAt
+          : session.huntBatch.cancelledAt,
         lastProcessedAt:
-          result.finalStatus === AutoCombatSessionStatus.ACTIVE &&
-          resultPhase === AutoCombatSessionPhase.ENCOUNTER_READY
+          terminalHuntBatchUpdateData?.lastProcessedAt ??
+          (shouldMarkHuntBatchReady
             ? result.newLastProcessedAt
-            : session.huntBatch.lastProcessedAt,
+            : session.huntBatch.lastProcessedAt),
         mobs: this.applyMobSummaryResultToHuntBatchMobs(
           session.huntBatch.mobs,
           result,
@@ -4375,6 +4606,9 @@ export class AutoCombatService implements OnModuleDestroy {
       maxHp: currentMob.hp,
     };
     const autoPotionState = this.createAutoPotionState(session.character);
+    let lastPotionQuantityBefore: number | null = null;
+    let lastPotionQuantityAfter: number | null = null;
+    let lastPotionUsedQuantity: number | null = null;
 
     const getNewLootTotal = () =>
       Array.from(loots.values()).reduce(
@@ -4402,8 +4636,89 @@ export class AutoCombatService implements OnModuleDestroy {
       }
 
       this.potionUsageByCombat.add(potionCombatKey);
+      const playerHpBeforePotion = playerHp;
+
       playerHp = potionResult.newHp;
       healingFromPotions += potionResult.healedAmount;
+      lastPotionQuantityBefore = potionResult.quantityBefore;
+      lastPotionQuantityAfter = potionResult.quantityAfter;
+      lastPotionUsedQuantity = potionResult.usedQuantity;
+
+      const totalPotionsAfterUse =
+        totalPotionsUsedBeforeRound + (autoPotionState?.usedQuantity ?? 0);
+      const potionEventContext: CombatRealtimeContext = {
+        ...context,
+        combatIndex,
+        enemyInstanceId: this.buildEnemyInstanceId({
+          sessionId: session.id,
+          combatIndex,
+          mobId: currentMob.id,
+        }),
+      };
+
+      events.push(
+        this.buildRealtimeEvent({
+          context: potionEventContext,
+          type: 'POTION_USED',
+          actor: 'PLAYER',
+          target: 'PLAYER',
+          message: `${session.character.name} usou ${
+            autoPotionState?.potionItemName ?? 'uma poção'
+          } após o ciclo e recuperou ${potionResult.healedAmount} HP.`,
+          mobCurrentHp: 0,
+          mobMaxHp: currentMob.hp,
+          battleProgressSeconds: 0,
+          battleProgressPercent: 0,
+          estimatedKillTimeSeconds: ttk.estimatedKillTimeSeconds,
+          baseKillTimeSeconds: ttk.baseKillTimeSeconds,
+          playerOffensivePower: ttk.playerOffensivePower,
+          monsterRecommendedPower: ttk.monsterRecommendedPower,
+          killsPerMinute: ttk.killsPerMinute,
+          killsPerHour: ttk.killsPerHour,
+          difficultyLabel: ttk.difficultyLabel,
+          mobIndex: ttk.mobIndex,
+          battleTargetMobId: session.battleTargetMobId ?? currentMob.id,
+          battleTargetEncounterId: session.battleTargetEncounterId ?? null,
+          battleTargetTotal: session.battleTargetTotal ?? null,
+          battleTargetRemaining: Math.max(
+            0,
+            Math.floor(Number(session.battleTargetRemaining) || 0) -
+              killsResolved,
+          ),
+          characterCurrentHp: playerHp,
+          characterMaxHp: simulatedMaxHp,
+          damage: 0,
+          healedAmount: potionResult.healedAmount,
+          isCritical: false,
+          isDodged: false,
+          hpBefore: playerHpBeforePotion,
+          hpAfter: playerHp,
+          targetHpBefore: playerHpBeforePotion,
+          targetHpAfter: playerHp,
+          mobHpBefore: 0,
+          mobHpAfter: 0,
+          characterHpBefore: playerHpBeforePotion,
+          characterHpAfter: playerHp,
+          phase: 'RESTING',
+          nextActor: 'SYSTEM',
+          nextActionAt: effectiveNow,
+          totalCombats: totalCombatsBeforeRound + killsResolved,
+          totalRounds: totalRoundsBeforeRound + killsResolved,
+          totalKills: totalCombatsBeforeRound + killsResolved,
+          totalXpGained: totalXpBeforeRound + xpGained,
+          totalLoot: getTotalLootNow(),
+          potionsUsed: totalPotionsAfterUse,
+          potionItemId: autoPotionState?.potionItemId ?? null,
+          potionItemName: autoPotionState?.potionItemName ?? null,
+          potionTriggerPercent: autoPotionState?.hpThresholdPercent ?? null,
+          potionQuantityBefore: potionResult.quantityBefore,
+          potionQuantityAfter: potionResult.quantityAfter,
+          potionQuantityRemaining: potionResult.quantityAfter,
+          potionUsedQuantity: potionResult.usedQuantity,
+          round: currentRound,
+          combatIndex,
+        }),
+      );
     };
 
     for (let killIndex = 0; killIndex < plannedKills; killIndex++) {
@@ -4489,7 +4804,6 @@ export class AutoCombatService implements OnModuleDestroy {
       killsResolved++;
 
       if (playerHp > 0) {
-        const hpBeforeMobThreat = playerHp;
         const attack = this.resolveAttack({
           attacker: mobStats,
           defender: playerStats,
@@ -4509,7 +4823,7 @@ export class AutoCombatService implements OnModuleDestroy {
           criticalBonusDamageTaken += attack.criticalBonusDamage;
         }
 
-        if (hpBeforeMobThreat > playerHp && playerHp > 0) {
+        if (playerHp > 0) {
           tryPotionForCombat(currentCombatIndex + killIndex);
           playerStats.hp = playerHp;
         }
@@ -4673,7 +4987,8 @@ export class AutoCombatService implements OnModuleDestroy {
           totalKills: totalKillsAfterKill,
           totalXpGained: totalXpAfterKill,
           totalLoot: getTotalLootNow(),
-          potionsUsed: totalPotionsUsedBeforeRound,
+          potionsUsed:
+            totalPotionsUsedBeforeRound + (autoPotionState?.usedQuantity ?? 0),
           round: currentRound,
           combatIndex: currentCombatIndex,
         }),
@@ -4783,10 +5098,7 @@ export class AutoCombatService implements OnModuleDestroy {
 
       dodgesByPlayer,
       dodgesByMob: 0,
-      playerDodgeRate: this.calculatePercent(
-        dodgesByPlayer,
-        mobAttackAttempts,
-      ),
+      playerDodgeRate: this.calculatePercent(dodgesByPlayer, mobAttackAttempts),
       mobDodgeRate: 0,
       playerDodged: dodgesByPlayer > 0,
       mobDodged: false,
@@ -4800,10 +5112,10 @@ export class AutoCombatService implements OnModuleDestroy {
       potionItemId: autoPotionState?.potionItemId ?? null,
       potionItemName: autoPotionState?.potionItemName ?? null,
       potionTriggerPercent: autoPotionState?.hpThresholdPercent ?? null,
-      potionQuantityBefore: null,
-      potionQuantityAfter: null,
+      potionQuantityBefore: lastPotionQuantityBefore,
+      potionQuantityAfter: lastPotionQuantityAfter,
       potionQuantityRemaining: autoPotionState?.availableQuantity ?? null,
-      potionUsedQuantity: autoPotionState?.usedQuantity ?? null,
+      potionUsedQuantity: lastPotionUsedQuantity,
 
       finalXp: simulatedXp,
       finalStatus,
@@ -5282,6 +5594,10 @@ export class AutoCombatService implements OnModuleDestroy {
           nextActor: 'PLAYER',
         });
 
+        if (playerHp > 0) {
+          tryPotion();
+        }
+
         return;
       }
 
@@ -5313,9 +5629,7 @@ export class AutoCombatService implements OnModuleDestroy {
         nextActor: playerHp > 0 ? 'PLAYER' : null,
       });
 
-      const tookRealDamage = hpBeforeAttack > playerHp;
-
-      if (tookRealDamage && playerHp > 0) {
+      if (playerHp > 0) {
         tryPotion();
       }
     };
@@ -5895,16 +6209,17 @@ export class AutoCombatService implements OnModuleDestroy {
         });
       }
 
-      if (result.finalStatus !== AutoCombatSessionStatus.ACTIVE) {
+      const terminalHuntBatchUpdateData = this.buildTerminalHuntBatchUpdateData(
+        session,
+        result,
+      );
+
+      if (terminalHuntBatchUpdateData) {
         await tx.autoCombatHuntBatch.updateMany({
           where: {
             sessionId: session.id,
           },
-          data: {
-            status: AutoCombatHuntBatchStatus.CONSUMED,
-            consumedAt: result.finishedAt ?? result.newLastProcessedAt,
-            lastProcessedAt: result.newLastProcessedAt,
-          },
+          data: terminalHuntBatchUpdateData,
         });
       }
 
@@ -6217,6 +6532,27 @@ export class AutoCombatService implements OnModuleDestroy {
                 premiumUntil: true,
               },
             },
+            equipment: {
+              include: {
+                mainHand: true,
+                offHand: true,
+                head: true,
+                armor: true,
+                pants: true,
+                boots: true,
+              },
+            },
+            potionConfig: {
+              include: {
+                potionItem: true,
+              },
+            },
+            inventoryItems: {
+              include: {
+                item: true,
+              },
+            },
+            gatheringSkills: true,
             huntingSkill: true,
           },
         },
@@ -6313,6 +6649,8 @@ export class AutoCombatService implements OnModuleDestroy {
         Number(huntBatch?.foundEnemiesCount ?? session.foundEnemiesCount) || 0,
       ),
     );
+    const currentTrackedEnemiesRemaining =
+      this.getTrackedEnemiesRemaining(session) ?? currentFoundEnemiesCount;
     const maxTrackedEnemies = Math.max(
       0,
       Math.floor(
@@ -6322,14 +6660,17 @@ export class AutoCombatService implements OnModuleDestroy {
     );
     const remainingHuntCapacity = Math.max(
       0,
-      maxTrackedEnemies - currentFoundEnemiesCount,
+      maxTrackedEnemies - currentTrackedEnemiesRemaining,
     );
     const isHuntLimitReached =
-      maxTrackedEnemies > 0 && currentFoundEnemiesCount >= maxTrackedEnemies;
+      maxTrackedEnemies > 0 &&
+      currentTrackedEnemiesRemaining >= maxTrackedEnemies;
     const huntCapacity = {
       maxTrackedEnemies,
       remainingCapacity: remainingHuntCapacity,
       isLimitReached: isHuntLimitReached,
+      availableEnemiesCount: currentTrackedEnemiesRemaining,
+      remainingEnemiesCount: currentTrackedEnemiesRemaining,
     };
 
     const sessionSummary = this.buildSessionSummary(
@@ -6374,6 +6715,19 @@ export class AutoCombatService implements OnModuleDestroy {
     const battleProgress = this.buildBattleProgressPayload(
       session,
       session.currentMob,
+      now,
+    );
+    const currentMobSurvivalProjection = this.buildMobSurvivalProjection(
+      session,
+      session.currentMob,
+      Math.max(
+        1,
+        Math.floor(
+          Number(session.battleTargetRemaining) ||
+            this.getTrackedEnemiesRemaining(session) ||
+            1,
+        ),
+      ),
     );
     const currentMobPayloadBase = this.buildCurrentMobStatusPayload(
       session.currentMob,
@@ -6382,6 +6736,7 @@ export class AutoCombatService implements OnModuleDestroy {
       {
         sessionId: session.id,
         combatIndex: session.currentCombatIndex,
+        survivalProjection: currentMobSurvivalProjection,
       },
     );
     const currentMobPayload = currentMobPayloadBase
@@ -6392,6 +6747,15 @@ export class AutoCombatService implements OnModuleDestroy {
       : null;
     const selectedEncounter =
       huntBatch?.selectedEncounter ?? session.selectedEncounter ?? null;
+    const selectedEncounterFoundCount = this.getSessionTrackedMobFoundCount(
+      session,
+      selectedEncounterMobId ?? selectedEncounter?.mobId,
+    );
+    const selectedEncounterSurvivalProjection = this.buildMobSurvivalProjection(
+      session,
+      selectedEncounter?.mob ?? null,
+      selectedEncounterFoundCount,
+    );
     const selectedEncounterMobPayload = this.buildCurrentMobStatusPayload(
       selectedEncounter?.mob ?? null,
       selectedEncounter?.mob?.hp ?? null,
@@ -6399,11 +6763,8 @@ export class AutoCombatService implements OnModuleDestroy {
       {
         sessionId: session.id,
         combatIndex: session.currentCombatIndex,
+        survivalProjection: selectedEncounterSurvivalProjection,
       },
-    );
-    const selectedEncounterFoundCount = this.getSessionTrackedMobFoundCount(
-      session,
-      selectedEncounterMobId ?? selectedEncounter?.mobId,
     );
     const selectedEncounterMobHuntPayload = selectedEncounterMobPayload
       ? {
@@ -6475,6 +6836,8 @@ export class AutoCombatService implements OnModuleDestroy {
       session.character.currentHp ?? 0,
       session.character.maxHp ?? 0,
     );
+    const autoCombatRecovery =
+      this.buildPreservedTrackedEnemiesViewModel(session);
     const shouldRedirectToInfirmary =
       session.status === AutoCombatSessionStatus.DEFEATED &&
       characterCurrentHp <= 0;
@@ -6498,6 +6861,11 @@ export class AutoCombatService implements OnModuleDestroy {
       currentSubMapId: session.subMapId,
       canTravel: session.status !== AutoCombatSessionStatus.ACTIVE,
       huntCapacity,
+      hasPreservedTrackedEnemies:
+        autoCombatRecovery.hasPreservedTrackedEnemies,
+      preservedTrackedEnemiesCount:
+        autoCombatRecovery.preservedTrackedEnemiesCount,
+      autoCombatRecovery,
 
       character: {
         id: session.character.id,
@@ -6519,6 +6887,11 @@ export class AutoCombatService implements OnModuleDestroy {
         phase: session.phase,
         endReason,
         shouldRedirectToInfirmary,
+        hasPreservedTrackedEnemies:
+          autoCombatRecovery.hasPreservedTrackedEnemies,
+        preservedTrackedEnemiesCount:
+          autoCombatRecovery.preservedTrackedEnemiesCount,
+        autoCombatRecovery,
         startedAt: session.startedAt,
         endsAt: session.endsAt,
         lastProcessedAt: session.lastProcessedAt,
@@ -6564,6 +6937,8 @@ export class AutoCombatService implements OnModuleDestroy {
           huntBatch?.huntingLevelAtStart ?? session.huntingLevelAtStart,
         huntingXpGained: huntBatch?.huntingXpGained ?? session.huntingXpGained,
         foundEnemiesCount: currentFoundEnemiesCount,
+        availableEnemiesCount: currentTrackedEnemiesRemaining,
+        remainingEnemiesCount: currentTrackedEnemiesRemaining,
         maxTrackedEnemies,
         remainingHuntCapacity,
         isHuntLimitReached,
@@ -6607,6 +6982,13 @@ export class AutoCombatService implements OnModuleDestroy {
             huntingLevelAtStart: huntBatch.huntingLevelAtStart,
             huntingXpGained: huntBatch.huntingXpGained,
             foundEnemiesCount: currentFoundEnemiesCount,
+            availableEnemiesCount: currentTrackedEnemiesRemaining,
+            remainingEnemiesCount: currentTrackedEnemiesRemaining,
+            hasPreservedTrackedEnemies:
+              autoCombatRecovery.hasPreservedTrackedEnemies,
+            preservedTrackedEnemiesCount:
+              autoCombatRecovery.preservedTrackedEnemiesCount,
+            autoCombatRecovery,
             maxTrackedEnemies,
             remainingCapacity: remainingHuntCapacity,
             isLimitReached: isHuntLimitReached,
@@ -6629,6 +7011,8 @@ export class AutoCombatService implements OnModuleDestroy {
         lastFindAt: huntingTiming.lastFindAt,
         nextFindAt: huntingTiming.nextFindAt,
         foundEnemiesCount: currentFoundEnemiesCount,
+        availableEnemiesCount: currentTrackedEnemiesRemaining,
+        remainingEnemiesCount: currentTrackedEnemiesRemaining,
         maxTrackedEnemies,
         remainingCapacity: remainingHuntCapacity,
         isLimitReached: isHuntLimitReached,
@@ -6711,7 +7095,39 @@ export class AutoCombatService implements OnModuleDestroy {
     };
   }
 
-  private buildBattleProgressPayload(session: any, currentMob: any) {
+  private buildPreservedTrackedEnemiesViewModel(session: any) {
+    const huntBatch = session.huntBatch ?? null;
+    const preservedTrackedEnemiesCount =
+      session.status === AutoCombatSessionStatus.DEFEATED &&
+      huntBatch?.status === AutoCombatHuntBatchStatus.READY
+        ? (this.getTrackedEnemiesRemaining(session) ?? 0)
+        : 0;
+    const hasPreservedTrackedEnemies = preservedTrackedEnemiesCount > 0;
+
+    return {
+      hasPreservedTrackedEnemies,
+      preservedTrackedEnemiesCount,
+      huntBatchId: hasPreservedTrackedEnemies ? (huntBatch?.id ?? null) : null,
+      sessionId: hasPreservedTrackedEnemies ? (session.id ?? null) : null,
+      mapId: hasPreservedTrackedEnemies ? (session.mapId ?? null) : null,
+      subMapId: hasPreservedTrackedEnemies ? (session.subMapId ?? null) : null,
+      mapName: hasPreservedTrackedEnemies
+        ? (session.map?.name ?? session.subMap?.map?.name ?? null)
+        : null,
+      subMapName: hasPreservedTrackedEnemies
+        ? (session.subMap?.name ?? null)
+        : null,
+      defeatedAt: hasPreservedTrackedEnemies
+        ? (session.finishedAt?.toISOString?.() ?? session.finishedAt ?? null)
+        : null,
+    };
+  }
+
+  private buildBattleProgressPayload(
+    session: any,
+    currentMob: any,
+    now = new Date(),
+  ) {
     if (!currentMob) {
       return null;
     }
@@ -6724,22 +7140,46 @@ export class AutoCombatService implements OnModuleDestroy {
       playerStats: characterStats,
     });
     const estimatedKillTimeSeconds = Math.max(
-      0.001,
-      Number(session.estimatedKillTimeSeconds) ||
-        calculatedTtk.estimatedKillTimeSeconds,
+      1,
+      Math.ceil(
+        Number(session.estimatedKillTimeSeconds) ||
+          calculatedTtk.estimatedKillTimeSeconds,
+      ),
+    );
+    const persistedProgressSeconds = Math.min(
+      estimatedKillTimeSeconds,
+      Math.max(0, Number(session.killProgressSeconds) || 0),
+    );
+    const progressAnchorAt = session.lastProcessedAt
+      ? new Date(session.lastProcessedAt)
+      : now;
+    const safeProgressAnchorAt = Number.isFinite(progressAnchorAt.getTime())
+      ? progressAnchorAt
+      : now;
+    const cycleStartedAt = new Date(
+      safeProgressAnchorAt.getTime() - persistedProgressSeconds * 1000,
     );
     const progressSeconds = Math.min(
       estimatedKillTimeSeconds,
-      Math.max(0, Number(session.killProgressSeconds) || 0),
+      Math.max(0, (now.getTime() - cycleStartedAt.getTime()) / 1000),
     );
     const progressPercent = this.calculatePercent(
       progressSeconds,
       estimatedKillTimeSeconds,
     );
+    const cycleDurationMs = Math.max(
+      1,
+      Math.round(estimatedKillTimeSeconds * 1000),
+    );
 
     return {
       progressSeconds,
       progressPercent,
+      cycleStartedAt: cycleStartedAt.toISOString(),
+      cycleDurationMs,
+      cycleDurationSeconds: estimatedKillTimeSeconds,
+      progressUpdatedAt: now.toISOString(),
+      serverNow: now.toISOString(),
       estimatedKillTimeSeconds,
       baseKillTimeSeconds:
         Number(session.baseKillTimeSeconds) ||
@@ -6760,6 +7200,66 @@ export class AutoCombatService implements OnModuleDestroy {
     };
   }
 
+  private buildMobSurvivalProjection(
+    session: any,
+    mob: any,
+    projectedKills?: number | null,
+  ): AutoCombatMobSurvivalProjection | null {
+    if (!session?.character || !mob) {
+      return null;
+    }
+
+    const projectedKillCount = Math.max(
+      0,
+      Math.floor(Number(projectedKills) || 0),
+    );
+
+    if (projectedKillCount <= 0) {
+      return null;
+    }
+
+    const playerStats = this.calculateCharacterFighterStats(session.character);
+    const mobStats = this.calculateMobFighterStats(mob);
+    const ttk = calculateAutoCombatTtk({
+      mob,
+      playerStats,
+    });
+    const potionState = this.createAutoPotionState(session.character);
+    const potionHealAmount = potionState
+      ? this.calculateHealAmount({
+          maxHp: playerStats.maxHp,
+          healFlat: potionState.healFlat,
+          healPercent: potionState.healPercent,
+        })
+      : 0;
+    const survival = projectAutoCombatSurvival({
+      currentHp: playerStats.hp,
+      maxHp: playerStats.maxHp,
+      playerDefense: playerStats.defense,
+      playerAgility: playerStats.agility,
+      mobAttack: mobStats.attack,
+      mobPrecision: mobStats.precision,
+      mobTechnique: mobStats.technique,
+      projectedKills: projectedKillCount,
+      potion: potionState
+        ? {
+            availableQuantity: potionState.availableQuantity,
+            healAmount: potionHealAmount,
+            hpThresholdPercent: potionState.hpThresholdPercent,
+          }
+        : null,
+    });
+
+    return {
+      ...survival,
+      estimatedKillTimeSeconds: ttk.estimatedKillTimeSeconds,
+      killsPerMinute: ttk.killsPerMinute,
+      difficultyLabel: ttk.difficultyLabel,
+      potionItemId: potionState?.potionItemId ?? null,
+      potionItemName: potionState?.potionItemName ?? null,
+    };
+  }
+
   private buildCurrentMobStatusPayload(
     currentMob: any,
     currentMobHp: number | null,
@@ -6767,6 +7267,7 @@ export class AutoCombatService implements OnModuleDestroy {
     options?: {
       sessionId?: string | null;
       combatIndex?: number | null;
+      survivalProjection?: AutoCombatMobSurvivalProjection | null;
     },
   ) {
     if (!currentMob) {
@@ -6797,11 +7298,16 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMobHp !== null && currentMobMaxHp
           ? this.calculatePercent(currentMobHp, currentMobMaxHp)
           : 0,
+      survivalProjection: options?.survivalProjection ?? null,
     };
   }
 
   private getSessionMobFoundCount(
-    mobSummaries: Array<{ mobId: string; foundCount?: number | null }>,
+    mobSummaries: Array<{
+      mobId: string;
+      foundCount?: number | null;
+      kills?: number | null;
+    }>,
     mobId?: string | null,
   ) {
     if (!mobId) {
@@ -6809,8 +7315,13 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     const summary = mobSummaries.find((item) => item.mobId === mobId);
+    const foundCount = Math.max(
+      0,
+      Math.floor(Number(summary?.foundCount) || 0),
+    );
+    const kills = Math.max(0, Math.floor(Number(summary?.kills) || 0));
 
-    return Math.max(0, Math.floor(Number(summary?.foundCount) || 0));
+    return Math.max(0, foundCount - kills);
   }
 
   private getSessionTrackedMobFoundCount(session: any, mobId?: string | null) {
@@ -6823,7 +7334,12 @@ export class AutoCombatService implements OnModuleDestroy {
     );
 
     if (huntBatchMob) {
-      return Math.max(0, Math.floor(Number(huntBatchMob.foundCount) || 0));
+      return Math.max(
+        0,
+        Math.floor(
+          Number(huntBatchMob.remainingCount ?? huntBatchMob.foundCount) || 0,
+        ),
+      );
     }
 
     return this.getSessionMobFoundCount(session.mobSummaries ?? [], mobId);
@@ -6857,6 +7373,18 @@ export class AutoCombatService implements OnModuleDestroy {
                 entry.mob,
                 entry.mob.hp ?? null,
                 entry.mob.hp ?? null,
+                {
+                  survivalProjection: this.buildMobSurvivalProjection(
+                    session,
+                    entry.mob,
+                    Math.max(
+                      0,
+                      Math.floor(
+                        Number(entry.remainingCount ?? entry.foundCount) || 0,
+                      ),
+                    ),
+                  ),
+                },
               )
             : null,
         }));
@@ -6870,6 +7398,7 @@ export class AutoCombatService implements OnModuleDestroy {
           Math.floor(Number(summary.foundCount) || 0),
         );
         const kills = Math.max(0, Math.floor(Number(summary.kills) || 0));
+        const remainingCount = Math.max(0, foundCount - kills);
 
         return {
           mobId: summary.mobId,
@@ -6881,7 +7410,7 @@ export class AutoCombatService implements OnModuleDestroy {
               ? session.selectedEncounter.id
               : null,
           foundCount,
-          remainingCount: Math.max(0, foundCount - kills),
+          remainingCount,
           weightSnapshot:
             session.selectedEncounter?.mobId === summary.mobId
               ? Math.max(
@@ -6896,6 +7425,13 @@ export class AutoCombatService implements OnModuleDestroy {
                 summary.mob,
                 summary.mob.hp ?? null,
                 summary.mob.hp ?? null,
+                {
+                  survivalProjection: this.buildMobSurvivalProjection(
+                    session,
+                    summary.mob,
+                    remainingCount,
+                  ),
+                },
               )
             : null,
         };
@@ -8150,6 +8686,10 @@ export class AutoCombatService implements OnModuleDestroy {
     enemyInstanceId?: string | null;
     battleProgressSeconds?: number;
     battleProgressPercent?: number;
+    cycleStartedAt?: string | Date | null;
+    cycleDurationMs?: number;
+    cycleDurationSeconds?: number;
+    progressUpdatedAt?: string | Date | null;
     estimatedKillTimeSeconds?: number;
     baseKillTimeSeconds?: number;
     playerOffensivePower?: number;
@@ -8201,6 +8741,35 @@ export class AutoCombatService implements OnModuleDestroy {
     const createdAt = new Date().toISOString();
     const actionStartedAt = this.toOptionalIsoString(params.actionStartedAt);
     const nextActionAt = this.toOptionalIsoString(params.nextActionAt);
+    const progressUpdatedAt =
+      this.toOptionalIsoString(params.progressUpdatedAt) ?? createdAt;
+    const progressUpdatedAtDate = new Date(progressUpdatedAt);
+    const battleProgressSeconds = Math.max(
+      0,
+      Number(params.battleProgressSeconds) || 0,
+    );
+    const estimatedKillTimeSeconds = Math.max(
+      0,
+      Math.ceil(Number(params.estimatedKillTimeSeconds) || 0),
+    );
+    const rawCycleDurationMs =
+      Number(params.cycleDurationMs) ||
+      (params.cycleDurationSeconds
+        ? Number(params.cycleDurationSeconds) * 1000
+        : estimatedKillTimeSeconds > 0
+          ? estimatedKillTimeSeconds * 1000
+          : 0);
+    const cycleDurationMs =
+      rawCycleDurationMs > 0
+        ? Math.max(1, Math.ceil(rawCycleDurationMs / 1000)) * 1000
+        : undefined;
+    const cycleStartedAt =
+      this.toOptionalIsoString(params.cycleStartedAt) ??
+      (cycleDurationMs && Number.isFinite(progressUpdatedAtDate.getTime())
+        ? new Date(
+            progressUpdatedAtDate.getTime() - battleProgressSeconds * 1000,
+          ).toISOString()
+        : null);
 
     return {
       characterId: params.context.characterId,
@@ -8228,7 +8797,14 @@ export class AutoCombatService implements OnModuleDestroy {
       mobHpPercent: this.calculatePercent(mobCurrentHp, params.mobMaxHp),
       battleProgressSeconds: params.battleProgressSeconds,
       battleProgressPercent: params.battleProgressPercent,
-      estimatedKillTimeSeconds: params.estimatedKillTimeSeconds,
+      cycleStartedAt,
+      cycleDurationMs,
+      cycleDurationSeconds: cycleDurationMs
+        ? cycleDurationMs / 1000
+        : undefined,
+      progressUpdatedAt,
+      estimatedKillTimeSeconds:
+        estimatedKillTimeSeconds > 0 ? estimatedKillTimeSeconds : undefined,
       baseKillTimeSeconds: params.baseKillTimeSeconds,
       playerOffensivePower: params.playerOffensivePower,
       monsterRecommendedPower: params.monsterRecommendedPower,
@@ -9087,6 +9663,37 @@ export class AutoCombatService implements OnModuleDestroy {
     };
   }
 
+  private getHuntBatchPendingMobSelection(huntBatch: any) {
+    const pendingMobs = (huntBatch?.mobs ?? []).filter(
+      (entry: any) =>
+        Math.max(0, Math.floor(Number(entry.remainingCount) || 0)) > 0,
+    );
+
+    if (pendingMobs.length <= 0) {
+      return null;
+    }
+
+    const selectedMobId =
+      huntBatch.selectedEncounterMobId ?? huntBatch.selectedEncounter?.mobId;
+    const selectedEncounterId =
+      huntBatch.selectedEncounterId ?? huntBatch.selectedEncounter?.id;
+    const selectedPendingMob =
+      pendingMobs.find((entry: any) => {
+        return (
+          (selectedMobId && entry.mobId === selectedMobId) ||
+          (selectedEncounterId && entry.encounterId === selectedEncounterId)
+        );
+      }) ?? pendingMobs[0];
+
+    return {
+      encounterId:
+        selectedPendingMob.encounterId ??
+        selectedPendingMob.encounter?.id ??
+        null,
+      mobId: selectedPendingMob.mobId ?? selectedPendingMob.mob?.id ?? null,
+    };
+  }
+
   private hasHuntBatchQueue(session: any) {
     return Boolean(session.huntBatch?.id && session.huntBatch?.mobs?.length);
   }
@@ -9130,6 +9737,69 @@ export class AutoCombatService implements OnModuleDestroy {
     );
 
     return Math.max(0, remaining - decrement);
+  }
+
+  private getTrackedEnemiesRemainingAfterResult(
+    session: any,
+    result: RealtimeRoundResult,
+  ): number | null {
+    let remaining = this.getTrackedEnemiesRemaining(session);
+
+    if (remaining === null) {
+      return null;
+    }
+
+    for (const summary of result.mobSummaries.values()) {
+      const mobId = summary.mobId;
+      const safeKills = Math.max(0, Math.floor(Number(summary.kills) || 0));
+
+      if (!mobId || safeKills <= 0) {
+        continue;
+      }
+
+      const huntBatchMob = (session.huntBatch?.mobs ?? []).find(
+        (entry: any) => entry.mobId === mobId,
+      );
+      const decrement = Math.min(
+        safeKills,
+        Math.max(0, Math.floor(Number(huntBatchMob?.remainingCount) || 0)),
+      );
+
+      remaining = Math.max(0, remaining - decrement);
+    }
+
+    return remaining;
+  }
+
+  private buildTerminalHuntBatchUpdateData(
+    session: any,
+    result: RealtimeRoundResult,
+  ): Prisma.AutoCombatHuntBatchUncheckedUpdateManyInput | null {
+    if (result.finalStatus === AutoCombatSessionStatus.ACTIVE) {
+      return null;
+    }
+
+    const terminalAt = result.finishedAt ?? result.newLastProcessedAt;
+    const trackedEnemiesRemaining =
+      this.getTrackedEnemiesRemainingAfterResult(session, result) ?? 0;
+
+    if (
+      result.finalStatus === AutoCombatSessionStatus.DEFEATED &&
+      trackedEnemiesRemaining > 0
+    ) {
+      return {
+        status: AutoCombatHuntBatchStatus.READY,
+        consumedAt: null,
+        cancelledAt: null,
+        lastProcessedAt: terminalAt,
+      };
+    }
+
+    return {
+      status: AutoCombatHuntBatchStatus.CONSUMED,
+      consumedAt: terminalAt,
+      lastProcessedAt: terminalAt,
+    };
   }
 
   private getBattleTargetRemainingAfterKill(

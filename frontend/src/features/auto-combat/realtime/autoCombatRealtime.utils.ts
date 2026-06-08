@@ -1171,6 +1171,21 @@ export function buildSessionStateFromStatus(
       session.battleProgress ?? status?.battleProgress,
       safeFallback?.battleProgress,
     ),
+    hasPreservedTrackedEnemies:
+      session.hasPreservedTrackedEnemies ??
+      status?.hasPreservedTrackedEnemies ??
+      safeFallback?.hasPreservedTrackedEnemies ??
+      null,
+    preservedTrackedEnemiesCount:
+      session.preservedTrackedEnemiesCount ??
+      status?.preservedTrackedEnemiesCount ??
+      safeFallback?.preservedTrackedEnemiesCount ??
+      null,
+    autoCombatRecovery:
+      session.autoCombatRecovery ??
+      status?.autoCombatRecovery ??
+      safeFallback?.autoCombatRecovery ??
+      null,
     snapshotSequence:
       session.snapshotSequence ??
       status?.snapshotSequence ??
@@ -1320,6 +1335,11 @@ export function buildMobStateFromRealtimeEvent(
     {
       progressSeconds: event.battleProgressSeconds,
       progressPercent: event.battleProgressPercent,
+      cycleStartedAt: event.cycleStartedAt,
+      cycleDurationMs: event.cycleDurationMs,
+      cycleDurationSeconds: event.cycleDurationSeconds,
+      progressUpdatedAt: event.progressUpdatedAt ?? event.serverTime,
+      serverNow: event.serverTime,
       estimatedKillTimeSeconds: event.estimatedKillTimeSeconds,
       baseKillTimeSeconds: event.baseKillTimeSeconds,
       playerOffensivePower: event.playerOffensivePower,
@@ -1376,10 +1396,33 @@ function normalizeBattleProgress(
       ? calculatePercent(progressSeconds, estimatedKillTimeSeconds)
       : getOptionalNumber(fallback?.progressPercent)) ??
     null;
+  const explicitCycleDurationSeconds = getOptionalNumber(
+    value?.cycleDurationSeconds,
+  );
+  const cycleDurationMs =
+    getOptionalNumber(value?.cycleDurationMs) ??
+    (explicitCycleDurationSeconds !== undefined
+      ? explicitCycleDurationSeconds * 1000
+      : undefined) ??
+    (estimatedKillTimeSeconds !== null
+      ? estimatedKillTimeSeconds * 1000
+      : undefined) ??
+    getOptionalNumber(fallback?.cycleDurationMs) ??
+    null;
 
   return {
     progressSeconds,
     progressPercent,
+    cycleStartedAt: value?.cycleStartedAt ?? fallback?.cycleStartedAt ?? null,
+    cycleDurationMs,
+    cycleDurationSeconds:
+      explicitCycleDurationSeconds ??
+      (cycleDurationMs !== null ? cycleDurationMs / 1000 : undefined) ??
+      getOptionalNumber(fallback?.cycleDurationSeconds) ??
+      null,
+    progressUpdatedAt:
+      value?.progressUpdatedAt ?? fallback?.progressUpdatedAt ?? null,
+    serverNow: value?.serverNow ?? fallback?.serverNow ?? null,
     estimatedKillTimeSeconds,
     baseKillTimeSeconds:
       getOptionalNumber(value?.baseKillTimeSeconds) ??
