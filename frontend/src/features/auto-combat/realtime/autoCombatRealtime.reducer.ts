@@ -1312,7 +1312,7 @@ function getEventCharacterCurrentHp(event: AutoCombatRealtimeEvent) {
 }
 
 function canRealtimeEventIncreaseCharacterHp(eventType: string | null) {
-  return eventType === 'POTION_USED' || eventType === 'AUTO_REST';
+  return eventType === 'POTION_USED';
 }
 
 function shouldRejectRollbackRealtimeEvent(

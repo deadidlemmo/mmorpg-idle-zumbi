@@ -7,7 +7,165 @@ type MaterialSeedDataWithGatheringProgression = MaterialSeedData & {
   baseGatheringRatePerHour?: number | null;
 };
 
-export const starterEquipmentDefinitions: EquipmentSeedData[] = [
+type EquipmentStatKey =
+  | 'strengthBonus'
+  | 'vitalityBonus'
+  | 'agilityBonus'
+  | 'precisionBonus'
+  | 'techniqueBonus'
+  | 'willpowerBonus';
+
+type EquipmentStatWeights = Record<EquipmentStatKey, number>;
+
+const EQUIPMENT_STAT_KEYS: EquipmentStatKey[] = [
+  'strengthBonus',
+  'vitalityBonus',
+  'agilityBonus',
+  'precisionBonus',
+  'techniqueBonus',
+  'willpowerBonus',
+];
+
+const BALANCED_EQUIPMENT_SLOT_POINTS_PER_TIER: Partial<
+  Record<ItemSlot, number>
+> = {
+  [ItemSlot.MAIN_HAND]: 6,
+  [ItemSlot.OFF_HAND]: 5,
+  [ItemSlot.HEAD]: 4,
+  [ItemSlot.ARMOR]: 6,
+  [ItemSlot.PANTS]: 5,
+  [ItemSlot.BOOTS]: 4,
+};
+
+const BALANCED_STARTER_ITEM_POINTS = 2;
+
+const BALANCED_EQUIPMENT_WEIGHTS_BY_CLASS: Record<
+  string,
+  EquipmentStatWeights
+> = {
+  lutador: {
+    strengthBonus: 0.32,
+    vitalityBonus: 0.34,
+    agilityBonus: 0.06,
+    precisionBonus: 0.04,
+    techniqueBonus: 0.1,
+    willpowerBonus: 0.14,
+  },
+  assassino: {
+    strengthBonus: 0.08,
+    vitalityBonus: 0.08,
+    agilityBonus: 0.34,
+    precisionBonus: 0.32,
+    techniqueBonus: 0.14,
+    willpowerBonus: 0.04,
+  },
+  atirador: {
+    strengthBonus: 0.08,
+    vitalityBonus: 0.08,
+    agilityBonus: 0.24,
+    precisionBonus: 0.36,
+    techniqueBonus: 0.18,
+    willpowerBonus: 0.06,
+  },
+  medico: {
+    strengthBonus: 0.04,
+    vitalityBonus: 0.18,
+    agilityBonus: 0.04,
+    precisionBonus: 0.14,
+    techniqueBonus: 0.32,
+    willpowerBonus: 0.28,
+  },
+};
+
+function normalizeClassKey(className: string): string {
+  return className
+    .toLocaleLowerCase('pt-BR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function createEmptyEquipmentStats(): Record<EquipmentStatKey, number> {
+  return EQUIPMENT_STAT_KEYS.reduce(
+    (stats, statKey) => ({
+      ...stats,
+      [statKey]: 0,
+    }),
+    {} as Record<EquipmentStatKey, number>,
+  );
+}
+
+function distributeEquipmentStatPoints(
+  totalPoints: number,
+  weights: EquipmentStatWeights,
+): Record<EquipmentStatKey, number> {
+  const entries = EQUIPMENT_STAT_KEYS.map((statKey) => {
+    const exactPoints = totalPoints * weights[statKey];
+
+    return {
+      statKey,
+      points: Math.floor(exactPoints),
+      remainder: exactPoints - Math.floor(exactPoints),
+      weight: weights[statKey],
+    };
+  });
+  let remainingPoints =
+    totalPoints - entries.reduce((sum, entry) => sum + entry.points, 0);
+
+  entries
+    .sort(
+      (left, right) =>
+        right.remainder - left.remainder || right.weight - left.weight,
+    )
+    .forEach((entry) => {
+      if (remainingPoints <= 0) {
+        return;
+      }
+
+      entry.points += 1;
+      remainingPoints -= 1;
+    });
+
+  return entries.reduce(
+    (stats, entry) => ({
+      ...stats,
+      [entry.statKey]: entry.points,
+    }),
+    createEmptyEquipmentStats(),
+  );
+}
+
+function getEquipmentStatBudget(item: EquipmentSeedData): number {
+  if (item.tier <= 0) {
+    return BALANCED_STARTER_ITEM_POINTS;
+  }
+
+  return item.tier * (BALANCED_EQUIPMENT_SLOT_POINTS_PER_TIER[item.slot] ?? 0);
+}
+
+function normalizeEquipmentItemStats(
+  item: EquipmentSeedData,
+): EquipmentSeedData {
+  const classKey = normalizeClassKey(item.className);
+  const weights = BALANCED_EQUIPMENT_WEIGHTS_BY_CLASS[classKey];
+
+  if (!weights) {
+    return item;
+  }
+
+  return {
+    ...item,
+    ...createEmptyEquipmentStats(),
+    ...distributeEquipmentStatPoints(getEquipmentStatBudget(item), weights),
+  };
+}
+
+function normalizeEquipmentStats(
+  definitions: EquipmentSeedData[],
+): EquipmentSeedData[] {
+  return definitions.map(normalizeEquipmentItemStats);
+}
+
+const rawStarterEquipmentDefinitions: EquipmentSeedData[] = [
   {
     name: 'Porrete de Aprendiz',
     description: 'Arma inicial de Tier 0 para Lutador.',
@@ -8384,7 +8542,7 @@ export const materialDefinitions: MaterialSeedDataWithGatheringProgression[] = [
   },
 ];
 
-export const equipmentDefinitions: EquipmentSeedData[] = [
+const rawEquipmentDefinitions: EquipmentSeedData[] = [
   {
     name: 'Armadura de Retalhos Pesados',
     description:
@@ -13408,3 +13566,10 @@ export const equipmentDefinitions: EquipmentSeedData[] = [
     isCraftable: true,
   },
 ];
+
+export const starterEquipmentDefinitions: EquipmentSeedData[] =
+  normalizeEquipmentStats(rawStarterEquipmentDefinitions);
+
+export const equipmentDefinitions: EquipmentSeedData[] = normalizeEquipmentStats(
+  rawEquipmentDefinitions,
+);

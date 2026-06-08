@@ -71,7 +71,6 @@ export interface DashboardTopBarActivityOverride {
   } | null;
   badge?: string | null;
   titleText?: string;
-  isResting?: boolean;
   isHunting?: boolean;
   isBattle?: boolean;
 }
@@ -880,42 +879,6 @@ function getAutoCombatHuntingProgress(
   };
 }
 
-function getAutoCombatRestSnapshot(autoCombatState: unknown): {
-  healedAmount: number | null;
-  hpPercent: number | null;
-} | null {
-  const latestEvent = getLatestAutoCombatEvent(autoCombatState);
-  const visual = getRecordField(autoCombatState, 'visual');
-
-  const eventType = normalizeStatus(
-    getStringField(latestEvent, 'type') ??
-      getStringField(visual, 'lastEventType'),
-  );
-
-  if (eventType !== 'AUTO_REST') return null;
-
-  const characterCurrentHp =
-    getNumberField(latestEvent, 'characterCurrentHp') ??
-    getNumberField(visual, 'characterCurrentHp');
-  const characterMaxHp =
-    getNumberField(latestEvent, 'characterMaxHp') ??
-    getNumberField(visual, 'characterMaxHp');
-  const explicitHpPercent =
-    getNumberField(latestEvent, 'characterHpPercent') ??
-    getNumberField(visual, 'characterHpPercent');
-  const hpPercent =
-    explicitHpPercent !== null
-      ? clampPercent(explicitHpPercent)
-      : characterMaxHp
-        ? calculateHpPercent(characterCurrentHp, characterMaxHp)
-        : null;
-
-  return {
-    healedAmount: getNumberField(latestEvent, 'healedAmount'),
-    hpPercent,
-  };
-}
-
 function isAutoCombatActive(autoCombatState: unknown): boolean {
   const status = getRecordField(autoCombatState, 'status');
   const session = getRecordField(autoCombatState, 'session');
@@ -984,32 +947,6 @@ function buildAutoCombatActivity(
       badge: formatNumber(foundEnemiesCount),
       titleText: `AutoCombat em caca - ${foundLabel}.`,
       isHunting: true,
-    };
-  }
-
-  const restSnapshot = getAutoCombatRestSnapshot(autoCombatState);
-
-  if (restSnapshot) {
-    const healedAmount =
-      restSnapshot.healedAmount !== null
-        ? Math.max(0, Math.floor(restSnapshot.healedAmount))
-        : null;
-
-    return {
-      kind: 'auto-combat',
-      title: 'Descanso automático',
-      subtitle:
-        healedAmount && healedAmount > 0
-          ? `+${formatNumber(healedAmount)} HP recuperado`
-          : 'Recuperando HP',
-      icon: 'HP',
-      progressPercent: restSnapshot.hpPercent,
-      badge:
-        healedAmount && healedAmount > 0
-          ? `+${formatNumber(healedAmount)}`
-          : null,
-      titleText: 'Descanso automático em andamento - recuperando HP.',
-      isResting: true,
     };
   }
 
@@ -1536,7 +1473,6 @@ export function DashboardTopBar({
   const rootClassName = [
     'dashboard-topbar',
     `dashboard-topbar--${activity.kind}`,
-    activity.isResting ? 'dashboard-topbar--auto-resting' : '',
     activity.isHunting ? 'dashboard-topbar--auto-hunting' : '',
     activity.isBattle ? 'dashboard-topbar--auto-battle' : '',
     shouldSnapActivityProgress ? 'dashboard-topbar--activity-progress-snap' : '',

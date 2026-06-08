@@ -29,7 +29,12 @@
     "prisma:reset-characters:apprentice": "node node_modules/tsx/dist/cli.mjs prisma/reset-characters-apprentice.ts",
     "test:grant-lutador-t1": "tsx prisma/grant-lutador-tier1-items.ts",
     "prisma:cleanup-items": "node node_modules/tsx/dist/cli.mjs prisma/cleanup-old-items.ts",
-    "prisma:cleanup-items:apply": "node node_modules/tsx/dist/cli.mjs prisma/cleanup-old-items.ts --apply"
+    "prisma:cleanup-items:apply": "node node_modules/tsx/dist/cli.mjs prisma/cleanup-old-items.ts --apply",
+    "balance:auto-combat": "node node_modules/tsx/dist/cli.mjs scripts/simulate-auto-combat-balance.ts",
+    "balance:auto-combat:validate": "node node_modules/tsx/dist/cli.mjs scripts/validate-auto-combat-balance.ts",
+    "balance:auto-combat:report": "node node_modules/tsx/dist/cli.mjs scripts/export-auto-combat-balance-report.ts",
+    "items:stats:audit": "node node_modules/tsx/dist/cli.mjs scripts/audit-equipment-stats-sync.ts",
+    "test:auto-combat:fixture": "node node_modules/tsx/dist/cli.mjs scripts/prepare-auto-combat-fixture.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

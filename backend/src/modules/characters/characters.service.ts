@@ -16,8 +16,6 @@ import {
   WorldBossEventStatus,
 } from '@prisma/client';
 import {
-  AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
-  AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
   AUTO_COMBAT_ROUND_DURATION_SECONDS,
 } from '../../common/config/auto-combat.config';
 import {
@@ -379,12 +377,9 @@ export class CharactersService {
             create: {
               enabled: true,
               potionItemId: starterPotion.id,
-              hpThresholdPercent: AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+              hpThresholdPercent: 35,
               useInManualCombat: true,
               useInAutoCombat: true,
-              autoRestEnabled: true,
-              autoRestStartHpPercent: AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
-              autoRestStopHpPercent: AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
             },
           },
 
@@ -2111,13 +2106,6 @@ export class CharactersService {
       hpThresholdPercent: config.hpThresholdPercent,
       useInManualCombat: config.useInManualCombat,
       useInAutoCombat: config.useInAutoCombat,
-      autoRestEnabled: config.autoRestEnabled ?? true,
-      autoRestStartHpPercent:
-        config.autoRestStartHpPercent ??
-        AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
-      autoRestStopHpPercent:
-        config.autoRestStopHpPercent ??
-        AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
       potion,
       potionItem: potion,
       summary: {
@@ -2145,16 +2133,6 @@ export class CharactersService {
         triggerText: config.enabled
           ? `Usar automaticamente quando HP estiver em ${config.hpThresholdPercent}% ou menos.`
           : 'Uso automático desativado.',
-        restText:
-          (config.autoRestEnabled ?? true)
-            ? `Descansar entre ameaças até ${
-                config.autoRestStopHpPercent ??
-                AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT
-              }% quando HP estiver abaixo de ${
-                config.autoRestStartHpPercent ??
-                AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT
-              }%.`
-            : 'Descanso automático desativado.',
       },
     };
   }

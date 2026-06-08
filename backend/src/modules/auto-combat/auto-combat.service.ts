@@ -15,11 +15,19 @@ import {
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import {
+  AUTO_COMBAT_HUNTING_BASE_MAX_TRACKED_ENEMIES,
+  AUTO_COMBAT_HUNTING_BASE_SECONDS_PER_ENEMY,
+  AUTO_COMBAT_HUNTING_LEVEL_CAP,
+  AUTO_COMBAT_HUNTING_MAX_EVENTS_PER_PROCESS,
+  AUTO_COMBAT_HUNTING_MAX_TRACKED_LINEAR_GAIN,
+  AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_EXPONENT,
+  AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_SCALE,
+  AUTO_COMBAT_HUNTING_XP_BASE_TO_NEXT_LEVEL,
+  AUTO_COMBAT_HUNTING_XP_LINEAR_SCALE,
+  AUTO_COMBAT_HUNTING_XP_PER_ENEMY,
+  AUTO_COMBAT_HUNTING_XP_POWER_EXPONENT,
+  AUTO_COMBAT_HUNTING_XP_POWER_SCALE,
   AUTO_COMBAT_MAX_COMBATS_PER_PROCESS,
-  AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
-  AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
-  AUTO_COMBAT_REST_HEAL_PERCENT_PER_SECOND,
-  AUTO_COMBAT_ROUND_DURATION_SECONDS,
   AUTO_COMBAT_TTK_PROGRESS_UPDATES_PER_SECOND,
 } from '../../common/config/auto-combat.config';
 import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
@@ -39,15 +47,22 @@ import {
   getLevelProgress,
 } from '../../common/utils/level.util';
 import {
-  applyPremiumXpBonus,
   calculatePremiumXpBreakdown,
   isPremiumActive,
 } from '../../common/utils/membership.util';
 import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
+  type PrimaryStats,
 } from '../../common/utils/stats.util';
 import { calculateAutoCombatTtk } from '../../common/utils/auto-combat-ttk.util';
+import { getAutoCombatHuntingSecondsPerEnemy } from '../../common/utils/auto-combat-hunting.util';
+import {
+  applyAutoCombatIncomingDamageMultiplier,
+  applyAutoCombatPotionHealMultiplier,
+  applyAutoCombatXpEfficiency,
+  scaleAutoCombatGatheringBonus,
+} from '../../common/utils/auto-combat-balance.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AutoCombatGateway } from './auto-combat.gateway';
 import {
@@ -73,20 +88,6 @@ const AUTO_COMBAT_RECENT_EVENTS_LIMIT = 20;
 const AUTO_COMBAT_MAX_REALTIME_EVENTS_TO_EMIT = 20;
 const AUTO_COMBAT_STATUS_LOCK_WAIT_MS = 3000;
 const AUTO_COMBAT_STATUS_LOCK_POLL_MS = 50;
-const AUTO_COMBAT_HUNTING_LEVEL_CAP = 50;
-const AUTO_COMBAT_HUNTING_BASE_SECONDS_PER_ENEMY = 15;
-const AUTO_COMBAT_HUNTING_MIN_SECONDS_PER_ENEMY = 6;
-const AUTO_COMBAT_HUNTING_SPEED_GAIN_PER_LEVEL = 0.024;
-const AUTO_COMBAT_HUNTING_XP_PER_ENEMY = 5;
-const AUTO_COMBAT_HUNTING_XP_BASE_TO_NEXT_LEVEL = 1400;
-const AUTO_COMBAT_HUNTING_XP_LINEAR_SCALE = 340;
-const AUTO_COMBAT_HUNTING_XP_POWER_SCALE = 78;
-const AUTO_COMBAT_HUNTING_XP_POWER_EXPONENT = 2.22;
-const AUTO_COMBAT_HUNTING_MAX_EVENTS_PER_PROCESS = 500;
-const AUTO_COMBAT_HUNTING_BASE_MAX_TRACKED_ENEMIES = 600;
-const AUTO_COMBAT_HUNTING_MAX_TRACKED_LINEAR_GAIN = 50;
-const AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_SCALE = 10;
-const AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_EXPONENT = 1.25;
 
 const AUTO_COMBAT_CONCURRENT_PROCESSING_MESSAGE =
   'Processamento abortado: outra execução já avançou esta sessão.';
@@ -112,13 +113,13 @@ type AutoCombatRealtimePhase =
   | 'MOB_TURN'
   | 'MOB_DEFEATED'
   | 'PLAYER_DEFEATED'
-  | 'RESTING'
   | 'FINISHED'
   | 'WAITING_NEXT_ROUND'
   | 'IDLE';
 
 type FighterStats = {
   name: string;
+  className?: string | null;
   hp: number;
   maxHp: number;
   attack: number;
@@ -179,7 +180,6 @@ type AutoCombatRealtimeEventType =
   | 'MOB_HIT'
   | 'DODGE'
   | 'POTION_USED'
-  | 'AUTO_REST'
   | 'MOB_DEFEATED'
   | 'PLAYER_DEFEATED';
 
@@ -283,8 +283,6 @@ type AutoCombatRealtimeEvent = {
   potionQuantityAfter?: number | null;
   potionQuantityRemaining?: number | null;
   potionUsedQuantity?: number | null;
-  restStartHpPercent?: number | null;
-  restStopHpPercent?: number | null;
 
   huntCycleKey?: string | null;
   huntSequence?: number | null;
@@ -364,13 +362,6 @@ type AutoPotionUseResult = {
   quantityBefore: number | null;
   quantityAfter: number | null;
   usedQuantity: number | null;
-};
-
-type AutoRestState = {
-  enabled: boolean;
-  startHpPercent: number;
-  stopHpPercent: number;
-  healPercentPerSecond: number;
 };
 
 type LootAccumulator = Map<
@@ -2985,30 +2976,6 @@ export class AutoCombatService implements OnModuleDestroy {
             break;
           }
 
-          const restResult = this.resolveAutoRestAction(
-            currentSession,
-            nextLastProcessedAt,
-            effectiveRoundDurationSeconds,
-          );
-
-          if (restResult) {
-            await this.persistRealtimeRoundResult(currentSession, restResult);
-
-            aggregateResult = this.mergeRealtimeRoundResults(
-              aggregateResult,
-              restResult,
-            );
-            aggregateResult.actionsProcessed =
-              (aggregateResult.actionsProcessed ?? 0) + 1;
-
-            currentSession = this.applyRealtimeRoundResultToSession(
-              currentSession,
-              restResult,
-            );
-
-            continue;
-          }
-
           const spawnResult = await this.spawnNextMobForSession(
             currentSession,
             {
@@ -3898,123 +3865,6 @@ export class AutoCombatService implements OnModuleDestroy {
     };
   }
 
-  private resolveAutoRestAction(
-    session: any,
-    nextLastProcessedAt: Date,
-    processedSeconds: number,
-  ): RealtimeRoundResult | null {
-    const restState = this.createAutoRestState(session.character);
-
-    if (!restState.enabled) {
-      return null;
-    }
-
-    const equipmentItems = this.getEquipmentItems(session.character);
-    const gatheringBonus = this.getGatheringBonus(session.character);
-    const stats = calculateFullStats(
-      session.character.class,
-      equipmentItems,
-      session.character.level,
-      gatheringBonus,
-    );
-
-    const maxHp = Math.max(1, stats.derivedCombatStats.maxHp);
-    const initialHp = this.clampHp(session.character.currentHp ?? maxHp, maxHp);
-
-    if (initialHp <= 0) {
-      return null;
-    }
-
-    const stopHp = Math.ceil((maxHp * restState.stopHpPercent) / 100);
-    const startHp = Math.floor((maxHp * restState.startHpPercent) / 100);
-    const isContinuingRest =
-      this.wasLastSessionEventAutoRest(session) && initialHp < stopHp;
-    const shouldStartRest = initialHp <= startHp;
-
-    if (initialHp >= stopHp || (!shouldStartRest && !isContinuingRest)) {
-      return null;
-    }
-
-    const healPerSecond = Math.max(0.01, restState.healPercentPerSecond);
-    const rawHeal = Math.floor(
-      (maxHp * healPerSecond * processedSeconds) / 100,
-    );
-    const healedAmount = Math.min(stopHp - initialHp, Math.max(1, rawHeal));
-    const finalCurrentHp = this.clampHp(initialHp + healedAmount, maxHp);
-
-    if (finalCurrentHp <= initialHp) {
-      return null;
-    }
-
-    const baseResult = this.buildBaseRealtimeProcessingResult(session);
-    const hpChange = finalCurrentHp - baseResult.initialHp;
-    const hpLostNet = Math.max(0, baseResult.initialHp - finalCurrentHp);
-    const hpRecoveredNet = Math.max(0, finalCurrentHp - baseResult.initialHp);
-    const currentCombatIndex = Math.max(1, session.currentCombatIndex ?? 1);
-    const restTurnId = `${session.id}:${currentCombatIndex}:0:1`;
-    const restCreatedAt = new Date().toISOString();
-
-    const event: AutoCombatRealtimeEvent = {
-      characterId: session.characterId,
-      sessionId: session.id,
-      turnId: restTurnId,
-      actionId: `${restTurnId}:AUTO_REST`,
-      actionOrder: 1,
-      phase: 'RESTING',
-      nextActor: 'PLAYER',
-      serverTime: restCreatedAt,
-      actionStartedAt: nextLastProcessedAt.toISOString(),
-      nextActionAt: this.addSeconds(
-        nextLastProcessedAt,
-        this.getEffectiveRoundDurationSeconds(session.roundDurationSeconds),
-      ).toISOString(),
-      type: 'AUTO_REST',
-      message: `${session.character.name} descansou e recuperou ${healedAmount} HP.`,
-      characterCurrentHp: finalCurrentHp,
-      characterMaxHp: maxHp,
-      characterHpPercent: this.calculatePercent(finalCurrentHp, maxHp),
-      healedAmount,
-      hpBefore: initialHp,
-      hpAfter: finalCurrentHp,
-      targetHpBefore: initialHp,
-      targetHpAfter: finalCurrentHp,
-      characterHpBefore: initialHp,
-      characterHpAfter: finalCurrentHp,
-      restStartHpPercent: restState.startHpPercent,
-      restStopHpPercent: restState.stopHpPercent,
-      round: 0,
-      combatIndex: currentCombatIndex,
-      actor: 'SYSTEM',
-      target: 'PLAYER',
-      createdAt: restCreatedAt,
-    };
-
-    return {
-      ...baseResult,
-      processedSeconds,
-      initialHp,
-      finalCurrentHp,
-      initialMaxHp: maxHp,
-      finalMaxHp: maxHp,
-      hpLost: hpLostNet,
-      healingReceived: healedAmount,
-      healingFromRest: healedAmount,
-      totalHealingReceived: healedAmount,
-      hpChange,
-      hpLostNet,
-      hpRecoveredNet,
-      wasHealed: true,
-      finalStatus: AutoCombatSessionStatus.ACTIVE,
-      newLastProcessedAt: nextLastProcessedAt,
-      currentMobId: null,
-      currentMobHp: null,
-      currentMobMaxHp: null,
-      currentRound: 0,
-      currentCombatIndex,
-      events: [event],
-    };
-  }
-
   private appendRealtimeEventsWithLimit(
     currentEvents: AutoCombatRealtimeEvent[],
     newEvents: AutoCombatRealtimeEvent[],
@@ -4360,23 +4210,6 @@ export class AutoCombatService implements OnModuleDestroy {
     return nextSession;
   }
 
-  private wasLastSessionEventAutoRest(session: any) {
-    const events = Array.isArray(session.events) ? session.events : [];
-
-    if (events.length <= 0) {
-      return false;
-    }
-
-    const [latestEvent] = [...events].sort((leftEvent, rightEvent) => {
-      const leftSequence = Number(leftEvent?.sequence ?? 0);
-      const rightSequence = Number(rightEvent?.sequence ?? 0);
-
-      return rightSequence - leftSequence;
-    });
-
-    return String(latestEvent?.type ?? '').toUpperCase() === 'AUTO_REST';
-  }
-
   private applyPotionUsageToInventoryItems(
     inventoryItems: any[],
     result: RealtimeRoundResult,
@@ -4488,12 +4321,20 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const equipmentItems = this.getEquipmentItems(session.character);
     const gatheringBonus = this.getGatheringBonus(session.character);
+    const combatGatheringBonus = scaleAutoCombatGatheringBonus(gatheringBonus);
     const fullStats = calculateFullStats(
       session.character.class,
       equipmentItems,
       session.character.level,
       gatheringBonus,
     );
+    const combatStats = calculateFullStats(
+      session.character.class,
+      equipmentItems,
+      session.character.level,
+      combatGatheringBonus,
+    );
+    const className = session.character.class?.name ?? null;
     const initialLevel = session.character.level;
     const initialXp = session.character.xp;
     const initialMaxHp = fullStats.derivedCombatStats.maxHp;
@@ -4503,14 +4344,15 @@ export class AutoCombatService implements OnModuleDestroy {
     );
     const playerStats: FighterStats = {
       name: session.character.name,
+      className,
       hp: initialHp,
       maxHp: initialMaxHp,
-      attack: fullStats.derivedCombatStats.attack,
-      defense: fullStats.derivedCombatStats.defense,
-      speed: fullStats.derivedCombatStats.speed,
-      precision: fullStats.totalPrimaryStats.precision,
-      technique: fullStats.totalPrimaryStats.technique,
-      agility: fullStats.totalPrimaryStats.agility,
+      attack: combatStats.derivedCombatStats.attack,
+      defense: combatStats.derivedCombatStats.defense,
+      speed: combatStats.derivedCombatStats.speed,
+      precision: combatStats.totalPrimaryStats.precision,
+      technique: combatStats.totalPrimaryStats.technique,
+      agility: combatStats.totalPrimaryStats.agility,
     };
     const ttk = calculateAutoCombatTtk({
       mob: currentMob,
@@ -4601,11 +4443,42 @@ export class AutoCombatService implements OnModuleDestroy {
     let dodgesByPlayer = 0;
 
     const mobStats: FighterStats = {
-      ...this.calculateMobFighterStats(currentMob),
+      ...this.calculateAutoCombatMobFighterStats(currentMob, className),
       hp: currentMob.hp,
       maxHp: currentMob.hp,
     };
     const autoPotionState = this.createAutoPotionState(session.character);
+    const projectedPotionHealAmount = autoPotionState
+      ? applyAutoCombatPotionHealMultiplier({
+          healAmount: this.calculateHealAmount({
+            maxHp: initialMaxHp,
+            healFlat: autoPotionState.healFlat,
+            healPercent: autoPotionState.healPercent,
+          }),
+          className,
+        })
+      : 0;
+    const xpRiskProjection =
+      plannedKills > 0
+        ? projectAutoCombatSurvival({
+            currentHp: initialHp,
+            maxHp: initialMaxHp,
+            playerDefense: playerStats.defense,
+            playerAgility: playerStats.agility,
+            mobAttack: mobStats.attack,
+            mobPrecision: mobStats.precision,
+            mobTechnique: mobStats.technique,
+            projectedKills: plannedKills,
+            potion: autoPotionState
+              ? {
+                  availableQuantity: autoPotionState.availableQuantity,
+                  healAmount: projectedPotionHealAmount,
+                  hpThresholdPercent: autoPotionState.hpThresholdPercent,
+                }
+              : null,
+          })
+        : null;
+    const xpRiskLevel = xpRiskProjection?.riskLevel ?? 'LOW';
     let lastPotionQuantityBefore: number | null = null;
     let lastPotionQuantityAfter: number | null = null;
     let lastPotionUsedQuantity: number | null = null;
@@ -4629,6 +4502,7 @@ export class AutoCombatService implements OnModuleDestroy {
         maxHp: simulatedMaxHp,
         autoPotionState,
         potionUsedThisCombat: false,
+        className,
       });
 
       if (!potionResult.used) {
@@ -4699,7 +4573,7 @@ export class AutoCombatService implements OnModuleDestroy {
           mobHpAfter: 0,
           characterHpBefore: playerHpBeforePotion,
           characterHpAfter: playerHp,
-          phase: 'RESTING',
+          phase: 'WAITING_NEXT_ROUND',
           nextActor: 'SYSTEM',
           nextActionAt: effectiveNow,
           totalCombats: totalCombatsBeforeRound + killsResolved,
@@ -4727,8 +4601,13 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMob.xpReward,
         penalty.xpMultiplier,
       );
+      const balancedBaseXpReward = applyAutoCombatXpEfficiency({
+        baseXp: baseXpReward,
+        className,
+        riskLevel: xpRiskLevel,
+      });
       const xpBreakdown = calculatePremiumXpBreakdown(
-        baseXpReward,
+        balancedBaseXpReward,
         premiumActive,
       );
       const finalXpReward = xpBreakdown.totalXp;
@@ -4757,6 +4636,12 @@ export class AutoCombatService implements OnModuleDestroy {
           simulatedLevel,
           gatheringBonus,
         );
+        const newCombatStatsAfterLevelUp = calculateFullStats(
+          session.character.class,
+          equipmentItems,
+          simulatedLevel,
+          combatGatheringBonus,
+        );
         const newMaxHpAfterLevelUp =
           newStatsAfterLevelUp.derivedCombatStats.maxHp;
         const hpBeforeLevelUpRecovery = playerHp;
@@ -4770,6 +4655,17 @@ export class AutoCombatService implements OnModuleDestroy {
         simulatedMaxHp = newMaxHpAfterLevelUp;
         playerStats.maxHp = simulatedMaxHp;
         playerStats.hp = playerHp;
+        playerStats.attack =
+          newCombatStatsAfterLevelUp.derivedCombatStats.attack;
+        playerStats.defense =
+          newCombatStatsAfterLevelUp.derivedCombatStats.defense;
+        playerStats.speed = newCombatStatsAfterLevelUp.derivedCombatStats.speed;
+        playerStats.precision =
+          newCombatStatsAfterLevelUp.totalPrimaryStats.precision;
+        playerStats.technique =
+          newCombatStatsAfterLevelUp.totalPrimaryStats.technique;
+        playerStats.agility =
+          newCombatStatsAfterLevelUp.totalPrimaryStats.agility;
         healingFromLevelUp += Math.max(0, playerHp - hpBeforeLevelUpRecovery);
       }
 
@@ -5165,12 +5061,20 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const equipmentItems = this.getEquipmentItems(session.character);
     const gatheringBonus = this.getGatheringBonus(session.character);
+    const combatGatheringBonus = scaleAutoCombatGatheringBonus(gatheringBonus);
+    const className = session.character.class?.name ?? null;
 
     const initialStats = calculateFullStats(
       session.character.class,
       equipmentItems,
       session.character.level,
       gatheringBonus,
+    );
+    const initialCombatStats = calculateFullStats(
+      session.character.class,
+      equipmentItems,
+      session.character.level,
+      combatGatheringBonus,
     );
 
     const initialLevel = session.character.level;
@@ -5244,18 +5148,19 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const playerStats: FighterStats = {
       name: session.character.name,
+      className,
       hp: playerHp,
       maxHp: simulatedMaxHp,
-      attack: initialStats.derivedCombatStats.attack,
-      defense: initialStats.derivedCombatStats.defense,
-      speed: initialStats.derivedCombatStats.speed,
-      precision: initialStats.totalPrimaryStats.precision,
-      technique: initialStats.totalPrimaryStats.technique,
-      agility: initialStats.totalPrimaryStats.agility,
+      attack: initialCombatStats.derivedCombatStats.attack,
+      defense: initialCombatStats.derivedCombatStats.defense,
+      speed: initialCombatStats.derivedCombatStats.speed,
+      precision: initialCombatStats.totalPrimaryStats.precision,
+      technique: initialCombatStats.totalPrimaryStats.technique,
+      agility: initialCombatStats.totalPrimaryStats.agility,
     };
 
     const mobStats: FighterStats = {
-      ...this.calculateMobFighterStats(currentMob),
+      ...this.calculateAutoCombatMobFighterStats(currentMob, className),
       hp: mobHp,
       maxHp: currentMobMaxHp,
     };
@@ -5419,6 +5324,7 @@ export class AutoCombatService implements OnModuleDestroy {
         maxHp: simulatedMaxHp,
         autoPotionState,
         potionUsedThisCombat,
+        className,
       });
 
       if (!potionResult.used) {
@@ -5457,7 +5363,7 @@ export class AutoCombatService implements OnModuleDestroy {
         characterHpAfter: playerHp,
         mobHpBefore: mobHp,
         mobHpAfter: mobHp,
-        phase: 'RESTING',
+        phase: 'PLAYER_TURN',
         nextActor: 'PLAYER',
         totalCombats: totalCombatsBeforeRound,
         totalRounds: totalRoundsAfterRound,
@@ -5710,8 +5616,13 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMob.xpReward,
         penalty.xpMultiplier,
       );
+      const balancedBaseXpReward = applyAutoCombatXpEfficiency({
+        baseXp: baseXpReward,
+        className,
+        riskLevel: this.getAutoCombatRewardRiskLevel(playerHp, simulatedMaxHp),
+      });
       const xpBreakdown = calculatePremiumXpBreakdown(
-        baseXpReward,
+        balancedBaseXpReward,
         premiumActive,
       );
       const finalXpReward = xpBreakdown.totalXp;
@@ -5739,6 +5650,12 @@ export class AutoCombatService implements OnModuleDestroy {
           simulatedLevel,
           gatheringBonus,
         );
+        const newCombatStatsAfterLevelUp = calculateFullStats(
+          session.character.class,
+          equipmentItems,
+          simulatedLevel,
+          combatGatheringBonus,
+        );
 
         const newMaxHpAfterLevelUp =
           newStatsAfterLevelUp.derivedCombatStats.maxHp;
@@ -5754,6 +5671,19 @@ export class AutoCombatService implements OnModuleDestroy {
 
         healingFromLevelUp += Math.max(0, playerHp - hpBeforeLevelUpRecovery);
         simulatedMaxHp = newMaxHpAfterLevelUp;
+        playerStats.maxHp = simulatedMaxHp;
+        playerStats.hp = playerHp;
+        playerStats.attack =
+          newCombatStatsAfterLevelUp.derivedCombatStats.attack;
+        playerStats.defense =
+          newCombatStatsAfterLevelUp.derivedCombatStats.defense;
+        playerStats.speed = newCombatStatsAfterLevelUp.derivedCombatStats.speed;
+        playerStats.precision =
+          newCombatStatsAfterLevelUp.totalPrimaryStats.precision;
+        playerStats.technique =
+          newCombatStatsAfterLevelUp.totalPrimaryStats.technique;
+        playerStats.agility =
+          newCombatStatsAfterLevelUp.totalPrimaryStats.agility;
       }
 
       this.addMobSummary(mobSummaries, currentMob.id, finalXpReward);
@@ -6861,8 +6791,7 @@ export class AutoCombatService implements OnModuleDestroy {
       currentSubMapId: session.subMapId,
       canTravel: session.status !== AutoCombatSessionStatus.ACTIVE,
       huntCapacity,
-      hasPreservedTrackedEnemies:
-        autoCombatRecovery.hasPreservedTrackedEnemies,
+      hasPreservedTrackedEnemies: autoCombatRecovery.hasPreservedTrackedEnemies,
       preservedTrackedEnemiesCount:
         autoCombatRecovery.preservedTrackedEnemiesCount,
       autoCombatRecovery,
@@ -7219,17 +7148,21 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     const playerStats = this.calculateCharacterFighterStats(session.character);
-    const mobStats = this.calculateMobFighterStats(mob);
+    const className = session.character.class?.name ?? playerStats.className;
+    const mobStats = this.calculateAutoCombatMobFighterStats(mob, className);
     const ttk = calculateAutoCombatTtk({
       mob,
       playerStats,
     });
     const potionState = this.createAutoPotionState(session.character);
     const potionHealAmount = potionState
-      ? this.calculateHealAmount({
-          maxHp: playerStats.maxHp,
-          healFlat: potionState.healFlat,
-          healPercent: potionState.healPercent,
+      ? applyAutoCombatPotionHealMultiplier({
+          healAmount: this.calculateHealAmount({
+            maxHp: playerStats.maxHp,
+            healFlat: potionState.healFlat,
+            healPercent: potionState.healPercent,
+          }),
+          className,
         })
       : 0;
     const survival = projectAutoCombatSurvival({
@@ -8117,6 +8050,8 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const equipmentItems = this.getEquipmentItems(session.character);
     const gatheringBonus = this.getGatheringBonus(session.character);
+    const combatGatheringBonus = scaleAutoCombatGatheringBonus(gatheringBonus);
+    const className = session.character.class?.name ?? null;
 
     const initialStats = calculateFullStats(
       session.character.class,
@@ -8160,6 +8095,23 @@ export class AutoCombatService implements OnModuleDestroy {
       1,
       AUTO_COMBAT_PREVIEW_MAX_ITERATIONS,
     );
+    const ttkPreview = this.buildAutoCombatTtkPreview({
+      session,
+      encounters: previewEncounters,
+      equipmentItems,
+      gatheringBonus,
+      combatGatheringBonus,
+      className,
+      currentHp,
+      initialMaxHp,
+      projectionSeconds,
+      iterations,
+      premiumActive,
+    });
+
+    if (ttkPreview) {
+      return ttkPreview;
+    }
 
     let totalCombatsSimulated = 0;
     let totalRounds = 0;
@@ -8212,25 +8164,35 @@ export class AutoCombatService implements OnModuleDestroy {
           simulatedLevel,
           gatheringBonus,
         );
+        const currentCombatStats = calculateFullStats(
+          session.character.class,
+          equipmentItems,
+          simulatedLevel,
+          combatGatheringBonus,
+        );
 
         simulatedMaxHp = currentStats.derivedCombatStats.maxHp;
         simulatedHp = this.clampHp(simulatedHp, simulatedMaxHp);
 
         const playerStats: FighterStats = {
           name: session.character.name,
+          className,
           hp: simulatedHp,
           maxHp: simulatedMaxHp,
-          attack: currentStats.derivedCombatStats.attack,
-          defense: currentStats.derivedCombatStats.defense,
-          speed: currentStats.derivedCombatStats.speed,
-          precision: currentStats.totalPrimaryStats.precision,
-          technique: currentStats.totalPrimaryStats.technique,
-          agility: currentStats.totalPrimaryStats.agility,
+          attack: currentCombatStats.derivedCombatStats.attack,
+          defense: currentCombatStats.derivedCombatStats.defense,
+          speed: currentCombatStats.derivedCombatStats.speed,
+          precision: currentCombatStats.totalPrimaryStats.precision,
+          technique: currentCombatStats.totalPrimaryStats.technique,
+          agility: currentCombatStats.totalPrimaryStats.agility,
         };
 
         const encounter = this.rollEncounter(previewEncounters);
         const mob = encounter.mob;
-        const mobStats = this.calculateMobFighterStats(mob);
+        const mobStats = this.calculateAutoCombatMobFighterStats(
+          mob,
+          className,
+        );
 
         const combat = this.resolvePreviewCombat(
           playerStats,
@@ -8277,10 +8239,18 @@ export class AutoCombatService implements OnModuleDestroy {
 
         const penalty = calculateTierFarmPenalty(simulatedLevel, mob.tier);
 
-        const finalXpReward = applyPremiumXpBonus(
-          applyXpPenalty(mob.xpReward, penalty.xpMultiplier),
+        const balancedBaseXpReward = applyAutoCombatXpEfficiency({
+          baseXp: applyXpPenalty(mob.xpReward, penalty.xpMultiplier),
+          className,
+          riskLevel: this.getAutoCombatRewardRiskLevel(
+            simulatedHp,
+            simulatedMaxHp,
+          ),
+        });
+        const finalXpReward = calculatePremiumXpBreakdown(
+          balancedBaseXpReward,
           premiumActive,
-        );
+        ).totalXp;
 
         totalXp += finalXpReward;
 
@@ -8435,6 +8405,228 @@ export class AutoCombatService implements OnModuleDestroy {
     };
   }
 
+  private buildAutoCombatTtkPreview(params: {
+    session: any;
+    encounters: any[];
+    equipmentItems: any[];
+    gatheringBonus: PrimaryStats;
+    combatGatheringBonus: PrimaryStats;
+    className: string | null;
+    currentHp: number;
+    initialMaxHp: number;
+    projectionSeconds: number;
+    iterations: number;
+    premiumActive: boolean;
+  }): AutoCombatPreview | null {
+    if (params.encounters.length <= 0 || params.projectionSeconds <= 0) {
+      return null;
+    }
+
+    const visibleStats = calculateFullStats(
+      params.session.character.class,
+      params.equipmentItems,
+      params.session.character.level,
+      params.gatheringBonus,
+    );
+    const combatStats = calculateFullStats(
+      params.session.character.class,
+      params.equipmentItems,
+      params.session.character.level,
+      params.combatGatheringBonus,
+    );
+    const maxHp = visibleStats.derivedCombatStats.maxHp;
+    const currentHp = this.clampHp(params.currentHp, maxHp);
+    const playerStats: FighterStats = {
+      name: params.session.character.name,
+      className: params.className,
+      hp: currentHp,
+      maxHp,
+      attack: combatStats.derivedCombatStats.attack,
+      defense: combatStats.derivedCombatStats.defense,
+      speed: combatStats.derivedCombatStats.speed,
+      precision: combatStats.totalPrimaryStats.precision,
+      technique: combatStats.totalPrimaryStats.technique,
+      agility: combatStats.totalPrimaryStats.agility,
+    };
+    const potionState = this.createAutoPotionState(params.session.character);
+    const potionHealAmount = potionState
+      ? applyAutoCombatPotionHealMultiplier({
+          healAmount: this.calculateHealAmount({
+            maxHp,
+            healFlat: potionState.healFlat,
+            healPercent: potionState.healPercent,
+          }),
+          className: params.className,
+        })
+      : 0;
+    const projections = params.encounters.map((encounter) => {
+      const mob = encounter.mob;
+      const mobStats = this.calculateAutoCombatMobFighterStats(
+        mob,
+        params.className,
+      );
+      const ttk = calculateAutoCombatTtk({
+        mob,
+        playerStats,
+      });
+      const projectedKills = Math.max(
+        1,
+        Math.floor(params.projectionSeconds / ttk.estimatedKillTimeSeconds),
+      );
+      const survival = projectAutoCombatSurvival({
+        currentHp,
+        maxHp,
+        playerDefense: playerStats.defense,
+        playerAgility: playerStats.agility,
+        mobAttack: mobStats.attack,
+        mobPrecision: mobStats.precision,
+        mobTechnique: mobStats.technique,
+        projectedKills,
+        potion: potionState
+          ? {
+              availableQuantity: potionState.availableQuantity,
+              healAmount: potionHealAmount,
+              hpThresholdPercent: potionState.hpThresholdPercent,
+            }
+          : null,
+      });
+      const penalty = calculateTierFarmPenalty(
+        params.session.character.level,
+        mob.tier,
+      );
+      const balancedBaseXpReward = applyAutoCombatXpEfficiency({
+        baseXp: applyXpPenalty(mob.xpReward, penalty.xpMultiplier),
+        className: params.className,
+        riskLevel: survival.riskLevel,
+      });
+      const finalXpReward = calculatePremiumXpBreakdown(
+        balancedBaseXpReward,
+        params.premiumActive,
+      ).totalXp;
+
+      return {
+        ttk,
+        survival,
+        projectedKills,
+        finalXpReward,
+      };
+    });
+    const divisor = Math.max(1, projections.length);
+    const averageCombatDurationSeconds = this.roundNumber(
+      projections.reduce(
+        (total, projection) => total + projection.ttk.estimatedKillTimeSeconds,
+        0,
+      ) / divisor,
+    );
+    const averageRoundsPerCombat = this.roundNumber(
+      averageCombatDurationSeconds /
+        Math.max(1, params.session.roundDurationSeconds),
+    );
+    const xpPerMinute = this.roundNumber(
+      projections.reduce(
+        (total, projection) =>
+          total +
+          (projection.finalXpReward /
+            Math.max(1, projection.ttk.estimatedKillTimeSeconds)) *
+            60,
+        0,
+      ) / divisor,
+    );
+    const expectedFinalHpPercent = this.roundNumber(
+      projections.reduce(
+        (total, projection) =>
+          total + projection.survival.projectedFinalHpPercent,
+        0,
+      ) / divisor,
+    );
+    const expectedFinalHp = this.clampHp(
+      Math.round((maxHp * expectedFinalHpPercent) / 100),
+      maxHp,
+    );
+    const defeatChancePercent = this.calculatePercent(
+      projections.filter(
+        (projection) => !projection.survival.willSurviveProjection,
+      ).length,
+      divisor,
+    );
+    const damageTakenPerMinute = this.roundNumber(
+      projections.reduce(
+        (total, projection) =>
+          total +
+          (projection.survival.expectedDamagePerKill /
+            Math.max(1, projection.ttk.estimatedKillTimeSeconds)) *
+            60,
+        0,
+      ) / divisor,
+    );
+    const riskScore = this.calculateRiskScore({
+      defeatChancePercent,
+      expectedHpPercentAtEnd: expectedFinalHpPercent,
+    });
+    const riskLevel = this.getRiskLevel(riskScore);
+    const totalCombatsSimulated =
+      Math.floor(
+        params.projectionSeconds / Math.max(1, averageCombatDurationSeconds),
+      ) * params.iterations;
+    const playerCriticalChancePercent = this.roundNumber(
+      Math.min(65, Math.max(0, playerStats.technique / 3)),
+    );
+    const averageMobCriticalChancePercent = this.roundNumber(
+      projections.reduce(
+        (total, projection) =>
+          total + projection.survival.expectedCriticalChancePercent,
+        0,
+      ) / divisor,
+    );
+    const playerDodgeChancePercent = this.roundNumber(
+      projections.reduce(
+        (total, projection) =>
+          total + projection.survival.expectedDodgeChancePercent,
+        0,
+      ) / divisor,
+    );
+
+    return {
+      averageCombatDurationSeconds,
+      averageRoundsPerCombat,
+      xpPerMinute,
+
+      risk: {
+        level: riskLevel,
+        score: riskScore,
+        defeatChancePercent,
+        expectedHpPercentAtEnd: expectedFinalHpPercent,
+        damageTakenPerMinute,
+      },
+
+      critical: {
+        playerCriticalChancePercent,
+        mobCriticalChancePercent: averageMobCriticalChancePercent,
+        criticalDamageSharePercent: playerCriticalChancePercent,
+      },
+
+      dodge: {
+        playerDodgeChancePercent,
+        mobDodgeChancePercent: 0,
+      },
+
+      hp: {
+        current: currentHp,
+        max: maxHp,
+        expectedFinal: expectedFinalHp,
+        expectedChange: expectedFinalHp - currentHp,
+        expectedFinalPercent: expectedFinalHpPercent,
+      },
+
+      sample: {
+        iterations: params.iterations,
+        projectionSeconds: params.projectionSeconds,
+        totalCombatsSimulated,
+        fullRemainingSessionProjected: true,
+      },
+    };
+  }
+
   private resolvePreviewCombat(
     player: FighterStats,
     mob: FighterStats,
@@ -8473,6 +8665,7 @@ export class AutoCombatService implements OnModuleDestroy {
         maxHp: player.maxHp,
         autoPotionState,
         potionUsedThisCombat,
+        className: player.className,
       });
 
       if (potion.used) {
@@ -8718,8 +8911,6 @@ export class AutoCombatService implements OnModuleDestroy {
     potionQuantityAfter?: number | null;
     potionQuantityRemaining?: number | null;
     potionUsedQuantity?: number | null;
-    restStartHpPercent?: number | null;
-    restStopHpPercent?: number | null;
   }): AutoCombatRealtimeEvent {
     const mobCurrentHp = this.clampHp(params.mobCurrentHp, params.mobMaxHp);
     const characterCurrentHp = this.clampHp(
@@ -8876,8 +9067,6 @@ export class AutoCombatService implements OnModuleDestroy {
       potionQuantityAfter: params.potionQuantityAfter,
       potionQuantityRemaining: params.potionQuantityRemaining,
       potionUsedQuantity: params.potionUsedQuantity,
-      restStartHpPercent: params.restStartHpPercent,
-      restStopHpPercent: params.restStopHpPercent,
 
       round: params.round,
       combatIndex,
@@ -8921,8 +9110,7 @@ export class AutoCombatService implements OnModuleDestroy {
       case 'MOB_HIT':
         return 'MOB_TURN';
       case 'POTION_USED':
-      case 'AUTO_REST':
-        return 'RESTING';
+        return 'PLAYER_TURN';
       case 'MOB_DEFEATED':
         return 'MOB_DEFEATED';
       case 'PLAYER_DEFEATED':
@@ -8950,14 +9138,7 @@ export class AutoCombatService implements OnModuleDestroy {
   }
 
   private getHuntingSecondsPerEnemy(level: number) {
-    const safeLevel = Math.max(1, Math.floor(Number(level) || 1));
-    const speedMultiplier =
-      1 + (safeLevel - 1) * AUTO_COMBAT_HUNTING_SPEED_GAIN_PER_LEVEL;
-    const seconds = Math.round(
-      AUTO_COMBAT_HUNTING_BASE_SECONDS_PER_ENEMY / speedMultiplier,
-    );
-
-    return Math.max(AUTO_COMBAT_HUNTING_MIN_SECONDS_PER_ENEMY, seconds);
+    return getAutoCombatHuntingSecondsPerEnemy(level);
   }
 
   private getHuntingMaxTrackedEnemies(level: number) {
@@ -9296,10 +9477,6 @@ export class AutoCombatService implements OnModuleDestroy {
           this.autoCombatGateway.emitPotionUsed(characterId, event);
           break;
 
-        case 'AUTO_REST':
-          this.autoCombatGateway.emitAutoRest(characterId, event);
-          break;
-
         case 'MOB_DEFEATED':
           this.autoCombatGateway.emitMobDefeated(characterId, event);
           break;
@@ -9368,44 +9545,19 @@ export class AutoCombatService implements OnModuleDestroy {
     };
   }
 
-  private createAutoRestState(character: any): AutoRestState {
-    const config = character.potionConfig;
-    const startHpPercent = this.clampNumber(
-      Math.floor(
-        config?.autoRestStartHpPercent ??
-          AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
-      ),
-      1,
-      99,
-    );
-    const stopHpPercent = this.clampNumber(
-      Math.floor(
-        config?.autoRestStopHpPercent ??
-          AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
-      ),
-      startHpPercent + 1,
-      100,
-    );
-
-    return {
-      enabled: config?.autoRestEnabled ?? true,
-      startHpPercent,
-      stopHpPercent,
-      healPercentPerSecond: AUTO_COMBAT_REST_HEAL_PERCENT_PER_SECOND,
-    };
-  }
-
   private tryUseAutoPotion(params: {
     currentHp: number;
     maxHp: number;
     autoPotionState?: AutoPotionState | null;
     potionUsedThisCombat?: boolean;
+    className?: string | null;
   }): AutoPotionUseResult {
     const {
       currentHp,
       maxHp,
       autoPotionState,
       potionUsedThisCombat = false,
+      className = null,
     } = params;
 
     if (!autoPotionState) {
@@ -9493,10 +9645,13 @@ export class AutoCombatService implements OnModuleDestroy {
       };
     }
 
-    const healAmount = this.calculateHealAmount({
-      maxHp,
-      healFlat: autoPotionState.healFlat,
-      healPercent: autoPotionState.healPercent,
+    const healAmount = applyAutoCombatPotionHealMultiplier({
+      healAmount: this.calculateHealAmount({
+        maxHp,
+        healFlat: autoPotionState.healFlat,
+        healPercent: autoPotionState.healPercent,
+      }),
+      className,
     });
 
     const newHp = this.clampHp(currentHp + healAmount, maxHp);
@@ -10024,12 +10179,19 @@ export class AutoCombatService implements OnModuleDestroy {
   private calculateCharacterFighterStats(character: any): FighterStats {
     const equipmentItems = this.getEquipmentItems(character);
     const gatheringBonus = this.getGatheringBonus(character);
+    const combatGatheringBonus = scaleAutoCombatGatheringBonus(gatheringBonus);
 
     const stats = calculateFullStats(
       character.class,
       equipmentItems,
       character.level,
       gatheringBonus,
+    );
+    const combatStats = calculateFullStats(
+      character.class,
+      equipmentItems,
+      character.level,
+      combatGatheringBonus,
     );
 
     const maxHp = stats.derivedCombatStats.maxHp;
@@ -10043,14 +10205,15 @@ export class AutoCombatService implements OnModuleDestroy {
 
     return {
       name: character.name,
+      className: character.class?.name ?? null,
       hp: clampedCurrentHp,
       maxHp,
-      attack: stats.derivedCombatStats.attack,
-      defense: stats.derivedCombatStats.defense,
-      speed: stats.derivedCombatStats.speed,
-      precision: stats.totalPrimaryStats.precision,
-      technique: stats.totalPrimaryStats.technique,
-      agility: stats.totalPrimaryStats.agility,
+      attack: combatStats.derivedCombatStats.attack,
+      defense: combatStats.derivedCombatStats.defense,
+      speed: combatStats.derivedCombatStats.speed,
+      precision: combatStats.totalPrimaryStats.precision,
+      technique: combatStats.totalPrimaryStats.technique,
+      agility: combatStats.totalPrimaryStats.agility,
     };
   }
 
@@ -10069,6 +10232,42 @@ export class AutoCombatService implements OnModuleDestroy {
       technique: safeLevel,
       agility: safeSpeed,
     };
+  }
+
+  private calculateAutoCombatMobFighterStats(
+    mob: any,
+    className?: string | null,
+  ): FighterStats {
+    const stats = this.calculateMobFighterStats(mob);
+
+    return {
+      ...stats,
+      attack: applyAutoCombatIncomingDamageMultiplier({
+        attack: stats.attack,
+        className,
+      }),
+    };
+  }
+
+  private getAutoCombatRewardRiskLevel(
+    currentHp: number,
+    maxHp: number,
+  ): RiskLevel {
+    if (currentHp <= 0 || maxHp <= 0) {
+      return 'LETHAL';
+    }
+
+    const hpPercent = this.calculatePercent(currentHp, maxHp);
+
+    if (hpPercent < 25) {
+      return 'HIGH';
+    }
+
+    if (hpPercent < 55) {
+      return 'MEDIUM';
+    }
+
+    return 'LOW';
   }
 
   private calculateCurrentHpAfterLevelUp(params: {

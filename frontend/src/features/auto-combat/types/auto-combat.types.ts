@@ -87,7 +87,6 @@ export type AutoCombatRealtimeEventType =
   | "MOB_HIT"
   | "DODGE"
   | "POTION_USED"
-  | "AUTO_REST"
   | "MOB_DEFEATED"
   | "PLAYER_DEFEATED"
   | "SESSION_STARTED"
@@ -108,7 +107,6 @@ export type AutoCombatRealtimePhase =
   | "MOB_TURN"
   | "MOB_DEFEATED"
   | "PLAYER_DEFEATED"
-  | "RESTING"
   | "FINISHED"
   | "WAITING_NEXT_ROUND"
   | "IDLE"
@@ -242,9 +240,6 @@ export interface AutoCombatRealtimeEvent {
   potionQuantityAfter?: number | null;
   potionQuantityRemaining?: number | null;
   potionUsedQuantity?: number | null;
-
-  restStartHpPercent?: number | null;
-  restStopHpPercent?: number | null;
 
   huntCycleKey?: string | null;
   huntSequence?: number | null;

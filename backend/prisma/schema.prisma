@@ -731,10 +731,6 @@ model CharacterPotionConfig {
   useInManualCombat Boolean @default(true)
   useInAutoCombat   Boolean @default(true)
 
-  autoRestEnabled        Boolean @default(true)
-  autoRestStartHpPercent Int     @default(35)
-  autoRestStopHpPercent  Int     @default(70)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

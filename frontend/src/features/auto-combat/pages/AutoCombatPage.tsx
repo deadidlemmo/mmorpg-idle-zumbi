@@ -445,7 +445,6 @@ function isAutoCombatBattleVisualEvent(event?: AutoCombatRealtimeEvent | null) {
     eventType === "MOB_HIT" ||
     eventType === "DODGE" ||
     eventType === "POTION_USED" ||
-    eventType === "AUTO_REST" ||
     eventType === "MOB_DEFEATED" ||
     eventType === "PLAYER_DEFEATED"
   );
@@ -853,17 +852,11 @@ export function AutoCombatPage() {
   const [autoPotionConfig, setAutoPotionConfig] =
     useState<CharacterPotionConfigWithItem | null>(null);
   const [isPotionConfigPanelOpen, setIsPotionConfigPanelOpen] = useState(false);
-  const [isRestConfigPanelOpen, setIsRestConfigPanelOpen] = useState(false);
   const [selectedPotionSlotIndex, setSelectedPotionSlotIndex] = useState(0);
   const [selectedPotionItemId, setSelectedPotionItemId] = useState("");
   const [potionThresholdPercent, setPotionThresholdPercent] = useState(35);
-  const [autoRestEnabled, setAutoRestEnabled] = useState(true);
-  const [autoRestStartHpPercent, setAutoRestStartHpPercent] = useState(35);
-  const [autoRestStopHpPercent, setAutoRestStopHpPercent] = useState(70);
   const [isPotionConfigLoading, setIsPotionConfigLoading] = useState(false);
-  const [isRestConfigLoading, setIsRestConfigLoading] = useState(false);
   const [potionConfigMessage, setPotionConfigMessage] = useState("");
-  const [restConfigMessage, setRestConfigMessage] = useState("");
 
   const [localRealtimeCombat, setLocalRealtimeCombat] =
     useState<RealtimeCombatState | null>(null);
@@ -1556,21 +1549,6 @@ export function AutoCombatPage() {
       setPotionThresholdPercent(
         clampNumber(normalizedPotionConfig?.hpThresholdPercent ?? 35, 1, 100),
       );
-      setAutoRestEnabled(normalizedPotionConfig?.autoRestEnabled ?? true);
-      setAutoRestStartHpPercent(
-        clampNumber(
-          normalizedPotionConfig?.autoRestStartHpPercent ?? 35,
-          1,
-          99,
-        ),
-      );
-      setAutoRestStopHpPercent(
-        clampNumber(
-          normalizedPotionConfig?.autoRestStopHpPercent ?? 70,
-          2,
-          100,
-        ),
-      );
 
       setLocalCharacterProgress((current) => {
         if (hasPendingRealtimeVisualRef.current && current) {
@@ -2176,22 +2154,6 @@ export function AutoCombatPage() {
       window.removeEventListener("keydown", handlePotionConfigModalKeyDown);
     };
   }, [isPotionConfigPanelOpen]);
-
-  useEffect(() => {
-    if (!isRestConfigPanelOpen) return;
-
-    function handleRestConfigModalKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsRestConfigPanelOpen(false);
-      }
-    }
-
-    window.addEventListener("keydown", handleRestConfigModalKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleRestConfigModalKeyDown);
-    };
-  }, [isRestConfigPanelOpen]);
 
   useEffect(() => {
     if (maps.length <= 0) return;
@@ -3992,21 +3954,6 @@ export function AutoCombatPage() {
       visibleMobFeedbackScope,
     );
 
-  const latestRealtimeEvent = showActiveSession
-    ? (activeBattleLogEvent ?? battleLogEvents[0] ?? null)
-    : null;
-
-  const latestRealtimeEventType = normalizeRealtimeEventType(
-    latestRealtimeEvent?.type ?? visualRealtimeCombat?.lastEventType,
-  );
-
-  const isAutoRestingVisual =
-    showActiveSession && latestRealtimeEventType === "AUTO_REST";
-
-  const autoRestHealedAmount = isAutoRestingVisual
-    ? Math.max(0, Math.floor(Number(latestRealtimeEvent?.healedAmount ?? 0)))
-    : 0;
-
   const isMobDefeatedVisual =
     showActiveSession &&
     ((activeVisualEventType === "MOB_DEFEATED" &&
@@ -4125,7 +4072,6 @@ export function AutoCombatPage() {
       ? "is-critical-hit"
       : "",
     shouldShowPlayerDodge ? "is-dodging" : "",
-    isAutoRestingVisual ? "is-resting" : "",
     isPlayerDefeatedVisual ? "is-defeated" : "",
   ]
     .filter(Boolean)
@@ -4406,8 +4352,6 @@ export function AutoCombatPage() {
 
     setSelectedPotionSlotIndex(slotIndex);
     setPotionConfigMessage("");
-    setIsRestConfigPanelOpen(false);
-    setRestConfigMessage("");
 
     if (slotIndex > 0) {
       setPotionConfigMessage(
@@ -4543,22 +4487,6 @@ export function AutoCombatPage() {
         hpThresholdPercent: safeThreshold,
         useInManualCombat: false,
         useInAutoCombat: true,
-        autoRestEnabled: currentPotionConfig?.autoRestEnabled ?? true,
-        autoRestStartHpPercent: Math.floor(
-          clampNumber(
-            currentPotionConfig?.autoRestStartHpPercent ??
-              autoRestStartHpPercent,
-            1,
-            99,
-          ),
-        ),
-        autoRestStopHpPercent: Math.floor(
-          clampNumber(
-            currentPotionConfig?.autoRestStopHpPercent ?? autoRestStopHpPercent,
-            2,
-            100,
-          ),
-        ),
       });
 
       const normalized = normalizePotionConfigResponse(response);
@@ -4567,21 +4495,6 @@ export function AutoCombatPage() {
       setSelectedPotionItemId(normalized?.potionItemId ?? potionItemId);
       setPotionThresholdPercent(
         clampNumber(normalized?.hpThresholdPercent ?? safeThreshold, 1, 100),
-      );
-      setAutoRestEnabled(normalized?.autoRestEnabled ?? true);
-      setAutoRestStartHpPercent(
-        clampNumber(
-          normalized?.autoRestStartHpPercent ?? autoRestStartHpPercent,
-          1,
-          99,
-        ),
-      );
-      setAutoRestStopHpPercent(
-        clampNumber(
-          normalized?.autoRestStopHpPercent ?? autoRestStopHpPercent,
-          2,
-          100,
-        ),
       );
       setIsThreatPotionPickerOpen(false);
 
@@ -4595,83 +4508,6 @@ export function AutoCombatPage() {
       );
     } finally {
       setIsPotionConfigLoading(false);
-    }
-  }
-
-  function handleOpenRestConfig() {
-    setIsPotionConfigPanelOpen(false);
-    setPotionConfigMessage("");
-    setRestConfigMessage("");
-    setAutoRestEnabled(currentPotionConfig?.autoRestEnabled ?? true);
-    setAutoRestStartHpPercent(
-      clampNumber(currentPotionConfig?.autoRestStartHpPercent ?? 35, 1, 99),
-    );
-    setAutoRestStopHpPercent(
-      clampNumber(currentPotionConfig?.autoRestStopHpPercent ?? 70, 2, 100),
-    );
-    setIsRestConfigPanelOpen(true);
-  }
-
-  async function handleSaveRestConfig(nextEnabled = autoRestEnabled) {
-    if (!characterId || isRestConfigLoading) return;
-
-    const safeRestStart = Math.floor(
-      clampNumber(autoRestStartHpPercent, 1, 99),
-    );
-    const safeRestStop = Math.floor(
-      clampNumber(autoRestStopHpPercent, safeRestStart + 1, 100),
-    );
-    const existingPotionItemId = currentPotionConfig?.potionItemId ?? null;
-    const existingPotionEnabled = Boolean(
-      currentPotionConfig?.enabled && existingPotionItemId,
-    );
-
-    try {
-      setIsRestConfigLoading(true);
-      setRestConfigMessage("");
-
-      const response = await updateCharacterPotionConfigRaw(characterId, {
-        enabled: existingPotionEnabled,
-        potionItemId: existingPotionItemId,
-        hpThresholdPercent: Math.floor(
-          clampNumber(
-            currentPotionConfig?.hpThresholdPercent ?? potionThresholdPercent,
-            1,
-            100,
-          ),
-        ),
-        useInManualCombat: false,
-        useInAutoCombat: true,
-        autoRestEnabled: nextEnabled,
-        autoRestStartHpPercent: safeRestStart,
-        autoRestStopHpPercent: safeRestStop,
-      });
-
-      const normalized = normalizePotionConfigResponse(response);
-
-      setAutoPotionConfig(normalized);
-      setAutoRestEnabled(normalized?.autoRestEnabled ?? nextEnabled);
-      setAutoRestStartHpPercent(
-        clampNumber(normalized?.autoRestStartHpPercent ?? safeRestStart, 1, 99),
-      );
-      setAutoRestStopHpPercent(
-        clampNumber(normalized?.autoRestStopHpPercent ?? safeRestStop, 2, 100),
-      );
-      setIsRestConfigPanelOpen(false);
-      setRestConfigMessage(
-        response.message ?? "Configuração de descanso atualizada com sucesso.",
-      );
-
-      await loadAutoCombatData();
-    } catch (error) {
-      setRestConfigMessage(
-        getApiErrorMessage(
-          error,
-          "Não foi possível salvar a configuração de descanso.",
-        ),
-      );
-    } finally {
-      setIsRestConfigLoading(false);
     }
   }
 
@@ -5449,29 +5285,6 @@ export function AutoCombatPage() {
                         </button>
                       </div>
 
-                      {isAutoRestingVisual ? (
-                        <div
-                          className="auto-combat-resting-callout"
-                          role="status"
-                          aria-live="polite"
-                        >
-                          <span
-                            className="auto-combat-resting-callout__pulse"
-                            aria-hidden="true"
-                          />
-
-                          <div className="auto-combat-resting-callout__copy">
-                            <strong>Descanso automÃ¡tico</strong>
-                            <span>Recuperando HP antes de continuar.</span>
-                          </div>
-
-                          <em>
-                            {autoRestHealedAmount > 0
-                              ? `+${autoRestHealedAmount} HP`
-                              : `${currentCharacterHp}/${currentCharacterMaxHp} HP`}
-                          </em>
-                        </div>
-                      ) : null}
                     </section>
                   ) : null}
 
@@ -5941,32 +5754,6 @@ export function AutoCombatPage() {
                       </div>
                     </div>
 
-                    {isAutoRestingVisual ? (
-                      <div
-                        className="auto-combat-resting-callout"
-                        role="status"
-                        aria-live="polite"
-                      >
-                        <span
-                          className="auto-combat-resting-callout__pulse"
-                          aria-hidden="true"
-                        />
-
-                        <div className="auto-combat-resting-callout__copy">
-                          <strong>Descanso automático</strong>
-                          <span>
-                            O sobrevivente pausou a caça para recuperar HP.
-                          </span>
-                        </div>
-
-                        <em>
-                          {autoRestHealedAmount > 0
-                            ? `+${autoRestHealedAmount} HP`
-                            : `${currentCharacterHp}/${currentCharacterMaxHp} HP`}
-                        </em>
-                      </div>
-                    ) : null}
-
                     <div className="auto-combat-stage-actions auto-combat-stage-actions--session">
                       <button
                         type="button"
@@ -5992,11 +5779,11 @@ export function AutoCombatPage() {
                     <div className="auto-combat-potion-belt__header">
                       <div>
                         <span>Automação de sobrevivência</span>
-                        <strong>Cura e descanso</strong>
+                        <strong>Cura por poções</strong>
                       </div>
 
                       <small>
-                        Configure a poção e o descanso em slots separados.
+                        Configure a poção automática e o gatilho de HP.
                       </small>
                     </div>
 
@@ -6076,50 +5863,6 @@ export function AutoCombatPage() {
                           </div>
                         );
                       })}
-                      <div className="auto-combat-potion-slot auto-combat-rest-slot">
-                        <button
-                          type="button"
-                          className={[
-                            "auto-combat-potion-slot__button",
-                            "auto-combat-rest-slot__button",
-                            autoRestEnabled ? "is-enabled" : "is-empty",
-                            isRestConfigPanelOpen ? "is-selected" : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          onClick={handleOpenRestConfig}
-                        >
-                          <div className="auto-combat-potion-slot__icon auto-combat-rest-slot__icon" />
-
-                          <div className="auto-combat-consumable-slot__body">
-                            <span className="auto-combat-consumable-slot__eyebrow">
-                              Descanso automático
-                            </span>
-
-                            <strong>
-                              {autoRestEnabled
-                                ? "Descanso ativo"
-                                : "Configurar"}
-                            </strong>
-
-                            <span>
-                              {autoRestEnabled
-                                ? "Pausa a caça só quando o HP chegar no gatilho baixo."
-                                : "Configure quando parar e quando voltar a caçar."}
-                            </span>
-
-                            <small className="auto-combat-consumable-slot__meta">
-                              {autoRestEnabled
-                                ? `HP <= ${autoRestStartHpPercent}% · volta em ${autoRestStopHpPercent}%`
-                                : "Sem descanso"}
-                            </small>
-                          </div>
-
-                          <em className="auto-combat-consumable-slot__action">
-                            Configurar
-                          </em>
-                        </button>
-                      </div>
                     </div>
                   </div>
 
@@ -6322,150 +6065,6 @@ export function AutoCombatPage() {
                             onClick={handleClearPotionConfig}
                           >
                             Remover
-                          </button>
-                        </div>
-                      </article>
-                    </div>
-                  ) : null}
-
-                  {isRestConfigPanelOpen ? (
-                    <div
-                      className="auto-combat-potion-config-modal-backdrop"
-                      role="presentation"
-                      onMouseDown={(event) => {
-                        if (event.target === event.currentTarget) {
-                          setIsRestConfigPanelOpen(false);
-                        }
-                      }}
-                    >
-                      <article
-                        className="auto-combat-potion-config-panel auto-combat-potion-config-panel--minimal auto-combat-potion-config-panel--modal auto-combat-rest-config-panel--modal"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="auto-combat-rest-config-title"
-                        onMouseDown={(event) => event.stopPropagation()}
-                      >
-                        <div className="auto-combat-potion-config-panel__header">
-                          <div>
-                            <span>Descanso automático</span>
-                            <strong id="auto-combat-rest-config-title">
-                              Configure a pausa de recuperação
-                            </strong>
-                          </div>
-
-                          <button
-                            type="button"
-                            className="auto-combat-potion-config-panel__close"
-                            aria-label="Fechar configuração de descanso"
-                            onClick={() => setIsRestConfigPanelOpen(false)}
-                          >
-                            Fechar
-                          </button>
-                        </div>
-
-                        <div className="auto-combat-potion-config-grid auto-combat-potion-config-grid--minimal auto-combat-rest-config-modal__grid">
-                          <section className="auto-combat-potion-threshold auto-combat-potion-threshold--minimal auto-combat-rest-config">
-                            <div className="auto-combat-potion-threshold__header auto-combat-rest-config__header">
-                              <div>
-                                <span>Estado</span>
-                                <strong>
-                                  {autoRestEnabled
-                                    ? "Descanso automático ativo"
-                                    : "Descanso automático desativado"}
-                                </strong>
-                              </div>
-
-                              <label className="auto-combat-rest-toggle">
-                                <input
-                                  type="checkbox"
-                                  checked={autoRestEnabled}
-                                  disabled={isRestConfigLoading}
-                                  onChange={(event) =>
-                                    setAutoRestEnabled(event.target.checked)
-                                  }
-                                />
-                                <span>Ativo</span>
-                              </label>
-                            </div>
-
-                            <p className="auto-combat-rest-config__hint">
-                              O descanso só começa quando o HP cair no limite
-                              baixo. A caça volta quando alcançar o limite de
-                              retorno.
-                            </p>
-
-                            <div className="auto-combat-rest-threshold-grid">
-                              <label>
-                                <span>Iniciar descanso em</span>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  max={99}
-                                  value={autoRestStartHpPercent}
-                                  disabled={isRestConfigLoading}
-                                  onChange={(event) => {
-                                    const nextStart = Math.floor(
-                                      clampNumber(event.target.value, 1, 99),
-                                    );
-
-                                    setAutoRestStartHpPercent(nextStart);
-                                    setAutoRestStopHpPercent((currentStop) =>
-                                      Math.max(nextStart + 1, currentStop),
-                                    );
-                                  }}
-                                />
-                              </label>
-
-                              <label>
-                                <span>Voltar a caçar em</span>
-                                <input
-                                  type="number"
-                                  min={autoRestStartHpPercent + 1}
-                                  max={100}
-                                  value={autoRestStopHpPercent}
-                                  disabled={isRestConfigLoading}
-                                  onChange={(event) =>
-                                    setAutoRestStopHpPercent(
-                                      Math.floor(
-                                        clampNumber(
-                                          event.target.value,
-                                          autoRestStartHpPercent + 1,
-                                          100,
-                                        ),
-                                      ),
-                                    )
-                                  }
-                                />
-                              </label>
-                            </div>
-                          </section>
-                        </div>
-
-                        {restConfigMessage ? (
-                          <p className="auto-combat-potion-config-message">
-                            {restConfigMessage}
-                          </p>
-                        ) : null}
-
-                        <div className="auto-combat-potion-config-actions auto-combat-potion-config-actions--minimal">
-                          <button
-                            type="button"
-                            className="auto-combat-primary-button"
-                            disabled={isRestConfigLoading}
-                            onClick={() => void handleSaveRestConfig()}
-                          >
-                            {isRestConfigLoading
-                              ? "Salvando..."
-                              : "Salvar descanso"}
-                          </button>
-
-                          <button
-                            type="button"
-                            className="auto-combat-secondary-button auto-combat-secondary-button--danger"
-                            disabled={isRestConfigLoading}
-                            onClick={() => void handleSaveRestConfig(false)}
-                          >
-                            Desativar
                           </button>
                         </div>
                       </article>

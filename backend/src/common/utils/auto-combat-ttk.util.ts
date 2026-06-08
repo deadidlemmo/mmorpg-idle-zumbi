@@ -2,9 +2,10 @@ import {
   AUTO_COMBAT_TTK_BASE_TIMES_BY_MOB_INDEX,
   AUTO_COMBAT_TTK_MAX_SECONDS,
   AUTO_COMBAT_TTK_MIN_SECONDS,
-  AUTO_COMBAT_TTK_POWER_EXPONENT,
   AUTO_COMBAT_TTK_POWER_MULTIPLIERS_BY_MOB_INDEX,
 } from '../config/auto-combat.config';
+import { AUTO_COMBAT_BALANCE_TTK_POWER_EXPONENT } from '../config/combat-balance.config';
+import { getAutoCombatClassPassive } from './auto-combat-balance.util';
 
 export type AutoCombatTtkDifficultyLabel =
   | 'Muito facil'
@@ -14,6 +15,7 @@ export type AutoCombatTtkDifficultyLabel =
   | 'Ineficiente';
 
 export type AutoCombatTtkStatsInput = {
+  className?: string | null;
   attack?: number | null;
   speed?: number | null;
   precision?: number | null;
@@ -101,8 +103,16 @@ export function calculatePlayerOffensivePower(stats: AutoCombatTtkStatsInput) {
   const critChance = Math.min(0.65, Math.max(0, technique / 300));
   const critDamageMultiplier = 1.5 + Math.min(0.75, agility / 400);
   const averageCritMultiplier = 1 + critChance * (critDamageMultiplier - 1);
+  const passive = getAutoCombatClassPassive(stats.className);
 
-  return Math.max(1, attack * attackSpeed * hitChance * averageCritMultiplier);
+  return Math.max(
+    1,
+    attack *
+      attackSpeed *
+      hitChance *
+      averageCritMultiplier *
+      passive.offensivePowerMultiplier,
+  );
 }
 
 export function calculateAutoCombatTtkSeconds(params: {
@@ -123,7 +133,7 @@ export function calculateAutoCombatTtkSeconds(params: {
     baseKillTimeSeconds *
     Math.pow(
       recommendedPower / playerOffensivePower,
-      AUTO_COMBAT_TTK_POWER_EXPONENT,
+      AUTO_COMBAT_BALANCE_TTK_POWER_EXPONENT,
     );
 
   return clampAutoCombatTtkSeconds(rawSeconds);

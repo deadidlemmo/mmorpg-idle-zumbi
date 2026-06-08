@@ -11,10 +11,6 @@ import {
   STARTER_POTION_ITEM_NAME,
   STARTER_POTION_KIT_QUANTITY,
 } from '../src/common/config/starter-kit.config';
-import {
-  AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
-  AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
-} from '../src/common/config/auto-combat.config';
 import { starterEquipmentDefinitions } from './seed-data/items.seed-data';
 
 const prisma = new PrismaClient();
@@ -385,23 +381,17 @@ async function resetCharacters() {
         update: {
           enabled: true,
           potionItemId: starterPotion.id,
-          hpThresholdPercent: AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+          hpThresholdPercent: 35,
           useInManualCombat: true,
           useInAutoCombat: true,
-          autoRestEnabled: true,
-          autoRestStartHpPercent: AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
-          autoRestStopHpPercent: AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
         },
         create: {
           characterId: character.id,
           enabled: true,
           potionItemId: starterPotion.id,
-          hpThresholdPercent: AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
+          hpThresholdPercent: 35,
           useInManualCombat: true,
           useInAutoCombat: true,
-          autoRestEnabled: true,
-          autoRestStartHpPercent: AUTO_COMBAT_REST_DEFAULT_START_HP_PERCENT,
-          autoRestStopHpPercent: AUTO_COMBAT_REST_DEFAULT_STOP_HP_PERCENT,
         },
       });
 

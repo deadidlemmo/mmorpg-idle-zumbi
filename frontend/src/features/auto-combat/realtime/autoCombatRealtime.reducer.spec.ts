@@ -409,47 +409,6 @@ test('overview canônico não antecipa EXP durante timeline visual pendente', ()
   assert.equal(hydrated.character?.xpProgressPercent, 50);
 });
 
-test('descanso automatico pode atualizar HP visual em tempo real', () => {
-  const damagedState: AutoCombatRealtimeState = {
-    ...makeState(),
-    character: {
-      id: 'char-1',
-      name: 'Sobrevivente',
-      currentHp: 45,
-      maxHp: 100,
-      hpPercent: 45,
-    },
-  };
-
-  const restEvent = {
-    characterId: 'char-1',
-    sessionId: 'session-1',
-    type: 'AUTO_REST',
-    actor: 'SYSTEM',
-    target: 'PLAYER',
-    mobId: 'mob-1',
-    mobName: 'Zumbi',
-    mobCurrentHp: 100,
-    mobMaxHp: 100,
-    characterCurrentHp: 52,
-    characterMaxHp: 100,
-    healedAmount: 7,
-    round: 1,
-    combatIndex: 1,
-    createdAt: '2026-05-11T00:00:02.000Z',
-    sequence: 2,
-  } as AutoCombatRealtimeEvent;
-
-  const rested = autoCombatRealtimeReducer(
-    enqueueAndProcess(damagedState, restEvent),
-    { type: 'APPLY_ACTIVE_EVENT_IMPACT' },
-  );
-
-  assert.equal(rested.character?.currentHp, 52);
-  assert.equal(rested.character?.hpPercent, 52);
-  assert.equal(rested.activeEvent, restEvent);
-});
-
 test('status canônico reconcilia totais quando não há timeline visual pendente', () => {
   const state: AutoCombatRealtimeState = {
     ...makeState(),

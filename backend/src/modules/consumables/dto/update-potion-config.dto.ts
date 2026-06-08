@@ -87,37 +87,4 @@ export class UpdatePotionConfigDto {
     message: 'O campo useInAutoCombat precisa ser verdadeiro ou falso.',
   })
   useInAutoCombat?: boolean;
-
-  @IsOptional()
-  @Transform(({ value }) => toOptionalBoolean(value))
-  @IsBoolean({
-    message: 'O campo autoRestEnabled precisa ser verdadeiro ou falso.',
-  })
-  autoRestEnabled?: boolean;
-
-  @IsOptional()
-  @Transform(({ value }) => toOptionalNumber(value))
-  @IsInt({
-    message: 'A porcentagem inicial do descanso precisa ser um número inteiro.',
-  })
-  @Min(1, {
-    message: 'A porcentagem inicial mínima do descanso é 1%.',
-  })
-  @Max(99, {
-    message: 'A porcentagem inicial máxima do descanso é 99%.',
-  })
-  autoRestStartHpPercent?: number;
-
-  @IsOptional()
-  @Transform(({ value }) => toOptionalNumber(value))
-  @IsInt({
-    message: 'A porcentagem final do descanso precisa ser um número inteiro.',
-  })
-  @Min(2, {
-    message: 'A porcentagem final mínima do descanso é 2%.',
-  })
-  @Max(100, {
-    message: 'A porcentagem final máxima do descanso é 100%.',
-  })
-  autoRestStopHpPercent?: number;
 }

@@ -128,92 +128,14 @@
   align-items: stretch;
 }
 
-.auto-combat-resting-callout {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.8rem;
-  width: min(100%, 35rem);
-  margin: 0.1rem auto 0;
-  padding: 0.78rem 0.95rem;
-  overflow: hidden;
-  border: 1px solid rgba(115, 214, 151, 0.34);
-  border-radius: 0.9rem;
-  background:
-    linear-gradient(90deg, rgba(115, 214, 151, 0.13), rgba(26, 69, 50, 0.34)),
-    rgba(5, 12, 9, 0.82);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 0 22px rgba(115, 214, 151, 0.08);
-}
 
-.auto-combat-resting-callout::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.48;
-  background:
-    linear-gradient(110deg, transparent 0 28%, rgba(176, 255, 199, 0.14) 46%, transparent 64%),
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 9px);
-  transform: translateX(-36%);
-  animation: autoCombatRestingSweep 2.1s ease-in-out infinite;
-}
 
-.auto-combat-resting-callout > * {
-  position: relative;
-  z-index: 1;
-}
 
-.auto-combat-resting-callout__pulse {
-  width: 0.78rem;
-  height: 0.78rem;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: #99e879;
-  box-shadow:
-    0 0 0 0 rgba(153, 232, 121, 0.42),
-    0 0 14px rgba(153, 232, 121, 0.34);
-  animation: autoCombatRestingPulse 1.2s ease-in-out infinite;
-}
 
-.auto-combat-resting-callout__copy {
-  display: grid;
-  min-width: 0;
-  gap: 0.08rem;
-}
 
-.auto-combat-resting-callout__copy strong,
-.auto-combat-resting-callout em {
-  color: #f5ffe5;
-  font-family: var(--font-title);
-  font-weight: 950;
-  line-height: 1.05;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
-}
 
-.auto-combat-resting-callout__copy strong {
-  font-size: 0.98rem;
-}
 
-.auto-combat-resting-callout__copy span {
-  color: rgba(231, 227, 216, 0.76);
-  font-size: 0.8rem;
-  font-weight: 800;
-}
 
-.auto-combat-resting-callout em {
-  margin-left: auto;
-  padding: 0.42rem 0.62rem;
-  border: 1px solid rgba(153, 232, 121, 0.28);
-  border-radius: 999px;
-  background: rgba(31, 91, 42, 0.48);
-  color: #bfffa4;
-  font-size: 0.86rem;
-  font-style: normal;
-  white-space: nowrap;
-}
 
 .auto-combat-fighter-card {
   position: relative;
@@ -291,20 +213,7 @@
     linear-gradient(90deg, rgba(110, 159, 67, 0.048), transparent 52%);
 }
 
-.auto-combat-fighter-card--player.is-resting {
-  border-color: rgba(115, 214, 151, 0.5);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 0 28px rgba(115, 214, 151, 0.12);
-}
 
-.auto-combat-fighter-card--player.is-resting::after {
-  opacity: 0.58;
-  background:
-    radial-gradient(circle at 50% 44%, rgba(127, 231, 163, 0.22), transparent 54%),
-    linear-gradient(90deg, rgba(115, 214, 151, 0.12), transparent 46%);
-  animation: autoCombatRestingFighterGlow 1.8s ease-in-out infinite;
-}
 
 .auto-combat-fighter-card--mob {
   border-color: rgba(188, 68, 68, 0.34);
@@ -1357,41 +1266,13 @@
   100% { opacity: 0; transform: translate3d(0, -8px, 0) scale(0.96); }
 }
 
-@keyframes autoCombatRestingPulse {
-  0%,
-  100% {
-    transform: scale(0.92);
-    box-shadow:
-      0 0 0 0 rgba(153, 232, 121, 0.42),
-      0 0 14px rgba(153, 232, 121, 0.34);
-  }
 
-  55% {
-    transform: scale(1.05);
-    box-shadow:
-      0 0 0 8px rgba(153, 232, 121, 0),
-      0 0 18px rgba(153, 232, 121, 0.48);
-  }
-}
 
-@keyframes autoCombatRestingSweep {
-  0% { transform: translateX(-42%); }
-  100% { transform: translateX(42%); }
-}
-
-@keyframes autoCombatRestingFighterGlow {
-  0%,
-  100% { opacity: 0.42; }
-  50% { opacity: 0.68; }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .auto-combat-fighter-card.is-hit,
   .auto-combat-fighter-card.is-critical-hit,
   .auto-combat-fighter-card.is-dodging,
-  .auto-combat-fighter-card.is-resting::after,
-  .auto-combat-resting-callout::before,
-  .auto-combat-resting-callout__pulse,
   .auto-combat-floating-hp,
   .auto-combat-floating-damage,
   .auto-combat-damage-pop,
@@ -1419,25 +1300,9 @@
    ========================================================= */
 
 @media (max-width: 920px) {
-  .auto-combat-resting-callout {
-    align-items: flex-start;
-    justify-content: flex-start;
-    gap: 0.65rem;
-    padding: 0.72rem;
-  }
 
-  .auto-combat-resting-callout__copy strong {
-    font-size: 0.9rem;
-  }
 
-  .auto-combat-resting-callout__copy span {
-    font-size: 0.72rem;
-  }
 
-  .auto-combat-resting-callout em {
-    padding: 0.36rem 0.5rem;
-    font-size: 0.74rem;
-  }
 
   .auto-combat-duel-row {
     grid-template-columns: minmax(0, 1fr);
