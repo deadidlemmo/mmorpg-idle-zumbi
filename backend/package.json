@@ -33,6 +33,10 @@
     "balance:auto-combat": "node node_modules/tsx/dist/cli.mjs scripts/simulate-auto-combat-balance.ts",
     "balance:auto-combat:validate": "node node_modules/tsx/dist/cli.mjs scripts/validate-auto-combat-balance.ts",
     "balance:auto-combat:report": "node node_modules/tsx/dist/cli.mjs scripts/export-auto-combat-balance-report.ts",
+    "balance:auto-combat:survival": "node node_modules/tsx/dist/cli.mjs scripts/export-auto-combat-survival-report.ts",
+    "balance:auto-combat:complete-report": "node node_modules/tsx/dist/cli.mjs scripts/export-auto-combat-complete-report.ts",
+    "balance:auto-combat:session-report": "node node_modules/tsx/dist/cli.mjs scripts/export-auto-combat-session-report.ts",
+    "balance:character-progression:report": "node node_modules/tsx/dist/cli.mjs scripts/export-character-progression-report.ts",
     "items:stats:audit": "node node_modules/tsx/dist/cli.mjs scripts/audit-equipment-stats-sync.ts",
     "test:auto-combat:fixture": "node node_modules/tsx/dist/cli.mjs scripts/prepare-auto-combat-fixture.ts"
   },

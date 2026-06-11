@@ -1,0 +1,275 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1540" viewBox="0 0 1240 1540">
+  <style>
+    .page { fill: #f5f7fb; }
+    .panel { fill: #ffffff; stroke: #d7deea; stroke-width: 1; }
+    .title { font: 700 26px Arial, sans-serif; fill: #0f172a; }
+    .subtitle { font: 400 13px Arial, sans-serif; fill: #475569; }
+    .note { font: 400 12px Arial, sans-serif; fill: #64748b; }
+    .chart-title { font: 700 18px Arial, sans-serif; fill: #0f172a; }
+    .chart-subtitle { font: 400 11px Arial, sans-serif; fill: #334155; }
+    .axis-label { font: 400 10px Arial, sans-serif; fill: #334155; }
+    .axis { stroke: #b9c3d5; stroke-width: 1; }
+    .grid { stroke: #e5eaf2; stroke-width: 1; }
+    .tick { font: 400 10px Arial, sans-serif; fill: #334155; }
+    .value { font: 700 10px Arial, sans-serif; fill: #0f172a; }
+    .legend { font: 400 11px Arial, sans-serif; fill: #334155; }
+  </style>
+  <rect width="100%" height="100%" class="page" />
+  <text x="30" y="42" class="title">Progressao realista de personagem ate o level 100</text>
+  <text x="30" y="64" class="subtitle">Modelo Balance V5.2 | mapas reais do seed | chance de mob | tempo de caca | TTK | sem descanso automatico</text>
+  <text x="30" y="84" class="note">Observacao: o codigo atual ainda usa cap jogavel 50 por padrao; level 100 aqui e uma projecao com a curva futura ja existente.</text>
+  
+    <g>
+      <rect x="24" y="110" width="580" height="310" rx="10" class="panel" />
+      <text x="44" y="138" class="chart-title">Dias medios ate level 100 por cenario</text>
+      <text x="44" y="156" class="chart-subtitle">Media entre classes, jogando sem limite diario.</text>
+      <text x="40" y="152" class="axis-label">Dias 24h</text>
+      <line x1="88" y1="160" x2="88" y2="354" class="axis" />
+      <line x1="88" y1="354" x2="582" y2="354" class="axis" />
+      
+            <line x1="88" y1="305.5" x2="582" y2="305.5" class="grid" />
+            <text x="78" y="309.5" text-anchor="end" class="tick">94</text>
+            <line x1="88" y1="257" x2="582" y2="257" class="grid" />
+            <text x="78" y="261" text-anchor="end" class="tick">188</text>
+            <line x1="88" y1="208.5" x2="582" y2="208.5" class="grid" />
+            <text x="78" y="212.5" text-anchor="end" class="tick">282</text>
+            <line x1="88" y1="160" x2="582" y2="160" class="grid" />
+            <text x="78" y="164" text-anchor="end" class="tick">376</text>
+      
+        <rect x="88" y="160" width="159.33333333333334" height="194" rx="4" fill="#64748b" />
+        <text x="167.66666666666669" y="154" text-anchor="middle" class="value">375,8</text>
+        <text x="167.66666666666669" y="372" text-anchor="middle" class="tick">Conservador</text>
+        <rect x="255.33333333333334" y="162.58116019159127" width="159.33333333333334" height="191.41883980840873" rx="4" fill="#0f766e" />
+        <text x="335" y="156.58116019159127" text-anchor="middle" class="value">370,8</text>
+        <text x="335" y="372" text-anchor="middle" class="tick">Provavel</text>
+        <rect x="422.6666666666667" y="163.92336349121874" width="159.33333333333334" height="190.07663650878126" rx="4" fill="#2563eb" />
+        <text x="502.33333333333337" y="157.92336349121874" text-anchor="middle" class="value">368,2</text>
+        <text x="502.33333333333337" y="372" text-anchor="middle" class="tick">Otimista</text>
+    </g>
+  
+    <g>
+      <rect x="628" y="110" width="580" height="310" rx="10" class="panel" />
+      <text x="648" y="138" class="chart-title">Dias medios ate level 50 por cenario</text>
+      <text x="648" y="156" class="chart-subtitle">Mostra o impacto de nao assumir caca 50 cedo.</text>
+      <text x="644" y="152" class="axis-label">Dias 24h</text>
+      <line x1="692" y1="160" x2="692" y2="354" class="axis" />
+      <line x1="692" y1="354" x2="1186" y2="354" class="axis" />
+      
+            <line x1="692" y1="305.5" x2="1186" y2="305.5" class="grid" />
+            <text x="682" y="309.5" text-anchor="end" class="tick">19</text>
+            <line x1="692" y1="257" x2="1186" y2="257" class="grid" />
+            <text x="682" y="261" text-anchor="end" class="tick">39</text>
+            <line x1="692" y1="208.5" x2="1186" y2="208.5" class="grid" />
+            <text x="682" y="212.5" text-anchor="end" class="tick">58</text>
+            <line x1="692" y1="160" x2="1186" y2="160" class="grid" />
+            <text x="682" y="164" text-anchor="end" class="tick">77</text>
+      
+        <rect x="692" y="160" width="159.33333333333334" height="194" rx="4" fill="#64748b" />
+        <text x="771.6666666666666" y="154" text-anchor="middle" class="value">77,1</text>
+        <text x="771.6666666666666" y="372" text-anchor="middle" class="tick">Conservador</text>
+        <rect x="859.3333333333334" y="164.78080415045395" width="159.33333333333334" height="189.21919584954605" rx="4" fill="#0f766e" />
+        <text x="939" y="158.78080415045395" text-anchor="middle" class="value">75,2</text>
+        <text x="939" y="372" text-anchor="middle" class="tick">Provavel</text>
+        <rect x="1026.6666666666667" y="167.04539559014268" width="159.33333333333334" height="186.95460440985732" rx="4" fill="#2563eb" />
+        <text x="1106.3333333333335" y="161.04539559014268" text-anchor="middle" class="value">74,3</text>
+        <text x="1106.3333333333335" y="372" text-anchor="middle" class="tick">Otimista</text>
+    </g>
+  
+    <g>
+      <rect x="24" y="440" width="580" height="310" rx="10" class="panel" />
+      <text x="44" y="468" class="chart-title">Level 100 no cenario provavel</text>
+      <text x="44" y="486" class="chart-subtitle">Total por classe, com caca escalando por tier.</text>
+      <text x="40" y="482" class="axis-label">Dias 24h</text>
+      <line x1="88" y1="490" x2="88" y2="684" class="axis" />
+      <line x1="88" y1="684" x2="582" y2="684" class="axis" />
+      
+            <line x1="88" y1="635.5" x2="582" y2="635.5" class="grid" />
+            <text x="78" y="639.5" text-anchor="end" class="tick">94</text>
+            <line x1="88" y1="587" x2="582" y2="587" class="grid" />
+            <text x="78" y="591" text-anchor="end" class="tick">188</text>
+            <line x1="88" y1="538.5" x2="582" y2="538.5" class="grid" />
+            <text x="78" y="542.5" text-anchor="end" class="tick">282</text>
+            <line x1="88" y1="490" x2="582" y2="490" class="grid" />
+            <text x="78" y="494" text-anchor="end" class="tick">376</text>
+      
+        <rect x="88" y="490" width="117.5" height="194" rx="4" fill="#d94b4b" />
+        <text x="146.75" y="484" text-anchor="middle" class="value">376,2</text>
+        <text x="146.75" y="702" text-anchor="middle" class="tick">Lutador</text>
+        <rect x="213.5" y="494.69234245009704" width="117.5" height="189.30765754990298" rx="4" fill="#8b5cf6" />
+        <text x="272.25" y="488.69234245009704" text-anchor="middle" class="value">367,1</text>
+        <text x="272.25" y="702" text-anchor="middle" class="tick">Assassino</text>
+        <rect x="339" y="494.70781171092153" width="117.5" height="189.2921882890785" rx="4" fill="#2563eb" />
+        <text x="397.75" y="488.70781171092153" text-anchor="middle" class="value">367,1</text>
+        <text x="397.75" y="702" text-anchor="middle" class="tick">Atirador</text>
+        <rect x="464.5" y="491.7634957339925" width="117.5" height="192.23650426600747" rx="4" fill="#16a34a" />
+        <text x="523.25" y="485.7634957339925" text-anchor="middle" class="value">372,8</text>
+        <text x="523.25" y="702" text-anchor="middle" class="tick">Medico</text>
+    </g>
+  
+    <g>
+      <rect x="628" y="440" width="580" height="310" rx="10" class="panel" />
+      <text x="648" y="468" class="chart-title">Level 50 no cenario provavel</text>
+      <text x="648" y="486" class="chart-subtitle">Cap atual jogavel em comparacao com a projecao 100.</text>
+      <text x="644" y="482" class="axis-label">Dias 24h</text>
+      <line x1="692" y1="490" x2="692" y2="684" class="axis" />
+      <line x1="692" y1="684" x2="1186" y2="684" class="axis" />
+      
+            <line x1="692" y1="635.5" x2="1186" y2="635.5" class="grid" />
+            <text x="682" y="639.5" text-anchor="end" class="tick">19</text>
+            <line x1="692" y1="587" x2="1186" y2="587" class="grid" />
+            <text x="682" y="591" text-anchor="end" class="tick">38</text>
+            <line x1="692" y1="538.5" x2="1186" y2="538.5" class="grid" />
+            <text x="682" y="542.5" text-anchor="end" class="tick">57</text>
+            <line x1="692" y1="490" x2="1186" y2="490" class="grid" />
+            <text x="682" y="494" text-anchor="end" class="tick">76</text>
+      
+        <rect x="692" y="493.7508878074444" width="117.5" height="190.24911219255557" rx="4" fill="#d94b4b" />
+        <text x="750.75" y="487.7508878074444" text-anchor="middle" class="value">74,6</text>
+        <text x="750.75" y="702" text-anchor="middle" class="tick">Lutador</text>
+        <rect x="817.5" y="490" width="117.5" height="194" rx="4" fill="#8b5cf6" />
+        <text x="876.25" y="484" text-anchor="middle" class="value">76</text>
+        <text x="876.25" y="702" text-anchor="middle" class="tick">Assassino</text>
+        <rect x="943" y="490.1020649743523" width="117.5" height="193.89793502564774" rx="4" fill="#2563eb" />
+        <text x="1001.75" y="484.1020649743523" text-anchor="middle" class="value">76</text>
+        <text x="1001.75" y="702" text-anchor="middle" class="tick">Atirador</text>
+        <rect x="1068.5" y="494.2101801920295" width="117.5" height="189.78981980797053" rx="4" fill="#16a34a" />
+        <text x="1127.25" y="488.2101801920295" text-anchor="middle" class="value">74,4</text>
+        <text x="1127.25" y="702" text-anchor="middle" class="tick">Medico</text>
+    </g>
+  
+    <g>
+      <rect x="24" y="770" width="580" height="330" rx="10" class="panel" />
+      <text x="44" y="798" class="chart-title">Curva acumulada provavel</text>
+      <text x="44" y="816" class="chart-subtitle">Dias continuos por level-chave.</text>
+      <text x="40" y="816" class="axis-label">Dias</text>
+      <line x1="94" y1="824" x2="94" y2="1042" class="axis" />
+      <line x1="94" y1="1042" x2="576" y2="1042" class="axis" />
+      
+            <line x1="94" y1="987.5" x2="576" y2="987.5" class="grid" />
+            <text x="84" y="991.5" text-anchor="end" class="tick">94</text>
+            <line x1="94" y1="933" x2="576" y2="933" class="grid" />
+            <text x="84" y="937" text-anchor="end" class="tick">188</text>
+            <line x1="94" y1="878.5" x2="576" y2="878.5" class="grid" />
+            <text x="84" y="882.5" text-anchor="end" class="tick">282</text>
+            <line x1="94" y1="824" x2="576" y2="824" class="grid" />
+            <text x="84" y="828" text-anchor="end" class="tick">376</text>
+      <text x="94" y="1060" text-anchor="middle" class="tick">L10</text><text x="147.55555555555554" y="1060" text-anchor="middle" class="tick">L20</text><text x="201.1111111111111" y="1060" text-anchor="middle" class="tick">L30</text><text x="254.66666666666666" y="1060" text-anchor="middle" class="tick">L40</text><text x="308.2222222222222" y="1060" text-anchor="middle" class="tick">L50</text><text x="361.77777777777777" y="1060" text-anchor="middle" class="tick">L60</text><text x="415.3333333333333" y="1060" text-anchor="middle" class="tick">L70</text><text x="468.8888888888889" y="1060" text-anchor="middle" class="tick">L80</text><text x="522.4444444444443" y="1060" text-anchor="middle" class="tick">L90</text><text x="576" y="1060" text-anchor="middle" class="tick">L100</text>
+      
+        <polyline points="94,1041.242847520986 147.55555555555554,1037.0885621469213 201.1111111111111,1028.2730984710793 254.66666666666666,1015.674595761805 308.2222222222222,998.7984451906858 361.77777777777777,977.8218970396001 415.3333333333333,950.7456562036349 468.8888888888889,917.4319321727195 522.4444444444443,876.247171515434 576,824" fill="none" stroke="#d94b4b" stroke-width="2.5" />
+        <circle cx="94" cy="1041.242847520986" r="3.5" fill="#d94b4b" /><circle cx="147.55555555555554" cy="1037.0885621469213" r="3.5" fill="#d94b4b" /><circle cx="201.1111111111111" cy="1028.2730984710793" r="3.5" fill="#d94b4b" /><circle cx="254.66666666666666" cy="1015.674595761805" r="3.5" fill="#d94b4b" /><circle cx="308.2222222222222" cy="998.7984451906858" r="3.5" fill="#d94b4b" /><circle cx="361.77777777777777" cy="977.8218970396001" r="3.5" fill="#d94b4b" /><circle cx="415.3333333333333" cy="950.7456562036349" r="3.5" fill="#d94b4b" /><circle cx="468.8888888888889" cy="917.4319321727195" r="3.5" fill="#d94b4b" /><circle cx="522.4444444444443" cy="876.247171515434" r="3.5" fill="#d94b4b" /><circle cx="576" cy="824" r="3.5" fill="#d94b4b" />
+        <polyline points="94,1041.186468140709 147.55555555555554,1036.870519384349 201.1111111111111,1027.7718840421003 254.66666666666666,1014.8371330864252 308.2222222222222,997.9475395387137 361.77777777777777,977.2557854822445 415.3333333333333,950.8409159170733 468.8888888888889,918.6856056276782 522.4444444444443,879.0433685904916 576,829.2720225226208" fill="none" stroke="#8b5cf6" stroke-width="2.5" />
+        <circle cx="94" cy="1041.186468140709" r="3.5" fill="#8b5cf6" /><circle cx="147.55555555555554" cy="1036.870519384349" r="3.5" fill="#8b5cf6" /><circle cx="201.1111111111111" cy="1027.7718840421003" r="3.5" fill="#8b5cf6" /><circle cx="254.66666666666666" cy="1014.8371330864252" r="3.5" fill="#8b5cf6" /><circle cx="308.2222222222222" cy="997.9475395387137" r="3.5" fill="#8b5cf6" /><circle cx="361.77777777777777" cy="977.2557854822445" r="3.5" fill="#8b5cf6" /><circle cx="415.3333333333333" cy="950.8409159170733" r="3.5" fill="#8b5cf6" /><circle cx="468.8888888888889" cy="918.6856056276782" r="3.5" fill="#8b5cf6" /><circle cx="522.4444444444443" cy="879.0433685904916" r="3.5" fill="#8b5cf6" /><circle cx="576" cy="829.2720225226208" r="3.5" fill="#8b5cf6" />
+        <polyline points="94,1041.2002587804889 147.55555555555554,1036.888771701705 201.1111111111111,1027.790136359456 254.66666666666666,1014.855385403781 308.2222222222222,997.9657918560696 361.77777777777777,977.2740377996004 415.3333333333333,950.8591682344291 468.8888888888889,918.7038579450341 522.4444444444443,879.0616209078474 576,829.2902748399765" fill="none" stroke="#2563eb" stroke-width="2.5" />
+        <circle cx="94" cy="1041.2002587804889" r="3.5" fill="#2563eb" /><circle cx="147.55555555555554" cy="1036.888771701705" r="3.5" fill="#2563eb" /><circle cx="201.1111111111111" cy="1027.790136359456" r="3.5" fill="#2563eb" /><circle cx="254.66666666666666" cy="1014.855385403781" r="3.5" fill="#2563eb" /><circle cx="308.2222222222222" cy="997.9657918560696" r="3.5" fill="#2563eb" /><circle cx="361.77777777777777" cy="977.2740377996004" r="3.5" fill="#2563eb" /><circle cx="415.3333333333333" cy="950.8591682344291" r="3.5" fill="#2563eb" /><circle cx="468.8888888888889" cy="918.7038579450341" r="3.5" fill="#2563eb" /><circle cx="522.4444444444443" cy="879.0616209078474" r="3.5" fill="#2563eb" /><circle cx="576" cy="829.2902748399765" r="3.5" fill="#2563eb" />
+        <polyline points="94,1041.2244213720362 147.55555555555554,1037.027431369745 201.1111111111111,1028.2000312577911 254.66666666666666,1015.6015285485169 308.2222222222222,998.9037291927037 361.77777777777777,977.9852407939692 415.3333333333333,951.1938519964851 468.8888888888889,918.645334641766 522.4444444444443,877.6793700172927 576,825.979362415483" fill="none" stroke="#16a34a" stroke-width="2.5" />
+        <circle cx="94" cy="1041.2244213720362" r="3.5" fill="#16a34a" /><circle cx="147.55555555555554" cy="1037.027431369745" r="3.5" fill="#16a34a" /><circle cx="201.1111111111111" cy="1028.2000312577911" r="3.5" fill="#16a34a" /><circle cx="254.66666666666666" cy="1015.6015285485169" r="3.5" fill="#16a34a" /><circle cx="308.2222222222222" cy="998.9037291927037" r="3.5" fill="#16a34a" /><circle cx="361.77777777777777" cy="977.9852407939692" r="3.5" fill="#16a34a" /><circle cx="415.3333333333333" cy="951.1938519964851" r="3.5" fill="#16a34a" /><circle cx="468.8888888888889" cy="918.645334641766" r="3.5" fill="#16a34a" /><circle cx="522.4444444444443" cy="877.6793700172927" r="3.5" fill="#16a34a" /><circle cx="576" cy="825.979362415483" r="3.5" fill="#16a34a" />
+      
+        <circle cx="48" cy="1082" r="4" fill="#d94b4b" />
+        <text x="58" y="1086" class="legend">Lutador</text>
+        <circle cx="168" cy="1082" r="4" fill="#8b5cf6" />
+        <text x="178" y="1086" class="legend">Assassino</text>
+        <circle cx="288" cy="1082" r="4" fill="#2563eb" />
+        <text x="298" y="1086" class="legend">Atirador</text>
+        <circle cx="408" cy="1082" r="4" fill="#16a34a" />
+        <text x="418" y="1086" class="legend">Medico</text>
+    </g>
+  
+    <g>
+      <rect x="628" y="770" width="580" height="330" rx="10" class="panel" />
+      <text x="648" y="798" class="chart-title">Dias por tier no cenario provavel</text>
+      <text x="648" y="816" class="chart-subtitle">Tempo gasto em cada bloco de 10 levels.</text>
+      <text x="644" y="816" class="axis-label">Dias</text>
+      <line x1="698" y1="824" x2="698" y2="1042" class="axis" />
+      <line x1="698" y1="1042" x2="1180" y2="1042" class="axis" />
+      
+            <line x1="698" y1="987.5" x2="1180" y2="987.5" class="grid" />
+            <text x="688" y="991.5" text-anchor="end" class="tick">19</text>
+            <line x1="698" y1="933" x2="1180" y2="933" class="grid" />
+            <text x="688" y="937" text-anchor="end" class="tick">37</text>
+            <line x1="698" y1="878.5" x2="1180" y2="878.5" class="grid" />
+            <text x="688" y="882.5" text-anchor="end" class="tick">56</text>
+            <line x1="698" y1="824" x2="1180" y2="824" class="grid" />
+            <text x="688" y="828" text-anchor="end" class="tick">75</text>
+      <text x="698" y="1060" text-anchor="middle" class="tick">T1</text><text x="751.5555555555555" y="1060" text-anchor="middle" class="tick">T2</text><text x="805.1111111111111" y="1060" text-anchor="middle" class="tick">T3</text><text x="858.6666666666666" y="1060" text-anchor="middle" class="tick">T4</text><text x="912.2222222222222" y="1060" text-anchor="middle" class="tick">T5</text><text x="965.7777777777778" y="1060" text-anchor="middle" class="tick">T6</text><text x="1019.3333333333333" y="1060" text-anchor="middle" class="tick">T7</text><text x="1072.888888888889" y="1060" text-anchor="middle" class="tick">T8</text><text x="1126.4444444444443" y="1060" text-anchor="middle" class="tick">T9</text><text x="1180" y="1060" text-anchor="middle" class="tick">T10</text>
+      
+        <polyline points="698,1036.9431544828694 751.5555555555555,1015.9008491602153 805.1111111111111,991.6169537381801 858.6666666666666,974.2527524041682 912.2222222222222,951.3338753314939 965.7777777777778,931.4060673434947 1019.3333333333333,897.1524282767673 1072.888888888889,866.639669443626 1126.4444444444443,824 1180,832.2397471270526" fill="none" stroke="#d94b4b" stroke-width="2.5" />
+        <circle cx="698" cy="1036.9431544828694" r="3.5" fill="#d94b4b" /><circle cx="751.5555555555555" cy="1015.9008491602153" r="3.5" fill="#d94b4b" /><circle cx="805.1111111111111" cy="991.6169537381801" r="3.5" fill="#d94b4b" /><circle cx="858.6666666666666" cy="974.2527524041682" r="3.5" fill="#d94b4b" /><circle cx="912.2222222222222" cy="951.3338753314939" r="3.5" fill="#d94b4b" /><circle cx="965.7777777777778" cy="931.4060673434947" r="3.5" fill="#d94b4b" /><circle cx="1019.3333333333333" cy="897.1524282767673" r="3.5" fill="#d94b4b" /><circle cx="1072.888888888889" cy="866.639669443626" r="3.5" fill="#d94b4b" /><circle cx="1126.4444444444443" cy="824" r="3.5" fill="#d94b4b" /><circle cx="1180" cy="832.2397471270526" r="3.5" fill="#d94b4b" />
+        <polyline points="698,1036.5667889957408 751.5555555555555,1014.9437304117222 805.1111111111111,990.0370362433366 858.6666666666666,972.5212959738556 912.2222222222222,951.8071790201174 965.7777777777778,933.1538747957461 1019.3333333333333,901.0007580830945 1072.888888888889,873.1240175725269 1126.4444444444443,832.1921539739091 1180,842.7046931504648" fill="none" stroke="#8b5cf6" stroke-width="2.5" />
+        <circle cx="698" cy="1036.5667889957408" r="3.5" fill="#8b5cf6" /><circle cx="751.5555555555555" cy="1014.9437304117222" r="3.5" fill="#8b5cf6" /><circle cx="805.1111111111111" cy="990.0370362433366" r="3.5" fill="#8b5cf6" /><circle cx="858.6666666666666" cy="972.5212959738556" r="3.5" fill="#8b5cf6" /><circle cx="912.2222222222222" cy="951.8071790201174" r="3.5" fill="#8b5cf6" /><circle cx="965.7777777777778" cy="933.1538747957461" r="3.5" fill="#8b5cf6" /><circle cx="1019.3333333333333" cy="901.0007580830945" r="3.5" fill="#8b5cf6" /><circle cx="1072.888888888889" cy="873.1240175725269" r="3.5" fill="#8b5cf6" /><circle cx="1126.4444444444443" cy="832.1921539739091" r="3.5" fill="#8b5cf6" /><circle cx="1180" cy="842.7046931504648" r="3.5" fill="#8b5cf6" />
+        <polyline points="698,1036.658763494147 751.5555555555555,1014.9437304117222 805.1111111111111,990.0370362433366 858.6666666666666,972.5212959738556 912.2222222222222,951.8071790201174 965.7777777777778,933.1538747957461 1019.3333333333333,901.0007580830945 1072.888888888889,873.1240175725269 1126.4444444444443,832.1921539739091 1180,842.7046931504648" fill="none" stroke="#2563eb" stroke-width="2.5" />
+        <circle cx="698" cy="1036.658763494147" r="3.5" fill="#2563eb" /><circle cx="751.5555555555555" cy="1014.9437304117222" r="3.5" fill="#2563eb" /><circle cx="805.1111111111111" cy="990.0370362433366" r="3.5" fill="#2563eb" /><circle cx="858.6666666666666" cy="972.5212959738556" r="3.5" fill="#2563eb" /><circle cx="912.2222222222222" cy="951.8071790201174" r="3.5" fill="#2563eb" /><circle cx="965.7777777777778" cy="933.1538747957461" r="3.5" fill="#2563eb" /><circle cx="1019.3333333333333" cy="901.0007580830945" r="3.5" fill="#2563eb" /><circle cx="1072.888888888889" cy="873.1240175725269" r="3.5" fill="#2563eb" /><circle cx="1126.4444444444443" cy="832.1921539739091" r="3.5" fill="#2563eb" /><circle cx="1180" cy="842.7046931504648" r="3.5" fill="#2563eb" />
+        <polyline points="698,1036.8202298357933 751.5555555555555,1015.6555838311323 805.1111111111111,991.6169537381801 858.6666666666666,974.2527524041682 912.2222222222222,952.5248720902199 965.7777777777778,931.4060673434947 1019.3333333333333,899.0549864723688 1072.888888888889,871.1312367737269 1126.4444444444443,824 1180,834.9966462189602" fill="none" stroke="#16a34a" stroke-width="2.5" />
+        <circle cx="698" cy="1036.8202298357933" r="3.5" fill="#16a34a" /><circle cx="751.5555555555555" cy="1015.6555838311323" r="3.5" fill="#16a34a" /><circle cx="805.1111111111111" cy="991.6169537381801" r="3.5" fill="#16a34a" /><circle cx="858.6666666666666" cy="974.2527524041682" r="3.5" fill="#16a34a" /><circle cx="912.2222222222222" cy="952.5248720902199" r="3.5" fill="#16a34a" /><circle cx="965.7777777777778" cy="931.4060673434947" r="3.5" fill="#16a34a" /><circle cx="1019.3333333333333" cy="899.0549864723688" r="3.5" fill="#16a34a" /><circle cx="1072.888888888889" cy="871.1312367737269" r="3.5" fill="#16a34a" /><circle cx="1126.4444444444443" cy="824" r="3.5" fill="#16a34a" /><circle cx="1180" cy="834.9966462189602" r="3.5" fill="#16a34a" />
+      
+        <circle cx="652" cy="1082" r="4" fill="#d94b4b" />
+        <text x="662" y="1086" class="legend">Lutador</text>
+        <circle cx="772" cy="1082" r="4" fill="#8b5cf6" />
+        <text x="782" y="1086" class="legend">Assassino</text>
+        <circle cx="892" cy="1082" r="4" fill="#2563eb" />
+        <text x="902" y="1086" class="legend">Atirador</text>
+        <circle cx="1012" cy="1082" r="4" fill="#16a34a" />
+        <text x="1022" y="1086" class="legend">Medico</text>
+    </g>
+  
+    <g>
+      <rect x="24" y="1120" width="580" height="330" rx="10" class="panel" />
+      <text x="44" y="1148" class="chart-title">Nivel de caca usado por tier</text>
+      <text x="44" y="1166" class="chart-subtitle">Cenario provavel adotado na simulacao.</text>
+      <text x="40" y="1166" class="axis-label">Nivel</text>
+      <line x1="94" y1="1174" x2="94" y2="1392" class="axis" />
+      <line x1="94" y1="1392" x2="576" y2="1392" class="axis" />
+      
+            <line x1="94" y1="1337.5" x2="576" y2="1337.5" class="grid" />
+            <text x="84" y="1341.5" text-anchor="end" class="tick">13</text>
+            <line x1="94" y1="1283" x2="576" y2="1283" class="grid" />
+            <text x="84" y="1287" text-anchor="end" class="tick">25</text>
+            <line x1="94" y1="1228.5" x2="576" y2="1228.5" class="grid" />
+            <text x="84" y="1232.5" text-anchor="end" class="tick">38</text>
+            <line x1="94" y1="1174" x2="576" y2="1174" class="grid" />
+            <text x="84" y="1178" text-anchor="end" class="tick">50</text>
+      <text x="94" y="1410" text-anchor="middle" class="tick">T1</text><text x="147.55555555555554" y="1410" text-anchor="middle" class="tick">T2</text><text x="201.1111111111111" y="1410" text-anchor="middle" class="tick">T3</text><text x="254.66666666666666" y="1410" text-anchor="middle" class="tick">T4</text><text x="308.2222222222222" y="1410" text-anchor="middle" class="tick">T5</text><text x="361.77777777777777" y="1410" text-anchor="middle" class="tick">T6</text><text x="415.3333333333333" y="1410" text-anchor="middle" class="tick">T7</text><text x="468.8888888888889" y="1410" text-anchor="middle" class="tick">T8</text><text x="522.4444444444443" y="1410" text-anchor="middle" class="tick">T9</text><text x="576" y="1410" text-anchor="middle" class="tick">T10</text>
+      
+        <polyline points="94,1370.2 147.55555555555554,1339.68 201.1111111111111,1313.52 254.66666666666666,1283 308.2222222222222,1261.2 361.77777777777777,1239.4 415.3333333333333,1217.6 468.8888888888889,1195.8 522.4444444444443,1182.72 576,1174" fill="none" stroke="#0f766e" stroke-width="2.5" />
+        <circle cx="94" cy="1370.2" r="3.5" fill="#0f766e" /><circle cx="147.55555555555554" cy="1339.68" r="3.5" fill="#0f766e" /><circle cx="201.1111111111111" cy="1313.52" r="3.5" fill="#0f766e" /><circle cx="254.66666666666666" cy="1283" r="3.5" fill="#0f766e" /><circle cx="308.2222222222222" cy="1261.2" r="3.5" fill="#0f766e" /><circle cx="361.77777777777777" cy="1239.4" r="3.5" fill="#0f766e" /><circle cx="415.3333333333333" cy="1217.6" r="3.5" fill="#0f766e" /><circle cx="468.8888888888889" cy="1195.8" r="3.5" fill="#0f766e" /><circle cx="522.4444444444443" cy="1182.72" r="3.5" fill="#0f766e" /><circle cx="576" cy="1174" r="3.5" fill="#0f766e" />
+      
+        <circle cx="48" cy="1432" r="4" fill="#0f766e" />
+        <text x="58" y="1436" class="legend">Caca provavel</text>
+    </g>
+  
+    <g>
+      <rect x="628" y="1120" width="580" height="330" rx="10" class="panel" />
+      <text x="648" y="1148" class="chart-title">XP/h por tier no cenario provavel</text>
+      <text x="648" y="1166" class="chart-subtitle">XP efetivo real usado pela progressao.</text>
+      <text x="644" y="1166" class="axis-label">XP/h</text>
+      <line x1="698" y1="1174" x2="698" y2="1392" class="axis" />
+      <line x1="698" y1="1392" x2="1180" y2="1392" class="axis" />
+      
+            <line x1="698" y1="1337.5" x2="1180" y2="1337.5" class="grid" />
+            <text x="688" y="1341.5" text-anchor="end" class="tick">9.286</text>
+            <line x1="698" y1="1283" x2="1180" y2="1283" class="grid" />
+            <text x="688" y="1287" text-anchor="end" class="tick">18.571</text>
+            <line x1="698" y1="1228.5" x2="1180" y2="1228.5" class="grid" />
+            <text x="688" y="1232.5" text-anchor="end" class="tick">27.857</text>
+            <line x1="698" y1="1174" x2="1180" y2="1174" class="grid" />
+            <text x="688" y="1178" text-anchor="end" class="tick">37.142</text>
+      <text x="698" y="1410" text-anchor="middle" class="tick">T1</text><text x="751.5555555555555" y="1410" text-anchor="middle" class="tick">T2</text><text x="805.1111111111111" y="1410" text-anchor="middle" class="tick">T3</text><text x="858.6666666666666" y="1410" text-anchor="middle" class="tick">T4</text><text x="912.2222222222222" y="1410" text-anchor="middle" class="tick">T5</text><text x="965.7777777777778" y="1410" text-anchor="middle" class="tick">T6</text><text x="1019.3333333333333" y="1410" text-anchor="middle" class="tick">T7</text><text x="1072.888888888889" y="1410" text-anchor="middle" class="tick">T8</text><text x="1126.4444444444443" y="1410" text-anchor="middle" class="tick">T9</text><text x="1180" y="1410" text-anchor="middle" class="tick">T10</text>
+      
+        <polyline points="698,1382.8496580690323 751.5555555555555,1382.5444510257928 805.1111111111111,1377.7139626299067 858.6666666666666,1371.5100425394432 912.2222222222222,1360.698669969307 965.7777777777778,1344.1177104087017 1019.3333333333333,1322.324753648161 1072.888888888889,1289.7380324161327 1126.4444444444443,1244.8373808626352 1180,1184.8759355985137" fill="none" stroke="#d94b4b" stroke-width="2.5" />
+        <circle cx="698" cy="1382.8496580690323" r="3.5" fill="#d94b4b" /><circle cx="751.5555555555555" cy="1382.5444510257928" r="3.5" fill="#d94b4b" /><circle cx="805.1111111111111" cy="1377.7139626299067" r="3.5" fill="#d94b4b" /><circle cx="858.6666666666666" cy="1371.5100425394432" r="3.5" fill="#d94b4b" /><circle cx="912.2222222222222" cy="1360.698669969307" r="3.5" fill="#d94b4b" /><circle cx="965.7777777777778" cy="1344.1177104087017" r="3.5" fill="#d94b4b" /><circle cx="1019.3333333333333" cy="1322.324753648161" r="3.5" fill="#d94b4b" /><circle cx="1072.888888888889" cy="1289.7380324161327" r="3.5" fill="#d94b4b" /><circle cx="1126.4444444444443" cy="1244.8373808626352" r="3.5" fill="#d94b4b" /><circle cx="1180" cy="1184.8759355985137" r="3.5" fill="#d94b4b" />
+        <polyline points="698,1383.483549620376 751.5555555555555,1382.8790049001132 805.1111111111111,1378.1482957299015 858.6666666666666,1372.0206774002477 912.2222222222222,1360.534327715255 965.7777777777778,1343.348823434387 1019.3333333333333,1320.4230789941307 1072.888888888889,1285.8114264175326 1126.4444444444443,1239.0912713370308 1180,1174" fill="none" stroke="#8b5cf6" stroke-width="2.5" />
+        <circle cx="698" cy="1383.483549620376" r="3.5" fill="#8b5cf6" /><circle cx="751.5555555555555" cy="1382.8790049001132" r="3.5" fill="#8b5cf6" /><circle cx="805.1111111111111" cy="1378.1482957299015" r="3.5" fill="#8b5cf6" /><circle cx="858.6666666666666" cy="1372.0206774002477" r="3.5" fill="#8b5cf6" /><circle cx="912.2222222222222" cy="1360.534327715255" r="3.5" fill="#8b5cf6" /><circle cx="965.7777777777778" cy="1343.348823434387" r="3.5" fill="#8b5cf6" /><circle cx="1019.3333333333333" cy="1320.4230789941307" r="3.5" fill="#8b5cf6" /><circle cx="1072.888888888889" cy="1285.8114264175326" r="3.5" fill="#8b5cf6" /><circle cx="1126.4444444444443" cy="1239.0912713370308" r="3.5" fill="#8b5cf6" /><circle cx="1180" cy="1174" r="3.5" fill="#8b5cf6" />
+        <polyline points="698,1383.3368154649722 751.5555555555555,1382.8790049001132 805.1111111111111,1378.1482957299015 858.6666666666666,1372.0206774002477 912.2222222222222,1360.534327715255 965.7777777777778,1343.348823434387 1019.3333333333333,1320.4230789941307 1072.888888888889,1285.8114264175326 1126.4444444444443,1239.0912713370308 1180,1174" fill="none" stroke="#2563eb" stroke-width="2.5" />
+        <circle cx="698" cy="1383.3368154649722" r="3.5" fill="#2563eb" /><circle cx="751.5555555555555" cy="1382.8790049001132" r="3.5" fill="#2563eb" /><circle cx="805.1111111111111" cy="1378.1482957299015" r="3.5" fill="#2563eb" /><circle cx="858.6666666666666" cy="1372.0206774002477" r="3.5" fill="#2563eb" /><circle cx="912.2222222222222" cy="1360.534327715255" r="3.5" fill="#2563eb" /><circle cx="965.7777777777778" cy="1343.348823434387" r="3.5" fill="#2563eb" /><circle cx="1019.3333333333333" cy="1320.4230789941307" r="3.5" fill="#2563eb" /><circle cx="1072.888888888889" cy="1285.8114264175326" r="3.5" fill="#2563eb" /><circle cx="1126.4444444444443" cy="1239.0912713370308" r="3.5" fill="#2563eb" /><circle cx="1180" cy="1174" r="3.5" fill="#2563eb" />
+        <polyline points="698,1383.0668246190296 751.5555555555555,1382.632491519035 805.1111111111111,1377.7139626299067 858.6666666666666,1371.5100425394432 912.2222222222222,1360.2819449679607 965.7777777777778,1344.1177104087017 1019.3333333333333,1321.3973937860105 1072.888888888889,1287.049862689139 1126.4444444444443,1244.8373808626352 1180,1182.1173334769264" fill="none" stroke="#16a34a" stroke-width="2.5" />
+        <circle cx="698" cy="1383.0668246190296" r="3.5" fill="#16a34a" /><circle cx="751.5555555555555" cy="1382.632491519035" r="3.5" fill="#16a34a" /><circle cx="805.1111111111111" cy="1377.7139626299067" r="3.5" fill="#16a34a" /><circle cx="858.6666666666666" cy="1371.5100425394432" r="3.5" fill="#16a34a" /><circle cx="912.2222222222222" cy="1360.2819449679607" r="3.5" fill="#16a34a" /><circle cx="965.7777777777778" cy="1344.1177104087017" r="3.5" fill="#16a34a" /><circle cx="1019.3333333333333" cy="1321.3973937860105" r="3.5" fill="#16a34a" /><circle cx="1072.888888888889" cy="1287.049862689139" r="3.5" fill="#16a34a" /><circle cx="1126.4444444444443" cy="1244.8373808626352" r="3.5" fill="#16a34a" /><circle cx="1180" cy="1182.1173334769264" r="3.5" fill="#16a34a" />
+      
+        <circle cx="652" cy="1432" r="4" fill="#d94b4b" />
+        <text x="662" y="1436" class="legend">Lutador</text>
+        <circle cx="772" cy="1432" r="4" fill="#8b5cf6" />
+        <text x="782" y="1436" class="legend">Assassino</text>
+        <circle cx="892" cy="1432" r="4" fill="#2563eb" />
+        <text x="902" y="1436" class="legend">Atirador</text>
+        <circle cx="1012" cy="1432" r="4" fill="#16a34a" />
+        <text x="1022" y="1436" class="legend">Medico</text>
+    </g>
+</svg>

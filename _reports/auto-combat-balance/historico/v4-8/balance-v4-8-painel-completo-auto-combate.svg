@@ -1,0 +1,1147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="3618" viewBox="0 0 1600 3618" role="img" aria-label="Painel completo de balanceamento do auto-combate">
+  <style>
+    .title { font: 700 34px Arial, sans-serif; fill: #101828; }
+    .subtitle { font: 400 18px Arial, sans-serif; fill: #475467; }
+    .meta { font: 600 16px Arial, sans-serif; fill: #344054; }
+    .section-title { font: 700 24px Arial, sans-serif; fill: #ffffff; }
+    .chart-title { font: 700 21px Arial, sans-serif; fill: #101828; }
+    .chart-subtitle { font: 400 14px Arial, sans-serif; fill: #667085; }
+    .axis-label { font: 400 12px Arial, sans-serif; fill: #667085; }
+    .axis-title { font: 700 12px Arial, sans-serif; fill: #667085; }
+    .legend-label { font: 600 13px Arial, sans-serif; fill: #344054; }
+  </style>
+  <rect width="100%" height="100%" fill="#f5f7fb"/>
+  <text x="50" y="62" class="title">Painel completo do auto-combate</text>
+  <text x="50" y="96" class="subtitle">Arquivo unico com XP, tempo, pocoes, sobrevivencia e dano. Sem loot, gold ou drops nas analises de dano.</text>
+  <text x="50" y="132" class="meta">Modelo: Balance V4.8 | Mapas reais do seed | Caca nivel 50 | Amostra principal 1000 mobs.</text>
+  <text x="50" y="162" class="meta">Use CSV/JSON apenas para auditoria; este SVG e o painel principal para leitura.</text>
+  <rect x="50" y="230" width="1500" height="56" rx="12" fill="#101828"/>
+<text x="74" y="266" class="section-title">XP, tempo e pocoes</text>
+<g class="chart">
+<rect x="50" y="316" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="348" class="chart-title">XP efetivo por hora</text>
+<text x="74" y="370" class="chart-subtitle">Tempo de caca + TTK, mapas reais e mobs ponderados.</text>
+<line x1="120" y1="786" x2="755" y2="786" stroke="#e8edf5"/>
+<text x="108" y="790" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="688" x2="755" y2="688" stroke="#e8edf5"/>
+<text x="108" y="692" text-anchor="end" class="axis-label">10.160,9</text>
+<line x1="120" y1="590" x2="755" y2="590" stroke="#e8edf5"/>
+<text x="108" y="594" text-anchor="end" class="axis-label">20.321,8</text>
+<line x1="120" y1="492" x2="755" y2="492" stroke="#e8edf5"/>
+<text x="108" y="496" text-anchor="end" class="axis-label">30.482,8</text>
+<line x1="120" y1="394" x2="755" y2="394" stroke="#e8edf5"/>
+<text x="108" y="398" text-anchor="end" class="axis-label">40.643,7</text>
+<line x1="120" y1="394" x2="120" y2="786" stroke="#98a2b3"/>
+<line x1="120" y1="786" x2="755" y2="786" stroke="#98a2b3"/>
+<text x="68" y="382" class="axis-title">XP/h</text>
+<text x="125" y="810" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="810" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="810" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="810" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="810" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="810" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="810" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="810" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="810" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="810" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 764.78 L 194.44 768.65 L 263.89 760.32 L 333.33 750.3 L 402.78 732.84 L 472.22 706.61 L 541.67 670.59 L 611.11 620.06 L 680.56 547.34 L 750 454.72" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="764.78" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 2.200</title></circle>
+<circle cx="194.44" cy="768.65" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 1.799</title></circle>
+<circle cx="263.89" cy="760.32" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 2.663</title></circle>
+<circle cx="333.33" cy="750.3" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 3.701</title></circle>
+<circle cx="402.78" cy="732.84" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 5.512</title></circle>
+<circle cx="472.22" cy="706.61" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 8.231</title></circle>
+<circle cx="541.67" cy="670.59" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 11.966</title></circle>
+<circle cx="611.11" cy="620.06" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 17.205</title></circle>
+<circle cx="680.56" cy="547.34" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 24.745</title></circle>
+<circle cx="750" cy="454.72" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 34.348</title></circle>
+<circle cx="74" cy="814" r="5" fill="#d94b4b"/>
+<text x="86" y="818" class="legend-label">Lutador</text>
+<path d="M 125 766.22 L 194.44 769.2 L 263.89 761.2 L 333.33 750.86 L 402.78 731.99 L 472.22 705.35 L 541.67 667.44 L 611.11 615.4 L 680.56 540.49 L 750 436" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="766.22" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 2.051</title></circle>
+<circle cx="194.44" cy="769.2" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 1.742</title></circle>
+<circle cx="263.89" cy="761.2" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 2.571</title></circle>
+<circle cx="333.33" cy="750.86" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 3.643</title></circle>
+<circle cx="402.78" cy="731.99" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 5.600</title></circle>
+<circle cx="472.22" cy="705.35" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 8.362</title></circle>
+<circle cx="541.67" cy="667.44" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 12.293</title></circle>
+<circle cx="611.11" cy="615.4" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 17.688</title></circle>
+<circle cx="680.56" cy="540.49" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 25.455</title></circle>
+<circle cx="750" cy="436" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 36.289</title></circle>
+<circle cx="206" cy="814" r="5" fill="#8b5cf6"/>
+<text x="218" y="818" class="legend-label">Assassino</text>
+<path d="M 125 765.78 L 194.44 769.2 L 263.89 761.2 L 333.33 750.86 L 402.78 731.99 L 472.22 705.35 L 541.67 667.44 L 611.11 615.4 L 680.56 540.49 L 750 436" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="765.78" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 2.096</title></circle>
+<circle cx="194.44" cy="769.2" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 1.742</title></circle>
+<circle cx="263.89" cy="761.2" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 2.571</title></circle>
+<circle cx="333.33" cy="750.86" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 3.643</title></circle>
+<circle cx="402.78" cy="731.99" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 5.600</title></circle>
+<circle cx="472.22" cy="705.35" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 8.362</title></circle>
+<circle cx="541.67" cy="667.44" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 12.293</title></circle>
+<circle cx="611.11" cy="615.4" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 17.688</title></circle>
+<circle cx="680.56" cy="540.49" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 25.455</title></circle>
+<circle cx="750" cy="436" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 36.289</title></circle>
+<circle cx="338" cy="814" r="5" fill="#2563eb"/>
+<text x="350" y="818" class="legend-label">Atirador</text>
+<path d="M 125 765.43 L 194.44 768.8 L 263.89 760.32 L 333.33 750.3 L 402.78 731.44 L 472.22 706.61 L 541.67 669.05 L 611.11 617.84 L 680.56 547.34 L 750 445.64" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="765.43" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 2.133</title></circle>
+<circle cx="194.44" cy="768.8" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 1.783</title></circle>
+<circle cx="263.89" cy="760.32" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 2.663</title></circle>
+<circle cx="333.33" cy="750.3" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 3.701</title></circle>
+<circle cx="402.78" cy="731.44" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 5.657</title></circle>
+<circle cx="472.22" cy="706.61" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 8.231</title></circle>
+<circle cx="541.67" cy="669.05" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 12.126</title></circle>
+<circle cx="611.11" cy="617.84" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 17.435</title></circle>
+<circle cx="680.56" cy="547.34" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 24.745</title></circle>
+<circle cx="750" cy="445.64" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 35.289</title></circle>
+<circle cx="470" cy="814" r="5" fill="#16a34a"/>
+<text x="482" y="818" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="810" y="316" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="348" class="chart-title">XP/h relativo ao melhor</text>
+<text x="834" y="370" class="chart-subtitle">Quanto cada classe fica perto da melhor no tier.</text>
+<line x1="880" y1="786" x2="1515" y2="786" stroke="#e8edf5"/>
+<text x="868" y="790" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="688" x2="1515" y2="688" stroke="#e8edf5"/>
+<text x="868" y="692" text-anchor="end" class="axis-label">25</text>
+<line x1="880" y1="590" x2="1515" y2="590" stroke="#e8edf5"/>
+<text x="868" y="594" text-anchor="end" class="axis-label">50</text>
+<line x1="880" y1="492" x2="1515" y2="492" stroke="#e8edf5"/>
+<text x="868" y="496" text-anchor="end" class="axis-label">75</text>
+<line x1="880" y1="394" x2="1515" y2="394" stroke="#e8edf5"/>
+<text x="868" y="398" text-anchor="end" class="axis-label">100</text>
+<line x1="880" y1="394" x2="880" y2="786" stroke="#98a2b3"/>
+<line x1="880" y1="786" x2="1515" y2="786" stroke="#98a2b3"/>
+<text x="828" y="382" class="axis-title">%</text>
+<text x="885" y="810" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="810" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="810" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="810" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="810" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="810" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="810" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="810" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="810" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="810" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 394 L 954.44 394 L 1023.89 394 L 1093.33 394 L 1162.78 404.19 L 1232.22 400.27 L 1301.67 404.58 L 1371.11 404.58 L 1440.56 404.98 L 1510 414.78" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="394" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 100</title></circle>
+<circle cx="954.44" cy="394" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 100</title></circle>
+<circle cx="1023.89" cy="394" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 100</title></circle>
+<circle cx="1093.33" cy="394" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 100</title></circle>
+<circle cx="1162.78" cy="404.19" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 97,4</title></circle>
+<circle cx="1232.22" cy="400.27" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 98,4</title></circle>
+<circle cx="1301.67" cy="404.58" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 97,3</title></circle>
+<circle cx="1371.11" cy="404.58" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 97,3</title></circle>
+<circle cx="1440.56" cy="404.98" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 97,2</title></circle>
+<circle cx="1510" cy="414.78" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 94,7</title></circle>
+<circle cx="834" cy="814" r="5" fill="#d94b4b"/>
+<text x="846" y="818" class="legend-label">Lutador</text>
+<path d="M 885 420.66 L 954.44 406.54 L 1023.89 407.72 L 1093.33 400.27 L 1162.78 397.92 L 1232.22 394 L 1301.67 394 L 1371.11 394 L 1440.56 394 L 1510 394" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="420.66" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 93,2</title></circle>
+<circle cx="954.44" cy="406.54" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 96,8</title></circle>
+<circle cx="1023.89" cy="407.72" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 96,5</title></circle>
+<circle cx="1093.33" cy="400.27" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 98,4</title></circle>
+<circle cx="1162.78" cy="397.92" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 99</title></circle>
+<circle cx="1232.22" cy="394" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 100</title></circle>
+<circle cx="1301.67" cy="394" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 100</title></circle>
+<circle cx="1371.11" cy="394" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 100</title></circle>
+<circle cx="1440.56" cy="394" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 100</title></circle>
+<circle cx="1510" cy="394" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 100</title></circle>
+<circle cx="966" cy="814" r="5" fill="#8b5cf6"/>
+<text x="978" y="818" class="legend-label">Assassino</text>
+<path d="M 885 412.42 L 954.44 406.54 L 1023.89 407.72 L 1093.33 400.27 L 1162.78 397.92 L 1232.22 394 L 1301.67 394 L 1371.11 394 L 1440.56 394 L 1510 394" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="412.42" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 95,3</title></circle>
+<circle cx="954.44" cy="406.54" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 96,8</title></circle>
+<circle cx="1023.89" cy="407.72" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 96,5</title></circle>
+<circle cx="1093.33" cy="400.27" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 98,4</title></circle>
+<circle cx="1162.78" cy="397.92" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 99</title></circle>
+<circle cx="1232.22" cy="394" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 100</title></circle>
+<circle cx="1301.67" cy="394" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 100</title></circle>
+<circle cx="1371.11" cy="394" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 100</title></circle>
+<circle cx="1440.56" cy="394" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 100</title></circle>
+<circle cx="1510" cy="394" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 100</title></circle>
+<circle cx="1098" cy="814" r="5" fill="#2563eb"/>
+<text x="1110" y="818" class="legend-label">Atirador</text>
+<path d="M 885 405.76 L 954.44 397.53 L 1023.89 394 L 1093.33 394 L 1162.78 394 L 1232.22 400.27 L 1301.67 399.49 L 1371.11 399.49 L 1440.56 404.98 L 1510 404.98" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="405.76" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 97</title></circle>
+<circle cx="954.44" cy="397.53" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 99,1</title></circle>
+<circle cx="1023.89" cy="394" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 100</title></circle>
+<circle cx="1093.33" cy="394" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 100</title></circle>
+<circle cx="1162.78" cy="394" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 100</title></circle>
+<circle cx="1232.22" cy="400.27" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 98,4</title></circle>
+<circle cx="1301.67" cy="399.49" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 98,6</title></circle>
+<circle cx="1371.11" cy="399.49" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 98,6</title></circle>
+<circle cx="1440.56" cy="404.98" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 97,2</title></circle>
+<circle cx="1510" cy="404.98" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 97,2</title></circle>
+<circle cx="1230" cy="814" r="5" fill="#16a34a"/>
+<text x="1242" y="818" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="50" y="872" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="904" class="chart-title">Tempo para 1000 mobs</text>
+<text x="74" y="926" class="chart-subtitle">Tempo total teorico da amostra.</text>
+<line x1="120" y1="1342" x2="755" y2="1342" stroke="#e8edf5"/>
+<text x="108" y="1346" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="1244" x2="755" y2="1244" stroke="#e8edf5"/>
+<text x="108" y="1248" text-anchor="end" class="axis-label">3,8</text>
+<line x1="120" y1="1146" x2="755" y2="1146" stroke="#e8edf5"/>
+<text x="108" y="1150" text-anchor="end" class="axis-label">7,6</text>
+<line x1="120" y1="1048" x2="755" y2="1048" stroke="#e8edf5"/>
+<text x="108" y="1052" text-anchor="end" class="axis-label">11,4</text>
+<line x1="120" y1="950" x2="755" y2="950" stroke="#e8edf5"/>
+<text x="108" y="954" text-anchor="end" class="axis-label">15,2</text>
+<line x1="120" y1="950" x2="120" y2="1342" stroke="#98a2b3"/>
+<line x1="120" y1="1342" x2="755" y2="1342" stroke="#98a2b3"/>
+<text x="68" y="938" class="axis-title">Horas</text>
+<text x="125" y="1366" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="1366" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="1366" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="1366" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="1366" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="1366" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="1366" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="1366" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="1366" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="1366" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 1229.11 L 194.44 1107.72 L 263.89 1057.06 L 333.33 1013.34 L 402.78 1006.14 L 472.22 1006.14 L 541.67 999.2 L 611.11 999.2 L 680.56 999.2 L 750 992" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1229.11" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 4,4</title></circle>
+<circle cx="194.44" cy="1107.72" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 9,1</title></circle>
+<circle cx="263.89" cy="1057.06" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 11,1</title></circle>
+<circle cx="333.33" cy="1013.34" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 12,8</title></circle>
+<circle cx="402.78" cy="1006.14" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 13,1</title></circle>
+<circle cx="472.22" cy="1006.14" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 13,1</title></circle>
+<circle cx="541.67" cy="999.2" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 13,3</title></circle>
+<circle cx="611.11" cy="999.2" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 13,3</title></circle>
+<circle cx="680.56" cy="999.2" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 13,3</title></circle>
+<circle cx="750" cy="992" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 13,6</title></circle>
+<circle cx="74" cy="1370" r="5" fill="#d94b4b"/>
+<text x="86" y="1374" class="legend-label">Lutador</text>
+<path d="M 125 1229.36 L 194.44 1119.81 L 263.89 1076.35 L 333.33 1041.89 L 402.78 1041.89 L 472.22 1041.89 L 541.67 1041.89 L 611.11 1041.89 L 680.56 1041.89 L 750 1041.89" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1229.36" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 4,4</title></circle>
+<circle cx="194.44" cy="1119.81" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 8,6</title></circle>
+<circle cx="263.89" cy="1076.35" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 10,3</title></circle>
+<circle cx="333.33" cy="1041.89" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 11,7</title></circle>
+<circle cx="402.78" cy="1041.89" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 11,7</title></circle>
+<circle cx="472.22" cy="1041.89" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 11,7</title></circle>
+<circle cx="541.67" cy="1041.89" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 11,7</title></circle>
+<circle cx="611.11" cy="1041.89" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 11,7</title></circle>
+<circle cx="680.56" cy="1041.89" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 11,7</title></circle>
+<circle cx="750" cy="1041.89" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 11,7</title></circle>
+<circle cx="206" cy="1370" r="5" fill="#8b5cf6"/>
+<text x="218" y="1374" class="legend-label">Assassino</text>
+<path d="M 125 1231.68 L 194.44 1119.81 L 263.89 1076.35 L 333.33 1041.89 L 402.78 1041.89 L 472.22 1041.89 L 541.67 1041.89 L 611.11 1041.89 L 680.56 1041.89 L 750 1041.89" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1231.68" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 4,3</title></circle>
+<circle cx="194.44" cy="1119.81" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 8,6</title></circle>
+<circle cx="263.89" cy="1076.35" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 10,3</title></circle>
+<circle cx="333.33" cy="1041.89" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 11,7</title></circle>
+<circle cx="402.78" cy="1041.89" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 11,7</title></circle>
+<circle cx="472.22" cy="1041.89" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 11,7</title></circle>
+<circle cx="541.67" cy="1041.89" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 11,7</title></circle>
+<circle cx="611.11" cy="1041.89" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 11,7</title></circle>
+<circle cx="680.56" cy="1041.89" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 11,7</title></circle>
+<circle cx="750" cy="1041.89" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 11,7</title></circle>
+<circle cx="338" cy="1370" r="5" fill="#2563eb"/>
+<text x="350" y="1374" class="legend-label">Atirador</text>
+<path d="M 125 1225.5 L 194.44 1105.92 L 263.89 1057.06 L 333.33 1013.34 L 402.78 1013.34 L 472.22 1006.14 L 541.67 1006.14 L 611.11 1006.14 L 680.56 999.2 L 750 999.2" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1225.5" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 4,5</title></circle>
+<circle cx="194.44" cy="1105.92" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 9,2</title></circle>
+<circle cx="263.89" cy="1057.06" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 11,1</title></circle>
+<circle cx="333.33" cy="1013.34" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 12,8</title></circle>
+<circle cx="402.78" cy="1013.34" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 12,8</title></circle>
+<circle cx="472.22" cy="1006.14" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 13,1</title></circle>
+<circle cx="541.67" cy="1006.14" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 13,1</title></circle>
+<circle cx="611.11" cy="1006.14" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 13,1</title></circle>
+<circle cx="680.56" cy="999.2" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 13,3</title></circle>
+<circle cx="750" cy="999.2" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 13,3</title></circle>
+<circle cx="470" cy="1370" r="5" fill="#16a34a"/>
+<text x="482" y="1374" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="810" y="872" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="904" class="chart-title">Pocoes por 1000 mobs</text>
+<text x="834" y="926" class="chart-subtitle">Projecao com cura por pocoes, sem descanso automatico.</text>
+<line x1="880" y1="1342" x2="1515" y2="1342" stroke="#e8edf5"/>
+<text x="868" y="1346" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="1244" x2="1515" y2="1244" stroke="#e8edf5"/>
+<text x="868" y="1248" text-anchor="end" class="axis-label">101,9</text>
+<line x1="880" y1="1146" x2="1515" y2="1146" stroke="#e8edf5"/>
+<text x="868" y="1150" text-anchor="end" class="axis-label">203,8</text>
+<line x1="880" y1="1048" x2="1515" y2="1048" stroke="#e8edf5"/>
+<text x="868" y="1052" text-anchor="end" class="axis-label">305,8</text>
+<line x1="880" y1="950" x2="1515" y2="950" stroke="#e8edf5"/>
+<text x="868" y="954" text-anchor="end" class="axis-label">407,7</text>
+<line x1="880" y1="950" x2="880" y2="1342" stroke="#98a2b3"/>
+<line x1="880" y1="1342" x2="1515" y2="1342" stroke="#98a2b3"/>
+<text x="828" y="938" class="axis-title">Pocoes</text>
+<text x="885" y="1366" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="1366" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="1366" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="1366" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="1366" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="1366" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="1366" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="1366" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="1366" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="1366" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 1338.15 L 954.44 1336.23 L 1023.89 1326.62 L 1093.33 1317.96 L 1162.78 1305.46 L 1232.22 1281.42 L 1301.67 1251.62 L 1371.11 1199.69 L 1440.56 1137.19 L 1510 1027.58" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1338.15" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 4</title></circle>
+<circle cx="954.44" cy="1336.23" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 6</title></circle>
+<circle cx="1023.89" cy="1326.62" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 16</title></circle>
+<circle cx="1093.33" cy="1317.96" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 25</title></circle>
+<circle cx="1162.78" cy="1305.46" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 38</title></circle>
+<circle cx="1232.22" cy="1281.42" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 63</title></circle>
+<circle cx="1301.67" cy="1251.62" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 94</title></circle>
+<circle cx="1371.11" cy="1199.69" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 148</title></circle>
+<circle cx="1440.56" cy="1137.19" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 213</title></circle>
+<circle cx="1510" cy="1027.58" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 327</title></circle>
+<circle cx="834" cy="1370" r="5" fill="#d94b4b"/>
+<text x="846" y="1374" class="legend-label">Lutador</text>
+<path d="M 885 1325.65 L 954.44 1320.85 L 1023.89 1282.38 L 1093.33 1249.69 L 1162.78 1214.12 L 1232.22 1195.85 L 1301.67 1172.77 L 1371.11 1127.58 L 1440.56 1081.42 L 1510 992" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1325.65" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 17</title></circle>
+<circle cx="954.44" cy="1320.85" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 22</title></circle>
+<circle cx="1023.89" cy="1282.38" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 62</title></circle>
+<circle cx="1093.33" cy="1249.69" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 96</title></circle>
+<circle cx="1162.78" cy="1214.12" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 133</title></circle>
+<circle cx="1232.22" cy="1195.85" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 152</title></circle>
+<circle cx="1301.67" cy="1172.77" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 176</title></circle>
+<circle cx="1371.11" cy="1127.58" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 223</title></circle>
+<circle cx="1440.56" cy="1081.42" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 271</title></circle>
+<circle cx="1510" cy="992" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 364</title></circle>
+<circle cx="966" cy="1370" r="5" fill="#8b5cf6"/>
+<text x="978" y="1374" class="legend-label">Assassino</text>
+<path d="M 885 1327.58 L 954.44 1323.73 L 1023.89 1286.23 L 1093.33 1256.42 L 1162.78 1223.73 L 1232.22 1201.62 L 1301.67 1181.42 L 1371.11 1134.31 L 1440.56 1086.23 L 1510 1004.5" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1327.58" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 15</title></circle>
+<circle cx="954.44" cy="1323.73" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 19</title></circle>
+<circle cx="1023.89" cy="1286.23" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 58</title></circle>
+<circle cx="1093.33" cy="1256.42" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 89</title></circle>
+<circle cx="1162.78" cy="1223.73" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 123</title></circle>
+<circle cx="1232.22" cy="1201.62" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 146</title></circle>
+<circle cx="1301.67" cy="1181.42" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 167</title></circle>
+<circle cx="1371.11" cy="1134.31" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 216</title></circle>
+<circle cx="1440.56" cy="1086.23" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 266</title></circle>
+<circle cx="1510" cy="1004.5" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 351</title></circle>
+<circle cx="1098" cy="1370" r="5" fill="#2563eb"/>
+<text x="1110" y="1374" class="legend-label">Atirador</text>
+<path d="M 885 1337.19 L 954.44 1335.27 L 1023.89 1324.69 L 1093.33 1316.04 L 1162.78 1302.58 L 1232.22 1278.54 L 1301.67 1245.85 L 1371.11 1192 L 1440.56 1130.46 L 1510 1015.08" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1337.19" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 5</title></circle>
+<circle cx="954.44" cy="1335.27" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 7</title></circle>
+<circle cx="1023.89" cy="1324.69" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 18</title></circle>
+<circle cx="1093.33" cy="1316.04" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 27</title></circle>
+<circle cx="1162.78" cy="1302.58" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 41</title></circle>
+<circle cx="1232.22" cy="1278.54" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 66</title></circle>
+<circle cx="1301.67" cy="1245.85" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 100</title></circle>
+<circle cx="1371.11" cy="1192" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 156</title></circle>
+<circle cx="1440.56" cy="1130.46" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 220</title></circle>
+<circle cx="1510" cy="1015.08" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 340</title></circle>
+<circle cx="1230" cy="1370" r="5" fill="#16a34a"/>
+<text x="1242" y="1374" class="legend-label">Medico</text>
+</g>
+<rect x="50" y="924" width="1500" height="56" rx="12" fill="#101828"/>
+<text x="74" y="960" class="section-title">Sobrevivencia direta</text>
+<g class="chart">
+<rect x="50" y="1010" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="1042" class="chart-title">Batalhas sem pocao</text>
+<text x="74" y="1064" class="chart-subtitle">HP cheio, ate cair, sem cura.</text>
+<line x1="120" y1="1480" x2="755" y2="1480" stroke="#e8edf5"/>
+<text x="108" y="1484" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="1382" x2="755" y2="1382" stroke="#e8edf5"/>
+<text x="108" y="1386" text-anchor="end" class="axis-label">183,4</text>
+<line x1="120" y1="1284" x2="755" y2="1284" stroke="#e8edf5"/>
+<text x="108" y="1288" text-anchor="end" class="axis-label">366,8</text>
+<line x1="120" y1="1186" x2="755" y2="1186" stroke="#e8edf5"/>
+<text x="108" y="1190" text-anchor="end" class="axis-label">550,2</text>
+<line x1="120" y1="1088" x2="755" y2="1088" stroke="#e8edf5"/>
+<text x="108" y="1092" text-anchor="end" class="axis-label">733,6</text>
+<line x1="120" y1="1088" x2="120" y2="1480" stroke="#98a2b3"/>
+<line x1="120" y1="1480" x2="755" y2="1480" stroke="#98a2b3"/>
+<text x="68" y="1076" class="axis-title">Batalhas</text>
+<text x="125" y="1504" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="1504" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="1504" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="1504" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="1504" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="1504" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="1504" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="1504" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="1504" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="1504" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 1130 L 194.44 1197.33 L 263.89 1359.24 L 333.33 1398.78 L 402.78 1428.7 L 472.22 1449.01 L 541.67 1460.23 L 611.11 1467.71 L 680.56 1471.98 L 750 1474.66" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1130" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 655</title></circle>
+<circle cx="194.44" cy="1197.33" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 529</title></circle>
+<circle cx="263.89" cy="1359.24" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 226</title></circle>
+<circle cx="333.33" cy="1398.78" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 152</title></circle>
+<circle cx="402.78" cy="1428.7" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 96</title></circle>
+<circle cx="472.22" cy="1449.01" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 58</title></circle>
+<circle cx="541.67" cy="1460.23" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 37</title></circle>
+<circle cx="611.11" cy="1467.71" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 23</title></circle>
+<circle cx="680.56" cy="1471.98" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 15</title></circle>
+<circle cx="750" cy="1474.66" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 10</title></circle>
+<circle cx="74" cy="1508" r="5" fill="#d94b4b"/>
+<text x="86" y="1512" class="legend-label">Lutador</text>
+<path d="M 125 1354.96 L 194.44 1382.21 L 263.89 1445.8 L 333.33 1457.56 L 402.78 1465.04 L 472.22 1467.18 L 541.67 1469.31 L 611.11 1471.98 L 680.56 1473.59 L 750 1475.19" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1354.96" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 234</title></circle>
+<circle cx="194.44" cy="1382.21" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 183</title></circle>
+<circle cx="263.89" cy="1445.8" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 64</title></circle>
+<circle cx="333.33" cy="1457.56" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 42</title></circle>
+<circle cx="402.78" cy="1465.04" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 28</title></circle>
+<circle cx="472.22" cy="1467.18" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 24</title></circle>
+<circle cx="541.67" cy="1469.31" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 20</title></circle>
+<circle cx="611.11" cy="1471.98" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 15</title></circle>
+<circle cx="680.56" cy="1473.59" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 12</title></circle>
+<circle cx="750" cy="1475.19" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 9</title></circle>
+<circle cx="206" cy="1508" r="5" fill="#8b5cf6"/>
+<text x="218" y="1512" class="legend-label">Assassino</text>
+<path d="M 125 1340 L 194.44 1365.65 L 263.89 1443.13 L 333.33 1455.95 L 402.78 1463.97 L 472.22 1466.11 L 541.67 1468.78 L 611.11 1471.45 L 680.56 1473.59 L 750 1475.19" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1340" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 262</title></circle>
+<circle cx="194.44" cy="1365.65" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 214</title></circle>
+<circle cx="263.89" cy="1443.13" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 69</title></circle>
+<circle cx="333.33" cy="1455.95" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 45</title></circle>
+<circle cx="402.78" cy="1463.97" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 30</title></circle>
+<circle cx="472.22" cy="1466.11" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 26</title></circle>
+<circle cx="541.67" cy="1468.78" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 21</title></circle>
+<circle cx="611.11" cy="1471.45" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 16</title></circle>
+<circle cx="680.56" cy="1473.59" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 12</title></circle>
+<circle cx="750" cy="1475.19" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 9</title></circle>
+<circle cx="338" cy="1508" r="5" fill="#2563eb"/>
+<text x="350" y="1512" class="legend-label">Atirador</text>
+<path d="M 125 1189.31 L 194.44 1252.37 L 263.89 1387.56 L 333.33 1418.55 L 402.78 1440.99 L 472.22 1455.95 L 541.67 1465.04 L 611.11 1470.38 L 680.56 1473.59 L 750 1476.26" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1189.31" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 544</title></circle>
+<circle cx="194.44" cy="1252.37" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 426</title></circle>
+<circle cx="263.89" cy="1387.56" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 173</title></circle>
+<circle cx="333.33" cy="1418.55" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 115</title></circle>
+<circle cx="402.78" cy="1440.99" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 73</title></circle>
+<circle cx="472.22" cy="1455.95" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 45</title></circle>
+<circle cx="541.67" cy="1465.04" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 28</title></circle>
+<circle cx="611.11" cy="1470.38" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 18</title></circle>
+<circle cx="680.56" cy="1473.59" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 12</title></circle>
+<circle cx="750" cy="1476.26" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 7</title></circle>
+<circle cx="470" cy="1508" r="5" fill="#16a34a"/>
+<text x="482" y="1512" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="810" y="1010" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="1042" class="chart-title">Batalhas com 25 pocoes</text>
+<text x="834" y="1064" class="chart-subtitle">Mesmo estoque para todas as classes.</text>
+<line x1="880" y1="1480" x2="1515" y2="1480" stroke="#e8edf5"/>
+<text x="868" y="1484" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="1382" x2="1515" y2="1382" stroke="#e8edf5"/>
+<text x="868" y="1386" text-anchor="end" class="axis-label">1.196,4</text>
+<line x1="880" y1="1284" x2="1515" y2="1284" stroke="#e8edf5"/>
+<text x="868" y="1288" text-anchor="end" class="axis-label">2.392,9</text>
+<line x1="880" y1="1186" x2="1515" y2="1186" stroke="#e8edf5"/>
+<text x="868" y="1190" text-anchor="end" class="axis-label">3.589,3</text>
+<line x1="880" y1="1088" x2="1515" y2="1088" stroke="#e8edf5"/>
+<text x="868" y="1092" text-anchor="end" class="axis-label">4.785,8</text>
+<line x1="880" y1="1088" x2="880" y2="1480" stroke="#98a2b3"/>
+<line x1="880" y1="1480" x2="1515" y2="1480" stroke="#98a2b3"/>
+<text x="828" y="1076" class="axis-title">Batalhas</text>
+<text x="885" y="1504" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="1504" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="1504" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="1504" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="1504" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="1504" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="1504" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="1504" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="1504" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="1504" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 1131.64 L 954.44 1198.31 L 1023.89 1350.5 L 1093.33 1392.77 L 1162.78 1420.94 L 1232.22 1443.88 L 1301.67 1455.67 L 1371.11 1464.44 L 1440.56 1469.19 L 1510 1472.96" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1131.64" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 4.253</title></circle>
+<circle cx="954.44" cy="1198.31" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 3.439</title></circle>
+<circle cx="1023.89" cy="1350.5" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 1.581</title></circle>
+<circle cx="1093.33" cy="1392.77" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 1.065</title></circle>
+<circle cx="1162.78" cy="1420.94" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 721</title></circle>
+<circle cx="1232.22" cy="1443.88" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 441</title></circle>
+<circle cx="1301.67" cy="1455.67" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 297</title></circle>
+<circle cx="1371.11" cy="1464.44" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 190</title></circle>
+<circle cx="1440.56" cy="1469.19" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 132</title></circle>
+<circle cx="1510" cy="1472.96" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 86</title></circle>
+<circle cx="834" cy="1508" r="5" fill="#d94b4b"/>
+<text x="846" y="1512" class="legend-label">Lutador</text>
+<path d="M 885 1355.58 L 954.44 1382.69 L 1023.89 1442.89 L 1093.33 1455.75 L 1162.78 1462.55 L 1232.22 1464.68 L 1301.67 1466.89 L 1371.11 1469.6 L 1440.56 1471.48 L 1510 1473.69" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1355.58" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 1.519</title></circle>
+<circle cx="954.44" cy="1382.69" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 1.188</title></circle>
+<circle cx="1023.89" cy="1442.89" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 453</title></circle>
+<circle cx="1093.33" cy="1455.75" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 296</title></circle>
+<circle cx="1162.78" cy="1462.55" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 213</title></circle>
+<circle cx="1232.22" cy="1464.68" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 187</title></circle>
+<circle cx="1301.67" cy="1466.89" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 160</title></circle>
+<circle cx="1371.11" cy="1469.6" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 127</title></circle>
+<circle cx="1440.56" cy="1471.48" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 104</title></circle>
+<circle cx="1510" cy="1473.69" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 77</title></circle>
+<circle cx="966" cy="1508" r="5" fill="#8b5cf6"/>
+<text x="978" y="1512" class="legend-label">Assassino</text>
+<path d="M 885 1342.06 L 954.44 1366.31 L 1023.89 1440.44 L 1093.33 1453.95 L 1162.78 1461.16 L 1232.22 1464.03 L 1301.67 1466.16 L 1371.11 1469.27 L 1440.56 1471.4 L 1510 1473.45" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1342.06" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 1.684</title></circle>
+<circle cx="954.44" cy="1366.31" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 1.388</title></circle>
+<circle cx="1023.89" cy="1440.44" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 483</title></circle>
+<circle cx="1093.33" cy="1453.95" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 318</title></circle>
+<circle cx="1162.78" cy="1461.16" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 230</title></circle>
+<circle cx="1232.22" cy="1464.03" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 195</title></circle>
+<circle cx="1301.67" cy="1466.16" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 169</title></circle>
+<circle cx="1371.11" cy="1469.27" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 131</title></circle>
+<circle cx="1440.56" cy="1471.4" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 105</title></circle>
+<circle cx="1510" cy="1473.45" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 80</title></circle>
+<circle cx="1098" cy="1508" r="5" fill="#2563eb"/>
+<text x="1110" y="1512" class="legend-label">Atirador</text>
+<path d="M 885 1130 L 954.44 1205.85 L 1023.89 1359.35 L 1093.33 1399.65 L 1162.78 1425.53 L 1232.22 1446.01 L 1301.67 1457.47 L 1371.11 1465.5 L 1440.56 1469.76 L 1510 1473.37" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1130" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 4.273</title></circle>
+<circle cx="954.44" cy="1205.85" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 3.347</title></circle>
+<circle cx="1023.89" cy="1359.35" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 1.473</title></circle>
+<circle cx="1093.33" cy="1399.65" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 981</title></circle>
+<circle cx="1162.78" cy="1425.53" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 665</title></circle>
+<circle cx="1232.22" cy="1446.01" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 415</title></circle>
+<circle cx="1301.67" cy="1457.47" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 275</title></circle>
+<circle cx="1371.11" cy="1465.5" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 177</title></circle>
+<circle cx="1440.56" cy="1469.76" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 125</title></circle>
+<circle cx="1510" cy="1473.37" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 81</title></circle>
+<circle cx="1230" cy="1508" r="5" fill="#16a34a"/>
+<text x="1242" y="1512" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="50" y="1566" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="1598" class="chart-title">Batalhas com 100 pocoes</text>
+<text x="74" y="1620" class="chart-subtitle">Comparacao de sustentacao com estoque igual.</text>
+<line x1="120" y1="2036" x2="755" y2="2036" stroke="#e8edf5"/>
+<text x="108" y="2040" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="1938" x2="755" y2="1938" stroke="#e8edf5"/>
+<text x="108" y="1942" text-anchor="end" class="axis-label">4.328,2</text>
+<line x1="120" y1="1840" x2="755" y2="1840" stroke="#e8edf5"/>
+<text x="108" y="1844" text-anchor="end" class="axis-label">8.656,5</text>
+<line x1="120" y1="1742" x2="755" y2="1742" stroke="#e8edf5"/>
+<text x="108" y="1746" text-anchor="end" class="axis-label">12.984,7</text>
+<line x1="120" y1="1644" x2="755" y2="1644" stroke="#e8edf5"/>
+<text x="108" y="1648" text-anchor="end" class="axis-label">17.313</text>
+<line x1="120" y1="1644" x2="120" y2="2036" stroke="#98a2b3"/>
+<line x1="120" y1="2036" x2="755" y2="2036" stroke="#98a2b3"/>
+<text x="68" y="1632" class="axis-title">Batalhas</text>
+<text x="125" y="2060" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="2060" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="2060" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="2060" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="2060" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="2060" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="2060" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="2060" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="2060" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="2060" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 1695.31 L 194.44 1760.51 L 263.89 1908.12 L 333.33 1949.87 L 402.78 1977.22 L 472.22 2000 L 541.67 2011.61 L 611.11 2020.33 L 680.56 2025.11 L 750 2028.89" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1695.31" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 15.047</title></circle>
+<circle cx="194.44" cy="1760.51" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 12.167</title></circle>
+<circle cx="263.89" cy="1908.12" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 5.648</title></circle>
+<circle cx="333.33" cy="1949.87" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 3.804</title></circle>
+<circle cx="402.78" cy="1977.22" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 2.596</title></circle>
+<circle cx="472.22" cy="2000" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 1.590</title></circle>
+<circle cx="541.67" cy="2011.61" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 1.077</title></circle>
+<circle cx="611.11" cy="2020.33" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 692</title></circle>
+<circle cx="680.56" cy="2025.11" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 481</title></circle>
+<circle cx="750" cy="2028.89" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 314</title></circle>
+<circle cx="74" cy="2064" r="5" fill="#d94b4b"/>
+<text x="86" y="2068" class="legend-label">Lutador</text>
+<path d="M 125 1914.25 L 194.44 1940.88 L 263.89 1999.37 L 333.33 2012 L 402.78 2018.66 L 472.22 2020.74 L 541.67 2022.8 L 611.11 2025.58 L 680.56 2027.42 L 750 2029.61" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1914.25" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 5.377</title></circle>
+<circle cx="194.44" cy="1940.88" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 4.201</title></circle>
+<circle cx="263.89" cy="1999.37" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 1.618</title></circle>
+<circle cx="333.33" cy="2012" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 1.060</title></circle>
+<circle cx="402.78" cy="2018.66" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 766</title></circle>
+<circle cx="472.22" cy="2020.74" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 674</title></circle>
+<circle cx="541.67" cy="2022.8" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 583</title></circle>
+<circle cx="611.11" cy="2025.58" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 460</title></circle>
+<circle cx="680.56" cy="2027.42" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 379</title></circle>
+<circle cx="750" cy="2029.61" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 282</title></circle>
+<circle cx="206" cy="2064" r="5" fill="#8b5cf6"/>
+<text x="218" y="2068" class="legend-label">Assassino</text>
+<path d="M 125 1901.3 L 194.44 1924.81 L 263.89 1996.94 L 333.33 2010.26 L 402.78 2017.25 L 472.22 2020.08 L 541.67 2022.12 L 611.11 2025.25 L 680.56 2027.26 L 750 2029.37" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1901.3" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 5.949</title></circle>
+<circle cx="194.44" cy="1924.81" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 4.911</title></circle>
+<circle cx="263.89" cy="1996.94" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 1.725</title></circle>
+<circle cx="333.33" cy="2010.26" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 1.137</title></circle>
+<circle cx="402.78" cy="2017.25" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 828</title></circle>
+<circle cx="472.22" cy="2020.08" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 703</title></circle>
+<circle cx="541.67" cy="2022.12" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 613</title></circle>
+<circle cx="611.11" cy="2025.25" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 475</title></circle>
+<circle cx="680.56" cy="2027.26" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 386</title></circle>
+<circle cx="750" cy="2029.37" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 293</title></circle>
+<circle cx="338" cy="2064" r="5" fill="#2563eb"/>
+<text x="350" y="2068" class="legend-label">Atirador</text>
+<path d="M 125 1686 L 194.44 1761.78 L 263.89 1914.39 L 333.33 1954.99 L 402.78 1980.66 L 472.22 2001.45 L 541.67 2012.97 L 611.11 2021.17 L 680.56 2025.49 L 750 2029.21" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1686" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 15.458</title></circle>
+<circle cx="194.44" cy="1761.78" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 12.111</title></circle>
+<circle cx="263.89" cy="1914.39" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 5.371</title></circle>
+<circle cx="333.33" cy="1954.99" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 3.578</title></circle>
+<circle cx="402.78" cy="1980.66" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 2.444</title></circle>
+<circle cx="472.22" cy="2001.45" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 1.526</title></circle>
+<circle cx="541.67" cy="2012.97" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 1.017</title></circle>
+<circle cx="611.11" cy="2021.17" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 655</title></circle>
+<circle cx="680.56" cy="2025.49" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 464</title></circle>
+<circle cx="750" cy="2029.21" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 300</title></circle>
+<circle cx="470" cy="2064" r="5" fill="#16a34a"/>
+<text x="482" y="2068" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="810" y="1566" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="1598" class="chart-title">100 pocoes relativo ao melhor</text>
+<text x="834" y="1620" class="chart-subtitle">Quanto cada classe fica perto da melhor sobrevivencia.</text>
+<line x1="880" y1="2036" x2="1515" y2="2036" stroke="#e8edf5"/>
+<text x="868" y="2040" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="1938" x2="1515" y2="1938" stroke="#e8edf5"/>
+<text x="868" y="1942" text-anchor="end" class="axis-label">25</text>
+<line x1="880" y1="1840" x2="1515" y2="1840" stroke="#e8edf5"/>
+<text x="868" y="1844" text-anchor="end" class="axis-label">50</text>
+<line x1="880" y1="1742" x2="1515" y2="1742" stroke="#e8edf5"/>
+<text x="868" y="1746" text-anchor="end" class="axis-label">75</text>
+<line x1="880" y1="1644" x2="1515" y2="1644" stroke="#e8edf5"/>
+<text x="868" y="1648" text-anchor="end" class="axis-label">100</text>
+<line x1="880" y1="1644" x2="880" y2="2036" stroke="#98a2b3"/>
+<line x1="880" y1="2036" x2="1515" y2="2036" stroke="#98a2b3"/>
+<text x="828" y="1632" class="axis-title">%</text>
+<text x="885" y="2060" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="2060" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="2060" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="2060" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="2060" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="2060" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="2060" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="2060" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="2060" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="2060" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 1654.58 L 954.44 1644 L 1023.89 1644 L 1093.33 1644 L 1162.78 1644 L 1232.22 1644 L 1301.67 1644 L 1371.11 1644 L 1440.56 1644 L 1510 1644" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1654.58" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 97,3</title></circle>
+<circle cx="954.44" cy="1644" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 100</title></circle>
+<circle cx="1023.89" cy="1644" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 100</title></circle>
+<circle cx="1093.33" cy="1644" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 100</title></circle>
+<circle cx="1162.78" cy="1644" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 100</title></circle>
+<circle cx="1232.22" cy="1644" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 100</title></circle>
+<circle cx="1301.67" cy="1644" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 100</title></circle>
+<circle cx="1371.11" cy="1644" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 100</title></circle>
+<circle cx="1440.56" cy="1644" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 100</title></circle>
+<circle cx="1510" cy="1644" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 100</title></circle>
+<circle cx="834" cy="2064" r="5" fill="#d94b4b"/>
+<text x="846" y="2068" class="legend-label">Lutador</text>
+<path d="M 885 1899.58 L 954.44 1900.76 L 1023.89 1923.89 L 1093.33 1926.63 L 1162.78 1920.36 L 1232.22 1869.79 L 1301.67 1823.93 L 1371.11 1775.32 L 1440.56 1727.1 L 1510 1683.98" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1899.58" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 34,8</title></circle>
+<circle cx="954.44" cy="1900.76" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 34,5</title></circle>
+<circle cx="1023.89" cy="1923.89" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 28,6</title></circle>
+<circle cx="1093.33" cy="1926.63" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 27,9</title></circle>
+<circle cx="1162.78" cy="1920.36" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 29,5</title></circle>
+<circle cx="1232.22" cy="1869.79" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 42,4</title></circle>
+<circle cx="1301.67" cy="1823.93" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 54,1</title></circle>
+<circle cx="1371.11" cy="1775.32" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 66,5</title></circle>
+<circle cx="1440.56" cy="1727.1" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 78,8</title></circle>
+<circle cx="1510" cy="1683.98" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 89,8</title></circle>
+<circle cx="966" cy="2064" r="5" fill="#8b5cf6"/>
+<text x="978" y="2068" class="legend-label">Assassino</text>
+<path d="M 885 1885.08 L 954.44 1877.63 L 1023.89 1916.44 L 1093.33 1918.79 L 1162.78 1910.95 L 1232.22 1862.74 L 1301.67 1812.95 L 1371.11 1767.09 L 1440.56 1721.62 L 1510 1670.26" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1885.08" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 38,5</title></circle>
+<circle cx="954.44" cy="1877.63" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 40,4</title></circle>
+<circle cx="1023.89" cy="1916.44" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 30,5</title></circle>
+<circle cx="1093.33" cy="1918.79" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 29,9</title></circle>
+<circle cx="1162.78" cy="1910.95" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 31,9</title></circle>
+<circle cx="1232.22" cy="1862.74" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 44,2</title></circle>
+<circle cx="1301.67" cy="1812.95" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 56,9</title></circle>
+<circle cx="1371.11" cy="1767.09" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 68,6</title></circle>
+<circle cx="1440.56" cy="1721.62" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 80,2</title></circle>
+<circle cx="1510" cy="1670.26" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 93,3</title></circle>
+<circle cx="1098" cy="2064" r="5" fill="#2563eb"/>
+<text x="1110" y="2068" class="legend-label">Atirador</text>
+<path d="M 885 1644 L 954.44 1645.96 L 1023.89 1663.21 L 1093.33 1667.13 L 1162.78 1667.13 L 1232.22 1659.68 L 1301.67 1665.95 L 1371.11 1664.78 L 1440.56 1657.72 L 1510 1661.64" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1644" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 100</title></circle>
+<circle cx="954.44" cy="1645.96" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 99,5</title></circle>
+<circle cx="1023.89" cy="1663.21" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 95,1</title></circle>
+<circle cx="1093.33" cy="1667.13" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 94,1</title></circle>
+<circle cx="1162.78" cy="1667.13" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 94,1</title></circle>
+<circle cx="1232.22" cy="1659.68" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 96</title></circle>
+<circle cx="1301.67" cy="1665.95" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 94,4</title></circle>
+<circle cx="1371.11" cy="1664.78" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 94,7</title></circle>
+<circle cx="1440.56" cy="1657.72" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 96,5</title></circle>
+<circle cx="1510" cy="1661.64" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 95,5</title></circle>
+<circle cx="1230" cy="2064" r="5" fill="#16a34a"/>
+<text x="1242" y="2068" class="legend-label">Medico</text>
+</g>
+<rect x="50" y="1618" width="1500" height="56" rx="12" fill="#101828"/>
+<text x="74" y="1654" class="section-title">Pressao de dano</text>
+<g class="chart">
+<rect x="50" y="1704" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="1736" class="chart-title">Dano medio por batalha</text>
+<text x="74" y="1758" class="chart-subtitle">Dano esperado ponderado pelos mobs reais.</text>
+<line x1="120" y1="2174" x2="755" y2="2174" stroke="#e8edf5"/>
+<text x="108" y="2178" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="2076" x2="755" y2="2076" stroke="#e8edf5"/>
+<text x="108" y="2080" text-anchor="end" class="axis-label">144,3</text>
+<line x1="120" y1="1978" x2="755" y2="1978" stroke="#e8edf5"/>
+<text x="108" y="1982" text-anchor="end" class="axis-label">288,6</text>
+<line x1="120" y1="1880" x2="755" y2="1880" stroke="#e8edf5"/>
+<text x="108" y="1884" text-anchor="end" class="axis-label">432,9</text>
+<line x1="120" y1="1782" x2="755" y2="1782" stroke="#e8edf5"/>
+<text x="108" y="1786" text-anchor="end" class="axis-label">577,1</text>
+<line x1="120" y1="1782" x2="120" y2="2174" stroke="#98a2b3"/>
+<line x1="120" y1="2174" x2="755" y2="2174" stroke="#98a2b3"/>
+<text x="68" y="1770" class="axis-title">Dano</text>
+<text x="125" y="2198" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="2198" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="2198" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="2198" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="2198" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="2198" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="2198" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="2198" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="2198" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="2198" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 2173.27 L 194.44 2172.42 L 263.89 2168.78 L 333.33 2163.92 L 402.78 2154.22 L 472.22 2137.99 L 541.67 2110.52 L 611.11 2064.92 L 680.56 1992.23 L 750 1871.49" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2173.27" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 1,1</title></circle>
+<circle cx="194.44" cy="2172.42" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 2,3</title></circle>
+<circle cx="263.89" cy="2168.78" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 7,7</title></circle>
+<circle cx="333.33" cy="2163.92" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 14,8</title></circle>
+<circle cx="402.78" cy="2154.22" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 29,1</title></circle>
+<circle cx="472.22" cy="2137.99" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 53</title></circle>
+<circle cx="541.67" cy="2110.52" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 93,5</title></circle>
+<circle cx="611.11" cy="2064.92" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 160,6</title></circle>
+<circle cx="680.56" cy="1992.23" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 267,6</title></circle>
+<circle cx="750" cy="1871.49" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 445,4</title></circle>
+<circle cx="74" cy="2202" r="5" fill="#d94b4b"/>
+<text x="86" y="2206" class="legend-label">Lutador</text>
+<path d="M 125 2173.29 L 194.44 2172.51 L 263.89 2168.4 L 333.33 2163.25 L 402.78 2154.78 L 472.22 2146.27 L 541.67 2133.35 L 611.11 2113.84 L 680.56 2085.25 L 750 2040.32" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2173.29" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 1,1</title></circle>
+<circle cx="194.44" cy="2172.51" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 2,2</title></circle>
+<circle cx="263.89" cy="2168.4" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 8,2</title></circle>
+<circle cx="333.33" cy="2163.25" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 15,8</title></circle>
+<circle cx="402.78" cy="2154.78" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 28,3</title></circle>
+<circle cx="472.22" cy="2146.27" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 40,8</title></circle>
+<circle cx="541.67" cy="2133.35" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 59,9</title></circle>
+<circle cx="611.11" cy="2113.84" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 88,6</title></circle>
+<circle cx="680.56" cy="2085.25" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 130,7</title></circle>
+<circle cx="750" cy="2040.32" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 196,8</title></circle>
+<circle cx="206" cy="2202" r="5" fill="#8b5cf6"/>
+<text x="218" y="2206" class="legend-label">Assassino</text>
+<path d="M 125 2173.31 L 194.44 2172.66 L 263.89 2168.59 L 333.33 2163.67 L 402.78 2155.62 L 472.22 2146.93 L 541.67 2134.43 L 611.11 2114.84 L 680.56 2085.93 L 750 2042.36" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2173.31" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 1</title></circle>
+<circle cx="194.44" cy="2172.66" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 2</title></circle>
+<circle cx="263.89" cy="2168.59" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 8</title></circle>
+<circle cx="333.33" cy="2163.67" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 15,2</title></circle>
+<circle cx="402.78" cy="2155.62" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 27,1</title></circle>
+<circle cx="472.22" cy="2146.93" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 39,9</title></circle>
+<circle cx="541.67" cy="2134.43" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 58,3</title></circle>
+<circle cx="611.11" cy="2114.84" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 87,1</title></circle>
+<circle cx="680.56" cy="2085.93" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 129,7</title></circle>
+<circle cx="750" cy="2042.36" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 193,8</title></circle>
+<circle cx="338" cy="2202" r="5" fill="#2563eb"/>
+<text x="350" y="2206" class="legend-label">Atirador</text>
+<path d="M 125 2173.21 L 194.44 2172.23 L 263.89 2167.82 L 333.33 2161.94 L 402.78 2150.49 L 472.22 2131.71 L 541.67 2098.95 L 611.11 2046 L 680.56 1963.48 L 750 1824" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2173.21" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 1,2</title></circle>
+<circle cx="194.44" cy="2172.23" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 2,6</title></circle>
+<circle cx="263.89" cy="2167.82" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 9,1</title></circle>
+<circle cx="333.33" cy="2161.94" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 17,8</title></circle>
+<circle cx="402.78" cy="2150.49" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 34,6</title></circle>
+<circle cx="472.22" cy="2131.71" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 62,3</title></circle>
+<circle cx="541.67" cy="2098.95" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 110,5</title></circle>
+<circle cx="611.11" cy="2046" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 188,5</title></circle>
+<circle cx="680.56" cy="1963.48" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 309,9</title></circle>
+<circle cx="750" cy="1824" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 515,3</title></circle>
+<circle cx="470" cy="2202" r="5" fill="#16a34a"/>
+<text x="482" y="2206" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="810" y="1704" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="1736" class="chart-title">Dano por 1000 batalhas</text>
+<text x="834" y="1758" class="chart-subtitle">Pressao bruta de cura, sem economia.</text>
+<line x1="880" y1="2174" x2="1515" y2="2174" stroke="#e8edf5"/>
+<text x="868" y="2178" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="2076" x2="1515" y2="2076" stroke="#e8edf5"/>
+<text x="868" y="2080" text-anchor="end" class="axis-label">144.284</text>
+<line x1="880" y1="1978" x2="1515" y2="1978" stroke="#e8edf5"/>
+<text x="868" y="1982" text-anchor="end" class="axis-label">288.568</text>
+<line x1="880" y1="1880" x2="1515" y2="1880" stroke="#e8edf5"/>
+<text x="868" y="1884" text-anchor="end" class="axis-label">432.852</text>
+<line x1="880" y1="1782" x2="1515" y2="1782" stroke="#e8edf5"/>
+<text x="868" y="1786" text-anchor="end" class="axis-label">577.136</text>
+<line x1="880" y1="1782" x2="880" y2="2174" stroke="#98a2b3"/>
+<line x1="880" y1="2174" x2="1515" y2="2174" stroke="#98a2b3"/>
+<text x="828" y="1770" class="axis-title">Dano</text>
+<text x="885" y="2198" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="2198" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="2198" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="2198" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="2198" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="2198" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="2198" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="2198" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="2198" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="2198" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 2173.27 L 954.44 2172.42 L 1023.89 2168.78 L 1093.33 2163.92 L 1162.78 2154.22 L 1232.22 2137.99 L 1301.67 2110.52 L 1371.11 2064.92 L 1440.56 1992.23 L 1510 1871.49" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2173.27" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 1.070</title></circle>
+<circle cx="954.44" cy="2172.42" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 2.320</title></circle>
+<circle cx="1023.89" cy="2168.78" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 7.690</title></circle>
+<circle cx="1093.33" cy="2163.92" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 14.840</title></circle>
+<circle cx="1162.78" cy="2154.22" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 29.120</title></circle>
+<circle cx="1232.22" cy="2137.99" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 53.010</title></circle>
+<circle cx="1301.67" cy="2110.52" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 93.460</title></circle>
+<circle cx="1371.11" cy="2064.92" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 160.590</title></circle>
+<circle cx="1440.56" cy="1992.23" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 267.620</title></circle>
+<circle cx="1510" cy="1871.49" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 445.380</title></circle>
+<circle cx="834" cy="2202" r="5" fill="#d94b4b"/>
+<text x="846" y="2206" class="legend-label">Lutador</text>
+<path d="M 885 2173.29 L 954.44 2172.51 L 1023.89 2168.4 L 1093.33 2163.25 L 1162.78 2154.78 L 1232.22 2146.27 L 1301.67 2133.35 L 1371.11 2113.84 L 1440.56 2085.25 L 1510 2040.32" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2173.29" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 1.050</title></circle>
+<circle cx="954.44" cy="2172.51" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 2.190</title></circle>
+<circle cx="1023.89" cy="2168.4" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 8.240</title></circle>
+<circle cx="1093.33" cy="2163.25" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 15.820</title></circle>
+<circle cx="1162.78" cy="2154.78" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 28.300</title></circle>
+<circle cx="1232.22" cy="2146.27" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 40.820</title></circle>
+<circle cx="1301.67" cy="2133.35" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 59.850</title></circle>
+<circle cx="1371.11" cy="2113.84" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 88.580</title></circle>
+<circle cx="1440.56" cy="2085.25" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 130.670</title></circle>
+<circle cx="1510" cy="2040.32" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 196.810</title></circle>
+<circle cx="966" cy="2202" r="5" fill="#8b5cf6"/>
+<text x="978" y="2206" class="legend-label">Assassino</text>
+<path d="M 885 2173.31 L 954.44 2172.66 L 1023.89 2168.59 L 1093.33 2163.67 L 1162.78 2155.62 L 1232.22 2146.93 L 1301.67 2134.43 L 1371.11 2114.84 L 1440.56 2085.93 L 1510 2042.36" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2173.31" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 1.020</title></circle>
+<circle cx="954.44" cy="2172.66" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 1.980</title></circle>
+<circle cx="1023.89" cy="2168.59" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 7.970</title></circle>
+<circle cx="1093.33" cy="2163.67" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 15.210</title></circle>
+<circle cx="1162.78" cy="2155.62" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 27.060</title></circle>
+<circle cx="1232.22" cy="2146.93" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 39.860</title></circle>
+<circle cx="1301.67" cy="2134.43" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 58.260</title></circle>
+<circle cx="1371.11" cy="2114.84" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 87.100</title></circle>
+<circle cx="1440.56" cy="2085.93" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 129.670</title></circle>
+<circle cx="1510" cy="2042.36" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 193.810</title></circle>
+<circle cx="1098" cy="2202" r="5" fill="#2563eb"/>
+<text x="1110" y="2206" class="legend-label">Atirador</text>
+<path d="M 885 2173.21 L 954.44 2172.23 L 1023.89 2167.82 L 1093.33 2161.94 L 1162.78 2150.49 L 1232.22 2131.71 L 1301.67 2098.95 L 1371.11 2046 L 1440.56 1963.48 L 1510 1824" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2173.21" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 1.160</title></circle>
+<circle cx="954.44" cy="2172.23" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 2.610</title></circle>
+<circle cx="1023.89" cy="2167.82" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 9.100</title></circle>
+<circle cx="1093.33" cy="2161.94" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 17.760</title></circle>
+<circle cx="1162.78" cy="2150.49" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 34.620</title></circle>
+<circle cx="1232.22" cy="2131.71" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 62.270</title></circle>
+<circle cx="1301.67" cy="2098.95" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 110.490</title></circle>
+<circle cx="1371.11" cy="2046" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 188.450</title></circle>
+<circle cx="1440.56" cy="1963.48" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 309.940</title></circle>
+<circle cx="1510" cy="1824" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 515.300</title></circle>
+<circle cx="1230" cy="2202" r="5" fill="#16a34a"/>
+<text x="1242" y="2206" class="legend-label">Medico</text>
+</g>
+<rect x="50" y="2312" width="1500" height="56" rx="12" fill="#101828"/>
+<text x="74" y="2348" class="section-title">Sequencias ruins</text>
+<g class="chart">
+<rect x="50" y="2398" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="2430" class="chart-title">Rank 6 sem pocao</text>
+<text x="74" y="2452" class="chart-subtitle">Sequencia apenas contra o mob mais forte do tier.</text>
+<line x1="120" y1="2868" x2="755" y2="2868" stroke="#e8edf5"/>
+<text x="108" y="2872" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="2770" x2="755" y2="2770" stroke="#e8edf5"/>
+<text x="108" y="2774" text-anchor="end" class="axis-label">96,6</text>
+<line x1="120" y1="2672" x2="755" y2="2672" stroke="#e8edf5"/>
+<text x="108" y="2676" text-anchor="end" class="axis-label">193,2</text>
+<line x1="120" y1="2574" x2="755" y2="2574" stroke="#e8edf5"/>
+<text x="108" y="2578" text-anchor="end" class="axis-label">289,8</text>
+<line x1="120" y1="2476" x2="755" y2="2476" stroke="#e8edf5"/>
+<text x="108" y="2480" text-anchor="end" class="axis-label">386,4</text>
+<line x1="120" y1="2476" x2="120" y2="2868" stroke="#98a2b3"/>
+<line x1="120" y1="2868" x2="755" y2="2868" stroke="#98a2b3"/>
+<text x="68" y="2464" class="axis-title">Batalhas</text>
+<text x="125" y="2892" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="2892" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="2892" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="2892" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="2892" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="2892" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="2892" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="2892" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="2892" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="2892" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 2518 L 194.44 2666.12 L 263.89 2801.04 L 333.33 2822.35 L 402.78 2838.58 L 472.22 2849.74 L 541.67 2855.83 L 611.11 2859.88 L 680.56 2862.93 L 750 2864.96" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2518" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 345</title></circle>
+<circle cx="194.44" cy="2666.12" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 199</title></circle>
+<circle cx="263.89" cy="2801.04" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 66</title></circle>
+<circle cx="333.33" cy="2822.35" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 45</title></circle>
+<circle cx="402.78" cy="2838.58" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 29</title></circle>
+<circle cx="472.22" cy="2849.74" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 18</title></circle>
+<circle cx="541.67" cy="2855.83" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 12</title></circle>
+<circle cx="611.11" cy="2859.88" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 8</title></circle>
+<circle cx="680.56" cy="2862.93" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 5</title></circle>
+<circle cx="750" cy="2864.96" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 3</title></circle>
+<circle cx="74" cy="2896" r="5" fill="#d94b4b"/>
+<text x="86" y="2900" class="legend-label">Lutador</text>
+<path d="M 125 2793.94 L 194.44 2813.22 L 263.89 2845.68 L 333.33 2851.77 L 402.78 2856.84 L 472.22 2857.86 L 541.67 2859.88 L 611.11 2861.91 L 680.56 2862.93 L 750 2863.94" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2793.94" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 73</title></circle>
+<circle cx="194.44" cy="2813.22" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 54</title></circle>
+<circle cx="263.89" cy="2845.68" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 22</title></circle>
+<circle cx="333.33" cy="2851.77" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 16</title></circle>
+<circle cx="402.78" cy="2856.84" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 11</title></circle>
+<circle cx="472.22" cy="2857.86" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 10</title></circle>
+<circle cx="541.67" cy="2859.88" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 8</title></circle>
+<circle cx="611.11" cy="2861.91" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 6</title></circle>
+<circle cx="680.56" cy="2862.93" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 5</title></circle>
+<circle cx="750" cy="2863.94" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 4</title></circle>
+<circle cx="206" cy="2896" r="5" fill="#8b5cf6"/>
+<text x="218" y="2900" class="legend-label">Assassino</text>
+<path d="M 125 2763.51 L 194.44 2803.07 L 263.89 2844.67 L 333.33 2850.75 L 402.78 2855.83 L 472.22 2857.86 L 541.67 2859.88 L 611.11 2861.91 L 680.56 2862.93 L 750 2863.94" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2763.51" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 103</title></circle>
+<circle cx="194.44" cy="2803.07" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 64</title></circle>
+<circle cx="263.89" cy="2844.67" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 23</title></circle>
+<circle cx="333.33" cy="2850.75" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 17</title></circle>
+<circle cx="402.78" cy="2855.83" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 12</title></circle>
+<circle cx="472.22" cy="2857.86" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 10</title></circle>
+<circle cx="541.67" cy="2859.88" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 8</title></circle>
+<circle cx="611.11" cy="2861.91" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 6</title></circle>
+<circle cx="680.56" cy="2862.93" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 5</title></circle>
+<circle cx="750" cy="2863.94" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 4</title></circle>
+<circle cx="338" cy="2896" r="5" fill="#2563eb"/>
+<text x="350" y="2900" class="legend-label">Atirador</text>
+<path d="M 125 2552.49 L 194.44 2732.06 L 263.89 2817.28 L 333.33 2833.51 L 402.78 2845.68 L 472.22 2853.8 L 541.67 2858.87 L 611.11 2861.91 L 680.56 2863.94 L 750 2865.97" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2552.49" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 311</title></circle>
+<circle cx="194.44" cy="2732.06" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 134</title></circle>
+<circle cx="263.89" cy="2817.28" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 50</title></circle>
+<circle cx="333.33" cy="2833.51" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 34</title></circle>
+<circle cx="402.78" cy="2845.68" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 22</title></circle>
+<circle cx="472.22" cy="2853.8" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 14</title></circle>
+<circle cx="541.67" cy="2858.87" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 9</title></circle>
+<circle cx="611.11" cy="2861.91" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 6</title></circle>
+<circle cx="680.56" cy="2863.94" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 4</title></circle>
+<circle cx="750" cy="2865.97" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 2</title></circle>
+<circle cx="470" cy="2896" r="5" fill="#16a34a"/>
+<text x="482" y="2900" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="810" y="2398" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="2430" class="chart-title">Sequencia ruim com 25 pocoes</text>
+<text x="834" y="2452" class="chart-subtitle">Sequencia extrema alternando mobs rank 5 e 6.</text>
+<line x1="880" y1="2868" x2="1515" y2="2868" stroke="#e8edf5"/>
+<text x="868" y="2872" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="2770" x2="1515" y2="2770" stroke="#e8edf5"/>
+<text x="868" y="2774" text-anchor="end" class="axis-label">838,3</text>
+<line x1="880" y1="2672" x2="1515" y2="2672" stroke="#e8edf5"/>
+<text x="868" y="2676" text-anchor="end" class="axis-label">1.676,6</text>
+<line x1="880" y1="2574" x2="1515" y2="2574" stroke="#e8edf5"/>
+<text x="868" y="2578" text-anchor="end" class="axis-label">2.515</text>
+<line x1="880" y1="2476" x2="1515" y2="2476" stroke="#e8edf5"/>
+<text x="868" y="2480" text-anchor="end" class="axis-label">3.353,3</text>
+<line x1="880" y1="2476" x2="880" y2="2868" stroke="#98a2b3"/>
+<line x1="880" y1="2868" x2="1515" y2="2868" stroke="#98a2b3"/>
+<text x="828" y="2464" class="axis-title">Batalhas</text>
+<text x="885" y="2892" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="2892" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="2892" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="2892" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="2892" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="2892" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="2892" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="2892" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="2892" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="2892" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 2518 L 954.44 2686.22 L 1023.89 2794.12 L 1093.33 2819.95 L 1162.78 2834.57 L 1232.22 2847.07 L 1301.67 2853.5 L 1371.11 2858.3 L 1440.56 2861.1 L 1510 2863.32" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2518" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 2.994</title></circle>
+<circle cx="954.44" cy="2686.22" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 1.555</title></circle>
+<circle cx="1023.89" cy="2794.12" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 632</title></circle>
+<circle cx="1093.33" cy="2819.95" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 411</title></circle>
+<circle cx="1162.78" cy="2834.57" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 286</title></circle>
+<circle cx="1232.22" cy="2847.07" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 179</title></circle>
+<circle cx="1301.67" cy="2853.5" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 124</title></circle>
+<circle cx="1371.11" cy="2858.3" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 83</title></circle>
+<circle cx="1440.56" cy="2861.1" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 59</title></circle>
+<circle cx="1510" cy="2863.32" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 40</title></circle>
+<circle cx="834" cy="2896" r="5" fill="#d94b4b"/>
+<text x="846" y="2900" class="legend-label">Lutador</text>
+<path d="M 885 2792.83 L 954.44 2816.1 L 1023.89 2845.09 L 1093.33 2851.63 L 1162.78 2855.73 L 1232.22 2857.13 L 1301.67 2858.65 L 1371.11 2860.52 L 1440.56 2861.69 L 1510 2863.32" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2792.83" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 643</title></circle>
+<circle cx="954.44" cy="2816.1" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 444</title></circle>
+<circle cx="1023.89" cy="2845.09" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 196</title></circle>
+<circle cx="1093.33" cy="2851.63" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 140</title></circle>
+<circle cx="1162.78" cy="2855.73" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 105</title></circle>
+<circle cx="1232.22" cy="2857.13" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 93</title></circle>
+<circle cx="1301.67" cy="2858.65" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 80</title></circle>
+<circle cx="1371.11" cy="2860.52" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 64</title></circle>
+<circle cx="1440.56" cy="2861.69" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 54</title></circle>
+<circle cx="1510" cy="2863.32" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 40</title></circle>
+<circle cx="966" cy="2896" r="5" fill="#8b5cf6"/>
+<text x="978" y="2900" class="legend-label">Assassino</text>
+<path d="M 885 2773.78 L 954.44 2805.34 L 1023.89 2843.92 L 1093.33 2850.7 L 1162.78 2854.91 L 1232.22 2856.78 L 1301.67 2858.18 L 1371.11 2860.28 L 1440.56 2861.69 L 1510 2863.21" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2773.78" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 806</title></circle>
+<circle cx="954.44" cy="2805.34" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 536</title></circle>
+<circle cx="1023.89" cy="2843.92" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 206</title></circle>
+<circle cx="1093.33" cy="2850.7" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 148</title></circle>
+<circle cx="1162.78" cy="2854.91" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 112</title></circle>
+<circle cx="1232.22" cy="2856.78" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 96</title></circle>
+<circle cx="1301.67" cy="2858.18" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 84</title></circle>
+<circle cx="1371.11" cy="2860.28" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 66</title></circle>
+<circle cx="1440.56" cy="2861.69" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 54</title></circle>
+<circle cx="1510" cy="2863.21" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 41</title></circle>
+<circle cx="1098" cy="2896" r="5" fill="#2563eb"/>
+<text x="1110" y="2900" class="legend-label">Atirador</text>
+<path d="M 885 2582.65 L 954.44 2702.47 L 1023.89 2801.13 L 1093.33 2823.11 L 1162.78 2837.14 L 1232.22 2848.24 L 1301.67 2854.32 L 1371.11 2858.88 L 1440.56 2861.34 L 1510 2863.56" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2582.65" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 2.441</title></circle>
+<circle cx="954.44" cy="2702.47" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 1.416</title></circle>
+<circle cx="1023.89" cy="2801.13" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 572</title></circle>
+<circle cx="1093.33" cy="2823.11" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 384</title></circle>
+<circle cx="1162.78" cy="2837.14" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 264</title></circle>
+<circle cx="1232.22" cy="2848.24" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 169</title></circle>
+<circle cx="1301.67" cy="2854.32" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 117</title></circle>
+<circle cx="1371.11" cy="2858.88" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 78</title></circle>
+<circle cx="1440.56" cy="2861.34" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 57</title></circle>
+<circle cx="1510" cy="2863.56" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 38</title></circle>
+<circle cx="1230" cy="2896" r="5" fill="#16a34a"/>
+<text x="1242" y="2900" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="50" y="2954" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="2986" class="chart-title">Sequencia ruim com 100 pocoes</text>
+<text x="74" y="3008" class="chart-subtitle">Mesmo cenario extremo, estoque maior.</text>
+<line x1="120" y1="3424" x2="755" y2="3424" stroke="#e8edf5"/>
+<text x="108" y="3428" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="3326" x2="755" y2="3326" stroke="#e8edf5"/>
+<text x="108" y="3330" text-anchor="end" class="axis-label">2.965,8</text>
+<line x1="120" y1="3228" x2="755" y2="3228" stroke="#e8edf5"/>
+<text x="108" y="3232" text-anchor="end" class="axis-label">5.931,5</text>
+<line x1="120" y1="3130" x2="755" y2="3130" stroke="#e8edf5"/>
+<text x="108" y="3134" text-anchor="end" class="axis-label">8.897,3</text>
+<line x1="120" y1="3032" x2="755" y2="3032" stroke="#e8edf5"/>
+<text x="108" y="3036" text-anchor="end" class="axis-label">11.863</text>
+<line x1="120" y1="3032" x2="120" y2="3424" stroke="#98a2b3"/>
+<line x1="120" y1="3424" x2="755" y2="3424" stroke="#98a2b3"/>
+<text x="68" y="3020" class="axis-title">Batalhas</text>
+<text x="125" y="3448" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="3448" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="3448" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="3448" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="3448" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="3448" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="3448" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="3448" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="3448" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="3448" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 3074 L 194.44 3242.19 L 263.89 3349.32 L 333.33 3375.49 L 402.78 3389.93 L 472.22 3402.69 L 541.67 3409.1 L 611.11 3414.05 L 680.56 3416.83 L 750 3419.21" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="3074" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 10.592</title></circle>
+<circle cx="194.44" cy="3242.19" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 5.502</title></circle>
+<circle cx="263.89" cy="3349.32" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 2.260</title></circle>
+<circle cx="333.33" cy="3375.49" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 1.468</title></circle>
+<circle cx="402.78" cy="3389.93" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 1.031</title></circle>
+<circle cx="472.22" cy="3402.69" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 645</title></circle>
+<circle cx="541.67" cy="3409.1" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 451</title></circle>
+<circle cx="611.11" cy="3414.05" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 301</title></circle>
+<circle cx="680.56" cy="3416.83" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 217</title></circle>
+<circle cx="750" cy="3419.21" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 145</title></circle>
+<circle cx="74" cy="3452" r="5" fill="#d94b4b"/>
+<text x="86" y="3456" class="legend-label">Lutador</text>
+<path d="M 125 3348.79 L 194.44 3372.06 L 263.89 3400.87 L 333.33 3407.41 L 402.78 3411.41 L 472.22 3412.93 L 541.67 3414.38 L 611.11 3416.27 L 680.56 3417.52 L 750 3419.11" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="3348.79" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 2.276</title></circle>
+<circle cx="194.44" cy="3372.06" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 1.572</title></circle>
+<circle cx="263.89" cy="3400.87" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 700</title></circle>
+<circle cx="333.33" cy="3407.41" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 502</title></circle>
+<circle cx="402.78" cy="3411.41" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 381</title></circle>
+<circle cx="472.22" cy="3412.93" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 335</title></circle>
+<circle cx="541.67" cy="3414.38" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 291</title></circle>
+<circle cx="611.11" cy="3416.27" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 234</title></circle>
+<circle cx="680.56" cy="3417.52" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 196</title></circle>
+<circle cx="750" cy="3419.11" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 148</title></circle>
+<circle cx="206" cy="3452" r="5" fill="#8b5cf6"/>
+<text x="218" y="3456" class="legend-label">Assassino</text>
+<path d="M 125 3329.89 L 194.44 3361.25 L 263.89 3399.68 L 333.33 3406.49 L 402.78 3410.65 L 472.22 3412.5 L 541.67 3413.95 L 611.11 3416.07 L 680.56 3417.42 L 750 3418.98" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="3329.89" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 2.848</title></circle>
+<circle cx="194.44" cy="3361.25" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 1.899</title></circle>
+<circle cx="263.89" cy="3399.68" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 736</title></circle>
+<circle cx="333.33" cy="3406.49" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 530</title></circle>
+<circle cx="402.78" cy="3410.65" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 404</title></circle>
+<circle cx="472.22" cy="3412.5" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 348</title></circle>
+<circle cx="541.67" cy="3413.95" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 304</title></circle>
+<circle cx="611.11" cy="3416.07" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 240</title></circle>
+<circle cx="680.56" cy="3417.42" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 199</title></circle>
+<circle cx="750" cy="3418.98" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 152</title></circle>
+<circle cx="338" cy="3452" r="5" fill="#2563eb"/>
+<text x="350" y="3456" class="legend-label">Atirador</text>
+<path d="M 125 3132.12 L 194.44 3254.72 L 263.89 3355.07 L 333.33 3377.71 L 402.78 3391.98 L 472.22 3403.51 L 541.67 3409.73 L 611.11 3414.45 L 680.56 3416.99 L 750 3419.34" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="3132.12" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 8.833</title></circle>
+<circle cx="194.44" cy="3254.72" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 5.123</title></circle>
+<circle cx="263.89" cy="3355.07" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 2.086</title></circle>
+<circle cx="333.33" cy="3377.71" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 1.401</title></circle>
+<circle cx="402.78" cy="3391.98" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 969</title></circle>
+<circle cx="472.22" cy="3403.51" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 620</title></circle>
+<circle cx="541.67" cy="3409.73" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 432</title></circle>
+<circle cx="611.11" cy="3414.45" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 289</title></circle>
+<circle cx="680.56" cy="3416.99" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 212</title></circle>
+<circle cx="750" cy="3419.34" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 141</title></circle>
+<circle cx="470" cy="3452" r="5" fill="#16a34a"/>
+<text x="482" y="3456" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="810" y="2954" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="2986" class="chart-title">Rank 6 com 100 pocoes</text>
+<text x="834" y="3008" class="chart-subtitle">Quanto cada classe sustenta contra o mob mais forte.</text>
+<line x1="880" y1="3424" x2="1515" y2="3424" stroke="#e8edf5"/>
+<text x="868" y="3428" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="3326" x2="1515" y2="3326" stroke="#e8edf5"/>
+<text x="868" y="3330" text-anchor="end" class="axis-label">2.473,2</text>
+<line x1="880" y1="3228" x2="1515" y2="3228" stroke="#e8edf5"/>
+<text x="868" y="3232" text-anchor="end" class="axis-label">4.946,5</text>
+<line x1="880" y1="3130" x2="1515" y2="3130" stroke="#e8edf5"/>
+<text x="868" y="3134" text-anchor="end" class="axis-label">7.419,7</text>
+<line x1="880" y1="3032" x2="1515" y2="3032" stroke="#e8edf5"/>
+<text x="868" y="3036" text-anchor="end" class="axis-label">9.893</text>
+<line x1="880" y1="3032" x2="880" y2="3424" stroke="#98a2b3"/>
+<line x1="880" y1="3424" x2="1515" y2="3424" stroke="#98a2b3"/>
+<text x="828" y="3020" class="axis-title">Batalhas</text>
+<text x="885" y="3448" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="3448" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="3448" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="3448" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="3448" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="3448" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="3448" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="3448" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="3448" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="3448" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 3109.74 L 954.44 3242.72 L 1023.89 3357.91 L 1093.33 3378.99 L 1162.78 3392.3 L 1232.22 3403.99 L 1301.67 3409.85 L 1371.11 3414.49 L 1440.56 3417.07 L 1510 3419.32" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="3109.74" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 7.931</title></circle>
+<circle cx="954.44" cy="3242.72" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 4.575</title></circle>
+<circle cx="1023.89" cy="3357.91" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 1.668</title></circle>
+<circle cx="1093.33" cy="3378.99" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 1.136</title></circle>
+<circle cx="1162.78" cy="3392.3" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 800</title></circle>
+<circle cx="1232.22" cy="3403.99" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 505</title></circle>
+<circle cx="1301.67" cy="3409.85" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 357</title></circle>
+<circle cx="1371.11" cy="3414.49" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 240</title></circle>
+<circle cx="1440.56" cy="3417.07" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 175</title></circle>
+<circle cx="1510" cy="3419.32" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 118</title></circle>
+<circle cx="834" cy="3452" r="5" fill="#d94b4b"/>
+<text x="846" y="3456" class="legend-label">Lutador</text>
+<path d="M 885 3356.84 L 954.44 3374.15 L 1023.89 3401.45 L 1093.33 3407.56 L 1162.78 3411.44 L 1232.22 3412.94 L 1301.67 3414.37 L 1371.11 3416.27 L 1440.56 3417.5 L 1510 3419.09" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="3356.84" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 1.695</title></circle>
+<circle cx="954.44" cy="3374.15" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 1.258</title></circle>
+<circle cx="1023.89" cy="3401.45" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 569</title></circle>
+<circle cx="1093.33" cy="3407.56" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 415</title></circle>
+<circle cx="1162.78" cy="3411.44" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 317</title></circle>
+<circle cx="1232.22" cy="3412.94" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 279</title></circle>
+<circle cx="1301.67" cy="3414.37" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 243</title></circle>
+<circle cx="1371.11" cy="3416.27" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 195</title></circle>
+<circle cx="1440.56" cy="3417.5" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 164</title></circle>
+<circle cx="1510" cy="3419.09" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 124</title></circle>
+<circle cx="966" cy="3452" r="5" fill="#8b5cf6"/>
+<text x="978" y="3456" class="legend-label">Assassino</text>
+<path d="M 885 3330.84 L 954.44 3365.48 L 1023.89 3400.78 L 1093.33 3406.72 L 1162.78 3410.73 L 1232.22 3412.55 L 1301.67 3414.01 L 1371.11 3416.08 L 1440.56 3417.38 L 1510 3418.93" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="3330.84" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 2.351</title></circle>
+<circle cx="954.44" cy="3365.48" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 1.477</title></circle>
+<circle cx="1023.89" cy="3400.78" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 586</title></circle>
+<circle cx="1093.33" cy="3406.72" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 436</title></circle>
+<circle cx="1162.78" cy="3410.73" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 335</title></circle>
+<circle cx="1232.22" cy="3412.55" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 289</title></circle>
+<circle cx="1301.67" cy="3414.01" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 252</title></circle>
+<circle cx="1371.11" cy="3416.08" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 200</title></circle>
+<circle cx="1440.56" cy="3417.38" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 167</title></circle>
+<circle cx="1510" cy="3418.93" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 128</title></circle>
+<circle cx="1098" cy="3452" r="5" fill="#2563eb"/>
+<text x="1110" y="3456" class="legend-label">Atirador</text>
+<path d="M 885 3074 L 954.44 3272.2 L 1023.89 3362.19 L 1093.33 3381.52 L 1162.78 3394.04 L 1232.22 3404.7 L 1301.67 3410.41 L 1371.11 3414.81 L 1440.56 3417.22 L 1510 3419.44" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="3074" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 8.833</title></circle>
+<circle cx="954.44" cy="3272.2" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 3.831</title></circle>
+<circle cx="1023.89" cy="3362.19" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 1.560</title></circle>
+<circle cx="1093.33" cy="3381.52" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 1.072</title></circle>
+<circle cx="1162.78" cy="3394.04" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 756</title></circle>
+<circle cx="1232.22" cy="3404.7" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 487</title></circle>
+<circle cx="1301.67" cy="3410.41" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 343</title></circle>
+<circle cx="1371.11" cy="3414.81" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 232</title></circle>
+<circle cx="1440.56" cy="3417.22" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 171</title></circle>
+<circle cx="1510" cy="3419.44" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 115</title></circle>
+<circle cx="1230" cy="3452" r="5" fill="#16a34a"/>
+<text x="1242" y="3456" class="legend-label">Medico</text>
+</g>
+</svg>

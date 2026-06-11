@@ -1,0 +1,574 @@
+/* =========================================================
+   GATHERING - PADRAO DE CARD DE ATIVIDADE
+   Alinha Hub, Atividade atual e Sua proficiencia ao card de Caca.
+   ========================================================= */
+
+.gathering-origin-option,
+.gathering-origin-current-card,
+.gathering-origin-skill-card {
+  --activity-rgb: 110, 159, 67;
+  --activity-panel-bg: rgba(4, 12, 9, 0.88);
+  --activity-card-radius: 0.9rem;
+  --activity-icon-size: 4.45rem;
+  --activity-progress-height: 9px;
+  --activity-pill-height: 1.68rem;
+}
+
+.gathering-origin-option.is-desmanche,
+.gathering-origin-current-card.is-desmanche,
+.gathering-origin-skill-card.is-desmanche {
+  --activity-rgb: 193, 118, 74;
+  --origin-rgb: 193, 118, 74;
+}
+
+.gathering-origin-option.is-coleta,
+.gathering-origin-current-card.is-coleta,
+.gathering-origin-skill-card.is-coleta {
+  --activity-rgb: 99, 171, 95;
+  --origin-rgb: 99, 171, 95;
+}
+
+.gathering-origin-option.is-patrulha,
+.gathering-origin-current-card.is-patrulha,
+.gathering-origin-skill-card.is-patrulha {
+  --activity-rgb: 72, 149, 214;
+  --origin-rgb: 72, 149, 214;
+}
+
+.gathering-origin-option.is-arsenal,
+.gathering-origin-current-card.is-arsenal,
+.gathering-origin-skill-card.is-arsenal {
+  --activity-rgb: 221, 167, 63;
+  --origin-rgb: 221, 167, 63;
+}
+
+.gathering-origin-option.is-tecnovarredura,
+.gathering-origin-current-card.is-tecnovarredura,
+.gathering-origin-skill-card.is-tecnovarredura {
+  --activity-rgb: 132, 113, 225;
+  --origin-rgb: 132, 113, 225;
+}
+
+.gathering-origin-option.is-contencao,
+.gathering-origin-current-card.is-contencao,
+.gathering-origin-skill-card.is-contencao {
+  --activity-rgb: 86, 198, 184;
+  --origin-rgb: 86, 198, 184;
+}
+
+.gathering-origins.gathering-origins--icons {
+  grid-template-columns: repeat(2, minmax(300px, 1fr));
+  gap: 0.72rem;
+}
+
+.gathering-origin-option,
+.gathering-origin-current-card,
+.gathering-origin-skill-card {
+  min-width: 0;
+  min-height: 7.1rem !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(var(--activity-rgb), 0.34) !important;
+  border-radius: var(--activity-card-radius) !important;
+  background:
+    radial-gradient(circle at 0% 42%, rgba(var(--activity-rgb), 0.18), transparent 11.5rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.01)),
+    var(--activity-panel-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 14px 28px rgba(0, 0, 0, 0.2),
+    0 0 22px rgba(var(--activity-rgb), 0.08) !important;
+}
+
+.gathering-origin-option::before,
+.gathering-origin-current-card::before,
+.gathering-origin-skill-card::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  background:
+    linear-gradient(90deg, rgba(var(--activity-rgb), 0.1), transparent 55%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.016) 0 1px,
+      transparent 1px 8px
+    ) !important;
+  opacity: 0.88 !important;
+}
+
+.gathering-origin-option__content,
+.gathering-origin-skill-card,
+.gathering-origin-current-card {
+  position: relative;
+}
+
+.gathering-origin-option__content {
+  display: grid !important;
+  grid-template-columns: var(--activity-icon-size) minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 0.82rem !important;
+  min-height: 7.1rem !important;
+  padding: 1.04rem 1.05rem 1rem !important;
+}
+
+.gathering-origin-option__visual,
+.gathering-origin-skill-card__icon,
+.gathering-origin-current-card .gathering-session__item-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: var(--activity-icon-size) !important;
+  min-width: var(--activity-icon-size) !important;
+  height: var(--activity-icon-size) !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(var(--activity-rgb), 0.3) !important;
+  border-radius: 0.86rem !important;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(var(--activity-rgb), 0.31), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
+    rgba(0, 0, 0, 0.34) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 10px 17px rgba(0, 0, 0, 0.24),
+    0 0 15px rgba(var(--activity-rgb), 0.12) !important;
+}
+
+.gathering-origin-option__visual::before,
+.gathering-origin-skill-card__icon::before,
+.gathering-origin-current-card .gathering-session__item-icon::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 7px !important;
+  border-radius: inherit !important;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(var(--activity-rgb), 0.16), transparent 72%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.04) 0 1px,
+      transparent 1px 7px
+    ) !important;
+  opacity: 0.92 !important;
+}
+
+.gathering-origin-option__icon,
+.gathering-origin-skill-card__icon img,
+.gathering-origin-current-card .gathering-session__item-image {
+  position: relative !important;
+  z-index: 2 !important;
+  display: block !important;
+  width: 3.78rem !important;
+  height: 3.78rem !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  filter:
+    drop-shadow(0 6px 9px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 0 9px rgba(var(--activity-rgb), 0.24)) !important;
+}
+
+.gathering-origin-option__icon-fallback,
+.gathering-origin-skill-card__icon:not(:has(img)) {
+  position: relative;
+  z-index: 2;
+  color: color-mix(in srgb, rgb(var(--activity-rgb)) 76%, #fff8e8) !important;
+  font-family: var(--font-title);
+  font-size: 0.84rem;
+  font-weight: 950;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.gathering-origin-option__text,
+.gathering-origin-skill-card,
+.gathering-origin-current-card .gathering-session__current-body {
+  min-width: 0;
+}
+
+.gathering-origin-option__text,
+.gathering-origin-current-card .gathering-session__current-body {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 0.58rem !important;
+}
+
+.gathering-origin-skill-card {
+  display: grid !important;
+  grid-template-columns: var(--activity-icon-size) minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 0.82rem !important;
+  padding: 1.04rem 1.05rem 1rem !important;
+}
+
+.gathering-origin-skill-card__top {
+  display: contents;
+}
+
+.gathering-origin-skill-card__heading {
+  display: flex !important;
+  min-width: 0 !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 0.34rem !important;
+}
+
+.gathering-origin-option__heading,
+.gathering-session__activity-title-row,
+.gathering-origin-skill-card__heading > span {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.56rem !important;
+}
+
+.gathering-origin-option__name {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.gathering-origin-option__active-dot {
+  flex: 0 0 auto;
+  width: 0.58rem;
+  height: 0.58rem;
+  border-radius: 999px;
+  background: rgb(var(--activity-rgb));
+  box-shadow: 0 0 10px rgba(var(--activity-rgb), 0.74);
+}
+
+.gathering-origin-option__heading strong,
+.gathering-origin-option__name strong,
+.gathering-origin-skill-card__heading strong,
+.gathering-origin-current-card .gathering-session__current-body h2 {
+  min-width: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  color: #fff8e8 !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.98rem !important;
+  font-weight: 950 !important;
+  line-height: 1.08 !important;
+  letter-spacing: 0 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.64),
+    0 0 12px rgba(var(--activity-rgb), 0.08) !important;
+}
+
+.gathering-origin-skill-card__heading small {
+  display: inline-flex !important;
+  color: rgba(231, 227, 216, 0.58) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.72rem !important;
+  font-weight: 760 !important;
+  line-height: 1.15 !important;
+}
+
+.gathering-origin-option__level-badge,
+.gathering-origin-skill-card__level-badge,
+.gathering-session__level-badge {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 3.65rem !important;
+  min-height: 1.82rem !important;
+  padding: 0.2rem 0.58rem !important;
+  color: #f6ffe6 !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.72rem !important;
+  font-style: normal !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.01em !important;
+  white-space: nowrap !important;
+  border: 1px solid rgba(var(--activity-rgb), 0.34) !important;
+  border-radius: 0.58rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(var(--activity-rgb), 0.2) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 6px 12px rgba(0, 0, 0, 0.13),
+    0 0 14px rgba(var(--activity-rgb), 0.08) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72) !important;
+}
+
+.gathering-origin-option__track,
+.gathering-origin-skill-card__track,
+.gathering-origin-current-card .gathering-session__progress-track {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  height: var(--activity-progress-height) !important;
+  min-height: var(--activity-progress-height) !important;
+  max-height: var(--activity-progress-height) !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    rgba(0, 0, 0, 0.54) !important;
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.72),
+    0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+.gathering-origin-skill-card__track {
+  grid-column: 2 !important;
+  margin: 0 !important;
+}
+
+.gathering-origin-option__track i,
+.gathering-origin-skill-card__track i,
+.gathering-origin-current-card .gathering-session__progress-fill {
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  display: block !important;
+  height: 100% !important;
+  min-width: 3px !important;
+  max-width: 100% !important;
+  border-radius: inherit !important;
+  background:
+    linear-gradient(90deg, rgb(var(--activity-rgb)), #ffd229),
+    rgba(var(--activity-rgb), 0.95) !important;
+  box-shadow:
+    0 0 12px rgba(var(--activity-rgb), 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24) !important;
+  transition: width 420ms linear !important;
+}
+
+.gathering-origin-option__pills,
+.gathering-origin-skill-card__pills,
+.gathering-origin-current-card .gathering-session__inline-stats {
+  display: grid !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-option__pills,
+.gathering-origin-skill-card__pills {
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+}
+
+.gathering-origin-skill-card__pills {
+  grid-column: 2 !important;
+}
+
+.gathering-origin-option__pills > span,
+.gathering-origin-skill-card__pills > span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  min-height: var(--activity-pill-height) !important;
+  padding: 0.16rem 0.6rem !important;
+  overflow: hidden !important;
+  color: rgba(255, 248, 232, 0.9) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.66rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.01em !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  border: 1px solid rgba(var(--activity-rgb), 0.22) !important;
+  border-radius: 0.58rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(8, 20, 12, 0.42) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 5px 10px rgba(0, 0, 0, 0.09) !important;
+}
+
+.gathering-origin-option__pills > span:first-child,
+.gathering-origin-skill-card__pills > span:first-child {
+  justify-content: flex-start !important;
+}
+
+.gathering-origin-current-card {
+  padding: 1.04rem 1.05rem 1rem !important;
+}
+
+.gathering-origin-current-card .gathering-session {
+  gap: 0 !important;
+}
+
+.gathering-origin-current-card .gathering-session__current-action,
+.gathering-origin-current-card .gathering-session__current-action--horizontal {
+  display: grid !important;
+  grid-template-columns: var(--activity-icon-size) minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 0.82rem !important;
+  min-height: var(--activity-icon-size) !important;
+  padding: 0 !important;
+}
+
+.gathering-origin-current-card .gathering-session__current-body {
+  gap: 0.58rem !important;
+}
+
+.gathering-origin-current-card .gathering-session__activity-heading {
+  display: grid !important;
+  grid-template-columns: 0.88rem minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+}
+
+.gathering-origin-current-card .gathering-session__activity-spinner {
+  width: 0.75rem !important;
+  height: 0.75rem !important;
+  border-width: 2px !important;
+  border-top-color: rgba(var(--activity-rgb), 0.95) !important;
+  box-shadow: 0 0 8px rgba(var(--activity-rgb), 0.22) !important;
+}
+
+.gathering-origin-current-card .gathering-session__header-actions {
+  position: absolute !important;
+  top: -0.54rem !important;
+  right: -0.54rem !important;
+  z-index: 8 !important;
+  display: inline-flex !important;
+  gap: 0.24rem !important;
+}
+
+.gathering-origin-current-card .gathering-session__icon-button {
+  width: 1.8rem !important;
+  min-width: 1.8rem !important;
+  height: 1.8rem !important;
+  border-color: rgba(var(--activity-rgb), 0.24) !important;
+  border-radius: 0.54rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    rgba(8, 16, 14, 0.9) !important;
+}
+
+.gathering-origin-current-card .gathering-session__inline-stats {
+  grid-template-columns: auto minmax(0, 1fr) !important;
+}
+
+.gathering-origin-current-card .gathering-session__inline-badge,
+.gathering-origin-current-card .gathering-session__inline-value--collected {
+  border-color: rgba(var(--activity-rgb), 0.34) !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(var(--activity-rgb), 0.16), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+    rgba(var(--activity-rgb), 0.2) !important;
+}
+
+.gathering-origin-current-card .gathering-session__inline-capsule {
+  border-color: rgba(var(--activity-rgb), 0.22) !important;
+}
+
+.gathering-origin-current-card .gathering-session__inline-value--time::before {
+  color: rgba(var(--activity-rgb), 0.9) !important;
+}
+
+@media (max-width: 980px) {
+  .gathering-origins.gathering-origins--icons {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-option,
+  .gathering-origin-current-card,
+  .gathering-origin-skill-card {
+    --activity-icon-size: 3.42rem;
+    --activity-progress-height: 7px;
+    min-height: 6.3rem !important;
+  }
+
+  .gathering-origin-option__content,
+  .gathering-origin-current-card,
+  .gathering-origin-skill-card {
+    gap: 0.66rem !important;
+    padding: 0.78rem !important;
+  }
+
+  .gathering-origin-option__icon,
+  .gathering-origin-skill-card__icon img,
+  .gathering-origin-current-card .gathering-session__item-image {
+    width: 2.88rem !important;
+    height: 2.88rem !important;
+  }
+
+  .gathering-origin-option__heading strong,
+  .gathering-origin-option__name strong,
+  .gathering-origin-skill-card__heading strong,
+  .gathering-origin-current-card .gathering-session__current-body h2 {
+    font-size: 0.88rem !important;
+  }
+
+  .gathering-origin-option__level-badge,
+  .gathering-origin-skill-card__level-badge,
+  .gathering-session__level-badge {
+    min-width: 3.25rem !important;
+    min-height: 1.62rem !important;
+    padding-inline: 0.48rem !important;
+    font-size: 0.66rem !important;
+  }
+
+  .gathering-origin-option__pills,
+  .gathering-origin-skill-card__pills,
+  .gathering-origin-current-card .gathering-session__inline-stats {
+    gap: 0.34rem !important;
+  }
+
+  .gathering-origin-option__pills > span,
+  .gathering-origin-skill-card__pills > span {
+    min-height: 1.52rem !important;
+    padding-inline: 0.48rem !important;
+    font-size: 0.62rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-option,
+  .gathering-origin-current-card,
+  .gathering-origin-skill-card {
+    --activity-icon-size: 2.9rem;
+    min-height: auto !important;
+  }
+
+  .gathering-origin-option__content,
+  .gathering-origin-current-card .gathering-session__current-action,
+  .gathering-origin-current-card .gathering-session__current-action--horizontal,
+  .gathering-origin-skill-card {
+    grid-template-columns: var(--activity-icon-size) minmax(0, 1fr) !important;
+    gap: 0.58rem !important;
+  }
+
+  .gathering-origin-option__icon,
+  .gathering-origin-skill-card__icon img,
+  .gathering-origin-current-card .gathering-session__item-image {
+    width: 2.42rem !important;
+    height: 2.42rem !important;
+  }
+
+  .gathering-origin-option__heading,
+  .gathering-session__activity-title-row,
+  .gathering-origin-skill-card__heading > span {
+    gap: 0.42rem !important;
+  }
+
+  .gathering-origin-option__pills,
+  .gathering-origin-skill-card__pills,
+  .gathering-origin-current-card .gathering-session__inline-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .gathering-origin-option__pills > span,
+  .gathering-origin-skill-card__pills > span {
+    justify-content: center !important;
+    width: 100% !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__inline-capsule {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+}

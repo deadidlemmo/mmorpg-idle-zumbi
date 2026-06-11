@@ -37,7 +37,7 @@ const membershipHighlights: MembershipHighlight[] = [
   {
     icon: Clock3,
     title: 'Mais tempo idle',
-    description: 'Janela maior para atividades automáticas quando o jogo ficar aberto ou em segundo plano.',
+    description: 'Atividades automáticas podem acumular até 12 horas em vez de 6 horas.',
   },
   {
     icon: BellRing,
@@ -51,8 +51,8 @@ const membershipHighlights: MembershipHighlight[] = [
   },
   {
     icon: BadgeCheck,
-    title: 'Bônus controlados',
-    description: 'Vantagens pensadas para acelerar conforto, não para substituir progressão.',
+    title: '20% mais EXP',
+    description: 'Bônus de EXP em gathering, batalha e caça, sem alterar a fonte real do estado.',
   },
 ];
 
@@ -62,13 +62,13 @@ const comparisonSections: MembershipComparisonSection[] = [
     rows: [
       {
         label: 'Atividades em segundo plano',
-        free: 'Padrão',
-        premium: 'Janela estendida',
+        free: '6 horas',
+        premium: '12 horas',
       },
       {
         label: 'Personagem alternativo',
-        free: 'Limitado',
-        premium: 'Mais tempo disponível',
+        free: '6 horas',
+        premium: '12 horas',
       },
     ],
   },
@@ -96,9 +96,9 @@ const comparisonSections: MembershipComparisonSection[] = [
     title: 'Progressão',
     rows: [
       {
-        label: 'Bônus de eficiência',
+        label: 'EXP de gathering, batalha e caça',
         free: '-',
-        premium: 'Leve e controlado',
+        premium: '+20%',
       },
       {
         label: 'Recompensas diárias',
@@ -165,6 +165,7 @@ export function MembershipPage() {
   const includedItems = useMemo(
     () => [
       'Maior limite de atividades idle',
+      '+20% EXP em gathering, batalha e caça',
       'Notificações avançadas',
       'Bônus leves de conveniência',
       'Mais espaço para respirar na rotina',
@@ -259,9 +260,9 @@ export function MembershipPage() {
             <span className="membership-eyebrow">Plano</span>
             <h2>Suba o ritmo do abrigo</h2>
             <p>
-              A estrutura já está pronta para receber os benefícios finais. Por
-              enquanto, a página mostra a proposta de assinatura e a comparação
-              de espaços que vamos balancear depois.
+              A estrutura já está pronta para receber os benefícios centrais:
+              mais tempo idle e bônus de EXP sem transformar progresso em
+              atalho vazio.
             </p>
 
             <div className="membership-included">

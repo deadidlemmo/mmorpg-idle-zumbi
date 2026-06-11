@@ -324,8 +324,7 @@ export class InfirmaryService {
         currentHp,
         maxHp,
         missingHp,
-        isDefeated:
-          character.status === CharacterStatus.DEAD || currentHp <= 0,
+        isDefeated: character.status === CharacterStatus.DEAD || currentHp <= 0,
         treatment,
         durationSeconds: FREE_TREATMENT_SECONDS,
         hasActiveAutoCombat: activityState.hasActiveAutoCombat,
@@ -430,19 +429,19 @@ export class InfirmaryService {
     return {
       hasPreservedTrackedEnemies,
       preservedTrackedEnemiesCount,
-      huntBatchId: hasPreservedTrackedEnemies ? huntBatch?.id ?? null : null,
+      huntBatchId: hasPreservedTrackedEnemies ? (huntBatch?.id ?? null) : null,
       sessionId: hasPreservedTrackedEnemies
-        ? huntBatch?.sessionId ?? huntBatch?.session?.id ?? null
+        ? (huntBatch?.sessionId ?? huntBatch?.session?.id ?? null)
         : null,
-      mapId: hasPreservedTrackedEnemies ? huntBatch?.mapId ?? null : null,
+      mapId: hasPreservedTrackedEnemies ? (huntBatch?.mapId ?? null) : null,
       subMapId: hasPreservedTrackedEnemies
-        ? huntBatch?.session?.subMapId ?? null
+        ? (huntBatch?.session?.subMapId ?? null)
         : null,
       mapName: hasPreservedTrackedEnemies
-        ? huntBatch?.map?.name ?? null
+        ? (huntBatch?.map?.name ?? null)
         : null,
       mapTier: hasPreservedTrackedEnemies
-        ? huntBatch?.map?.tier ?? null
+        ? (huntBatch?.map?.tier ?? null)
         : null,
       defeatedAt: hasPreservedTrackedEnemies
         ? (huntBatch?.session?.finishedAt?.toISOString?.() ??

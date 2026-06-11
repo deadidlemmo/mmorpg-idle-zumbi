@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import {
   ActivityStatus,
+  AutoCombatSessionPhase,
   AutoCombatSessionStatus,
   CharacterStatus,
   IncursionSessionStatus,
@@ -57,6 +58,11 @@ const ACTIVE_WORLD_BOSS_EVENT_STATUSES = [
   WorldBossEventStatus.ACTIVE,
 ];
 
+const BLOCKING_AUTO_COMBAT_PHASES = [
+  AutoCombatSessionPhase.HUNTING,
+  AutoCombatSessionPhase.COMBAT_ACTIVE,
+];
+
 @Injectable()
 export class ActivityGuardService {
   constructor(private readonly prisma: PrismaService) {}
@@ -105,6 +111,9 @@ export class ActivityGuardService {
         where: {
           characterId: character.id,
           status: AutoCombatSessionStatus.ACTIVE,
+          phase: {
+            in: BLOCKING_AUTO_COMBAT_PHASES,
+          },
         },
         orderBy: {
           startedAt: 'desc',
@@ -112,6 +121,7 @@ export class ActivityGuardService {
         select: {
           id: true,
           status: true,
+          phase: true,
           startedAt: true,
           endsAt: true,
           lastProcessedAt: true,
@@ -725,8 +735,7 @@ export class ActivityGuardService {
 
     if (state.hasActiveIncursion) {
       throw new ConflictException({
-        message:
-          'Nao e possivel usar a enfermaria durante uma incursao ativa.',
+        message: 'Nao e possivel usar a enfermaria durante uma incursao ativa.',
         activeIncursionSession: state.activeIncursionSession,
       });
     }
@@ -746,6 +755,64 @@ export class ActivityGuardService {
     }
 
     return state;
+  }
+
+  async stopActivitiesForDefeatedCharacter(params: {
+    characterId: string;
+    client?: PrismaService | Prisma.TransactionClient;
+    now?: Date;
+  }) {
+    const client = params.client ?? this.prisma;
+    const now = params.now ?? new Date();
+
+    await client.gatheringSession.updateMany({
+      where: {
+        characterId: params.characterId,
+        status: ActivityStatus.ACTIVE,
+      },
+      data: {
+        status: ActivityStatus.STOPPED,
+      },
+    });
+
+    await client.craftingSession.updateMany({
+      where: {
+        characterId: params.characterId,
+        status: ActivityStatus.ACTIVE,
+      },
+      data: {
+        status: ActivityStatus.STOPPED,
+      },
+    });
+
+    await client.characterIncursionSession.updateMany({
+      where: {
+        characterId: params.characterId,
+        status: IncursionSessionStatus.ACTIVE,
+      },
+      data: {
+        status: IncursionSessionStatus.CANCELLED,
+        completedAt: null,
+      },
+    });
+
+    await client.worldBossParticipant.updateMany({
+      where: {
+        characterId: params.characterId,
+        leftAt: null,
+        event: {
+          status: {
+            in: ACTIVE_WORLD_BOSS_EVENT_STATUSES,
+          },
+          endsAt: {
+            gt: now,
+          },
+        },
+      },
+      data: {
+        leftAt: now,
+      },
+    });
   }
 
   private ensureCharacterIsActive(status: CharacterStatus, message: string) {

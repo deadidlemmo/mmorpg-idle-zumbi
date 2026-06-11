@@ -9,6 +9,7 @@ import {
   Item,
   ItemSlot,
 } from '@prisma/client';
+import { AUTO_POTION_TRIGGER_PERCENT } from '../../common/config/potions.config';
 import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
@@ -236,7 +237,7 @@ export class ConsumablesService {
         characterId: character.id,
         enabled: false,
         potionItemId: null,
-        hpThresholdPercent: 35,
+        hpThresholdPercent: AUTO_POTION_TRIGGER_PERCENT,
         useInManualCombat: true,
         useInAutoCombat: true,
       },
@@ -291,10 +292,7 @@ export class ConsumablesService {
         ? updatePotionConfigDto.potionItemId
         : (existingConfig?.potionItemId ?? null);
 
-    const nextHpThresholdPercent =
-      updatePotionConfigDto.hpThresholdPercent ??
-      existingConfig?.hpThresholdPercent ??
-      35;
+    const nextHpThresholdPercent = AUTO_POTION_TRIGGER_PERCENT;
 
     const nextUseInManualCombat =
       updatePotionConfigDto.useInManualCombat ??
@@ -506,7 +504,6 @@ export class ConsumablesService {
 
     const hasPotion = Boolean(potion);
     const hasPotionInInventory = availableQuantity > 0;
-
     const canAutoUseInManualCombat =
       config.enabled &&
       config.useInManualCombat &&
@@ -568,8 +565,8 @@ export class ConsumablesService {
         canAutoUseInAutoCombat,
         canAutoUse: canAutoUseInManualCombat || canAutoUseInAutoCombat,
         triggerText: config.enabled
-          ? `Usar automaticamente quando HP estiver em ${config.hpThresholdPercent}% ou menos.`
-          : 'Uso automático desativado.',
+          ? 'Pocao selecionada para uso durante a batalha.'
+          : 'Nenhuma pocao selecionada para a batalha.',
       },
     };
   }

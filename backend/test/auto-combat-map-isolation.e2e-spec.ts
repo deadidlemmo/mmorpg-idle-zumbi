@@ -120,12 +120,11 @@ describe('AutoCombat map isolation (e2e)', () => {
       fixture.mobB.id,
     );
 
-    const persistedSession =
-      await prisma.autoCombatSession.findUniqueOrThrow({
-        where: {
-          id: statusResponse.body.session.id,
-        },
-      });
+    const persistedSession = await prisma.autoCombatSession.findUniqueOrThrow({
+      where: {
+        id: statusResponse.body.session.id,
+      },
+    });
 
     expect(persistedSession.mapId).toBe(fixture.mapA.id);
     expect(persistedSession.mapId).not.toBe(fixture.mapB.id);
@@ -143,9 +142,7 @@ describe('AutoCombat map isolation (e2e)', () => {
     expect(persistedHuntBatch.mapId).toBe(fixture.mapA.id);
     expect(persistedHuntBatch.mapId).not.toBe(fixture.mapB.id);
     expect(persistedHuntBatch.selectedEncounterMobId).toBe(fixture.mobA.id);
-    expect(persistedHuntBatch.selectedEncounterMobId).not.toBe(
-      fixture.mobB.id,
-    );
+    expect(persistedHuntBatch.selectedEncounterMobId).not.toBe(fixture.mobB.id);
 
     const stopResponse = await request(app.getHttpServer())
       .post(`/auto-combat/${fixture.character.id}/stop`)

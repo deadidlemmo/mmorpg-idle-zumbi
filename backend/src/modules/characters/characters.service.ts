@@ -15,13 +15,12 @@ import {
   MaterialOrigin,
   WorldBossEventStatus,
 } from '@prisma/client';
-import {
-  AUTO_COMBAT_ROUND_DURATION_SECONDS,
-} from '../../common/config/auto-combat.config';
+import { AUTO_COMBAT_ROUND_DURATION_SECONDS } from '../../common/config/auto-combat.config';
 import {
   STARTER_POTION_ITEM_NAME,
   STARTER_POTION_KIT_QUANTITY,
 } from '../../common/config/starter-kit.config';
+import { AUTO_POTION_TRIGGER_PERCENT } from '../../common/config/potions.config';
 import {
   GATHERING_AFFINITY_PRODUCTION_MULTIPLIER,
   GATHERING_AFFINITY_XP_MULTIPLIER,
@@ -377,7 +376,7 @@ export class CharactersService {
             create: {
               enabled: true,
               potionItemId: starterPotion.id,
-              hpThresholdPercent: 35,
+              hpThresholdPercent: AUTO_POTION_TRIGGER_PERCENT,
               useInManualCombat: true,
               useInAutoCombat: true,
             },
@@ -1718,7 +1717,9 @@ export class CharactersService {
 
   private formatActiveAutoCombatSession(activeAutoCombatSession: any) {
     const activeMap =
-      activeAutoCombatSession.map ?? activeAutoCombatSession.subMap?.map ?? null;
+      activeAutoCombatSession.map ??
+      activeAutoCombatSession.subMap?.map ??
+      null;
     const formattedActiveMap = activeMap ? this.formatMap(activeMap) : null;
     const formattedSubMap = activeAutoCombatSession.subMap
       ? {
@@ -1789,7 +1790,9 @@ export class CharactersService {
   private buildAutoCombatPreview(activeAutoCombatSession: any) {
     const now = new Date();
     const activeMap =
-      activeAutoCombatSession.map ?? activeAutoCombatSession.subMap?.map ?? null;
+      activeAutoCombatSession.map ??
+      activeAutoCombatSession.subMap?.map ??
+      null;
     const formattedActiveMap = activeMap ? this.formatMap(activeMap) : null;
 
     const startedAt = new Date(activeAutoCombatSession.startedAt);
@@ -2097,7 +2100,6 @@ export class CharactersService {
     const potion = potionItem
       ? this.mapPotionItem(potionItem, availableQuantity)
       : null;
-
     return {
       id: config.id,
       characterId: config.characterId,
@@ -2131,8 +2133,8 @@ export class CharactersService {
           potion?.usableInCombat === true &&
           (config.useInManualCombat || config.useInAutoCombat),
         triggerText: config.enabled
-          ? `Usar automaticamente quando HP estiver em ${config.hpThresholdPercent}% ou menos.`
-          : 'Uso automático desativado.',
+          ? 'Pocao selecionada para uso durante a batalha.'
+          : 'Nenhuma pocao selecionada para a batalha.',
       },
     };
   }

@@ -1,0 +1,62 @@
+﻿[
+    {
+        "Classe":  "Assassino",
+        "Horas":  6,
+        "KillsPorIteracao":  514,
+        "XPporHora":  35938,
+        "CicloSeg":  42,
+        "CombateSeg":  35,
+        "EncontrarMobSeg":  7,
+        "Risco":  "LETHAL",
+        "ChanceDerrotaPct":  100,
+        "HPFinalPct":  0,
+        "DanoPorMin":  272.39,
+        "CritJogadorPct":  47.67,
+        "EsquivaJogadorPct":  28
+    },
+    {
+        "Classe":  "Atirador",
+        "Horas":  6,
+        "KillsPorIteracao":  514,
+        "XPporHora":  35938,
+        "CicloSeg":  42,
+        "CombateSeg":  35,
+        "EncontrarMobSeg":  7,
+        "Risco":  "LETHAL",
+        "ChanceDerrotaPct":  100,
+        "HPFinalPct":  0,
+        "DanoPorMin":  268.17,
+        "CritJogadorPct":  64,
+        "EsquivaJogadorPct":  28
+    },
+    {
+        "Classe":  "Lutador",
+        "Horas":  6,
+        "KillsPorIteracao":  440,
+        "XPporHora":  33907,
+        "CicloSeg":  49,
+        "CombateSeg":  42,
+        "EncontrarMobSeg":  7,
+        "Risco":  "LETHAL",
+        "ChanceDerrotaPct":  100,
+        "HPFinalPct":  0,
+        "DanoPorMin":  526.45,
+        "CritJogadorPct":  43.67,
+        "EsquivaJogadorPct":  2.21
+    },
+    {
+        "Classe":  "Médico",
+        "Horas":  6,
+        "KillsPorIteracao":  450,
+        "XPporHora":  34678,
+        "CicloSeg":  48,
+        "CombateSeg":  41,
+        "EncontrarMobSeg":  7,
+        "Risco":  "LETHAL",
+        "ChanceDerrotaPct":  100,
+        "HPFinalPct":  0,
+        "DanoPorMin":  623.68,
+        "CritJogadorPct":  65,
+        "EsquivaJogadorPct":  2
+    }
+]

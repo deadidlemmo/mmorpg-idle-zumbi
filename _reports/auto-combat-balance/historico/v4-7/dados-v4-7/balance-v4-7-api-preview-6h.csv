@@ -1,0 +1,5 @@
+﻿"Classe","Personagem","Nivel","HPAtual","HPMax","Mapa","Submapa","ProjecaoHoras","Iteracoes","CombatesProjetados","XPporMin","XPporHora","TempoMedioCicloSeg","TempoMedioCombateSeg","SegundosPorEncontrarMob","Risco","ScoreRisco","ChanceDerrotaPct","HPFinalEsperadoPct","DanoPorMin","CritJogadorPct","EsquivaJogadorPct"
+"Assassino","AC V42 Assassino","97","1758","1758","Marco Zero","Anel Externo","6","14","7196","598,97","35938","42","35","7","LETHAL","100","100","0","272,39","47,67","28"
+"Atirador","AC V42 Atirador","97","1798","1798","Marco Zero","Anel Externo","6","14","7196","598,97","35938","42","35","7","LETHAL","100","100","0","268,17","64","28"
+"Lutador","AC V42 Lutador","97","4442","4442","Marco Zero","Anel Externo","6","14","6160","565,12","33907","49","42","7","LETHAL","100","100","0","526,45","43,67","2,21"
+"Médico","AC V42 Medico","97","3956","3956","Marco Zero","Anel Externo","6","14","6300","577,96","34678","48","41","7","LETHAL","100","100","0","623,68","65","2"

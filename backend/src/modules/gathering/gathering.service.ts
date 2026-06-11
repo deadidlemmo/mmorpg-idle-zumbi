@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,7 @@ import {
   InventoryItemType,
   ItemSlot,
   MaterialOrigin,
+  Prisma,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import {
@@ -723,8 +725,7 @@ export class GatheringService {
 
     const now = new Date();
     const premiumActive = isPremiumActive(session.character.user, now);
-    const idleProgressLimitSeconds =
-      getIdleProgressLimitSeconds(premiumActive);
+    const idleProgressLimitSeconds = getIdleProgressLimitSeconds(premiumActive);
     const rawElapsedSeconds = Math.max(
       0,
       (now.getTime() - session.lastResolvedAt.getTime()) / 1000,
@@ -1246,72 +1247,89 @@ export class GatheringService {
 
     const now = new Date();
 
-    const session = await this.prisma.$transaction(async (tx) => {
-      await this.activityGuard.ensureCanStartGathering({
-        characterId: dto.characterId,
-        client: tx,
-        lockCharacter: true,
-      });
+    let session;
 
-      return tx.gatheringSession.create({
-        data: {
-          characterId: dto.characterId,
-          mapId: dto.mapId,
-          origin: dto.origin,
-          targetMaterialId: dto.targetMaterialId,
-          status: ActivityStatus.ACTIVE,
-          startedAt: now,
-          lastResolvedAt: now,
-          progressRemainder: 0,
-          collectedQuantity: 0,
-          collectedXp: 0,
-        },
-        include: {
-          character: {
-            select: {
-              id: true,
-              name: true,
-              level: true,
-              status: true,
-              currentHp: true,
-              maxHp: true,
-              user: {
-                select: {
-                  premiumUntil: true,
-                },
-              },
-              class: {
+    try {
+      session = await this.prisma.$transaction(
+        async (tx) => {
+          await this.activityGuard.ensureCanStartGathering({
+            characterId: dto.characterId,
+            client: tx,
+            lockCharacter: true,
+          });
+
+          return tx.gatheringSession.create({
+            data: {
+              characterId: dto.characterId,
+              mapId: dto.mapId,
+              origin: dto.origin,
+              targetMaterialId: dto.targetMaterialId,
+              status: ActivityStatus.ACTIVE,
+              startedAt: now,
+              lastResolvedAt: now,
+              progressRemainder: 0,
+              collectedQuantity: 0,
+              collectedXp: 0,
+            },
+            include: {
+              character: {
                 select: {
                   id: true,
                   name: true,
+                  level: true,
+                  status: true,
+                  currentHp: true,
+                  maxHp: true,
+                  user: {
+                    select: {
+                      premiumUntil: true,
+                    },
+                  },
+                  class: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+              map: {
+                select: {
+                  id: true,
+                  name: true,
+                  tier: true,
+                },
+              },
+              targetMaterial: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  tier: true,
+                  materialOrigin: true,
+                  materialSlot: true,
+                  isGatheringMaterial: true,
+                  requiredGatheringLevel: true,
+                  gatheringXpPerUnit: true,
+                  baseGatheringRatePerHour: true,
                 },
               },
             },
-          },
-          map: {
-            select: {
-              id: true,
-              name: true,
-              tier: true,
-            },
-          },
-          targetMaterial: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              tier: true,
-              materialOrigin: true,
-              materialSlot: true,
-              isGatheringMaterial: true,
-              requiredGatheringLevel: true,
-              gatheringXpPerUnit: true,
-              baseGatheringRatePerHour: true,
-            },
-          },
+          });
         },
-      });
-    });
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        },
+      );
+    } catch (error) {
+      if (this.isTransactionConflictError(error)) {
+        throw new ConflictException(
+          'Voce ja esta realizando outra atividade. Encerre a atividade atual antes de iniciar uma nova.',
+        );
+      }
+
+      throw error;
+    }
 
     return {
       message: 'Gathering iniciado com sucesso.',
@@ -1550,5 +1568,12 @@ export class GatheringService {
         character: session.character,
       }),
     };
+  }
+
+  private isTransactionConflictError(error: unknown) {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2034'
+    );
   }
 }

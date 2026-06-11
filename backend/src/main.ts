@@ -24,7 +24,10 @@ function isAllowedOrigin(origin?: string): boolean {
   try {
     const { hostname } = new URL(origin);
 
-    return hostname === 'trycloudflare.com' || hostname.endsWith('.trycloudflare.com');
+    return (
+      hostname === 'trycloudflare.com' ||
+      hostname.endsWith('.trycloudflare.com')
+    );
   } catch {
     return false;
   }

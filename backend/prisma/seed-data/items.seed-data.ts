@@ -38,6 +38,12 @@ const BALANCED_EQUIPMENT_SLOT_POINTS_PER_TIER: Partial<
 };
 
 const BALANCED_STARTER_ITEM_POINTS = 2;
+const GLASS_CANNON_DEFENSIVE_PADDING_START_TIER = 6;
+const GLASS_CANNON_DEFENSIVE_PADDING_SLOT_MULTIPLIER = 0.4;
+const GLASS_CANNON_DEFENSIVE_PADDING_CLASSES = new Set([
+  'assassino',
+  'atirador',
+]);
 
 const BALANCED_EQUIPMENT_WEIGHTS_BY_CLASS: Record<
   string,
@@ -142,6 +148,39 @@ function getEquipmentStatBudget(item: EquipmentSeedData): number {
   return item.tier * (BALANCED_EQUIPMENT_SLOT_POINTS_PER_TIER[item.slot] ?? 0);
 }
 
+function getGlassCannonDefensivePadding(item: EquipmentSeedData) {
+  const classKey = normalizeClassKey(item.className);
+
+  if (
+    !GLASS_CANNON_DEFENSIVE_PADDING_CLASSES.has(classKey) ||
+    item.tier < GLASS_CANNON_DEFENSIVE_PADDING_START_TIER
+  ) {
+    return {
+      vitalityBonus: 0,
+      willpowerBonus: 0,
+    };
+  }
+
+  const tierOffset =
+    item.tier - GLASS_CANNON_DEFENSIVE_PADDING_START_TIER + 1;
+  const slotPoints = BALANCED_EQUIPMENT_SLOT_POINTS_PER_TIER[item.slot] ?? 0;
+  const totalPadding = Math.max(
+    0,
+    Math.round(
+      slotPoints *
+        tierOffset *
+        GLASS_CANNON_DEFENSIVE_PADDING_SLOT_MULTIPLIER,
+    ),
+  );
+  const vitalityBonus = Math.ceil(totalPadding * 0.6);
+  const willpowerBonus = Math.max(0, totalPadding - vitalityBonus);
+
+  return {
+    vitalityBonus,
+    willpowerBonus,
+  };
+}
+
 function normalizeEquipmentItemStats(
   item: EquipmentSeedData,
 ): EquipmentSeedData {
@@ -152,10 +191,18 @@ function normalizeEquipmentItemStats(
     return item;
   }
 
+  const baseStats = distributeEquipmentStatPoints(
+    getEquipmentStatBudget(item),
+    weights,
+  );
+  const defensivePadding = getGlassCannonDefensivePadding(item);
+
   return {
     ...item,
     ...createEmptyEquipmentStats(),
-    ...distributeEquipmentStatPoints(getEquipmentStatBudget(item), weights),
+    ...baseStats,
+    vitalityBonus: baseStats.vitalityBonus + defensivePadding.vitalityBonus,
+    willpowerBonus: baseStats.willpowerBonus + defensivePadding.willpowerBonus,
   };
 }
 

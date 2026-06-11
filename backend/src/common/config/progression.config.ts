@@ -9,23 +9,36 @@ export const LEVELS_PER_TIER = 10;
 // pocoes e gargalos de equipamento reduzem a taxa sustentada.
 export const EXPECTED_COMBATS_PER_DAY = 7200;
 
-// Meta aproximada para o lancamento 1-50.
-// Total: 2 + 7 + 12 + 18 + 26 = 65 dias no ritmo efetivo alvo.
-// T1 ficou um pouco mais curto para o inicio nao parecer travado.
-// Depois cada tier segura mais tempo.
+// Meta aproximada por fase de conteudo.
+//
+// Lancamento:
+// - Level cap 50.
+// - Conteudo ate T5.
+// - Objetivo realista: 1-50 em aproximadamente 2 a 3 meses para jogador
+//   mantendo sessoes de auto-combate ativas, sem limite diario artificial.
+//
+// Expansao:
+// - Futuro level cap 100.
+// - Conteudo T6-T10.
+// - Objetivo realista: manter 1-100 perto de 1 ano total quando a expansao
+//   for liberada, com 50-100 bem mais longo que a fase de lancamento.
+//
+// Estes valores sao calibrados contra os relatorios de auto-combate com:
+// mapas reais do seed, chance de aparicao dos mobs, tempo de caca por tier,
+// TTK real, equipamentos seedados e gathering recomendado por classe.
 export const TIER_TARGET_DAYS: Record<number, number> = {
-  1: 2,
-  2: 7,
-  3: 12,
-  4: 18,
-  5: 26,
+  1: 1,
+  2: 3,
+  3: 5,
+  4: 6,
+  5: 8,
 
   // Preparado para expansao futura 51-100.
-  6: 36,
-  7: 48,
-  8: 62,
-  9: 78,
-  10: 96,
+  6: 10,
+  7: 13,
+  8: 16,
+  9: 20,
+  10: 25,
 };
 
 // XP medio real aproximado dos mobs seedados por tier.

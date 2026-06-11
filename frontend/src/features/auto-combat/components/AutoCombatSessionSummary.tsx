@@ -1,4 +1,4 @@
-import { PremiumPlaceholderIcon } from '../../../components/PremiumPlaceholderIcon';
+import { AutoCombatPremiumRewardBreakdown } from './AutoCombatPremiumRewardBreakdown';
 import { formatSessionStatus } from '../utils/auto-combat-page.helpers';
 
 type AutoCombatSessionSummaryProps = {
@@ -12,6 +12,7 @@ type AutoCombatSessionSummaryProps = {
   premiumPotentialBonusXp: number;
   premiumTotalXp: number;
   isPremiumActive: boolean;
+  membershipHref?: string;
   totalLoot: number;
   potionsUsed: number;
 };
@@ -25,14 +26,12 @@ export function AutoCombatSessionSummary({
   baseXpGained,
   premiumBonusXp,
   premiumPotentialBonusXp,
+  premiumTotalXp,
   isPremiumActive,
+  membershipHref,
   totalLoot,
   potionsUsed,
 }: AutoCombatSessionSummaryProps) {
-  const premiumDetailText = isPremiumActive
-    ? `+${premiumBonusXp} EXP Premium`
-    : `+${premiumPotentialBonusXp} EXP com Premium`;
-
   return (
     <article className="auto-combat-session-panel">
       <div className="auto-combat-session-panel__header">
@@ -69,20 +68,16 @@ export function AutoCombatSessionSummary({
             <em>EXP total</em>
           </strong>
 
-          <small className="auto-combat-session-summary__xp-details">
-            <span>Base: {baseXpGained} EXP</span>
-            <span
-              className={[
-                'auto-combat-session-summary__xp-premium-detail',
-                isPremiumActive
-                  ? 'auto-combat-session-summary__xp-premium-detail--active'
-                  : 'auto-combat-session-summary__xp-premium-detail--locked',
-              ].join(' ')}
-            >
-              <PremiumPlaceholderIcon className="auto-combat-session-summary__premium-icon auto-combat-session-summary__premium-icon--inline" />
-              {premiumDetailText}
-            </span>
-          </small>
+          <AutoCombatPremiumRewardBreakdown
+            baseXp={baseXpGained}
+            totalXp={totalXpGained}
+            premiumBonusXp={premiumBonusXp}
+            premiumPotentialBonusXp={premiumPotentialBonusXp}
+            premiumTotalXp={premiumTotalXp}
+            isPremiumActive={isPremiumActive}
+            membershipHref={membershipHref}
+            variant="summary"
+          />
         </div>
 
         <div className="auto-combat-session-summary__card auto-combat-session-summary__card--loot">

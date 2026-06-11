@@ -12,6 +12,7 @@ import {
   IncursionSessionStatus,
   InventoryItemType,
   ItemSlot,
+  Prisma,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { calculateLevelProgress } from '../../common/utils/level.util';
@@ -162,63 +163,80 @@ export class IncursionsService {
     const now = new Date();
     const endsAt = new Date(now.getTime() + incursion.durationSeconds * 1000);
 
-    const session = await this.prisma.$transaction(async (tx) => {
-      await this.activityGuard.ensureCanStartIncursion({
-        characterId: dto.characterId,
-        userId,
-        client: tx,
-        lockCharacter: true,
-      });
+    let session;
 
-      const activeIncursion = await tx.characterIncursionSession.findFirst({
-        where: {
-          characterId: character.id,
-          status: {
-            in: [
-              IncursionSessionStatus.ACTIVE,
-              IncursionSessionStatus.COMPLETED,
-            ],
-          },
+    try {
+      session = await this.prisma.$transaction(
+        async (tx) => {
+          await this.activityGuard.ensureCanStartIncursion({
+            characterId: dto.characterId,
+            userId,
+            client: tx,
+            lockCharacter: true,
+          });
+
+          const activeIncursion = await tx.characterIncursionSession.findFirst({
+            where: {
+              characterId: character.id,
+              status: {
+                in: [
+                  IncursionSessionStatus.ACTIVE,
+                  IncursionSessionStatus.COMPLETED,
+                ],
+              },
+            },
+            select: { id: true, status: true },
+          });
+
+          if (activeIncursion) {
+            throw new ConflictException(
+              'Este personagem já possui uma incursão ativa.',
+            );
+          }
+
+          const debit = await tx.character.updateMany({
+            where: {
+              id: character.id,
+              userId,
+              gold: { gte: incursion.goldCost },
+              status: CharacterStatus.ACTIVE,
+            },
+            data: {
+              gold: { decrement: incursion.goldCost },
+            },
+          });
+
+          if (debit.count <= 0) {
+            throw new BadRequestException(
+              'Gold insuficiente para iniciar esta incursão.',
+            );
+          }
+
+          return tx.characterIncursionSession.create({
+            data: {
+              characterId: character.id,
+              incursionId: incursion.id,
+              status: IncursionSessionStatus.ACTIVE,
+              startedAt: now,
+              endsAt,
+              goldCostPaid: incursion.goldCost,
+            },
+            include: this.sessionInclude(),
+          });
         },
-        select: { id: true, status: true },
-      });
-
-      if (activeIncursion) {
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        },
+      );
+    } catch (error) {
+      if (this.isTransactionConflictError(error)) {
         throw new ConflictException(
-          'Este personagem já possui uma incursão ativa.',
+          'Voce ja esta realizando outra atividade. Encerre a atividade atual antes de iniciar uma nova.',
         );
       }
 
-      const debit = await tx.character.updateMany({
-        where: {
-          id: character.id,
-          userId,
-          gold: { gte: incursion.goldCost },
-          status: CharacterStatus.ACTIVE,
-        },
-        data: {
-          gold: { decrement: incursion.goldCost },
-        },
-      });
-
-      if (debit.count <= 0) {
-        throw new BadRequestException(
-          'Gold insuficiente para iniciar esta incursão.',
-        );
-      }
-
-      return tx.characterIncursionSession.create({
-        data: {
-          characterId: character.id,
-          incursionId: incursion.id,
-          status: IncursionSessionStatus.ACTIVE,
-          startedAt: now,
-          endsAt,
-          goldCostPaid: incursion.goldCost,
-        },
-        include: this.sessionInclude(),
-      });
-    });
+      throw error;
+    }
 
     return {
       message: 'Incursão iniciada com sucesso.',
@@ -813,5 +831,12 @@ export class IncursionsService {
       quantity: reward.quantity,
       rarity: reward.rarity,
     };
+  }
+
+  private isTransactionConflictError(error: unknown) {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2034'
+    );
   }
 }

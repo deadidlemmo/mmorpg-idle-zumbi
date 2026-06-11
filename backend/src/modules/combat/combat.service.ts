@@ -10,6 +10,7 @@ import {
   ItemSlot,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
+import { AUTO_POTION_TRIGGER_PERCENT } from '../../common/config/potions.config';
 import { calculateCombatHit } from '../../common/utils/combat-damage.util';
 import {
   applyXpPenalty,
@@ -20,6 +21,10 @@ import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
 } from '../../common/utils/stats.util';
+import {
+  applyPremiumXpBonus,
+  isPremiumActive,
+} from '../../common/utils/membership.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StartCombatDto } from './dto/start-combat.dto';
 
@@ -105,6 +110,11 @@ export class CombatService {
       },
       include: {
         class: true,
+        user: {
+          select: {
+            premiumUntil: true,
+          },
+        },
         equipment: {
           include: {
             mainHand: true,
@@ -204,9 +214,13 @@ export class CombatService {
       : CombatStatus.PLAYER_LOSE;
 
     const farmPenalty = calculateTierFarmPenalty(character.level, mob.tier);
-    const xpGained = playerWon
+    const baseXpGained = playerWon
       ? applyXpPenalty(mob.xpReward, farmPenalty.xpMultiplier)
       : 0;
+    const xpGained = applyPremiumXpBonus(
+      baseXpGained,
+      isPremiumActive(character.user),
+    );
 
     const levelProgress = calculateLevelProgress(
       character.level,
@@ -792,7 +806,7 @@ export class CombatService {
       enabled: true,
       potionItemId: potionItem.id,
       potionItemName: potionItem.name,
-      hpThresholdPercent: config.hpThresholdPercent,
+      hpThresholdPercent: AUTO_POTION_TRIGGER_PERCENT,
       healFlat: potionItem.healFlat,
       healPercent: potionItem.healPercent,
       availableQuantity,

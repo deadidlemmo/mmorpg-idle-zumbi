@@ -1,0 +1,1 @@
+export const AUTO_POTION_TRIGGER_PERCENT = 35;

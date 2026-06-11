@@ -12,6 +12,7 @@ export type MobStatsInput = {
   level: number;
   mobName: string;
   mobType: MobType;
+  autoCombatRank?: number | null;
 };
 
 export type MobCombatStats = {
@@ -271,6 +272,54 @@ export const mobProfileMultipliers: Record<
   },
 };
 
+export const activeAutoCombatRankMultipliers: Record<
+  number,
+  Omit<MobCombatStats, 'level' | 'tier'>
+> = {
+  1: {
+    hp: 0.9,
+    attack: 0.42,
+    defense: 0.85,
+    speed: 0.9,
+    xpReward: 0.88,
+  },
+  2: {
+    hp: 0.96,
+    attack: 0.5,
+    defense: 0.88,
+    speed: 1,
+    xpReward: 0.96,
+  },
+  3: {
+    hp: 1.04,
+    attack: 0.54,
+    defense: 1.02,
+    speed: 0.96,
+    xpReward: 1.06,
+  },
+  4: {
+    hp: 1.08,
+    attack: 0.62,
+    defense: 1,
+    speed: 1.08,
+    xpReward: 1.16,
+  },
+  5: {
+    hp: 1.18,
+    attack: 0.7,
+    defense: 1.16,
+    speed: 1.04,
+    xpReward: 1.28,
+  },
+  6: {
+    hp: 1.35,
+    attack: 0.86,
+    defense: 1.28,
+    speed: 1.1,
+    xpReward: 1.62,
+  },
+};
+
 const agileKeywords = [
   'aranha',
   'barata',
@@ -385,7 +434,13 @@ export function buildMobCombatStats(input: MobStatsInput): MobCombatStats {
   const tierStartLevel = (input.tier - 1) * 10 + 1;
   const tierProgress = clamp((input.level - tierStartLevel) / 9, 0, 1);
   const profile = inferMobCombatProfile(input);
-  const multiplier = mobProfileMultipliers[profile];
+  const activeRank = Math.max(
+    0,
+    Math.floor(Number(input.autoCombatRank) || 0),
+  );
+  const multiplier =
+    activeAutoCombatRankMultipliers[activeRank] ??
+    mobProfileMultipliers[profile];
   const tierPressure =
     mobTierPressureByTier[input.tier] ?? mobTierPressureByTier[10];
 

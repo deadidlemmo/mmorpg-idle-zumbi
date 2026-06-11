@@ -10,8 +10,8 @@ export type AutoCombatClassPassive = {
   effectiveXpMultiplier: number;
 };
 
-export const AUTO_COMBAT_BALANCE_MODEL_KEY = 'balance-v4-4';
-export const AUTO_COMBAT_BALANCE_MODEL_LABEL = 'Balance V4.4';
+export const AUTO_COMBAT_BALANCE_MODEL_KEY = 'balance-v5-2';
+export const AUTO_COMBAT_BALANCE_MODEL_LABEL = 'Balance V5.2';
 
 export const AUTO_COMBAT_BALANCE_TTK_POWER_EXPONENT = 0.1;
 export const AUTO_COMBAT_BALANCE_OFFENSIVE_GATHERING_MULTIPLIER = 0.38;
@@ -51,19 +51,19 @@ export const AUTO_COMBAT_CLASS_PASSIVES: Record<
     offensivePowerMultiplier: 1.19,
     incomingDamageMultiplier: 0.68,
     potionHealMultiplier: 1,
-    effectiveXpMultiplier: 1.1,
+    effectiveXpMultiplier: 1.08,
   },
   assassino: {
     label: 'Execucao precisa',
     offensivePowerMultiplier: 1.02,
-    incomingDamageMultiplier: 0.65,
+    incomingDamageMultiplier: 0.34,
     potionHealMultiplier: 1,
     effectiveXpMultiplier: 0.98,
   },
   atirador: {
     label: 'Supressao controlada',
     offensivePowerMultiplier: 1.02,
-    incomingDamageMultiplier: 0.65,
+    incomingDamageMultiplier: 0.34,
     potionHealMultiplier: 1,
     effectiveXpMultiplier: 0.98,
   },
@@ -71,7 +71,7 @@ export const AUTO_COMBAT_CLASS_PASSIVES: Record<
     label: 'Triagem sustentada',
     offensivePowerMultiplier: 1.18,
     incomingDamageMultiplier: 0.75,
-    potionHealMultiplier: 1.5,
-    effectiveXpMultiplier: 1.1,
+    potionHealMultiplier: 1.25,
+    effectiveXpMultiplier: 1.08,
   },
 };

@@ -1,0 +1,608 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2618" viewBox="0 0 1600 2618" role="img" aria-label="Painel de sessoes do auto-combate">
+  <style>
+    .title { font: 700 34px Arial, sans-serif; fill: #101828; }
+    .subtitle { font: 400 18px Arial, sans-serif; fill: #475467; }
+    .meta { font: 600 16px Arial, sans-serif; fill: #344054; }
+    .chart-title { font: 700 21px Arial, sans-serif; fill: #101828; }
+    .chart-subtitle { font: 400 14px Arial, sans-serif; fill: #667085; }
+    .axis-label { font: 400 12px Arial, sans-serif; fill: #667085; }
+    .axis-title { font: 700 12px Arial, sans-serif; fill: #667085; }
+    .legend-label { font: 600 13px Arial, sans-serif; fill: #344054; }
+  </style>
+  <rect width="100%" height="100%" fill="#f5f7fb"/>
+  <text x="50" y="62" class="title">Painel de sessoes do auto-combate</text>
+  <text x="50" y="96" class="subtitle">Combate + caca + pocoes em sessoes reais. Inclui 6h free e 12h premium, caca 1/10/25/50, estoques 0/5/10/20/50/100.</text>
+  <text x="50" y="132" class="meta">Modelo: Balance V5.1 | Fonte: JSONs de mapas reais do seed | Sem descanso automatico | Gatilho interno de pocao: 35%.</text>
+  <text x="50" y="162" class="meta">Pior combinacao: 6h, C1, P0, T4: Assassino ficou em 24.4% do melhor. Outliers: 375.</text>
+  <g class="chart">
+<rect x="50" y="230" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="262" class="chart-title">XP por sessao 6h</text>
+<text x="74" y="284" class="chart-subtitle">Caca 50, 100 pocoes. Penaliza morte antes de fechar sessao.</text>
+<line x1="120" y1="700" x2="755" y2="700" stroke="#e8edf5"/>
+<text x="108" y="704" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="602" x2="755" y2="602" stroke="#e8edf5"/>
+<text x="108" y="606" text-anchor="end" class="axis-label">42.398,7</text>
+<line x1="120" y1="504" x2="755" y2="504" stroke="#e8edf5"/>
+<text x="108" y="508" text-anchor="end" class="axis-label">84.797,4</text>
+<line x1="120" y1="406" x2="755" y2="406" stroke="#e8edf5"/>
+<text x="108" y="410" text-anchor="end" class="axis-label">127.196,2</text>
+<line x1="120" y1="308" x2="755" y2="308" stroke="#e8edf5"/>
+<text x="108" y="312" text-anchor="end" class="axis-label">169.594,9</text>
+<line x1="120" y1="308" x2="120" y2="700" stroke="#98a2b3"/>
+<line x1="120" y1="700" x2="755" y2="700" stroke="#98a2b3"/>
+<text x="68" y="296" class="axis-title">XP</text>
+<text x="125" y="724" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="724" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="724" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="724" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="724" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="724" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="724" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="724" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="724" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="724" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 667.33 L 194.44 674.1 L 263.89 662.03 L 333.33 647.41 L 402.78 621.41 L 472.22 582.6 L 541.67 530.68 L 611.11 456.62 L 680.56 350 L 750 358.52" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="667.33" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 14.133 | 100% sessao</title></circle>
+<circle cx="194.44" cy="674.1" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 11.204 | 100% sessao</title></circle>
+<circle cx="263.89" cy="662.03" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 16.428 | 100% sessao</title></circle>
+<circle cx="333.33" cy="647.41" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 22.752 | 100% sessao</title></circle>
+<circle cx="402.78" cy="621.41" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 34.003 | 100% sessao</title></circle>
+<circle cx="472.22" cy="582.6" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 50.793 | 100% sessao</title></circle>
+<circle cx="541.67" cy="530.68" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 73.256 | 100% sessao</title></circle>
+<circle cx="611.11" cy="456.62" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 105.295 | 100% sessao</title></circle>
+<circle cx="680.56" cy="350" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 151.424 | 100% sessao</title></circle>
+<circle cx="750" cy="358.52" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 147.737 | 70% sessao</title></circle>
+<circle cx="74" cy="728" r="5" fill="#d94b4b"/>
+<text x="86" y="732" class="legend-label">Lutador</text>
+<path d="M 125 669.55 L 194.44 674.97 L 263.89 663.08 L 333.33 647.84 L 402.78 619.88 L 472.22 580.37 L 541.67 524.2 L 611.11 458.54 L 680.56 437.63 L 750 421.74" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="669.55" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 13.176 | 100% sessao</title></circle>
+<circle cx="194.44" cy="674.97" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 10.827 | 100% sessao</title></circle>
+<circle cx="263.89" cy="663.08" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 15.973 | 100% sessao</title></circle>
+<circle cx="333.33" cy="647.84" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 22.565 | 100% sessao</title></circle>
+<circle cx="402.78" cy="619.88" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 34.663 | 100% sessao</title></circle>
+<circle cx="472.22" cy="580.37" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 51.758 | 100% sessao</title></circle>
+<circle cx="541.67" cy="524.2" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 76.060 | 100% sessao</title></circle>
+<circle cx="611.11" cy="458.54" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 104.466 | 95.5% sessao</title></circle>
+<circle cx="680.56" cy="437.63" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 113.511 | 72.1% sessao</title></circle>
+<circle cx="750" cy="421.74" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 120.386 | 53.7% sessao</title></circle>
+<circle cx="206" cy="728" r="5" fill="#8b5cf6"/>
+<text x="218" y="732" class="legend-label">Assassino</text>
+<path d="M 125 668.92 L 194.44 674.97 L 263.89 663.08 L 333.33 647.84 L 402.78 619.88 L 472.22 580.37 L 541.67 524.2 L 611.11 452.77 L 680.56 432.79 L 750 410.89" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="668.92" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 13.446 | 100% sessao</title></circle>
+<circle cx="194.44" cy="674.97" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 10.827 | 100% sessao</title></circle>
+<circle cx="263.89" cy="663.08" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 15.973 | 100% sessao</title></circle>
+<circle cx="333.33" cy="647.84" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 22.565 | 100% sessao</title></circle>
+<circle cx="402.78" cy="619.88" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 34.663 | 100% sessao</title></circle>
+<circle cx="472.22" cy="580.37" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 51.758 | 100% sessao</title></circle>
+<circle cx="541.67" cy="524.2" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 76.060 | 100% sessao</title></circle>
+<circle cx="611.11" cy="452.77" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 106.963 | 97.8% sessao</title></circle>
+<circle cx="680.56" cy="432.79" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 115.607 | 73.5% sessao</title></circle>
+<circle cx="750" cy="410.89" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 125.082 | 55.8% sessao</title></circle>
+<circle cx="338" cy="728" r="5" fill="#2563eb"/>
+<text x="350" y="732" class="legend-label">Atirador</text>
+<path d="M 125 668.39 L 194.44 674.33 L 263.89 662.03 L 333.33 647.41 L 402.78 619.56 L 472.22 582.6 L 541.67 526.99 L 611.11 451.32 L 680.56 350 L 750 373.75" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="668.39" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 13.677 | 100% sessao</title></circle>
+<circle cx="194.44" cy="674.33" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 11.105 | 100% sessao</title></circle>
+<circle cx="263.89" cy="662.03" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 16.428 | 100% sessao</title></circle>
+<circle cx="333.33" cy="647.41" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 22.752 | 100% sessao</title></circle>
+<circle cx="402.78" cy="619.56" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 34.800 | 100% sessao</title></circle>
+<circle cx="472.22" cy="582.6" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 50.793 | 100% sessao</title></circle>
+<circle cx="541.67" cy="526.99" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 74.852 | 100% sessao</title></circle>
+<circle cx="611.11" cy="451.32" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 107.589 | 100% sessao</title></circle>
+<circle cx="680.56" cy="350" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 151.424 | 100% sessao</title></circle>
+<circle cx="750" cy="373.75" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 141.150 | 65.5% sessao</title></circle>
+<circle cx="470" cy="728" r="5" fill="#16a34a"/>
+<text x="482" y="732" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="810" y="230" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="262" class="chart-title">Conclusao da sessao 6h</text>
+<text x="834" y="284" class="chart-subtitle">Caca 50, 100 pocoes. 100% significa sobreviver ate o fim.</text>
+<line x1="880" y1="700" x2="1515" y2="700" stroke="#e8edf5"/>
+<text x="868" y="704" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="602" x2="1515" y2="602" stroke="#e8edf5"/>
+<text x="868" y="606" text-anchor="end" class="axis-label">25</text>
+<line x1="880" y1="504" x2="1515" y2="504" stroke="#e8edf5"/>
+<text x="868" y="508" text-anchor="end" class="axis-label">50</text>
+<line x1="880" y1="406" x2="1515" y2="406" stroke="#e8edf5"/>
+<text x="868" y="410" text-anchor="end" class="axis-label">75</text>
+<line x1="880" y1="308" x2="1515" y2="308" stroke="#e8edf5"/>
+<text x="868" y="312" text-anchor="end" class="axis-label">100</text>
+<line x1="880" y1="308" x2="880" y2="700" stroke="#98a2b3"/>
+<line x1="880" y1="700" x2="1515" y2="700" stroke="#98a2b3"/>
+<text x="828" y="296" class="axis-title">%</text>
+<text x="885" y="724" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="724" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="724" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="724" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="724" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="724" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="724" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="724" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="724" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="724" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 308 L 954.44 308 L 1023.89 308 L 1093.33 308 L 1162.78 308 L 1232.22 308 L 1301.67 308 L 1371.11 308 L 1440.56 308 L 1510 425.6" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="308" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 100 | 100% sessao</title></circle>
+<circle cx="954.44" cy="308" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 100 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="308" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 100 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="308" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 100 | 100% sessao</title></circle>
+<circle cx="1162.78" cy="308" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 100 | 100% sessao</title></circle>
+<circle cx="1232.22" cy="308" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 100 | 100% sessao</title></circle>
+<circle cx="1301.67" cy="308" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 100 | 100% sessao</title></circle>
+<circle cx="1371.11" cy="308" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 100 | 100% sessao</title></circle>
+<circle cx="1440.56" cy="308" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 100 | 100% sessao</title></circle>
+<circle cx="1510" cy="425.6" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 70 | 70% sessao</title></circle>
+<circle cx="834" cy="728" r="5" fill="#d94b4b"/>
+<text x="846" y="732" class="legend-label">Lutador</text>
+<path d="M 885 308 L 954.44 308 L 1023.89 308 L 1093.33 308 L 1162.78 308 L 1232.22 308 L 1301.67 308 L 1371.11 325.64 L 1440.56 417.37 L 1510 489.5" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="308" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 100 | 100% sessao</title></circle>
+<circle cx="954.44" cy="308" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 100 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="308" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 100 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="308" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 100 | 100% sessao</title></circle>
+<circle cx="1162.78" cy="308" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 100 | 100% sessao</title></circle>
+<circle cx="1232.22" cy="308" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 100 | 100% sessao</title></circle>
+<circle cx="1301.67" cy="308" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 100 | 100% sessao</title></circle>
+<circle cx="1371.11" cy="325.64" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 95,5 | 95.5% sessao</title></circle>
+<circle cx="1440.56" cy="417.37" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 72,1 | 72.1% sessao</title></circle>
+<circle cx="1510" cy="489.5" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 53,7 | 53.7% sessao</title></circle>
+<circle cx="966" cy="728" r="5" fill="#8b5cf6"/>
+<text x="978" y="732" class="legend-label">Assassino</text>
+<path d="M 885 308 L 954.44 308 L 1023.89 308 L 1093.33 308 L 1162.78 308 L 1232.22 308 L 1301.67 308 L 1371.11 316.62 L 1440.56 411.88 L 1510 481.26" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="308" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 100 | 100% sessao</title></circle>
+<circle cx="954.44" cy="308" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 100 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="308" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 100 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="308" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 100 | 100% sessao</title></circle>
+<circle cx="1162.78" cy="308" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 100 | 100% sessao</title></circle>
+<circle cx="1232.22" cy="308" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 100 | 100% sessao</title></circle>
+<circle cx="1301.67" cy="308" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 100 | 100% sessao</title></circle>
+<circle cx="1371.11" cy="316.62" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 97,8 | 97.8% sessao</title></circle>
+<circle cx="1440.56" cy="411.88" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 73,5 | 73.5% sessao</title></circle>
+<circle cx="1510" cy="481.26" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 55,8 | 55.8% sessao</title></circle>
+<circle cx="1098" cy="728" r="5" fill="#2563eb"/>
+<text x="1110" y="732" class="legend-label">Atirador</text>
+<path d="M 885 308 L 954.44 308 L 1023.89 308 L 1093.33 308 L 1162.78 308 L 1232.22 308 L 1301.67 308 L 1371.11 308 L 1440.56 308 L 1510 443.24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="308" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 100 | 100% sessao</title></circle>
+<circle cx="954.44" cy="308" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 100 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="308" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 100 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="308" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 100 | 100% sessao</title></circle>
+<circle cx="1162.78" cy="308" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 100 | 100% sessao</title></circle>
+<circle cx="1232.22" cy="308" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 100 | 100% sessao</title></circle>
+<circle cx="1301.67" cy="308" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 100 | 100% sessao</title></circle>
+<circle cx="1371.11" cy="308" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 100 | 100% sessao</title></circle>
+<circle cx="1440.56" cy="308" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 100 | 100% sessao</title></circle>
+<circle cx="1510" cy="443.24" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 65,5 | 65.5% sessao</title></circle>
+<circle cx="1230" cy="728" r="5" fill="#16a34a"/>
+<text x="1242" y="732" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="50" y="792" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="824" class="chart-title">Pocoes necessarias para 6h</text>
+<text x="74" y="846" class="chart-subtitle">Caca 50, estoque teorico para completar a sessao.</text>
+<line x1="120" y1="1262" x2="755" y2="1262" stroke="#e8edf5"/>
+<text x="108" y="1266" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="1164" x2="755" y2="1164" stroke="#e8edf5"/>
+<text x="108" y="1168" text-anchor="end" class="axis-label">53,5</text>
+<line x1="120" y1="1066" x2="755" y2="1066" stroke="#e8edf5"/>
+<text x="108" y="1070" text-anchor="end" class="axis-label">107</text>
+<line x1="120" y1="968" x2="755" y2="968" stroke="#e8edf5"/>
+<text x="108" y="972" text-anchor="end" class="axis-label">160,4</text>
+<line x1="120" y1="870" x2="755" y2="870" stroke="#e8edf5"/>
+<text x="108" y="874" text-anchor="end" class="axis-label">213,9</text>
+<line x1="120" y1="870" x2="120" y2="1262" stroke="#98a2b3"/>
+<line x1="120" y1="1262" x2="755" y2="1262" stroke="#98a2b3"/>
+<text x="68" y="858" class="axis-title">Pocoes</text>
+<text x="125" y="1286" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="1286" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="1286" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="1286" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="1286" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="1286" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="1286" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="1286" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="1286" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="1286" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 1236.35 L 194.44 1243.68 L 263.89 1227.18 L 333.33 1207.03 L 402.78 1208.86 L 472.22 1166.71 L 541.67 1161.21 L 611.11 1097.08 L 680.56 1084.25 L 750 994.46" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1236.35" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 14 | 100% sessao</title></circle>
+<circle cx="194.44" cy="1243.68" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 10 | 100% sessao</title></circle>
+<circle cx="263.89" cy="1227.18" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 19 | 100% sessao</title></circle>
+<circle cx="333.33" cy="1207.03" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 30 | 100% sessao</title></circle>
+<circle cx="402.78" cy="1208.86" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 29 | 100% sessao</title></circle>
+<circle cx="472.22" cy="1166.71" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 52 | 100% sessao</title></circle>
+<circle cx="541.67" cy="1161.21" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 55 | 100% sessao</title></circle>
+<circle cx="611.11" cy="1097.08" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 90 | 100% sessao</title></circle>
+<circle cx="680.56" cy="1084.25" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 97 | 100% sessao</title></circle>
+<circle cx="750" cy="994.46" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 146 | 70% sessao</title></circle>
+<circle cx="74" cy="1290" r="5" fill="#d94b4b"/>
+<text x="86" y="1294" class="legend-label">Lutador</text>
+<path d="M 125 1229.02 L 194.44 1230.85 L 263.89 1192.37 L 333.33 1146.55 L 402.78 1148.39 L 472.22 1109.91 L 541.67 1120.9 L 611.11 1067.76 L 680.56 1001.79 L 750 912" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1229.02" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 18 | 100% sessao</title></circle>
+<circle cx="194.44" cy="1230.85" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 17 | 100% sessao</title></circle>
+<circle cx="263.89" cy="1192.37" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 38 | 100% sessao</title></circle>
+<circle cx="333.33" cy="1146.55" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 63 | 100% sessao</title></circle>
+<circle cx="402.78" cy="1148.39" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 62 | 100% sessao</title></circle>
+<circle cx="472.22" cy="1109.91" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 83 | 100% sessao</title></circle>
+<circle cx="541.67" cy="1120.9" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 77 | 100% sessao</title></circle>
+<circle cx="611.11" cy="1067.76" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 106 | 95.5% sessao</title></circle>
+<circle cx="680.56" cy="1001.79" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 142 | 72.1% sessao</title></circle>
+<circle cx="750" cy="912" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 191 | 53.7% sessao</title></circle>
+<circle cx="206" cy="1290" r="5" fill="#8b5cf6"/>
+<text x="218" y="1294" class="legend-label">Assassino</text>
+<path d="M 125 1230.85 L 194.44 1234.51 L 263.89 1194.2 L 333.33 1152.05 L 402.78 1153.88 L 472.22 1113.57 L 541.67 1126.4 L 611.11 1071.42 L 680.56 1007.29 L 750 924.83" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1230.85" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 17 | 100% sessao</title></circle>
+<circle cx="194.44" cy="1234.51" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 15 | 100% sessao</title></circle>
+<circle cx="263.89" cy="1194.2" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 37 | 100% sessao</title></circle>
+<circle cx="333.33" cy="1152.05" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 60 | 100% sessao</title></circle>
+<circle cx="402.78" cy="1153.88" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 59 | 100% sessao</title></circle>
+<circle cx="472.22" cy="1113.57" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 81 | 100% sessao</title></circle>
+<circle cx="541.67" cy="1126.4" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 74 | 100% sessao</title></circle>
+<circle cx="611.11" cy="1071.42" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 104 | 97.8% sessao</title></circle>
+<circle cx="680.56" cy="1007.29" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 139 | 73.5% sessao</title></circle>
+<circle cx="750" cy="924.83" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 184 | 55.8% sessao</title></circle>
+<circle cx="338" cy="1290" r="5" fill="#2563eb"/>
+<text x="350" y="1294" class="legend-label">Atirador</text>
+<path d="M 125 1238.18 L 194.44 1241.84 L 263.89 1225.35 L 333.33 1203.36 L 402.78 1203.36 L 472.22 1164.88 L 541.67 1155.72 L 611.11 1089.75 L 680.56 1078.75 L 750 977.97" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1238.18" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 13 | 100% sessao</title></circle>
+<circle cx="194.44" cy="1241.84" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 11 | 100% sessao</title></circle>
+<circle cx="263.89" cy="1225.35" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 20 | 100% sessao</title></circle>
+<circle cx="333.33" cy="1203.36" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 32 | 100% sessao</title></circle>
+<circle cx="402.78" cy="1203.36" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 32 | 100% sessao</title></circle>
+<circle cx="472.22" cy="1164.88" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 53 | 100% sessao</title></circle>
+<circle cx="541.67" cy="1155.72" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 58 | 100% sessao</title></circle>
+<circle cx="611.11" cy="1089.75" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 94 | 100% sessao</title></circle>
+<circle cx="680.56" cy="1078.75" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 100 | 100% sessao</title></circle>
+<circle cx="750" cy="977.97" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 155 | 65.5% sessao</title></circle>
+<circle cx="470" cy="1290" r="5" fill="#16a34a"/>
+<text x="482" y="1294" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="810" y="792" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="824" class="chart-title">XP por pocao</text>
+<text x="834" y="846" class="chart-subtitle">Caca 50, 100 pocoes em sessao free.</text>
+<line x1="880" y1="1262" x2="1515" y2="1262" stroke="#e8edf5"/>
+<text x="868" y="1266" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="1164" x2="1515" y2="1164" stroke="#e8edf5"/>
+<text x="868" y="1168" text-anchor="end" class="axis-label">437,1</text>
+<line x1="880" y1="1066" x2="1515" y2="1066" stroke="#e8edf5"/>
+<text x="868" y="1070" text-anchor="end" class="axis-label">874,2</text>
+<line x1="880" y1="968" x2="1515" y2="968" stroke="#e8edf5"/>
+<text x="868" y="972" text-anchor="end" class="axis-label">1.311,3</text>
+<line x1="880" y1="870" x2="1515" y2="870" stroke="#e8edf5"/>
+<text x="868" y="874" text-anchor="end" class="axis-label">1.748,4</text>
+<line x1="880" y1="870" x2="880" y2="1262" stroke="#98a2b3"/>
+<line x1="880" y1="1262" x2="1515" y2="1262" stroke="#98a2b3"/>
+<text x="828" y="858" class="axis-title">XP/pocao</text>
+<text x="885" y="1286" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="1286" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="1286" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="1286" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="1286" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="1286" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="1286" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="1286" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="1286" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="1286" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 1035.66 L 954.44 1010.8 L 1023.89 1068.15 L 1093.33 1091.96 L 1162.78 999.11 L 1232.22 1043 L 1301.67 963.37 L 1371.11 999.69 L 1440.56 912 L 1510 930.77" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1035.66" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 1.009,5 | 100% sessao</title></circle>
+<circle cx="954.44" cy="1010.8" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 1.120,4 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="1068.15" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 864,6 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="1091.96" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 758,4 | 100% sessao</title></circle>
+<circle cx="1162.78" cy="999.11" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 1.172,5 | 100% sessao</title></circle>
+<circle cx="1232.22" cy="1043" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 976,8 | 100% sessao</title></circle>
+<circle cx="1301.67" cy="963.37" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 1.331,9 | 100% sessao</title></circle>
+<circle cx="1371.11" cy="999.69" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 1.169,9 | 100% sessao</title></circle>
+<circle cx="1440.56" cy="912" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 1.561,1 | 100% sessao</title></circle>
+<circle cx="1510" cy="930.77" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 1.477,4 | 70% sessao</title></circle>
+<circle cx="834" cy="1290" r="5" fill="#d94b4b"/>
+<text x="846" y="1294" class="legend-label">Lutador</text>
+<path d="M 885 1097.88 L 954.44 1119.21 L 1023.89 1167.76 L 1093.33 1181.7 L 1162.78 1136.65 L 1232.22 1122.19 L 1301.67 1040.53 L 1371.11 1027.78 L 1440.56 1007.5 L 1510 992.09" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1097.88" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 732 | 100% sessao</title></circle>
+<circle cx="954.44" cy="1119.21" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 636,9 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="1167.76" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 420,3 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="1181.7" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 358,2 | 100% sessao</title></circle>
+<circle cx="1162.78" cy="1136.65" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 559,1 | 100% sessao</title></circle>
+<circle cx="1232.22" cy="1122.19" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 623,6 | 100% sessao</title></circle>
+<circle cx="1301.67" cy="1040.53" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 987,8 | 100% sessao</title></circle>
+<circle cx="1371.11" cy="1027.78" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 1.044,7 | 95.5% sessao</title></circle>
+<circle cx="1440.56" cy="1007.5" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 1.135,1 | 72.1% sessao</title></circle>
+<circle cx="1510" cy="992.09" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 1.203,9 | 53.7% sessao</title></circle>
+<circle cx="966" cy="1290" r="5" fill="#8b5cf6"/>
+<text x="978" y="1294" class="legend-label">Assassino</text>
+<path d="M 885 1084.67 L 954.44 1100.17 L 1023.89 1165.21 L 1093.33 1177.68 L 1162.78 1130.28 L 1232.22 1118.74 L 1301.67 1031.55 L 1371.11 1022.18 L 1440.56 1002.8 L 1510 981.56" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1084.67" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 790,9 | 100% sessao</title></circle>
+<circle cx="954.44" cy="1100.17" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 721,8 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="1165.21" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 431,7 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="1177.68" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 376,1 | 100% sessao</title></circle>
+<circle cx="1162.78" cy="1130.28" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 587,5 | 100% sessao</title></circle>
+<circle cx="1232.22" cy="1118.74" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 639 | 100% sessao</title></circle>
+<circle cx="1301.67" cy="1031.55" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 1.027,8 | 100% sessao</title></circle>
+<circle cx="1371.11" cy="1022.18" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 1.069,6 | 97.8% sessao</title></circle>
+<circle cx="1440.56" cy="1002.8" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 1.156,1 | 73.5% sessao</title></circle>
+<circle cx="1510" cy="981.56" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 1.250,8 | 55.8% sessao</title></circle>
+<circle cx="1098" cy="1290" r="5" fill="#2563eb"/>
+<text x="1110" y="1294" class="legend-label">Atirador</text>
+<path d="M 885 1026.12 L 954.44 1035.65 L 1023.89 1077.84 L 1093.33 1102.59 L 1162.78 1018.18 L 1232.22 1047.13 L 1301.67 972.65 L 1371.11 1005.38 L 1440.56 922.5 L 1510 945.53" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1026.12" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 1.052,1 | 100% sessao</title></circle>
+<circle cx="954.44" cy="1035.65" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 1.009,6 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="1077.84" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 821,4 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="1102.59" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 711 | 100% sessao</title></circle>
+<circle cx="1162.78" cy="1018.18" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 1.087,5 | 100% sessao</title></circle>
+<circle cx="1232.22" cy="1047.13" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 958,4 | 100% sessao</title></circle>
+<circle cx="1301.67" cy="972.65" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 1.290,6 | 100% sessao</title></circle>
+<circle cx="1371.11" cy="1005.38" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 1.144,6 | 100% sessao</title></circle>
+<circle cx="1440.56" cy="922.5" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 1.514,2 | 100% sessao</title></circle>
+<circle cx="1510" cy="945.53" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 1.411,5 | 65.5% sessao</title></circle>
+<circle cx="1230" cy="1290" r="5" fill="#16a34a"/>
+<text x="1242" y="1294" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="50" y="1354" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="1386" class="chart-title">T10 por nivel de caca</text>
+<text x="74" y="1408" class="chart-subtitle">Sessao 6h, 100 pocoes. Mostra impacto do tempo de encontro.</text>
+<line x1="120" y1="1824" x2="755" y2="1824" stroke="#e8edf5"/>
+<text x="108" y="1828" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="1726" x2="755" y2="1726" stroke="#e8edf5"/>
+<text x="108" y="1730" text-anchor="end" class="axis-label">43.517,3</text>
+<line x1="120" y1="1628" x2="755" y2="1628" stroke="#e8edf5"/>
+<text x="108" y="1632" text-anchor="end" class="axis-label">87.034,6</text>
+<line x1="120" y1="1530" x2="755" y2="1530" stroke="#e8edf5"/>
+<text x="108" y="1534" text-anchor="end" class="axis-label">130.552</text>
+<line x1="120" y1="1432" x2="755" y2="1432" stroke="#e8edf5"/>
+<text x="108" y="1436" text-anchor="end" class="axis-label">174.069,3</text>
+<line x1="120" y1="1432" x2="120" y2="1824" stroke="#98a2b3"/>
+<line x1="120" y1="1824" x2="755" y2="1824" stroke="#98a2b3"/>
+<text x="68" y="1420" class="axis-title">XP</text>
+<text x="125" y="1848" text-anchor="middle" class="axis-label">C1</text>
+<text x="239.8" y="1848" text-anchor="middle" class="axis-label">C10</text>
+<text x="431.12" y="1848" text-anchor="middle" class="axis-label">C25</text>
+<text x="750" y="1848" text-anchor="middle" class="axis-label">C50</text>
+<path d="M 125 1474 L 239.8 1479.23 L 431.12 1483.71 L 750 1491.3" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1474" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 155.419 | 91% sessao</title></circle>
+<circle cx="239.8" cy="1479.23" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 153.095 | 84% sessao</title></circle>
+<circle cx="431.12" cy="1483.71" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 151.107 | 77.4% sessao</title></circle>
+<circle cx="750" cy="1491.3" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 147.737 | 70% sessao</title></circle>
+<circle cx="74" cy="1852" r="5" fill="#d94b4b"/>
+<text x="86" y="1856" class="legend-label">Lutador</text>
+<path d="M 125 1544.3 L 239.8 1546.7 L 431.12 1549.22 L 750 1552.89" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1544.3" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 124.200 | 70.4% sessao</title></circle>
+<circle cx="239.8" cy="1546.7" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 123.136 | 64.8% sessao</title></circle>
+<circle cx="431.12" cy="1549.22" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 122.016 | 59.5% sessao</title></circle>
+<circle cx="750" cy="1552.89" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 120.386 | 53.7% sessao</title></circle>
+<circle cx="206" cy="1852" r="5" fill="#8b5cf6"/>
+<text x="218" y="1856" class="legend-label">Assassino</text>
+<path d="M 125 1533.23 L 239.8 1535.5 L 431.12 1538.83 L 750 1542.32" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1533.23" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 129.119 | 73.1% sessao</title></circle>
+<circle cx="239.8" cy="1535.5" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 128.111 | 67.5% sessao</title></circle>
+<circle cx="431.12" cy="1538.83" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 126.629 | 61.7% sessao</title></circle>
+<circle cx="750" cy="1542.32" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 125.082 | 55.8% sessao</title></circle>
+<circle cx="338" cy="1852" r="5" fill="#2563eb"/>
+<text x="350" y="1856" class="legend-label">Atirador</text>
+<path d="M 125 1490.28 L 239.8 1494.67 L 431.12 1499.32 L 750 1506.13" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1490.28" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 148.190 | 85.3% sessao</title></circle>
+<circle cx="239.8" cy="1494.67" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 146.240 | 78.8% sessao</title></circle>
+<circle cx="431.12" cy="1499.32" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 144.175 | 72.5% sessao</title></circle>
+<circle cx="750" cy="1506.13" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 141.150 | 65.5% sessao</title></circle>
+<circle cx="470" cy="1852" r="5" fill="#16a34a"/>
+<text x="482" y="1856" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="810" y="1354" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="1386" class="chart-title">T10 por estoque de pocao</text>
+<text x="834" y="1408" class="chart-subtitle">Sessao 6h, caca 50. Mostra ponto de quebra de sobrevivencia.</text>
+<line x1="880" y1="1824" x2="1515" y2="1824" stroke="#e8edf5"/>
+<text x="868" y="1828" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="1726" x2="1515" y2="1726" stroke="#e8edf5"/>
+<text x="868" y="1730" text-anchor="end" class="axis-label">25</text>
+<line x1="880" y1="1628" x2="1515" y2="1628" stroke="#e8edf5"/>
+<text x="868" y="1632" text-anchor="end" class="axis-label">50</text>
+<line x1="880" y1="1530" x2="1515" y2="1530" stroke="#e8edf5"/>
+<text x="868" y="1534" text-anchor="end" class="axis-label">75</text>
+<line x1="880" y1="1432" x2="1515" y2="1432" stroke="#e8edf5"/>
+<text x="868" y="1436" text-anchor="end" class="axis-label">100</text>
+<line x1="880" y1="1432" x2="880" y2="1824" stroke="#98a2b3"/>
+<line x1="880" y1="1824" x2="1515" y2="1824" stroke="#98a2b3"/>
+<text x="828" y="1420" class="axis-title">%</text>
+<text x="885" y="1848" text-anchor="middle" class="axis-label">P0</text>
+<text x="916.25" y="1848" text-anchor="middle" class="axis-label">P5</text>
+<text x="947.5" y="1848" text-anchor="middle" class="axis-label">P10</text>
+<text x="1010" y="1848" text-anchor="middle" class="axis-label">P20</text>
+<text x="1197.5" y="1848" text-anchor="middle" class="axis-label">P50</text>
+<text x="1510" y="1848" text-anchor="middle" class="axis-label">P100</text>
+<path d="M 885 1814.59 L 916.25 1801.26 L 947.5 1788.33 L 1010 1761.28 L 1197.5 1682.1 L 1510 1549.6" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1814.59" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 2,4 | 2.4% sessao</title></circle>
+<circle cx="916.25" cy="1801.26" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 5,8 | 5.8% sessao</title></circle>
+<circle cx="947.5" cy="1788.33" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 9,1 | 9.1% sessao</title></circle>
+<circle cx="1010" cy="1761.28" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 16 | 16% sessao</title></circle>
+<circle cx="1197.5" cy="1682.1" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 36,2 | 36.2% sessao</title></circle>
+<circle cx="1510" cy="1549.6" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 70 | 70% sessao</title></circle>
+<circle cx="834" cy="1852" r="5" fill="#d94b4b"/>
+<text x="846" y="1856" class="legend-label">Lutador</text>
+<path d="M 885 1816.55 L 916.25 1806.75 L 947.5 1796.56 L 1010 1776.57 L 1197.5 1715.42 L 1510 1613.5" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1816.55" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 1,9 | 1.9% sessao</title></circle>
+<circle cx="916.25" cy="1806.75" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 4,4 | 4.4% sessao</title></circle>
+<circle cx="947.5" cy="1796.56" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 7 | 7% sessao</title></circle>
+<circle cx="1010" cy="1776.57" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 12,1 | 12.1% sessao</title></circle>
+<circle cx="1197.5" cy="1715.42" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 27,7 | 27.7% sessao</title></circle>
+<circle cx="1510" cy="1613.5" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 53,7 | 53.7% sessao</title></circle>
+<circle cx="966" cy="1852" r="5" fill="#8b5cf6"/>
+<text x="978" y="1856" class="legend-label">Assassino</text>
+<path d="M 885 1816.55 L 916.25 1805.97 L 947.5 1795.78 L 1010 1774.22 L 1197.5 1710.71 L 1510 1605.26" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1816.55" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 1,9 | 1.9% sessao</title></circle>
+<circle cx="916.25" cy="1805.97" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 4,6 | 4.6% sessao</title></circle>
+<circle cx="947.5" cy="1795.78" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 7,2 | 7.2% sessao</title></circle>
+<circle cx="1010" cy="1774.22" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 12,7 | 12.7% sessao</title></circle>
+<circle cx="1197.5" cy="1710.71" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 28,9 | 28.9% sessao</title></circle>
+<circle cx="1510" cy="1605.26" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 55,8 | 55.8% sessao</title></circle>
+<circle cx="1098" cy="1852" r="5" fill="#2563eb"/>
+<text x="1110" y="1856" class="legend-label">Atirador</text>
+<path d="M 885 1817.34 L 916.25 1804.4 L 947.5 1791.46 L 1010 1766.77 L 1197.5 1691.9 L 1510 1567.24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1817.34" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 1,7 | 1.7% sessao</title></circle>
+<circle cx="916.25" cy="1804.4" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 5 | 5% sessao</title></circle>
+<circle cx="947.5" cy="1791.46" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 8,3 | 8.3% sessao</title></circle>
+<circle cx="1010" cy="1766.77" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 14,6 | 14.6% sessao</title></circle>
+<circle cx="1197.5" cy="1691.9" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 33,7 | 33.7% sessao</title></circle>
+<circle cx="1510" cy="1567.24" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 65,5 | 65.5% sessao</title></circle>
+<circle cx="1230" cy="1852" r="5" fill="#16a34a"/>
+<text x="1242" y="1856" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="50" y="1916" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="1948" class="chart-title">XP por sessao 12h</text>
+<text x="74" y="1970" class="chart-subtitle">Caca 50, 100 pocoes. Cenario premium.</text>
+<line x1="120" y1="2386" x2="755" y2="2386" stroke="#e8edf5"/>
+<text x="108" y="2390" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="2288" x2="755" y2="2288" stroke="#e8edf5"/>
+<text x="108" y="2292" text-anchor="end" class="axis-label">44.431</text>
+<line x1="120" y1="2190" x2="755" y2="2190" stroke="#e8edf5"/>
+<text x="108" y="2194" text-anchor="end" class="axis-label">88.861,9</text>
+<line x1="120" y1="2092" x2="755" y2="2092" stroke="#e8edf5"/>
+<text x="108" y="2096" text-anchor="end" class="axis-label">133.292,9</text>
+<line x1="120" y1="1994" x2="755" y2="1994" stroke="#e8edf5"/>
+<text x="108" y="1998" text-anchor="end" class="axis-label">177.723,8</text>
+<line x1="120" y1="1994" x2="120" y2="2386" stroke="#98a2b3"/>
+<line x1="120" y1="2386" x2="755" y2="2386" stroke="#98a2b3"/>
+<text x="68" y="1982" class="axis-title">XP</text>
+<text x="125" y="2410" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="2410" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="2410" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="2410" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="2410" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="2410" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="2410" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="2410" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="2410" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="2410" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 2323.65 L 194.44 2336.58 L 263.89 2313.53 L 333.33 2285.63 L 402.78 2235.84 L 472.22 2173.4 L 541.67 2094.52 L 611.11 2123.9 L 680.56 2036 L 750 2060.14" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2323.65" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 28.266 | 100% sessao</title></circle>
+<circle cx="194.44" cy="2336.58" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 22.407 | 100% sessao</title></circle>
+<circle cx="263.89" cy="2313.53" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 32.856 | 100% sessao</title></circle>
+<circle cx="333.33" cy="2285.63" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 45.504 | 100% sessao</title></circle>
+<circle cx="402.78" cy="2235.84" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 68.078 | 100% sessao</title></circle>
+<circle cx="472.22" cy="2173.4" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 96.387 | 94.9% sessao</title></circle>
+<circle cx="541.67" cy="2094.52" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 132.149 | 90.2% sessao</title></circle>
+<circle cx="611.11" cy="2123.9" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 118.829 | 56.5% sessao</title></circle>
+<circle cx="680.56" cy="2036" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 158.682 | 52.4% sessao</title></circle>
+<circle cx="750" cy="2060.14" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 147.737 | 35% sessao</title></circle>
+<circle cx="74" cy="2414" r="5" fill="#d94b4b"/>
+<text x="86" y="2418" class="legend-label">Lutador</text>
+<path d="M 125 2327.88 L 194.44 2338.21 L 263.89 2315.48 L 333.33 2306.71 L 402.78 2262.74 L 472.22 2247.31 L 541.67 2166.57 L 611.11 2155.58 L 680.56 2135.63 L 750 2120.47" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2327.88" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 26.352 | 100% sessao</title></circle>
+<circle cx="194.44" cy="2338.21" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 21.669 | 100% sessao</title></circle>
+<circle cx="263.89" cy="2315.48" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 31.972 | 100% sessao</title></circle>
+<circle cx="333.33" cy="2306.71" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 35.950 | 79.6% sessao</title></circle>
+<circle cx="402.78" cy="2262.74" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 55.883 | 80.6% sessao</title></circle>
+<circle cx="472.22" cy="2247.31" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 62.878 | 60.7% sessao</title></circle>
+<circle cx="541.67" cy="2166.57" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 99.485 | 65.4% sessao</title></circle>
+<circle cx="611.11" cy="2155.58" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 104.466 | 47.7% sessao</title></circle>
+<circle cx="680.56" cy="2135.63" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 113.511 | 36.1% sessao</title></circle>
+<circle cx="750" cy="2120.47" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 120.386 | 26.9% sessao</title></circle>
+<circle cx="206" cy="2414" r="5" fill="#8b5cf6"/>
+<text x="218" y="2418" class="legend-label">Assassino</text>
+<path d="M 125 2326.67 L 194.44 2338.21 L 263.89 2315.48 L 333.33 2302.73 L 402.78 2255.91 L 472.22 2242.76 L 541.67 2157.64 L 611.11 2150.08 L 680.56 2131.01 L 750 2110.11" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2326.67" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 26.901 | 100% sessao</title></circle>
+<circle cx="194.44" cy="2338.21" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 21.669 | 100% sessao</title></circle>
+<circle cx="263.89" cy="2315.48" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 31.972 | 100% sessao</title></circle>
+<circle cx="333.33" cy="2302.73" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 37.752 | 83.6% sessao</title></circle>
+<circle cx="402.78" cy="2255.91" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 58.981 | 85% sessao</title></circle>
+<circle cx="472.22" cy="2242.76" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 64.944 | 62.7% sessao</title></circle>
+<circle cx="541.67" cy="2157.64" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 103.534 | 68% sessao</title></circle>
+<circle cx="611.11" cy="2150.08" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 106.963 | 48.9% sessao</title></circle>
+<circle cx="680.56" cy="2131.01" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 115.607 | 36.7% sessao</title></circle>
+<circle cx="750" cy="2110.11" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 125.082 | 27.9% sessao</title></circle>
+<circle cx="338" cy="2414" r="5" fill="#2563eb"/>
+<text x="350" y="2418" class="legend-label">Atirador</text>
+<path d="M 125 2325.64 L 194.44 2336.98 L 263.89 2313.53 L 333.33 2285.63 L 402.78 2232.49 L 472.22 2176.51 L 541.67 2101.92 L 611.11 2130.48 L 680.56 2048.37 L 750 2074.67" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2325.64" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 27.364 | 100% sessao</title></circle>
+<circle cx="194.44" cy="2336.98" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 22.226 | 100% sessao</title></circle>
+<circle cx="263.89" cy="2313.53" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 32.856 | 100% sessao</title></circle>
+<circle cx="333.33" cy="2285.63" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 45.504 | 100% sessao</title></circle>
+<circle cx="402.78" cy="2232.49" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 69.600 | 100% sessao</title></circle>
+<circle cx="472.22" cy="2176.51" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 94.979 | 93.5% sessao</title></circle>
+<circle cx="541.67" cy="2101.92" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 128.797 | 86% sessao</title></circle>
+<circle cx="611.11" cy="2130.48" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 115.847 | 53.9% sessao</title></circle>
+<circle cx="680.56" cy="2048.37" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 153.074 | 50.6% sessao</title></circle>
+<circle cx="750" cy="2074.67" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 141.150 | 32.7% sessao</title></circle>
+<circle cx="470" cy="2414" r="5" fill="#16a34a"/>
+<text x="482" y="2418" class="legend-label">Medico</text>
+</g>
+<g class="chart">
+<rect x="810" y="1916" width="740" height="520" rx="12" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="1948" class="chart-title">Pocoes necessarias para 12h</text>
+<text x="834" y="1970" class="chart-subtitle">Caca 50, estoque teorico para completar sessao premium.</text>
+<line x1="880" y1="2386" x2="1515" y2="2386" stroke="#e8edf5"/>
+<text x="868" y="2390" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="2288" x2="1515" y2="2288" stroke="#e8edf5"/>
+<text x="868" y="2292" text-anchor="end" class="axis-label">107,5</text>
+<line x1="880" y1="2190" x2="1515" y2="2190" stroke="#e8edf5"/>
+<text x="868" y="2194" text-anchor="end" class="axis-label">215</text>
+<line x1="880" y1="2092" x2="1515" y2="2092" stroke="#e8edf5"/>
+<text x="868" y="2096" text-anchor="end" class="axis-label">322,6</text>
+<line x1="880" y1="1994" x2="1515" y2="1994" stroke="#e8edf5"/>
+<text x="868" y="1998" text-anchor="end" class="axis-label">430,1</text>
+<line x1="880" y1="1994" x2="880" y2="2386" stroke="#98a2b3"/>
+<line x1="880" y1="2386" x2="1515" y2="2386" stroke="#98a2b3"/>
+<text x="828" y="1982" class="axis-title">Pocoes</text>
+<text x="885" y="2410" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="2410" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="2410" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="2410" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="2410" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="2410" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="2410" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="2410" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="2410" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="2410" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 2355.01 L 954.44 2358.66 L 1023.89 2345.9 L 1093.33 2324.02 L 1162.78 2329.49 L 1232.22 2286.65 L 1301.67 2282.09 L 1371.11 2219.2 L 1440.56 2207.35 L 1510 2118.03" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2355.01" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 34 | 100% sessao</title></circle>
+<circle cx="954.44" cy="2358.66" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 30 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="2345.9" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 44 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="2324.02" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 68 | 100% sessao</title></circle>
+<circle cx="1162.78" cy="2329.49" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 62 | 100% sessao</title></circle>
+<circle cx="1232.22" cy="2286.65" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 109 | 94.9% sessao</title></circle>
+<circle cx="1301.67" cy="2282.09" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 114 | 90.2% sessao</title></circle>
+<circle cx="1371.11" cy="2219.2" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 183 | 56.5% sessao</title></circle>
+<circle cx="1440.56" cy="2207.35" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 196 | 52.4% sessao</title></circle>
+<circle cx="1510" cy="2118.03" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador: 294 | 35% sessao</title></circle>
+<circle cx="834" cy="2414" r="5" fill="#d94b4b"/>
+<text x="846" y="2418" class="legend-label">Lutador</text>
+<path d="M 885 2352.28 L 954.44 2352.28 L 1023.89 2313.99 L 1093.33 2268.42 L 1162.78 2270.24 L 1232.22 2231.96 L 1301.67 2243.81 L 1371.11 2190.04 L 1440.56 2126.23 L 1510 2036" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2352.28" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 37 | 100% sessao</title></circle>
+<circle cx="954.44" cy="2352.28" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 37 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="2313.99" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 79 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="2268.42" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 129 | 79.6% sessao</title></circle>
+<circle cx="1162.78" cy="2270.24" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 127 | 80.6% sessao</title></circle>
+<circle cx="1232.22" cy="2231.96" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 169 | 60.7% sessao</title></circle>
+<circle cx="1301.67" cy="2243.81" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 156 | 65.4% sessao</title></circle>
+<circle cx="1371.11" cy="2190.04" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 215 | 47.7% sessao</title></circle>
+<circle cx="1440.56" cy="2126.23" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 285 | 36.1% sessao</title></circle>
+<circle cx="1510" cy="2036" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino: 384 | 26.9% sessao</title></circle>
+<circle cx="966" cy="2414" r="5" fill="#8b5cf6"/>
+<text x="978" y="2418" class="legend-label">Assassino</text>
+<path d="M 885 2353.19 L 954.44 2355.92 L 1023.89 2316.73 L 1093.33 2273.89 L 1162.78 2276.63 L 1232.22 2236.52 L 1301.67 2249.28 L 1371.11 2194.59 L 1440.56 2130.79 L 1510 2049.67" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2353.19" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 36 | 100% sessao</title></circle>
+<circle cx="954.44" cy="2355.92" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 33 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="2316.73" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 76 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="2273.89" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 123 | 83.6% sessao</title></circle>
+<circle cx="1162.78" cy="2276.63" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 120 | 85% sessao</title></circle>
+<circle cx="1232.22" cy="2236.52" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 164 | 62.7% sessao</title></circle>
+<circle cx="1301.67" cy="2249.28" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 150 | 68% sessao</title></circle>
+<circle cx="1371.11" cy="2194.59" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 210 | 48.9% sessao</title></circle>
+<circle cx="1440.56" cy="2130.79" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 280 | 36.7% sessao</title></circle>
+<circle cx="1510" cy="2049.67" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador: 369 | 27.9% sessao</title></circle>
+<circle cx="1098" cy="2414" r="5" fill="#2563eb"/>
+<text x="1110" y="2418" class="legend-label">Atirador</text>
+<path d="M 885 2359.57 L 954.44 2360.48 L 1023.89 2344.98 L 1093.33 2322.2 L 1162.78 2325.84 L 1232.22 2285.74 L 1301.67 2277.54 L 1371.11 2211.91 L 1440.56 2201.89 L 1510 2101.63" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="2359.57" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 29 | 100% sessao</title></circle>
+<circle cx="954.44" cy="2360.48" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 28 | 100% sessao</title></circle>
+<circle cx="1023.89" cy="2344.98" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 45 | 100% sessao</title></circle>
+<circle cx="1093.33" cy="2322.2" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 70 | 100% sessao</title></circle>
+<circle cx="1162.78" cy="2325.84" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 66 | 100% sessao</title></circle>
+<circle cx="1232.22" cy="2285.74" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 110 | 93.5% sessao</title></circle>
+<circle cx="1301.67" cy="2277.54" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 119 | 86% sessao</title></circle>
+<circle cx="1371.11" cy="2211.91" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 191 | 53.9% sessao</title></circle>
+<circle cx="1440.56" cy="2201.89" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 202 | 50.6% sessao</title></circle>
+<circle cx="1510" cy="2101.63" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico: 312 | 32.7% sessao</title></circle>
+<circle cx="1230" cy="2414" r="5" fill="#16a34a"/>
+<text x="1242" y="2418" class="legend-label">Medico</text>
+</g>
+</svg>

@@ -10,7 +10,6 @@ import { flushSync } from "react-dom";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { RefreshCw, X } from "lucide-react";
 import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.png";
-import { PremiumPlaceholderIcon } from "../../../components/PremiumPlaceholderIcon";
 import {
   getCharacterOverview,
   updateCharacterCurrentMap,
@@ -30,6 +29,7 @@ import {
 import "../auto-combat-mob-images.css";
 import "../auto-combat.css";
 import { AutoCombatBattleLog } from "../components/AutoCombatBattleLog";
+import { AutoCombatPremiumRewardBreakdown } from "../components/AutoCombatPremiumRewardBreakdown";
 import { AutoCombatSessionSummary } from "../components/AutoCombatSessionSummary";
 import { AutoCombatStatsTab } from "../components/AutoCombatStatsTab";
 import { AutoCombatTabs } from "../components/AutoCombatTabs";
@@ -854,7 +854,6 @@ export function AutoCombatPage() {
   const [isPotionConfigPanelOpen, setIsPotionConfigPanelOpen] = useState(false);
   const [selectedPotionSlotIndex, setSelectedPotionSlotIndex] = useState(0);
   const [selectedPotionItemId, setSelectedPotionItemId] = useState("");
-  const [potionThresholdPercent, setPotionThresholdPercent] = useState(35);
   const [isPotionConfigLoading, setIsPotionConfigLoading] = useState(false);
   const [potionConfigMessage, setPotionConfigMessage] = useState("");
 
@@ -1546,9 +1545,6 @@ export function AutoCombatPage() {
       setAutoPotionConfig(normalizedPotionConfig);
 
       setSelectedPotionItemId(normalizedPotionConfig?.potionItemId ?? "");
-      setPotionThresholdPercent(
-        clampNumber(normalizedPotionConfig?.hpThresholdPercent ?? 35, 1, 100),
-      );
 
       setLocalCharacterProgress((current) => {
         if (hasPendingRealtimeVisualRef.current && current) {
@@ -2228,6 +2224,8 @@ export function AutoCombatPage() {
   if (!character) {
     return <Navigate to="/characters" replace />;
   }
+
+  const membershipHref = `/dashboard/${characterId}/membership`;
 
   const characterWithPotionConfig =
     character as CharacterWithSinglePotionConfig;
@@ -3483,7 +3481,6 @@ export function AutoCombatPage() {
   const selectedThreatPotionTriggerPercent = selectedThreatPotionEnabled
     ? (currentPotionConfig?.hpThresholdPercent ??
       selectedThreatSurvivalProjection?.potionTriggerPercent ??
-      potionThresholdPercent ??
       null)
     : null;
   const selectedThreatProjectionKillLimit = Math.max(
@@ -4055,9 +4052,6 @@ export function AutoCombatPage() {
     shouldShowXpFeedback && xpFeedbackEvent
       ? `mob-xp-${getXpFeedbackDisplayKey(xpFeedbackEvent)}`
       : "";
-  const xpFeedbackPremiumXp = xpFeedbackBreakdown?.isPremiumActive
-    ? xpFeedbackBreakdown.premiumBonusXp
-    : (xpFeedbackBreakdown?.premiumPotentialBonusXp ?? 0);
   const shouldShowMobDeathFeedback = shouldShowXpFeedback;
   const mobDeathFeedbackKey =
     shouldShowMobDeathFeedback && xpFeedbackEvent
@@ -4360,18 +4354,11 @@ export function AutoCombatPage() {
     }
 
     setSelectedPotionItemId(currentPotionConfig?.potionItemId ?? "");
-    setPotionThresholdPercent(
-      clampNumber(currentPotionConfig?.hpThresholdPercent ?? 35, 1, 100),
-    );
     setIsPotionConfigPanelOpen(true);
   }
 
   async function handleSavePotionConfig() {
     if (!characterId || isPotionConfigLoading) return;
-
-    const safeThreshold = Math.floor(
-      clampNumber(potionThresholdPercent, 1, 100),
-    );
 
     const shouldEnable = Boolean(selectedPotionItemId);
 
@@ -4389,7 +4376,6 @@ export function AutoCombatPage() {
       const response = await updateCharacterPotionConfigRaw(characterId, {
         enabled: shouldEnable,
         potionItemId: selectedPotionItemId || null,
-        hpThresholdPercent: safeThreshold,
         useInManualCombat: false,
         useInAutoCombat: true,
       });
@@ -4398,9 +4384,6 @@ export function AutoCombatPage() {
 
       setAutoPotionConfig(normalized);
       setSelectedPotionItemId(normalized?.potionItemId ?? selectedPotionItemId);
-      setPotionThresholdPercent(
-        clampNumber(normalized?.hpThresholdPercent ?? safeThreshold, 1, 100),
-      );
       setIsPotionConfigPanelOpen(false);
       setPotionConfigMessage(
         response.message ?? "Configuração de poção atualizada com sucesso.",
@@ -4429,9 +4412,6 @@ export function AutoCombatPage() {
       const response = await updateCharacterPotionConfigRaw(characterId, {
         enabled: false,
         potionItemId: null,
-        hpThresholdPercent: Math.floor(
-          clampNumber(potionThresholdPercent, 1, 100),
-        ),
         useInManualCombat: false,
         useInAutoCombat: true,
       });
@@ -4468,14 +4448,6 @@ export function AutoCombatPage() {
       return;
     }
 
-    const safeThreshold = Math.floor(
-      clampNumber(
-        currentPotionConfig?.hpThresholdPercent ?? potionThresholdPercent ?? 35,
-        1,
-        100,
-      ),
-    );
-
     try {
       setIsPotionConfigLoading(true);
       setErrorMessage("");
@@ -4484,7 +4456,6 @@ export function AutoCombatPage() {
       const response = await updateCharacterPotionConfigRaw(characterId, {
         enabled: true,
         potionItemId,
-        hpThresholdPercent: safeThreshold,
         useInManualCombat: false,
         useInAutoCombat: true,
       });
@@ -4493,9 +4464,6 @@ export function AutoCombatPage() {
 
       setAutoPotionConfig(normalized);
       setSelectedPotionItemId(normalized?.potionItemId ?? potionItemId);
-      setPotionThresholdPercent(
-        clampNumber(normalized?.hpThresholdPercent ?? safeThreshold, 1, 100),
-      );
       setIsThreatPotionPickerOpen(false);
 
       await loadAutoCombatData();
@@ -5104,27 +5072,22 @@ export function AutoCombatPage() {
                           .join(" ")}
                       >
                         {shouldShowXpFeedback && xpFeedbackBreakdown ? (
-                          <div
+                          <AutoCombatPremiumRewardBreakdown
                             key={xpFeedbackKey}
                             className="auto-combat-xp-feedback auto-combat-inline-battle__xp"
-                            role="status"
-                            aria-live="polite"
-                          >
-                            <strong>
-                              +{xpFeedbackBreakdown.totalXp} EXP TOTAL
-                            </strong>
-
-                            <div className="auto-combat-xp-feedback__details">
-                              <span>
-                                Base: {xpFeedbackBreakdown.baseXp} EXP
-                              </span>
-
-                              <span className="auto-combat-xp-feedback__premium">
-                                <PremiumPlaceholderIcon className="auto-combat-xp-feedback__premium-icon" />
-                                + {xpFeedbackPremiumXp} EXP PREMIUM
-                              </span>
-                            </div>
-                          </div>
+                            baseXp={xpFeedbackBreakdown.baseXp}
+                            totalXp={xpFeedbackBreakdown.totalXp}
+                            premiumBonusXp={xpFeedbackBreakdown.premiumBonusXp}
+                            premiumPotentialBonusXp={
+                              xpFeedbackBreakdown.premiumPotentialBonusXp
+                            }
+                            premiumTotalXp={xpFeedbackBreakdown.premiumTotalXp}
+                            isPremiumActive={
+                              xpFeedbackBreakdown.isPremiumActive
+                            }
+                            variant="feedback"
+                            showCta={false}
+                          />
                         ) : null}
 
                         {shouldShowMobDamage ? (
@@ -5605,27 +5568,22 @@ export function AutoCombatPage() {
                         data-fighter-role="mob"
                       >
                         {shouldShowXpFeedback && xpFeedbackBreakdown ? (
-                          <div
+                          <AutoCombatPremiumRewardBreakdown
                             key={xpFeedbackKey}
                             className="auto-combat-xp-feedback"
-                            role="status"
-                            aria-live="polite"
-                          >
-                            <strong>
-                              +{xpFeedbackBreakdown.totalXp} EXP TOTAL
-                            </strong>
-
-                            <div className="auto-combat-xp-feedback__details">
-                              <span>
-                                Base: {xpFeedbackBreakdown.baseXp} EXP
-                              </span>
-
-                              <span className="auto-combat-xp-feedback__premium">
-                                <PremiumPlaceholderIcon className="auto-combat-xp-feedback__premium-icon" />
-                                + {xpFeedbackPremiumXp} EXP PREMIUM
-                              </span>
-                            </div>
-                          </div>
+                            baseXp={xpFeedbackBreakdown.baseXp}
+                            totalXp={xpFeedbackBreakdown.totalXp}
+                            premiumBonusXp={xpFeedbackBreakdown.premiumBonusXp}
+                            premiumPotentialBonusXp={
+                              xpFeedbackBreakdown.premiumPotentialBonusXp
+                            }
+                            premiumTotalXp={xpFeedbackBreakdown.premiumTotalXp}
+                            isPremiumActive={
+                              xpFeedbackBreakdown.isPremiumActive
+                            }
+                            variant="feedback"
+                            showCta={false}
+                          />
                         ) : null}
 
                         {shouldShowMobDamage ? (
@@ -5783,7 +5741,7 @@ export function AutoCombatPage() {
                       </div>
 
                       <small>
-                        Configure a poção automática e o gatilho de HP.
+                        Escolha a poção que poderá ser usada durante as batalhas.
                       </small>
                     </div>
 
@@ -5831,12 +5789,12 @@ export function AutoCombatPage() {
                                 <span>
                                   {potionItem
                                     ? getPotionDescription(potionConfig)
-                                    : "Clique para escolher uma poção e definir o gatilho de HP."}
+                                    : "Clique para escolher a poção da batalha."}
                                 </span>
 
                                 <small className="auto-combat-consumable-slot__meta">
                                   {potionItem
-                                    ? `HP <= ${currentPotionConfig?.hpThresholdPercent ?? potionThresholdPercent}% · x${potionQuantity}`
+                                    ? `Selecionada · x${potionQuantity}`
                                     : "Escolher poção"}
                                 </small>
                               </div>
@@ -5887,7 +5845,7 @@ export function AutoCombatPage() {
                           <div>
                             <span>Poção automática</span>
                             <strong id="auto-combat-potion-config-title">
-                              Escolha a poção e o gatilho de HP
+                              Escolha a poção da batalha
                             </strong>
                           </div>
 
@@ -5979,65 +5937,6 @@ export function AutoCombatPage() {
                             )}
                           </section>
 
-                          <section className="auto-combat-potion-threshold auto-combat-potion-threshold--minimal">
-                            <div className="auto-combat-potion-threshold__header">
-                              <div>
-                                <span>Usar quando o HP estiver em</span>
-                                <strong>
-                                  {potionThresholdPercent}% ou menos
-                                </strong>
-                              </div>
-
-                              <input
-                                type="number"
-                                min={1}
-                                max={100}
-                                value={potionThresholdPercent}
-                                disabled={isPotionConfigLoading}
-                                onChange={(event) =>
-                                  setPotionThresholdPercent(
-                                    clampNumber(event.target.value, 1, 100),
-                                  )
-                                }
-                              />
-                            </div>
-
-                            <input
-                              type="range"
-                              min={1}
-                              max={100}
-                              value={potionThresholdPercent}
-                              disabled={isPotionConfigLoading}
-                              onChange={(event) =>
-                                setPotionThresholdPercent(
-                                  clampNumber(event.target.value, 1, 100),
-                                )
-                              }
-                            />
-
-                            <div className="auto-combat-potion-threshold__presets">
-                              {[25, 35, 50, 65].map((value) => (
-                                <button
-                                  key={value}
-                                  type="button"
-                                  className={
-                                    potionThresholdPercent === value
-                                      ? "is-selected"
-                                      : ""
-                                  }
-                                  aria-pressed={
-                                    potionThresholdPercent === value
-                                  }
-                                  disabled={isPotionConfigLoading}
-                                  onClick={() =>
-                                    setPotionThresholdPercent(value)
-                                  }
-                                >
-                                  {value}%
-                                </button>
-                              ))}
-                            </div>
-                          </section>
                         </div>
 
                         {potionConfigMessage ? (
@@ -6084,6 +5983,7 @@ export function AutoCombatPage() {
                     }
                     premiumTotalXp={normalizedSessionXp.premiumTotalXp}
                     isPremiumActive={normalizedSessionXp.isPremiumActive}
+                    membershipHref={membershipHref}
                     totalLoot={totalLoot}
                     potionsUsed={potionsUsed}
                   />

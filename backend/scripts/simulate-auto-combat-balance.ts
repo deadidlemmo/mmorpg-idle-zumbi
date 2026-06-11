@@ -963,7 +963,9 @@ function printScenarioDescriptions() {
   console.log('Assumptions:');
   console.log('- Equipment presets are class-specific stat sets.');
   console.log('- Target mob is a balanced monster at the same level/tier.');
-  console.log('- Standard potion estimate uses 30% max HP heal at 35% trigger.');
+  console.log(
+    '- Standard potion estimate uses the current tier potion at 35% trigger.',
+  );
   console.log('- Recommended gathering uses 3 class-related origins.');
   console.log('- Full gathering uses all 6 origins at gathering level 50.');
   console.log('- All levels from 1 to 100 are simulated.');

@@ -1,0 +1,241 @@
+tier,level,mapName,subMapName,className,rank,mobName,mobLevel,mobAttack,mobHp,baseWeight,averageWeight,probabilityPercent,expectedKillsPer1000,expectedDamagePerBattle,expectedMobHitDamage,expectedDodgeChancePercent,expectedCriticalChancePercent,noPotionBattles,potions25Battles,potions100Battles
+1,10,"Subúrbio Silencioso","Rua das Cercas","Lutador",1,"Errante do Subúrbio",1,2,43,42,42,30.08,300.8,0.98,1,3.55,4.42,715,6072,22143
+1,10,"Subúrbio Silencioso","Rua das Cercas","Lutador",2,"Gato de Telhado Contaminado",4,4,79,24,35.89,25.7,257,1,1,2.2,5.32,700,5950,21700
+1,10,"Subúrbio Silencioso","Quintais Abandonados","Lutador",3,"Rastejante de Garagem",4,4,86,15,21.96,15.72,157.2,1,1,2.2,5.32,700,5950,21700
+1,10,"Subúrbio Silencioso","Quintais Abandonados","Lutador",4,"Morcego de Caixa d’Água",7,7,127,9,17.92,12.83,128.3,1.01,1,2,6.4,694,5892,21486
+1,10,"Subúrbio Silencioso","Bloco do Síndico","Lutador",5,"Porteiro Infectado",7,8,138,6,11.95,8.55,85.5,1.01,1,2,6.22,694,5892,21486
+1,10,"Subúrbio Silencioso","Bloco do Síndico","Lutador",6,"Síndico Devorado",10,12,206,4,9.95,7.12,71.2,2.03,2,2,7.3,345,2931,10690
+1,10,"Subúrbio Silencioso","Rua das Cercas","Assassino",1,"Errante do Subúrbio",1,1,43,42,42,30.08,300.8,0.79,1,22.45,3,311,2621,9551
+1,10,"Subúrbio Silencioso","Rua das Cercas","Assassino",2,"Gato de Telhado Contaminado",4,2,79,24,35.89,25.7,257,0.8,1,21.1,3,307,2588,9432
+1,10,"Subúrbio Silencioso","Quintais Abandonados","Assassino",3,"Rastejante de Garagem",4,2,86,15,21.96,15.72,157.2,0.8,1,21.1,3,307,2588,9432
+1,10,"Subúrbio Silencioso","Quintais Abandonados","Assassino",4,"Morcego de Caixa d’Água",7,3,127,9,17.92,12.83,128.3,0.82,1,19.3,3,300,2525,9202
+1,10,"Subúrbio Silencioso","Bloco do Síndico","Assassino",5,"Porteiro Infectado",7,4,138,6,11.95,8.55,85.5,1.63,2,19.75,3,150,1270,4629
+1,10,"Subúrbio Silencioso","Bloco do Síndico","Assassino",6,"Síndico Devorado",10,6,206,4,9.95,7.12,71.2,3.33,4,17.95,3,73,621,2266
+1,10,"Subúrbio Silencioso","Rua das Cercas","Atirador",1,"Errante do Subúrbio",1,1,43,42,42,30.08,300.8,0.81,1,19.75,3,330,2799,10207
+1,10,"Subúrbio Silencioso","Rua das Cercas","Atirador",2,"Gato de Telhado Contaminado",4,2,79,24,35.89,25.7,257,0.83,1,18.4,3,322,2732,9961
+1,10,"Subúrbio Silencioso","Quintais Abandonados","Atirador",3,"Rastejante de Garagem",4,2,86,15,21.96,15.72,157.2,0.83,1,18.4,3,322,2732,9961
+1,10,"Subúrbio Silencioso","Quintais Abandonados","Atirador",4,"Morcego de Caixa d’Água",7,3,127,9,17.92,12.83,128.3,0.85,1,16.6,3,315,2668,9727
+1,10,"Subúrbio Silencioso","Bloco do Síndico","Atirador",5,"Porteiro Infectado",7,4,138,6,11.95,8.55,85.5,1.68,2,17.05,3,159,1349,4921
+1,10,"Subúrbio Silencioso","Bloco do Síndico","Atirador",6,"Síndico Devorado",10,6,206,4,9.95,7.12,71.2,2.58,3,15.25,3,103,879,3204
+1,10,"Subúrbio Silencioso","Rua das Cercas","Medico",1,"Errante do Subúrbio",1,2,43,42,42,30.08,300.8,0.98,1,3.55,4.42,644,6665,24726
+1,10,"Subúrbio Silencioso","Rua das Cercas","Medico",2,"Gato de Telhado Contaminado",4,4,79,24,35.89,25.7,257,1,1,2.2,5.32,631,6531,24231
+1,10,"Subúrbio Silencioso","Quintais Abandonados","Medico",3,"Rastejante de Garagem",4,4,86,15,21.96,15.72,157.2,1,1,2.2,5.32,631,6531,24231
+1,10,"Subúrbio Silencioso","Quintais Abandonados","Medico",4,"Morcego de Caixa d’Água",7,8,127,9,17.92,12.83,128.3,1.01,1,2,6.4,625,6467,23992
+1,10,"Subúrbio Silencioso","Bloco do Síndico","Medico",5,"Porteiro Infectado",7,9,138,6,11.95,8.55,85.5,2.02,2,2,6.22,312,3233,11996
+1,10,"Subúrbio Silencioso","Bloco do Síndico","Medico",6,"Síndico Devorado",10,14,206,4,9.95,7.12,71.2,2.03,2,2,7.3,311,3217,11936
+2,20,"Distrito da Ferrugem","Pátio de Carga","Lutador",1,"Carregador de Paletes Infectado",11,7,152,42,42,30.08,300.8,0.99,1,4,5.68,1241,10534,38413
+2,20,"Distrito da Ferrugem","Pátio de Carga","Lutador",2,"Arrastador de Correntes",14,12,233,24,35.89,25.7,257,2.03,2,2,6.94,605,5137,18733
+2,20,"Distrito da Ferrugem","Linha de Prensas","Lutador",3,"Operário Prensado",14,12,252,15,21.96,15.72,157.2,2.02,2,2.2,6.76,608,5162,18826
+2,20,"Distrito da Ferrugem","Linha de Prensas","Lutador",4,"Esmagado da Prensa",17,19,342,9,17.92,12.83,128.3,3.06,3,2,8.02,401,3408,12427
+2,20,"Distrito da Ferrugem","Galpão do Capataz","Lutador",5,"Vigia do Galpão Infectado",17,21,373,6,11.95,8.55,85.5,4.08,4,2,8.02,301,2556,9320
+2,20,"Distrito da Ferrugem","Galpão do Capataz","Lutador",6,"Capataz Ferrugento",20,31,527,4,9.95,7.12,71.2,6.17,6,2,9.28,199,1690,6163
+2,20,"Distrito da Ferrugem","Pátio de Carga","Assassino",1,"Carregador de Paletes Infectado",11,3,152,42,42,30.08,300.8,0.73,1,28,3,550,4660,16989
+2,20,"Distrito da Ferrugem","Pátio de Carga","Assassino",2,"Arrastador de Correntes",14,6,233,24,35.89,25.7,257,1.46,2,28,3,275,2330,8494
+2,20,"Distrito da Ferrugem","Linha de Prensas","Assassino",3,"Operário Prensado",14,6,252,15,21.96,15.72,157.2,1.46,2,28,3,275,2330,8494
+2,20,"Distrito da Ferrugem","Linha de Prensas","Assassino",4,"Esmagado da Prensa",17,9,342,9,17.92,12.83,128.3,3.66,5,28,3,109,929,3388
+2,20,"Distrito da Ferrugem","Galpão do Capataz","Assassino",5,"Vigia do Galpão Infectado",17,10,373,6,11.95,8.55,85.5,4.39,6,28,3,91,774,2825
+2,20,"Distrito da Ferrugem","Galpão do Capataz","Assassino",6,"Capataz Ferrugento",20,15,527,4,9.95,7.12,71.2,7.31,10,28,3,54,465,1696
+2,20,"Distrito da Ferrugem","Pátio de Carga","Atirador",1,"Carregador de Paletes Infectado",11,3,152,42,42,30.08,300.8,0.73,1,28,3,580,4930,17978
+2,20,"Distrito da Ferrugem","Pátio de Carga","Atirador",2,"Arrastador de Correntes",14,6,233,24,35.89,25.7,257,1.46,2,28,3,290,2465,8989
+2,20,"Distrito da Ferrugem","Linha de Prensas","Atirador",3,"Operário Prensado",14,6,252,15,21.96,15.72,157.2,1.46,2,28,3,290,2465,8989
+2,20,"Distrito da Ferrugem","Linha de Prensas","Atirador",4,"Esmagado da Prensa",17,9,342,9,17.92,12.83,128.3,2.92,4,28,3,145,1232,4494
+2,20,"Distrito da Ferrugem","Galpão do Capataz","Atirador",5,"Vigia do Galpão Infectado",17,10,373,6,11.95,8.55,85.5,3.66,5,28,3,115,983,3585
+2,20,"Distrito da Ferrugem","Galpão do Capataz","Atirador",6,"Capataz Ferrugento",20,15,527,4,9.95,7.12,71.2,6.58,9,28,3,64,546,1994
+2,20,"Distrito da Ferrugem","Pátio de Carga","Medico",1,"Carregador de Paletes Infectado",11,8,152,42,42,30.08,300.8,1.01,1,2.2,6.16,1100,11398,42289
+2,20,"Distrito da Ferrugem","Pátio de Carga","Medico",2,"Arrastador de Correntes",14,13,233,24,35.89,25.7,257,2.03,2,2,7.42,547,5670,21040
+2,20,"Distrito da Ferrugem","Linha de Prensas","Medico",3,"Operário Prensado",14,14,252,15,21.96,15.72,157.2,2.03,2,2,7.24,547,5670,21040
+2,20,"Distrito da Ferrugem","Linha de Prensas","Medico",4,"Esmagado da Prensa",17,21,342,9,17.92,12.83,128.3,4.09,4,2,8.5,271,2814,10443
+2,20,"Distrito da Ferrugem","Galpão do Capataz","Medico",5,"Vigia do Galpão Infectado",17,24,373,6,11.95,8.55,85.5,4.09,4,2,8.5,271,2814,10443
+2,20,"Distrito da Ferrugem","Galpão do Capataz","Medico",6,"Capataz Ferrugento",20,35,527,4,9.95,7.12,71.2,8.25,8,2,9.76,134,1395,5177
+3,30,"Hospital Santa Ruína","Triagem Vazia","Lutador",1,"Paciente Febril Errante",21,19,462,42,42,30.08,300.8,3,3,3.55,7.18,579,4921,17946
+3,30,"Hospital Santa Ruína","Triagem Vazia","Lutador",2,"Mosca de Ferida Contaminada",24,31,657,24,35.89,25.7,257,6.15,6,2,8.44,282,2400,8754
+3,30,"Hospital Santa Ruína","Ala de Isolamento","Lutador",3,"Enfermeira de Isolamento Infectada",24,33,711,15,21.96,15.72,157.2,6.15,6,2,8.26,282,2400,8754
+3,30,"Hospital Santa Ruína","Ala de Isolamento","Lutador",4,"Centopeia de Tubulação Contaminada",27,48,923,9,17.92,12.83,128.3,10.33,10,2,9.7,168,1429,5211
+3,30,"Hospital Santa Ruína","Centro Cirúrgico","Lutador",5,"Instrumentador Cirúrgico Infectado",27,54,1009,6,11.95,8.55,85.5,12.4,12,2,9.7,140,1190,4341
+3,30,"Hospital Santa Ruína","Centro Cirúrgico","Lutador",6,"Cirurgião-Chefe Necrosado",30,80,1385,4,9.95,7.12,71.2,26.03,25,2,10.96,66,567,2068
+3,30,"Hospital Santa Ruína","Triagem Vazia","Assassino",1,"Paciente Febril Errante",21,9,462,42,42,30.08,300.8,2.93,4,28,3,182,1547,5643
+3,30,"Hospital Santa Ruína","Triagem Vazia","Assassino",2,"Mosca de Ferida Contaminada",24,15,657,24,35.89,25.7,257,6.59,9,28,3,81,688,2508
+3,30,"Hospital Santa Ruína","Ala de Isolamento","Assassino",3,"Enfermeira de Isolamento Infectada",24,16,711,15,21.96,15.72,157.2,7.32,10,28,3,72,619,2258
+3,30,"Hospital Santa Ruína","Ala de Isolamento","Assassino",4,"Centopeia de Tubulação Contaminada",27,24,923,9,17.92,12.83,128.3,12.44,17,28,3,42,364,1329
+3,30,"Hospital Santa Ruína","Centro Cirúrgico","Assassino",5,"Instrumentador Cirúrgico Infectado",27,27,1009,6,11.95,8.55,85.5,14.64,20,28,3,36,309,1129
+3,30,"Hospital Santa Ruína","Centro Cirúrgico","Assassino",6,"Cirurgião-Chefe Necrosado",30,40,1385,4,9.95,7.12,71.2,23.43,32,28,3,22,193,705
+3,30,"Hospital Santa Ruína","Triagem Vazia","Atirador",1,"Paciente Febril Errante",21,9,462,42,42,30.08,300.8,2.93,4,28,3,187,1595,5819
+3,30,"Hospital Santa Ruína","Triagem Vazia","Atirador",2,"Mosca de Ferida Contaminada",24,15,657,24,35.89,25.7,257,6.59,9,28,3,83,709,2587
+3,30,"Hospital Santa Ruína","Ala de Isolamento","Atirador",3,"Enfermeira de Isolamento Infectada",24,16,711,15,21.96,15.72,157.2,6.59,9,28,3,83,709,2587
+3,30,"Hospital Santa Ruína","Ala de Isolamento","Atirador",4,"Centopeia de Tubulação Contaminada",27,24,923,9,17.92,12.83,128.3,11.71,16,28,3,46,399,1456
+3,30,"Hospital Santa Ruína","Centro Cirúrgico","Atirador",5,"Instrumentador Cirúrgico Infectado",27,27,1009,6,11.95,8.55,85.5,13.91,19,28,3,39,336,1225
+3,30,"Hospital Santa Ruína","Centro Cirúrgico","Atirador",6,"Cirurgião-Chefe Necrosado",30,40,1385,4,9.95,7.12,71.2,23.43,32,28,3,23,199,727
+3,30,"Hospital Santa Ruína","Triagem Vazia","Medico",1,"Paciente Febril Errante",21,21,462,42,42,30.08,300.8,4.08,4,2,7.66,387,4014,14897
+3,30,"Hospital Santa Ruína","Triagem Vazia","Medico",2,"Mosca de Ferida Contaminada",24,34,657,24,35.89,25.7,257,6.17,6,2,8.92,256,2654,9850
+3,30,"Hospital Santa Ruína","Ala de Isolamento","Medico",3,"Enfermeira de Isolamento Infectada",24,36,711,15,21.96,15.72,157.2,7.19,7,2,8.74,219,2278,8453
+3,30,"Hospital Santa Ruína","Ala de Isolamento","Medico",4,"Centopeia de Tubulação Contaminada",27,53,923,9,17.92,12.83,128.3,12.43,12,2,10.18,127,1317,4889
+3,30,"Hospital Santa Ruína","Centro Cirúrgico","Medico",5,"Instrumentador Cirúrgico Infectado",27,60,1009,6,11.95,8.55,85.5,15.54,15,2,10.18,101,1054,3911
+3,30,"Hospital Santa Ruína","Centro Cirúrgico","Medico",6,"Cirurgião-Chefe Necrosado",30,88,1385,4,9.95,7.12,71.2,31.32,30,2,11.44,50,522,1940
+4,40,"Terminal dos Esquecidos","Saguão de Embarque","Lutador",1,"Amontoado de Bagagens Vivas",31,35,907,42,42,30.08,300.8,6.1,6,3.1,8.68,370,3149,11485
+4,40,"Terminal dos Esquecidos","Saguão de Embarque","Lutador",2,"Enxame de Carrapatos Hemáticos",34,53,1236,24,35.89,25.7,257,10.37,10,2,9.94,218,1852,6756
+4,40,"Terminal dos Esquecidos","Plataformas Mortas","Lutador",3,"Sinaleiro Sem Rosto",34,57,1340,15,21.96,15.72,157.2,11.41,11,2,9.94,198,1683,6140
+4,40,"Terminal dos Esquecidos","Plataformas Mortas","Lutador",4,"Casulo de Traças de Plataforma",37,80,1693,9,17.92,12.83,128.3,20.93,20,2,11.38,108,917,3347
+4,40,"Terminal dos Esquecidos","Cabine Final","Lutador",5,"Cobrador Fundido",37,91,1850,6,11.95,8.55,85.5,27.21,26,2,11.38,83,706,2574
+4,40,"Terminal dos Esquecidos","Cabine Final","Lutador",6,"Regente da Cabine Lacrada",40,131,2495,4,9.95,7.12,71.2,49.66,47,2,12.82,45,386,1410
+4,40,"Terminal dos Esquecidos","Saguão de Embarque","Assassino",1,"Amontoado de Bagagens Vivas",31,17,907,42,42,30.08,300.8,7.32,10,28,3,91,778,2837
+4,40,"Terminal dos Esquecidos","Saguão de Embarque","Assassino",2,"Enxame de Carrapatos Hemáticos",34,26,1236,24,35.89,25.7,257,13.19,18,28,3,50,431,1574
+4,40,"Terminal dos Esquecidos","Plataformas Mortas","Assassino",3,"Sinaleiro Sem Rosto",34,28,1340,15,21.96,15.72,157.2,13.92,19,28,3,48,409,1492
+4,40,"Terminal dos Esquecidos","Plataformas Mortas","Assassino",4,"Casulo de Traças de Plataforma",37,40,1693,9,17.92,12.83,128.3,22.72,31,28,3,29,250,914
+4,40,"Terminal dos Esquecidos","Cabine Final","Assassino",5,"Cobrador Fundido",37,45,1850,6,11.95,8.55,85.5,26.39,36,28,3,25,215,787
+4,40,"Terminal dos Esquecidos","Cabine Final","Assassino",6,"Regente da Cabine Lacrada",40,65,2495,4,9.95,7.12,71.2,40.32,55,28,3,16,141,515
+4,40,"Terminal dos Esquecidos","Saguão de Embarque","Atirador",1,"Amontoado de Bagagens Vivas",31,17,907,42,42,30.08,300.8,6.59,9,28,3,105,894,3261
+4,40,"Terminal dos Esquecidos","Saguão de Embarque","Atirador",2,"Enxame de Carrapatos Hemáticos",34,26,1236,24,35.89,25.7,257,12.46,17,28,3,55,473,1725
+4,40,"Terminal dos Esquecidos","Plataformas Mortas","Atirador",3,"Sinaleiro Sem Rosto",34,28,1340,15,21.96,15.72,157.2,13.92,19,28,3,49,423,1544
+4,40,"Terminal dos Esquecidos","Plataformas Mortas","Atirador",4,"Casulo de Traças de Plataforma",37,40,1693,9,17.92,12.83,128.3,21.99,30,28,3,31,268,977
+4,40,"Terminal dos Esquecidos","Cabine Final","Atirador",5,"Cobrador Fundido",37,45,1850,6,11.95,8.55,85.5,25.65,35,28,3,27,229,837
+4,40,"Terminal dos Esquecidos","Cabine Final","Atirador",6,"Regente da Cabine Lacrada",40,65,2495,4,9.95,7.12,71.2,39.59,54,28,3,17,148,542
+4,40,"Terminal dos Esquecidos","Saguão de Embarque","Medico",1,"Amontoado de Bagagens Vivas",31,39,907,42,42,30.08,300.8,7.2,7,2.2,8.92,285,2958,10979
+4,40,"Terminal dos Esquecidos","Saguão de Embarque","Medico",2,"Enxame de Carrapatos Hemáticos",34,59,1236,24,35.89,25.7,257,12.46,12,2,10.18,164,1709,6344
+4,40,"Terminal dos Esquecidos","Plataformas Mortas","Medico",3,"Sinaleiro Sem Rosto",34,63,1340,15,21.96,15.72,157.2,13.5,13,2,10.18,152,1578,5855
+4,40,"Terminal dos Esquecidos","Plataformas Mortas","Medico",4,"Casulo de Traças de Plataforma",37,89,1693,9,17.92,12.83,128.3,26.2,25,2,11.62,78,813,3017
+4,40,"Terminal dos Esquecidos","Cabine Final","Medico",5,"Cobrador Fundido",37,100,1850,6,11.95,8.55,85.5,31.44,30,2,11.62,65,677,2514
+4,40,"Terminal dos Esquecidos","Cabine Final","Medico",6,"Regente da Cabine Lacrada",40,145,2495,4,9.95,7.12,71.2,59.25,56,2,13.06,34,359,1334
+5,50,"Zona de Quarentena 9","Triagem Externa","Lutador",1,"Isolado da Tenda Rasgada",41,57,1539,42,42,30.08,300.8,11.43,11,2.2,10.24,245,2082,7594
+5,50,"Zona de Quarentena 9","Triagem Externa","Lutador",2,"Larva de Descarte Biológico",44,87,2045,24,35.89,25.7,257,21.06,20,2,11.86,133,1130,4121
+5,50,"Zona de Quarentena 9","Cercas Internas","Lutador",3,"Arameiro de Contenção",44,93,2215,15,21.96,15.72,157.2,23.14,22,2,11.68,121,1028,3751
+5,50,"Zona de Quarentena 9","Cercas Internas","Lutador",4,"Lesma de Canaleta Química",47,129,2754,9,17.92,12.83,128.3,42.53,40,2,13.3,65,559,2040
+5,50,"Zona de Quarentena 9","Posto de Comando","Lutador",5,"Operador de Rádio Infectado",47,146,3009,6,11.95,8.55,85.5,52.04,49,2,13.12,53,457,1667
+5,50,"Zona de Quarentena 9","Posto de Comando","Lutador",6,"Coronel Lacrado da Zona 9",50,210,4010,4,9.95,7.12,71.2,94.5,88,2,14.74,29,251,918
+5,50,"Zona de Quarentena 9","Triagem Externa","Assassino",1,"Isolado da Tenda Rasgada",41,28,1539,42,42,30.08,300.8,13.93,19,28,3,57,490,1787
+5,50,"Zona de Quarentena 9","Triagem Externa","Assassino",2,"Larva de Descarte Biológico",44,43,2045,24,35.89,25.7,257,24.21,33,28,3,33,282,1028
+5,50,"Zona de Quarentena 9","Cercas Internas","Assassino",3,"Arameiro de Contenção",44,46,2215,15,21.96,15.72,157.2,26.41,36,28,3,30,258,942
+5,50,"Zona de Quarentena 9","Cercas Internas","Assassino",4,"Lesma de Canaleta Química",47,64,2754,9,17.92,12.83,128.3,38.89,53,28,3,20,175,640
+5,50,"Zona de Quarentena 9","Posto de Comando","Assassino",5,"Operador de Rádio Infectado",47,73,3009,6,11.95,8.55,85.5,45.49,62,28,3,17,150,547
+5,50,"Zona de Quarentena 9","Posto de Comando","Assassino",6,"Coronel Lacrado da Zona 9",50,105,4010,4,9.95,7.12,71.2,68.27,93,28,3,11,100,364
+5,50,"Zona de Quarentena 9","Triagem Externa","Atirador",1,"Isolado da Tenda Rasgada",41,28,1539,42,42,30.08,300.8,13.2,18,28,3,63,534,1949
+5,50,"Zona de Quarentena 9","Triagem Externa","Atirador",2,"Larva de Descarte Biológico",44,43,2045,24,35.89,25.7,257,22.74,31,28,3,36,310,1131
+5,50,"Zona de Quarentena 9","Cercas Internas","Atirador",3,"Arameiro de Contenção",44,46,2215,15,21.96,15.72,157.2,24.94,34,28,3,33,282,1031
+5,50,"Zona de Quarentena 9","Cercas Internas","Atirador",4,"Lesma de Canaleta Química",47,64,2754,9,17.92,12.83,128.3,37.42,51,28,3,22,188,687
+5,50,"Zona de Quarentena 9","Posto de Comando","Atirador",5,"Operador de Rádio Infectado",47,73,3009,6,11.95,8.55,85.5,44.03,60,28,3,18,160,584
+5,50,"Zona de Quarentena 9","Posto de Comando","Atirador",6,"Coronel Lacrado da Zona 9",50,105,4010,4,9.95,7.12,71.2,66.8,91,28,3,12,105,385
+5,50,"Zona de Quarentena 9","Triagem Externa","Medico",1,"Isolado da Tenda Rasgada",41,63,1539,42,42,30.08,300.8,12.52,12,2,10.48,201,2092,7765
+5,50,"Zona de Quarentena 9","Triagem Externa","Medico",2,"Larva de Descarte Biológico",44,96,2045,24,35.89,25.7,257,25.3,24,2,12.1,99,1035,3843
+5,50,"Zona de Quarentena 9","Cercas Internas","Medico",3,"Arameiro de Contenção",44,103,2215,15,21.96,15.72,157.2,28.43,27,2,11.92,88,921,3419
+5,50,"Zona de Quarentena 9","Cercas Internas","Medico",4,"Lesma de Canaleta Química",47,143,2754,9,17.92,12.83,128.3,51.1,48,2,13.54,49,512,1902
+5,50,"Zona de Quarentena 9","Posto de Comando","Medico",5,"Operador de Rádio Infectado",47,162,3009,6,11.95,8.55,85.5,62.75,59,2,13.36,40,417,1549
+5,50,"Zona de Quarentena 9","Posto de Comando","Medico",6,"Coronel Lacrado da Zona 9",50,232,4010,4,9.95,7.12,71.2,111.84,104,2,14.98,22,234,869
+6,60,"Refinaria do Pó Cinzento","Tanques Vazios","Lutador",1,"Homem-Tanque Rachado",51,87,2376,42,42,30.08,300.8,19.77,19,3.1,11.32,158,1342,4897
+6,60,"Refinaria do Pó Cinzento","Tanques Vazios","Lutador",2,"Respirador de Cinzas",54,128,3149,24,35.89,25.7,257,39.38,37,2,12.94,79,674,2458
+6,60,"Refinaria do Pó Cinzento","Tubulação Quente","Lutador",3,"Operário Escaldado de Vapor",54,139,3411,15,21.96,15.72,157.2,44.66,42,2,12.76,69,594,2168
+6,60,"Refinaria do Pó Cinzento","Tubulação Quente","Lutador",4,"Pressurizado Sem Face",57,191,4234,9,17.92,12.83,128.3,77.61,72,2,14.74,40,342,1247
+6,60,"Refinaria do Pó Cinzento","Câmara da Fornalha","Lutador",5,"Forjado em Cinzas",57,216,4626,6,11.95,8.55,85.5,94.75,88,2,14.56,32,280,1021
+6,60,"Refinaria do Pó Cinzento","Câmara da Fornalha","Lutador",6,"Guardião da Fornalha Morta",60,309,6156,4,9.95,7.12,71.2,166.68,153,2,16.18,18,159,580
+6,60,"Refinaria do Pó Cinzento","Tanques Vazios","Assassino",1,"Homem-Tanque Rachado",51,43,2376,42,42,30.08,300.8,22.76,31,28,3,41,353,1289
+6,60,"Refinaria do Pó Cinzento","Tanques Vazios","Assassino",2,"Respirador de Cinzas",54,64,3149,24,35.89,25.7,257,37.45,51,28,3,25,214,783
+6,60,"Refinaria do Pó Cinzento","Tubulação Quente","Assassino",3,"Operário Escaldado de Vapor",54,69,3411,15,21.96,15.72,157.2,41.13,56,28,3,23,195,713
+6,60,"Refinaria do Pó Cinzento","Tubulação Quente","Assassino",4,"Pressurizado Sem Face",57,95,4234,9,17.92,12.83,128.3,60.24,82,28,3,15,133,487
+6,60,"Refinaria do Pó Cinzento","Câmara da Fornalha","Assassino",5,"Forjado em Cinzas",57,108,4626,6,11.95,8.55,85.5,69.06,94,28,3,13,116,424
+6,60,"Refinaria do Pó Cinzento","Câmara da Fornalha","Assassino",6,"Guardião da Fornalha Morta",60,154,6156,4,9.95,7.12,71.2,102.89,140,28,3,9,78,285
+6,60,"Refinaria do Pó Cinzento","Tanques Vazios","Atirador",1,"Homem-Tanque Rachado",51,43,2376,42,42,30.08,300.8,22.02,30,28,3,44,374,1365
+6,60,"Refinaria do Pó Cinzento","Tanques Vazios","Atirador",2,"Respirador de Cinzas",54,64,3149,24,35.89,25.7,257,36.72,50,28,3,26,224,818
+6,60,"Refinaria do Pó Cinzento","Tubulação Quente","Atirador",3,"Operário Escaldado de Vapor",54,69,3411,15,21.96,15.72,157.2,40.39,55,28,3,24,204,744
+6,60,"Refinaria do Pó Cinzento","Tubulação Quente","Atirador",4,"Pressurizado Sem Face",57,95,4234,9,17.92,12.83,128.3,58.77,80,28,3,16,140,511
+6,60,"Refinaria do Pó Cinzento","Câmara da Fornalha","Atirador",5,"Forjado em Cinzas",57,108,4626,6,11.95,8.55,85.5,67.59,92,28,3,14,121,444
+6,60,"Refinaria do Pó Cinzento","Câmara da Fornalha","Atirador",6,"Guardião da Fornalha Morta",60,154,6156,4,9.95,7.12,71.2,101.42,138,28,3,9,81,296
+6,60,"Refinaria do Pó Cinzento","Tanques Vazios","Medico",1,"Homem-Tanque Rachado",51,96,2376,42,42,30.08,300.8,23.26,22,2,12.04,122,1266,4700
+6,60,"Refinaria do Pó Cinzento","Tanques Vazios","Medico",2,"Respirador de Cinzas",54,141,3149,24,35.89,25.7,257,45.97,43,2,13.66,61,640,2378
+6,60,"Refinaria do Pó Cinzento","Tubulação Quente","Medico",3,"Operário Escaldado de Vapor",54,153,3411,15,21.96,15.72,157.2,53.4,50,2,13.48,53,551,2047
+6,60,"Refinaria do Pó Cinzento","Tubulação Quente","Medico",4,"Pressurizado Sem Face",57,210,4234,9,17.92,12.83,128.3,90.95,84,2,15.46,31,323,1202
+6,60,"Refinaria do Pó Cinzento","Câmara da Fornalha","Medico",5,"Forjado em Cinzas",57,238,4626,6,11.95,8.55,85.5,111.4,103,2,15.28,25,264,981
+6,60,"Refinaria do Pó Cinzento","Câmara da Fornalha","Medico",6,"Guardião da Fornalha Morta",60,341,6156,4,9.95,7.12,71.2,194.78,178,2,16.9,14,151,561
+7,70,"Avenida dos Caídos","Faixa Engarrafada","Lutador",1,"Motorista Fundido ao Volante",61,127,3626,42,42,30.08,300.8,35.84,34,3.1,12.64,96,823,3001
+7,70,"Avenida dos Caídos","Faixa Engarrafada","Lutador",2,"Colosso do Para-Choque",64,188,4782,24,35.89,25.7,257,71.27,66,2,14.44,48,413,1509
+7,70,"Avenida dos Caídos","Becos de Caça","Lutador",3,"Predador de Viela Cega",64,203,5180,15,21.96,15.72,157.2,80.9,75,2,14.26,42,364,1329
+7,70,"Avenida dos Caídos","Becos de Caça","Lutador",4,"Caçador de Neon Quebrado",67,278,6408,9,17.92,12.83,128.3,136.94,125,2,16.42,25,215,785
+7,70,"Avenida dos Caídos","Cruzamento Central","Lutador",5,"Semafórico de Carne Exposta",67,314,7001,6,11.95,8.55,85.5,163.95,150,2,16.06,21,179,656
+7,70,"Avenida dos Caídos","Cruzamento Central","Lutador",6,"Tirano do Cruzamento Morto",70,448,9295,4,9.95,7.12,71.2,281.7,254,2,18.04,12,104,381
+7,70,"Avenida dos Caídos","Faixa Engarrafada","Assassino",1,"Motorista Fundido ao Volante",61,63,3626,42,42,30.08,300.8,36.01,49,28,3,30,255,932
+7,70,"Avenida dos Caídos","Faixa Engarrafada","Assassino",2,"Colosso do Para-Choque",64,94,4782,24,35.89,25.7,257,58.08,79,28,3,18,158,578
+7,70,"Avenida dos Caídos","Becos de Caça","Assassino",3,"Predador de Viela Cega",64,101,5180,15,21.96,15.72,157.2,63.23,86,28,3,17,145,531
+7,70,"Avenida dos Caídos","Becos de Caça","Assassino",4,"Caçador de Neon Quebrado",67,139,6408,9,17.92,12.83,128.3,90.47,123,28,3,12,101,371
+7,70,"Avenida dos Caídos","Cruzamento Central","Assassino",5,"Semafórico de Carne Exposta",67,157,7001,6,11.95,8.55,85.5,103.71,141,28,3,10,88,323
+7,70,"Avenida dos Caídos","Cruzamento Central","Assassino",6,"Tirano do Cruzamento Morto",70,224,9295,4,9.95,7.12,71.2,152.3,207,28,3,7,60,220
+7,70,"Avenida dos Caídos","Faixa Engarrafada","Atirador",1,"Motorista Fundido ao Volante",61,63,3626,42,42,30.08,300.8,34.54,47,28,3,32,274,999
+7,70,"Avenida dos Caídos","Faixa Engarrafada","Atirador",2,"Colosso do Para-Choque",64,94,4782,24,35.89,25.7,257,55.88,76,28,3,19,169,617
+7,70,"Avenida dos Caídos","Becos de Caça","Atirador",3,"Predador de Viela Cega",64,101,5180,15,21.96,15.72,157.2,61.03,83,28,3,18,155,565
+7,70,"Avenida dos Caídos","Becos de Caça","Atirador",4,"Caçador de Neon Quebrado",67,139,6408,9,17.92,12.83,128.3,88.26,120,28,3,12,107,391
+7,70,"Avenida dos Caídos","Cruzamento Central","Atirador",5,"Semafórico de Carne Exposta",67,157,7001,6,11.95,8.55,85.5,101.5,138,28,3,10,93,340
+7,70,"Avenida dos Caídos","Cruzamento Central","Atirador",6,"Tirano do Cruzamento Morto",70,224,9295,4,9.95,7.12,71.2,150.1,204,28,3,7,63,229
+7,70,"Avenida dos Caídos","Faixa Engarrafada","Medico",1,"Motorista Fundido ao Volante",61,140,3626,42,42,30.08,300.8,43.91,41,2,13.36,71,738,2740
+7,70,"Avenida dos Caídos","Faixa Engarrafada","Medico",2,"Colosso do Para-Choque",64,207,4782,24,35.89,25.7,257,84.62,78,2,15.16,36,383,1421
+7,70,"Avenida dos Caídos","Becos de Caça","Medico",3,"Predador de Viela Cega",64,224,5180,15,21.96,15.72,157.2,96.44,89,2,14.98,32,336,1247
+7,70,"Avenida dos Caídos","Becos de Caça","Medico",4,"Caçador de Neon Quebrado",67,307,6408,9,17.92,12.83,128.3,160.69,146,2,17.14,19,201,748
+7,70,"Avenida dos Caídos","Cruzamento Central","Medico",5,"Semafórico de Carne Exposta",67,347,7001,6,11.95,8.55,85.5,192.16,175,2,16.78,16,168,626
+7,70,"Avenida dos Caídos","Cruzamento Central","Medico",6,"Tirano do Cruzamento Morto",70,495,9295,4,9.95,7.12,71.2,327.58,294,2,18.76,9,98,367
+8,80,"Complexo Helix","Ala de Observação","Lutador",1,"Observado de Vidro Vivo",71,185,5443,42,42,30.08,300.8,65.88,61,2.2,14.2,58,494,1802
+8,80,"Complexo Helix","Ala de Observação","Lutador",2,"Réplica Neural Incompleta",74,272,7154,24,35.89,25.7,257,126.3,115,2,16.18,30,257,940
+8,80,"Complexo Helix","Câmaras Seladas","Lutador",3,"Cobaia de Tanque Rompido",74,293,7750,15,21.96,15.72,157.2,141.51,129,2,16,27,230,839
+8,80,"Complexo Helix","Câmaras Seladas","Lutador",4,"Larva de Amostra Helix",77,400,9564,9,17.92,12.83,128.3,230.78,207,2,18.16,16,141,514
+8,80,"Complexo Helix","Diretoria Helix","Lutador",5,"Executivo Parasitado",77,452,10450,6,11.95,8.55,85.5,276.16,248,2,17.98,13,117,429
+8,80,"Complexo Helix","Diretoria Helix","Lutador",6,"Doutor Helix Primeiro Vetor",80,643,13851,4,9.95,7.12,71.2,461.29,408,2,19.96,8,70,257
+8,80,"Complexo Helix","Ala de Observação","Assassino",1,"Observado de Vidro Vivo",71,92,5443,42,42,30.08,300.8,55.19,75,28,3,22,189,690
+8,80,"Complexo Helix","Ala de Observação","Assassino",2,"Réplica Neural Incompleta",74,136,7154,24,35.89,25.7,257,86.86,118,28,3,14,120,438
+8,80,"Complexo Helix","Câmaras Seladas","Assassino",3,"Cobaia de Tanque Rompido",74,146,7750,15,21.96,15.72,157.2,94.22,128,28,3,13,110,404
+8,80,"Complexo Helix","Câmaras Seladas","Assassino",4,"Larva de Amostra Helix",77,200,9564,9,17.92,12.83,128.3,133.28,181,28,3,9,78,286
+8,80,"Complexo Helix","Diretoria Helix","Assassino",5,"Executivo Parasitado",77,226,10450,6,11.95,8.55,85.5,152.43,207,28,3,8,68,250
+8,80,"Complexo Helix","Diretoria Helix","Assassino",6,"Doutor Helix Primeiro Vetor",80,321,13851,4,9.95,7.12,71.2,222.46,302,28,3,5,46,171
+8,80,"Complexo Helix","Ala de Observação","Atirador",1,"Observado de Vidro Vivo",71,92,5443,42,42,30.08,300.8,53.72,73,28,3,23,197,721
+8,80,"Complexo Helix","Ala de Observação","Atirador",2,"Réplica Neural Incompleta",74,136,7154,24,35.89,25.7,257,84.65,115,28,3,14,125,457
+8,80,"Complexo Helix","Câmaras Seladas","Atirador",3,"Cobaia de Tanque Rompido",74,146,7750,15,21.96,15.72,157.2,92.01,125,28,3,13,115,421
+8,80,"Complexo Helix","Câmaras Seladas","Atirador",4,"Larva de Amostra Helix",77,200,9564,9,17.92,12.83,128.3,131.07,178,28,3,9,81,295
+8,80,"Complexo Helix","Diretoria Helix","Atirador",5,"Executivo Parasitado",77,226,10450,6,11.95,8.55,85.5,150.22,204,28,3,8,70,257
+8,80,"Complexo Helix","Diretoria Helix","Atirador",6,"Doutor Helix Primeiro Vetor",80,321,13851,4,9.95,7.12,71.2,219.52,298,28,3,5,48,176
+8,80,"Complexo Helix","Ala de Observação","Medico",1,"Observado de Vidro Vivo",71,204,5443,42,42,30.08,300.8,79.37,73,2,14.92,43,448,1664
+8,80,"Complexo Helix","Ala de Observação","Medico",2,"Réplica Neural Incompleta",74,300,7154,24,35.89,25.7,257,148.98,135,2,16.9,23,239,886
+8,80,"Complexo Helix","Câmaras Seladas","Medico",3,"Cobaia de Tanque Rompido",74,324,7750,15,21.96,15.72,157.2,167.54,152,2,16.72,20,212,788
+8,80,"Complexo Helix","Câmaras Seladas","Medico",4,"Larva de Amostra Helix",77,441,9564,9,17.92,12.83,128.3,269.98,241,2,18.88,12,131,489
+8,80,"Complexo Helix","Diretoria Helix","Medico",5,"Executivo Parasitado",77,498,10450,6,11.95,8.55,85.5,321.13,287,2,18.7,10,110,411
+8,80,"Complexo Helix","Diretoria Helix","Medico",6,"Doutor Helix Primeiro Vetor",80,709,13851,4,9.95,7.12,71.2,531.67,468,2,20.68,6,66,248
+9,90,"Necrópole Industrial","Pátio de Escória","Lutador",1,"Fundido de Escória Humana",81,267,8105,42,42,30.08,300.8,117.22,107,2.2,15.52,35,301,1099
+9,90,"Necrópole Industrial","Pátio de Escória","Lutador",2,"Colosso de Fuligem Coagulada",84,388,10597,24,35.89,25.7,257,214.04,192,2,17.5,19,165,602
+9,90,"Necrópole Industrial","Esteiras Mortas","Lutador",3,"Costurado da Esteira Morta",84,420,11481,15,21.96,15.72,157.2,240.5,216,2,17.32,17,146,535
+9,90,"Necrópole Industrial","Esteiras Mortas","Lutador",4,"Boneco de Cabos Nervosos",87,569,14118,9,17.92,12.83,128.3,380.28,335,2,19.84,10,92,338
+9,90,"Necrópole Industrial","Coração da Usina","Lutador",5,"Turbina de Carne Pulsante",87,643,15425,6,11.95,8.55,85.5,450.67,398,2,19.48,9,78,285
+9,90,"Necrópole Industrial","Coração da Usina","Lutador",6,"Soberano da Usina Morta",90,912,20392,4,9.95,7.12,71.2,733.44,636,2,21.82,5,48,175
+9,90,"Necrópole Industrial","Pátio de Escória","Assassino",1,"Fundido de Escória Humana",81,133,8105,42,42,30.08,300.8,83.25,113,28,3,16,139,508
+9,90,"Necrópole Industrial","Pátio de Escória","Assassino",2,"Colosso de Fuligem Coagulada",84,194,10597,24,35.89,25.7,257,127.5,173,28,3,10,91,332
+9,90,"Necrópole Industrial","Esteiras Mortas","Assassino",3,"Costurado da Esteira Morta",84,210,11481,15,21.96,15.72,157.2,139.29,189,28,3,9,83,304
+9,90,"Necrópole Industrial","Esteiras Mortas","Assassino",4,"Boneco de Cabos Nervosos",87,284,14118,9,17.92,12.83,128.3,193.89,263,28,3,7,59,218
+9,90,"Necrópole Industrial","Coração da Usina","Assassino",5,"Turbina de Carne Pulsante",87,321,15425,6,11.95,8.55,85.5,220.43,299,28,3,6,52,192
+9,90,"Necrópole Industrial","Coração da Usina","Assassino",6,"Soberano da Usina Morta",90,456,20392,4,9.95,7.12,71.2,320.07,434,28,3,4,36,132
+9,90,"Necrópole Industrial","Pátio de Escória","Atirador",1,"Fundido de Escória Humana",81,133,8105,42,42,30.08,300.8,81.78,111,28,3,16,143,524
+9,90,"Necrópole Industrial","Pátio de Escória","Atirador",2,"Colosso de Fuligem Coagulada",84,194,10597,24,35.89,25.7,257,126.02,171,28,3,10,93,340
+9,90,"Necrópole Industrial","Esteiras Mortas","Atirador",3,"Costurado da Esteira Morta",84,210,11481,15,21.96,15.72,157.2,137.81,187,28,3,10,85,311
+9,90,"Necrópole Industrial","Esteiras Mortas","Atirador",4,"Boneco de Cabos Nervosos",87,284,14118,9,17.92,12.83,128.3,192.42,261,28,3,7,61,222
+9,90,"Necrópole Industrial","Coração da Usina","Atirador",5,"Turbina de Carne Pulsante",87,321,15425,6,11.95,8.55,85.5,218.96,297,28,3,6,53,195
+9,90,"Necrópole Industrial","Coração da Usina","Atirador",6,"Soberano da Usina Morta",90,456,20392,4,9.95,7.12,71.2,318.6,432,28,3,4,36,134
+9,90,"Necrópole Industrial","Pátio de Escória","Medico",1,"Fundido de Escória Humana",81,294,8105,42,42,30.08,300.8,137.9,125,2,16.24,27,281,1043
+9,90,"Necrópole Industrial","Pátio de Escória","Medico",2,"Colosso de Fuligem Coagulada",84,429,10597,24,35.89,25.7,257,249.84,223,2,18.22,14,155,576
+9,90,"Necrópole Industrial","Esteiras Mortas","Medico",3,"Costurado da Esteira Morta",84,463,11481,15,21.96,15.72,157.2,279.74,250,2,18.04,13,138,514
+9,90,"Necrópole Industrial","Esteiras Mortas","Medico",4,"Boneco de Cabos Nervosos",87,628,14118,9,17.92,12.83,128.3,439.2,385,2,20.56,8,88,327
+9,90,"Necrópole Industrial","Coração da Usina","Medico",5,"Turbina de Carne Pulsante",87,709,15425,6,11.95,8.55,85.5,517.78,455,2,20.2,7,74,277
+9,90,"Necrópole Industrial","Coração da Usina","Medico",6,"Soberano da Usina Morta",90,1006,20392,4,9.95,7.12,71.2,837.9,723,2,22.54,4,46,171
+10,100,"Marco Zero","Anel Externo","Lutador",1,"Eco Humano Saturado",91,385,11880,42,42,30.08,300.8,201.2,182,2.65,16.66,22,190,696
+10,100,"Marco Zero","Anel Externo","Lutador",2,"Lacraia de Cinza Primária",94,563,15744,24,35.89,25.7,257,362.82,320,2,19,12,105,386
+10,100,"Marco Zero","Zona de Saturação","Lutador",3,"Corpo Saturado de Mil Vozes",94,607,17056,15,21.96,15.72,157.2,404.25,357,2,18.82,11,95,346
+10,100,"Marco Zero","Zona de Saturação","Lutador",4,"Besta de Radiação Orgânica",97,826,21168,9,17.92,12.83,128.3,629.61,545,2,21.34,7,61,222
+10,100,"Marco Zero","Núcleo do Colapso","Lutador",5,"Forma Primária do Surto",97,933,23128,6,11.95,8.55,85.5,739.57,641,2,21.16,6,51,189
+10,100,"Marco Zero","Núcleo do Colapso","Lutador",6,"Coração do Marco Zero",100,1326,30780,4,9.95,7.12,71.2,1180.46,1004,2,23.5,3,32,118
+10,100,"Marco Zero","Anel Externo","Assassino",1,"Eco Humano Saturado",91,192,11880,42,42,30.08,300.8,125.39,170,28,3,11,101,370
+10,100,"Marco Zero","Anel Externo","Assassino",2,"Lacraia de Cinza Primária",94,281,15744,24,35.89,25.7,257,191.1,259,28,3,7,66,243
+10,100,"Marco Zero","Zona de Saturação","Assassino",3,"Corpo Saturado de Mil Vozes",94,303,17056,15,21.96,15.72,157.2,206.6,280,28,3,7,61,225
+10,100,"Marco Zero","Zona de Saturação","Assassino",4,"Besta de Radiação Orgânica",97,413,21168,9,17.92,12.83,128.3,287.86,390,28,3,5,44,161
+10,100,"Marco Zero","Núcleo do Colapso","Assassino",5,"Forma Primária do Surto",97,466,23128,6,11.95,8.55,85.5,326.98,443,28,3,4,38,142
+10,100,"Marco Zero","Núcleo do Colapso","Assassino",6,"Coração do Marco Zero",100,663,30780,4,9.95,7.12,71.2,472.55,640,28,3,3,6,6
+10,100,"Marco Zero","Anel Externo","Atirador",1,"Eco Humano Saturado",91,192,11880,42,42,30.08,300.8,122.44,166,28,3,12,106,389
+10,100,"Marco Zero","Anel Externo","Atirador",2,"Lacraia de Cinza Primária",94,281,15744,24,35.89,25.7,257,186.67,253,28,3,8,70,255
+10,100,"Marco Zero","Zona de Saturação","Atirador",3,"Corpo Saturado de Mil Vozes",94,303,17056,15,21.96,15.72,157.2,202.91,275,28,3,7,64,235
+10,100,"Marco Zero","Zona de Saturação","Atirador",4,"Besta de Radiação Orgânica",97,413,21168,9,17.92,12.83,128.3,284.17,385,28,3,5,46,167
+10,100,"Marco Zero","Núcleo do Colapso","Atirador",5,"Forma Primária do Surto",97,466,23128,6,11.95,8.55,85.5,322.55,437,28,3,4,40,148
+10,100,"Marco Zero","Núcleo do Colapso","Atirador",6,"Coração do Marco Zero",100,663,30780,4,9.95,7.12,71.2,468.12,634,28,3,3,25,25
+10,100,"Marco Zero","Anel Externo","Medico",1,"Eco Humano Saturado",91,425,11880,42,42,30.08,300.8,238.68,213,2,17.62,16,175,649
+10,100,"Marco Zero","Anel Externo","Medico",2,"Lacraia de Cinza Primária",94,621,15744,24,35.89,25.7,257,422.38,370,2,19.96,9,98,367
+10,100,"Marco Zero","Zona de Saturação","Medico",3,"Corpo Saturado de Mil Vozes",94,670,17056,15,21.96,15.72,157.2,468.59,411,2,19.78,8,89,330
+10,100,"Marco Zero","Zona de Saturação","Medico",4,"Besta de Radiação Orgânica",97,912,21168,9,17.92,12.83,128.3,725.8,624,2,22.3,5,57,213
+10,100,"Marco Zero","Núcleo do Colapso","Medico",5,"Forma Primária do Surto",97,1029,23128,6,11.95,8.55,85.5,848.01,730,2,22.12,4,49,182
+10,100,"Marco Zero","Núcleo do Colapso","Medico",6,"Coração do Marco Zero",100,1462,30780,4,9.95,7.12,71.2,1343.56,1135,2,24.46,2,31,115

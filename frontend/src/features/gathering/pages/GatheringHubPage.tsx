@@ -8,6 +8,7 @@ import {
     extractGatheringApiError,
     getGatheringStatusRequest,
 } from '../api/gathering.api';
+import { getGatheringOriginIcon } from '../constants/gathering-origin-icons';
 import '../styles/gathering.css';
 import type {
     GatheringAllowedOrigin,
@@ -167,6 +168,46 @@ function getSkillProgressLabel(skill?: GatheringSkillViewModel | null): string {
   return `${skill.xp}/${skill.xpToNextLevel} XP`;
 }
 
+function getSkillProgressPercent(skill?: GatheringSkillViewModel | null): number {
+  if (!skill) {
+    return 0;
+  }
+
+  if (skill.isAtLevelCap || skill.xpToNextLevel === null) {
+    return 100;
+  }
+
+  const explicitPercent = Number(skill.xpProgressPercent);
+
+  if (Number.isFinite(explicitPercent)) {
+    return Math.max(0, Math.min(100, Math.floor(explicitPercent)));
+  }
+
+  const xp = Number(skill.xp ?? 0);
+  const xpToNextLevel = Number(skill.xpToNextLevel ?? 0);
+
+  if (!Number.isFinite(xp) || !Number.isFinite(xpToNextLevel) || xpToNextLevel <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, Math.floor((xp / xpToNextLevel) * 100)));
+}
+
+function getOriginStatusLabel(params: {
+  isActive: boolean;
+  isClassAffinity: boolean;
+}): string {
+  if (params.isActive) {
+    return 'Ativa';
+  }
+
+  if (params.isClassAffinity) {
+    return 'Afinidade';
+  }
+
+  return 'Disponível';
+}
+
 function getActiveOrigin(status?: GatheringStatusResponse | null) {
   if (!status?.active) return null;
 
@@ -300,7 +341,17 @@ export function GatheringHubPage() {
   }, [safeCharacterId]);
 
   useEffect(() => {
-    void loadHubData();
+    let isCancelled = false;
+
+    queueMicrotask(() => {
+      if (isCancelled) return;
+
+      void loadHubData();
+    });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [loadHubData]);
 
   if (!safeCharacterId) {
@@ -414,6 +465,8 @@ export function GatheringHubPage() {
                 const skill = getSkillByOrigin(gatheringSkills, origin.key);
                 const isActive = activeOrigin === origin.key;
                 const isClassAffinity = Boolean(skill?.isClassAffinity);
+                const progressPercent = getSkillProgressPercent(skill);
+                const iconUrl = getGatheringOriginIcon(origin.key);
 
                 return (
                   <Link
@@ -436,20 +489,60 @@ export function GatheringHubPage() {
                         className="gathering-origin-option__visual"
                         aria-hidden="true"
                       >
-                        <span className="gathering-origin-option__icon-fallback">
-                          {getOriginIconFallback(origin.label)}
-                        </span>
+                        {iconUrl ? (
+                          <img
+                            className="gathering-origin-option__icon"
+                            src={iconUrl}
+                            alt=""
+                            draggable={false}
+                          />
+                        ) : (
+                          <span className="gathering-origin-option__icon-fallback">
+                            {getOriginIconFallback(origin.label)}
+                          </span>
+                        )}
                       </span>
 
                       <span className="gathering-origin-option__text">
-                        <strong>{origin.label}</strong>
+                        <span className="gathering-origin-option__heading">
+                          <span className="gathering-origin-option__name">
+                            <strong>{origin.label}</strong>
+                            {isActive ? (
+                              <span
+                                className="gathering-origin-option__active-dot"
+                                aria-hidden="true"
+                              />
+                            ) : null}
+                          </span>
 
-                        <span className="gathering-origin-option__stat">
-                          {getSkillLevelLabel(skill)}
+                          <em className="gathering-origin-option__level-badge">
+                            {getSkillLevelLabel(skill)}
+                          </em>
                         </span>
 
-                        <span className="gathering-origin-option__hint">
-                          {getSkillProgressLabel(skill)}
+                        <span
+                          className="gathering-origin-option__track"
+                          role="progressbar"
+                          aria-label={`Progresso de ${origin.label}`}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={progressPercent}
+                        >
+                          <i
+                            aria-hidden="true"
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </span>
+
+                        <span className="gathering-origin-option__pills">
+                          <span>{getSkillProgressLabel(skill)}</span>
+                          <span>{origin.statLabel}</span>
+                          <span>
+                            {getOriginStatusLabel({
+                              isActive,
+                              isClassAffinity,
+                            })}
+                          </span>
                         </span>
                       </span>
                     </span>

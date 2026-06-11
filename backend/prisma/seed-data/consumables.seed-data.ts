@@ -3,8 +3,9 @@ import type { ConsumableSeedData } from '../seed-types';
 
 /**
  * Pocoes vendidas pela Mara.
- * Cada item cobre dois tiers de progressao e usa nomes classicos de RPG para
- * facilitar a leitura rapida na loja.
+ * Cada item cobre dois tiers de progressao. Pocoes iniciais curam valor fixo
+ * baixo, enquanto pocoes altas escalam mais por HP maximo. Isso permite usar
+ * pocoes antigas no endgame, mas sem eficiencia real.
  */
 export const consumableDefinitions: ConsumableSeedData[] = [
   {
@@ -38,8 +39,8 @@ export const consumableDefinitions: ConsumableSeedData[] = [
     tier: 2,
     rarity: Rarity.UNCOMMON,
     family: 'Poção de Vida',
-    healFlat: 180,
-    healPercent: 0,
+    healFlat: 100,
+    healPercent: 4,
     minTier: 3,
     maxTier: 4,
   },
@@ -49,8 +50,8 @@ export const consumableDefinitions: ConsumableSeedData[] = [
     tier: 3,
     rarity: Rarity.RARE,
     family: 'Poção de Vida',
-    healFlat: 420,
-    healPercent: 0,
+    healFlat: 160,
+    healPercent: 9,
     minTier: 5,
     maxTier: 6,
   },
@@ -60,8 +61,8 @@ export const consumableDefinitions: ConsumableSeedData[] = [
     tier: 4,
     rarity: Rarity.EPIC,
     family: 'Poção de Vida',
-    healFlat: 900,
-    healPercent: 0,
+    healFlat: 220,
+    healPercent: 15,
     minTier: 7,
     maxTier: 8,
   },
@@ -71,8 +72,8 @@ export const consumableDefinitions: ConsumableSeedData[] = [
     tier: 5,
     rarity: Rarity.LEGENDARY,
     family: 'Poção de Vida',
-    healFlat: 1800,
-    healPercent: 0,
+    healFlat: 200,
+    healPercent: 25,
     minTier: 9,
     maxTier: 10,
   },

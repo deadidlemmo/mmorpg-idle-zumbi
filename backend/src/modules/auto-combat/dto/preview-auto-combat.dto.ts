@@ -17,7 +17,7 @@ export class PreviewAutoCombatDto {
   @Type(() => Number)
   @IsInt()
   @Min(5)
-  @Max(21600)
+  @Max(43200)
   projectionSeconds?: number;
 
   @IsOptional()

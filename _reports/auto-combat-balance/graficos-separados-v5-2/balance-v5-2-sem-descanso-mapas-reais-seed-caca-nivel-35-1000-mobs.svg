@@ -1,0 +1,505 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2600" viewBox="0 0 1600 2600" role="img" aria-label="Auto-combat balance report">
+  <style>
+    .title { font: 700 34px Arial, sans-serif; fill: #101828; }
+    .subtitle { font: 400 18px Arial, sans-serif; fill: #475467; }
+    .meta { font: 600 16px Arial, sans-serif; fill: #344054; }
+    .chart-title { font: 700 22px Arial, sans-serif; fill: #101828; }
+    .chart-subtitle { font: 400 14px Arial, sans-serif; fill: #667085; }
+    .axis-label { font: 400 12px Arial, sans-serif; fill: #667085; }
+    .axis-title { font: 700 12px Arial, sans-serif; fill: #667085; }
+    .legend-label { font: 600 13px Arial, sans-serif; fill: #344054; }
+    .note { font: 400 14px Arial, sans-serif; fill: #475467; }
+  </style>
+  <rect width="100%" height="100%" fill="#f5f7fb"/>
+  <text x="50" y="62" class="title">Balanceamento Auto-combate</text>
+  <text x="50" y="96" class="subtitle">Amostra fixa de 1000 mobs por tier, mapas reais do seed ponderados por chance de aparicao, equipamento real do seed, gathering recomendado, caca nivel 35 e 9999 pocoes disponiveis.</text>
+  <text x="50" y="132" class="meta">Modelo: Balance V5.2 | Nivel representativo por tier: T1=L10 ... T10=L100</text>
+  <text x="50" y="162" class="meta">Pior tier no XP/h: T1, melhor Lutador, pior Assassino, ratio 1.07, pior 93.3%.</text>
+  <g class="chart" transform="translate(0 0)">
+<rect x="50" y="210" width="740" height="650" rx="14" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="242" class="chart-title">XP efetivo por hora</text>
+<text x="74" y="264" class="chart-subtitle">Metrica principal de balanceamento entre classes.</text>
+<line x1="120" y1="810" x2="755" y2="810" stroke="#e8edf5"/>
+<text x="108" y="814" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="679" x2="755" y2="679" stroke="#e8edf5"/>
+<text x="108" y="683" text-anchor="end" class="axis-label">10.073,3</text>
+<line x1="120" y1="548" x2="755" y2="548" stroke="#e8edf5"/>
+<text x="108" y="552" text-anchor="end" class="axis-label">20.146,6</text>
+<line x1="120" y1="417" x2="755" y2="417" stroke="#e8edf5"/>
+<text x="108" y="421" text-anchor="end" class="axis-label">30.219,8</text>
+<line x1="120" y1="286" x2="755" y2="286" stroke="#e8edf5"/>
+<text x="108" y="290" text-anchor="end" class="axis-label">40.293,1</text>
+<line x1="120" y1="286" x2="120" y2="810" stroke="#98a2b3"/>
+<line x1="120" y1="810" x2="755" y2="810" stroke="#98a2b3"/>
+<text x="68" y="274" class="axis-title">XP/h</text>
+<text x="125" y="834" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="834" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="834" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="834" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="834" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="834" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="834" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="834" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="834" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="834" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 781.48 L 194.44 786.41 L 263.89 775.72 L 333.33 762.31 L 402.78 738.98 L 472.22 703.91 L 541.67 655.75 L 611.11 588.19 L 680.56 490.96 L 750 367.15" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="781.48" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 2.193 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="786.41" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 1.814 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="775.72" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 2.636 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="762.31" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 3.667 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="738.98" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 5.461 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="703.91" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 8.158 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="655.75" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 11.861 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="588.19" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 17.056 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="490.96" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 24.533 | risco MEDIUM</title></circle>
+<circle cx="750" cy="367.15" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 34.053 | risco MEDIUM</title></circle>
+<circle cx="74" cy="838" r="5" fill="#d94b4b"/>
+<text x="86" y="842" class="legend-label">Lutador</text>
+<path d="M 125 783.39 L 194.44 787.16 L 263.89 776.55 L 333.33 763.07 L 402.78 737.85 L 472.22 702.2 L 541.67 651.55 L 611.11 581.96 L 680.56 481.8 L 750 342.14" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="783.39" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 2.046 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="787.16" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 1.756 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="776.55" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 2.572 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="763.07" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 3.609 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="737.85" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 5.548 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="702.2" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 8.289 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="651.55" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 12.184 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="581.96" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 17.535 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="481.8" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 25.237 | risco MEDIUM</title></circle>
+<circle cx="750" cy="342.14" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 35.976 | risco MEDIUM</title></circle>
+<circle cx="209" cy="838" r="5" fill="#8b5cf6"/>
+<text x="221" y="842" class="legend-label">Assassino</text>
+<path d="M 125 782.82 L 194.44 787.16 L 263.89 776.55 L 333.33 763.07 L 402.78 737.85 L 472.22 702.2 L 541.67 651.55 L 611.11 581.96 L 680.56 481.8 L 750 342.14" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="782.82" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 2.090 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="787.16" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 1.756 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="776.55" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 2.572 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="763.07" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 3.609 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="737.85" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 5.548 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="702.2" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 8.289 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="651.55" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 12.184 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="581.96" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 17.535 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="481.8" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 25.237 | risco MEDIUM</title></circle>
+<circle cx="750" cy="342.14" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 35.976 | risco MEDIUM</title></circle>
+<circle cx="344" cy="838" r="5" fill="#2563eb"/>
+<text x="356" y="842" class="legend-label">Atirador</text>
+<path d="M 125 782.35 L 194.44 786.62 L 263.89 775.72 L 333.33 762.31 L 402.78 737.11 L 472.22 703.91 L 541.67 653.7 L 611.11 585.23 L 680.56 490.96 L 750 355.02" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="782.35" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 2.126 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="786.62" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 1.798 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="775.72" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 2.636 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="762.31" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 3.667 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="737.11" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 5.605 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="703.91" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 8.158 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="653.7" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 12.019 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="585.23" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 17.284 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="490.96" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 24.533 | risco MEDIUM</title></circle>
+<circle cx="750" cy="355.02" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 34.986 | risco MEDIUM</title></circle>
+<circle cx="479" cy="838" r="5" fill="#16a34a"/>
+<text x="491" y="842" class="legend-label">Medico</text>
+</g>
+<g class="chart" transform="translate(0 0)">
+<rect x="810" y="210" width="740" height="650" rx="14" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="242" class="chart-title">XP/h relativo ao melhor do tier</text>
+<text x="834" y="264" class="chart-subtitle">Quanto cada classe fica perto da melhor classe em XP/h.</text>
+<line x1="880" y1="810" x2="1515" y2="810" stroke="#e8edf5"/>
+<text x="868" y="814" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="679" x2="1515" y2="679" stroke="#e8edf5"/>
+<text x="868" y="683" text-anchor="end" class="axis-label">25</text>
+<line x1="880" y1="548" x2="1515" y2="548" stroke="#e8edf5"/>
+<text x="868" y="552" text-anchor="end" class="axis-label">50</text>
+<line x1="880" y1="417" x2="1515" y2="417" stroke="#e8edf5"/>
+<text x="868" y="421" text-anchor="end" class="axis-label">75</text>
+<line x1="880" y1="286" x2="1515" y2="286" stroke="#e8edf5"/>
+<text x="868" y="290" text-anchor="end" class="axis-label">100</text>
+<line x1="880" y1="286" x2="880" y2="810" stroke="#98a2b3"/>
+<line x1="880" y1="810" x2="1515" y2="810" stroke="#98a2b3"/>
+<text x="828" y="274" class="axis-title">% do melhor</text>
+<text x="885" y="834" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="834" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="834" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="834" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="834" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="834" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="834" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="834" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="834" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="834" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 286 L 954.44 286 L 1023.89 286 L 1093.33 286 L 1162.78 299.62 L 1232.22 294.38 L 1301.67 300.15 L 1371.11 300.15 L 1440.56 300.67 L 1510 313.77" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="286" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 100% | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="286" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 100% | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="286" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 100% | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="286" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 100% | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="299.62" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 97,4% | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="294.38" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 98,4% | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="300.15" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 97,3% | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="300.15" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 97,3% | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="300.67" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 97,2% | risco MEDIUM</title></circle>
+<circle cx="1510" cy="313.77" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 94,7% | risco MEDIUM</title></circle>
+<circle cx="834" cy="838" r="5" fill="#d94b4b"/>
+<text x="846" y="842" class="legend-label">Lutador</text>
+<path d="M 885 321.11 L 954.44 302.77 L 1023.89 298.58 L 1093.33 294.38 L 1162.78 291.24 L 1232.22 286 L 1301.67 286 L 1371.11 286 L 1440.56 286 L 1510 286" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="321.11" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 93,3% | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="302.77" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 96,8% | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="298.58" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 97,6% | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="294.38" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 98,4% | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="291.24" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 99% | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="286" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 100% | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="286" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 100% | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="286" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 100% | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="286" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 100% | risco MEDIUM</title></circle>
+<circle cx="1510" cy="286" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 100% | risco MEDIUM</title></circle>
+<circle cx="969" cy="838" r="5" fill="#8b5cf6"/>
+<text x="981" y="842" class="legend-label">Assassino</text>
+<path d="M 885 310.63 L 954.44 302.77 L 1023.89 298.58 L 1093.33 294.38 L 1162.78 291.24 L 1232.22 286 L 1301.67 286 L 1371.11 286 L 1440.56 286 L 1510 286" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="310.63" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 95,3% | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="302.77" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 96,8% | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="298.58" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 97,6% | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="294.38" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 98,4% | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="291.24" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 99% | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="286" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 100% | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="286" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 100% | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="286" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 100% | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="286" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 100% | risco MEDIUM</title></circle>
+<circle cx="1510" cy="286" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 100% | risco MEDIUM</title></circle>
+<circle cx="1104" cy="838" r="5" fill="#2563eb"/>
+<text x="1116" y="842" class="legend-label">Atirador</text>
+<path d="M 885 302.24 L 954.44 290.72 L 1023.89 286 L 1093.33 286 L 1162.78 286 L 1232.22 294.38 L 1301.67 293.34 L 1371.11 293.34 L 1440.56 300.67 L 1510 300.67" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="302.24" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 96,9% | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="290.72" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 99,1% | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="286" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 100% | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="286" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 100% | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="286" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 100% | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="294.38" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 98,4% | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="293.34" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 98,6% | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="293.34" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 98,6% | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="300.67" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 97,2% | risco MEDIUM</title></circle>
+<circle cx="1510" cy="300.67" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 97,2% | risco MEDIUM</title></circle>
+<circle cx="1239" cy="838" r="5" fill="#16a34a"/>
+<text x="1251" y="842" class="legend-label">Medico</text>
+</g>
+<g class="chart" transform="translate(0 0)">
+<rect x="50" y="910" width="740" height="650" rx="14" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="942" class="chart-title">XP efetivo por amostra</text>
+<text x="74" y="964" class="chart-subtitle">Inclui passiva de classe e penalidade/bonus por risco.</text>
+<line x1="120" y1="1510" x2="755" y2="1510" stroke="#e8edf5"/>
+<text x="108" y="1514" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="1379" x2="755" y2="1379" stroke="#e8edf5"/>
+<text x="108" y="1383" text-anchor="end" class="axis-label">130.613,8</text>
+<line x1="120" y1="1248" x2="755" y2="1248" stroke="#e8edf5"/>
+<text x="108" y="1252" text-anchor="end" class="axis-label">261.227,7</text>
+<line x1="120" y1="1117" x2="755" y2="1117" stroke="#e8edf5"/>
+<text x="108" y="1121" text-anchor="end" class="axis-label">391.841,5</text>
+<line x1="120" y1="986" x2="755" y2="986" stroke="#e8edf5"/>
+<text x="108" y="990" text-anchor="end" class="axis-label">522.455,4</text>
+<line x1="120" y1="986" x2="120" y2="1510" stroke="#98a2b3"/>
+<line x1="120" y1="1510" x2="755" y2="1510" stroke="#98a2b3"/>
+<text x="68" y="974" class="axis-title">XP</text>
+<text x="125" y="1534" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="1534" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="1534" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="1534" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="1534" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="1534" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="1534" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="1534" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="1534" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="1534" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 1500.4 L 194.44 1493.61 L 263.89 1480.62 L 333.33 1462.85 L 402.78 1437.93 L 472.22 1402.34 L 541.67 1351.39 L 611.11 1281.91 L 680.56 1181.93 L 750 1042.14" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1500.4" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 9.575 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="1493.61" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 16.344 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="1480.62" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 29.289 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="1462.85" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 47.014 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="1437.93" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 71.853 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="1402.34" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 107.339 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="1351.39" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 158.140 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="1281.91" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 227.416 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="1181.93" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 327.105 | risco MEDIUM</title></circle>
+<circle cx="750" cy="1042.14" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 466.478 | risco MEDIUM</title></circle>
+<circle cx="74" cy="1538" r="5" fill="#d94b4b"/>
+<text x="86" y="1542" class="legend-label">Lutador</text>
+<path d="M 125 1501.08 L 194.44 1494.95 L 263.89 1483.4 L 333.33 1467.42 L 402.78 1444.53 L 472.22 1412.2 L 541.67 1366.23 L 611.11 1303.1 L 680.56 1212.22 L 750 1085.5" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1501.08" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 8.894 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="1494.95" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 15.005 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="1483.4" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 26.519 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="1467.42" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 42.456 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="1444.53" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 65.274 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="1412.2" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 97.513 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="1366.23" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 143.346 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="1303.1" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 206.293 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="1212.22" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 296.904 | risco MEDIUM</title></circle>
+<circle cx="750" cy="1085.5" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 423.247 | risco MEDIUM</title></circle>
+<circle cx="209" cy="1538" r="5" fill="#8b5cf6"/>
+<text x="221" y="1542" class="legend-label">Assassino</text>
+<path d="M 125 1501.08 L 194.44 1494.95 L 263.89 1483.4 L 333.33 1467.42 L 402.78 1444.53 L 472.22 1412.2 L 541.67 1366.23 L 611.11 1303.1 L 680.56 1212.22 L 750 1085.5" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1501.08" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 8.894 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="1494.95" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 15.005 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="1483.4" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 26.519 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="1467.42" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 42.456 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="1444.53" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 65.274 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="1412.2" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 97.513 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="1366.23" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 143.346 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="1303.1" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 206.293 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="1212.22" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 296.904 | risco MEDIUM</title></circle>
+<circle cx="750" cy="1085.5" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 423.247 | risco MEDIUM</title></circle>
+<circle cx="344" cy="1538" r="5" fill="#2563eb"/>
+<text x="356" y="1542" class="legend-label">Atirador</text>
+<path d="M 125 1500.4 L 194.44 1493.61 L 263.89 1480.62 L 333.33 1462.85 L 402.78 1437.93 L 472.22 1402.34 L 541.67 1351.39 L 611.11 1281.91 L 680.56 1181.93 L 750 1042.14" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="1500.4" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 9.575 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="1493.61" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 16.344 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="1480.62" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 29.289 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="1462.85" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 47.014 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="1437.93" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 71.853 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="1402.34" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 107.339 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="1351.39" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 158.140 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="1281.91" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 227.416 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="1181.93" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 327.105 | risco MEDIUM</title></circle>
+<circle cx="750" cy="1042.14" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 466.478 | risco MEDIUM</title></circle>
+<circle cx="479" cy="1538" r="5" fill="#16a34a"/>
+<text x="491" y="1542" class="legend-label">Medico</text>
+</g>
+<g class="chart" transform="translate(0 0)">
+<rect x="810" y="910" width="740" height="650" rx="14" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="942" class="chart-title">Tempo total por amostra</text>
+<text x="834" y="964" class="chart-subtitle">Tempo teorico somando encontro da caça e TTK de combate.</text>
+<line x1="880" y1="1510" x2="1515" y2="1510" stroke="#e8edf5"/>
+<text x="868" y="1514" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="1379" x2="1515" y2="1379" stroke="#e8edf5"/>
+<text x="868" y="1383" text-anchor="end" class="axis-label">3,8</text>
+<line x1="880" y1="1248" x2="1515" y2="1248" stroke="#e8edf5"/>
+<text x="868" y="1252" text-anchor="end" class="axis-label">7,6</text>
+<line x1="880" y1="1117" x2="1515" y2="1117" stroke="#e8edf5"/>
+<text x="868" y="1121" text-anchor="end" class="axis-label">11,4</text>
+<line x1="880" y1="986" x2="1515" y2="986" stroke="#e8edf5"/>
+<text x="868" y="990" text-anchor="end" class="axis-label">15,2</text>
+<line x1="880" y1="986" x2="880" y2="1510" stroke="#98a2b3"/>
+<line x1="880" y1="1510" x2="1515" y2="1510" stroke="#98a2b3"/>
+<text x="828" y="974" class="axis-title">Horas</text>
+<text x="885" y="1534" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="1534" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="1534" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="1534" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="1534" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="1534" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="1534" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="1534" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="1534" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="1534" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 1360.46 L 954.44 1200.96 L 1023.89 1132.21 L 1093.33 1070.67 L 1162.78 1061.05 L 1232.22 1061.05 L 1301.67 1051.77 L 1371.11 1051.77 L 1440.56 1051.77 L 1510 1042.14" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1360.46" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 4,4h | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="1200.96" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 9h | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="1132.21" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 11h | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="1070.67" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 12,8h | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="1061.05" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 13,1h | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="1061.05" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 13,1h | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="1051.77" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 13,3h | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="1051.77" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 13,3h | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="1051.77" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 13,3h | risco MEDIUM</title></circle>
+<circle cx="1510" cy="1042.14" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 13,6h | risco MEDIUM</title></circle>
+<circle cx="834" cy="1538" r="5" fill="#d94b4b"/>
+<text x="846" y="1542" class="legend-label">Lutador</text>
+<path d="M 885 1361.15 L 954.44 1217.12 L 1023.89 1157.65 L 1093.33 1108.83 L 1162.78 1108.83 L 1232.22 1108.83 L 1301.67 1108.83 L 1371.11 1108.83 L 1440.56 1108.83 L 1510 1108.83" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1361.15" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 4,3h | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="1217.12" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 8,5h | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="1157.65" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 10,3h | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="1108.83" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="1108.83" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="1108.83" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="1108.83" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="1108.83" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="1108.83" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1510" cy="1108.83" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 11,7h | risco MEDIUM</title></circle>
+<circle cx="969" cy="1538" r="5" fill="#8b5cf6"/>
+<text x="981" y="1542" class="legend-label">Assassino</text>
+<path d="M 885 1364.25 L 954.44 1217.12 L 1023.89 1157.65 L 1093.33 1108.83 L 1162.78 1108.83 L 1232.22 1108.83 L 1301.67 1108.83 L 1371.11 1108.83 L 1440.56 1108.83 L 1510 1108.83" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1364.25" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 4,2h | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="1217.12" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 8,5h | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="1157.65" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 10,3h | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="1108.83" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="1108.83" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="1108.83" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="1108.83" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="1108.83" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="1108.83" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1510" cy="1108.83" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 11,7h | risco MEDIUM</title></circle>
+<circle cx="1104" cy="1538" r="5" fill="#2563eb"/>
+<text x="1116" y="1542" class="legend-label">Atirador</text>
+<path d="M 885 1355.65 L 954.44 1198.55 L 1023.89 1132.21 L 1093.33 1070.67 L 1162.78 1070.67 L 1232.22 1061.05 L 1301.67 1061.05 L 1371.11 1061.05 L 1440.56 1051.77 L 1510 1051.77" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1355.65" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 4,5h | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="1198.55" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 9,1h | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="1132.21" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 11h | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="1070.67" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 12,8h | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="1070.67" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 12,8h | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="1061.05" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 13,1h | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="1061.05" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 13,1h | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="1061.05" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 13,1h | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="1051.77" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 13,3h | risco MEDIUM</title></circle>
+<circle cx="1510" cy="1051.77" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 13,3h | risco MEDIUM</title></circle>
+<circle cx="1239" cy="1538" r="5" fill="#16a34a"/>
+<text x="1251" y="1542" class="legend-label">Medico</text>
+</g>
+<g class="chart" transform="translate(0 0)">
+<rect x="50" y="1610" width="740" height="650" rx="14" fill="#ffffff" stroke="#d7dde8"/>
+<text x="74" y="1642" class="chart-title">Pocoes projetadas por amostra</text>
+<text x="74" y="1664" class="chart-subtitle">Estimativa do modelo de sobrevivencia com gatilho em 35% HP.</text>
+<line x1="120" y1="2210" x2="755" y2="2210" stroke="#e8edf5"/>
+<text x="108" y="2214" text-anchor="end" class="axis-label">0</text>
+<line x1="120" y1="2079" x2="755" y2="2079" stroke="#e8edf5"/>
+<text x="108" y="2083" text-anchor="end" class="axis-label">93,5</text>
+<line x1="120" y1="1948" x2="755" y2="1948" stroke="#e8edf5"/>
+<text x="108" y="1952" text-anchor="end" class="axis-label">187</text>
+<line x1="120" y1="1817" x2="755" y2="1817" stroke="#e8edf5"/>
+<text x="108" y="1821" text-anchor="end" class="axis-label">280,6</text>
+<line x1="120" y1="1686" x2="755" y2="1686" stroke="#e8edf5"/>
+<text x="108" y="1690" text-anchor="end" class="axis-label">374,1</text>
+<line x1="120" y1="1686" x2="120" y2="2210" stroke="#98a2b3"/>
+<line x1="120" y1="2210" x2="755" y2="2210" stroke="#98a2b3"/>
+<text x="68" y="1674" class="axis-title">Pocoes</text>
+<text x="125" y="2234" text-anchor="middle" class="axis-label">T1</text>
+<text x="194.44" y="2234" text-anchor="middle" class="axis-label">T2</text>
+<text x="263.89" y="2234" text-anchor="middle" class="axis-label">T3</text>
+<text x="333.33" y="2234" text-anchor="middle" class="axis-label">T4</text>
+<text x="402.78" y="2234" text-anchor="middle" class="axis-label">T5</text>
+<text x="472.22" y="2234" text-anchor="middle" class="axis-label">T6</text>
+<text x="541.67" y="2234" text-anchor="middle" class="axis-label">T7</text>
+<text x="611.11" y="2234" text-anchor="middle" class="axis-label">T8</text>
+<text x="680.56" y="2234" text-anchor="middle" class="axis-label">T9</text>
+<text x="750" y="2234" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 125 2198.79 L 194.44 2183.39 L 263.89 2156.77 L 333.33 2113.35 L 402.78 2118.95 L 472.22 2051.71 L 541.67 2040.51 L 611.11 1936.85 L 680.56 1915.84 L 750 1751.95" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2198.79" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 8 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="2183.39" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 19 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="2156.77" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 38 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="2113.35" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 69 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="2118.95" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 65 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="2051.71" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 113 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="2040.51" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 121 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="1936.85" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 195 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="1915.84" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 210 | risco MEDIUM</title></circle>
+<circle cx="750" cy="1751.95" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 327 | risco MEDIUM</title></circle>
+<circle cx="74" cy="2238" r="5" fill="#d94b4b"/>
+<text x="86" y="2242" class="legend-label">Lutador</text>
+<path d="M 125 2194.59 L 194.44 2176.38 L 263.89 2120.35 L 333.33 2041.91 L 402.78 2044.71 L 472.22 1988.68 L 541.67 2005.49 L 611.11 1929.85 L 680.56 1911.64 L 750 1792.57" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2194.59" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 11 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="2176.38" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 24 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="2120.35" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 64 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="2041.91" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 120 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="2044.71" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 118 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="1988.68" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 158 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="2005.49" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 146 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="1929.85" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 200 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="1911.64" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 213 | risco MEDIUM</title></circle>
+<circle cx="750" cy="1792.57" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 298 | risco MEDIUM</title></circle>
+<circle cx="209" cy="2238" r="5" fill="#8b5cf6"/>
+<text x="221" y="2242" class="legend-label">Assassino</text>
+<path d="M 125 2194.59 L 194.44 2180.58 L 263.89 2124.55 L 333.33 2050.31 L 402.78 2053.11 L 472.22 1995.68 L 541.67 2013.89 L 611.11 1935.45 L 680.56 1915.84 L 750 1805.18" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2194.59" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 11 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="2180.58" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 21 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="2124.55" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 61 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="2050.31" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 114 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="2053.11" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 112 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="1995.68" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 153 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="2013.89" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 140 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="1935.45" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 196 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="1915.84" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 210 | risco MEDIUM</title></circle>
+<circle cx="750" cy="1805.18" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 289 | risco MEDIUM</title></circle>
+<circle cx="344" cy="2238" r="5" fill="#2563eb"/>
+<text x="356" y="2242" class="legend-label">Atirador</text>
+<path d="M 125 2198.79 L 194.44 2183.39 L 263.89 2155.37 L 333.33 2110.55 L 402.78 2116.15 L 472.22 2050.31 L 541.67 2036.3 L 611.11 1931.25 L 680.56 1911.64 L 750 1742.14" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="125" cy="2198.79" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 8 | risco MEDIUM</title></circle>
+<circle cx="194.44" cy="2183.39" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 19 | risco MEDIUM</title></circle>
+<circle cx="263.89" cy="2155.37" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 39 | risco MEDIUM</title></circle>
+<circle cx="333.33" cy="2110.55" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 71 | risco MEDIUM</title></circle>
+<circle cx="402.78" cy="2116.15" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 67 | risco MEDIUM</title></circle>
+<circle cx="472.22" cy="2050.31" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 114 | risco MEDIUM</title></circle>
+<circle cx="541.67" cy="2036.3" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 124 | risco MEDIUM</title></circle>
+<circle cx="611.11" cy="1931.25" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 199 | risco MEDIUM</title></circle>
+<circle cx="680.56" cy="1911.64" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 213 | risco MEDIUM</title></circle>
+<circle cx="750" cy="1742.14" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 334 | risco MEDIUM</title></circle>
+<circle cx="479" cy="2238" r="5" fill="#16a34a"/>
+<text x="491" y="2242" class="legend-label">Medico</text>
+</g>
+<g class="chart" transform="translate(0 0)">
+<rect x="810" y="1610" width="740" height="650" rx="14" fill="#ffffff" stroke="#d7dde8"/>
+<text x="834" y="1642" class="chart-title">XP relativo ao melhor do tier</text>
+<text x="834" y="1664" class="chart-subtitle">Quanto cada classe fica perto da melhor classe daquele tier.</text>
+<line x1="880" y1="2210" x2="1515" y2="2210" stroke="#e8edf5"/>
+<text x="868" y="2214" text-anchor="end" class="axis-label">0</text>
+<line x1="880" y1="2079" x2="1515" y2="2079" stroke="#e8edf5"/>
+<text x="868" y="2083" text-anchor="end" class="axis-label">25</text>
+<line x1="880" y1="1948" x2="1515" y2="1948" stroke="#e8edf5"/>
+<text x="868" y="1952" text-anchor="end" class="axis-label">50</text>
+<line x1="880" y1="1817" x2="1515" y2="1817" stroke="#e8edf5"/>
+<text x="868" y="1821" text-anchor="end" class="axis-label">75</text>
+<line x1="880" y1="1686" x2="1515" y2="1686" stroke="#e8edf5"/>
+<text x="868" y="1690" text-anchor="end" class="axis-label">100</text>
+<line x1="880" y1="1686" x2="880" y2="2210" stroke="#98a2b3"/>
+<line x1="880" y1="2210" x2="1515" y2="2210" stroke="#98a2b3"/>
+<text x="828" y="1674" class="axis-title">% do melhor</text>
+<text x="885" y="2234" text-anchor="middle" class="axis-label">T1</text>
+<text x="954.44" y="2234" text-anchor="middle" class="axis-label">T2</text>
+<text x="1023.89" y="2234" text-anchor="middle" class="axis-label">T3</text>
+<text x="1093.33" y="2234" text-anchor="middle" class="axis-label">T4</text>
+<text x="1162.78" y="2234" text-anchor="middle" class="axis-label">T5</text>
+<text x="1232.22" y="2234" text-anchor="middle" class="axis-label">T6</text>
+<text x="1301.67" y="2234" text-anchor="middle" class="axis-label">T7</text>
+<text x="1371.11" y="2234" text-anchor="middle" class="axis-label">T8</text>
+<text x="1440.56" y="2234" text-anchor="middle" class="axis-label">T9</text>
+<text x="1510" y="2234" text-anchor="middle" class="axis-label">T10</text>
+<path d="M 885 1686 L 954.44 1686 L 1023.89 1686 L 1093.33 1686 L 1162.78 1686 L 1232.22 1686 L 1301.67 1686 L 1371.11 1686 L 1440.56 1686 L 1510 1686" fill="none" stroke="#d94b4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1686" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T1: 100% | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="1686" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T2: 100% | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="1686" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T3: 100% | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="1686" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T4: 100% | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="1686" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T5: 100% | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="1686" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T6: 100% | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="1686" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T7: 100% | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="1686" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T8: 100% | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="1686" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T9: 100% | risco MEDIUM</title></circle>
+<circle cx="1510" cy="1686" r="4" fill="#d94b4b" stroke="#ffffff" stroke-width="1.5"><title>Lutador T10: 100% | risco MEDIUM</title></circle>
+<circle cx="834" cy="2238" r="5" fill="#d94b4b"/>
+<text x="846" y="2242" class="legend-label">Lutador</text>
+<path d="M 885 1723.2 L 954.44 1728.97 L 1023.89 1735.78 L 1093.33 1736.83 L 1162.78 1734.21 L 1232.22 1734.21 L 1301.67 1735.26 L 1371.11 1734.73 L 1440.56 1734.21 L 1510 1734.73" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1723.2" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T1: 92,9% | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="1728.97" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T2: 91,8% | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="1735.78" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T3: 90,5% | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="1736.83" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T4: 90,3% | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="1734.21" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T5: 90,8% | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="1734.21" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T6: 90,8% | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="1735.26" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T7: 90,6% | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="1734.73" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T8: 90,7% | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="1734.21" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T9: 90,8% | risco MEDIUM</title></circle>
+<circle cx="1510" cy="1734.73" r="4" fill="#8b5cf6" stroke="#ffffff" stroke-width="1.5"><title>Assassino T10: 90,7% | risco MEDIUM</title></circle>
+<circle cx="969" cy="2238" r="5" fill="#8b5cf6"/>
+<text x="981" y="2242" class="legend-label">Assassino</text>
+<path d="M 885 1723.2 L 954.44 1728.97 L 1023.89 1735.78 L 1093.33 1736.83 L 1162.78 1734.21 L 1232.22 1734.21 L 1301.67 1735.26 L 1371.11 1734.73 L 1440.56 1734.21 L 1510 1734.73" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1723.2" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T1: 92,9% | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="1728.97" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T2: 91,8% | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="1735.78" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T3: 90,5% | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="1736.83" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T4: 90,3% | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="1734.21" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T5: 90,8% | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="1734.21" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T6: 90,8% | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="1735.26" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T7: 90,6% | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="1734.73" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T8: 90,7% | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="1734.21" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T9: 90,8% | risco MEDIUM</title></circle>
+<circle cx="1510" cy="1734.73" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"><title>Atirador T10: 90,7% | risco MEDIUM</title></circle>
+<circle cx="1104" cy="2238" r="5" fill="#2563eb"/>
+<text x="1116" y="2242" class="legend-label">Atirador</text>
+<path d="M 885 1686 L 954.44 1686 L 1023.89 1686 L 1093.33 1686 L 1162.78 1686 L 1232.22 1686 L 1301.67 1686 L 1371.11 1686 L 1440.56 1686 L 1510 1686" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="885" cy="1686" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T1: 100% | risco MEDIUM</title></circle>
+<circle cx="954.44" cy="1686" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T2: 100% | risco MEDIUM</title></circle>
+<circle cx="1023.89" cy="1686" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T3: 100% | risco MEDIUM</title></circle>
+<circle cx="1093.33" cy="1686" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T4: 100% | risco MEDIUM</title></circle>
+<circle cx="1162.78" cy="1686" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T5: 100% | risco MEDIUM</title></circle>
+<circle cx="1232.22" cy="1686" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T6: 100% | risco MEDIUM</title></circle>
+<circle cx="1301.67" cy="1686" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T7: 100% | risco MEDIUM</title></circle>
+<circle cx="1371.11" cy="1686" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T8: 100% | risco MEDIUM</title></circle>
+<circle cx="1440.56" cy="1686" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T9: 100% | risco MEDIUM</title></circle>
+<circle cx="1510" cy="1686" r="4" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"><title>Medico T10: 100% | risco MEDIUM</title></circle>
+<circle cx="1239" cy="2238" r="5" fill="#16a34a"/>
+<text x="1251" y="2242" class="legend-label">Medico</text>
+</g>
+  <rect x="50" y="2320" width="1500" height="190" rx="14" fill="#ffffff" stroke="#d7dde8"/>
+  <text x="74" y="2352" class="chart-title">Leitura rapida</text>
+  <text x="74" y="2382" class="note">1. XP/h e a metrica principal: usa tempo de encontrar mob + TTK, sem descanso automatico.</text>
+  <text x="74" y="2410" class="note">2. No modo real, cada mob entra pela chance ponderada do seed e pelo ajuste de qualidade da caca nivel 35.</text>
+  <text x="74" y="2438" class="note">3. Pontos com borda escura estao em risco LETHAL no modelo de sobrevivencia para 1000 kills projetadas.</text>
+  <text x="74" y="2466" class="note">4. CSV e JSON foram exportados junto com este SVG para auditoria dos numeros.</text>
+</svg>

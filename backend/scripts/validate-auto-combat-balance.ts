@@ -1,6 +1,7 @@
 import { classDefinitions } from '../prisma/seed-data/classes.seed-data';
 import { equipmentDefinitions } from '../prisma/seed-data/items.seed-data';
 import { buildMobCombatStats } from '../prisma/seed-data/mob-stats.seed-data';
+import { calculateAutoCombatPotionHeal } from './auto-combat-potion-balancing';
 import { AUTO_COMBAT_BALANCE_MODEL_LABEL } from '../src/common/config/combat-balance.config';
 import { AUTO_COMBAT_HUNTING_LEVEL_CAP } from '../src/common/config/auto-combat.config';
 import {
@@ -9,7 +10,6 @@ import {
 } from '../src/common/config/gathering.config';
 import {
   applyAutoCombatIncomingDamageMultiplier,
-  applyAutoCombatPotionHealMultiplier,
   applyAutoCombatXpEfficiency,
   scaleAutoCombatGatheringBonus,
 } from '../src/common/utils/auto-combat-balance.util';
@@ -400,8 +400,9 @@ function simulateClass(params: {
     attack: mob.attack,
     className: classDefinition.name,
   });
-  const potionHealAmount = applyAutoCombatPotionHealMultiplier({
-    healAmount: Math.floor(maxHp * 0.3),
+  const potionHeal = calculateAutoCombatPotionHeal({
+    tier,
+    maxHp,
     className: classDefinition.name,
   });
   const survival = projectAutoCombatSurvival({
@@ -415,7 +416,7 @@ function simulateClass(params: {
     projectedKills: Math.max(1, plannedKills),
     potion: {
       availableQuantity: options.potionQuantity,
-      healAmount: potionHealAmount,
+      healAmount: potionHeal.healAmount,
       hpThresholdPercent: 35,
     },
   });

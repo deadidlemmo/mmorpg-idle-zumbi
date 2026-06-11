@@ -953,6 +953,8 @@ export interface AutoCombatSessionSummary {
 
 export interface AutoCombatProjectionPreview {
   averageCombatDurationSeconds?: number;
+  averageCycleDurationSeconds?: number;
+  huntingSecondsPerEnemy?: number;
   averageRoundsPerCombat?: number;
   xpPerMinute?: number;
 

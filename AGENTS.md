@@ -302,7 +302,7 @@ Models atuais de alto impacto:
 - Helper compartilhado: conferir `membership.util.ts` e `membership.config.ts`.
 - Free idle identificado: 6 horas.
 - Premium idle identificado: 12 horas.
-- Bonus premium de XP identificado: 10%.
+- Bonus premium de XP identificado: 20%.
 - Tela `/membership` existe, mas compra/pagamento nao foi identificado como funcional.
 
 Nao transforme a tela de membership em fonte de verdade. O backend decide se premium esta ativo.

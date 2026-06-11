@@ -26,6 +26,7 @@ import {
 import { GatheringActivityPanel } from '../components/GatheringActivityPanel';
 import { GatheringMaterialList } from '../components/GatheringMaterialList';
 import { GatheringUsageModal } from '../components/GatheringUsageModal';
+import { getGatheringOriginIcon } from '../constants/gathering-origin-icons';
 import {
   useGatheringRealtimeActions,
   useGatheringRealtimeState,
@@ -759,7 +760,6 @@ export function GatheringOriginPage() {
   const [isPageBusy, setIsPageBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pageErrorMessage, setPageErrorMessage] = useState<string | null>(null);
-  const [isSkillPanelExpanded, setIsSkillPanelExpanded] = useState(true);
 
   const status = gatheringRealtimeState.status;
   const isBusy = isPageBusy || gatheringRealtimeState.isBusy;
@@ -772,6 +772,11 @@ export function GatheringOriginPage() {
     ? getGatheringOriginDescription(originKey)
     : 'Expedição idle para obtenção de materiais.';
   const originLore = originKey ? getOriginLore(originKey) : null;
+  const originIcon = originKey ? getGatheringOriginIcon(originKey) : null;
+  const originStatLabel = originKey
+    ? getGatheringOriginStatLabel(originKey)
+    : 'Progressão';
+  const originActivityClassName = origin ? `is-${origin}` : '';
   const originQuote = `“${
     originLore?.quote ??
     'Toda expedição deixa alguma coisa para trás. O segredo é saber o que vale carregar.'
@@ -1345,7 +1350,16 @@ export function GatheringOriginPage() {
                   <span>Atividade atual</span>
                 </div>
 
-                <div className="gathering-card gathering-card--active gathering-origin-current-card">
+                <div
+                  className={[
+                    'gathering-card',
+                    'gathering-card--active',
+                    'gathering-origin-current-card',
+                    originActivityClassName,
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
                   <GatheringActivityPanel
                     status={status}
                     productionPreview={gatheringRealtimeState.productionPreview}
@@ -1367,51 +1381,35 @@ export function GatheringOriginPage() {
                   className={[
                     'gathering-card',
                     'gathering-origin-skill-card',
-                    isSkillPanelExpanded
-                      ? 'gathering-origin-skill-card--expanded'
-                      : 'gathering-origin-skill-card--collapsed',
+                    originActivityClassName,
                   ]
                     .filter(Boolean)
                     .join(' ')}
                 >
-                  <button
-                    type="button"
-                    className="gathering-origin-skill-card__toggle"
-                    aria-expanded={isSkillPanelExpanded}
-                    onClick={() =>
-                      setIsSkillPanelExpanded((currentValue) => !currentValue)
-                    }
-                  >
+                  <div className="gathering-origin-skill-card__top">
                     <span
                       className="gathering-origin-skill-card__icon"
                       aria-hidden="true"
                     >
-                      {getOriginIconFallback(originKey)}
+                      {originIcon ? (
+                        <img src={originIcon} alt="" draggable={false} />
+                      ) : (
+                        getOriginIconFallback(originKey)
+                      )}
                     </span>
 
                     <span className="gathering-origin-skill-card__heading">
                       <span>
                         <strong>{originLabel}</strong>
-                        {!isSkillPanelExpanded ? (
-                          <em className="gathering-origin-skill-card__level-badge">
-                            {getSkillLevelLabel(gatheringSkill)}
-                          </em>
-                        ) : null}
+                        <em className="gathering-origin-skill-card__level-badge">
+                          {getSkillLevelLabel(gatheringSkill)}
+                        </em>
                       </span>
+                      <small>
+                        {isCurrentOriginActive ? 'Ativa agora' : 'Proficiência'}
+                      </small>
                     </span>
-
-                    <span
-                      className={[
-                        'gathering-origin-skill-card__chevron',
-                        isSkillPanelExpanded
-                          ? 'gathering-origin-skill-card__chevron--expanded'
-                          : 'gathering-origin-skill-card__chevron--collapsed',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      aria-hidden="true"
-                    />
-                  </button>
+                  </div>
 
                   <div
                     className="gathering-origin-skill-card__track"
@@ -1427,38 +1425,11 @@ export function GatheringOriginPage() {
                     />
                   </div>
 
-                  {isSkillPanelExpanded ? (
-                    <div className="gathering-origin-skill-card__details">
-                      <div className="gathering-origin-skill-card__expanded-metrics">
-                        <span
-                          className="gathering-origin-skill-card__metric-level"
-                          aria-label={`Nível atual: ${getSkillLevelLabel(gatheringSkill)}`}
-                        >
-                          <em className="gathering-origin-skill-card__level-badge">
-                            {getSkillLevelLabel(gatheringSkill)}
-                          </em>
-                        </span>
-
-                        <span
-                          className="gathering-origin-skill-card__metric-progress gathering-origin-skill-card__xp-capsule"
-                          aria-label={`${getSkillXpNeededLabel(
-                            gatheringSkill,
-                          )}. Progresso: ${skillProgressPercent}%`}
-                        >
-                          <span className="gathering-origin-skill-card__xp-capsule-value">
-                            {getSkillXpNeededLabel(gatheringSkill)}
-                          </span>
-
-                          <span
-                            className="gathering-origin-skill-card__xp-capsule-percent"
-                            aria-hidden="true"
-                          >
-                            {skillProgressPercent}%
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-                  ) : null}
+                  <div className="gathering-origin-skill-card__pills">
+                    <span>{getSkillXpNeededLabel(gatheringSkill)}</span>
+                    <span>{skillProgressPercent}%</span>
+                    <span>{originStatLabel}</span>
+                  </div>
                 </div>
               </section>
             </aside>

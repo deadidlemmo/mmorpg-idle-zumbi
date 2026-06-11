@@ -1,6 +1,4 @@
-import {
-  GATHERING_RATE_BY_TIER,
-} from '../config/gathering.config';
+import { GATHERING_RATE_BY_TIER } from '../config/gathering.config';
 import { FREE_IDLE_PROGRESS_LIMIT_SECONDS } from '../config/membership.config';
 
 type CalculateGatheringRewardParams = {
@@ -19,10 +17,7 @@ export function calculateGatheringReward({
   maxElapsedSeconds = FREE_IDLE_PROGRESS_LIMIT_SECONDS,
 }: CalculateGatheringRewardParams) {
   const maxElapsedHours = Math.max(0, maxElapsedSeconds) / 3600;
-  const elapsedHours = Math.min(
-    elapsedSeconds / 3600,
-    maxElapsedHours,
-  );
+  const elapsedHours = Math.min(elapsedSeconds / 3600, maxElapsedHours);
 
   const ratePerHour = GATHERING_RATE_BY_TIER[tier] ?? 1;
 

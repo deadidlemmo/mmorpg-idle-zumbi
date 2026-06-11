@@ -1,3 +1,4 @@
+import { AUTO_POTION_TRIGGER_PERCENT } from '../config/potions.config';
 import { calculateCombatDamageDetails } from './combat-damage.util';
 
 export type AutoCombatSurvivalRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'LETHAL';
@@ -167,17 +168,19 @@ export function projectAutoCombatSurvival(
 ): AutoCombatSurvivalProjection {
   const currentHp = Math.max(0, Number(params.currentHp) || 0);
   const maxHp = Math.max(0, Number(params.maxHp) || 0);
-  const projectedKills = Math.max(0, Math.floor(Number(params.projectedKills) || 0));
+  const projectedKills = Math.max(
+    0,
+    Math.floor(Number(params.projectedKills) || 0),
+  );
   const availablePotions = Math.max(
     0,
     Math.floor(Number(params.potion?.availableQuantity) || 0),
   );
   const potionHealAmount = Math.max(0, Number(params.potion?.healAmount) || 0);
   const potionTriggerPercent =
-    params.potion?.hpThresholdPercent === null ||
-    params.potion?.hpThresholdPercent === undefined
-      ? null
-      : clampNumber(Number(params.potion.hpThresholdPercent) || 0, 1, 100);
+    availablePotions > 0 && potionHealAmount > 0
+      ? AUTO_POTION_TRIGGER_PERCENT
+      : null;
   const incomingDamage = getExpectedIncomingDamagePerKill(params);
 
   if (projectedKills <= 0 || maxHp <= 0 || currentHp <= 0) {
@@ -193,7 +196,8 @@ export function projectAutoCombatSurvival(
       potionHealAmount,
       potionTriggerPercent,
       projectedFinalHp: roundNumber(currentHp, 2),
-      projectedFinalHpPercent: maxHp > 0 ? roundNumber((currentHp / maxHp) * 100) : 0,
+      projectedFinalHpPercent:
+        maxHp > 0 ? roundNumber((currentHp / maxHp) * 100) : 0,
       willSurviveProjection: projectedKills <= 0 && currentHp > 0,
       hpLimited: currentHp <= 0,
     };

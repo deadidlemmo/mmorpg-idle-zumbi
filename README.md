@@ -461,7 +461,7 @@ Enums relevantes:
 - Premium fica em `User.premiumUntil`.
 - Limite idle free: 6 horas.
 - Limite idle premium: 12 horas.
-- Bonus premium de XP identificado: 10% (`PREMIUM_XP_BONUS_MULTIPLIER = 1.1`).
+- Bonus premium de XP identificado: 20% (`PREMIUM_XP_BONUS_MULTIPLIER = 1.2`).
 - A tela `/membership` existe, mas pagamento/compra nao foi identificado como funcional no repositorio.
 
 ### Atividades exclusivas

@@ -376,12 +376,12 @@ export function getPotionDescription(
   const potionItem = getPotionItem(potionConfig);
 
   if (!potionItem) {
-    return 'Clique para escolher uma poção e definir quando ela será usada.';
+    return 'Clique para escolher a poção que será usada durante a batalha.';
   }
 
   return potionConfig?.enabled
-    ? `Usa automaticamente com ${potionConfig.hpThresholdPercent ?? 35}% de HP ou menos.`
-    : 'Poção selecionada, mas uso automático desativado.';
+    ? 'Poção selecionada para uso durante a batalha.'
+    : 'Poção selecionada, mas uso durante a batalha desativado.';
 }
 
 export function getPotionQuantity(

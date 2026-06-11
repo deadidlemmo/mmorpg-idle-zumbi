@@ -105,6 +105,7 @@ function createServiceHarness(updateCount = 1) {
     emitSessionUpdated: jest.fn(),
     emitStatus: jest.fn(),
     emitFinished: jest.fn(),
+    emitStopped: jest.fn(),
   };
   const service = new AutoCombatService(
     prisma as never,
@@ -186,7 +187,40 @@ describe('AutoCombatService hunting processing', () => {
     expect(foundCountIncrements).toBe(expectedFoundEnemies);
   });
 
-  it('mantem progressao de caca moderada para dificil em 24h offline', () => {
+  it('aplica bonus premium de 20% no XP da skill de caca', async () => {
+    const { service, tx } = createServiceHarness();
+    const session = createSession({
+      character: {
+        user: {
+          premiumUntil: new Date('2026-06-03T12:00:00.000Z'),
+        },
+      },
+    });
+
+    await (service as any).processHuntingSession(session);
+
+    const expectedFoundEnemies = 600;
+    const expectedPremiumHuntingXpPerEnemy = 6;
+
+    expect(tx.autoCombatSession.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          huntingXpGained: {
+            increment: expectedFoundEnemies * expectedPremiumHuntingXpPerEnemy,
+          },
+        }),
+      }),
+    );
+
+    const createManyPayload =
+      tx.autoCombatSessionEvent.createMany.mock.calls[0][0];
+
+    expect(createManyPayload.data[0].payloadJson.huntingXpGained).toBe(
+      expectedPremiumHuntingXpPerEnemy,
+    );
+  });
+
+  it('mantem progressao de caca longa para cerca de 2 meses ate o cap', () => {
     const { service } = createServiceHarness();
     const levelOneSecondsPerEnemy = (service as any).getHuntingSecondsPerEnemy(
       1,
@@ -206,8 +240,8 @@ describe('AutoCombatService hunting processing', () => {
     expect(levelOneSecondsPerEnemy).toBe(LEVEL_1_HUNTING_SECONDS_PER_ENEMY);
     expect(foundEnemiesIn24h).toBe(5760);
     expect(progress.level).toBe(7);
-    expect(progress.xp).toBe(3291);
-    expect(progress.xpToNextLevel).toBe(9644);
+    expect(progress.xp).toBe(4505);
+    expect(progress.xpToNextLevel).toBe(7614);
     expect((service as any).getHuntingSecondsPerEnemy(progress.level)).toBe(13);
   });
 
@@ -631,9 +665,7 @@ describe('AutoCombatService hunting processing', () => {
     });
     tx.autoCombatSession.create.mockResolvedValue({ id: 'session-resumed' });
 
-    const response = await (
-      service as any
-    ).resumeDefeatedHuntBatchIfAvailable({
+    const response = await (service as any).resumeDefeatedHuntBatchIfAvailable({
       userId: 'user-1',
       character: {
         id: 'character-1',
@@ -687,6 +719,62 @@ describe('AutoCombatService hunting processing', () => {
       }),
     );
     expect(gateway.emitStatus).toHaveBeenCalled();
+  });
+
+  it('cancela batalha preservando os mobs rastreados restantes', async () => {
+    const { service, prisma, tx, gateway } = createServiceHarness();
+    const lastProcessedAt = new Date('2026-06-02T12:02:00.000Z');
+    const loadedSession = createSession({
+      phase: AutoCombatSessionPhase.COMBAT_ACTIVE,
+      lastProcessedAt,
+      currentMobId: 'mob-2',
+      currentMobHp: 5,
+      currentMobMaxHp: 10,
+      huntBatch: {
+        id: 'hunt-batch-1',
+        status: AutoCombatHuntBatchStatus.CONSUMED,
+        lastProcessedAt,
+        mobs: [
+          {
+            mobId: 'mob-2',
+            encounterId: 'encounter-2',
+            remainingCount: 3,
+          },
+        ],
+      },
+    });
+
+    (prisma as any).character = {
+      findFirst: jest.fn().mockResolvedValue({ id: 'character-1' }),
+    };
+    (prisma as any).autoCombatSession = {
+      findFirst: jest.fn().mockResolvedValue({ id: 'session-1' }),
+    };
+    jest
+      .spyOn(service as any, 'loadAutoCombatSession')
+      .mockResolvedValue(loadedSession);
+
+    await service.stop('user-1', 'character-1');
+
+    expect(tx.autoCombatSession.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+          currentMobId: null,
+          battleTargetRemaining: 0,
+        }),
+      }),
+    );
+    expect(tx.autoCombatHuntBatch.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: AutoCombatHuntBatchStatus.READY,
+          consumedAt: null,
+          cancelledAt: null,
+        }),
+      }),
+    );
+    expect(gateway.emitStopped).toHaveBeenCalled();
   });
 
   it('consome a fila quando a sessao termina sem mobs rastreados restantes', () => {

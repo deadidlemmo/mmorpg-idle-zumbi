@@ -2,7 +2,16 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { classDefinitions } from '../prisma/seed-data/classes.seed-data';
 import { equipmentDefinitions } from '../prisma/seed-data/items.seed-data';
+import { mapDefinitions } from '../prisma/seed-data/maps.seed-data';
 import { buildMobCombatStats } from '../prisma/seed-data/mob-stats.seed-data';
+import { calculateAutoCombatPotionHeal } from './auto-combat-potion-balancing';
+import {
+  getActiveAutoCombatEncounterWeight,
+  getActiveAutoCombatMobRank,
+  isActiveAutoCombatMob,
+  mobBaseDefinitions,
+  type MobBaseSeedData,
+} from '../prisma/seed-data/mobs.seed-data';
 import { AUTO_COMBAT_BALANCE_MODEL_LABEL } from '../src/common/config/combat-balance.config';
 import { AUTO_COMBAT_HUNTING_LEVEL_CAP } from '../src/common/config/auto-combat.config';
 import {
@@ -11,7 +20,6 @@ import {
 } from '../src/common/config/gathering.config';
 import {
   applyAutoCombatIncomingDamageMultiplier,
-  applyAutoCombatPotionHealMultiplier,
   applyAutoCombatXpEfficiency,
   scaleAutoCombatGatheringBonus,
 } from '../src/common/utils/auto-combat-balance.util';
@@ -44,11 +52,30 @@ type BalanceReportOptions = {
   potionQuantity: number;
   huntingLevel: number;
   outputDir: string;
+  source: BalanceReportSource;
+};
+
+type BalanceReportSource = 'synthetic-tier' | 'real-seed-maps';
+
+type WeightedEncounterPlan = {
+  mob: ReturnType<typeof buildMobCombatStats>;
+  baseMob: MobBaseSeedData;
+  mapName: string;
+  subMapName: string;
+  baseWeight: number;
+  averageWeight: number;
+  probability: number;
+  expectedKills: number;
 };
 
 type BalanceReportRow = {
   tier: number;
   level: number;
+  source: BalanceReportSource;
+  mapName: string;
+  encounterCount: number;
+  totalEncounterWeight: number;
+  averageMobLevel: number;
   className: string;
   equipmentPoints: number;
   hp: number;
@@ -90,6 +117,14 @@ type ChartMetric = {
 const DEFAULT_KILLS = 1000;
 const DEFAULT_POTION_QUANTITY = 9999;
 const DEFAULT_HUNTING_LEVEL = AUTO_COMBAT_HUNTING_LEVEL_CAP;
+const DEFAULT_SOURCE: BalanceReportSource = 'synthetic-tier';
+
+function toSlug(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
 const EQUIPMENT_STAT_KEYS = [
   'strengthBonus',
@@ -130,6 +165,13 @@ const CLASS_COLORS: Record<string, string> = {
   Assassino: '#8b5cf6',
   Atirador: '#2563eb',
   Medico: '#16a34a',
+};
+
+const RISK_WEIGHT: Record<AutoCombatSurvivalRiskLevel, number> = {
+  LOW: 1,
+  MEDIUM: 2,
+  HIGH: 3,
+  LETHAL: 4,
 };
 
 const CHART_METRICS: ChartMetric[] = [
@@ -195,7 +237,8 @@ function parseArgs(): BalanceReportOptions {
     kills: DEFAULT_KILLS,
     potionQuantity: DEFAULT_POTION_QUANTITY,
     huntingLevel: DEFAULT_HUNTING_LEVEL,
-    outputDir: resolve(process.cwd(), '..', '_reports'),
+    outputDir: resolve(process.cwd(), '..', '_reports', 'auto-combat-balance'),
+    source: DEFAULT_SOURCE,
   };
 
   for (const arg of process.argv.slice(2)) {
@@ -219,6 +262,11 @@ function parseArgs(): BalanceReportOptions {
         break;
       case '--output-dir':
         options.outputDir = resolve(process.cwd(), value ?? options.outputDir);
+        break;
+      case '--source':
+        if (value === 'real-seed-maps' || value === 'synthetic-tier') {
+          options.source = value;
+        }
         break;
       default:
         break;
@@ -247,6 +295,97 @@ function roundNumber(value: number, digits = 2) {
   const factor = 10 ** digits;
 
   return Math.round(value * factor) / factor;
+}
+
+function getWorstRiskLevel(levels: AutoCombatSurvivalRiskLevel[]) {
+  return levels.reduce<AutoCombatSurvivalRiskLevel>(
+    (worst, level) => (RISK_WEIGHT[level] > RISK_WEIGHT[worst] ? level : worst),
+    'LOW',
+  );
+}
+
+function getAdjustedEncounterWeight(params: {
+  mobLevel: number;
+  minMobLevel: number;
+  maxMobLevel: number;
+  baseWeight: number;
+  huntingLevel: number;
+  foundEnemiesCount: number;
+}) {
+  const levelRange = Math.max(1, params.maxMobLevel - params.minMobLevel);
+  const relativeDifficulty =
+    (Math.max(1, params.mobLevel) - params.minMobLevel) / levelRange;
+  const huntingBias = Math.min(
+    1.75,
+    Math.max(0, (params.huntingLevel - 1) / AUTO_COMBAT_HUNTING_LEVEL_CAP) +
+      Math.min(0.5, params.foundEnemiesCount / 100),
+  );
+  const betterMobMultiplier = 1 + relativeDifficulty * huntingBias;
+
+  return Math.max(1, Math.round(params.baseWeight * betterMobMultiplier));
+}
+
+function projectExpectedDamageSurvival(params: {
+  currentHp: number;
+  maxHp: number;
+  expectedDamagePerKill: number;
+  projectedKills: number;
+  potionQuantity: number;
+  potionHealAmount: number;
+  potionTriggerPercent: number;
+}) {
+  const maxHp = Math.max(0, params.maxHp);
+  const thresholdHp = Math.floor(
+    (maxHp * Math.max(1, Math.min(100, params.potionTriggerPercent))) / 100,
+  );
+  let hp = Math.max(0, Math.min(maxHp, params.currentHp));
+  let potionsRemaining = Math.max(0, Math.floor(params.potionQuantity));
+  let potionsUsed = 0;
+  let safeKills = 0;
+
+  for (let kill = 0; kill < params.projectedKills; kill++) {
+    if (hp <= 0) {
+      break;
+    }
+
+    hp = Math.max(0, hp - params.expectedDamagePerKill);
+
+    if (
+      hp > 0 &&
+      hp <= thresholdHp &&
+      potionsRemaining > 0 &&
+      params.potionHealAmount > 0
+    ) {
+      hp = Math.min(maxHp, hp + params.potionHealAmount);
+      potionsRemaining--;
+      potionsUsed++;
+    }
+
+    if (hp <= 0) {
+      break;
+    }
+
+    safeKills++;
+  }
+
+  const finalHpPercent = maxHp > 0 ? (hp / maxHp) * 100 : 0;
+  let riskLevel: AutoCombatSurvivalRiskLevel = 'LOW';
+
+  if (safeKills < params.projectedKills) {
+    riskLevel = safeKills <= 0 ? 'LETHAL' : 'HIGH';
+  } else if (finalHpPercent < 25) {
+    riskLevel = 'HIGH';
+  } else if (finalHpPercent < 55) {
+    riskLevel = 'MEDIUM';
+  }
+
+  return {
+    riskLevel,
+    potionsUsed,
+    finalHp: roundNumber(hp, 2),
+    finalHpPercent: roundNumber(finalHpPercent, 2),
+    safeKills,
+  };
 }
 
 function escapeXml(value: string | number) {
@@ -282,6 +421,90 @@ function getSeedEquipmentItems(className: string, tier: number) {
       )[0];
 
     return selected ? [selected] : [];
+  });
+}
+
+function getRealSeedEncounterPlans(params: {
+  tier: number;
+  kills: number;
+  huntingLevel: number;
+}): WeightedEncounterPlan[] {
+  const mapDefinition = mapDefinitions.find((map) => map.tier === params.tier);
+
+  if (!mapDefinition) {
+    return [];
+  }
+
+  const basePlans = mobBaseDefinitions
+    .filter(
+      (mob) =>
+        mob.mapName === mapDefinition.name &&
+        mapDefinition.subMaps.includes(mob.subMapName) &&
+        isActiveAutoCombatMob(mob),
+    )
+    .map((mob) => ({
+      mob: buildMobCombatStats({
+        ...mob,
+        mobName: mob.name,
+        autoCombatRank: getActiveAutoCombatMobRank(mob),
+      }),
+      baseMob: mob,
+      mapName: mapDefinition.name,
+      subMapName: mob.subMapName,
+      baseWeight: getActiveAutoCombatEncounterWeight(mob),
+      accumulatedProbability: 0,
+      accumulatedWeight: 0,
+    }))
+    .filter((plan) => plan.baseWeight > 0);
+
+  if (basePlans.length === 0) {
+    return [];
+  }
+
+  const minMobLevel = Math.min(...basePlans.map((plan) => plan.mob.level));
+  const maxMobLevel = Math.max(...basePlans.map((plan) => plan.mob.level));
+  const sampleSize = Math.max(1, params.kills);
+
+  for (let index = 0; index < sampleSize; index++) {
+    const weightedPlans = basePlans.map((plan) => {
+      const weight = getAdjustedEncounterWeight({
+        mobLevel: plan.mob.level,
+        minMobLevel,
+        maxMobLevel,
+        baseWeight: plan.baseWeight,
+        huntingLevel: params.huntingLevel,
+        foundEnemiesCount: index,
+      });
+
+      return { plan, weight };
+    });
+    const totalWeight = weightedPlans.reduce(
+      (total, plan) => total + plan.weight,
+      0,
+    );
+
+    for (const weightedPlan of weightedPlans) {
+      const probability =
+        totalWeight > 0 ? weightedPlan.weight / totalWeight : 0;
+
+      weightedPlan.plan.accumulatedProbability += probability;
+      weightedPlan.plan.accumulatedWeight += weightedPlan.weight;
+    }
+  }
+
+  return basePlans.map((plan) => {
+    const probability = plan.accumulatedProbability / sampleSize;
+
+    return {
+      mob: plan.mob,
+      baseMob: plan.baseMob,
+      mapName: plan.mapName,
+      subMapName: plan.subMapName,
+      baseWeight: plan.baseWeight,
+      averageWeight: roundNumber(plan.accumulatedWeight / sampleSize, 2),
+      probability,
+      expectedKills: probability * params.kills,
+    };
   });
 }
 
@@ -366,8 +589,9 @@ function simulateClassTier(params: {
     attack: mob.attack,
     className: classDefinition.name,
   });
-  const potionHealAmount = applyAutoCombatPotionHealMultiplier({
-    healAmount: Math.floor(maxHp * 0.3),
+  const potionHeal = calculateAutoCombatPotionHeal({
+    tier,
+    maxHp,
     className: classDefinition.name,
   });
   const survival = projectAutoCombatSurvival({
@@ -381,7 +605,7 @@ function simulateClassTier(params: {
     projectedKills: kills,
     potion: {
       availableQuantity: potionQuantity,
-      healAmount: potionHealAmount,
+      healAmount: potionHeal.healAmount,
       hpThresholdPercent: 35,
     },
   });
@@ -399,6 +623,11 @@ function simulateClassTier(params: {
   return {
     tier,
     level,
+    source: 'synthetic-tier',
+    mapName: `Tier ${tier} sintetico`,
+    encounterCount: 1,
+    totalEncounterWeight: 100,
+    averageMobLevel: level,
     className: displayClassName(classDefinition.name),
     equipmentPoints: equipmentItems.reduce(
       (sum, item) => sum + getEquipmentItemStatsTotal(item),
@@ -425,17 +654,219 @@ function simulateClassTier(params: {
   };
 }
 
+function simulateClassTierRealSeed(params: {
+  classDefinition: (typeof classDefinitions)[number];
+  tier: number;
+  kills: number;
+  potionQuantity: number;
+  huntingLevel: number;
+}): BalanceReportRow {
+  const { classDefinition, tier, kills, potionQuantity } = params;
+  const level = tier * 10;
+  const encounterPlans = getRealSeedEncounterPlans({
+    tier,
+    kills,
+    huntingLevel: params.huntingLevel,
+  });
+
+  if (encounterPlans.length === 0) {
+    return simulateClassTier(params);
+  }
+
+  const equipmentItems = getSeedEquipmentItems(classDefinition.name, tier);
+  const rawGatheringBonus = buildRecommendedGatheringBonus(
+    classDefinition.name,
+    level,
+  );
+  const combatGatheringBonus = scaleAutoCombatGatheringBonus(rawGatheringBonus);
+  const visibleStats = calculateFullStats(
+    classDefinition,
+    equipmentItems,
+    level,
+    rawGatheringBonus,
+  );
+  const combatStats = calculateFullStats(
+    classDefinition,
+    equipmentItems,
+    level,
+    combatGatheringBonus,
+  );
+  const primary = combatStats.totalPrimaryStats;
+  const derived = combatStats.derivedCombatStats;
+  const maxHp = visibleStats.derivedCombatStats.maxHp;
+  const potionHeal = calculateAutoCombatPotionHeal({
+    tier,
+    maxHp,
+    className: classDefinition.name,
+  });
+  const encounterMetrics = encounterPlans.map((plan) => {
+    const ttk = calculateAutoCombatTtk({
+      mob: plan.mob,
+      playerStats: {
+        className: classDefinition.name,
+        attack: derived.attack,
+        speed: derived.speed,
+        precision: primary.precision,
+        technique: primary.technique,
+        agility: primary.agility,
+      },
+    });
+    const mobAttack = applyAutoCombatIncomingDamageMultiplier({
+      attack: plan.mob.attack,
+      className: classDefinition.name,
+    });
+    const survival = projectAutoCombatSurvival({
+      currentHp: maxHp,
+      maxHp,
+      playerDefense: derived.defense,
+      playerAgility: primary.agility,
+      mobAttack,
+      mobPrecision: plan.mob.speed,
+      mobTechnique: plan.mob.level,
+      projectedKills: 1,
+      potion: null,
+    });
+
+    return {
+      plan,
+      ttkSeconds: ttk.estimatedKillTimeSeconds,
+      offensivePower: ttk.playerOffensivePower,
+      expectedDamagePerKill: survival.expectedDamagePerKill,
+    };
+  });
+  const weightedTtkSeconds = encounterMetrics.reduce(
+    (total, metric) => total + metric.plan.probability * metric.ttkSeconds,
+    0,
+  );
+  const weightedMobXp = encounterMetrics.reduce(
+    (total, metric) =>
+      total + metric.plan.probability * metric.plan.mob.xpReward,
+    0,
+  );
+  const weightedMobLevel = encounterMetrics.reduce(
+    (total, metric) => total + metric.plan.probability * metric.plan.mob.level,
+    0,
+  );
+  const weightedDamagePerKill = encounterMetrics.reduce(
+    (total, metric) =>
+      total + metric.plan.probability * metric.expectedDamagePerKill,
+    0,
+  );
+  const survival = projectExpectedDamageSurvival({
+    currentHp: maxHp,
+    maxHp,
+    expectedDamagePerKill: weightedDamagePerKill,
+    projectedKills: kills,
+    potionQuantity,
+    potionHealAmount: potionHeal.healAmount,
+    potionTriggerPercent: 35,
+  });
+  const encounterRiskLevels = encounterMetrics
+    .filter((metric) => metric.plan.expectedKills >= 1)
+    .map((metric) =>
+      projectAutoCombatSurvival({
+        currentHp: maxHp,
+        maxHp,
+        playerDefense: derived.defense,
+        playerAgility: primary.agility,
+        mobAttack: applyAutoCombatIncomingDamageMultiplier({
+          attack: metric.plan.mob.attack,
+          className: classDefinition.name,
+        }),
+        mobPrecision: metric.plan.mob.speed,
+        mobTechnique: metric.plan.mob.level,
+        projectedKills: Math.max(1, Math.round(metric.plan.expectedKills)),
+        potion: {
+          availableQuantity: potionQuantity,
+          healAmount: potionHeal.healAmount,
+          hpThresholdPercent: 35,
+        },
+      }).riskLevel,
+    );
+  const riskLevel = getWorstRiskLevel([
+    survival.riskLevel,
+    ...encounterRiskLevels,
+  ]);
+  const effectiveXpPerKill = encounterMetrics.reduce(
+    (total, metric) =>
+      total +
+      metric.plan.probability *
+        applyAutoCombatXpEfficiency({
+          baseXp: metric.plan.mob.xpReward,
+          className: classDefinition.name,
+          riskLevel,
+        }),
+    0,
+  );
+  const secondsPerFind = getAutoCombatHuntingSecondsPerEnemy(
+    params.huntingLevel,
+  );
+  const ttkSeconds = roundNumber(weightedTtkSeconds);
+  const secondsPerMob = roundNumber(secondsPerFind + weightedTtkSeconds);
+  const killsPerHour = Math.floor(3600 / Math.max(1, secondsPerMob));
+
+  return {
+    tier,
+    level,
+    source: 'real-seed-maps',
+    mapName: encounterPlans[0]?.mapName ?? `Tier ${tier}`,
+    encounterCount: encounterPlans.length,
+    totalEncounterWeight: roundNumber(
+      encounterPlans.reduce((total, plan) => total + plan.averageWeight, 0),
+    ),
+    averageMobLevel: roundNumber(weightedMobLevel, 1),
+    className: displayClassName(classDefinition.name),
+    equipmentPoints: equipmentItems.reduce(
+      (sum, item) => sum + getEquipmentItemStatsTotal(item),
+      0,
+    ),
+    hp: maxHp,
+    defense: derived.defense,
+    attack: derived.attack,
+    power: roundNumber(
+      encounterMetrics.reduce(
+        (total, metric) =>
+          total + metric.plan.probability * metric.offensivePower,
+        0,
+      ),
+      1,
+    ),
+    mobXp: roundNumber(weightedMobXp, 1),
+    secondsPerFind,
+    ttkSeconds,
+    secondsPerMob,
+    killsPerHour,
+    effectiveXpPerHour: Math.round(killsPerHour * effectiveXpPerKill),
+    xpPerHourVsBestPercent: 0,
+    timeHours: roundNumber((secondsPerMob * kills) / 3600, 2),
+    effectiveXpPerKill: roundNumber(effectiveXpPerKill, 1),
+    effectiveXpPerSample: Math.round(effectiveXpPerKill * kills),
+    potionsUsed: survival.potionsUsed,
+    expectedDamagePerKill: roundNumber(weightedDamagePerKill, 2),
+    riskLevel,
+    xpVsBestPercent: 0,
+  };
+}
+
 function buildRows(options: BalanceReportOptions) {
   const rows = Array.from({ length: 10 }, (_, index) => index + 1).flatMap(
     (tier) =>
       classDefinitions.map((classDefinition) =>
-        simulateClassTier({
-          classDefinition,
-          tier,
-          kills: options.kills,
-          potionQuantity: options.potionQuantity,
-          huntingLevel: options.huntingLevel,
-        }),
+        options.source === 'real-seed-maps'
+          ? simulateClassTierRealSeed({
+              classDefinition,
+              tier,
+              kills: options.kills,
+              potionQuantity: options.potionQuantity,
+              huntingLevel: options.huntingLevel,
+            })
+          : simulateClassTier({
+              classDefinition,
+              tier,
+              kills: options.kills,
+              potionQuantity: options.potionQuantity,
+              huntingLevel: options.huntingLevel,
+            }),
       ),
   );
 
@@ -469,6 +900,12 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat('pt-BR', {
     maximumFractionDigits: 1,
   }).format(value);
+}
+
+function getSourceLabel(source: BalanceReportSource) {
+  return source === 'real-seed-maps'
+    ? 'mapas reais do seed ponderados por chance de aparicao'
+    : 'mob sintetico representativo por tier';
 }
 
 function getMetricMax(rows: BalanceReportRow[], metric: ChartMetric) {
@@ -666,7 +1103,7 @@ function renderSvg(rows: BalanceReportRow[], options: BalanceReportOptions) {
   </style>
   <rect width="100%" height="100%" fill="#f5f7fb"/>
   <text x="50" y="62" class="title">Balanceamento Auto-combate</text>
-  <text x="50" y="96" class="subtitle">Amostra fixa de ${options.kills} mobs por tier, equipamento real do seed, gathering recomendado, caca nivel ${options.huntingLevel} e ${options.potionQuantity} pocoes disponiveis.</text>
+  <text x="50" y="96" class="subtitle">Amostra fixa de ${options.kills} mobs por tier, ${escapeXml(getSourceLabel(options.source))}, equipamento real do seed, gathering recomendado, caca nivel ${options.huntingLevel} e ${options.potionQuantity} pocoes disponiveis.</text>
   <text x="50" y="132" class="meta">Modelo: ${escapeXml(AUTO_COMBAT_BALANCE_MODEL_LABEL)} | Nivel representativo por tier: T1=L10 ... T10=L100</text>
   <text x="50" y="162" class="meta">Pior tier no XP/h: T${worstTier.tier}, melhor ${escapeXml(worstTier.best)}, pior ${escapeXml(worstTier.worst)}, ratio ${worstTier.ratio}, pior ${worstTier.worstPercent}%.</text>
   ${CHART_METRICS.map((metric, index) =>
@@ -682,7 +1119,7 @@ function renderSvg(rows: BalanceReportRow[], options: BalanceReportOptions) {
   <rect x="50" y="2320" width="1500" height="190" rx="14" fill="#ffffff" stroke="#d7dde8"/>
   <text x="74" y="2352" class="chart-title">Leitura rapida</text>
   <text x="74" y="2382" class="note">1. XP/h e a metrica principal: usa tempo de encontrar mob + TTK, sem descanso automatico.</text>
-  <text x="74" y="2410" class="note">2. XP por amostra mostra recompensa por ${options.kills} mobs; pode variar mais quando classes rapidas terminam a amostra antes.</text>
+  <text x="74" y="2410" class="note">2. No modo real, cada mob entra pela chance ponderada do seed e pelo ajuste de qualidade da caca nivel ${options.huntingLevel}.</text>
   <text x="74" y="2438" class="note">3. Pontos com borda escura estao em risco LETHAL no modelo de sobrevivencia para ${options.kills} kills projetadas.</text>
   <text x="74" y="2466" class="note">4. CSV e JSON foram exportados junto com este SVG para auditoria dos numeros.</text>
 </svg>`;
@@ -692,6 +1129,11 @@ function toCsv(rows: BalanceReportRow[]) {
   const headers = [
     'tier',
     'level',
+    'source',
+    'mapName',
+    'encounterCount',
+    'totalEncounterWeight',
+    'averageMobLevel',
     'className',
     'equipmentPoints',
     'hp',
@@ -732,7 +1174,13 @@ function main() {
   const options = parseArgs();
   const rows = buildRows(options);
   const outputDir = options.outputDir;
-  const baseName = `auto-combat-balance-${options.kills}-mobs`;
+  const sourceSlug =
+    options.source === 'real-seed-maps'
+      ? 'mapas-reais-seed'
+      : 'sintetico-tier';
+  const baseName = `${toSlug(
+    AUTO_COMBAT_BALANCE_MODEL_LABEL,
+  )}-sem-descanso-${sourceSlug}-caca-nivel-${options.huntingLevel}-${options.kills}-mobs`;
   const svgPath = resolve(outputDir, `${baseName}.svg`);
   const csvPath = resolve(outputDir, `${baseName}.csv`);
   const jsonPath = resolve(outputDir, `${baseName}.json`);
@@ -748,8 +1196,8 @@ function main() {
         kills: options.kills,
         potionQuantity: options.potionQuantity,
         huntingLevel: options.huntingLevel,
-        scenario:
-          'seed equipment + recommended gathering + hunting time + current balance model',
+        source: options.source,
+        scenario: `${getSourceLabel(options.source)} + seed equipment + recommended gathering + hunting time + current balance model`,
         rows,
       },
       null,
@@ -768,7 +1216,9 @@ function main() {
       .sort((left, right) => right.effectiveXpPerHour - left.effectiveXpPerHour)
       .map((row) => ({
         tier: row.tier,
+        source: row.source,
         class: row.className,
+        map: row.mapName,
         xp_h: row.effectiveXpPerHour,
         xp_sample: row.effectiveXpPerSample,
         find_s: row.secondsPerFind,

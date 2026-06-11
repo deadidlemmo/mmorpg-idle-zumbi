@@ -14,14 +14,9 @@ export type MobBaseSeedData = {
 
 const ACTIVE_AUTO_COMBAT_ORDERS = new Set([1, 4]);
 
-const BASE_ENCOUNTER_WEIGHT_BY_ORDER = new Map([
-  [1, 40],
-  [2, 30],
-  [3, 20],
-  [4, 10],
-]);
+const ACTIVE_AUTO_COMBAT_GLOBAL_ORDERS = [1, 4, 5, 8, 9, 12] as const;
 
-const ELITE_ENCOUNTER_WEIGHT = 15;
+const ACTIVE_AUTO_COMBAT_WEIGHT_BY_RANK = [42, 24, 15, 9, 6, 4] as const;
 
 export function isActiveAutoCombatMob(
   mob: Pick<MobBaseSeedData, 'orderNoSubmap'>,
@@ -32,11 +27,11 @@ export function isActiveAutoCombatMob(
 export function getBaseAutoCombatEncounterWeight(
   mob: Pick<MobBaseSeedData, 'mobType' | 'orderNoSubmap'>,
 ) {
-  if (mob.orderNoSubmap === 4 && mob.mobType === 'ELITE') {
-    return ELITE_ENCOUNTER_WEIGHT;
-  }
+  if (!isActiveAutoCombatMob(mob)) return 0;
 
-  return BASE_ENCOUNTER_WEIGHT_BY_ORDER.get(mob.orderNoSubmap) ?? 0;
+  return mob.mobType === 'ELITE'
+    ? ACTIVE_AUTO_COMBAT_WEIGHT_BY_RANK[5]
+    : ACTIVE_AUTO_COMBAT_WEIGHT_BY_RANK[0];
 }
 
 export function getAbsorbedAutoCombatMobOrder(
@@ -51,16 +46,34 @@ export function getAbsorbedAutoCombatMobOrder(
 export function getActiveAutoCombatEncounterWeight(mob: MobBaseSeedData) {
   if (!isActiveAutoCombatMob(mob)) return 0;
 
-  const absorbedOrder = getAbsorbedAutoCombatMobOrder(mob);
+  const rank = getActiveAutoCombatMobRank(mob);
 
-  if (absorbedOrder === null) {
-    return getBaseAutoCombatEncounterWeight(mob);
-  }
+  if (rank === null) return 0;
 
-  return (
-    getBaseAutoCombatEncounterWeight(mob) +
-    (BASE_ENCOUNTER_WEIGHT_BY_ORDER.get(absorbedOrder) ?? 0)
+  return ACTIVE_AUTO_COMBAT_WEIGHT_BY_RANK[rank - 1] ?? 0;
+}
+
+export function getActiveAutoCombatMobRank(mob: MobBaseSeedData) {
+  if (!isActiveAutoCombatMob(mob)) return null;
+
+  const activeTierMobs = mobBaseDefinitions.filter(
+    (candidate) =>
+      candidate.tier === mob.tier && isActiveAutoCombatMob(candidate),
   );
+  const index = activeTierMobs.findIndex(
+    (candidate) =>
+      candidate.name === mob.name &&
+      candidate.mapName === mob.mapName &&
+      candidate.subMapName === mob.subMapName,
+  );
+
+  if (index < 0) return null;
+
+  return index + 1;
+}
+
+export function getActiveAutoCombatGlobalOrder(rank: number) {
+  return ACTIVE_AUTO_COMBAT_GLOBAL_ORDERS[rank - 1] ?? null;
 }
 
 export const mobBaseDefinitions: MobBaseSeedData[] = [
@@ -1182,6 +1195,7 @@ export const mobDefinitions: MobSeedData[] = mobBaseDefinitions.map((mob) => {
     level: mob.level,
     mobName: mob.name,
     mobType: mob.mobType,
+    autoCombatRank: getActiveAutoCombatMobRank(mob),
   });
 
   return {

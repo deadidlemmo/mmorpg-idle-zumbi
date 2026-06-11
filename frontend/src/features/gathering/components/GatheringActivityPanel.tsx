@@ -42,6 +42,10 @@ type GatheringSessionWithCounters = GatheringSessionViewModel & {
   sessionCollectedQuantity?: unknown;
 };
 
+type GatheringSkillLevelLike = {
+  level?: unknown;
+};
+
 function isActiveStatus(
   status?: GatheringStatusResponse | null,
 ): status is Extract<GatheringStatusResponse, { active: true }> {
@@ -231,6 +235,17 @@ function getCollectedQuantityLabel(collectedQuantity: number): string {
   return `+${Math.max(0, collectedQuantity).toLocaleString('pt-BR')}`;
 }
 
+function getGatheringSkillLevelLabel(gatheringSkill?: unknown): string {
+  const skill = gatheringSkill as GatheringSkillLevelLike | null | undefined;
+  const level = Number(skill?.level ?? 1);
+
+  if (!Number.isFinite(level)) {
+    return 'Nv. 1';
+  }
+
+  return `Nv. ${Math.max(1, Math.floor(level))}`;
+}
+
 function formatGatheringDurationFriendly(seconds?: number | null): string {
   if (seconds === null || seconds === undefined) return '—';
 
@@ -336,6 +351,7 @@ export function GatheringActivityPanel({
   status,
   session,
   productionPreview,
+  gatheringSkill,
   isBusy = false,
   onStop,
   onRefresh,
@@ -394,6 +410,7 @@ export function GatheringActivityPanel({
   });
 
   const nextUnitLabel = getNextUnitLabel(liveProduction.secondsToNextUnit);
+  const skillLevelLabel = getGatheringSkillLevelLabel(gatheringSkill);
 
   const canStop = Boolean(onStop) && isActive && !isBusy;
   const canRefresh = Boolean(onRefresh) && !isBusy;
@@ -464,9 +481,15 @@ export function GatheringActivityPanel({
               className="gathering-session__activity-spinner"
               aria-hidden="true"
             />
-            <h2 title={getActivityTitle(material)}>
-              {getActivityTitle(material)}
-            </h2>
+            <span className="gathering-session__activity-title-row">
+              <h2 title={getActivityTitle(material)}>
+                {getActivityTitle(material)}
+              </h2>
+
+              <em className="gathering-session__level-badge">
+                {skillLevelLabel}
+              </em>
+            </span>
           </span>
 
           <div
@@ -544,50 +567,6 @@ export function GatheringActivityPanel({
             </button>
           ) : null}
         </div>
-      </div>
-
-      <div
-        className="gathering-session__progress-strip"
-        role="progressbar"
-        aria-label="Progresso até a próxima unidade coletada"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(progressPercent)}
-        title={`${Math.round(progressPercent)}% até a próxima unidade`}
-      >
-        <span className="gathering-session__progress-track" aria-hidden="true">
-          <span
-            className="gathering-session__progress-fill"
-            style={{
-              width: `${progressPercent}%`,
-            }}
-          />
-        </span>
-      </div>
-
-      <div className="gathering-session__inline-stats gathering-session__inline-stats--auto">
-        <span
-          className="gathering-session__inline-badge gathering-session__inline-value--collected"
-          title="Quantidade coletada automaticamente nesta sessão"
-        >
-          {getCollectedQuantityLabel(collectedQuantity)}
-        </span>
-
-        <span className="gathering-session__inline-capsule">
-          <span
-            className="gathering-session__inline-value gathering-session__inline-value--time"
-            title="Tempo estimado para a próxima unidade"
-          >
-            {nextUnitLabel}
-          </span>
-
-          <span
-            className="gathering-session__inline-value gathering-session__inline-value--xp"
-            title="Experiência gerada por segundo"
-          >
-            {expPerSecondLabel}
-          </span>
-        </span>
       </div>
     </section>
   );

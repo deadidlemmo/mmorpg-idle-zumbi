@@ -13,8 +13,8 @@ import {
 import * as bcrypt from 'bcrypt';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { AUTO_COMBAT_HUNTING_LEVEL_CAP } from '../src/common/config/auto-combat.config';
 import { GATHERING_LEVEL_CAP } from '../src/common/config/gathering.config';
-import { STARTER_POTION_ITEM_NAME } from '../src/common/config/starter-kit.config';
 import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
@@ -22,6 +22,7 @@ import {
 } from '../src/common/utils/stats.util';
 import { classDefinitions } from '../prisma/seed-data/classes.seed-data';
 import { equipmentDefinitions } from '../prisma/seed-data/items.seed-data';
+import { getAutoCombatPotionForTier } from './auto-combat-potion-balancing';
 
 type FixtureOptions = {
   apply: boolean;
@@ -32,6 +33,7 @@ type FixtureOptions = {
   tier: number;
   potions: number;
   gatheringLevel: number;
+  huntingLevel: number;
 };
 
 type EquipmentSeedItem = (typeof equipmentDefinitions)[number];
@@ -45,7 +47,9 @@ type PreparedCharacter = {
   subMapName: string | null;
   equipmentPoints: number;
   maxHp: number;
+  potionName: string;
   gatheringLevel: number;
+  huntingLevel: number;
   route: string;
 };
 
@@ -137,6 +141,7 @@ function parseArgs(): FixtureOptions {
     tier: getTierForLevel(DEFAULT_LEVEL),
     potions: DEFAULT_POTION_QUANTITY,
     gatheringLevel: Math.min(DEFAULT_LEVEL, GATHERING_LEVEL_CAP),
+    huntingLevel: Math.min(DEFAULT_LEVEL, AUTO_COMBAT_HUNTING_LEVEL_CAP),
   };
 
   for (const arg of process.argv.slice(2)) {
@@ -168,6 +173,10 @@ function parseArgs(): FixtureOptions {
         );
         options.tier = getTierForLevel(options.level);
         options.gatheringLevel = Math.min(options.level, GATHERING_LEVEL_CAP);
+        options.huntingLevel = Math.min(
+          options.level,
+          AUTO_COMBAT_HUNTING_LEVEL_CAP,
+        );
         break;
       case '--tier':
         options.tier = Math.min(10, parsePositiveInteger(value, options.tier));
@@ -179,6 +188,12 @@ function parseArgs(): FixtureOptions {
         options.gatheringLevel = Math.min(
           GATHERING_LEVEL_CAP,
           parsePositiveInteger(value, options.gatheringLevel),
+        );
+        break;
+      case '--hunting-level':
+        options.huntingLevel = Math.min(
+          AUTO_COMBAT_HUNTING_LEVEL_CAP,
+          parsePositiveInteger(value, options.huntingLevel),
         );
         break;
       default:
@@ -403,6 +418,7 @@ async function prepareCharacter(params: {
   level: number;
   tier: number;
   gatheringLevel: number;
+  huntingLevel: number;
   potions: number;
   apply: boolean;
 }) {
@@ -485,15 +501,16 @@ async function prepareCharacter(params: {
     );
   }
 
+  const potionDefinition = getAutoCombatPotionForTier(params.tier);
   const potionItem = await prisma.item.findUnique({
     where: {
-      name: STARTER_POTION_ITEM_NAME,
+      name: potionDefinition.name,
     },
   });
 
   if (!potionItem) {
     throw new Error(
-      `Pocao inicial "${STARTER_POTION_ITEM_NAME}" nao encontrada. Rode o seed.`,
+      `Pocao de tier "${potionDefinition.name}" nao encontrada. Rode o seed.`,
     );
   }
 
@@ -597,6 +614,23 @@ async function prepareCharacter(params: {
       });
     }
 
+    await prisma.characterHuntingSkill.upsert({
+      where: {
+        characterId: character.id,
+      },
+      create: {
+        characterId: character.id,
+        level: params.huntingLevel,
+        xp: 0,
+        totalXp: 0,
+      },
+      update: {
+        level: params.huntingLevel,
+        xp: 0,
+        totalXp: 0,
+      },
+    });
+
     await prisma.inventoryItem.upsert({
       where: {
         characterId_itemId: {
@@ -657,7 +691,9 @@ async function prepareCharacter(params: {
       0,
     ),
     maxHp,
+    potionName: potionItem.name,
     gatheringLevel: params.gatheringLevel,
+    huntingLevel: params.huntingLevel,
     route: character?.id
       ? `/dashboard/${character.id}/auto-combat`
       : '(disponivel apos --apply)',
@@ -725,6 +761,7 @@ async function main() {
         level: options.level,
         tier: options.tier,
         gatheringLevel: options.gatheringLevel,
+        huntingLevel: options.huntingLevel,
         potions: options.potions,
         apply: options.apply,
       }),
@@ -741,6 +778,7 @@ async function main() {
   console.log(`Level: ${options.level}`);
   console.log(`Equipment tier: ${options.tier}`);
   console.log(`Recommended gathering level: ${options.gatheringLevel}`);
+  console.log(`Hunting level: ${options.huntingLevel}`);
   console.log(`Potion quantity per character: ${options.potions}`);
   console.log(
     'Premium: disabled for this fixture, so XP can be compared with the non-premium simulator.',
@@ -761,7 +799,9 @@ async function main() {
       submap: character.subMapName,
       equipment_points: character.equipmentPoints,
       hp: character.maxHp,
+      potion: character.potionName,
       gathering_level: character.gatheringLevel,
+      hunting_level: character.huntingLevel,
       route: character.route,
     })),
   );
