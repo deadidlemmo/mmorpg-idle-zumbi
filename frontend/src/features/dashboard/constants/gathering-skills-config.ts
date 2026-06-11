@@ -1,9 +1,4 @@
-import arsenalIcon from '../../../assets/images/gathering/skills/gathering-arsenal.png';
-import coletaIcon from '../../../assets/images/gathering/skills/gathering-coleta.png';
-import contencaoIcon from '../../../assets/images/gathering/skills/gathering-contencao.png';
-import desmancheIcon from '../../../assets/images/gathering/skills/gathering-desmanche.png';
-import patrulhaIcon from '../../../assets/images/gathering/skills/gathering-patrulha.png';
-import tecnovarreduraIcon from '../../../assets/images/gathering/skills/gathering-tecnovarredura.png';
+import { GATHERING_ORIGIN_ICON_BY_SKILL_KEY } from '../../gathering/constants/gathering-origin-icons';
 
 export type GatheringSkillKey =
   | 'desmanche'
@@ -35,7 +30,7 @@ export const GATHERING_SKILLS_CONFIG: GatheringSkillConfig[] = [
     key: 'desmanche',
     label: 'Desmanche',
     description: 'Sucata, chapas, peças e materiais reaproveitáveis.',
-    icon: desmancheIcon,
+    icon: GATHERING_ORIGIN_ICON_BY_SKILL_KEY.desmanche,
     defaultLevel: 1,
     defaultCurrentXp: 0,
     defaultXpToNextLevel: 100,
@@ -44,7 +39,7 @@ export const GATHERING_SKILLS_CONFIG: GatheringSkillConfig[] = [
     key: 'coleta',
     label: 'Coleta',
     description: 'Recursos básicos, tecidos, suprimentos e materiais gerais.',
-    icon: coletaIcon,
+    icon: GATHERING_ORIGIN_ICON_BY_SKILL_KEY.coleta,
     defaultLevel: 1,
     defaultCurrentXp: 0,
     defaultXpToNextLevel: 100,
@@ -53,7 +48,7 @@ export const GATHERING_SKILLS_CONFIG: GatheringSkillConfig[] = [
     key: 'patrulha',
     label: 'Patrulha',
     description: 'Exploração, mobilidade e rastreio de recursos.',
-    icon: patrulhaIcon,
+    icon: GATHERING_ORIGIN_ICON_BY_SKILL_KEY.patrulha,
     defaultLevel: 1,
     defaultCurrentXp: 0,
     defaultXpToNextLevel: 100,
@@ -62,7 +57,7 @@ export const GATHERING_SKILLS_CONFIG: GatheringSkillConfig[] = [
     key: 'arsenal',
     label: 'Arsenal',
     description: 'Peças ofensivas, munição e componentes de armas.',
-    icon: arsenalIcon,
+    icon: GATHERING_ORIGIN_ICON_BY_SKILL_KEY.arsenal,
     defaultLevel: 1,
     defaultCurrentXp: 0,
     defaultXpToNextLevel: 100,
@@ -71,7 +66,7 @@ export const GATHERING_SKILLS_CONFIG: GatheringSkillConfig[] = [
     key: 'tecnovarredura',
     label: 'Tecnovarredura',
     description: 'Circuitos, módulos, sensores e tecnologia.',
-    icon: tecnovarreduraIcon,
+    icon: GATHERING_ORIGIN_ICON_BY_SKILL_KEY.tecnovarredura,
     defaultLevel: 1,
     defaultCurrentXp: 0,
     defaultXpToNextLevel: 100,
@@ -80,7 +75,7 @@ export const GATHERING_SKILLS_CONFIG: GatheringSkillConfig[] = [
     key: 'contencao',
     label: 'Contenção',
     description: 'Filtros, químicos e materiais de controle contaminado.',
-    icon: contencaoIcon,
+    icon: GATHERING_ORIGIN_ICON_BY_SKILL_KEY.contencao,
     defaultLevel: 1,
     defaultCurrentXp: 0,
     defaultXpToNextLevel: 100,

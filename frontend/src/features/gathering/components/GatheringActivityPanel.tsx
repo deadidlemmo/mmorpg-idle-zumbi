@@ -1,3 +1,4 @@
+import { getGatheringOriginIcon } from '../constants/gathering-origin-icons';
 import { useGatheringRealtimeState } from '../realtime/useGatheringRealtime';
 import type {
   GatheringMaterialViewModel,
@@ -379,7 +380,8 @@ export function GatheringActivityPanel({
   const material =
     realtimeState.targetMaterial ?? getSessionMaterial(activeSession);
 
-  const iconUrl = getMaterialIconUrl(material);
+  const originIconUrl = getGatheringOriginIcon(activeSession?.origin);
+  const iconUrl = originIconUrl ?? getMaterialIconUrl(material);
 
   const fallbackLiveProduction = getStaticLiveProduction({
     isActive,

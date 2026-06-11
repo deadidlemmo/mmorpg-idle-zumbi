@@ -25,6 +25,7 @@ import {
 import { getMobPortraitImage } from '../../auto-combat/utils/mobAssets';
 import { useAutoCombatRealtime } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import { useCraftingRealtime } from '../../crafting/realtime/useCraftingRealtime';
+import { getGatheringOriginIcon } from '../../gathering/constants/gathering-origin-icons';
 import { useGatheringRealtime } from '../../gathering/realtime/useGatheringRealtime';
 import type { IncursionsRealtimeState } from '../../incursions/realtime/IncursionsRealtimeProvider';
 import { useIncursionsRealtime } from '../../incursions/realtime/useIncursionsRealtime';
@@ -1008,7 +1009,9 @@ function buildGatheringActivity(
 
   const material = gatheringState.targetMaterial;
   const materialName = material?.name ?? 'Expedição ativa';
-  const materialIconUrl = getMaterialIconUrl(material);
+  const activityIconUrl =
+    getGatheringOriginIcon(gatheringState.session.origin) ??
+    getMaterialIconUrl(material);
 
   const progressPercent = clampPercent(
     gatheringState.liveProduction?.progressPercent ?? 0,
@@ -1033,8 +1036,8 @@ function buildGatheringActivity(
     subtitle: `+${formatNumber(collectedQuantity)} · ${formatCompactDuration(
       secondsToNextUnit,
     )}`,
-    icon: materialIconUrl ? null : getMaterialInitials(materialName),
-    imageUrl: materialIconUrl,
+    icon: activityIconUrl ? null : getMaterialInitials(materialName),
+    imageUrl: activityIconUrl,
     progressPercent,
     badge: badgeValue !== null ? formatNumber(badgeValue) : null,
     titleText: 'Expedição ativa em tempo real',
