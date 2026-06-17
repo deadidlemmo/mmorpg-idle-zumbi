@@ -863,8 +863,11 @@ export class GatheringService {
             select: {
               id: true,
               name: true,
+              slug: true,
               tier: true,
               materialOrigin: true,
+              materialSlot: true,
+              isGatheringMaterial: true,
               requiredGatheringLevel: true,
               gatheringXpPerUnit: true,
               baseGatheringRatePerHour: true,
@@ -986,13 +989,6 @@ export class GatheringService {
         slot: ItemSlot.MATERIAL,
         materialOrigin: origin,
         isGatheringMaterial: true,
-        craftingIngredients: {
-          some: {
-            recipe: {
-              isActive: true,
-            },
-          },
-        },
       },
       orderBy: [
         {
@@ -1144,17 +1140,6 @@ export class GatheringService {
         requiredGatheringLevel: true,
         gatheringXpPerUnit: true,
         baseGatheringRatePerHour: true,
-        _count: {
-          select: {
-            craftingIngredients: {
-              where: {
-                recipe: {
-                  isActive: true,
-                },
-              },
-            },
-          },
-        },
       },
     });
 
@@ -1172,9 +1157,9 @@ export class GatheringService {
       );
     }
 
-    if (targetMaterial._count.craftingIngredients <= 0) {
+    if (!targetMaterial.isGatheringMaterial) {
       throw new BadRequestException(
-        'Este material ainda não está vinculado a nenhuma receita ativa.',
+        'Este material não está liberado para gathering.',
       );
     }
 
@@ -1446,8 +1431,11 @@ export class GatheringService {
             select: {
               id: true,
               name: true,
+              slug: true,
               tier: true,
               materialOrigin: true,
+              materialSlot: true,
+              isGatheringMaterial: true,
               requiredGatheringLevel: true,
               gatheringXpPerUnit: true,
               baseGatheringRatePerHour: true,

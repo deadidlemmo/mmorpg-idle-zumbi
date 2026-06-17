@@ -9,6 +9,7 @@ import type {
 import { getMobPortraitImage } from "../../auto-combat/utils/mobAssets";
 import type { GatheringRealtimeState } from "../../gathering/realtime/GatheringRealtimeProvider";
 import { useGatheringRealtimeState } from "../../gathering/realtime/useGatheringRealtime";
+import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
 import type { CraftingRealtimeState } from "../../crafting/realtime/CraftingRealtimeProvider";
 import { useCraftingRealtimeState } from "../../crafting/realtime/useCraftingRealtime";
 import type { IncursionsRealtimeState } from "../../incursions/realtime/IncursionsRealtimeProvider";
@@ -342,6 +343,8 @@ type AutoCombatRealtimeStateLoose = {
 type GatheringMaterialLike = {
   id?: string | null;
   name?: string | null;
+  slug?: string | null;
+  assetKey?: string | null;
   tier?: number | null;
   materialOrigin?: string | null;
   requiredGatheringLevel?: number | null;
@@ -458,6 +461,20 @@ function normalizeStatus(status?: string | null) {
 
 function isActiveStatus(status?: string | null) {
   return normalizeStatus(status) === "ACTIVE";
+}
+
+function isRunningAutoCombatPhase(phase?: string | null) {
+  const normalizedPhase = normalizeStatus(phase);
+
+  return (
+    normalizedPhase === "HUNTING" ||
+    normalizedPhase === "COMBAT_ACTIVE" ||
+    normalizedPhase === "HUNT_TARGET_FOUND"
+  );
+}
+
+function isEncounterReadyAutoCombatPhase(phase?: string | null) {
+  return normalizeStatus(phase) === "ENCOUNTER_READY";
 }
 
 function isTerminalStatus(status?: string | null) {
@@ -621,18 +638,7 @@ function getActivityMobPortraitUrl(mobName?: string | null) {
 }
 
 function getGatheringMaterialIconUrl(material?: GatheringMaterialLike | null) {
-  if (!material) return null;
-
-  const possibleIcon =
-    material.iconUrl ?? material.imageUrl ?? material.iconPath ?? material.icon;
-
-  if (typeof possibleIcon !== "string") {
-    return null;
-  }
-
-  const trimmedIcon = possibleIcon.trim();
-
-  return trimmedIcon.length > 0 ? trimmedIcon : null;
+  return getGatheringMaterialImageUrl(material);
 }
 
 function formatCharacterHpLabel(
@@ -1479,15 +1485,38 @@ function buildAutoCombatItemFromRealtime(params: {
 
   const sessionIsActive = isActiveStatus(session.status);
   const sessionIsTerminal = isTerminalStatus(session.status);
+  const sessionPhase =
+    session.phase ?? status?.phase ?? looseStatus?.hunting?.phase ?? null;
+  const sessionHasRunningPhase = isRunningAutoCombatPhase(sessionPhase);
+  const sessionIsEncounterReady =
+    isEncounterReadyAutoCombatPhase(sessionPhase);
+  const statusExplicitlyInactive =
+    realtimeState.hasActiveAutoCombat === false ||
+    looseStatus?.hasActiveAutoCombat === false;
+  const activeStatusCurrentMob = getStatusCurrentMob(status);
+  const sessionHasCombatTarget =
+    !sessionIsEncounterReady &&
+    Boolean(
+      session.currentMobId ??
+        session.currentMob?.id ??
+        activeStatusCurrentMob?.id ??
+        null,
+    );
 
   const hasActiveAutoCombat =
-    sessionIsActive ||
-    (!sessionIsTerminal &&
-      (Boolean(realtimeState.isActive) ||
-        Boolean(realtimeState.hasActiveAutoCombat) ||
-        Boolean(realtimeState.hasActiveSession) ||
-        Boolean(looseStatus?.active) ||
-        Boolean(looseStatus?.hasActiveAutoCombat)));
+    !sessionIsTerminal &&
+    (sessionHasRunningPhase ||
+      sessionHasCombatTarget ||
+      realtimeState.hasActiveAutoCombat === true ||
+      looseStatus?.hasActiveAutoCombat === true ||
+      (!statusExplicitlyInactive &&
+        !sessionIsEncounterReady &&
+        (Boolean(realtimeState.isActive) ||
+          Boolean(realtimeState.hasActiveAutoCombat) ||
+          Boolean(realtimeState.hasActiveSession) ||
+          Boolean(looseStatus?.active) ||
+          Boolean(looseStatus?.hasActiveAutoCombat) ||
+          sessionIsActive)));
 
   if (!hasActiveAutoCombat || sessionIsTerminal) {
     return null;
@@ -2270,11 +2299,22 @@ function buildActivityItems(params: {
     const activeAutoCombatIsTerminal = isTerminalStatus(
       activeAutoCombatSession?.status,
     );
+    const activeAutoCombatHasRunningPhase = isRunningAutoCombatPhase(
+      activeAutoCombatSession?.phase,
+    );
+    const activeAutoCombatHasCombatTarget = Boolean(
+      activeAutoCombatSession?.currentMobId ??
+        activeAutoCombatSession?.currentMob?.id ??
+        null,
+    );
 
     const hasActiveAutoCombat =
-      activeAutoCombatIsActive ||
-      (Boolean(overview.activity.hasActiveAutoCombat) &&
-        !activeAutoCombatIsTerminal);
+      !activeAutoCombatIsTerminal &&
+      (activeAutoCombatHasRunningPhase ||
+        activeAutoCombatHasCombatTarget ||
+        Boolean(overview.activity.hasActiveAutoCombat) ||
+        (activeAutoCombatIsActive &&
+          !isEncounterReadyAutoCombatPhase(activeAutoCombatSession?.phase)));
 
     if (
       hasActiveAutoCombat &&
@@ -2651,6 +2691,7 @@ export function DashboardActivityBar({
             : "dashboard-activity-bar__compact-track",
         ].join(" ");
         const isFirstItem = index === 0;
+        const isGatheringActivity = item.type === "gathering";
 
         return (
           <article
@@ -2700,6 +2741,9 @@ export function DashboardActivityBar({
                 className={[
                   "dashboard-activity-bar__icon",
                   item.imageUrl ? "dashboard-activity-bar__icon--portrait" : "",
+                  isGatheringActivity && item.imageUrl
+                    ? "dashboard-activity-bar__icon--gathering"
+                    : "",
                   isAutoCombatHunting && item.imageUrl
                     ? "dashboard-activity-bar__icon--hunting"
                     : "",
@@ -2720,7 +2764,10 @@ export function DashboardActivityBar({
                       display: "block",
                       width: "100%",
                       height: "100%",
-                      objectFit: isAutoCombatHunting ? "contain" : "cover",
+                      objectFit:
+                        isAutoCombatHunting || isGatheringActivity
+                          ? "contain"
+                          : "cover",
                       objectPosition: "center",
                       borderRadius: "inherit",
                       filter:

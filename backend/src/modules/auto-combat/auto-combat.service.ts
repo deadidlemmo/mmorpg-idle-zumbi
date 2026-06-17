@@ -23,7 +23,6 @@ import {
   AUTO_COMBAT_HUNTING_MAX_TRACKED_LINEAR_GAIN,
   AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_EXPONENT,
   AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_SCALE,
-  AUTO_COMBAT_HUNTING_XP_PER_ENEMY,
   AUTO_COMBAT_MAX_COMBATS_PER_PROCESS,
   AUTO_COMBAT_TTK_PROGRESS_UPDATES_PER_SECOND,
 } from '../../common/config/auto-combat.config';
@@ -55,6 +54,7 @@ import {
 } from '../../common/utils/stats.util';
 import { calculateAutoCombatTtk } from '../../common/utils/auto-combat-ttk.util';
 import {
+  getAutoCombatHuntingXpForEncounter,
   getAutoCombatHuntingSecondsPerEnemy,
   getAutoCombatHuntingXpToNextLevel,
 } from '../../common/utils/auto-combat-hunting.util';
@@ -3398,20 +3398,11 @@ export class AutoCombatService implements OnModuleDestroy {
       safeLastHuntProcessedAt,
       enemiesFoundNow * secondsPerEnemy,
     );
-    const huntingXpPerEnemyBreakdown = calculatePremiumXpBreakdown(
-      AUTO_COMBAT_HUNTING_XP_PER_ENEMY,
-      isPremiumActive(session.character?.user),
-    );
-    const huntingXpPerEnemy = huntingXpPerEnemyBreakdown.totalXp;
-    const huntingXpGained = enemiesFoundNow * huntingXpPerEnemy;
-    const huntingProgress = this.calculateHuntingSkillProgress(
-      huntingSkill,
-      huntingXpGained,
-    );
     let trackedEncounter =
       huntBatch?.selectedEncounter ?? session.selectedEncounter ?? null;
     const huntEncounters = this.getSessionHuntEncounters(session);
     const huntEvents: AutoCombatRealtimeEvent[] = [];
+    let huntingXpGained = 0;
     const huntFoundCountsByMob = new Map<string, number>();
     const huntFoundMetadataByMob = new Map<
       string,
@@ -3438,6 +3429,13 @@ export class AutoCombatService implements OnModuleDestroy {
         huntingLevel: huntingSkill.level,
         foundEnemiesCount: findIndex,
       });
+      const huntingXpBreakdown = calculatePremiumXpBreakdown(
+        getAutoCombatHuntingXpForEncounter(trackedEncounter),
+        isPremiumActive(session.character?.user),
+      );
+      const huntingXpForEncounter = huntingXpBreakdown.totalXp;
+
+      huntingXpGained += huntingXpForEncounter;
 
       const mobId = trackedEncounter.mobId;
       huntFoundCountsByMob.set(
@@ -3482,11 +3480,16 @@ export class AutoCombatService implements OnModuleDestroy {
         targetMobId: trackedEncounter.mobId,
         mobId: trackedEncounter.mobId,
         mobName: trackedEncounter.mob?.name,
-        huntingXpGained: huntingXpPerEnemy,
+        huntingXpGained: huntingXpForEncounter,
         foundEnemiesCount: findIndex,
         message: `${trackedEncounter.mob?.name ?? 'Ameaça'} rastreada na caça.`,
       });
     }
+
+    const huntingProgress = this.calculateHuntingSkillProgress(
+      huntingSkill,
+      huntingXpGained,
+    );
 
     const didReachSessionLimit =
       !didReachHuntLimit && now.getTime() >= session.endsAt.getTime();

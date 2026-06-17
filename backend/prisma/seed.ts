@@ -992,9 +992,8 @@ async function validateOfficialGatheringMaterials() {
   const invalidCombination = combinationGroups.find(
     (entry) =>
       !entry.materialOrigin ||
-      !entry.materialSlot ||
       !officialOrigins.includes(entry.materialOrigin) ||
-      !officialSlots.includes(entry.materialSlot),
+      (entry.materialSlot !== null && !officialSlots.includes(entry.materialSlot)),
   );
 
   if (invalidCombination) {
@@ -1004,13 +1003,19 @@ async function validateOfficialGatheringMaterials() {
   }
 
   const expectedCombinationCounts = new Map<string, number>();
+  const getMaterialCombinationKey = (params: {
+    tier: number;
+    origin: MaterialOrigin;
+    slot?: ItemSlot | null;
+  }) =>
+    [params.tier, params.origin, params.slot ?? 'GENERIC_MATERIAL'].join('::');
 
   for (const materialDefinition of officialGatheringMaterialDefinitions) {
-    const key = [
-      materialDefinition.tier,
-      materialDefinition.materialOrigin,
-      materialDefinition.materialSlot,
-    ].join('::');
+    const key = getMaterialCombinationKey({
+      tier: materialDefinition.tier,
+      origin: materialDefinition.materialOrigin,
+      slot: materialDefinition.materialSlot,
+    });
 
     expectedCombinationCounts.set(
       key,
@@ -1019,13 +1024,13 @@ async function validateOfficialGatheringMaterials() {
   }
 
   for (const [key, expectedCount] of expectedCombinationCounts) {
-    const [tier, origin, slot] = key.split('::');
+    const [tier, origin, slotKey] = key.split('::');
     const actualCount =
       combinationGroups.find(
         (entry) =>
           entry.tier === Number(tier) &&
           entry.materialOrigin === origin &&
-          entry.materialSlot === slot,
+          (entry.materialSlot ?? 'GENERIC_MATERIAL') === slotKey,
       )?._count._all ?? 0;
 
     if (actualCount !== expectedCount) {

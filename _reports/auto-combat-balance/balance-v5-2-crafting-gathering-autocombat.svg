@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="980" viewBox="0 0 1320 980">
+  <style>
+    .bg { fill: #07110d; }
+    .panel { fill: #101a14; stroke: #304632; stroke-width: 1.2; }
+    .plot { fill: #0a130f; stroke: #243329; stroke-width: 1; }
+    .grid { stroke: #243329; stroke-width: 1; opacity: 0.78; }
+    .free-line { stroke: #f59e0b; stroke-width: 1.5; stroke-dasharray: 5 6; opacity: 0.8; }
+    .premium-line { stroke: #9bed5b; stroke-width: 1.5; stroke-dasharray: 5 6; opacity: 0.8; }
+    .headline { fill: #f7f0d2; font: 700 28px Arial, sans-serif; }
+    .title { fill: #f7f0d2; font: 700 17px Arial, sans-serif; }
+    .subtitle { fill: #a9b29f; font: 12px Arial, sans-serif; }
+    .muted { fill: #a9b29f; font: 12px Arial, sans-serif; }
+    .axis { fill: #b9c4ad; font: 11px Arial, sans-serif; }
+    .small { fill: #f7f0d2; font: 10px Arial, sans-serif; }
+    .pill { fill: #122119; stroke: #2f4c34; stroke-width: 1; }
+    .pill-text { fill: #f7f0d2; font: 700 12px Arial, sans-serif; }
+  </style>
+  <rect class="bg" width="1320" height="980" />
+  <text x="48" y="58" class="headline">Balance V5.2 - Crafting, Gathering e AutoCombat</text>
+  <text x="48" y="82" class="subtitle">Custo medio para criar 1 equipamento por tier. Considera sessoes free 6h, premium 12h, niveis realistas de gathering/caca e drops reais ponderados pela aparicao dos mobs ativos.</text>
+  <g transform="translate(48 112)">
+    <rect class="panel" width="1224" height="810" rx="14" />
+    
+    <g>
+      <text x="60" y="56" class="title">Tempo medio por item craftado</text>
+      <text x="60" y="74" class="subtitle">Gathering + AutoCombat + duracao do craft, com niveis realistas por tier.</text>
+      <rect x="60" y="82" width="560" height="245" class="plot" />
+      
+        <line x1="60" x2="620" y1="327" y2="327" class="grid" />
+        <text x="50" y="331" class="axis" text-anchor="end">0h</text>
+      
+        <line x1="60" x2="620" y1="270.46153846153845" y2="270.46153846153845" class="grid" />
+        <text x="50" y="274.46153846153845" class="axis" text-anchor="end">3h</text>
+      
+        <line x1="60" x2="620" y1="213.9230769230769" y2="213.9230769230769" class="grid" />
+        <text x="50" y="217.9230769230769" class="axis" text-anchor="end">6h</text>
+      
+        <line x1="60" x2="620" y1="157.3846153846154" y2="157.3846153846154" class="grid" />
+        <text x="50" y="161.3846153846154" class="axis" text-anchor="end">9h</text>
+      
+        <line x1="60" x2="620" y1="100.84615384615384" y2="100.84615384615384" class="grid" />
+        <text x="50" y="104.84615384615384" class="axis" text-anchor="end">12h</text>
+      
+      <line x1="60" x2="620" y1="213.9230769230769" y2="213.9230769230769" class="free-line" />
+      <line x1="60" x2="620" y1="100.84615384615384" y2="100.84615384615384" class="premium-line" />
+      
+        <rect x="118" y="304.38461538461536" width="32" height="22.615384615384613" fill="#f2ce45" rx="4" />
+        <rect x="118" y="292.7" width="32" height="11.684615384615386" fill="#6ee7b7" rx="4" />
+        <rect x="118" y="292.32307692307694" width="32" height="2" fill="#8fb3ff" rx="4" />
+        <text x="134" y="349" class="axis" text-anchor="middle">T1</text>
+        <text x="134" y="284.32307692307694" class="small" text-anchor="middle">1.8h</text>
+      
+        <rect x="170" y="302.3115384615385" width="32" height="24.688461538461542" fill="#f2ce45" rx="4" />
+        <rect x="170" y="290.25" width="32" height="12.061538461538461" fill="#6ee7b7" rx="4" />
+        <rect x="170" y="289.68461538461537" width="32" height="2" fill="#8fb3ff" rx="4" />
+        <text x="186" y="349" class="axis" text-anchor="middle">T2</text>
+        <text x="186" y="281.68461538461537" class="small" text-anchor="middle">2.0h</text>
+      
+        <rect x="222" y="294.7730769230769" width="32" height="32.22692307692308" fill="#f2ce45" rx="4" />
+        <rect x="222" y="279.5076923076923" width="32" height="15.265384615384617" fill="#6ee7b7" rx="4" />
+        <rect x="222" y="278.9423076923077" width="32" height="2" fill="#8fb3ff" rx="4" />
+        <text x="238" y="349" class="axis" text-anchor="middle">T3</text>
+        <text x="238" y="270.9423076923077" class="small" text-anchor="middle">2.5h</text>
+      
+        <rect x="274" y="291.38076923076926" width="32" height="35.61923076923077" fill="#f2ce45" rx="4" />
+        <rect x="274" y="274.2307692307693" width="32" height="17.150000000000002" fill="#6ee7b7" rx="4" />
+        <rect x="274" y="273.2884615384616" width="32" height="2" fill="#8fb3ff" rx="4" />
+        <text x="290" y="349" class="axis" text-anchor="middle">T4</text>
+        <text x="290" y="265.2884615384616" class="small" text-anchor="middle">2.9h</text>
+      
+        <rect x="326" y="280.07307692307694" width="32" height="46.92692307692308" fill="#f2ce45" rx="4" />
+        <rect x="326" y="258.21153846153845" width="32" height="21.86153846153846" fill="#6ee7b7" rx="4" />
+        <rect x="326" y="256.70384615384614" width="32" height="2" fill="#8fb3ff" rx="4" />
+        <text x="342" y="349" class="axis" text-anchor="middle">T5</text>
+        <text x="342" y="248.70384615384614" class="small" text-anchor="middle">3.7h</text>
+      
+        <rect x="378" y="271.2153846153846" width="32" height="55.784615384615385" fill="#f2ce45" rx="4" />
+        <rect x="378" y="244.45384615384614" width="32" height="26.76153846153846" fill="#6ee7b7" rx="4" />
+        <rect x="378" y="242.19230769230768" width="32" height="2.2615384615384615" fill="#8fb3ff" rx="4" />
+        <text x="394" y="349" class="axis" text-anchor="middle">T6</text>
+        <text x="394" y="234.19230769230768" class="small" text-anchor="middle">4.5h</text>
+      
+        <rect x="430" y="255.19615384615383" width="32" height="71.80384615384615" fill="#f2ce45" rx="4" />
+        <rect x="430" y="220.7076923076923" width="32" height="34.48846153846154" fill="#6ee7b7" rx="4" />
+        <rect x="430" y="217.50384615384615" width="32" height="3.203846153846154" fill="#8fb3ff" rx="4" />
+        <text x="446" y="349" class="axis" text-anchor="middle">T7</text>
+        <text x="446" y="209.50384615384615" class="small" text-anchor="middle">5.8h</text>
+      
+        <rect x="482" y="237.8576923076923" width="32" height="89.1423076923077" fill="#f2ce45" rx="4" />
+        <rect x="482" y="196.39615384615382" width="32" height="41.46153846153847" fill="#6ee7b7" rx="4" />
+        <rect x="482" y="192.06153846153845" width="32" height="4.334615384615385" fill="#8fb3ff" rx="4" />
+        <text x="498" y="349" class="axis" text-anchor="middle">T8</text>
+        <text x="498" y="184.06153846153845" class="small" text-anchor="middle">7.2h</text>
+      
+        <rect x="534" y="208.64615384615385" width="32" height="118.35384615384615" fill="#f2ce45" rx="4" />
+        <rect x="534" y="152.86153846153846" width="32" height="55.784615384615385" fill="#6ee7b7" rx="4" />
+        <rect x="534" y="146.6423076923077" width="32" height="6.21923076923077" fill="#8fb3ff" rx="4" />
+        <text x="550" y="349" class="axis" text-anchor="middle">T9</text>
+        <text x="550" y="138.6423076923077" class="small" text-anchor="middle">9.6h</text>
+      
+        <rect x="586" y="171.89615384615385" width="32" height="155.10384615384615" fill="#f2ce45" rx="4" />
+        <rect x="586" y="110.26923076923077" width="32" height="61.62692307692308" fill="#6ee7b7" rx="4" />
+        <rect x="586" y="101.41153846153847" width="32" height="8.857692307692307" fill="#8fb3ff" rx="4" />
+        <text x="602" y="349" class="axis" text-anchor="middle">T10</text>
+        <text x="602" y="93.41153846153847" class="small" text-anchor="middle">12.0h</text>
+      
+      
+        <g transform="translate(70 375)">
+          <rect width="14" height="14" rx="3" fill="#f2ce45" />
+          <text x="20" y="11" class="muted">Gathering</text>
+        </g>
+        <g transform="translate(225 375)">
+          <rect width="14" height="14" rx="3" fill="#6ee7b7" />
+          <text x="20" y="11" class="muted">AutoCombat</text>
+        </g>
+        <g transform="translate(380 375)">
+          <rect width="14" height="14" rx="3" fill="#8fb3ff" />
+          <text x="20" y="11" class="muted">Craft</text>
+        </g>
+    </g>
+  
+    
+    <g>
+      <text x="650" y="56" class="title">Participacao do AutoCombat no custo</text>
+      <text x="650" y="74" class="subtitle">Percentual dos materiais vindo de drops, por tempo esperado.</text>
+      <rect x="650" y="82" width="560" height="220" class="plot" />
+      
+          <line x1="650" x2="1210" y1="302" y2="302" class="grid" />
+          <text x="640" y="306" class="axis" text-anchor="end">0</text>
+        
+          <line x1="650" x2="1210" y1="247" y2="247" class="grid" />
+          <text x="640" y="251" class="axis" text-anchor="end">12.5</text>
+        
+          <line x1="650" x2="1210" y1="192" y2="192" class="grid" />
+          <text x="640" y="196" class="axis" text-anchor="end">25</text>
+        
+          <line x1="650" x2="1210" y1="137" y2="137" class="grid" />
+          <text x="640" y="141" class="axis" text-anchor="end">37.5</text>
+        
+          <line x1="650" x2="1210" y1="82" y2="82" class="grid" />
+          <text x="640" y="86" class="axis" text-anchor="end">50</text>
+        
+      
+          <text x="650" y="324" class="axis" text-anchor="middle">T1</text>
+        
+          <text x="712.2222222222222" y="324" class="axis" text-anchor="middle">T2</text>
+        
+          <text x="774.4444444444445" y="324" class="axis" text-anchor="middle">T3</text>
+        
+          <text x="836.6666666666666" y="324" class="axis" text-anchor="middle">T4</text>
+        
+          <text x="898.8888888888889" y="324" class="axis" text-anchor="middle">T5</text>
+        
+          <text x="961.1111111111111" y="324" class="axis" text-anchor="middle">T6</text>
+        
+          <text x="1023.3333333333333" y="324" class="axis" text-anchor="middle">T7</text>
+        
+          <text x="1085.5555555555557" y="324" class="axis" text-anchor="middle">T8</text>
+        
+          <text x="1147.7777777777778" y="324" class="axis" text-anchor="middle">T9</text>
+        
+          <text x="1210" y="324" class="axis" text-anchor="middle">T10</text>
+        
+      
+        <path d="M650.00,158.43 L712.22,162.48 L774.44,162.17 L836.67,161.02 L898.89,165.86 L961.11,163.66 L1023.33,164.28 L1085.56,167.36 L1147.78,162.92 L1210.00,178.36" fill="none" stroke="#6ee7b7" stroke-width="3" stroke-linecap="round" />
+        <circle cx="650" cy="158.428" r="4" fill="#6ee7b7" /><circle cx="712.2222222222222" cy="162.476" r="4" fill="#6ee7b7" /><circle cx="774.4444444444445" cy="162.16799999999998" r="4" fill="#6ee7b7" /><circle cx="836.6666666666666" cy="161.024" r="4" fill="#6ee7b7" /><circle cx="898.8888888888889" cy="165.864" r="4" fill="#6ee7b7" /><circle cx="961.1111111111111" cy="163.664" r="4" fill="#6ee7b7" /><circle cx="1023.3333333333333" cy="164.28" r="4" fill="#6ee7b7" /><circle cx="1085.5555555555557" cy="167.36" r="4" fill="#6ee7b7" /><circle cx="1147.7777777777778" cy="162.916" r="4" fill="#6ee7b7" /><circle cx="1210" cy="178.35999999999999" r="4" fill="#6ee7b7" />
+      
+      
+        <g transform="translate(660 350)">
+          <rect width="14" height="14" rx="3" fill="#6ee7b7" />
+          <text x="20" y="11" class="muted">AutoCombat %</text>
+        </g>
+    </g>
+  
+    
+    <g>
+      <text x="60" y="454" class="title">Quantidade media exigida por receita</text>
+      <text x="60" y="472" class="subtitle">Gathering principal+secundario contra biomaterial+residuo.</text>
+      <rect x="60" y="480" width="560" height="220" class="plot" />
+      
+          <line x1="60" x2="620" y1="700" y2="700" class="grid" />
+          <text x="50" y="704" class="axis" text-anchor="end">0</text>
+        
+          <line x1="60" x2="620" y1="645" y2="645" class="grid" />
+          <text x="50" y="649" class="axis" text-anchor="end">112.5</text>
+        
+          <line x1="60" x2="620" y1="590" y2="590" class="grid" />
+          <text x="50" y="594" class="axis" text-anchor="end">225</text>
+        
+          <line x1="60" x2="620" y1="535" y2="535" class="grid" />
+          <text x="50" y="539" class="axis" text-anchor="end">337.5</text>
+        
+          <line x1="60" x2="620" y1="480" y2="480" class="grid" />
+          <text x="50" y="484" class="axis" text-anchor="end">450</text>
+        
+      
+          <text x="60" y="722" class="axis" text-anchor="middle">T1</text>
+        
+          <text x="122.22222222222223" y="722" class="axis" text-anchor="middle">T2</text>
+        
+          <text x="184.44444444444446" y="722" class="axis" text-anchor="middle">T3</text>
+        
+          <text x="246.66666666666666" y="722" class="axis" text-anchor="middle">T4</text>
+        
+          <text x="308.8888888888889" y="722" class="axis" text-anchor="middle">T5</text>
+        
+          <text x="371.1111111111111" y="722" class="axis" text-anchor="middle">T6</text>
+        
+          <text x="433.3333333333333" y="722" class="axis" text-anchor="middle">T7</text>
+        
+          <text x="495.55555555555554" y="722" class="axis" text-anchor="middle">T8</text>
+        
+          <text x="557.7777777777778" y="722" class="axis" text-anchor="middle">T9</text>
+        
+          <text x="620" y="722" class="axis" text-anchor="middle">T10</text>
+        
+      
+        <path d="M60.00,641.33 L122.22,641.33 L184.44,634.00 L246.67,634.00 L308.89,626.67 L371.11,626.67 L433.33,619.33 L495.56,619.33 L557.78,612.00 L620.00,612.00" fill="none" stroke="#f2ce45" stroke-width="3" stroke-linecap="round" />
+        <circle cx="60" cy="641.3333333333334" r="4" fill="#f2ce45" /><circle cx="122.22222222222223" cy="641.3333333333334" r="4" fill="#f2ce45" /><circle cx="184.44444444444446" cy="634" r="4" fill="#f2ce45" /><circle cx="246.66666666666666" cy="634" r="4" fill="#f2ce45" /><circle cx="308.8888888888889" cy="626.6666666666666" r="4" fill="#f2ce45" /><circle cx="371.1111111111111" cy="626.6666666666666" r="4" fill="#f2ce45" /><circle cx="433.3333333333333" cy="619.3333333333334" r="4" fill="#f2ce45" /><circle cx="495.55555555555554" cy="619.3333333333334" r="4" fill="#f2ce45" /><circle cx="557.7777777777778" cy="612" r="4" fill="#f2ce45" /><circle cx="620" cy="612" r="4" fill="#f2ce45" />
+      
+        <path d="M60.00,687.78 L122.22,685.33 L184.44,684.36 L246.67,681.42 L308.89,677.51 L371.11,670.67 L433.33,664.80 L495.56,656.98 L557.78,645.24 L620.00,640.84" fill="none" stroke="#6ee7b7" stroke-width="3" stroke-linecap="round" />
+        <circle cx="60" cy="687.7777777777778" r="4" fill="#6ee7b7" /><circle cx="122.22222222222223" cy="685.3333333333334" r="4" fill="#6ee7b7" /><circle cx="184.44444444444446" cy="684.3555555555556" r="4" fill="#6ee7b7" /><circle cx="246.66666666666666" cy="681.4222222222222" r="4" fill="#6ee7b7" /><circle cx="308.8888888888889" cy="677.5111111111111" r="4" fill="#6ee7b7" /><circle cx="371.1111111111111" cy="670.6666666666666" r="4" fill="#6ee7b7" /><circle cx="433.3333333333333" cy="664.8" r="4" fill="#6ee7b7" /><circle cx="495.55555555555554" cy="656.9777777777778" r="4" fill="#6ee7b7" /><circle cx="557.7777777777778" cy="645.2444444444444" r="4" fill="#6ee7b7" /><circle cx="620" cy="640.8444444444444" r="4" fill="#6ee7b7" />
+      
+      
+        <g transform="translate(70 748)">
+          <rect width="14" height="14" rx="3" fill="#f2ce45" />
+          <text x="20" y="11" class="muted">Itens de Gathering</text>
+        </g>
+        <g transform="translate(225 748)">
+          <rect width="14" height="14" rx="3" fill="#6ee7b7" />
+          <text x="20" y="11" class="muted">Drops AutoCombat</text>
+        </g>
+    </g>
+  
+    
+    <g>
+      <text x="650" y="454" class="title">Crafts completos por janela idle</text>
+      <text x="650" y="472" class="subtitle">Quantos equipamentos completos cabem em 6h e 12h teoricas.</text>
+      <rect x="650" y="480" width="560" height="220" class="plot" />
+      
+          <line x1="650" x2="1210" y1="700" y2="700" class="grid" />
+          <text x="640" y="704" class="axis" text-anchor="end">0</text>
+        
+          <line x1="650" x2="1210" y1="645" y2="645" class="grid" />
+          <text x="640" y="649" class="axis" text-anchor="end">1.8</text>
+        
+          <line x1="650" x2="1210" y1="590" y2="590" class="grid" />
+          <text x="640" y="594" class="axis" text-anchor="end">3.5</text>
+        
+          <line x1="650" x2="1210" y1="535" y2="535" class="grid" />
+          <text x="640" y="539" class="axis" text-anchor="end">5.3</text>
+        
+          <line x1="650" x2="1210" y1="480" y2="480" class="grid" />
+          <text x="640" y="484" class="axis" text-anchor="end">7</text>
+        
+      
+          <text x="650" y="722" class="axis" text-anchor="middle">T1</text>
+        
+          <text x="712.2222222222222" y="722" class="axis" text-anchor="middle">T2</text>
+        
+          <text x="774.4444444444445" y="722" class="axis" text-anchor="middle">T3</text>
+        
+          <text x="836.6666666666666" y="722" class="axis" text-anchor="middle">T4</text>
+        
+          <text x="898.8888888888889" y="722" class="axis" text-anchor="middle">T5</text>
+        
+          <text x="961.1111111111111" y="722" class="axis" text-anchor="middle">T6</text>
+        
+          <text x="1023.3333333333333" y="722" class="axis" text-anchor="middle">T7</text>
+        
+          <text x="1085.5555555555557" y="722" class="axis" text-anchor="middle">T8</text>
+        
+          <text x="1147.7777777777778" y="722" class="axis" text-anchor="middle">T9</text>
+        
+          <text x="1210" y="722" class="axis" text-anchor="middle">T10</text>
+        
+      
+        <path d="M650.00,595.03 L712.22,602.89 L774.44,625.51 L836.67,633.37 L898.89,648.77 L961.11,657.57 L1023.33,667.00 L1085.56,673.29 L1147.78,680.20 L1210.00,684.29" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" />
+        <circle cx="650" cy="595.0285714285715" r="4" fill="#f59e0b" /><circle cx="712.2222222222222" cy="602.8857142857144" r="4" fill="#f59e0b" /><circle cx="774.4444444444445" cy="625.5142857142857" r="4" fill="#f59e0b" /><circle cx="836.6666666666666" cy="633.3714285714286" r="4" fill="#f59e0b" /><circle cx="898.8888888888889" cy="648.7714285714286" r="4" fill="#f59e0b" /><circle cx="961.1111111111111" cy="657.5714285714286" r="4" fill="#f59e0b" /><circle cx="1023.3333333333333" cy="667" r="4" fill="#f59e0b" /><circle cx="1085.5555555555557" cy="673.2857142857143" r="4" fill="#f59e0b" /><circle cx="1147.7777777777778" cy="680.2" r="4" fill="#f59e0b" /><circle cx="1210" cy="684.2857142857143" r="4" fill="#f59e0b" />
+      
+        <path d="M650.00,490.37 L712.22,505.77 L774.44,551.34 L836.67,566.74 L898.89,597.86 L961.11,614.83 L1023.33,634.00 L1085.56,646.57 L1147.78,660.40 L1210.00,668.26" fill="none" stroke="#9bed5b" stroke-width="3" stroke-linecap="round" />
+        <circle cx="650" cy="490.37142857142857" r="4" fill="#9bed5b" /><circle cx="712.2222222222222" cy="505.7714285714286" r="4" fill="#9bed5b" /><circle cx="774.4444444444445" cy="551.3428571428572" r="4" fill="#9bed5b" /><circle cx="836.6666666666666" cy="566.7428571428571" r="4" fill="#9bed5b" /><circle cx="898.8888888888889" cy="597.8571428571429" r="4" fill="#9bed5b" /><circle cx="961.1111111111111" cy="614.8285714285714" r="4" fill="#9bed5b" /><circle cx="1023.3333333333333" cy="634" r="4" fill="#9bed5b" /><circle cx="1085.5555555555557" cy="646.5714285714286" r="4" fill="#9bed5b" /><circle cx="1147.7777777777778" cy="660.4" r="4" fill="#9bed5b" /><circle cx="1210" cy="668.2571428571429" r="4" fill="#9bed5b" />
+      
+      
+        <g transform="translate(660 748)">
+          <rect width="14" height="14" rx="3" fill="#f59e0b" />
+          <text x="20" y="11" class="muted">Free 6h</text>
+        </g>
+        <g transform="translate(815 748)">
+          <rect width="14" height="14" rx="3" fill="#9bed5b" />
+          <text x="20" y="11" class="muted">Premium 12h</text>
+        </g>
+    </g>
+  
+  </g>
+</svg>

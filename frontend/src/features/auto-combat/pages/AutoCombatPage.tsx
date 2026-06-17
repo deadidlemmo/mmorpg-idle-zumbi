@@ -10,6 +10,7 @@ import { flushSync } from "react-dom";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { RefreshCw, X } from "lucide-react";
 import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.png";
+import { ActivityProgressCard } from "../../../components/game/ActivityProgressCard";
 import {
   getCharacterOverview,
   updateCharacterCurrentMap,
@@ -29,6 +30,7 @@ import {
 import "../auto-combat-mob-images.css";
 import "../auto-combat.css";
 import { AutoCombatBattleLog } from "../components/AutoCombatBattleLog";
+import { AutoCombatPremiumBenefitsCard } from "../components/AutoCombatPremiumBenefitsCard";
 import { AutoCombatPremiumRewardBreakdown } from "../components/AutoCombatPremiumRewardBreakdown";
 import { AutoCombatSessionSummary } from "../components/AutoCombatSessionSummary";
 import { AutoCombatStatsTab } from "../components/AutoCombatStatsTab";
@@ -3058,13 +3060,27 @@ export function AutoCombatPage() {
     ),
   );
 
-  const isPremiumActive = Boolean(
-    visibleSessionTotals?.isPremiumActive ??
-    effectiveStatus?.sessionSummary?.progression?.isPremiumActive ??
-    effectiveSession?.isPremiumActive ??
-    visualRealtimeCombat?.isPremiumActive ??
-    false,
+  const characterPremiumUntilMs = Date.parse(
+    String(character.premiumUntil ?? character.membership?.premiumUntil ?? ""),
   );
+  const characterPremiumUntilActive =
+    Number.isFinite(characterPremiumUntilMs) &&
+    characterPremiumUntilMs > Date.now();
+  const characterPremiumActive = Boolean(
+    character.isPremiumActive ||
+      character.membership?.isPremiumActive ||
+      characterPremiumUntilActive,
+  );
+
+  const rewardPremiumActive = Boolean(
+    visibleSessionTotals?.isPremiumActive ??
+      effectiveStatus?.sessionSummary?.progression?.isPremiumActive ??
+      effectiveSession?.isPremiumActive ??
+      visualRealtimeCombat?.isPremiumActive ??
+      false,
+  );
+
+  const isPremiumActive = rewardPremiumActive || characterPremiumActive;
 
   const normalizedSessionXp = normalizeSessionXpBreakdown({
     totalXpGained,
@@ -3836,12 +3852,20 @@ export function AutoCombatPage() {
   ]
     .filter(Boolean)
     .join(" ");
-  const huntingSkillProgressStyle = {
-    "--hunt-skill-progress": `${huntingXpProgressPercent}%`,
-  } as CSSProperties;
+  const shouldShowHuntSkillControls = hasActiveSession && isBackendHuntingPhase;
+  const isHuntSkillTracking =
+    hasActiveSession && isBackendHuntingPhase && !showInlineHuntBattle;
+  const isHuntSkillReady =
+    hasActiveSession && isBackendEncounterReadyPhase && !isHuntSkillTracking;
   const huntingSkillCardClassName = [
-    "auto-combat-hunt-skill-card",
-    hasActiveSession ? "auto-combat-hunt-skill-card--with-controls" : "",
+    isHuntSkillTracking ? "auto-combat-hunt-skill-card--tracking" : "",
+    isHuntSkillReady ? "auto-combat-hunt-skill-card--ready" : "",
+    !isHuntSkillTracking && !isHuntSkillReady
+      ? "auto-combat-hunt-skill-card--idle"
+      : "",
+    shouldShowHuntSkillControls
+      ? "auto-combat-hunt-skill-card--with-controls"
+      : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -4610,8 +4634,33 @@ export function AutoCombatPage() {
       .join(" ");
 
     return (
-      <div className={cardClassName} style={huntingSkillProgressStyle}>
-        {hasActiveSession ? (
+      <ActivityProgressCard
+        className={cardClassName}
+        iconAriaLabel={'Ca\u00e7a'}
+        icon={<img src={huntingActivityIcon} alt="" />}
+        label={'Ca\u00e7a'}
+        badge={`Nv. ${huntingLevel}`}
+        progressPercent={huntingXpProgressPercent}
+        progressLabel={`Progresso de ca\u00e7a: ${huntingSkillXpLabel}, ${huntingXpProgressPercent}%`}
+        progressTitle={`${huntingSkillXpLabel} (${huntingXpProgressPercent}%)`}
+        pills={[
+          {
+            content: `+${huntingFoundLabel}`,
+            key: "capacity",
+            title: `${huntingCapacityLabel} rastreados`,
+          },
+          {
+            content: huntingActivityNextLabel,
+            key: "next",
+            title: huntingSpeedLabel,
+          },
+          {
+            content: `${huntingXpPerSecondLabel} EXP/s`,
+            key: "xp",
+          },
+        ]}
+        controls={
+          shouldShowHuntSkillControls ? (
           <div
             className="auto-combat-hunt-skill-card__controls"
             aria-label="Controles da caça"
@@ -4632,7 +4681,7 @@ export function AutoCombatPage() {
             <button
               type="button"
               className="auto-combat-hunt-skill-card__control-button auto-combat-hunt-skill-card__control-button--danger"
-              disabled={isActionLoading || !hasActiveSession}
+              disabled={isActionLoading || !shouldShowHuntSkillControls}
               aria-label="Parar caçada"
               title="Parar caçada"
               onClick={handleStopHuntActivityPanel}
@@ -4640,39 +4689,10 @@ export function AutoCombatPage() {
               <X size={16} strokeWidth={2.8} />
             </button>
           </div>
-        ) : null}
+          ) : null
+        }
+      />
 
-        <div className="auto-combat-hunt-skill-card__top">
-          <div className="auto-combat-hunt-skill-card__icon" aria-label="Caça">
-            <img src={huntingActivityIcon} alt="" />
-          </div>
-
-          <div className="auto-combat-hunt-skill-card__body">
-            <div className="auto-combat-hunt-skill-card__heading">
-              <span>
-                <strong>Caça</strong>
-                <em>Nv. {huntingLevel}</em>
-              </span>
-            </div>
-
-            <div
-              className="auto-combat-hunt-skill-card__track"
-              aria-label={`Progresso de caça: ${huntingSkillXpLabel}, ${huntingXpProgressPercent}%`}
-              title={`${huntingSkillXpLabel} (${huntingXpProgressPercent}%)`}
-            >
-              <i />
-            </div>
-
-            <div className="auto-combat-hunt-skill-card__pills">
-              <span title={`${huntingCapacityLabel} rastreados`}>
-                +{huntingFoundLabel}
-              </span>
-              <span title={huntingSpeedLabel}>{huntingActivityNextLabel}</span>
-              <span>{huntingXpPerSecondLabel} EXP/s</span>
-            </div>
-          </div>
-        </div>
-      </div>
     );
   }
 
@@ -4680,6 +4700,9 @@ export function AutoCombatPage() {
     <DashboardLayout
       character={layoutCharacter}
       topBarActivityOverride={autoCombatTopBarActivityOverride}
+      suppressAutoCombatTopBarFallback={
+        autoCombatTopBarActivityOverride === null
+      }
     >
       <div
         className={[
@@ -5033,12 +5056,28 @@ export function AutoCombatPage() {
                         "auto-combat-hunt-skill-card--side-panel",
                       )}
                     </section>
+
+                    <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--premium">
+                      <div className="auto-combat-hunt-side__section-title">
+                        <span>Premium</span>
+                      </div>
+
+                      <AutoCombatPremiumBenefitsCard
+                        isPremiumActive={normalizedSessionXp.isPremiumActive}
+                        membershipHref={membershipHref}
+                        premiumBonusXp={normalizedSessionXp.premiumBonusXp}
+                        premiumPotentialBonusXp={
+                          normalizedSessionXp.premiumPotentialBonusXp
+                        }
+                        totalXpGained={normalizedSessionXp.totalXpGained}
+                      />
+                    </section>
                   </aside>
 
                   {showInlineHuntBattle ? (
                     <section
                       className="auto-combat-inline-battle"
-                      aria-label="Batalha da caÃ§a em andamento"
+                      aria-label="Batalha da caça em andamento"
                     >
                       <div className="auto-combat-inline-battle__header">
                         <span>Alvo atual</span>
@@ -5244,7 +5283,7 @@ export function AutoCombatPage() {
                           disabled={isActionLoading || !hasActiveSession}
                           onClick={handleStopAutoCombat}
                         >
-                          {isActionLoading ? "Processando..." : "Parar sessÃ£o"}
+                          {isActionLoading ? "Processando..." : "Parar sessão"}
                         </button>
                       </div>
 
@@ -6000,6 +6039,22 @@ export function AutoCombatPage() {
                 {renderHuntSkillActivityCard(
                   "auto-combat-hunt-skill-card--mobile-status",
                 )}
+              </section>
+
+              <section className="auto-combat-mobile-status-hunt-card auto-combat-hunt-side-section auto-combat-hunt-side-section--premium">
+                <div className="auto-combat-hunt-side__section-title">
+                  <span>Premium</span>
+                </div>
+
+                <AutoCombatPremiumBenefitsCard
+                  isPremiumActive={normalizedSessionXp.isPremiumActive}
+                  membershipHref={membershipHref}
+                  premiumBonusXp={normalizedSessionXp.premiumBonusXp}
+                  premiumPotentialBonusXp={
+                    normalizedSessionXp.premiumPotentialBonusXp
+                  }
+                  totalXpGained={normalizedSessionXp.totalXpGained}
+                />
               </section>
 
               <AutoCombatStatsTab totalStats={totalStats} />

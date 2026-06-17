@@ -178,6 +178,7 @@ export interface GatheringMaterialViewModel {
 
   materialOrigin?: GatheringMaterialOrigin | string | null;
   mapId?: string | null;
+  slug?: string | null;
 
   requiredGatheringLevel?: number | null;
   gatheringXpPerUnit?: number | null;
@@ -189,6 +190,7 @@ export interface GatheringMaterialViewModel {
   iconUrl?: string | null;
   iconPath?: string | null;
   imageUrl?: string | null;
+  assetKey?: string | null;
 
   isUnlockedByDefault?: boolean | null;
 

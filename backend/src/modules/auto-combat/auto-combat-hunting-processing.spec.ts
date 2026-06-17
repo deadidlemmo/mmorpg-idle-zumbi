@@ -4,21 +4,29 @@ import {
   AutoCombatSessionStatus,
 } from '@prisma/client';
 
+import { getAutoCombatHuntingXpForEncounter } from '../../common/utils/auto-combat-hunting.util';
 import { AutoCombatService } from './auto-combat.service';
 
 const HUNTING_XP_PER_ENEMY = 5;
 const HUNTING_MAX_EVENTS_PER_PROCESS = 500;
 const LEVEL_1_HUNTING_SECONDS_PER_ENEMY = 15;
 
-function createEncounter(id: string, mobId: string, level = 1) {
+function createEncounter(
+  id: string,
+  mobId: string,
+  level = 1,
+  tier = 1,
+  weight = 100,
+) {
   return {
     id,
     mobId,
     isActive: true,
-    weight: 100,
+    weight,
     mob: {
       id: mobId,
       name: `Mob ${mobId}`,
+      tier,
       level,
       hp: 10,
       attack: 1,
@@ -217,6 +225,44 @@ describe('AutoCombatService hunting processing', () => {
 
     expect(createManyPayload.data[0].payloadJson.huntingXpGained).toBe(
       expectedPremiumHuntingXpPerEnemy,
+    );
+  });
+
+  it('escala XP da skill de caca pelo tier do mob rastreado', async () => {
+    const { service, tx } = createServiceHarness();
+    const tierTenEncounter = createEncounter(
+      'encounter-t10',
+      'mob-t10',
+      91,
+      10,
+    );
+    const session = createSession({
+      subMap: {
+        encounters: [tierTenEncounter],
+      },
+    });
+    const expectedFoundEnemies = 600;
+    const expectedHuntingXpPerEnemy =
+      getAutoCombatHuntingXpForEncounter(tierTenEncounter);
+
+    await (service as any).processHuntingSession(session);
+
+    expect(expectedHuntingXpPerEnemy).toBeGreaterThan(HUNTING_XP_PER_ENEMY);
+    expect(tx.autoCombatSession.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          huntingXpGained: {
+            increment: expectedFoundEnemies * expectedHuntingXpPerEnemy,
+          },
+        }),
+      }),
+    );
+
+    const createManyPayload =
+      tx.autoCombatSessionEvent.createMany.mock.calls[0][0];
+
+    expect(createManyPayload.data[0].payloadJson.huntingXpGained).toBe(
+      expectedHuntingXpPerEnemy,
     );
   });
 

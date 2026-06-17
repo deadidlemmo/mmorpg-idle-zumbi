@@ -588,6 +588,12 @@ export interface DashboardCharacterViewModel {
   cash?: number | null;
   wallet?: { gold?: number | null; cash?: number | null } | null;
   currencies?: { gold?: number | null; cash?: number | null } | null;
+  isPremiumActive?: boolean | null;
+  premiumUntil?: string | null;
+  membership?: {
+    isPremiumActive?: boolean | null;
+    premiumUntil?: string | null;
+  } | null;
 
   classId?: string;
   className?: string;

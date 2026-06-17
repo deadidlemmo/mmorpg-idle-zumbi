@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
+import { ActivityProgressCard } from '../../../components/game/ActivityProgressCard';
 import npcArsenalNogueira from '../../../assets/images/npcs/npc_arsenal_nogueira.png';
 import npcColetaDonaCelia from '../../../assets/images/npcs/npc_coleta_dona_celia.png';
 import npcContencaoDrAlvaro from '../../../assets/images/npcs/npc_contencao_dr_alvaro.png';
@@ -200,7 +201,7 @@ function normalizeGatheringOriginKey(
     TECNO_VARREDURA: 'TECNOVARREDURA',
     CONTENCAO: 'CONTENCAO',
     CONTENCAO_: 'CONTENCAO',
-    CONTENÇÃO: 'CONTENCAO',
+    ['CONTEN\u00c7AO']: 'CONTENCAO',
   };
 
   return aliases[normalized] ?? null;
@@ -553,7 +554,7 @@ function getSkillXpNeededLabel(skill?: GatheringSkillViewModel | null): string {
   }
 
   if (skill.isAtLevelCap || skill.xpToNextLevel === null) {
-    return 'Nível máximo';
+    return 'XP completo';
   }
 
   const currentXp = Math.max(0, Math.floor(Number(skill.xp ?? 0)));
@@ -823,6 +824,7 @@ export function GatheringOriginPage() {
 
   const activeMaterialId = getActiveMaterialId(status);
   const activeOrigin = getActiveOrigin(status);
+  const hasActiveGatheringSession = status?.active === true;
   const isCurrentOriginActive = activeOrigin === originKey;
 
   const gatheringSkill = useMemo(() => {
@@ -1345,23 +1347,25 @@ export function GatheringOriginPage() {
             </main>
 
             <aside className="gathering-origin-side gathering-origin-side--stacked">
-              <section className="gathering-origin-side-section gathering-origin-side-section--current">
-                <div className="gathering-origin-section-divider">
-                  <span>Atividade atual</span>
-                </div>
+              {hasActiveGatheringSession ? (
+                <section className="gathering-origin-side-section gathering-origin-side-section--current">
+                  <div className="gathering-origin-section-divider">
+                    <span>Atividade atual</span>
+                  </div>
 
-                <div
-                  className={[
-                    'gathering-card',
-                    'gathering-card--active',
-                    'gathering-origin-current-card',
-                    originActivityClassName,
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
                   <GatheringActivityPanel
+                    cardClassName={[
+                      'gathering-card',
+                      'gathering-card--active',
+                      'gathering-origin-current-card',
+                      'auto-combat-hunt-skill-card--with-controls',
+                      originActivityClassName,
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
                     status={status}
+                    origin={originKey}
+                    activityLabel={originLabel}
                     productionPreview={gatheringRealtimeState.productionPreview}
                     gatheringSkill={gatheringSkill}
                     isBusy={isBusy}
@@ -1369,15 +1373,15 @@ export function GatheringOriginPage() {
                     onStop={handleStop}
                     onRefresh={handleRefreshActivity}
                   />
-                </div>
-              </section>
+                </section>
+              ) : null}
 
               <section className="gathering-origin-side-section gathering-origin-side-section--progress">
                 <div className="gathering-origin-section-divider">
                   <span>Sua proficiência</span>
                 </div>
 
-                <div
+                <ActivityProgressCard
                   className={[
                     'gathering-card',
                     'gathering-origin-skill-card',
@@ -1385,52 +1389,32 @@ export function GatheringOriginPage() {
                   ]
                     .filter(Boolean)
                     .join(' ')}
-                >
-                  <div className="gathering-origin-skill-card__top">
-                    <span
-                      className="gathering-origin-skill-card__icon"
-                      aria-hidden="true"
-                    >
-                      {originIcon ? (
-                        <img src={originIcon} alt="" draggable={false} />
-                      ) : (
-                        getOriginIconFallback(originKey)
-                      )}
-                    </span>
-
-                    <span className="gathering-origin-skill-card__heading">
-                      <span>
-                        <strong>{originLabel}</strong>
-                        <em className="gathering-origin-skill-card__level-badge">
-                          {getSkillLevelLabel(gatheringSkill)}
-                        </em>
-                      </span>
-                      <small>
-                        {isCurrentOriginActive ? 'Ativa agora' : 'Proficiência'}
-                      </small>
-                    </span>
-                  </div>
-
-                  <div
-                    className="gathering-origin-skill-card__track"
-                    role="progressbar"
-                    aria-label="Progresso da proficiência"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={skillProgressPercent}
-                  >
-                    <i
-                      aria-hidden="true"
-                      style={{ width: `${skillProgressPercent}%` }}
-                    />
-                  </div>
-
-                  <div className="gathering-origin-skill-card__pills">
-                    <span>{getSkillXpNeededLabel(gatheringSkill)}</span>
-                    <span>{skillProgressPercent}%</span>
-                    <span>{originStatLabel}</span>
-                  </div>
-                </div>
+                  icon={
+                    originIcon ? (
+                      <img src={originIcon} alt="" draggable={false} />
+                    ) : (
+                      getOriginIconFallback(originKey)
+                    )
+                  }
+                  label={originLabel}
+                  badge={getSkillLevelLabel(gatheringSkill)}
+                  progressPercent={skillProgressPercent}
+                  progressLabel={'Progresso da profici\u00eancia'}
+                  pills={[
+                    {
+                      content: getSkillXpNeededLabel(gatheringSkill),
+                      key: 'xp-needed',
+                    },
+                    {
+                      content: `${skillProgressPercent}%`,
+                      key: 'progress',
+                    },
+                    {
+                      content: originStatLabel,
+                      key: 'stat',
+                    },
+                  ]}
+                />
               </section>
             </aside>
           </section>

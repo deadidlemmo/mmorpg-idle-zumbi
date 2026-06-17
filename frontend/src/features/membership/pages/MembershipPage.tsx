@@ -10,12 +10,13 @@ import {
   TicketPercent,
 } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import heroImage from '../../../assets/images/classes/class-lutador.png';
+import { PremiumPlaceholderIcon } from '../../../components/PremiumPlaceholderIcon';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
 import '../../dashboard/dashboard.css';
 import type { DashboardCharacterViewModel } from '../../dashboard/types/dashboard.types';
 import { buildGatheringDashboardCharacter } from '../../gathering/utils/gathering-dashboard-character';
+import { MEMBERSHIP_BENEFIT_LABELS } from '../constants/membership-benefits';
 import '../styles/membership.css';
 
 type MembershipHighlight = {
@@ -37,7 +38,7 @@ const membershipHighlights: MembershipHighlight[] = [
   {
     icon: Clock3,
     title: 'Mais tempo idle',
-    description: 'Atividades automáticas podem acumular até 12 horas em vez de 6 horas.',
+    description: `Atividades automáticas podem acumular até ${MEMBERSHIP_BENEFIT_LABELS.premiumIdleLimit} em vez de ${MEMBERSHIP_BENEFIT_LABELS.freeIdleLimit}.`,
   },
   {
     icon: BellRing,
@@ -51,7 +52,7 @@ const membershipHighlights: MembershipHighlight[] = [
   },
   {
     icon: BadgeCheck,
-    title: '20% mais EXP',
+    title: `${MEMBERSHIP_BENEFIT_LABELS.xpBonus} mais EXP`,
     description: 'Bônus de EXP em gathering, batalha e caça, sem alterar a fonte real do estado.',
   },
 ];
@@ -62,13 +63,13 @@ const comparisonSections: MembershipComparisonSection[] = [
     rows: [
       {
         label: 'Atividades em segundo plano',
-        free: '6 horas',
-        premium: '12 horas',
+        free: MEMBERSHIP_BENEFIT_LABELS.freeIdleLimit,
+        premium: MEMBERSHIP_BENEFIT_LABELS.premiumIdleLimit,
       },
       {
         label: 'Personagem alternativo',
-        free: '6 horas',
-        premium: '12 horas',
+        free: MEMBERSHIP_BENEFIT_LABELS.freeIdleLimit,
+        premium: MEMBERSHIP_BENEFIT_LABELS.premiumIdleLimit,
       },
     ],
   },
@@ -98,7 +99,7 @@ const comparisonSections: MembershipComparisonSection[] = [
       {
         label: 'EXP de gathering, batalha e caça',
         free: '-',
-        premium: '+20%',
+        premium: MEMBERSHIP_BENEFIT_LABELS.xpBonus,
       },
       {
         label: 'Recompensas diárias',
@@ -165,7 +166,7 @@ export function MembershipPage() {
   const includedItems = useMemo(
     () => [
       'Maior limite de atividades idle',
-      '+20% EXP em gathering, batalha e caça',
+      `${MEMBERSHIP_BENEFIT_LABELS.xpBonus} EXP em gathering, batalha e caça`,
       'Notificações avançadas',
       'Bônus leves de conveniência',
       'Mais espaço para respirar na rotina',
@@ -227,7 +228,11 @@ export function MembershipPage() {
           </div>
 
           <div className="membership-hero__visual" aria-hidden="true">
-            <img src={heroImage} alt="" />
+            <div className="membership-premium-emblem">
+              <span className="membership-premium-emblem__ring membership-premium-emblem__ring--outer" />
+              <span className="membership-premium-emblem__ring membership-premium-emblem__ring--inner" />
+              <PremiumPlaceholderIcon className="membership-hero__premium-icon" />
+            </div>
           </div>
         </article>
 

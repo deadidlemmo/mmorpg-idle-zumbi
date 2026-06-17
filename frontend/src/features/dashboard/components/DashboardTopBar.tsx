@@ -27,9 +27,9 @@ import { useAutoCombatRealtime } from '../../auto-combat/realtime/useAutoCombatR
 import { useCraftingRealtime } from '../../crafting/realtime/useCraftingRealtime';
 import { getGatheringOriginIcon } from '../../gathering/constants/gathering-origin-icons';
 import { useGatheringRealtime } from '../../gathering/realtime/useGatheringRealtime';
+import { getGatheringMaterialImageUrl } from '../../gathering/utils/gatheringMaterialAssets';
 import type { IncursionsRealtimeState } from '../../incursions/realtime/IncursionsRealtimeProvider';
 import { useIncursionsRealtime } from '../../incursions/realtime/useIncursionsRealtime';
-import type { GatheringMaterialViewModel } from '../../gathering/types/gathering.types';
 import {
   getWorldBossStatus,
   leaveWorldBoss,
@@ -89,6 +89,7 @@ interface DashboardTopBarProps {
   isSidebarCollapsed?: boolean;
   className?: string;
   activityOverride?: DashboardTopBarActivityOverride | null;
+  suppressAutoCombatActivityFallback?: boolean;
 
   onRefresh?: () => void | Promise<void>;
 }
@@ -170,6 +171,16 @@ function isTerminalStatus(value: unknown): boolean {
     'CANCELLED',
     'CANCELED',
   ].includes(status);
+}
+
+function isRunningAutoCombatPhase(value: unknown): boolean {
+  const phase = normalizeStatus(value);
+
+  return (
+    phase === 'HUNTING' ||
+    phase === 'COMBAT_ACTIVE' ||
+    phase === 'HUNT_TARGET_FOUND'
+  );
 }
 
 function clampPercent(value: unknown): number {
@@ -365,34 +376,6 @@ function getMaterialInitials(materialName?: string | null): string {
 
   return `${words[0][0] ?? ''}${words[1][0] ?? ''}`.toUpperCase();
 }
-
-function getMaterialIconUrl(
-  material?: GatheringMaterialViewModel | null,
-): string | null {
-  if (!material) return null;
-
-  const materialWithOptionalIcon = material as GatheringMaterialViewModel & {
-    icon?: unknown;
-    iconUrl?: unknown;
-    iconPath?: unknown;
-    imageUrl?: unknown;
-  };
-
-  const possibleIcon =
-    materialWithOptionalIcon.iconUrl ??
-    materialWithOptionalIcon.imageUrl ??
-    materialWithOptionalIcon.iconPath ??
-    materialWithOptionalIcon.icon;
-
-  if (typeof possibleIcon !== 'string') {
-    return null;
-  }
-
-  const trimmedIcon = possibleIcon.trim();
-
-  return trimmedIcon.length > 0 ? trimmedIcon : null;
-}
-
 
 function getAutoCombatMobRecord(autoCombatState: unknown): LooseRecord | null {
   const status = getRecordField(autoCombatState, 'status');
@@ -882,9 +865,13 @@ function getAutoCombatHuntingProgress(
 
 function isAutoCombatActive(autoCombatState: unknown): boolean {
   const status = getRecordField(autoCombatState, 'status');
-  const session = getRecordField(autoCombatState, 'session');
+  const session = getAutoCombatSessionRecord(autoCombatState);
   const hunting = getAutoCombatHuntingRecord(autoCombatState);
   const latestEvent = getLatestAutoCombatEvent(autoCombatState);
+  const currentMob =
+    getRecordField(autoCombatState, 'mob') ??
+    getRecordField(status, 'currentMob') ??
+    getRecordField(session, 'currentMob');
 
   const statusActive = status?.active;
   const hasActiveAutoCombat = status?.hasActiveAutoCombat;
@@ -902,19 +889,29 @@ function isAutoCombatActive(autoCombatState: unknown): boolean {
       getStringField(latestEvent, 'type'),
   );
   const hasActivePhase =
-    sessionPhase === 'HUNTING' ||
-    sessionPhase === 'COMBAT_ACTIVE' ||
-    sessionPhase === 'HUNT_TARGET_FOUND';
+    isRunningAutoCombatPhase(sessionPhase);
+  const isEncounterReady = sessionPhase === 'ENCOUNTER_READY';
+  const hasCombatTarget =
+    !isEncounterReady &&
+    Boolean(
+      getStringField(session, 'currentMobId') ??
+        getStringField(currentMob, 'id') ??
+        null,
+    );
 
-  if (statusActive === true || hasActiveAutoCombat === true || hasActivePhase) {
+  if (hasActiveAutoCombat === true || hasActivePhase || hasCombatTarget) {
     return true;
   }
 
-  if (statusActive === false || hasActiveAutoCombat === false) {
+  if (
+    statusActive === false ||
+    hasActiveAutoCombat === false ||
+    isEncounterReady
+  ) {
     return false;
   }
 
-  if (session && !isTerminalStatus(sessionStatus)) {
+  if (statusActive === true && session && !isTerminalStatus(sessionStatus)) {
     return true;
   }
 
@@ -1010,8 +1007,8 @@ function buildGatheringActivity(
   const material = gatheringState.targetMaterial;
   const materialName = material?.name ?? 'Expedição ativa';
   const activityIconUrl =
-    getGatheringOriginIcon(gatheringState.session.origin) ??
-    getMaterialIconUrl(material);
+    getGatheringMaterialImageUrl(material) ??
+    getGatheringOriginIcon(gatheringState.session.origin);
 
   const progressPercent = clampPercent(
     gatheringState.liveProduction?.progressPercent ?? 0,
@@ -1211,6 +1208,7 @@ export function DashboardTopBar({
   isSidebarCollapsed = false,
   className,
   activityOverride,
+  suppressAutoCombatActivityFallback = false,
   onRefresh,
 }: DashboardTopBarProps) {
   const autoCombatRealtime = useAutoCombatRealtime();
@@ -1444,10 +1442,14 @@ export function DashboardTopBar({
   }, [nowMs, worldBossStatus]);
 
   const activity = useMemo(() => {
+    const autoCombatActivity = suppressAutoCombatActivityFallback
+      ? null
+      : buildAutoCombatActivity(autoCombatState, nowMs);
+
     return (
       activityOverride ??
       worldBossActivity ??
-      buildAutoCombatActivity(autoCombatState, nowMs) ??
+      autoCombatActivity ??
       buildGatheringActivity(gatheringState) ??
       buildCraftingActivity(craftingState) ??
       buildIncursionActivity(incursionsState) ??
@@ -1460,6 +1462,7 @@ export function DashboardTopBar({
     gatheringState,
     incursionsState,
     nowMs,
+    suppressAutoCombatActivityFallback,
     worldBossActivity,
   ]);
 

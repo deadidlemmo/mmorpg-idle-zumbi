@@ -27,6 +27,7 @@ import type {
   GatheringSkillViewModel,
   GatheringStatusResponse,
 } from '../types/gathering.types';
+import { getGatheringMaterialImageUrl } from '../utils/gatheringMaterialAssets';
 
 interface GatheringRealtimeProviderProps {
   characterId: string;
@@ -153,26 +154,6 @@ type GatheringLootNotificationSource = {
   targetMaterial?: GatheringMaterialViewModel | null;
   inventoryItem?: GatheringInventoryItemViewModel | null;
 };
-
-function getMaterialImageUrl(material?: GatheringMaterialViewModel | null) {
-  const materialWithOptionalIcon = material as
-    | (GatheringMaterialViewModel & { icon?: string | null })
-    | null
-    | undefined;
-  const possibleImage =
-    materialWithOptionalIcon?.iconUrl ??
-    materialWithOptionalIcon?.imageUrl ??
-    materialWithOptionalIcon?.iconPath ??
-    materialWithOptionalIcon?.icon;
-
-  if (typeof possibleImage !== 'string') {
-    return null;
-  }
-
-  const trimmedImage = possibleImage.trim();
-
-  return trimmedImage.length > 0 ? trimmedImage : null;
-}
 
 function getCollectedQuantity(collected?: GatheringCollectedViewModel | null) {
   const quantity = Number(collected?.quantity ?? 0);
@@ -339,6 +320,99 @@ function getStatusTargetMaterial(
   const productionPreview = getProductionPreview({ status, session });
 
   return getTargetMaterial({ session, productionPreview });
+}
+
+function getMaterialId(
+  material?: GatheringMaterialViewModel | null,
+): string | null {
+  return typeof material?.id === 'string' && material.id.trim().length > 0
+    ? material.id
+    : null;
+}
+
+function mergeMaterialSnapshot(params: {
+  next?: GatheringMaterialViewModel | null;
+  previous?: GatheringMaterialViewModel | null;
+}): GatheringMaterialViewModel | null {
+  const nextId = getMaterialId(params.next);
+  const previousId = getMaterialId(params.previous);
+
+  if (!params.next) {
+    return params.previous ?? null;
+  }
+
+  if (!params.previous || !nextId || nextId !== previousId) {
+    return params.next;
+  }
+
+  return {
+    ...params.previous,
+    ...params.next,
+    slug: params.next.slug ?? params.previous.slug,
+    icon: params.next.icon ?? params.previous.icon,
+    iconUrl: params.next.iconUrl ?? params.previous.iconUrl,
+    iconPath: params.next.iconPath ?? params.previous.iconPath,
+    imageUrl: params.next.imageUrl ?? params.previous.imageUrl,
+    assetKey: params.next.assetKey ?? params.previous.assetKey,
+  };
+}
+
+function preserveGatheringTargetMaterial(params: {
+  previous: GatheringStatusResponse | null;
+  next: GatheringStatusResponse | null;
+}): GatheringStatusResponse | null {
+  const nextSession = getActiveSession(params.next);
+
+  if (!nextSession) {
+    return params.next;
+  }
+
+  const previousSession = getActiveSession(params.previous);
+
+  if (previousSession?.id !== nextSession.id) {
+    return params.next;
+  }
+
+  const previousMaterial = getStatusTargetMaterial(params.previous);
+  const nextPreview = getProductionPreview({
+    status: params.next,
+    session: nextSession,
+  });
+  const nextMaterial = getTargetMaterial({
+    session: nextSession,
+    productionPreview: nextPreview,
+  });
+  const mergedMaterial = mergeMaterialSnapshot({
+    next: nextMaterial,
+    previous: previousMaterial,
+  });
+
+  if (!mergedMaterial || mergedMaterial === nextMaterial) {
+    return params.next;
+  }
+
+  const nextLoose = params.next as GatheringStatusLoose;
+  const mergedSession = {
+    ...nextSession,
+    targetMaterial: mergedMaterial,
+  } as GatheringSessionViewModel;
+  const mergedPreview = nextPreview
+    ? ({
+        ...nextPreview,
+        targetMaterial:
+          (nextPreview as GatheringProductionPreviewLoose).targetMaterial ??
+          mergedMaterial,
+        material:
+          (nextPreview as GatheringProductionPreviewLoose).material ??
+          mergedMaterial,
+      } as GatheringProductionPreviewViewModel)
+    : nextPreview;
+
+  return {
+    ...nextLoose,
+    session: mergedSession,
+    productionPreview: mergedPreview,
+  } as GatheringStatusResponse;
 }
 
 function getSessionCollectedQuantity(
@@ -940,7 +1014,7 @@ export function GatheringRealtimeProvider({
         itemId: collected.itemId,
         itemName,
         quantity,
-        imageUrl: getMaterialImageUrl(targetMaterial),
+        imageUrl: getGatheringMaterialImageUrl(targetMaterial),
         rarity: targetMaterial?.rarity,
         source: 'gathering',
       });
@@ -951,29 +1025,32 @@ export function GatheringRealtimeProvider({
   const applyStatus = useCallback((nextStatus: GatheringStatusResponse | null) => {
     if (!isMountedRef.current) return;
 
-    const nextSignature = safeStatusSignature(nextStatus);
+    const previousStatus = statusRef.current;
+    const normalizedStatus = preserveGatheringTargetMaterial({
+      previous: previousStatus,
+      next: nextStatus,
+    });
+    const nextSignature = safeStatusSignature(normalizedStatus);
 
     if (statusSignatureRef.current === nextSignature) {
-      statusRef.current = nextStatus;
+      statusRef.current = normalizedStatus;
       return;
     }
 
-    const previousStatus = statusRef.current;
-
     statusSignatureRef.current = nextSignature;
-    statusRef.current = nextStatus;
+    statusRef.current = normalizedStatus;
 
     if (previousStatus) {
-      const activeStatus = nextStatus as GatheringStatusLoose | null;
+      const activeStatus = normalizedStatus as GatheringStatusLoose | null;
       publishGatheringLootNotification({
         collected: activeStatus?.autoCollected ?? null,
-        session: getActiveSession(nextStatus),
-        targetMaterial: getStatusTargetMaterial(nextStatus),
+        session: getActiveSession(normalizedStatus),
+        targetMaterial: getStatusTargetMaterial(normalizedStatus),
         inventoryItem: activeStatus?.inventoryItem ?? null,
       });
     }
 
-    setStatus(nextStatus);
+    setStatus(normalizedStatus);
     setLastUpdatedAt(Date.now());
     setErrorMessage(null);
   }, [publishGatheringLootNotification]);

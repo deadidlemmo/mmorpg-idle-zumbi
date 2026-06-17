@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { CraftIngredientRole, MaterialOrigin } from '@prisma/client';
+import { CraftIngredientRole, MaterialOrigin, Rarity } from '@prisma/client';
+import {
+  GATHERING_RATE_BY_TIER,
+  getGatheringXpPerUnitForTier,
+} from '../src/common/config/gathering.config';
 import {
   equipmentDefinitions,
   materialDefinitions,
@@ -66,6 +70,17 @@ function increment(
 
 function buildKey(parts: CsvValue[]) {
   return parts.map((part) => String(part ?? '')).join('|');
+}
+
+function getRarityByTier(tier: number) {
+  const safeTier = Math.max(0, Math.floor(Number(tier) || 0));
+
+  if (safeTier >= 9) return Rarity.LEGENDARY;
+  if (safeTier >= 7) return Rarity.EPIC;
+  if (safeTier >= 5) return Rarity.RARE;
+  if (safeTier >= 3) return Rarity.UNCOMMON;
+
+  return Rarity.COMMON;
 }
 
 const outputDir = path.resolve(process.argv[2] ?? DEFAULT_OUTPUT_DIR);
@@ -191,12 +206,15 @@ const materialRows = materialDefinitions.map((item) => ({
   slotAfinidade: item.materialSlot ?? '',
   familia: item.family ?? '',
   tier: item.tier,
-  raridade: item.rarity ?? '',
+  raridade: item.rarity ?? getRarityByTier(item.tier),
   mapa: item.mapName,
   materialDeGathering: item.isGatheringMaterial ?? false,
   nivelGathering: item.requiredGatheringLevel ?? '',
-  xpPorUnidade: item.gatheringXpPerUnit ?? '',
-  taxaBaseHora: item.baseGatheringRatePerHour ?? '',
+  xpPorUnidade:
+    item.gatheringXpPerUnit ??
+    (item.isGatheringMaterial ? getGatheringXpPerUnitForTier(item.tier) : ''),
+  taxaBaseHora:
+    item.baseGatheringRatePerHour ?? GATHERING_RATE_BY_TIER[item.tier] ?? '',
   usadoEmReceitas: ingredientUsesByItem[item.name]?.length ?? 0,
   demandaTotal: ingredientDemandByItem[item.name] ?? 0,
   papeisNaReceita: Array.from(ingredientRolesByItem[item.name] ?? []).join(
@@ -276,6 +294,9 @@ const recipeRows = recipeDefinitions.map((recipe) => {
   const secondary = recipe.ingredients.find(
     (ingredient) => ingredient.role === CraftIngredientRole.SHARED_MATERIAL,
   );
+  const tertiary = recipe.ingredients.filter(
+    (ingredient) => ingredient.role === CraftIngredientRole.SHARED_MATERIAL,
+  )[1];
   const rareDrops = recipe.ingredients.filter(
     (ingredient) => ingredient.origin === MaterialOrigin.DROP_MOBS,
   );
@@ -301,6 +322,9 @@ const recipeRows = recipeDefinitions.map((recipe) => {
     materialSecundario: secondary?.itemName ?? '',
     origemSecundaria: secondary?.origin ?? '',
     qtdSecundario: secondary?.quantity ?? '',
+    materialTerciario: tertiary?.itemName ?? '',
+    origemTerciaria: tertiary?.origin ?? '',
+    qtdTerciario: tertiary?.quantity ?? '',
     biomaterial: biomaterial?.itemName ?? '',
     qtdBiomaterial: biomaterial?.quantity ?? '',
     residuo: residue?.itemName ?? '',
@@ -329,6 +353,9 @@ writeCsv(
     'materialSecundario',
     'origemSecundaria',
     'qtdSecundario',
+    'materialTerciario',
+    'origemTerciaria',
+    'qtdTerciario',
     'biomaterial',
     'qtdBiomaterial',
     'residuo',
@@ -523,12 +550,16 @@ Arquivos gerados automaticamente a partir dos seeds do projeto.
 - 08_balanco_demanda_por_origem.csv: demanda total agregada por origem.
 - 09_balanco_demanda_por_classe_origem.csv: demanda agregada por classe e origem.
 - 10_resumo.csv: contadores gerais da exportação.
+- 11_balanceamento_tempo_receitas.csv: tempo esperado por receita, separando gathering, drops de AutoCombat e crafting.
+- 12_balanceamento_tempo_por_tier.csv: media por tier com niveis realistas de gathering/caca e sessoes free/premium.
+- 13_balanceamento_drops_receitas.csv: auditoria dos drops usados em receitas, com chance ponderada por aparicao dos mobs ativos, kills esperadas e horas esperadas.
 
 Para regenerar:
 
 \`\`\`bash
 cd backend
 npm run prisma:export:economy-csv
+npm run balance:crafting-economy:report
 \`\`\`
 `;
 

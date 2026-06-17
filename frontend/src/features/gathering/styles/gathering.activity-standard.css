@@ -572,3 +572,581 @@
     grid-template-columns: minmax(0, 1fr) auto !important;
   }
 }
+
+/* Ajuste final: cards de proficiencia/atividade seguem o card de Caca,
+   com logo solto no painel e sem moldura interna de icone. */
+.gathering-origin-skill-card__icon,
+.gathering-origin-current-card .gathering-session__item-icon {
+  overflow: visible !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-skill-card__icon::before,
+.gathering-origin-current-card .gathering-session__item-icon::before {
+  display: none !important;
+}
+
+.gathering-origin-skill-card__icon img,
+.gathering-origin-current-card .gathering-session__item-image {
+  width: var(--activity-icon-size) !important;
+  height: var(--activity-icon-size) !important;
+}
+
+.gathering-origin-current-card .gathering-session__current-action--idle {
+  opacity: 0.96;
+}
+
+.gathering-origin-current-card
+  .gathering-session__activity-spinner--idle {
+  animation: none !important;
+  border-color: rgba(var(--activity-rgb), 0.36) !important;
+  background: rgba(var(--activity-rgb), 0.22) !important;
+  box-shadow: 0 0 8px rgba(var(--activity-rgb), 0.18) !important;
+}
+
+.gathering-origin-current-card
+  .gathering-session__current-action--idle
+  .gathering-session__progress-fill {
+  min-width: 0 !important;
+}
+
+/* Padrao final alinhado ao card de Caca/Premium. */
+.gathering-origin-current-card.auto-combat-hunt-skill-card,
+.gathering-origin-skill-card.auto-combat-hunt-skill-card {
+  --activity-icon-size: 4.45rem;
+  --activity-progress-height: 9px;
+  --activity-pill-height: 1.68rem;
+  --hunt-skill-progress: 0%;
+  display: block !important;
+  min-width: 0 !important;
+  min-height: 7.1rem !important;
+  padding: 1.04rem 1.05rem 1rem !important;
+  overflow: visible !important;
+  border-color: rgba(231, 227, 216, 0.105) !important;
+  border-radius: 0.9rem !important;
+  background:
+    radial-gradient(circle at 16% 18%, rgba(110, 159, 67, 0.08), transparent 8rem),
+    radial-gradient(circle at 50% 24%, rgba(231, 227, 216, 0.04), transparent 54%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent 58%),
+    linear-gradient(135deg, rgba(110, 159, 67, 0.045), transparent 60%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.009) 0 1px,
+      transparent 1px 10px
+    ),
+    rgba(5, 9, 8, 0.5) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.034),
+    0 12px 28px rgba(0, 0, 0, 0.18) !important;
+}
+
+.gathering-origin-current-card.auto-combat-hunt-skill-card::before,
+.gathering-origin-skill-card.auto-combat-hunt-skill-card::before {
+  display: none !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__top,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__top {
+  display: grid !important;
+  grid-template-columns: var(--activity-icon-size) minmax(0, 1fr) !important;
+  gap: 0.96rem !important;
+  align-items: center !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__icon,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__icon {
+  display: grid !important;
+  width: var(--activity-icon-size) !important;
+  min-width: var(--activity-icon-size) !important;
+  height: var(--activity-icon-size) !important;
+  place-items: center !important;
+  overflow: visible !important;
+  color: #fff1b8 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__icon::before,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__icon::before {
+  display: none !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__icon img,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__icon img,
+.gathering-origin-current-card .gathering-session__item-image,
+.gathering-origin-skill-card__icon img {
+  display: block !important;
+  width: 124% !important;
+  height: 124% !important;
+  object-fit: contain !important;
+  filter:
+    drop-shadow(0 5px 8px rgba(0, 0, 0, 0.44))
+    saturate(1.08)
+    contrast(1.04) !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__body,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__body {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 0.52rem !important;
+}
+
+.gathering-origin-skill-card__top {
+  display: grid !important;
+}
+
+.gathering-origin-skill-card__heading small {
+  display: none !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__heading,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__heading {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 0.28rem !important;
+}
+
+.gathering-origin-current-card .gathering-session__activity-title-row,
+.gathering-origin-skill-card__heading > span {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.48rem !important;
+}
+
+.gathering-origin-current-card .gathering-session__activity-title-row strong,
+.gathering-origin-current-card .gathering-session__current-body h2,
+.gathering-origin-skill-card__heading strong {
+  min-width: 0 !important;
+  margin: 0 !important;
+  margin-right: auto !important;
+  overflow: hidden !important;
+  color: #fff8df !important;
+  font-family: var(--font-title) !important;
+  font-size: 1.08rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.44) !important;
+}
+
+.gathering-origin-current-card .gathering-session__activity-heading {
+  display: block !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-current-card .gathering-session__activity-title-row {
+  width: 100% !important;
+}
+
+.gathering-origin-current-card .gathering-session__activity-title-row strong {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.gathering-origin-current-card .gathering-session__activity-spinner {
+  position: absolute !important;
+  width: 0.58rem !important;
+  height: 0.58rem !important;
+  margin-top: 0.18rem !important;
+  margin-left: -0.86rem !important;
+  animation: none !important;
+  border: 0 !important;
+  background: #9ee957 !important;
+  box-shadow:
+    0 0 0 3px rgba(158, 233, 87, 0.12),
+    0 0 12px rgba(158, 233, 87, 0.24) !important;
+}
+
+.gathering-origin-current-card .gathering-session__activity-spinner--idle {
+  display: none !important;
+}
+
+.gathering-origin-current-card .gathering-session__level-badge,
+.gathering-origin-skill-card__level-badge {
+  min-height: 1.55rem !important;
+  min-width: auto !important;
+  padding: 0.14rem 0.48rem !important;
+  color: #12200d !important;
+  background: linear-gradient(180deg, #b7ef72, #7fbd48) !important;
+  border: 1px solid rgba(211, 255, 147, 0.34) !important;
+  border-radius: 0.42rem !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 12px rgba(127, 187, 91, 0.13) !important;
+  text-shadow: none !important;
+}
+
+.gathering-origin-current-card .gathering-session__progress-strip,
+.gathering-origin-skill-card__track {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: var(--activity-progress-height) !important;
+  margin: 0 !important;
+}
+
+.gathering-origin-skill-card__track {
+  grid-column: auto !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__track,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__track {
+  height: var(--activity-progress-height) !important;
+  overflow: hidden !important;
+  background: rgba(108, 122, 132, 0.38) !important;
+  border: 1px solid rgba(255, 255, 255, 0.035) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-current-card .gathering-session__progress-fill,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__track i {
+  display: block !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  background: linear-gradient(90deg, #d8b447, #f0c53f) !important;
+  border-radius: inherit !important;
+  box-shadow: 0 0 12px rgba(240, 197, 63, 0.16) !important;
+}
+
+.gathering-origin-current-card .gathering-session__inline-capsule {
+  display: contents !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__pills,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__pills {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.42rem !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-skill-card__pills {
+  grid-column: auto !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__pills > span,
+.gathering-origin-current-card
+  .auto-combat-hunt-skill-card__pills
+  .gathering-session__inline-value,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__pills > span {
+  display: inline-flex !important;
+  min-height: var(--activity-pill-height) !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  padding: 0.2rem 0.5rem !important;
+  overflow: hidden !important;
+  color: rgba(244, 248, 220, 0.9) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.72rem !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(5, 9, 8, 0.42) !important;
+  border: 1px solid rgba(231, 227, 216, 0.09) !important;
+  border-radius: 0.34rem !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 4px 10px rgba(0, 0, 0, 0.12) !important;
+}
+
+.gathering-origin-current-card .gathering-session__activity-spinner--idle {
+  display: none !important;
+}
+
+.gathering-origin-current-card .gathering-session__icon-button {
+  font-size: 0 !important;
+}
+
+.gathering-origin-current-card .gathering-session__icon-button svg {
+  width: 15px !important;
+  height: 15px !important;
+  color: currentColor !important;
+}
+
+.gathering-origin-current-card
+  .auto-combat-hunt-skill-card__pills
+  > .gathering-session__inline-capsule {
+  display: contents !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-current-card.auto-combat-hunt-skill-card,
+  .gathering-origin-skill-card.auto-combat-hunt-skill-card {
+    --activity-icon-size: 3.42rem;
+    --activity-progress-height: 7px;
+    min-height: 6.3rem !important;
+    padding: 0.78rem !important;
+  }
+
+  .gathering-origin-current-card .auto-combat-hunt-skill-card__top,
+  .gathering-origin-skill-card .auto-combat-hunt-skill-card__top {
+    gap: 0.66rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__activity-title-row strong,
+  .gathering-origin-current-card .gathering-session__current-body h2,
+  .gathering-origin-skill-card__heading strong {
+    font-size: 0.88rem !important;
+  }
+
+  .gathering-origin-current-card .gathering-session__level-badge,
+  .gathering-origin-skill-card__level-badge {
+    min-height: 1.42rem !important;
+    padding-inline: 0.42rem !important;
+    font-size: 0.66rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-current-card.auto-combat-hunt-skill-card,
+  .gathering-origin-skill-card.auto-combat-hunt-skill-card {
+    --activity-icon-size: 2.9rem;
+    min-height: auto !important;
+  }
+
+  .gathering-origin-current-card .auto-combat-hunt-skill-card__top,
+  .gathering-origin-skill-card .auto-combat-hunt-skill-card__top {
+    grid-template-columns: var(--activity-icon-size) minmax(0, 1fr) !important;
+    gap: 0.58rem !important;
+  }
+
+  .gathering-origin-current-card .auto-combat-hunt-skill-card__pills,
+  .gathering-origin-skill-card .auto-combat-hunt-skill-card__pills {
+    gap: 0.34rem !important;
+  }
+}
+
+/* Estrutura final do componente padrao.
+   Mantem Gathering, Caca e Premium com a mesma composicao visual. */
+.gathering-origin-current-card.auto-combat-hunt-skill-card,
+.gathering-origin-skill-card.auto-combat-hunt-skill-card {
+  --activity-icon-size: 4.45rem !important;
+  --activity-progress-height: 9px !important;
+  --activity-pill-height: 1.56rem !important;
+  padding: 1.04rem 1.05rem 1rem !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__top,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__top {
+  display: grid !important;
+  grid-template-columns: var(--activity-icon-size) minmax(0, 1fr) !important;
+  gap: 0.96rem !important;
+  align-items: center !important;
+  min-width: 0 !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__body,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__body {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 0.52rem !important;
+  place-items: stretch !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__heading,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__heading {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 0.28rem !important;
+  text-align: left !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__heading > span,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__heading > span {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.48rem !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__heading strong,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__heading strong {
+  margin: 0 !important;
+  margin-right: auto !important;
+  color: #fff8df !important;
+  font-family: var(--font-title) !important;
+  font-size: 1.08rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.44) !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__heading em,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__heading em {
+  min-height: 1.55rem !important;
+  min-width: auto !important;
+  padding: 0.14rem 0.48rem !important;
+  color: #12200d !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.68rem !important;
+  font-style: normal !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  background: linear-gradient(180deg, #b7ef72, #7fbd48) !important;
+  border: 1px solid rgba(211, 255, 147, 0.34) !important;
+  border-radius: 0.42rem !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 12px rgba(127, 187, 91, 0.13) !important;
+  text-shadow: none !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__track,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__track {
+  width: 100% !important;
+  height: var(--activity-progress-height) !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  background: rgba(5, 9, 8, 0.78) !important;
+  border: 1px solid rgba(255, 255, 255, 0.035) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__track i,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__track i {
+  display: block !important;
+  width: var(--hunt-skill-progress) !important;
+  height: 100% !important;
+  background: linear-gradient(90deg, #d8b447, #f0c53f) !important;
+  border-radius: inherit !important;
+  box-shadow: 0 0 12px rgba(240, 197, 63, 0.16) !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__pills,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__pills {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 0.42rem !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__pills span,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__pills span {
+  display: inline-flex !important;
+  min-height: var(--activity-pill-height) !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0.2rem 0.5rem !important;
+  color: rgba(244, 248, 220, 0.9) !important;
+  font-family: var(--font-title) !important;
+  font-size: 0.72rem !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(5, 9, 8, 0.42) !important;
+  border: 1px solid rgba(231, 227, 216, 0.09) !important;
+  border-radius: 0.34rem !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 4px 10px rgba(0, 0, 0, 0.12) !important;
+}
+
+@media (max-width: 720px) {
+  .gathering-origin-current-card.auto-combat-hunt-skill-card,
+  .gathering-origin-skill-card.auto-combat-hunt-skill-card {
+    --activity-icon-size: 3.42rem !important;
+    --activity-progress-height: 7px !important;
+    min-height: 6.3rem !important;
+    padding: 0.78rem !important;
+  }
+
+  .gathering-origin-current-card .auto-combat-hunt-skill-card__top,
+  .gathering-origin-skill-card .auto-combat-hunt-skill-card__top {
+    gap: 0.66rem !important;
+  }
+
+  .gathering-origin-current-card .auto-combat-hunt-skill-card__heading strong,
+  .gathering-origin-skill-card .auto-combat-hunt-skill-card__heading strong {
+    font-size: 0.88rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .gathering-origin-current-card.auto-combat-hunt-skill-card,
+  .gathering-origin-skill-card.auto-combat-hunt-skill-card {
+    --activity-icon-size: 2.9rem !important;
+    min-height: auto !important;
+  }
+
+  .gathering-origin-current-card .auto-combat-hunt-skill-card__top,
+  .gathering-origin-skill-card .auto-combat-hunt-skill-card__top {
+    gap: 0.58rem !important;
+  }
+}
+
+/* Contencao de overflow lateral nos cards do painel direito. */
+.gathering-origin-side,
+.gathering-origin-side-section {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: clip !important;
+}
+
+.gathering-origin-current-card.auto-combat-hunt-skill-card,
+.gathering-origin-skill-card.auto-combat-hunt-skill-card {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.gathering-origin-current-card.auto-combat-hunt-skill-card--with-controls {
+  margin-top: 1.04rem !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__controls,
+.gathering-origin-current-card .gathering-session__header-actions {
+  top: -1.28rem !important;
+  right: 0.72rem !important;
+  max-width: calc(100% - 1.44rem) !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__control-button,
+.gathering-origin-current-card .gathering-session__icon-button {
+  flex: 0 0 2rem !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__heading strong,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__heading strong {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.gathering-origin-current-card .auto-combat-hunt-skill-card__pills span,
+.gathering-origin-skill-card .auto-combat-hunt-skill-card__pills span {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}

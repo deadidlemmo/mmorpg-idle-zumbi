@@ -256,6 +256,177 @@
   display: none;
 }
 
+.auto-combat-premium-benefits.auto-combat-hunt-skill-card {
+  --hunt-skill-progress: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.auto-combat-premium-benefits--locked {
+  cursor: pointer;
+  border-color: rgba(229, 182, 63, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 215, 107, 0.05), rgba(0, 0, 0, 0.08)),
+    radial-gradient(circle at 12% 42%, rgba(229, 182, 63, 0.16), transparent 8.8rem),
+    linear-gradient(120deg, rgba(229, 182, 63, 0.08), transparent 58%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 10px
+    ),
+    rgba(8, 12, 10, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    inset 0 0 0 1px rgba(229, 182, 63, 0.06),
+    0 12px 28px rgba(0, 0, 0, 0.2),
+    0 0 22px rgba(229, 182, 63, 0.08);
+}
+
+.auto-combat-premium-benefits--locked::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(229, 182, 63, 0.11), transparent 48%),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(229, 182, 63, 0.035) 0 1px,
+      transparent 1px 9px
+    );
+  opacity: 0.82;
+}
+
+.auto-combat-premium-benefits__top {
+  position: relative;
+  z-index: 1;
+}
+
+.auto-combat-hunt-skill-card__icon.auto-combat-premium-benefits__icon {
+  position: relative;
+  color: #ffe58e;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.auto-combat-premium-benefits--locked
+  .auto-combat-hunt-skill-card__icon.auto-combat-premium-benefits__icon::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  right: -0.06rem;
+  bottom: -0.02rem;
+  width: 1.46rem;
+  height: 1.46rem;
+  background:
+    linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.18),
+        rgba(255, 255, 255, 0)
+      ),
+    rgba(8, 12, 10, 0.86);
+  border: 1px solid rgba(229, 182, 63, 0.46);
+  border-radius: 0.42rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 5px 12px rgba(0, 0, 0, 0.34),
+    0 0 12px rgba(229, 182, 63, 0.16);
+}
+
+.auto-combat-premium-benefits--locked
+  .auto-combat-hunt-skill-card__icon.auto-combat-premium-benefits__icon::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  right: 0.33rem;
+  bottom: 0.93rem;
+  width: 0.68rem;
+  height: 0.52rem;
+  border: 2px solid rgba(255, 226, 134, 0.92);
+  border-bottom: 0;
+  border-radius: 999px 999px 0 0;
+}
+
+.auto-combat-premium-benefits__symbol.premium-placeholder-icon {
+  width: 94%;
+  height: 94%;
+  filter:
+    drop-shadow(0 5px 8px rgba(0, 0, 0, 0.44))
+    saturate(1.08)
+    contrast(1.04);
+}
+
+.auto-combat-premium-benefits--locked
+  .auto-combat-premium-benefits__symbol.premium-placeholder-icon {
+  opacity: 0.62;
+  filter:
+    drop-shadow(0 5px 8px rgba(0, 0, 0, 0.44))
+    grayscale(0.45)
+    saturate(0.66)
+    contrast(0.9);
+}
+
+.auto-combat-premium-benefits__symbol .premium-placeholder-icon__mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.auto-combat-premium-benefits__track i {
+  width: 100%;
+}
+
+.auto-combat-premium-benefits--locked .auto-combat-premium-benefits__track i {
+  width: 38%;
+  background: linear-gradient(
+    90deg,
+    rgba(136, 108, 44, 0.62),
+    rgba(229, 182, 63, 0.78)
+  );
+}
+
+.auto-combat-premium-benefits--locked
+  .auto-combat-premium-benefits__heading
+  em {
+  color: #f4d47e;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(70, 54, 21, 0.78);
+  border-color: rgba(229, 182, 63, 0.36);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 14px rgba(229, 182, 63, 0.1);
+}
+
+.auto-combat-premium-benefits--locked
+  .auto-combat-premium-benefits__pills
+  span {
+  color: rgba(255, 239, 192, 0.88);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(24, 18, 9, 0.62);
+  border-color: rgba(229, 182, 63, 0.24);
+}
+
+.auto-combat-premium-benefits__overlay {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.auto-combat-premium-benefits__overlay:focus-visible {
+  outline: 2px solid rgba(211, 255, 147, 0.56);
+  outline-offset: 3px;
+}
+
+.auto-combat-premium-benefits--locked:hover,
+.auto-combat-premium-benefits--locked:has(.auto-combat-premium-benefits__overlay:focus-visible) {
+  border-color: rgba(229, 182, 63, 0.36);
+}
+
 @media (max-width: 620px) {
   .auto-combat-premium-reward--summary {
     margin-top: 0.46rem;

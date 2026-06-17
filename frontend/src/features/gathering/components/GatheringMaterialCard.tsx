@@ -11,6 +11,7 @@ import {
   getGatheringXpPerUnit,
   isGatheringMaterialUnlocked,
 } from '../types/gathering.types';
+import { getGatheringMaterialImageUrl } from '../utils/gatheringMaterialAssets';
 
 type GatheringVisualRarity =
   | 'common'
@@ -118,29 +119,6 @@ function getMaterialInitials(materialName: string): string {
   }
 
   return `${words[0][0] ?? ''}${words[1][0] ?? ''}`.toUpperCase();
-}
-
-function getMaterialIconUrl(material: GatheringMaterialViewModel): string | null {
-  const materialWithOptionalIcon = material as GatheringMaterialViewModel & {
-    icon?: unknown;
-    iconUrl?: unknown;
-    iconPath?: unknown;
-    imageUrl?: unknown;
-  };
-
-  const possibleIcon =
-    materialWithOptionalIcon.iconUrl ??
-    materialWithOptionalIcon.imageUrl ??
-    materialWithOptionalIcon.iconPath ??
-    materialWithOptionalIcon.icon;
-
-  if (typeof possibleIcon !== 'string') {
-    return null;
-  }
-
-  const trimmedIcon = possibleIcon.trim();
-
-  return trimmedIcon.length > 0 ? trimmedIcon : null;
 }
 
 function getRecipeUsageTitle(material: GatheringMaterialViewModel): string {
@@ -421,7 +399,7 @@ export function GatheringMaterialCard({
   });
 
   const rarityMeta = getRarityMeta(material.rarity, material.tier);
-  const iconUrl = getMaterialIconUrl(material);
+  const iconUrl = getGatheringMaterialImageUrl(material);
 
   const timePerUnitLabel = rateDisplayMeta.label;
   const timePerUnitTitle = rateDisplayMeta.title;

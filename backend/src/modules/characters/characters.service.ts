@@ -7,6 +7,7 @@ import {
 import type { Item } from '@prisma/client';
 import {
   ActivityStatus,
+  AutoCombatSessionPhase,
   AutoCombatSessionStatus,
   CharacterStatus,
   IncursionSessionStatus,
@@ -45,6 +46,11 @@ import { CreateCharacterDto } from './dto/create-character.dto';
 const MAX_CHARACTERS_PER_USER = 2;
 const INITIAL_CHARACTER_GOLD = 250;
 const INITIAL_CHARACTER_CASH = 0;
+
+const BLOCKING_AUTO_COMBAT_PHASES: AutoCombatSessionPhase[] = [
+  AutoCombatSessionPhase.HUNTING,
+  AutoCombatSessionPhase.COMBAT_ACTIVE,
+];
 
 const GATHERING_ORIGINS = [
   MaterialOrigin.DESMANCHE,
@@ -897,6 +903,9 @@ export class CharactersService {
         where: {
           characterId: character.id,
           status: AutoCombatSessionStatus.ACTIVE,
+          phase: {
+            in: BLOCKING_AUTO_COMBAT_PHASES,
+          },
         },
         orderBy: {
           startedAt: 'desc',
@@ -904,6 +913,7 @@ export class CharactersService {
         select: {
           id: true,
           status: true,
+          phase: true,
           startedAt: true,
           endsAt: true,
           lastProcessedAt: true,
@@ -1239,11 +1249,14 @@ export class CharactersService {
         ? (gatheringSkills.byOrigin[activeGatheringSession.origin] ?? null)
         : null;
 
+    const characterIsPremiumActive = isPremiumActive(character.user);
+    const characterPremiumUntil = character.user?.premiumUntil ?? null;
+
     const gatheringProductionPreview = activeGatheringSession
       ? this.buildGatheringProductionPreview(
           activeGatheringSession,
           activeGatheringSkill,
-          isPremiumActive(character.user),
+          characterIsPremiumActive,
         )
       : null;
 
@@ -1287,6 +1300,12 @@ export class CharactersService {
         currencies: {
           gold: character.gold,
           cash: character.cash,
+        },
+        isPremiumActive: characterIsPremiumActive,
+        premiumUntil: characterPremiumUntil,
+        membership: {
+          isPremiumActive: characterIsPremiumActive,
+          premiumUntil: characterPremiumUntil,
         },
         currentHp,
         maxHp: calculatedMaxHp,

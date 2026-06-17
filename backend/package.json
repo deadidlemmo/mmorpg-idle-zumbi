@@ -30,6 +30,8 @@
     "test:grant-lutador-t1": "tsx prisma/grant-lutador-tier1-items.ts",
     "prisma:cleanup-items": "node node_modules/tsx/dist/cli.mjs prisma/cleanup-old-items.ts",
     "prisma:cleanup-items:apply": "node node_modules/tsx/dist/cli.mjs prisma/cleanup-old-items.ts --apply",
+    "prisma:reset-equipment-gathering-catalog": "node node_modules/tsx/dist/cli.mjs prisma/reset-equipment-gathering-catalog.ts",
+    "prisma:reset-equipment-gathering-catalog:apply": "node node_modules/tsx/dist/cli.mjs prisma/reset-equipment-gathering-catalog.ts --apply",
     "balance:auto-combat": "node node_modules/tsx/dist/cli.mjs scripts/simulate-auto-combat-balance.ts",
     "balance:auto-combat:validate": "node node_modules/tsx/dist/cli.mjs scripts/validate-auto-combat-balance.ts",
     "balance:auto-combat:report": "node node_modules/tsx/dist/cli.mjs scripts/export-auto-combat-balance-report.ts",
@@ -37,6 +39,7 @@
     "balance:auto-combat:complete-report": "node node_modules/tsx/dist/cli.mjs scripts/export-auto-combat-complete-report.ts",
     "balance:auto-combat:session-report": "node node_modules/tsx/dist/cli.mjs scripts/export-auto-combat-session-report.ts",
     "balance:character-progression:report": "node node_modules/tsx/dist/cli.mjs scripts/export-character-progression-report.ts",
+    "balance:crafting-economy:report": "node node_modules/tsx/dist/cli.mjs scripts/export-crafting-economy-balance-report.ts",
     "items:stats:audit": "node node_modules/tsx/dist/cli.mjs scripts/audit-equipment-stats-sync.ts",
     "test:auto-combat:fixture": "node node_modules/tsx/dist/cli.mjs scripts/prepare-auto-combat-fixture.ts"
   },

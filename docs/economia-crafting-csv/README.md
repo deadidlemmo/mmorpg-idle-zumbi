@@ -15,10 +15,14 @@ Arquivos gerados automaticamente a partir dos seeds do projeto.
 - 08_balanco_demanda_por_origem.csv: demanda total agregada por origem.
 - 09_balanco_demanda_por_classe_origem.csv: demanda agregada por classe e origem.
 - 10_resumo.csv: contadores gerais da exportação.
+- 11_balanceamento_tempo_receitas.csv: tempo esperado por receita, separando gathering, drops de AutoCombat e crafting.
+- 12_balanceamento_tempo_por_tier.csv: media por tier com niveis realistas de gathering/caca e sessoes free/premium.
+- 13_balanceamento_drops_receitas.csv: auditoria dos drops usados em receitas, com chance ponderada por aparicao dos mobs ativos, kills esperadas e horas esperadas.
 
 Para regenerar:
 
 ```bash
 cd backend
 npm run prisma:export:economy-csv
+npm run balance:crafting-economy:report
 ```

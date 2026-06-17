@@ -27,6 +27,7 @@ interface DashboardLayoutProps {
   hideHero?: boolean;
   hideTopBar?: boolean;
   topBarActivityOverride?: DashboardTopBarActivityOverride | null;
+  suppressAutoCombatTopBarFallback?: boolean;
 }
 
 interface DashboardLayoutContentProps {
@@ -35,6 +36,7 @@ interface DashboardLayoutContentProps {
   hideHero?: boolean;
   hideTopBar?: boolean;
   topBarActivityOverride?: DashboardTopBarActivityOverride | null;
+  suppressAutoCombatTopBarFallback?: boolean;
 }
 
 interface DashboardNavItem {
@@ -167,6 +169,20 @@ type RealtimeProgressLoose = {
   levelProgress?: DashboardCharacterWithXpProgress['levelProgress'];
 };
 
+type RealtimeAutoCombatSessionLoose = {
+  id?: string | null;
+  status?: string | null;
+  phase?: string | null;
+  mapId?: string | null;
+  currentMobId?: string | null;
+  currentMob?: {
+    id?: string | null;
+  } | null;
+  map?: {
+    name?: string | null;
+  } | null;
+};
+
 type RealtimeStateLoose = {
   characterId?: string | null;
 
@@ -220,41 +236,18 @@ type RealtimeStateLoose = {
       maxHp?: number | null;
     }) | null;
 
-    session?: {
+    phase?: string | null;
+    currentMob?: {
       id?: string | null;
-      status?: string | null;
-      mapId?: string | null;
-      map?: {
-        name?: string | null;
-      } | null;
     } | null;
 
-    activeSession?: {
-      id?: string | null;
-      status?: string | null;
-      mapId?: string | null;
-      map?: {
-        name?: string | null;
-      } | null;
-    } | null;
+    session?: RealtimeAutoCombatSessionLoose | null;
 
-    autoCombatSession?: {
-      id?: string | null;
-      status?: string | null;
-      mapId?: string | null;
-      map?: {
-        name?: string | null;
-      } | null;
-    } | null;
+    activeSession?: RealtimeAutoCombatSessionLoose | null;
 
-    lastSession?: {
-      id?: string | null;
-      status?: string | null;
-      mapId?: string | null;
-      map?: {
-        name?: string | null;
-      } | null;
-    } | null;
+    autoCombatSession?: RealtimeAutoCombatSessionLoose | null;
+
+    lastSession?: RealtimeAutoCombatSessionLoose | null;
 
     sessionSummary?: {
       hp?: {
@@ -278,23 +271,9 @@ type RealtimeStateLoose = {
     } | null;
   } | null;
 
-  activeSession?: {
-    id?: string | null;
-    status?: string | null;
-    mapId?: string | null;
-    map?: {
-      name?: string | null;
-    } | null;
-  } | null;
+  activeSession?: RealtimeAutoCombatSessionLoose | null;
 
-  session?: {
-    id?: string | null;
-    status?: string | null;
-    mapId?: string | null;
-    map?: {
-      name?: string | null;
-    } | null;
-  } | null;
+  session?: RealtimeAutoCombatSessionLoose | null;
 
   isActive?: boolean | null;
   hasActiveSession?: boolean | null;
@@ -576,6 +555,16 @@ function isActiveStatus(status?: string | null) {
   return normalizeStatus(status) === 'ACTIVE';
 }
 
+function isRunningAutoCombatPhase(phase?: string | null) {
+  const normalizedPhase = normalizeStatus(phase);
+
+  return (
+    normalizedPhase === 'HUNTING' ||
+    normalizedPhase === 'COMBAT_ACTIVE' ||
+    normalizedPhase === 'HUNT_TARGET_FOUND'
+  );
+}
+
 function getStatusSession(status: RealtimeStateLoose['status']) {
   if (!status) return null;
 
@@ -597,13 +586,33 @@ function getRealtimeSession(realtimeState: RealtimeStateLoose) {
 function isRealtimeSessionActive(realtimeState: RealtimeStateLoose) {
   const session = getRealtimeSession(realtimeState);
   const sessionStatus = normalizeStatus(session?.status);
+  const sessionPhase = normalizeStatus(
+    session?.phase ?? realtimeState.status?.phase ?? null,
+  );
 
   if (isTerminalStatus(sessionStatus)) {
     return false;
   }
 
-  if (isActiveStatus(sessionStatus)) {
+  if (isRunningAutoCombatPhase(sessionPhase)) {
     return true;
+  }
+
+  if (
+    sessionPhase === 'ENCOUNTER_READY' ||
+    realtimeState.hasActiveAutoCombat === false ||
+    realtimeState.status?.hasActiveAutoCombat === false
+  ) {
+    return false;
+  }
+
+  if (isActiveStatus(sessionStatus)) {
+    return Boolean(
+      session?.currentMobId ??
+        session?.currentMob?.id ??
+        realtimeState.status?.currentMob?.id ??
+        null,
+    );
   }
 
   return Boolean(
@@ -1184,6 +1193,7 @@ function DashboardLayoutContent({
   hideHero = false,
   hideTopBar = false,
   topBarActivityOverride,
+  suppressAutoCombatTopBarFallback = false,
 }: DashboardLayoutContentProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1667,6 +1677,9 @@ function DashboardLayoutContent({
               characterMaxHp={heroCharacter.maxHp}
               resources={topBarResources}
               activityOverride={topBarActivityOverride}
+              suppressAutoCombatActivityFallback={
+                suppressAutoCombatTopBarFallback
+              }
             />
           ) : null}
         </div>
@@ -1807,6 +1820,7 @@ export function DashboardLayout({
   hideHero = false,
   hideTopBar = false,
   topBarActivityOverride,
+  suppressAutoCombatTopBarFallback = false,
 }: DashboardLayoutProps) {
   return (
     <DashboardLayoutContent
@@ -1814,6 +1828,7 @@ export function DashboardLayout({
       hideHero={hideHero}
       hideTopBar={hideTopBar}
       topBarActivityOverride={topBarActivityOverride}
+      suppressAutoCombatTopBarFallback={suppressAutoCombatTopBarFallback}
     >
       {children}
     </DashboardLayoutContent>

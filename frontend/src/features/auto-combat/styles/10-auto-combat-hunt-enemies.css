@@ -1258,6 +1258,7 @@
 
 .auto-combat-hunt-skill-card__heading > span::before {
   content: "";
+  display: none;
   width: 0.86rem;
   height: 0.86rem;
   flex: 0 0 auto;
@@ -1265,7 +1266,26 @@
   border-top-color: rgba(235, 243, 255, 0.92);
   border-radius: 999px;
   box-shadow: 0 0 10px rgba(235, 243, 255, 0.12);
+}
+
+.auto-combat-hunt-skill-card--tracking
+  .auto-combat-hunt-skill-card__heading
+  > span::before {
+  display: block;
   animation: auto-combat-hunt-spin 1s linear infinite;
+}
+
+.auto-combat-hunt-skill-card--ready
+  .auto-combat-hunt-skill-card__heading
+  > span::before {
+  display: block;
+  width: 0.58rem;
+  height: 0.58rem;
+  border-color: rgba(178, 238, 96, 0.48);
+  background: #9ee957;
+  box-shadow:
+    0 0 0 3px rgba(158, 233, 87, 0.12),
+    0 0 12px rgba(158, 233, 87, 0.24);
 }
 
 .auto-combat-hunt-skill-card__heading strong {

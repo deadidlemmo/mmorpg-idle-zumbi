@@ -1,3 +1,5 @@
+import { RefreshCw, X } from 'lucide-react';
+import { ActivityProgressCard } from '../../../components/game/ActivityProgressCard';
 import { getGatheringOriginIcon } from '../constants/gathering-origin-icons';
 import { useGatheringRealtimeState } from '../realtime/useGatheringRealtime';
 import type {
@@ -11,9 +13,13 @@ import {
   getGatheringMaterialRatePerHour,
   getGatheringXpPerUnit,
 } from '../types/gathering.types';
+import { getGatheringMaterialImageUrl } from '../utils/gatheringMaterialAssets';
 
 interface GatheringActivityPanelProps {
+  cardClassName?: string;
   status?: GatheringStatusResponse | null;
+  origin?: string | null;
+  activityLabel?: string | null;
 
   session?: GatheringSessionViewModel | null;
   productionPreview?: GatheringProductionPreviewViewModel | null;
@@ -77,6 +83,10 @@ function getSafeInteger(value: unknown, fallback = 0): number {
   return Math.max(0, Math.floor(parsed));
 }
 
+function joinClassNames(...classNames: Array<string | false | null | undefined>) {
+  return classNames.filter(Boolean).join(' ');
+}
+
 function getMaterialInitials(materialName?: string | null): string {
   const safeName = materialName?.trim();
 
@@ -91,33 +101,6 @@ function getMaterialInitials(materialName?: string | null): string {
   }
 
   return `${words[0][0] ?? ''}${words[1][0] ?? ''}`.toUpperCase();
-}
-
-function getMaterialIconUrl(
-  material?: GatheringMaterialViewModel | null,
-): string | null {
-  if (!material) return null;
-
-  const materialWithOptionalIcon = material as GatheringMaterialViewModel & {
-    icon?: unknown;
-    iconUrl?: unknown;
-    iconPath?: unknown;
-    imageUrl?: unknown;
-  };
-
-  const possibleIcon =
-    materialWithOptionalIcon.iconUrl ??
-    materialWithOptionalIcon.imageUrl ??
-    materialWithOptionalIcon.iconPath ??
-    materialWithOptionalIcon.icon;
-
-  if (typeof possibleIcon !== 'string') {
-    return null;
-  }
-
-  const trimmedIcon = possibleIcon.trim();
-
-  return trimmedIcon.length > 0 ? trimmedIcon : null;
 }
 
 function getSessionMaterial(
@@ -349,7 +332,10 @@ function getSyncedLiveProduction(params: {
 }
 
 export function GatheringActivityPanel({
+  cardClassName,
   status,
+  origin,
+  activityLabel,
   session,
   productionPreview,
   gatheringSkill,
@@ -380,8 +366,9 @@ export function GatheringActivityPanel({
   const material =
     realtimeState.targetMaterial ?? getSessionMaterial(activeSession);
 
-  const originIconUrl = getGatheringOriginIcon(activeSession?.origin);
-  const iconUrl = originIconUrl ?? getMaterialIconUrl(material);
+  const originIconUrl = getGatheringOriginIcon(activeSession?.origin ?? origin);
+  const materialIconUrl = getGatheringMaterialImageUrl(material);
+  const iconUrl = materialIconUrl ?? originIconUrl;
 
   const fallbackLiveProduction = getStaticLiveProduction({
     isActive,
@@ -413,6 +400,7 @@ export function GatheringActivityPanel({
 
   const nextUnitLabel = getNextUnitLabel(liveProduction.secondsToNextUnit);
   const skillLevelLabel = getGatheringSkillLevelLabel(gatheringSkill);
+  const inactiveActivityLabel = activityLabel?.trim() || 'Gathering';
 
   const canStop = Boolean(onStop) && isActive && !isBusy;
   const canRefresh = Boolean(onRefresh) && !isBusy;
@@ -431,146 +419,123 @@ export function GatheringActivityPanel({
 
   if (!isActive || !activeSession) {
     return (
-      <section className="gathering-session gathering-session--empty gathering-session--compact">
-        <div className="gathering-session__empty-card">
-          <span className="gathering-session__empty-icon" aria-hidden="true">
-            ⛏
-          </span>
-
-          <div className="gathering-session__empty-content">
-            <strong>Nenhuma coleta ativa</strong>
-            <p>Escolha um material para iniciar uma expedição.</p>
-          </div>
-
-          {onRefresh ? (
-            <button
-              type="button"
-              className="gathering-session__icon-button"
-              onClick={handleRefresh}
-              disabled={!canRefresh}
-              aria-label="Atualizar gathering"
-              title="Atualizar"
-            >
-              ↻
-            </button>
-          ) : null}
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="gathering-session gathering-session--active gathering-session--compact gathering-session--horizontal">
-      <div className="gathering-session__current-action gathering-session__current-action--horizontal">
-        <div className="gathering-session__item-icon" aria-hidden="true">
-          {iconUrl ? (
+      <ActivityProgressCard
+        as="section"
+        className={joinClassNames(
+          cardClassName,
+          'gathering-session',
+          'gathering-session--empty',
+          'gathering-session--idle',
+          'gathering-session--compact',
+          'gathering-session--horizontal',
+        )}
+        icon={
+          originIconUrl ? (
             <img
-              className="gathering-session__item-image"
-              src={iconUrl}
+              src={originIconUrl}
               alt=""
               draggable={false}
             />
           ) : (
             <span className="gathering-material-card__icon-fallback">
-              {getMaterialInitials(material?.name)}
+              {getMaterialInitials(inactiveActivityLabel)}
             </span>
-          )}
-        </div>
+          )
+        }
+        label={inactiveActivityLabel}
+        badge={skillLevelLabel}
+        progressPercent={0}
+        progressLabel="Nenhuma coleta ativa"
+        progressTitle="Nenhuma coleta ativa"
+        pills={[
+          {
+            content: 'Sem coleta',
+            key: 'status',
+          },
+          {
+            content: 'Disponível',
+            key: 'availability',
+          },
+          {
+            content: '0 EXP/s',
+            key: 'xp',
+          },
+        ]}
+      />
+    );
+  }
 
-        <div className="gathering-session__current-body gathering-session__current-body--title-only">
-          <span className="gathering-session__activity-heading">
-            <span
-              className="gathering-session__activity-spinner"
-              aria-hidden="true"
-            />
-            <span className="gathering-session__activity-title-row">
-              <h2 title={getActivityTitle(material)}>
-                {getActivityTitle(material)}
-              </h2>
-
-              <em className="gathering-session__level-badge">
-                {skillLevelLabel}
-              </em>
-            </span>
+  return (
+    <ActivityProgressCard
+      as="section"
+      className={joinClassNames(
+        cardClassName,
+        'gathering-session',
+        'gathering-session--active',
+        'gathering-session--compact',
+        'gathering-session--horizontal',
+      )}
+      icon={
+        iconUrl ? (
+          <img src={iconUrl} alt="" draggable={false} />
+        ) : (
+          <span className="gathering-material-card__icon-fallback">
+            {getMaterialInitials(material?.name)}
           </span>
-
-          <div
-            className="gathering-session__progress-strip"
-            role="progressbar"
-            aria-label="Progresso até a próxima unidade coletada"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(progressPercent)}
-            title={`${Math.round(progressPercent)}% até a próxima unidade`}
-          >
-            <span
-              className="gathering-session__progress-track"
-              aria-hidden="true"
-            >
-              <span
-                className="gathering-session__progress-fill"
-                style={{
-                  width: `${progressPercent}%`,
-                }}
-              />
-            </span>
-          </div>
-
-          <div className="gathering-session__inline-stats gathering-session__inline-stats--auto">
-            <span
-              className="gathering-session__inline-badge gathering-session__inline-value--collected"
-              title="Quantidade coletada automaticamente nesta sessão"
-            >
-              {getCollectedQuantityLabel(collectedQuantity)}
-            </span>
-
-            <span className="gathering-session__inline-capsule">
-              <span
-                className="gathering-session__inline-value gathering-session__inline-value--time"
-                title="Tempo estimado para a próxima unidade"
-              >
-                {nextUnitLabel}
-              </span>
-
-              <span
-                className="gathering-session__inline-value gathering-session__inline-value--xp"
-                title="Experiência gerada por segundo"
-              >
-                {expPerSecondLabel}
-              </span>
-            </span>
-          </div>
-        </div>
-
-        <div className="gathering-session__header-actions">
+        )
+      }
+      label={getActivityTitle(material)}
+      badge={skillLevelLabel}
+      progressPercent={progressPercent}
+      progressLabel="Progresso até a próxima unidade coletada"
+      progressTitle={`${Math.round(progressPercent)}% até a próxima unidade`}
+      pills={[
+        {
+          content: getCollectedQuantityLabel(collectedQuantity),
+          key: 'collected',
+          title: 'Quantidade coletada automaticamente nesta sessão',
+        },
+        {
+          content: nextUnitLabel,
+          key: 'next',
+          title: 'Tempo estimado para a próxima unidade',
+        },
+        {
+          content: expPerSecondLabel,
+          key: 'xp',
+          title: 'Experiência gerada por segundo',
+        },
+      ]}
+      controls={
+        <div className="gathering-session__header-actions auto-combat-hunt-skill-card__controls">
           {onRefresh ? (
             <button
               type="button"
-              className="gathering-session__icon-button"
+              className="gathering-session__icon-button auto-combat-hunt-skill-card__control-button"
               onClick={handleRefresh}
               disabled={!canRefresh}
               aria-label="Atualizar gathering"
               title="Atualizar"
             >
-              ↻
+              <RefreshCw size={15} strokeWidth={2.6} />
             </button>
           ) : null}
 
           {onStop ? (
             <button
               type="button"
-              className="gathering-session__icon-button gathering-session__icon-button--danger"
+              className="gathering-session__icon-button gathering-session__icon-button--danger auto-combat-hunt-skill-card__control-button auto-combat-hunt-skill-card__control-button--danger"
               onClick={handleStop}
               disabled={!canStop}
               aria-label="Parar gathering"
               title="Parar"
             >
-              ×
+              <X size={16} strokeWidth={2.8} />
             </button>
           ) : null}
         </div>
-      </div>
-    </section>
+      }
+    />
   );
 }
 

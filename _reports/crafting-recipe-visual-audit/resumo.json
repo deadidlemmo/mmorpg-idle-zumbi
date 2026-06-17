@@ -1,0 +1,14 @@
+{
+  "equipamentosComReceita": 280,
+  "materiaisGatheringAtivos": 440,
+  "receitasCom3GatheringHoje": 9,
+  "receitasComMenosDe3Gathering": 271,
+  "percentualMenosDe3": 96.8,
+  "combosAtuaisUnicos": 279,
+  "combosAtuaisRepetidos": 1,
+  "receitasEmCombosRepetidosAtuais": 2,
+  "combosPropostosUnicos": 276,
+  "combosPropostosRepetidos": 4,
+  "receitasEmCombosRepetidosProposta": 8,
+  "observacao": "Proposta nao aplicada automaticamente ao seed; revisar antes de alterar todas as receitas finais."
+}

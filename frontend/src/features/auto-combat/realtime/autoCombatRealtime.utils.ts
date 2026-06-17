@@ -1255,8 +1255,16 @@ export function buildMobStateFromStatus(
   const currentMob = status?.currentMob;
   const session = getStatusSession(status);
   const incomingSessionIsTerminal = isTerminalSessionStatus(session?.status);
+  const incomingPhase = String(session?.phase ?? status?.phase ?? '')
+    .trim()
+    .toUpperCase();
 
-  if (incomingSessionIsTerminal && !currentMob) {
+  if (
+    !currentMob &&
+    (incomingSessionIsTerminal ||
+      incomingPhase === 'ENCOUNTER_READY' ||
+      incomingPhase === 'HUNTING')
+  ) {
     return null;
   }
 

@@ -10,6 +10,7 @@ Abra este arquivo primeiro:
 balance-v5-2-painel-completo-auto-combate.svg
 balance-v5-2-painel-sessoes-auto-combate.svg
 balance-v5-2-painel-progressao-personagem-realista.svg
+balance-v5-2-crafting-gathering-autocombat.svg
 ```
 
 O painel completo concentra os graficos principais de XP, tempo, dano e caca.
@@ -17,6 +18,8 @@ O painel de sessoes mostra a relacao direta entre combate, caca e pocoes em
 sessoes de 6h e 12h.
 O painel de progressao de personagem projeta o tempo ate os levels 50 e 100
 com niveis de caca realistas por tier.
+O painel de crafting compara o custo de receitas entre gathering, drops de
+AutoCombat e tempo de criacao.
 
 - XP efetivo por hora.
 - XP/h relativo ao melhor do tier.
@@ -39,6 +42,10 @@ com niveis de caca realistas por tier.
 - Dias ate level 50 e 100 em cenarios conservador, provavel e otimista.
 - Curva acumulada de dias por level-chave usando caca realista por tier.
 - Dias por tier, nivel de caca usado por tier e XP/h por tier.
+- Horas por equipamento craftado usando gathering + AutoCombat + crafting.
+- Percentual do custo vindo de drops de AutoCombat.
+- Quantidades medias exigidas por tier para gathering e drops.
+- Crafts completos que cabem em sessoes free de 6h e premium de 12h.
 
 ## Cenario atual
 
@@ -64,6 +71,9 @@ com niveis de caca realistas por tier.
 - Equipamentos: itens reais do seed.
 - Gathering: origem recomendada por classe.
 - Loot, gold e drops: nao entram nas analises de dano/sobrevivencia.
+- Crafting/economia: usa receitas reais do seed, materiais reais, drops reais
+  dos mobs ativos, nivel realista de gathering/caca por tier e duracao real de
+  crafting.
 
 ## Mudancas do modelo
 
@@ -76,6 +86,11 @@ com niveis de caca realistas por tier.
 - V5.1 manteve o mesmo ganho de velocidade por nivel, mas aumentou a XP necessaria da skill de caca para que o nivel 50 fique em aproximadamente 1.439,8h continuas, perto de 60 dias sem limite diario.
 - V5.2 adicionou o painel de sessoes e ajustou a Pocao de Vida Suprema de 30% para 200 + 25%, reduzindo a discrepancia de XP por sessao em T9/T10 com estoque igual de pocoes.
 - V5.2 tambem recebeu o painel de progressao realista de personagem, sem assumir caca 50 nos tiers iniciais, e a curva de XP de personagem foi recalibrada para lancamento 1-50 em 2-3 meses e 1-100 perto de 1 ano.
+- V5.2 recebeu o painel de crafting/economia. Os drops exigidos em receitas
+  foram balanceados de forma progressiva por tier usando chance real de drop,
+  quantidade media e aparicao ponderada dos mobs ativos. AutoCombat representa
+  cerca de 28-33% do tempo esperado de materiais, mantendo T5 perto de 4h por
+  equipamento e T10 perto de uma janela premium de 12h.
 
 ## Organizacao da pasta
 
@@ -84,6 +99,7 @@ _reports/auto-combat-balance/
 |-- balance-v5-2-painel-completo-auto-combate.svg
 |-- balance-v5-2-painel-sessoes-auto-combate.svg
 |-- balance-v5-2-painel-progressao-personagem-realista.svg
+|-- balance-v5-2-crafting-gathering-autocombat.svg
 |-- README.md
 |-- dados-v5-2/
 |   |-- *.csv
@@ -126,6 +142,10 @@ _reports/auto-combat-balance/
 - `balance-v5-2-progressao-personagem-realista-resumo.csv`
 - `balance-v5-2-progressao-personagem-realista-detalhe.csv`
 - `balance-v5-2-progressao-personagem-realista-por-tier.csv`
+- `balance-v5-2-crafting-gathering-autocombat.json`
+- `balance-v5-2-crafting-gathering-autocombat-por-tier.csv`
+- `balance-v5-2-crafting-gathering-autocombat-receitas.csv`
+- `balance-v5-2-crafting-gathering-autocombat-drops-receitas.csv`
 
 `graficos-separados-v5-2/` guarda os SVGs individuais, caso seja necessario auditar um grafico isolado.
 
@@ -143,6 +163,7 @@ npm run balance:auto-combat:survival -- --kills=1000 --hunting-level=50 --potion
 npm run balance:auto-combat:complete-report -- --kills=1000 --hunting-level=50 --hunting-levels=1,10,25,50
 npm run balance:auto-combat:session-report -- --kills=1000 --hunting-levels=1,10,25,50 --session-hours=6,12 --potion-quantities=0,5,10,20,50,100,150,200,300
 npm run balance:character-progression:report -- --kills=1000
+npm run balance:crafting-economy:report
 ```
 
 Depois de gerar os arquivos individuais, mantenha os SVGs principais na raiz e mova CSV/JSON para `dados-v5-2/` se quiser preservar a organizacao atual.

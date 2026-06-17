@@ -1,17 +1,25 @@
 import type { MouseEvent } from 'react';
 import { useEffect } from 'react';
 import type {
+  GatheringMaterialRecipeUsageViewModel,
   GatheringMaterialViewModel,
   GatheringSkillViewModel,
 } from '../types/gathering.types';
 import {
+  formatGatheringOutputItemSlot,
+  formatGatheringRecipeQuantity,
   formatGatheringTimePerUnitShort,
   getGatheringMaterialRatePerHour,
+  getGatheringMaterialUsedInRecipes,
   getGatheringRequiredLevel,
   getGatheringSkillLevel,
   getGatheringXpPerUnit,
   isGatheringMaterialUnlocked,
 } from '../types/gathering.types';
+import {
+  getGatheringMaterialImageUrl,
+  getGatheringRecipeOutputImageUrl,
+} from '../utils/gatheringMaterialAssets';
 
 interface GatheringUsageModalProps {
   isOpen: boolean;
@@ -41,31 +49,62 @@ function getMaterialInitials(material?: GatheringMaterialViewModel | null): stri
   return `${words[0][0] ?? ''}${words[1][0] ?? ''}`.toUpperCase();
 }
 
-function getMaterialIconUrl(
-  material?: GatheringMaterialViewModel | null,
-): string | null {
-  if (!material) return null;
+function getRecipeInitials(recipe: GatheringMaterialRecipeUsageViewModel): string {
+  const words = recipe.outputItemName.trim().split(/\s+/).filter(Boolean);
 
-  const materialWithOptionalIcon = material as GatheringMaterialViewModel & {
-    icon?: unknown;
-    iconUrl?: unknown;
-    iconPath?: unknown;
-    imageUrl?: unknown;
-  };
+  if (words.length <= 0) return '?';
 
-  const possibleIcon =
-    materialWithOptionalIcon.iconUrl ??
-    materialWithOptionalIcon.imageUrl ??
-    materialWithOptionalIcon.iconPath ??
-    materialWithOptionalIcon.icon;
-
-  if (typeof possibleIcon !== 'string') {
-    return null;
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase();
   }
 
-  const trimmedIcon = possibleIcon.trim();
+  return `${words[0][0] ?? ''}${words[1][0] ?? ''}`.toUpperCase();
+}
 
-  return trimmedIcon.length > 0 ? trimmedIcon : null;
+function sortRecipeUsages(
+  recipes: GatheringMaterialRecipeUsageViewModel[],
+): GatheringMaterialRecipeUsageViewModel[] {
+  return [...recipes].sort((first, second) => {
+    if (first.outputItemTier !== second.outputItemTier) {
+      return first.outputItemTier - second.outputItemTier;
+    }
+
+    const firstClass = first.outputItemClassName ?? '';
+    const secondClass = second.outputItemClassName ?? '';
+
+    if (firstClass !== secondClass) {
+      return firstClass.localeCompare(secondClass, 'pt-BR');
+    }
+
+    return first.outputItemName.localeCompare(second.outputItemName, 'pt-BR');
+  });
+}
+
+function formatRecipeRarity(rarity?: string | null): string {
+  switch (rarity) {
+    case 'COMMON':
+      return 'Comum';
+    case 'UNCOMMON':
+      return 'Incomum';
+    case 'RARE':
+      return 'Raro';
+    case 'EPIC':
+      return 'Epico';
+    case 'LEGENDARY':
+      return 'Lendario';
+    default:
+      return rarity ?? 'Item';
+  }
+}
+
+function formatOutputQuantity(recipe: GatheringMaterialRecipeUsageViewModel): string {
+  const quantity = Number(recipe.outputQuantity ?? 1);
+
+  if (!Number.isFinite(quantity) || quantity <= 1) {
+    return 'Cria x1';
+  }
+
+  return `Cria x${Math.floor(quantity)}`;
 }
 
 function getStartButtonLabel(params: {
@@ -108,7 +147,14 @@ export function GatheringUsageModal({
     : null;
 
   const timePerUnitLabel = formatGatheringTimePerUnitShort(ratePerHour);
-  const iconUrl = getMaterialIconUrl(material);
+  const iconUrl = getGatheringMaterialImageUrl(material);
+  const usedInRecipes = material
+    ? sortRecipeUsages(getGatheringMaterialUsedInRecipes(material))
+    : [];
+  const usedInRecipesCountLabel =
+    usedInRecipes.length === 1
+      ? '1 item final'
+      : `${usedInRecipes.length} itens finais`;
   const canStart = Boolean(
     material && onStart && isUnlocked && !isBusy && !isStartDisabled,
   );
@@ -195,18 +241,77 @@ export function GatheringUsageModal({
               <span>Lv. {requiredLevel}</span>
               <span>{timePerUnitLabel}</span>
               <span>+{xpPerUnit} XP</span>
+              <span>{usedInRecipesCountLabel}</span>
             </div>
           </div>
         </header>
 
+        <section
+          className="gathering-usage-modal__content gathering-usage-modal__content--inline"
+          aria-label="Itens finais criados com este material"
+        >
+          <div className="gathering-usage-modal__recipes-heading">
+            <span>Usado para criar</span>
+            <strong>{usedInRecipesCountLabel}</strong>
+          </div>
+
+          {usedInRecipes.length > 0 ? (
+            <div className="gathering-usage-modal__recipes">
+              {usedInRecipes.map((recipe) => {
+                const classLabel = recipe.outputItemClassName ?? 'Todas as classes';
+                const slotLabel = formatGatheringOutputItemSlot(recipe.outputItemSlot);
+                const outputImageUrl = getGatheringRecipeOutputImageUrl(recipe);
+
+                return (
+                  <article
+                    className="gathering-usage-modal__recipe"
+                    key={`${recipe.recipeId}-${recipe.outputItemId}`}
+                  >
+                    <span
+                      className="gathering-usage-modal__recipe-icon"
+                      aria-hidden="true"
+                    >
+                      {outputImageUrl ? (
+                        <img src={outputImageUrl} alt="" draggable={false} />
+                      ) : (
+                        getRecipeInitials(recipe)
+                      )}
+                    </span>
+
+                    <div className="gathering-usage-modal__recipe-body">
+                      <div className="gathering-usage-modal__recipe-top">
+                        <strong title={recipe.outputItemName}>
+                          {recipe.outputItemName}
+                        </strong>
+                        <span>T{recipe.outputItemTier}</span>
+                      </div>
+
+                      <p>
+                        {slotLabel} - {classLabel}
+                      </p>
+
+                      <footer className="gathering-usage-modal__recipe-footer">
+                        <span>{formatGatheringRecipeQuantity(recipe)} deste material</span>
+                        <span>{formatOutputQuantity(recipe)}</span>
+                        <span>{formatRecipeRarity(recipe.outputItemRarity)}</span>
+                      </footer>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="gathering-usage-modal__empty-usage">
+              <strong>Sem item final vinculado</strong>
+              <span>Este material ainda nao aparece em receitas de crafting.</span>
+            </div>
+          )}
+        </section>
+
         <div className="gathering-usage-modal__actions">
-          <button
-            type="button"
-            className="gathering-usage-modal__inspect-button"
-            title="Inspeção detalhada será adicionada depois."
-          >
-            Inspecionar item
-          </button>
+          <span className="gathering-usage-modal__usage-count">
+            {usedInRecipes.length > 0 ? usedInRecipesCountLabel : 'Sem receita'}
+          </span>
 
           <button
             type="button"

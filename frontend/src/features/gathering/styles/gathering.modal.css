@@ -79,7 +79,7 @@
 }
 
 .gathering-usage-modal__panel--compact {
-  width: min(360px, 100%);
+  width: min(460px, 100%);
   border-color: rgba(154, 206, 91, 0.26);
   border-radius: 0.52rem;
   background:
@@ -155,9 +155,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   justify-items: center;
-  gap: 0.68rem;
+  gap: 0.76rem;
   min-width: 0;
-  padding: 1.36rem 2.7rem 1.04rem;
+  padding: 1.44rem 2.7rem 1.1rem;
   text-align: center;
   border-bottom: 0;
 }
@@ -165,8 +165,8 @@
 .gathering-usage-modal__material-icon {
   display: grid;
   place-items: center;
-  width: 92px;
-  height: 78px;
+  width: 120px;
+  height: 98px;
   overflow: hidden;
   color: color-mix(in srgb, rgb(var(--equipment-rarity-rgb)) 82%, #fff8e8);
   font-family: var(--font-title);
@@ -188,8 +188,8 @@
 
 .gathering-usage-modal__material-image {
   display: block;
-  width: 84px;
-  height: 70px;
+  width: 112px;
+  height: 90px;
   object-fit: contain;
   object-position: center;
   filter:
@@ -419,6 +419,7 @@
   position: relative;
   z-index: 1;
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 0.34rem;
   padding: 0.48rem 0.72rem 0.58rem;
@@ -451,6 +452,30 @@
     color var(--transition-fast),
     opacity var(--transition-fast),
     box-shadow var(--transition-fast);
+}
+
+.gathering-usage-modal__usage-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0.42rem 0.7rem;
+  color: rgba(255, 248, 232, 0.78);
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid rgba(231, 227, 216, 0.12);
+  border-radius: 0.32rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.048), transparent),
+    rgba(5, 9, 8, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 7px 12px rgba(0, 0, 0, 0.12);
 }
 
 .gathering-usage-modal__inspect-button {
@@ -528,6 +553,39 @@
   overflow: auto;
 }
 
+.gathering-usage-modal__content--inline {
+  max-height: min(270px, 38vh);
+  padding: 0.1rem 0.92rem 0.86rem;
+}
+
+.gathering-usage-modal__recipes-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.62rem;
+  min-width: 0;
+  padding: 0 0.08rem;
+}
+
+.gathering-usage-modal__recipes-heading span {
+  color: rgba(174, 218, 120, 0.76);
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.gathering-usage-modal__recipes-heading strong {
+  color: rgba(255, 248, 232, 0.82);
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .gathering-usage-modal__recipes {
   display: flex;
   flex-direction: column;
@@ -536,7 +594,7 @@
 
 .gathering-usage-modal__recipe {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: 58px minmax(0, 1fr);
   align-items: center;
   gap: 0.76rem;
   padding: 0.76rem;
@@ -553,11 +611,11 @@
 .gathering-usage-modal__recipe-icon {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
+  width: 56px;
+  height: 56px;
   color: color-mix(in srgb, rgb(var(--equipment-rarity-rgb)) 84%, #fff8e8);
   font-family: var(--font-title);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 950;
   letter-spacing: 0.025em;
   border: 1px solid rgba(var(--equipment-rarity-rgb), 0.18);
@@ -565,6 +623,17 @@
   background:
     radial-gradient(circle at 50% 42%, rgba(var(--equipment-rarity-rgb), 0.13), transparent 70%),
     rgba(0, 0, 0, 0.28);
+}
+
+.gathering-usage-modal__recipe-icon img {
+  display: block;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  object-position: center;
+  filter:
+    drop-shadow(0 4px 7px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 7px rgba(var(--equipment-rarity-rgb), 0.12));
 }
 
 .gathering-usage-modal__recipe-body {
@@ -649,6 +718,32 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
     rgba(5, 9, 8, 0.44);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.58);
+}
+
+.gathering-usage-modal__empty-usage {
+  display: grid;
+  gap: 0.28rem;
+  padding: 0.82rem;
+  text-align: center;
+  border: 1px solid rgba(231, 227, 216, 0.11);
+  border-radius: 0.78rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), transparent),
+    rgba(5, 9, 8, 0.44);
+}
+
+.gathering-usage-modal__empty-usage strong {
+  color: rgba(255, 248, 232, 0.9);
+  font-family: var(--font-title);
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.gathering-usage-modal__empty-usage span {
+  color: rgba(231, 227, 216, 0.68);
+  font-size: 0.78rem;
+  font-weight: 720;
+  line-height: 1.3;
 }
 
 /* =========================================================
@@ -741,7 +836,7 @@
   .gathering-usage-modal__panel,
   .gathering-usage-modal__panel--compact,
   .gathering-usage-modal__panel.is-inspecting {
-    width: min(100%, 360px);
+    width: min(100%, 420px);
     max-height: calc(100vh - 1.5rem);
     border-radius: 0.52rem;
   }
@@ -769,15 +864,15 @@
   }
 
   .gathering-usage-modal__material-icon {
-    width: 86px;
-    height: 72px;
+    width: 108px;
+    height: 88px;
     border-radius: 0.72rem;
     font-size: 0.8rem;
   }
 
   .gathering-usage-modal__material-image {
-    width: 78px;
-    height: 64px;
+    width: 100px;
+    height: 80px;
   }
 
   .gathering-usage-modal__hero .gathering-card__eyebrow {
@@ -846,18 +941,28 @@
     padding: 0 0.88rem 0.88rem;
   }
 
+  .gathering-usage-modal__content--inline {
+    max-height: min(250px, 36vh);
+    padding: 0.08rem 0.78rem 0.78rem;
+  }
+
   .gathering-usage-modal__recipe {
-    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-columns: 52px minmax(0, 1fr);
     gap: 0.6rem;
     padding: 0.64rem;
     border-radius: 0.76rem;
   }
 
   .gathering-usage-modal__recipe-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 0.68rem;
+    width: 50px;
+    height: 50px;
+    font-size: 0.72rem;
     border-radius: 0.68rem;
+  }
+
+  .gathering-usage-modal__recipe-icon img {
+    width: 46px;
+    height: 46px;
   }
 
   .gathering-usage-modal__recipe-top {
