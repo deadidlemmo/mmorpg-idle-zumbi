@@ -154,19 +154,29 @@ describe('AutoCombat status concurrency (e2e)', () => {
     });
     createdIds.userId = user.id;
 
-    const gameClass = await prisma.gameClass.create({
-      data: {
-        name: `AutoCombat E2E Class ${suffix}`,
-        description: 'Classe temporaria para teste e2e de auto-combate.',
-        baseStrength: 5,
-        baseVitality: 5,
-        baseAgility: 5,
-        basePrecision: 5,
-        baseTechnique: 5,
-        baseWillpower: 5,
+    const existingGameClass = await prisma.gameClass.findUnique({
+      where: {
+        name: 'Lutador',
       },
     });
-    createdIds.gameClassId = gameClass.id;
+    const gameClass =
+      existingGameClass ??
+      (await prisma.gameClass.create({
+        data: {
+          name: 'Lutador',
+          description: 'Classe canonica para teste e2e de auto-combate.',
+          baseStrength: 8,
+          baseVitality: 8,
+          baseAgility: 2,
+          basePrecision: 2,
+          baseTechnique: 5,
+          baseWillpower: 5,
+        },
+      }));
+
+    if (!existingGameClass) {
+      createdIds.gameClassId = gameClass.id;
+    }
 
     const gameMap = await prisma.gameMap.create({
       data: {
