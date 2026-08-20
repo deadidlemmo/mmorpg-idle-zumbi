@@ -20,8 +20,7 @@ import { recipeDefinitions } from './seed-data/recipes.seed-data';
 
 type CsvRow = Record<string, string>;
 
-const DEFAULT_CSV_PATH =
-  'C:/Users/Neto/Downloads/receitas_corrigidas_2principal_1secundario.csv';
+const DEFAULT_CSV_PATH = process.env.CRAFTING_AUDIT_CSV_PATH?.trim() || null;
 
 const GATHERING_ORIGINS = [
   'DESMANCHE',
@@ -500,7 +499,7 @@ function buildRecipeQuantityAudit(params: {
 
 function main() {
   const csvPath = process.argv[2] ?? DEFAULT_CSV_PATH;
-  const rows = parseCsv(fs.readFileSync(csvPath, 'utf8'));
+  const rows = csvPath ? parseCsv(fs.readFileSync(csvPath, 'utf8')) : [];
   const equipmentNames = new Set(equipmentDefinitions.map((item) => item.name));
   const mobDropItemNames = new Set(
     mobDropItemDefinitions.map((item) => item.name),
@@ -568,8 +567,7 @@ function main() {
     const originalMainOrigin = ORIGIN_BY_LABEL[
       normalize(row.gatheringprincipal)
     ] as GatheringOriginCode;
-    const mainOrigin =
-      mainOverride?.targetMainOrigin ?? originalMainOrigin;
+    const mainOrigin = mainOverride?.targetMainOrigin ?? originalMainOrigin;
     const mainMaterialName = chooseBalancedMainMaterial({
       row,
       outputItemName,
@@ -703,6 +701,7 @@ function main() {
     }
   }
 
+  const launchTiers = new Set(recipeDefinitions.map((recipe) => recipe.tier));
   const usedRecipeIngredients = new Set(
     recipeDefinitions.flatMap((recipe) =>
       recipe.ingredients.map((ingredient) => ingredient.itemName),
@@ -710,7 +709,9 @@ function main() {
   );
   const gatheringMaterialsWithoutRecipe = materialDefinitions.filter(
     (material) =>
-      material.isGatheringMaterial && !usedRecipeIngredients.has(material.name),
+      launchTiers.has(material.tier) &&
+      material.isGatheringMaterial &&
+      !usedRecipeIngredients.has(material.name),
   );
   const recipeGatheringIngredientsNotGatherable = [
     ...new Set(
@@ -804,9 +805,37 @@ function main() {
         .map((ingredient) => ingredient.itemName),
     ),
   );
+  const recipeOutputCounts: Record<string, number> = {};
+
+  for (const recipe of recipeDefinitions) {
+    increment(recipeOutputCounts, recipe.outputItemName);
+  }
+
+  const missingRecipeOutputs = [...equipmentNames].filter(
+    (itemName) => !recipesByOutput.has(itemName),
+  );
+  const unknownRecipeOutputs = [...recipesByOutput.keys()].filter(
+    (itemName) => !equipmentNames.has(itemName),
+  );
+  const duplicateRecipeOutputs = Object.entries(recipeOutputCounts)
+    .filter(([, count]) => count > 1)
+    .map(([itemName]) => itemName);
+  const unknownRecipeIngredients = [
+    ...new Set(
+      recipeDefinitions
+        .flatMap((recipe) => recipe.ingredients)
+        .map((ingredient) => ingredient.itemName)
+        .filter((itemName) => !itemNames.has(itemName)),
+    ),
+  ];
+  const recipeMobDropItemsNotDropped = [...recipeMobDropIngredients].filter(
+    (itemName) => !droppedItemNames.has(itemName),
+  );
+  const recipeQuantityAudit = buildRecipeQuantityAudit({ mobDropMetaByName });
 
   const report = {
     csv: {
+      source: csvPath ?? 'seed-data canonico',
       rows: rows.length,
       outputItems: new Set(rows.map((row) => row.item)).size,
       usedGatheringNames: csvUsedGatheringNames.size,
@@ -822,6 +851,10 @@ function main() {
       recipes: recipeDefinitions.length,
     },
     coverage: {
+      missingRecipeOutputs,
+      unknownRecipeOutputs,
+      duplicateRecipeOutputs,
+      unknownRecipeIngredients,
       missingOutputs: [...missingOutputs],
       unresolvedUsedGatheringCount: unresolvedUsedGathering.length,
       unresolvedUsedGathering: unresolvedUsedGathering.slice(0, 20),
@@ -846,7 +879,7 @@ function main() {
       affinityViolationsCount: affinityViolations.length,
       affinityViolations: affinityViolations.slice(0, 20),
     },
-    recipeQuantitySymmetry: buildRecipeQuantityAudit({ mobDropMetaByName }),
+    recipeQuantitySymmetry: recipeQuantityAudit,
     gatheringSymmetry: {
       targetDemandPerOrigin: balancedGatheringDemandPerOrigin,
       targetDemandPerClassOrigin: balancedGatheringDemandPerClassOrigin,
@@ -861,9 +894,7 @@ function main() {
     },
     mobDrops: {
       recipeMobDropItems: recipeMobDropIngredients.size,
-      recipeMobDropItemsNotDropped: [...recipeMobDropIngredients].filter(
-        (itemName) => !droppedItemNames.has(itemName),
-      ),
+      recipeMobDropItemsNotDropped,
       droppedItems: droppedItemNames.size,
       droppedItemsNotUsedInRecipes: [...droppedItemNames]
         .filter((itemName) => !recipeMobDropIngredients.has(itemName))
@@ -880,6 +911,31 @@ function main() {
   };
 
   console.log(JSON.stringify(report, null, 2));
+
+  const seedIssueCount =
+    missingRecipeOutputs.length +
+    unknownRecipeOutputs.length +
+    duplicateRecipeOutputs.length +
+    unknownRecipeIngredients.length +
+    gatheringMaterialsWithoutRecipe.length +
+    recipeGatheringIngredientsNotGatherable.length +
+    recipeMobDropItemsNotDropped.length +
+    recipeQuantityAudit.invalidRecipeCount +
+    mobDropTableIssues.length;
+  const csvIssueCount = csvPath
+    ? missingOutputs.size +
+      unresolvedUsedGathering.length +
+      missingMobDropIngredients.size +
+      mismatchedRecipes.length +
+      affinityViolations.length
+    : 0;
+
+  if (seedIssueCount + csvIssueCount > 0) {
+    console.error(
+      `Auditoria de crafting encontrou ${seedIssueCount + csvIssueCount} inconsistencias.`,
+    );
+    process.exitCode = 1;
+  }
 }
 
 main();
