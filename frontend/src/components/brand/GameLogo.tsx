@@ -1,4 +1,4 @@
-import logoHorizontal from '../../assets/images/brand/dead-idle-logo-horizontal.png';
+import logoHorizontal from '../../assets/images/brand/dead-idle-logo-horizontal.webp';
 
 interface GameLogoProps {
   variant?: 'horizontal' | 'compact';

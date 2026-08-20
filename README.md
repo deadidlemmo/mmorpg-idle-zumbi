@@ -1,12 +1,12 @@
 # MMORPG Idle Zumbi
 
-Ultima revisao: 2026-06-08.
+Ultima revisao: 2026-08-20.
 
 Este README foi refeito a partir do estado real do working tree local. O codigo, o schema Prisma, as migrations, os `package.json` e os arquivos de configuracao continuam sendo a fonte da verdade. Quando algo nao foi identificado diretamente no repositorio, isso esta marcado como "confirmar manualmente".
 
 ## Descricao
 
-MMORPG Idle Zumbi e um jogo web full stack de sobrevivencia zumbi com progressao idle/MMORPG. O jogador cria personagens, escolhe classe, navega por mapas, enfrenta mobs, usa auto-combate com fase de caca, coleta materiais, cria itens, gerencia inventario/equipamentos, participa de incursions e world bosses, e pode ter beneficios premium.
+MMORPG Idle Zumbi e um jogo web full stack de sobrevivencia zumbi com progressao idle/MMORPG. O jogador cria personagens, escolhe classe, navega por mapas, enfrenta mobs, usa auto-combate com fase de caca, coleta materiais, cria itens, gerencia inventario/equipamentos, participa de incursions e world bosses, conclui missoes/conquistas e interage com aliados. Beneficios premium existem no dominio, mas a compra comercial ainda nao esta habilitada.
 
 O projeto esta dividido em:
 
@@ -34,14 +34,15 @@ O backend deve ser tratado como fonte da verdade para estado de personagem, ativ
 | Camada | Tecnologias identificadas |
 | --- | --- |
 | Frontend | React 19, TypeScript, Vite, React Router, Zustand, Axios, Socket.IO Client, clsx, lucide-react |
-| Backend | NestJS 11, TypeScript, Prisma 6, Passport/JWT, bcrypt, Socket.IO, ioredis |
+| Backend | NestJS 11, TypeScript, Prisma 6, Passport/JWT, bcrypt, Socket.IO, ioredis, Nodemailer |
 | Banco | PostgreSQL via Prisma ORM |
 | Realtime | Socket.IO no backend e no frontend |
 | Infra local | Docker Compose com PostgreSQL 16 e Redis 7 |
-| Testes backend | Jest e Supertest |
-| Build frontend | `tsc -b` e `vite build` |
+| Testes | Jest/Supertest no backend e Node Test Runner via `tsx` no frontend |
+| CI | GitHub Actions com lint, testes, builds, migrations, seed, auditorias e restore |
+| Build frontend | `tsc -b` e `vite build` com code splitting por rota |
 
-Nao foi identificado arquivo de CI/CD versionado. Nao foi identificado `Dockerfile` de aplicacao. Nao foi identificado arquivo `LICENSE`; o `backend/package.json` declara `UNLICENSED`.
+Nao foi identificado `Dockerfile` de aplicacao. Nao foi identificado arquivo `LICENSE`; o `backend/package.json` declara `UNLICENSED`.
 
 ## Estrutura de pastas
 
@@ -50,8 +51,10 @@ Nao foi identificado arquivo de CI/CD versionado. Nao foi identificado `Dockerfi
 |-- AGENTS.md
 |-- README.md
 |-- AUTOCOMBAT.md
+|-- .github/workflows/ci.yml
 |-- docs/
 |   |-- economia-crafting-csv/
+|   |-- operations/
 |   `-- mob-image-pack/
 |-- infra/
 |   `-- docker-compose.yml
@@ -624,6 +627,8 @@ Frontend:
 ```bash
 cd frontend
 npm run lint
+npm test
+npm run images:audit:equipment
 npm run build
 ```
 
@@ -690,13 +695,14 @@ Verifique:
 
 Recarregue status/recent-events por REST e confirme `sessionId`, `phase`, `sequence`, `eventKey`, `huntBatchId` e alvo de batalha. O visual deve ser reconstruido a partir do estado persistido, nao de estado local antigo.
 
+Runbooks operacionais ficam em `docs/operations/`, incluindo backup/restore,
+checklist de lancamento e procedimento isolado para limpeza do historico Git.
+
 ## Pontos a confirmar manualmente
 
-- Versao minima exata de Node.js.
-- Estrategia de deploy/producao e CI/CD.
+- Plataforma e estrategia final de deploy/producao.
 - Dockerfile de aplicacao nao identificado.
-- `JWT_EXPIRES_IN` existe no env, mas nao e usado dinamicamente no `AuthModule` atual.
 - Confirmar se `VITE_BACKEND_URL` deve continuar como fallback legado ou se deve ser consolidado em `VITE_API_URL`/`VITE_SOCKET_URL`.
 - `test:grant-lutador-t1` referencia arquivo nao identificado na arvore atual.
-- Autenticacao/ownership de gathering precisa de revisao antes de producao.
-- Modo de teste de world boss esta habilitado no codigo atual e deve ser revisado antes de producao.
+- Provedor de pagamento, webhook, conciliacao e reembolso do Premium ainda precisam ser definidos.
+- T6-T10 permanecem como conteudo futuro, fora do cap jogavel de nivel 50.

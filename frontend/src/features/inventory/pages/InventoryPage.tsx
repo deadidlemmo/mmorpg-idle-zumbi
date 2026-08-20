@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import goldIcon from '../../../assets/images/coins/gold.png';
+import goldIcon from '../../../assets/images/coins/gold.webp';
 import { normalizeClassName } from '../../characters/api/characters.api';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';

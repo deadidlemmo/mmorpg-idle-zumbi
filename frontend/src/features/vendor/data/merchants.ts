@@ -1,4 +1,4 @@
-import maraPortrait from '../../../assets/images/npcs/npc_coleta_dona_celia.png';
+import maraPortrait from '../../../assets/images/npcs/npc_coleta_dona_celia.webp';
 
 export type MerchantTagTone = 'gold' | 'green' | 'muted';
 

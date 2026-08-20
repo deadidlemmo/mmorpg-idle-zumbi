@@ -132,6 +132,7 @@ export class EquipmentService {
         item: {
           include: {
             class: true,
+            map: true,
           },
         },
       },
@@ -154,6 +155,12 @@ export class EquipmentService {
     if (item.classId && item.classId !== character.classId) {
       throw new BadRequestException(
         `Este item pertence à classe ${item.class?.name}.`,
+      );
+    }
+
+    if (item.map?.minLevel && character.level < item.map.minLevel) {
+      throw new BadRequestException(
+        `Este item exige nível ${item.map.minLevel}.`,
       );
     }
 

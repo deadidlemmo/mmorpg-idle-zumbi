@@ -1,11 +1,11 @@
-import type { FormEvent } from 'react';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '../../../components/common/Button';
-import { FormError } from '../../../components/common/FormError';
-import { FormInput } from '../../../components/common/FormInput';
-import { useAuthStore } from '../../../store/auth.store';
-import { PasswordField } from './PasswordField';
+import type { FormEvent } from "react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "../../../components/common/Button";
+import { FormError } from "../../../components/common/FormError";
+import { FormInput } from "../../../components/common/FormInput";
+import { useAuthStore } from "../../../store/auth.store";
+import { PasswordField } from "./PasswordField";
 
 interface RegisterFormProps {
   onBackToLogin: () => void;
@@ -16,9 +16,11 @@ export function RegisterForm({ onBackToLogin }: RegisterFormProps) {
 
   const { register, isLoading, error, clearError } = useAuthStore();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
   const passwordsDoNotMatch =
     password.length > 0 &&
@@ -33,7 +35,7 @@ export function RegisterForm({ onBackToLogin }: RegisterFormProps) {
       return;
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return;
     }
 
@@ -41,8 +43,8 @@ export function RegisterForm({ onBackToLogin }: RegisterFormProps) {
       return;
     }
 
-    await register(email, password);
-    navigate('/characters');
+    await register(email, password, acceptTerms, acceptPrivacy);
+    navigate("/characters");
   }
 
   return (
@@ -67,8 +69,8 @@ export function RegisterForm({ onBackToLogin }: RegisterFormProps) {
         onChange={setPassword}
         placeholder="Crie uma senha"
         error={
-          password.length > 0 && password.length < 6
-            ? 'A senha precisa ter pelo menos 6 caracteres.'
+          password.length > 0 && password.length < 8
+            ? "A senha precisa ter pelo menos 8 caracteres."
             : null
         }
       />
@@ -79,8 +81,32 @@ export function RegisterForm({ onBackToLogin }: RegisterFormProps) {
         value={confirmPassword}
         onChange={setConfirmPassword}
         placeholder="Repita sua senha"
-        error={passwordsDoNotMatch ? 'As senhas não coincidem.' : null}
+        error={passwordsDoNotMatch ? "As senhas não coincidem." : null}
       />
+
+      <label className="auth-consent-row">
+        <input
+          type="checkbox"
+          checked={acceptTerms}
+          disabled={isLoading}
+          onChange={(event) => setAcceptTerms(event.target.checked)}
+        />
+        <span>
+          Li e aceito os <Link to="/terms">Termos de Uso</Link>.
+        </span>
+      </label>
+
+      <label className="auth-consent-row">
+        <input
+          type="checkbox"
+          checked={acceptPrivacy}
+          disabled={isLoading}
+          onChange={(event) => setAcceptPrivacy(event.target.checked)}
+        />
+        <span>
+          Li e aceito a <Link to="/privacy">Politica de Privacidade</Link>.
+        </span>
+      </label>
 
       <Button
         type="submit"
@@ -92,15 +118,17 @@ export function RegisterForm({ onBackToLogin }: RegisterFormProps) {
           !email.trim() ||
           !password.trim() ||
           !confirmPassword.trim() ||
-          password.length < 6 ||
-          passwordsDoNotMatch
+          password.length < 8 ||
+          passwordsDoNotMatch ||
+          !acceptTerms ||
+          !acceptPrivacy
         }
       >
         Criar conta
       </Button>
 
       <p className="auth-footer-action">
-        Já tem conta?{' '}
+        Já tem conta?{" "}
         <button
           type="button"
           className="auth-text-link"

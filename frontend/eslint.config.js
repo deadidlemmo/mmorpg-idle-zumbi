@@ -6,7 +6,12 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores([
+    'dist/**',
+    'coverage/**',
+    '_backup_gathering/**',
+    '_backup_gathering_unused/**',
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -17,6 +22,10 @@ export default defineConfig([
     ],
     languageOptions: {
       globals: globals.browser,
+    },
+    rules: {
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-refresh/only-export-components': 'warn',
     },
   },
 ])

@@ -1,4 +1,8 @@
-import { IsString, IsUUID } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  INCURSION_APPROACHES,
+  type IncursionApproach,
+} from '../incursion-risk.util';
 
 export class StartIncursionDto {
   @IsString()
@@ -8,4 +12,8 @@ export class StartIncursionDto {
   @IsString()
   @IsUUID()
   incursionId: string;
+
+  @IsOptional()
+  @IsIn(INCURSION_APPROACHES)
+  approach?: IncursionApproach;
 }

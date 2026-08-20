@@ -115,10 +115,19 @@ function createServiceHarness(updateCount = 1) {
     emitFinished: jest.fn(),
     emitStopped: jest.fn(),
   };
+  const distributedLock = {
+    runExclusive: jest.fn(
+      async (_key: string, _ttlMs: number, task: () => Promise<unknown>) => ({
+        acquired: true,
+        value: await task(),
+      }),
+    ),
+  };
   const service = new AutoCombatService(
     prisma as never,
     activityGuard as never,
     gateway as never,
+    distributedLock as never,
   );
 
   jest.spyOn(service as any, 'getOrCreateHuntingSkill').mockResolvedValue({

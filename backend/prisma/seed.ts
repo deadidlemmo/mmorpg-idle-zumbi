@@ -32,6 +32,10 @@ import {
 import { mobDefinitions } from './seed-data/mobs.seed-data';
 import { recipeDefinitions } from './seed-data/recipes.seed-data';
 import { worldBossDefinitions } from './seed-data/world-bosses.seed-data';
+import {
+  achievementDefinitions,
+  missionDefinitions,
+} from './seed-data/progression.seed-data';
 import type {
   ConsumableSeedData,
   CraftingRecipeSeedData,
@@ -251,10 +255,9 @@ async function upsertMaterialItem(params: {
 
   const isMobDrop = data.materialOrigin === 'DROP_MOBS';
   const isGatheringMaterial = data.isGatheringMaterial ?? false;
-  const gatheringXpPerUnit =
-    isGatheringMaterial
-      ? getGatheringXpPerUnitForTier(data.tier)
-      : (data.gatheringXpPerUnit ?? (isMobDrop ? 0 : 1));
+  const gatheringXpPerUnit = isGatheringMaterial
+    ? getGatheringXpPerUnitForTier(data.tier)
+    : (data.gatheringXpPerUnit ?? (isMobDrop ? 0 : 1));
 
   return upsertItemByName({
     name: data.name,
@@ -993,7 +996,8 @@ async function validateOfficialGatheringMaterials() {
     (entry) =>
       !entry.materialOrigin ||
       !officialOrigins.includes(entry.materialOrigin) ||
-      (entry.materialSlot !== null && !officialSlots.includes(entry.materialSlot)),
+      (entry.materialSlot !== null &&
+        !officialSlots.includes(entry.materialSlot)),
   );
 
   if (invalidCombination) {
@@ -1329,6 +1333,24 @@ async function main() {
     });
   }
 
+  console.log('Criando/atualizando missoes e conquistas...');
+
+  for (const mission of missionDefinitions) {
+    await prisma.missionDefinition.upsert({
+      where: { key: mission.key },
+      update: mission,
+      create: mission,
+    });
+  }
+
+  for (const achievement of achievementDefinitions) {
+    await prisma.achievementDefinition.upsert({
+      where: { key: achievement.key },
+      update: achievement,
+      create: achievement,
+    });
+  }
+
   const mobDropDefinitions = flattenMobDropTables();
   const mobsByDropKey = new Map<string, Mob>();
   const skippedMobDropKeys = new Set<string>();
@@ -1450,6 +1472,8 @@ async function main() {
     dropsIgnoradosPorMobAusente: skippedMobDropKeys.size,
     ameacasGlobaisRegistradas: worldBossDefinitions.length,
     incursionsRegistradas: incursionDefinitions.length,
+    missoesRegistradas: missionDefinitions.length,
+    conquistasRegistradas: achievementDefinitions.length,
     gatheringDocumentado: gatheringDefinitions.map((definition) => ({
       key: definition.key,
       label: definition.label,

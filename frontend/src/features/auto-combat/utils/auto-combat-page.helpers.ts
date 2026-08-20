@@ -756,7 +756,6 @@ export function getVisibleCombatMaps(maps: AutoCombatMapViewModel[]) {
 
 export function getSubMapsForMap(
   gameMap: AutoCombatMapViewModel | null | undefined,
-  _characterLevel: number,
 ) {
   if (!gameMap) return [];
 
@@ -771,12 +770,9 @@ export function getSubMapsForMap(
     });
 }
 
-export function flattenCombatSubMaps(
-  maps: AutoCombatMapViewModel[],
-  characterLevel: number,
-) {
+export function flattenCombatSubMaps(maps: AutoCombatMapViewModel[]) {
   return getVisibleCombatMaps(maps).flatMap((gameMap) => {
-    return getSubMapsForMap(gameMap, characterLevel);
+    return getSubMapsForMap(gameMap);
   });
 }
 
@@ -789,7 +785,7 @@ export function getDefaultSubMapId(params: {
   characterLevel: number;
   status: AutoCombatStatusResponse | null;
 }) {
-  const subMaps = flattenCombatSubMaps(params.maps, params.characterLevel);
+  const subMaps = flattenCombatSubMaps(params.maps);
   const sessionSubMapId = params.status?.subMap?.id;
 
   if (

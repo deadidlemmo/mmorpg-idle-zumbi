@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { HeartPulse, Package, Search, ShoppingCart } from "lucide-react";
-import goldIcon from "../../../assets/images/coins/gold.png";
+import goldIcon from "../../../assets/images/coins/gold.webp";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import "../../dashboard/dashboard.css";

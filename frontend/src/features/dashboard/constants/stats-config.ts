@@ -1,9 +1,9 @@
-import agilityIcon from '../../../assets/images/stats/attributes/stat-agility.png';
-import precisionIcon from '../../../assets/images/stats/attributes/stat-precision.png';
-import strengthIcon from '../../../assets/images/stats/attributes/stat-strength.png';
-import techniqueIcon from '../../../assets/images/stats/attributes/stat-technique.png';
-import vitalityIcon from '../../../assets/images/stats/attributes/stat-vitality.png';
-import willpowerIcon from '../../../assets/images/stats/attributes/stat-willpower.png';
+import agilityIcon from '../../../assets/images/stats/attributes/stat-agility.webp';
+import precisionIcon from '../../../assets/images/stats/attributes/stat-precision.webp';
+import strengthIcon from '../../../assets/images/stats/attributes/stat-strength.webp';
+import techniqueIcon from '../../../assets/images/stats/attributes/stat-technique.webp';
+import vitalityIcon from '../../../assets/images/stats/attributes/stat-vitality.webp';
+import willpowerIcon from '../../../assets/images/stats/attributes/stat-willpower.webp';
 
 export type DashboardAttributeKey =
   | 'strength'

@@ -1,0 +1,228 @@
+.social-page {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem 1rem 2rem;
+}
+
+.social-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 1rem;
+}
+
+.social-header span {
+  color: #aeb5aa;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.social-header h1 {
+  margin: 0.15rem 0;
+  color: #f4f0df;
+  font-size: 2rem;
+}
+
+.social-header p {
+  margin: 0;
+  color: #b8bdb2;
+}
+
+.social-header > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #c9dbac;
+}
+
+.social-invite {
+  display: grid;
+  grid-template-columns: auto auto minmax(12rem, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  border-block: 1px solid rgba(255, 255, 255, 0.08);
+  padding-block: 0.8rem;
+  color: #c7cebd;
+}
+
+.social-invite label {
+  white-space: nowrap;
+}
+
+.social-invite input {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.35rem;
+  padding: 0.62rem 0.72rem;
+  background: rgba(0, 0, 0, 0.2);
+  color: #eef0e7;
+}
+
+.social-invite button,
+.social-row__actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(142, 189, 91, 0.35);
+  border-radius: 0.35rem;
+  padding: 0.6rem 0.72rem;
+  background: rgba(88, 132, 49, 0.18);
+  color: #dcebc9;
+  cursor: pointer;
+}
+
+.social-notice {
+  border: 1px solid;
+  padding: 0.7rem;
+}
+
+.social-notice.is-success {
+  border-color: rgba(130, 190, 80, 0.35);
+  color: #cdeba8;
+}
+
+.social-notice.is-error {
+  border-color: rgba(210, 75, 68, 0.4);
+  color: #f0aaa4;
+}
+
+.social-section {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.social-section__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  padding-bottom: 0.45rem;
+}
+
+.social-section__title h2 {
+  margin: 0;
+  color: #eff0e8;
+  font-size: 1rem;
+}
+
+.social-section__title span {
+  color: #aab2a3;
+}
+
+.social-list {
+  display: grid;
+}
+
+.social-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 0.7rem;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-block: 0.68rem;
+}
+
+.social-row__avatar {
+  display: grid;
+  width: 2.7rem;
+  height: 2.7rem;
+  place-items: center;
+  border: 1px solid rgba(142, 189, 91, 0.28);
+  background: rgba(80, 118, 48, 0.13);
+  color: #d9edbf;
+  font-weight: 800;
+}
+
+.social-row__identity {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.social-row__identity strong,
+.social-row__identity span,
+.social-row__identity small {
+  overflow-wrap: anywhere;
+}
+
+.social-row__identity strong {
+  color: #f0eee3;
+}
+
+.social-row__identity span,
+.social-row__identity small,
+.social-row__state {
+  color: #aeb5a8;
+  font-size: 0.72rem;
+}
+
+.social-row__state span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.social-row__actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.social-row__actions button {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-color: rgba(210, 91, 81, 0.25);
+  padding: 0;
+  background: rgba(125, 49, 43, 0.13);
+  color: #eab2ac;
+}
+
+.social-row__actions button.is-primary {
+  border-color: rgba(142, 189, 91, 0.35);
+  background: rgba(88, 132, 49, 0.18);
+  color: #dcebc9;
+}
+
+.social-row__actions button:disabled,
+.social-invite button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.social-empty {
+  margin: 0;
+  padding: 1rem 0;
+  color: #92998e;
+}
+
+@media (max-width: 760px) {
+  .social-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .social-invite {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .social-invite input,
+  .social-invite button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .social-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .social-row__state {
+    grid-column: 2;
+  }
+
+  .social-row__actions {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+}

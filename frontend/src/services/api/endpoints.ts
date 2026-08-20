@@ -3,6 +3,31 @@ export const API_ENDPOINTS = {
     login: "/auth/login",
     register: "/auth/register",
     me: "/auth/me",
+    requestPasswordReset: "/auth/password-reset/request",
+    confirmPasswordReset: "/auth/password-reset/confirm",
+  },
+
+  admin: {
+    summary: "/admin/summary",
+    users: "/admin/users",
+    userSuspension: (userId: string) => `/admin/users/${userId}/suspension`,
+    auditLogs: "/admin/audit-logs",
+  },
+
+  progression: {
+    dashboard: (characterId: string) => `/progression/${characterId}`,
+    tutorial: (characterId: string) => `/progression/${characterId}/tutorial`,
+    claimMission: (characterId: string, missionId: string) =>
+      `/progression/${characterId}/missions/${missionId}/claim`,
+    claimAchievement: (characterId: string, achievementId: string) =>
+      `/progression/${characterId}/achievements/${achievementId}/claim`,
+  },
+
+  social: {
+    friends: "/social/friends",
+    request: "/social/friends/request",
+    accept: (friendshipId: string) => `/social/friends/${friendshipId}/accept`,
+    remove: (friendshipId: string) => `/social/friends/${friendshipId}`,
   },
 
   characters: {
@@ -11,6 +36,8 @@ export const API_ENDPOINTS = {
     byId: (characterId: string) => `/characters/${characterId}`,
     status: (characterId: string) => `/characters/${characterId}/status`,
     overview: (characterId: string) => `/characters/${characterId}/overview`,
+    activitySummary: (characterId: string) =>
+      `/characters/${characterId}/activity-summary`,
     currentMap: (characterId: string) =>
       `/characters/${characterId}/current-map`,
   },

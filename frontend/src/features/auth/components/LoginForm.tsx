@@ -54,9 +54,7 @@ export function LoginForm({ onCreateAccount }: LoginFormProps) {
           <button
             type="button"
             className="auth-text-link"
-            onClick={() => {
-              alert('Fluxo de recuperação de senha será implementado depois.');
-            }}
+            onClick={() => navigate('/recover-password')}
           >
             Esqueceu a senha?
           </button>

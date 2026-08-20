@@ -13,6 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
+import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import {
   buildMapVisualStyle,
   getMapImageByName,
@@ -638,7 +639,9 @@ export function WorldBossesPage() {
     }
 
     void load();
-    const interval = window.setInterval(() => void load(), 3000);
+    const interval = window.setInterval(() => {
+      if (canRunNetworkRefresh()) void load();
+    }, 15000);
     return () => {
       disposed = true;
       window.clearInterval(interval);

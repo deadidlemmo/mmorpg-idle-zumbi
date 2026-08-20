@@ -4,12 +4,15 @@ import {
   Clock,
   Lock,
   PackageOpen,
+  Scale,
   ShieldAlert,
+  ShieldCheck,
   XCircle,
+  Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import goldIcon from "../../../assets/images/coins/gold.png";
+import goldIcon from "../../../assets/images/coins/gold.webp";
 import { normalizeClassName } from "../../characters/api/characters.api";
 import {
   buildMapVisualStyle,
@@ -28,19 +31,49 @@ import { useIncursionsRealtime } from "../realtime/useIncursionsRealtime";
 import "../styles/incursions.css";
 import type {
   Incursion,
+  IncursionApproach,
+  IncursionApproachProfile,
   IncursionLootPreview,
   IncursionSession,
   IncursionsAvailableResponse,
 } from "../types/incursions.types";
 
-const coinIconUrls = import.meta.glob("../../../assets/images/coins/*.png", {
+const coinIconUrls = import.meta.glob("../../../assets/images/coins/*.webp", {
   eager: true,
   import: "default",
   query: "?url",
 }) as Record<string, string>;
 
 const EXP_ICON_URL =
-  coinIconUrls["../../../assets/images/coins/exp.png"] ?? null;
+  coinIconUrls["../../../assets/images/coins/exp.webp"] ?? null;
+
+const APPROACH_COPY: Record<
+  IncursionApproach,
+  { label: string; description: string }
+> = {
+  CAUTIOUS: {
+    label: "Cautelosa",
+    description: "Mais segura, lenta e com saque reduzido.",
+  },
+  BALANCED: {
+    label: "Equilibrada",
+    description: "Risco, duração e recompensa padrão.",
+  },
+  AGGRESSIVE: {
+    label: "Agressiva",
+    description: "Mais rápida e lucrativa, com risco elevado.",
+  },
+};
+
+function ApproachIcon({ approach }: { approach: IncursionApproach }) {
+  if (approach === "CAUTIOUS") return <ShieldCheck size={18} />;
+  if (approach === "AGGRESSIVE") return <Zap size={18} />;
+  return <Scale size={18} />;
+}
+
+function formatMultiplier(multiplier: number) {
+  return `${Math.round(multiplier * 100)}%`;
+}
 
 function buildCharacterViewModel(
   overview: CharacterOverviewResponse,
@@ -299,8 +332,7 @@ function getRiskLabel(riskLevel?: number | null) {
 function getErrorMessage(error: unknown) {
   if (isAxiosError(error)) {
     const data = error.response?.data as
-      | { message?: string | string[] }
-      | undefined;
+      { message?: string | string[] } | undefined;
     if (Array.isArray(data?.message)) return data.message.join(" ");
     if (data?.message) return data.message;
   }
@@ -324,7 +356,7 @@ function getIncursionStatusLabel(params: {
   }
 
   if (params.rewardedSession?.incursionId === params.incursion.id) {
-    return "Recompensada";
+    return params.rewardedSession.success === false ? "Falhou" : "Concluída";
   }
 
   if (!params.incursion.canStart) return "Bloqueada";
@@ -438,6 +470,8 @@ export function IncursionsPage() {
   );
   const [data, setData] = useState<IncursionsAvailableResponse | null>(null);
   const [modalIncursionId, setModalIncursionId] = useState<string | null>(null);
+  const [selectedApproach, setSelectedApproach] =
+    useState<IncursionApproach>("BALANCED");
   const [isLoading, setIsLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -503,6 +537,9 @@ export function IncursionsPage() {
   const incursions = data?.incursions ?? [];
   const modalIncursion =
     incursions.find((incursion) => incursion.id === modalIncursionId) ?? null;
+  const selectedApproachProfile = modalIncursion?.approaches.find(
+    (profile) => profile.approach === selectedApproach,
+  );
   const currentMap =
     data?.currentMap ??
     activeSession?.incursion.map ??
@@ -539,7 +576,7 @@ export function IncursionsPage() {
     setSuccessMessage(null);
 
     try {
-      const response = await start(incursionId);
+      const response = await start(incursionId, selectedApproach);
       if (response?.message) setSuccessMessage(response.message);
       if (response?.session) setModalIncursionId(null);
       await loadData();
@@ -666,6 +703,22 @@ export function IncursionsPage() {
             {successMessage}
           </div>
         ) : null}
+        {rewardedSession?.outcomeSummary ? (
+          <div
+            className={`incursions-alert ${
+              rewardedSession.success === false
+                ? "incursions-alert--error"
+                : "incursions-alert--success"
+            }`}
+          >
+            <strong>
+              {rewardedSession.success === false
+                ? "Operação fracassada. "
+                : "Operação concluída. "}
+            </strong>
+            {rewardedSession.outcomeSummary}
+          </div>
+        ) : null}
         {hasBlockingActivity && !activeSession ? (
           <div className="incursions-alert incursions-alert--warning">
             Este personagem já está em outra atividade principal. Encerre a
@@ -720,7 +773,10 @@ export function IncursionsPage() {
                           .join(" ")}
                         key={incursion.id}
                         type="button"
-                        onClick={() => setModalIncursionId(incursion.id)}
+                        onClick={() => {
+                          setSelectedApproach("BALANCED");
+                          setModalIncursionId(incursion.id);
+                        }}
                       >
                         <IncursionArt
                           incursion={incursion}
@@ -829,6 +885,15 @@ export function IncursionsPage() {
                         : "Entregando automaticamente"}
                     </strong>
 
+                    <div className="incursions-current-card__risk">
+                      <span>{APPROACH_COPY[activeSession.approach].label}</span>
+                      <strong>{activeSession.successChance}% de sucesso</strong>
+                      <span>
+                        Recompensa{" "}
+                        {formatMultiplier(activeSession.rewardMultiplier)}
+                      </span>
+                    </div>
+
                     {activeSession.status === "ACTIVE" ? (
                       <button
                         className="incursions-danger-button"
@@ -879,6 +944,68 @@ export function IncursionsPage() {
               </header>
 
               <div className="incursions-modal__body">
+                <section className="incursions-modal__approach">
+                  <div className="incursions-modal__section-title">
+                    <ShieldAlert size={16} />
+                    <div>
+                      <strong>Escolha a abordagem</strong>
+                      <span>O resultado é calculado no fim da operação.</span>
+                    </div>
+                  </div>
+
+                  <div
+                    className="incursions-approach-selector"
+                    role="radiogroup"
+                    aria-label="Abordagem da incursão"
+                  >
+                    {modalIncursion.approaches.map(
+                      (profile: IncursionApproachProfile) => {
+                        const copy = APPROACH_COPY[profile.approach];
+                        const isSelected =
+                          selectedApproach === profile.approach;
+
+                        return (
+                          <button
+                            key={profile.approach}
+                            className={isSelected ? "is-selected" : ""}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            onClick={() =>
+                              setSelectedApproach(profile.approach)
+                            }
+                          >
+                            <span className="incursions-approach-selector__head">
+                              <ApproachIcon approach={profile.approach} />
+                              <strong>{copy.label}</strong>
+                            </span>
+                            <span>{copy.description}</span>
+                            <span className="incursions-approach-selector__stats">
+                              <strong>{profile.successChance}%</strong> sucesso
+                              <strong>
+                                {formatDuration(profile.durationSeconds)}
+                              </strong>
+                              <strong>
+                                {formatMultiplier(profile.rewardMultiplier)}
+                              </strong>{" "}
+                              loot
+                            </span>
+                          </button>
+                        );
+                      },
+                    )}
+                  </div>
+
+                  {selectedApproachProfile ? (
+                    <p className="incursions-modal__risk-note">
+                      Falhar pode remover até{" "}
+                      {Math.round(selectedApproachProfile.failureHpRatio * 100)}
+                      % do HP máximo. O sobrevivente nunca retorna com menos de
+                      1 HP.
+                    </p>
+                  ) : null}
+                </section>
+
                 <section className="incursions-modal__rewards">
                   <strong className="incursions-modal__rewards-title">
                     <PackageOpen size={16} /> Loot possível

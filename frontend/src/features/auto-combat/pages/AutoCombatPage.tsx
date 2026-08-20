@@ -9,7 +9,7 @@ import {
 import { flushSync } from "react-dom";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { RefreshCw, X } from "lucide-react";
-import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.png";
+import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.webp";
 import { ActivityProgressCard } from "../../../components/game/ActivityProgressCard";
 import {
   getCharacterOverview,
@@ -139,6 +139,7 @@ const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
 const XP_FEEDBACK_VISIBLE_MS = 4800;
 const MAX_SHOWN_XP_FEEDBACK_KEYS = 80;
 const MAX_SHOWN_BATTLE_TICK_IMPACT_KEYS = 120;
+const EMPTY_REALTIME_EVENTS: AutoCombatRealtimeEvent[] = [];
 
 type AutoCombatHuntProgressStyle = CSSProperties & {
   "--hunt-progress"?: string;
@@ -932,6 +933,7 @@ export function AutoCombatPage() {
     selectedPotionItemIdRef.current = selectedPotionItemId;
   }, [selectedPotionItemId]);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Route-scoped visual state must reset when the character changes. */
   useEffect(() => {
     setLocalRealtimeCombat(null);
     setLocalCharacterProgress(null);
@@ -949,6 +951,7 @@ export function AutoCombatPage() {
     approvedBattleTickImpactKeyRef.current = "";
     queueClearXpFeedback({ resetShownEvents: true });
   }, [characterId, queueClearXpFeedback]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const realtimeStatus = getRealtimeStatus(realtimeState);
   const isRealtimeSynchronizing = Boolean(realtimeState.isSynchronizing);
@@ -967,8 +970,8 @@ export function AutoCombatPage() {
       ? providerActiveEvent
       : null;
   const providerQueuedEventsRaw = isRealtimeSynchronizing
-    ? []
-    : (realtimeState.eventQueue ?? []);
+    ? EMPTY_REALTIME_EVENTS
+    : (realtimeState.eventQueue ?? EMPTY_REALTIME_EVENTS);
   const providerQueueLength = isRealtimeSynchronizing
     ? 0
     : providerQueuedEventsRaw.length || getRealtimeQueueLength(realtimeState);
@@ -1120,6 +1123,7 @@ export function AutoCombatPage() {
     (!showActiveSession || showInlineHuntBattle) &&
     (isBackendHuntFlow ||
       hasStartedHunt ||
+      hasActiveSession ||
       showInlineHuntBattle ||
       hasPreservedTrackedEnemies);
   const showTravelEmptyStage =
@@ -1145,14 +1149,12 @@ export function AutoCombatPage() {
     isRealtimeSynchronizing &&
     !hasCombatSnapshotWhileSynchronizing;
   const [sessionClockNowMs, setSessionClockNowMs] = useState(() => Date.now());
-  const [serverClockOffsetMs, setServerClockOffsetMs] = useState(0);
   const [suppressProgressTransition, setSuppressProgressTransition] =
     useState(false);
   const [stableTimerStatus, setStableTimerStatus] = useState<{
     sessionId: string | null;
     status: AutoCombatStatusResponse;
   } | null>(null);
-  const syncedSessionNowMs = sessionClockNowMs + serverClockOffsetMs;
   const effectiveSessionId = effectiveSession?.id ?? null;
   const timerStatusCandidate = useMemo(
     () =>
@@ -1173,6 +1175,14 @@ export function AutoCombatPage() {
     (showActiveSession && stableTimerStatusMatches
       ? stableTimerStatus.status
       : null);
+  const serverClockOffsetMs = useMemo(() => {
+    const serverNow = activeTimerStatus?.serverNow ?? effectiveStatus?.serverNow;
+
+    return getAutoCombatTimestampMs(serverNow) === null
+      ? 0
+      : getServerClientOffsetMs(serverNow, Date.now());
+  }, [activeTimerStatus?.serverNow, effectiveStatus?.serverNow]);
+  const syncedSessionNowMs = sessionClockNowMs + serverClockOffsetMs;
   const battleClockSyncKey = [
     visualRealtimeCombat?.mobId,
     visualRealtimeCombat?.mobName,
@@ -1249,20 +1259,6 @@ export function AutoCombatPage() {
   );
 
   useEffect(() => {
-    const serverNow = activeTimerStatus?.serverNow ?? effectiveStatus?.serverNow;
-    const serverNowMs = getAutoCombatTimestampMs(serverNow);
-
-    if (serverNowMs === null) {
-      setServerClockOffsetMs(0);
-      return;
-    }
-
-    setServerClockOffsetMs(getServerClientOffsetMs(serverNow, Date.now()));
-  }, [activeTimerStatus?.serverNow, effectiveStatus?.serverNow]);
-
-  useEffect(() => {
-    setSessionClockNowMs(Date.now());
-
     if (!showActiveSession && !showHuntStage) return undefined;
 
     const intervalId = window.setInterval(() => {
@@ -1349,6 +1345,7 @@ export function AutoCombatPage() {
     };
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Preserve the last authoritative timer across transient socket gaps. */
   useEffect(() => {
     if (!showActiveSession) {
       setStableTimerStatus(null);
@@ -1374,6 +1371,7 @@ export function AutoCombatPage() {
       };
     });
   }, [showActiveSession, timerStatusCandidate, effectiveSessionId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     hasPendingRealtimeVisualRef.current = hasPendingRealtimeVisual;
@@ -1619,7 +1617,7 @@ export function AutoCombatPage() {
         ),
       );
     }
-  }, [characterId]);
+  }, [characterId, requestedMapId, requestedSubMapId]);
 
   const character = useMemo(() => {
     if (!overview) return null;
@@ -1694,21 +1692,28 @@ export function AutoCombatPage() {
       statusSessionTotals)
     : null;
 
-  const battleLogEvents =
-    showActiveSession && providerBattleLogEvents.length > 0
-      ? providerBattleLogEvents
-      : showActiveSession
-        ? localBattleLogEvents
-        : [];
+  const battleLogEvents = useMemo(
+    () =>
+      showActiveSession && providerBattleLogEvents.length > 0
+        ? providerBattleLogEvents
+        : showActiveSession
+          ? localBattleLogEvents
+          : [],
+    [localBattleLogEvents, providerBattleLogEvents, showActiveSession],
+  );
 
   const activeBattleLogEvent = showActiveSession
     ? (providerPublicActiveEvent ?? localActiveEvent)
     : null;
-  const providerQueuedEvents = showActiveSession
-    ? isRealtimeSynchronizing
-      ? []
-      : providerQueuedEventsRaw
-    : [];
+  const providerQueuedEvents = useMemo(
+    () =>
+      showActiveSession
+        ? isRealtimeSynchronizing
+          ? []
+          : providerQueuedEventsRaw
+        : [],
+    [isRealtimeSynchronizing, providerQueuedEventsRaw, showActiveSession],
+  );
   const shouldDeferInfirmaryRedirect =
     isLoading || isRealtimeSynchronizing || !effectiveStatus;
   const shouldRedirectToInfirmary = Boolean(
@@ -1720,17 +1725,6 @@ export function AutoCombatPage() {
         event: activeBattleLogEvent ?? providerActiveEvent,
       }),
   );
-
-  useEffect(() => {
-    if (!shouldRedirectToInfirmary) return;
-
-    setLocalRealtimeCombat(null);
-    setLocalCharacterProgress(null);
-    setLocalSessionTotals(null);
-    setLocalBattleLogEvents([]);
-    setLocalActiveEvent(null);
-    queueClearXpFeedback({ resetShownEvents: true });
-  }, [queueClearXpFeedback, shouldRedirectToInfirmary]);
 
   const visibleMobFeedbackScope = useMemo(
     () =>
@@ -1802,9 +1796,9 @@ export function AutoCombatPage() {
     canSyncXpFeedbackWithMobDeath,
     providerQueuedEvents,
     visibleMobFeedbackScope,
-    visibleMobFeedbackScopeKey,
   ]);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Feedback follows the authoritative realtime event stream. */
   useEffect(() => {
     if (isCombatViewSynchronizing) {
       queueClearXpFeedback();
@@ -1907,7 +1901,9 @@ export function AutoCombatPage() {
     synchronizedXpFeedbackEvent,
     xpFeedbackEvent,
   ]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Remove feedback that belongs to a previous mob scope. */
   useEffect(() => {
     if (!xpFeedbackEvent) {
       return;
@@ -1935,6 +1931,7 @@ export function AutoCombatPage() {
     visibleMobFeedbackScopeKey,
     xpFeedbackEvent,
   ]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     return () => {
@@ -1966,12 +1963,6 @@ export function AutoCombatPage() {
       isMounted = false;
     };
   }, [characterId, loadAutoCombatData]);
-
-  useEffect(() => {
-    if (hasActiveSession) {
-      setHasStartedHunt(true);
-    }
-  }, [hasActiveSession]);
 
   useEffect(() => {
     if (!hasActiveSession && !providerActiveEvent) {
@@ -2122,6 +2113,7 @@ export function AutoCombatPage() {
 
     function handleThreatModalKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        setIsThreatPotionPickerOpen(false);
         setSelectedThreat(null);
       }
     }
@@ -2132,10 +2124,6 @@ export function AutoCombatPage() {
       window.removeEventListener("keydown", handleThreatModalKeyDown);
     };
   }, [selectedThreat]);
-
-  useEffect(() => {
-    setIsThreatPotionPickerOpen(false);
-  }, [selectedThreat?.id]);
 
   useEffect(() => {
     if (!isPotionConfigPanelOpen) return;
@@ -2153,6 +2141,7 @@ export function AutoCombatPage() {
     };
   }, [isPotionConfigPanelOpen]);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Selection mirrors the active session and route request. */
   useEffect(() => {
     if (maps.length <= 0) return;
 
@@ -2205,6 +2194,7 @@ export function AutoCombatPage() {
     requestedMapId,
     requestedSubMapId,
   ]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!characterId) {
     return <Navigate to="/characters" replace />;
@@ -4564,6 +4554,7 @@ export function AutoCombatPage() {
       setLocalSessionTotals(responseTotals);
       setHasStartedHunt(true);
       setActiveTab("battle");
+      setIsThreatPotionPickerOpen(false);
       setSelectedThreat(null);
       setSelectedBattleQuantity(1);
     } catch (error) {
@@ -5358,6 +5349,7 @@ export function AutoCombatPage() {
                             aria-label={`Ver detalhes de ${mob?.name ?? "Infectado"}`}
                             onClick={() => {
                               setSelectedBattleQuantity(1);
+                              setIsThreatPotionPickerOpen(false);
                               setSelectedThreat(encounter);
                             }}
                             onKeyDown={(event) => {
@@ -5367,6 +5359,7 @@ export function AutoCombatPage() {
 
                               event.preventDefault();
                               setSelectedBattleQuantity(1);
+                              setIsThreatPotionPickerOpen(false);
                               setSelectedThreat(encounter);
                             }}
                           >
@@ -6149,7 +6142,10 @@ export function AutoCombatPage() {
         <div
           className="auto-combat-threat-modal-backdrop"
           role="presentation"
-          onClick={() => setSelectedThreat(null)}
+          onClick={() => {
+            setIsThreatPotionPickerOpen(false);
+            setSelectedThreat(null);
+          }}
         >
           <article
             className="auto-combat-threat-modal"
@@ -6162,7 +6158,10 @@ export function AutoCombatPage() {
               type="button"
               className="auto-combat-threat-modal__close"
               aria-label="Fechar detalhes do monstro"
-              onClick={() => setSelectedThreat(null)}
+              onClick={() => {
+                setIsThreatPotionPickerOpen(false);
+                setSelectedThreat(null);
+              }}
             >
               ×
             </button>

@@ -1,8 +1,11 @@
-import ncSoftLogo from '../../assets/images/company/nc-soft-logo-horizontal.png';
+import ncSoftLogo from "../../assets/images/company/nc-soft-logo-horizontal.webp";
+import { Link } from "react-router-dom";
 
 const currentYear = new Date().getFullYear();
 
 export function CompanyFooter() {
+  const supportUrl = import.meta.env.VITE_DISCORD_URL?.trim();
+
   return (
     <footer className="company-footer">
       <div className="company-footer__brand">
@@ -13,28 +16,29 @@ export function CompanyFooter() {
         />
 
         <div className="company-footer__text">
-          <span>
-            Estúdio independente de jogos digitais.
-          </span>
+          <span>Estúdio independente de jogos digitais.</span>
         </div>
       </div>
 
       <nav className="company-footer__links" aria-label="Links institucionais">
-        <a href="#" className="company-footer__link">
-          Suporte
-        </a>
+        {supportUrl ? (
+          <a
+            href={supportUrl}
+            className="company-footer__link"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Suporte
+          </a>
+        ) : null}
 
-        <a href="#" className="company-footer__link">
+        <Link to="/privacy" className="company-footer__link">
           Privacidade
-        </a>
+        </Link>
 
-        <a href="#" className="company-footer__link">
+        <Link to="/terms" className="company-footer__link">
           Termos
-        </a>
-
-        <a href="#" className="company-footer__link">
-          Contato
-        </a>
+        </Link>
       </nav>
 
       <p className="company-footer__copyright">

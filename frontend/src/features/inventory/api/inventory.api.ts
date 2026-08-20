@@ -1,6 +1,10 @@
 import { API_ENDPOINTS } from '../../../services/api/endpoints';
 import { apiClient } from '../../../services/api/apiClient';
-import type { DashboardEquipmentViewModel } from '../../dashboard/types/dashboard.types';
+import type {
+  DashboardDerivedStats,
+  DashboardEquipmentViewModel,
+  DashboardStats,
+} from '../../dashboard/types/dashboard.types';
 import type { InventoryResponse } from '../types/inventory.types';
 
 interface InventoryItemActionPayload {
@@ -14,7 +18,7 @@ interface InventoryItemUnequipPayload {
   slot: string;
 }
 
-interface InventoryItemActionResponse {
+export interface InventoryItemActionResponse {
   message?: string;
   [key: string]: unknown;
 }
@@ -31,8 +35,26 @@ interface InventoryBlackMarketSaleResponse extends InventoryItemActionResponse {
   };
 }
 
-interface CharacterEquipmentResponse {
+export interface CharacterEquipmentResponse {
+  character?: {
+    id: string;
+    name: string;
+    class: string;
+    level: number;
+    xp: number;
+    currentHp: number;
+    maxHp: number;
+  };
   equipment?: DashboardEquipmentViewModel | null;
+  stats?: {
+    level?: number;
+    basePrimaryStats?: DashboardStats;
+    levelBonusStats?: DashboardStats;
+    equipmentBonusStats?: DashboardStats;
+    gatheringBonusStats?: DashboardStats;
+    totalPrimaryStats?: DashboardStats;
+    derivedCombatStats?: DashboardDerivedStats;
+  };
   [key: string]: unknown;
 }
 

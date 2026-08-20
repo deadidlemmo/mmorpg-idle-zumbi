@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
 import { Logger } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
@@ -12,13 +11,8 @@ import {
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SocketAuthService } from '../auth/socket-auth.service';
 import { CraftingService } from './crafting.service';
-
-type JwtSocketPayload = {
-  sub: string;
-  email?: string;
-  role?: string;
-};
 
 type CraftingSocketData = {
   userId?: string;
@@ -39,10 +33,6 @@ const CRAFTING_TICK_MS = 1000;
 
 @WebSocketGateway({
   namespace: CRAFTING_NAMESPACE,
-  cors: {
-    origin: true,
-    credentials: true,
-  },
 })
 export class CraftingGateway
   implements OnGatewayConnection, OnGatewayDisconnect
@@ -59,7 +49,7 @@ export class CraftingGateway
   >();
 
   constructor(
-    private readonly jwtService: JwtService,
+    private readonly socketAuth: SocketAuthService,
     private readonly prisma: PrismaService,
     private readonly craftingService: CraftingService,
   ) {}
@@ -79,21 +69,12 @@ export class CraftingGateway
         return;
       }
 
-      const payload =
-        await this.jwtService.verifyAsync<JwtSocketPayload>(token);
+      const user = await this.socketAuth.authenticate(token);
 
-      if (!payload?.sub) {
-        client.emit('crafting:error', {
-          message: 'Token de autenticação inválido no WebSocket.',
-        });
-        client.disconnect(true);
-        return;
-      }
-
-      client.data.userId = payload.sub;
+      client.data.userId = user.id;
       client.emit('crafting:connected', {
         socketId: client.id,
-        userId: payload.sub,
+        userId: user.id,
       });
     } catch (error) {
       client.emit('crafting:error', {

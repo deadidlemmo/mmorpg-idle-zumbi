@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router-dom";
-import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.png";
+import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.webp";
+import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import { useAutoCombatRealtimeState } from "../../auto-combat/realtime/useAutoCombatRealtime";
 import type {
   AutoCombatRealtimeEvent,
@@ -23,9 +24,11 @@ import {
 } from "../../../services/websocket/socketClient";
 import { getWorldBossStatus } from "../../world-bosses/api/world-bosses.api";
 import type { WorldBossStatusResponse } from "../../world-bosses/types/world-bosses.types";
-import { getCharacterOverview } from "../api/dashboard.api";
+import {
+  getCharacterActivitySummary,
+  type CharacterActivitySummaryResponse,
+} from "../api/dashboard.api";
 import type {
-  CharacterOverviewResponse,
   DashboardAutoCombatSessionViewModel,
   DashboardGatheringSessionViewModel,
   DashboardIncursionSessionViewModel,
@@ -730,7 +733,9 @@ function getStatusCharacter(status: AutoCombatStatusResponse | null) {
   return getLooseStatus(status)?.character ?? null;
 }
 
-function getOverviewCharacter(overview: CharacterOverviewResponse | null) {
+function getOverviewCharacter(
+  overview: CharacterActivitySummaryResponse | null,
+) {
   return (overview?.character ??
     null) as AutoCombatRealtimeCharacterLike | null;
 }
@@ -942,7 +947,7 @@ function buildCharacterXpSnapshot(
 function buildCharacterActivitySnapshot(params: {
   realtimeState: AutoCombatRealtimeStateLoose;
   status: AutoCombatStatusResponse | null;
-  overview: CharacterOverviewResponse | null;
+  overview: CharacterActivitySummaryResponse | null;
 }) {
   const { realtimeState, status, overview } = params;
 
@@ -1470,7 +1475,7 @@ function buildAutoCombatTotalsFromOverview(
 
 function buildAutoCombatItemFromRealtime(params: {
   characterId: string;
-  overview: CharacterOverviewResponse | null;
+  overview: CharacterActivitySummaryResponse | null;
   realtimeState: AutoCombatRealtimeStateLoose;
 }): ActivityBarItem | null {
   const { characterId, overview, realtimeState } = params;
@@ -1687,7 +1692,7 @@ function buildAutoCombatItemFromRealtime(params: {
 
 function buildAutoCombatItemFromOverview(params: {
   characterId: string;
-  overview: CharacterOverviewResponse | null;
+  overview: CharacterActivitySummaryResponse | null;
   session: DashboardAutoCombatSessionViewModel;
 }): ActivityBarItem {
   const { characterId, overview } = params;
@@ -2237,7 +2242,7 @@ function buildIncursionItemFromOverview(params: {
 
 function buildActivityItems(params: {
   characterId: string;
-  overview: CharacterOverviewResponse | null;
+  overview: CharacterActivitySummaryResponse | null;
   realtimeState: AutoCombatRealtimeStateLoose;
   gatheringState: GatheringRealtimeState;
   craftingState: CraftingRealtimeState;
@@ -2485,7 +2490,7 @@ function getInitialMinimizedState() {
 
 export function DashboardActivityBar({
   characterId,
-  refreshMs = 5000,
+  refreshMs = 15000,
 }: DashboardActivityBarProps) {
   const location = useLocation();
   const realtimeState =
@@ -2496,9 +2501,8 @@ export function DashboardActivityBar({
   const incursionsState = useIncursionsRealtimeState();
   const { cancel: cancelIncursionActivity } = useIncursionsRealtimeActions();
 
-  const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
-    null,
-  );
+  const [overview, setOverview] =
+    useState<CharacterActivitySummaryResponse | null>(null);
   const [worldBossStatus, setWorldBossStatus] =
     useState<WorldBossStatusResponse | null>(null);
 
@@ -2524,7 +2528,7 @@ export function DashboardActivityBar({
     async function loadActivity() {
       try {
         const [data, worldBossData] = await Promise.all([
-          getCharacterOverview(characterId),
+          getCharacterActivitySummary(characterId),
           getWorldBossStatus(characterId).catch(() => null),
         ]);
 
@@ -2544,7 +2548,7 @@ export function DashboardActivityBar({
     loadActivity();
 
     const intervalId = window.setInterval(() => {
-      loadActivity();
+      if (canRunNetworkRefresh()) loadActivity();
     }, refreshMs);
 
     return () => {

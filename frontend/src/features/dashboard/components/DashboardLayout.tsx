@@ -1,25 +1,26 @@
-import type { CSSProperties, ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import discordIcon from '../../../assets/images/brand/discord.png';
-import cashIcon from '../../../assets/images/coins/cash.png';
-import goldIcon from '../../../assets/images/coins/gold.png';
-import { PremiumPlaceholderIcon } from '../../../components/PremiumPlaceholderIcon';
-import { removeAuthToken } from '../../../services/api/authToken';
-import { getOnlinePlayersStatus } from '../api/dashboard.api';
-import { useAutoCombatRealtimeState } from '../../auto-combat/realtime/useAutoCombatRealtime';
-import { normalizeClassName } from '../../characters/api/characters.api';
-import { getAvatarImage } from '../../characters/constants/avatar-options';
+import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import discordIcon from "../../../assets/images/brand/discord.webp";
+import cashIcon from "../../../assets/images/coins/cash.webp";
+import goldIcon from "../../../assets/images/coins/gold.webp";
+import { PremiumPlaceholderIcon } from "../../../components/PremiumPlaceholderIcon";
+import { removeAuthToken } from "../../../services/api/authToken";
+import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
+import { getOnlinePlayersStatus } from "../api/dashboard.api";
+import { useAutoCombatRealtimeState } from "../../auto-combat/realtime/useAutoCombatRealtime";
+import { normalizeClassName } from "../../characters/api/characters.api";
+import { getAvatarImage } from "../../characters/constants/avatar-options";
 import {
   getCharacterClass,
   getCharacterInitials,
-} from '../../characters/types/character.types';
-import type { DashboardCharacterViewModel } from '../types/dashboard.types';
+} from "../../characters/types/character.types";
+import type { DashboardCharacterViewModel } from "../types/dashboard.types";
 import {
   DashboardTopBar,
   type DashboardTopBarActivityOverride,
   type DashboardTopBarResource,
-} from './DashboardTopBar';
+} from "./DashboardTopBar";
 
 interface DashboardLayoutProps {
   character: DashboardCharacterViewModel;
@@ -47,12 +48,12 @@ interface DashboardNavItem {
 }
 
 type DashboardGatheringOrigin =
-  | 'DESMANCHE'
-  | 'COLETA'
-  | 'PATRULHA'
-  | 'ARSENAL'
-  | 'TECNOVARREDURA'
-  | 'CONTENCAO';
+  | "DESMANCHE"
+  | "COLETA"
+  | "PATRULHA"
+  | "ARSENAL"
+  | "TECNOVARREDURA"
+  | "CONTENCAO";
 
 interface DashboardGatheringSidebarItem {
   label: string;
@@ -81,10 +82,7 @@ type GatheringSkillsSummaryLoose = {
 };
 
 type GatheringSkillsSource =
-  | GatheringSkillLoose[]
-  | GatheringSkillsSummaryLoose
-  | null
-  | undefined;
+  GatheringSkillLoose[] | GatheringSkillsSummaryLoose | null | undefined;
 
 type DashboardCharacterWithGatheringSkills = DashboardCharacterViewModel & {
   gatheringSkills?: GatheringSkillsSource;
@@ -166,7 +164,7 @@ type RealtimeProgressLoose = {
   nextLevelRequiredXp?: number | null;
   isAtLevelCap?: boolean | null;
 
-  levelProgress?: DashboardCharacterWithXpProgress['levelProgress'];
+  levelProgress?: DashboardCharacterWithXpProgress["levelProgress"];
 };
 
 type RealtimeAutoCombatSessionLoose = {
@@ -186,13 +184,15 @@ type RealtimeAutoCombatSessionLoose = {
 type RealtimeStateLoose = {
   characterId?: string | null;
 
-  character?: (Partial<DashboardCharacterWithXpProgress> & {
-    id?: string | null;
-    sessionId?: string | null;
-    currentHp?: number | null;
-    maxHp?: number | null;
-    hpPercent?: number | null;
-  }) | null;
+  character?:
+    | (Partial<DashboardCharacterWithXpProgress> & {
+        id?: string | null;
+        sessionId?: string | null;
+        currentHp?: number | null;
+        maxHp?: number | null;
+        hpPercent?: number | null;
+      })
+    | null;
 
   characterProgress?: RealtimeProgressLoose | null;
   progress?: RealtimeProgressLoose | null;
@@ -230,11 +230,13 @@ type RealtimeStateLoose = {
     active?: boolean | null;
     hasActiveAutoCombat?: boolean | null;
 
-    character?: (Partial<DashboardCharacterWithXpProgress> & {
-      id?: string | null;
-      currentHp?: number | null;
-      maxHp?: number | null;
-    }) | null;
+    character?:
+      | (Partial<DashboardCharacterWithXpProgress> & {
+          id?: string | null;
+          currentHp?: number | null;
+          maxHp?: number | null;
+        })
+      | null;
 
     phase?: string | null;
     currentMob?: {
@@ -287,110 +289,125 @@ type XpProgressResult = {
 };
 
 const GATHERING_SUBNAV_STORAGE_KEY =
-  'dead-idle.dashboard.gathering-subnav-open';
+  "dead-idle.dashboard.gathering-subnav-open";
 
 const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   {
-    label: 'Visão geral',
-    path: '',
-    icon: '⌂',
+    label: "Visão geral",
+    path: "",
+    icon: "⌂",
   },
   {
-    label: 'Combate automático',
-    path: 'auto-combat',
-    icon: '⚔',
+    label: "Combate automático",
+    path: "auto-combat",
+    icon: "⚔",
   },
   {
-    label: 'Expedições',
-    path: 'gathering',
-    icon: '⛏',
+    label: "Expedições",
+    path: "gathering",
+    icon: "⛏",
   },
   {
-    label: 'Criação',
-    path: 'crafting',
-    icon: '⚒',
+    label: "Criação",
+    path: "crafting",
+    icon: "⚒",
   },
   {
-    label: 'Mochila',
-    path: 'inventory',
-    icon: '▦',
+    label: "Mochila",
+    path: "inventory",
+    icon: "▦",
   },
   {
-    label: 'Equipamentos',
-    path: 'equipment',
-    icon: '◇',
+    label: "Equipamentos",
+    path: "equipment",
+    icon: "◇",
   },
   {
-    label: 'Mercador',
-    path: 'consumables',
-    icon: '$',
+    label: "Mercador",
+    path: "consumables",
+    icon: "$",
   },
   {
-    label: 'Enfermaria',
-    path: 'infirmary',
-    icon: '+',
+    label: "Objetivos",
+    path: "objectives",
+    icon: "✓",
   },
   {
-    label: 'Premium',
-    path: 'membership',
-    icon: 'P',
+    label: "Enfermaria",
+    path: "infirmary",
+    icon: "+",
+  },
+  {
+    label: "Premium",
+    path: "membership",
+    icon: "P",
     isPremium: true,
   },
   {
-    label: 'Mapas',
-    path: 'maps',
-    icon: '◇',
+    label: "Mapas",
+    path: "maps",
+    icon: "◇",
   },
   {
-    label: 'Incursões',
-    path: 'incursions',
-    icon: '⌬',
+    label: "Incursões",
+    path: "incursions",
+    icon: "⌬",
   },
   {
-    label: 'Ameaças Globais',
-    path: 'world-bosses',
-    icon: '☣',
+    label: "Ameaças Globais",
+    path: "world-bosses",
+    icon: "☣",
+  },
+  {
+    label: "Aliados",
+    path: "allies",
+    icon: "◎",
   },
 ];
 
 const DASHBOARD_MAIN_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter((item) =>
-  ['', 'auto-combat'].includes(item.path),
+  ["", "objectives", "auto-combat"].includes(item.path),
 );
 
 const DASHBOARD_MANAGEMENT_NAV_ITEMS = [
-  'inventory',
-  'equipment',
-  'crafting',
-  'consumables',
-  'infirmary',
-  'membership',
+  "inventory",
+  "equipment",
+  "crafting",
+  "consumables",
+  "infirmary",
+  "membership",
 ]
   .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
   .filter((item): item is DashboardNavItem => Boolean(item));
 
-const DASHBOARD_WORLD_NAV_ITEMS = ['maps', 'incursions', 'world-bosses']
+const DASHBOARD_WORLD_NAV_ITEMS = [
+  "maps",
+  "incursions",
+  "world-bosses",
+  "allies",
+]
   .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
   .filter((item): item is DashboardNavItem => Boolean(item));
 
 const DASHBOARD_GATHERING_NAV_ITEM = DASHBOARD_NAV_ITEMS.find(
-  (item) => item.path === 'gathering',
+  (item) => item.path === "gathering",
 );
 
-const DASHBOARD_DISCORD_URL = 'https://discord.gg/dXSZCj3sA';
+const DASHBOARD_DISCORD_URL = "https://discord.gg/dXSZCj3sA";
 
 const ONLINE_PLAYERS_REFRESH_MS = 30_000;
 
 function formatOnlinePlayersLabel(onlinePlayers: number | null) {
   if (onlinePlayers === null) {
     return {
-      full: 'Online agora',
-      short: 'Online',
+      full: "Online agora",
+      short: "Online",
     };
   }
 
   return {
     full: `${onlinePlayers} ${
-      onlinePlayers === 1 ? 'sobrevivente' : 'sobreviventes'
+      onlinePlayers === 1 ? "sobrevivente" : "sobreviventes"
     }`,
     short: `${onlinePlayers} online`,
   };
@@ -412,12 +429,12 @@ function getDashboardNavLinkClassName(
   isActive: boolean,
 ) {
   return [
-    'dashboard-sidebar__link',
-    item.isPremium ? 'dashboard-sidebar__link--premium' : '',
-    isActive ? 'is-active' : '',
+    "dashboard-sidebar__link",
+    item.isPremium ? "dashboard-sidebar__link--premium" : "",
+    isActive ? "is-active" : "",
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 }
 
 function DashboardNavIcon({ item }: { item: DashboardNavItem }) {
@@ -434,45 +451,45 @@ function DashboardNavIcon({ item }: { item: DashboardNavItem }) {
 
 const DASHBOARD_GATHERING_ITEMS: DashboardGatheringSidebarItem[] = [
   {
-    label: 'Desmanche',
-    slug: 'desmanche',
-    origin: 'DESMANCHE',
-    icon: '⛏',
+    label: "Desmanche",
+    slug: "desmanche",
+    origin: "DESMANCHE",
+    icon: "⛏",
   },
   {
-    label: 'Coleta',
-    slug: 'coleta',
-    origin: 'COLETA',
-    icon: '◇',
+    label: "Coleta",
+    slug: "coleta",
+    origin: "COLETA",
+    icon: "◇",
   },
   {
-    label: 'Patrulha',
-    slug: 'patrulha',
-    origin: 'PATRULHA',
-    icon: '⌁',
+    label: "Patrulha",
+    slug: "patrulha",
+    origin: "PATRULHA",
+    icon: "⌁",
   },
   {
-    label: 'Arsenal',
-    slug: 'arsenal',
-    origin: 'ARSENAL',
-    icon: '⌖',
+    label: "Arsenal",
+    slug: "arsenal",
+    origin: "ARSENAL",
+    icon: "⌖",
   },
   {
-    label: 'Tecnovarredura',
-    slug: 'tecnovarredura',
-    origin: 'TECNOVARREDURA',
-    icon: '◌',
+    label: "Tecnovarredura",
+    slug: "tecnovarredura",
+    origin: "TECNOVARREDURA",
+    icon: "◌",
   },
   {
-    label: 'Contenção',
-    slug: 'contencao',
-    origin: 'CONTENCAO',
-    icon: '◎',
+    label: "Contenção",
+    slug: "contencao",
+    origin: "CONTENCAO",
+    icon: "◎",
   },
 ];
 
 function getInitialGatheringSubnavState() {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return true;
   }
 
@@ -485,14 +502,14 @@ function getInitialGatheringSubnavState() {
       return true;
     }
 
-    return storedValue === 'true';
+    return storedValue === "true";
   } catch {
     return true;
   }
 }
 
 function toSafeNumber(value: unknown, fallback = 0) {
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     return fallback;
   }
 
@@ -503,7 +520,7 @@ function toSafeNumber(value: unknown, fallback = 0) {
 
 function getFirstValidNumber(...values: unknown[]) {
   for (const value of values) {
-    if (value === null || value === undefined || value === '') {
+    if (value === null || value === undefined || value === "") {
       continue;
     }
 
@@ -519,7 +536,7 @@ function getFirstValidNumber(...values: unknown[]) {
 
 function getFirstBoolean(...values: unknown[]) {
   for (const value of values) {
-    if (typeof value === 'boolean') {
+    if (typeof value === "boolean") {
       return value;
     }
   }
@@ -528,7 +545,7 @@ function getFirstBoolean(...values: unknown[]) {
 }
 
 function isValidNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function clampPercent(value: number) {
@@ -536,36 +553,38 @@ function clampPercent(value: number) {
 }
 
 function normalizeStatus(status?: string | null) {
-  return String(status ?? '').trim().toUpperCase();
+  return String(status ?? "")
+    .trim()
+    .toUpperCase();
 }
 
 function isTerminalStatus(status?: string | null) {
   const normalizedStatus = normalizeStatus(status);
 
   return (
-    normalizedStatus === 'STOPPED' ||
-    normalizedStatus === 'FINISHED' ||
-    normalizedStatus === 'DEFEATED' ||
-    normalizedStatus === 'FAILED' ||
-    normalizedStatus === 'CANCELLED'
+    normalizedStatus === "STOPPED" ||
+    normalizedStatus === "FINISHED" ||
+    normalizedStatus === "DEFEATED" ||
+    normalizedStatus === "FAILED" ||
+    normalizedStatus === "CANCELLED"
   );
 }
 
 function isActiveStatus(status?: string | null) {
-  return normalizeStatus(status) === 'ACTIVE';
+  return normalizeStatus(status) === "ACTIVE";
 }
 
 function isRunningAutoCombatPhase(phase?: string | null) {
   const normalizedPhase = normalizeStatus(phase);
 
   return (
-    normalizedPhase === 'HUNTING' ||
-    normalizedPhase === 'COMBAT_ACTIVE' ||
-    normalizedPhase === 'HUNT_TARGET_FOUND'
+    normalizedPhase === "HUNTING" ||
+    normalizedPhase === "COMBAT_ACTIVE" ||
+    normalizedPhase === "HUNT_TARGET_FOUND"
   );
 }
 
-function getStatusSession(status: RealtimeStateLoose['status']) {
+function getStatusSession(status: RealtimeStateLoose["status"]) {
   if (!status) return null;
 
   return (
@@ -599,7 +618,7 @@ function isRealtimeSessionActive(realtimeState: RealtimeStateLoose) {
   }
 
   if (
-    sessionPhase === 'ENCOUNTER_READY' ||
+    sessionPhase === "ENCOUNTER_READY" ||
     realtimeState.hasActiveAutoCombat === false ||
     realtimeState.status?.hasActiveAutoCombat === false
   ) {
@@ -609,18 +628,18 @@ function isRealtimeSessionActive(realtimeState: RealtimeStateLoose) {
   if (isActiveStatus(sessionStatus)) {
     return Boolean(
       session?.currentMobId ??
-        session?.currentMob?.id ??
-        realtimeState.status?.currentMob?.id ??
-        null,
+      session?.currentMob?.id ??
+      realtimeState.status?.currentMob?.id ??
+      null,
     );
   }
 
   return Boolean(
     realtimeState.isActive ||
-      realtimeState.hasActiveSession ||
-      realtimeState.hasActiveAutoCombat ||
-      realtimeState.status?.active ||
-      realtimeState.status?.hasActiveAutoCombat,
+    realtimeState.hasActiveSession ||
+    realtimeState.hasActiveAutoCombat ||
+    realtimeState.status?.active ||
+    realtimeState.status?.hasActiveAutoCombat,
   );
 }
 
@@ -636,7 +655,7 @@ function isSameSessionScope(
 }
 
 function getDashboardCharacterId(character: DashboardCharacterViewModel) {
-  return typeof character.id === 'string' ? character.id : '';
+  return typeof character.id === "string" ? character.id : "";
 }
 
 function getProgressForCurrentSession(
@@ -852,7 +871,7 @@ function buildWalletDisplay(character: DashboardCharacterViewModel) {
 }
 
 function formatCurrency(value: number) {
-  return value.toLocaleString('pt-BR');
+  return value.toLocaleString("pt-BR");
 }
 
 function getDashboardCharacterClassKey(character: DashboardCharacterViewModel) {
@@ -861,7 +880,7 @@ function getDashboardCharacterClassKey(character: DashboardCharacterViewModel) {
     character.className ??
     character.class?.name ??
     character.gameClass?.name ??
-    'lutador'
+    "lutador"
   );
 }
 
@@ -870,30 +889,30 @@ function getDashboardCharacterMapName(character: DashboardCharacterViewModel) {
     character.currentMapName ??
     character.currentMap?.name ??
     character.map?.name ??
-    'Sem mapa'
+    "Sem mapa"
   );
 }
 
 function normalizeGatheringOriginKey(
   value?: string | null,
 ): DashboardGatheringOrigin | null {
-  const normalized = String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+  const normalized = String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 
   const aliases: Record<string, DashboardGatheringOrigin> = {
-    DESMANCHE: 'DESMANCHE',
-    COLETA: 'COLETA',
-    PATRULHA: 'PATRULHA',
-    ARSENAL: 'ARSENAL',
-    TECNOVARREDURA: 'TECNOVARREDURA',
-    TECNO_VARREDURA: 'TECNOVARREDURA',
-    CONTENCAO: 'CONTENCAO',
-    CONTENÇÃO: 'CONTENCAO',
+    DESMANCHE: "DESMANCHE",
+    COLETA: "COLETA",
+    PATRULHA: "PATRULHA",
+    ARSENAL: "ARSENAL",
+    TECNOVARREDURA: "TECNOVARREDURA",
+    TECNO_VARREDURA: "TECNOVARREDURA",
+    CONTENCAO: "CONTENCAO",
+    CONTENÇÃO: "CONTENCAO",
   };
 
   return aliases[normalized] ?? null;
@@ -1005,13 +1024,16 @@ function buildHeroCharacterFromRealtimeState(params: {
       : rawRealtimeCharacter;
 
   const statusCharacter = realtimeState.status?.character ?? {};
-  const progress = getProgressForCurrentSession(realtimeState, realtimeSessionId);
+  const progress = getProgressForCurrentSession(
+    realtimeState,
+    realtimeSessionId,
+  );
   const combat = getCombatForCurrentSession(realtimeState, realtimeSessionId);
   const statusHp = realtimeState.status?.sessionSummary?.hp ?? null;
   const baseCurrentHp = getFirstValidNumber(character.currentHp);
   const shouldIgnoreTerminalDefeatHp =
     !realtimeSessionIsActive &&
-    normalizeStatus(statusSession?.status) === 'DEFEATED' &&
+    normalizeStatus(statusSession?.status) === "DEFEATED" &&
     baseCurrentHp !== undefined &&
     baseCurrentHp > 0;
   const statusCharacterForHp = shouldIgnoreTerminalDefeatHp
@@ -1020,7 +1042,7 @@ function buildHeroCharacterFromRealtimeState(params: {
   const statusHpForHero = shouldIgnoreTerminalDefeatHp ? null : statusHp;
   const hasPendingVisualEvents = Boolean(
     realtimeSessionIsActive &&
-      (realtimeState.activeEvent || (realtimeState.eventQueue?.length ?? 0) > 0),
+    (realtimeState.activeEvent || (realtimeState.eventQueue?.length ?? 0) > 0),
   );
 
   /**
@@ -1094,8 +1116,9 @@ function buildHeroCharacterFromRealtimeState(params: {
     undefined;
 
   const nextCurrentMapName =
-    (realtimeSessionIsActive ? statusMapName ?? locationMapName : undefined) ??
-    getDashboardCharacterMapName(character);
+    (realtimeSessionIsActive
+      ? (statusMapName ?? locationMapName)
+      : undefined) ?? getDashboardCharacterMapName(character);
 
   const next = {
     ...character,
@@ -1236,10 +1259,9 @@ function DashboardLayoutContent({
 
     void loadOnlinePlayers();
 
-    const refreshId = window.setInterval(
-      () => void loadOnlinePlayers(),
-      ONLINE_PLAYERS_REFRESH_MS,
-    );
+    const refreshId = window.setInterval(() => {
+      if (canRunNetworkRefresh()) void loadOnlinePlayers();
+    }, ONLINE_PLAYERS_REFRESH_MS);
 
     return () => {
       isMounted = false;
@@ -1248,7 +1270,7 @@ function DashboardLayoutContent({
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     try {
       window.localStorage.setItem(
@@ -1284,7 +1306,7 @@ function DashboardLayoutContent({
   const characterMapName = getDashboardCharacterMapName(heroCharacter);
 
   const classStyle = {
-    '--class-accent': classData.accentColor,
+    "--class-accent": classData.accentColor,
   } as CSSProperties;
 
   const xpProgress = useMemo(() => {
@@ -1301,16 +1323,16 @@ function DashboardLayoutContent({
 
   const onlinePlayersLabel = formatOnlinePlayersLabel(onlinePlayers);
   const onlinePlayersTitle = onlinePlayersError
-    ? 'Não foi possível atualizar a presença agora.'
+    ? "Não foi possível atualizar a presença agora."
     : onlinePlayersUpdatedAt
-      ? `Presença baseada em usuários conectados via WebSocket. Atualizado em ${new Date(onlinePlayersUpdatedAt).toLocaleTimeString('pt-BR')}.`
-      : 'Presença baseada em usuários conectados via WebSocket.';
+      ? `Presença baseada em usuários conectados via WebSocket. Atualizado em ${new Date(onlinePlayersUpdatedAt).toLocaleTimeString("pt-BR")}.`
+      : "Presença baseada em usuários conectados via WebSocket.";
 
   const topBarResources = useMemo<DashboardTopBarResource[]>(
     () => [
       {
-        key: 'gold',
-        label: 'Gold',
+        key: "gold",
+        label: "Gold",
         value: formatCurrency(walletDisplay.gold),
         icon: (
           <img
@@ -1319,13 +1341,13 @@ function DashboardLayoutContent({
             aria-hidden="true"
             className="dashboard-topbar__resource-icon-image"
           />
-        ) as DashboardTopBarResource['icon'],
-        tone: 'gold',
-        title: 'Gold disponível',
+        ) as DashboardTopBarResource["icon"],
+        tone: "gold",
+        title: "Gold disponível",
       },
       {
-        key: 'cash',
-        label: 'Cash',
+        key: "cash",
+        label: "Cash",
         value: formatCurrency(walletDisplay.cash),
         icon: (
           <img
@@ -1334,9 +1356,9 @@ function DashboardLayoutContent({
             aria-hidden="true"
             className="dashboard-topbar__resource-icon-image"
           />
-        ) as DashboardTopBarResource['icon'],
-        tone: 'cash',
-        title: 'Cash disponível',
+        ) as DashboardTopBarResource["icon"],
+        tone: "cash",
+        title: "Cash disponível",
       },
     ],
     [walletDisplay.cash, walletDisplay.gold],
@@ -1356,7 +1378,7 @@ function DashboardLayoutContent({
 
   function handleLogout() {
     removeAuthToken();
-    window.location.href = '/';
+    window.location.href = "/";
   }
 
   function handleToggleGatheringMenu() {
@@ -1380,7 +1402,7 @@ function DashboardLayoutContent({
         />
       ) : null}
 
-      <aside className={`dashboard-sidebar ${isSidebarOpen ? 'is-open' : ''}`}>
+      <aside className={`dashboard-sidebar ${isSidebarOpen ? "is-open" : ""}`}>
         <div className="dashboard-sidebar__brand">
           <span>Dead Idle</span>
           <strong>Abrigo de Sobreviventes</strong>
@@ -1440,7 +1462,7 @@ function DashboardLayoutContent({
             style={classStyle}
             onClick={() => {
               closeSidebar();
-              navigate('/characters');
+              navigate("/characters");
             }}
             aria-label={`Trocar personagem atual: ${heroCharacter.name}`}
           >
@@ -1511,18 +1533,21 @@ function DashboardLayoutContent({
                 <button
                   type="button"
                   className={[
-                    'dashboard-sidebar__link',
-                    'dashboard-sidebar__link--toggle',
-                    isGatheringRoute ? 'is-active' : '',
-                    isGatheringMenuOpen ? 'is-expanded' : '',
+                    "dashboard-sidebar__link",
+                    "dashboard-sidebar__link--toggle",
+                    isGatheringRoute ? "is-active" : "",
+                    isGatheringMenuOpen ? "is-expanded" : "",
                   ]
                     .filter(Boolean)
-                    .join(' ')}
+                    .join(" ")}
                   onClick={handleToggleGatheringMenu}
                   aria-expanded={isGatheringMenuOpen}
                   aria-controls="dashboard-gathering-subnav"
                 >
-                  <span className="dashboard-sidebar__link-icon" aria-hidden="true">
+                  <span
+                    className="dashboard-sidebar__link-icon"
+                    aria-hidden="true"
+                  >
                     {DASHBOARD_GATHERING_NAV_ITEM.icon}
                   </span>
                   <strong>{DASHBOARD_GATHERING_NAV_ITEM.label}</strong>
@@ -1549,7 +1574,7 @@ function DashboardLayoutContent({
                           onClick={closeSidebar}
                           className={({ isActive }) =>
                             `dashboard-sidebar__subitem ${
-                              isActive ? 'is-active' : ''
+                              isActive ? "is-active" : ""
                             }`
                           }
                         >
@@ -1636,7 +1661,7 @@ function DashboardLayoutContent({
             className="dashboard-sidebar__secondary"
             onClick={() => {
               closeSidebar();
-              navigate('/characters');
+              navigate("/characters");
             }}
           >
             Trocar personagem
@@ -1652,10 +1677,16 @@ function DashboardLayoutContent({
         </div>
       </aside>
 
-      <main className={hideTopBar ? 'dashboard-main dashboard-main--content-only' : 'dashboard-main'}>
+      <main
+        className={
+          hideTopBar
+            ? "dashboard-main dashboard-main--content-only"
+            : "dashboard-main"
+        }
+      >
         <div
           className={`dashboard-mobile-topbar ${
-            hideTopBar ? 'dashboard-mobile-topbar--menu-only' : ''
+            hideTopBar ? "dashboard-mobile-topbar--menu-only" : ""
           }`}
         >
           <button
@@ -1726,7 +1757,9 @@ function DashboardLayoutContent({
                         aria-hidden="true"
                         className="dashboard-hero__currency-icon"
                       />
-                      <span className="dashboard-hero__currency-label">Gold</span>
+                      <span className="dashboard-hero__currency-label">
+                        Gold
+                      </span>
                     </span>
                     <strong>{formatCurrency(walletDisplay.gold)}</strong>
                   </div>
@@ -1739,7 +1772,9 @@ function DashboardLayoutContent({
                         aria-hidden="true"
                         className="dashboard-hero__currency-icon"
                       />
-                      <span className="dashboard-hero__currency-label">Cash</span>
+                      <span className="dashboard-hero__currency-label">
+                        Cash
+                      </span>
                     </span>
                     <strong>{formatCurrency(walletDisplay.cash)}</strong>
                   </div>

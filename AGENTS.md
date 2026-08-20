@@ -1,6 +1,6 @@
 # AGENTS.md - MMORPG Idle Zumbi
 
-Ultima revisao: 2026-06-08.
+Ultima revisao: 2026-08-20.
 
 Guia para agentes de IA/Codex trabalharem neste repositorio. Foi refeito a partir do working tree local atual. Nao assuma que este arquivo esta mais atualizado que o codigo: sempre confirme no checkout antes de editar.
 
@@ -128,6 +128,8 @@ Frontend:
 ```bash
 cd frontend
 npm run lint
+npm test
+npm run images:audit:equipment
 npm run build
 ```
 
@@ -281,7 +283,9 @@ Models atuais de alto impacto:
 - `UserRole`: `PLAYER`, `ADMIN`.
 - `AuthService` retorna `user` e `accessToken`; nunca retornar `passwordHash`.
 - Frontend remove token em `401`.
-- `JWT_EXPIRES_IN` existe no `.env.example`, mas o `AuthModule` atual usa `expiresIn: '7d'` diretamente. Confirmar antes de documentar como variavel funcional.
+- `JWT_EXPIRES_IN` controla a duracao do token; o fallback e `7d`.
+- Redefinicao de senha invalida tokens anteriores por `tokenVersion`.
+- Login, cadastro e recuperacao possuem rate limit; em escala, usam Redis quando habilitado.
 
 ## Regras de personagens e progressao
 
@@ -397,7 +401,7 @@ Parametros de hunt identificados no codigo:
 - Origens: `DESMANCHE`, `COLETA`, `CONTENCAO`, `ARSENAL`, `PATRULHA`, `TECNOVARREDURA`, `DROP_MOBS`.
 - Proficiencia por origem em `CharacterGatheringSkill`.
 - Cap identificado: 50.
-- O controller/gateway de gathering nao mostrou o mesmo padrao claro de `JwtAuthGuard` encontrado em outros modulos protegidos. Revisar autenticacao e ownership antes de producao.
+- Controller e gateway exigem JWT e validam ownership do personagem.
 - Gathering e atividade exclusiva; use `ActivityGuardService`.
 
 ## Regras de crafting
@@ -443,7 +447,7 @@ Parametros de hunt identificados no codigo:
 - Recompensas podem incluir `PET_EGG`.
 - Participacao em world boss bloqueia outras atividades principais.
 - Seed-data e `worldBoss.id` sao fontes importantes para deduplicar cards/eventos.
-- Ha modo de teste identificado no service (`WORLD_BOSS_TEST_UNLOCK_ENABLED = true`). Confirmar antes de tratar disponibilidade como regra final de producao.
+- O modo de QA so ativa quando `WORLD_BOSS_TEST_UNLOCK_ENABLED=true`; o padrao e `false`.
 
 ## Regras de vendor
 
@@ -526,10 +530,10 @@ cd frontend
 npm run dev
 npm run build
 npm run lint
+npm test
+npm run images:audit:equipment
 npm run preview
 ```
-
-Nao ha script oficial de teste frontend identificado.
 
 ## Alteracoes seguras
 
@@ -594,11 +598,9 @@ Realtime:
 
 ## Pontos conhecidos a confirmar
 
-- Versao minima exata de Node.js nao identificada.
-- CI/CD nao identificado.
+- CI esta em `.github/workflows/ci.yml`; a plataforma final de deploy ainda precisa ser definida.
 - Dockerfile de aplicacao nao identificado.
 - `LICENSE` nao identificado; backend declara `UNLICENSED`.
-- `JWT_EXPIRES_IN` nao e usado dinamicamente no `AuthModule` atual.
 - Confirmar se `VITE_BACKEND_URL` deve continuar como fallback legado ou se deve ser consolidado em `VITE_API_URL`/`VITE_SOCKET_URL`.
-- Gathering precisa de revisao de autenticacao/ownership antes de producao.
-- World boss tem modo de teste habilitado no service atual.
+- Premium comercial depende de provedor, webhook e conciliacao ainda nao definidos.
+- T6-T10 permanecem fora do cap jogavel de lancamento.

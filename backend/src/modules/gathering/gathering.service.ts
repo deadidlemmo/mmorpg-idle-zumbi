@@ -528,11 +528,33 @@ export class GatheringService {
     });
   }
 
-  private async findActiveGatheringSession(characterId: string) {
+  private async assertCharacterOwnership(userId: string, characterId: string) {
+    const character = await this.prisma.character.findFirst({
+      where: {
+        id: characterId,
+        userId,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+
+    if (!character) {
+      throw new NotFoundException('Personagem não encontrado.');
+    }
+  }
+
+  private async findActiveGatheringSession(
+    userId: string,
+    characterId: string,
+  ) {
     return this.prisma.gatheringSession.findFirst({
       where: {
         characterId,
         status: ActivityStatus.ACTIVE,
+        character: {
+          userId,
+          deletedAt: null,
+        },
       },
       include: {
         character: {
@@ -659,10 +681,13 @@ export class GatheringService {
   }
 
   private async resolveActiveGathering(
+    userId: string,
     characterId: string,
     options: ResolveGatheringOptions = {},
   ) {
-    const session = await this.findActiveGatheringSession(characterId);
+    await this.assertCharacterOwnership(userId, characterId);
+
+    const session = await this.findActiveGatheringSession(userId, characterId);
 
     if (!session) {
       if (options.throwIfMissing) {
@@ -710,6 +735,7 @@ export class GatheringService {
     if (options.validateCollectionGuard) {
       await this.activityGuard.ensureCanCollectGathering({
         characterId,
+        userId,
       });
     }
 
@@ -884,7 +910,10 @@ export class GatheringService {
     });
 
     if (!transactionResult) {
-      const freshSession = await this.findActiveGatheringSession(characterId);
+      const freshSession = await this.findActiveGatheringSession(
+        userId,
+        characterId,
+      );
 
       if (!freshSession) {
         if (options.throwIfMissing) {
@@ -1097,11 +1126,12 @@ export class GatheringService {
     };
   }
 
-  async start(dto: StartGatheringDto) {
+  async start(userId: string, dto: StartGatheringDto) {
     this.validateGatheringOrigin(dto.origin);
 
     const activityState = await this.activityGuard.ensureCanStartGathering({
       characterId: dto.characterId,
+      userId,
     });
 
     const character = activityState.character;
@@ -1239,6 +1269,7 @@ export class GatheringService {
         async (tx) => {
           await this.activityGuard.ensureCanStartGathering({
             characterId: dto.characterId,
+            userId,
             client: tx,
             lockCharacter: true,
           });
@@ -1326,8 +1357,8 @@ export class GatheringService {
     };
   }
 
-  async getStatus(characterId: string) {
-    const resolved = await this.resolveActiveGathering(characterId, {
+  async getStatus(userId: string, characterId: string) {
+    const resolved = await this.resolveActiveGathering(userId, characterId, {
       forcePersist: false,
       validateCollectionGuard: false,
       throwIfMissing: false,
@@ -1362,8 +1393,8 @@ export class GatheringService {
     };
   }
 
-  async collect(characterId: string) {
-    const resolved = await this.resolveActiveGathering(characterId, {
+  async collect(userId: string, characterId: string) {
+    const resolved = await this.resolveActiveGathering(userId, characterId, {
       forcePersist: true,
       validateCollectionGuard: true,
       throwIfMissing: true,
@@ -1401,8 +1432,10 @@ export class GatheringService {
     };
   }
 
-  async stop(characterId: string) {
-    const session = await this.findActiveGatheringSession(characterId);
+  async stop(userId: string, characterId: string) {
+    await this.assertCharacterOwnership(userId, characterId);
+
+    const session = await this.findActiveGatheringSession(userId, characterId);
 
     if (!session) {
       throw new BadRequestException('Nenhum gathering ativo para encerrar.');
@@ -1474,7 +1507,7 @@ export class GatheringService {
       };
     }
 
-    const resolved = await this.resolveActiveGathering(characterId, {
+    const resolved = await this.resolveActiveGathering(userId, characterId, {
       forcePersist: true,
       validateCollectionGuard: true,
       throwIfMissing: true,
@@ -1561,7 +1594,7 @@ export class GatheringService {
   private isTransactionConflictError(error: unknown) {
     return (
       error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2034'
+      (error.code === 'P2034' || error.code === 'P2002')
     );
   }
 }

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import {
-  createContext,
   useCallback,
   useEffect,
   useMemo,
@@ -9,6 +8,7 @@ import {
 } from 'react';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
+import { canRunNetworkRefresh } from '../../../utils/networkRefresh';
 import { useLootNotifications } from '../../loot-notifications/lootNotificationContext';
 import {
   collectGatheringRequest,
@@ -28,6 +28,7 @@ import type {
   GatheringStatusResponse,
 } from '../types/gathering.types';
 import { getGatheringMaterialImageUrl } from '../utils/gatheringMaterialAssets';
+import { GatheringRealtimeContext } from './gatheringRealtimeContext';
 
 interface GatheringRealtimeProviderProps {
   characterId: string;
@@ -191,9 +192,6 @@ const GATHERING_STATUS_EVENTS = [
   'gathering:collected',
   'gathering:stopped',
 ] as const;
-
-export const GatheringRealtimeContext =
-  createContext<GatheringRealtimeContextValue | null>(null);
 
 function isRecord(value: unknown): value is LooseRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -1253,6 +1251,7 @@ export function GatheringRealtimeProvider({
     };
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Provider state is scoped to the selected character. */
   useEffect(() => {
     statusRef.current = null;
     statusSignatureRef.current = 'null';
@@ -1265,7 +1264,9 @@ export function GatheringRealtimeProvider({
     setIsRefreshing((previous) => (previous ? false : previous));
     setIsBusy((previous) => (previous ? false : previous));
   }, [autoLoad, characterId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Connection state mirrors the external Socket.IO lifecycle. */
   useEffect(() => {
     if (!enabled || !characterId) {
       socketConnectedRef.current = false;
@@ -1377,7 +1378,9 @@ export function GatheringRealtimeProvider({
       }
     };
   }, [applySocketPayload, characterId, enabled]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Initial loading state follows the provider lifecycle. */
   useEffect(() => {
     if (!enabled) return undefined;
 
@@ -1399,6 +1402,7 @@ export function GatheringRealtimeProvider({
     setIsLoading((previous) => (previous ? previous : true));
     void refresh();
   }, [autoLoad, characterId, enabled, refresh]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!enabled || !characterId || refreshMs <= 0 || isSocketConnected) {
@@ -1406,6 +1410,7 @@ export function GatheringRealtimeProvider({
     }
 
     const intervalId = window.setInterval(() => {
+      if (!canRunNetworkRefresh()) return;
       void refresh();
     }, refreshMs);
 

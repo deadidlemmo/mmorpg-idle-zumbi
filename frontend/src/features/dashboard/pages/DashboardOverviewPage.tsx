@@ -1,23 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { normalizeClassName } from '../../characters/api/characters.api';
-import '../../characters/characters.css';
-import { useGatheringRealtimeState } from '../../gathering/realtime/useGatheringRealtime';
-import { getCharacterOverview } from '../api/dashboard.api';
-import { CharacterStatsPanel } from '../components/CharacterStatsPanel';
-import { DashboardCard } from '../components/DashboardCard';
-import { DashboardEquipmentBody } from '../components/DashboardEquipmentBody';
-import { DashboardLayout } from '../components/DashboardLayout';
-import { GatheringSkillsPanel } from '../components/GatheringSkillsPanel';
+import { useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useParams } from "react-router-dom";
+import { normalizeClassName } from "../../characters/api/characters.api";
+import "../../characters/characters.css";
+import { useGatheringRealtimeState } from "../../gathering/realtime/useGatheringRealtime";
+import { TutorialBanner } from "../../progression/components/TutorialBanner";
+import { getCharacterOverview } from "../api/dashboard.api";
+import { CharacterStatsPanel } from "../components/CharacterStatsPanel";
+import { DashboardCard } from "../components/DashboardCard";
+import { DashboardEquipmentBody } from "../components/DashboardEquipmentBody";
+import { DashboardLayout } from "../components/DashboardLayout";
+import { GatheringSkillsPanel } from "../components/GatheringSkillsPanel";
 import {
   GATHERING_SKILLS_CONFIG,
   type GatheringSkillViewModel,
-} from '../constants/gathering-skills-config';
-import '../dashboard.css';
+} from "../constants/gathering-skills-config";
+import "../dashboard.css";
 import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
-} from '../types/dashboard.types';
+} from "../types/dashboard.types";
 
 function toSafeNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
@@ -26,15 +27,15 @@ function toSafeNumber(value: unknown, fallback = 0) {
 }
 
 function normalizeGatheringSkillKey(value?: string | null) {
-  if (!value) return '';
+  if (!value) return "";
 
   return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase()
-    .replace(/_/g, '-')
-    .replace(/\s+/g, '-');
+    .replace(/_/g, "-")
+    .replace(/\s+/g, "-");
 }
 
 function buildCharacterViewModel(
@@ -43,13 +44,13 @@ function buildCharacterViewModel(
   const character = overview.character;
 
   const className =
-    character.class?.name ?? character.gameClass?.name ?? 'Lutador';
+    character.class?.name ?? character.gameClass?.name ?? "Lutador";
 
   const currentMapName =
     character.currentMap?.name ??
     character.map?.name ??
     overview.progression?.currentMap?.name ??
-    'Sem mapa';
+    "Sem mapa";
 
   return {
     ...character,
@@ -67,7 +68,11 @@ function buildCharacterViewModel(
      * No backend, character.xp é XP TOTAL acumulado.
      */
     xp: character.xp ?? 0,
-    totalXp: character.totalXp ?? character.levelProgress?.totalXp ?? character.xp ?? 0,
+    totalXp:
+      character.totalXp ??
+      character.levelProgress?.totalXp ??
+      character.xp ??
+      0,
 
     /**
      * IMPORTANTE:
@@ -128,20 +133,44 @@ function buildCharacterViewModel(
 
     levelProgress: character.levelProgress ?? null,
 
-    status: character.status ?? 'ACTIVE',
+    status: character.status ?? "ACTIVE",
 
     currentHp: character.currentHp ?? character.maxHp ?? 1,
     maxHp: character.maxHp ?? 1,
 
-    gold: character.gold ?? character.wallet?.gold ?? character.currencies?.gold ?? 0,
-    cash: character.cash ?? character.wallet?.cash ?? character.currencies?.cash ?? 0,
+    gold:
+      character.gold ??
+      character.wallet?.gold ??
+      character.currencies?.gold ??
+      0,
+    cash:
+      character.cash ??
+      character.wallet?.cash ??
+      character.currencies?.cash ??
+      0,
     wallet: {
-      gold: character.gold ?? character.wallet?.gold ?? character.currencies?.gold ?? 0,
-      cash: character.cash ?? character.wallet?.cash ?? character.currencies?.cash ?? 0,
+      gold:
+        character.gold ??
+        character.wallet?.gold ??
+        character.currencies?.gold ??
+        0,
+      cash:
+        character.cash ??
+        character.wallet?.cash ??
+        character.currencies?.cash ??
+        0,
     },
     currencies: {
-      gold: character.gold ?? character.wallet?.gold ?? character.currencies?.gold ?? 0,
-      cash: character.cash ?? character.wallet?.cash ?? character.currencies?.cash ?? 0,
+      gold:
+        character.gold ??
+        character.wallet?.gold ??
+        character.currencies?.gold ??
+        0,
+      cash:
+        character.cash ??
+        character.wallet?.cash ??
+        character.currencies?.cash ??
+        0,
     },
 
     avatarKey: character.avatarKey ?? null,
@@ -212,13 +241,13 @@ function readRawGatheringSkills(
     return source as Array<Record<string, unknown>>;
   }
 
-  if (source && typeof source === 'object') {
-    return Object.entries(source as Record<string, Record<string, unknown>>).map(
-      ([key, value]) => ({
-        key,
-        ...(value ?? {}),
-      }),
-    );
+  if (source && typeof source === "object") {
+    return Object.entries(
+      source as Record<string, Record<string, unknown>>,
+    ).map(([key, value]) => ({
+      key,
+      ...(value ?? {}),
+    }));
   }
 
   return [];
@@ -232,17 +261,17 @@ function buildGatheringSkillsViewModel(
   return GATHERING_SKILLS_CONFIG.map((config) => {
     const matchedSkill = rawSkills.find((skill) => {
       const normalizedKey = normalizeGatheringSkillKey(
-        typeof skill.origin === 'string'
+        typeof skill.origin === "string"
           ? skill.origin
-          : typeof skill.key === 'string'
-          ? skill.key
-          : typeof skill.name === 'string'
-            ? skill.name
-            : typeof skill.type === 'string'
-              ? skill.type
-              : typeof skill.slug === 'string'
-                ? skill.slug
-                : null,
+          : typeof skill.key === "string"
+            ? skill.key
+            : typeof skill.name === "string"
+              ? skill.name
+              : typeof skill.type === "string"
+                ? skill.type
+                : typeof skill.slug === "string"
+                  ? skill.slug
+                  : null,
       );
 
       return normalizedKey === config.key;
@@ -281,7 +310,7 @@ function buildGatheringSkillsViewModel(
       xpToNextLevel > 0 ? Math.round((currentXp / xpToNextLevel) * 100) : 0;
 
     const progressPercent =
-      typeof explicitPercent === 'number'
+      typeof explicitPercent === "number"
         ? Math.max(0, Math.min(100, explicitPercent))
         : Math.max(0, Math.min(100, calculatedPercent));
 
@@ -381,7 +410,7 @@ export function DashboardOverviewPage() {
     null,
   );
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -391,7 +420,7 @@ export function DashboardOverviewPage() {
 
       try {
         setIsLoading(true);
-        setErrorMessage('');
+        setErrorMessage("");
 
         const data = await getCharacterOverview(characterId);
 
@@ -401,7 +430,7 @@ export function DashboardOverviewPage() {
       } catch {
         if (isMounted) {
           setErrorMessage(
-            'Não foi possível carregar o painel deste personagem.',
+            "Não foi possível carregar o painel deste personagem.",
           );
         }
       } finally {
@@ -450,7 +479,7 @@ export function DashboardOverviewPage() {
     return (
       <main className="dashboard-error">
         <h1>Erro ao carregar painel</h1>
-        <p>{errorMessage || 'Personagem não encontrado.'}</p>
+        <p>{errorMessage || "Personagem não encontrado."}</p>
 
         <Link to="/characters" className="btn btn-primary">
           Voltar para seleção
@@ -463,6 +492,8 @@ export function DashboardOverviewPage() {
   const equipment = overview.equipment ?? {};
   return (
     <DashboardLayout character={character}>
+      <TutorialBanner characterId={character.id} />
+
       <div className="dashboard-section-divider">
         <span>Resumo do personagem</span>
       </div>

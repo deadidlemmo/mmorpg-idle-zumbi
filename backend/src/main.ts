@@ -1,44 +1,60 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
-
-function isAllowedOrigin(origin?: string): boolean {
-  if (!origin) {
-    return true;
-  }
-
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
-    'http://127.0.0.1:5175',
-    'https://miller-textbooks-home-batch.trycloudflare.com',
-  ];
-
-  if (allowedOrigins.includes(origin)) {
-    return true;
-  }
-
-  try {
-    const { hostname } = new URL(origin);
-
-    return (
-      hostname === 'trycloudflare.com' ||
-      hostname.endsWith('.trycloudflare.com')
-    );
-  } catch {
-    return false;
-  }
-}
+import {
+  buildAllowedCorsOrigins,
+  isCorsOriginAllowed,
+} from './common/config/cors.util';
+import { isConfigEnabled } from './common/redis/redis-client.factory';
+import { ConfiguredIoAdapter } from './common/websocket/configured-io.adapter';
+import { RedisIoAdapter } from './common/websocket/redis-io.adapter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const configService = app.get(ConfigService);
+  const nodeEnv = configService.get<string>('NODE_ENV');
+  const production = nodeEnv?.trim().toLowerCase() === 'production';
+  const allowedOrigins = buildAllowedCorsOrigins({
+    nodeEnv,
+    frontendUrl: configService.get<string>('FRONTEND_URL'),
+    configuredOrigins: configService.get<string>('CORS_ALLOWED_ORIGINS'),
+  });
+  const trustProxyHops = Number(configService.get<string>('TRUST_PROXY_HOPS'));
+
+  if (production && allowedOrigins.size === 0) {
+    throw new Error(
+      'Configure FRONTEND_URL ou CORS_ALLOWED_ORIGINS em producao.',
+    );
+  }
+
+  if (Number.isInteger(trustProxyHops) && trustProxyHops > 0) {
+    app.set('trust proxy', trustProxyHops);
+  }
+
+  app.use(helmet());
+
+  app.enableShutdownHooks();
+
+  if (isConfigEnabled(configService, 'SOCKET_REDIS_ADAPTER_ENABLED')) {
+    const redisIoAdapter = new RedisIoAdapter(app, configService);
+    await redisIoAdapter.connectToRedis();
+    app.useWebSocketAdapter(redisIoAdapter);
+  } else {
+    app.useWebSocketAdapter(new ConfiguredIoAdapter(app, configService));
+  }
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (isAllowedOrigin(origin)) {
+      if (
+        isCorsOriginAllowed({
+          origin,
+          allowedOrigins,
+          allowDevelopmentTunnels: !production,
+        })
+      ) {
         callback(null, true);
         return;
       }
@@ -73,4 +89,4 @@ async function bootstrap() {
   console.log(`Backend rodando em http://localhost:${port}`);
 }
 
-bootstrap();
+void bootstrap();

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/auth.store';
 import { deleteCharacter, getMyCharacters } from '../api/characters.api';
@@ -13,6 +14,7 @@ import {
 export function CharacterSelectPage() {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
+  const user = useAuthStore((state) => state.user);
 
   const [characters, setCharacters] = useState<CharacterSummary[]>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState('');
@@ -98,11 +100,13 @@ export function CharacterSelectPage() {
       if (selectedCharacterId === characterToDelete.id) {
         setSelectedCharacterId(updatedCharacters[0].id);
       }
-    } catch (err: any) {
-      console.error(err);
+    } catch (error: unknown) {
+      console.error(error);
 
       const message =
-        err?.response?.data?.message ??
+        (isAxiosError<{ message?: string | string[] }>(error)
+          ? error.response?.data?.message
+          : null) ??
         'Não foi possível excluir o personagem.';
 
       setError(Array.isArray(message) ? message[0] : message);
@@ -168,6 +172,16 @@ export function CharacterSelectPage() {
           >
             Entrar no jogo
           </button>
+
+          {user?.role === 'ADMIN' ? (
+            <button
+              type="button"
+              className="character-logout"
+              onClick={() => navigate('/admin')}
+            >
+              Painel administrativo
+            </button>
+          ) : null}
 
           <button
             type="button"

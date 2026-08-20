@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { IncursionsRealtimeContext } from "./incursionsRealtimeContext";
 import { getAuthToken } from "../../../services/api/authToken";
+import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import {
   cancelIncursion,
   claimIncursion,
@@ -13,6 +14,7 @@ import {
 import type {
   CancelIncursionResponse,
   ClaimIncursionResponse,
+  IncursionApproach,
   IncursionSession,
   IncursionStatusResponse,
   StartIncursionResponse,
@@ -45,7 +47,10 @@ export interface IncursionsRealtimeState {
 export interface IncursionsRealtimeContextValue {
   state: IncursionsRealtimeState;
   refresh: () => Promise<IncursionStatusResponse | null>;
-  start: (incursionId: string) => Promise<StartIncursionResponse | null>;
+  start: (
+    incursionId: string,
+    approach: IncursionApproach,
+  ) => Promise<StartIncursionResponse | null>;
   claim: (sessionId: string) => Promise<ClaimIncursionResponse | null>;
   cancel: () => Promise<CancelIncursionResponse | null>;
   clearError: () => void;
@@ -160,7 +165,7 @@ export function IncursionsRealtimeProvider({
   children,
   autoLoad = true,
   enabled = true,
-  refreshMs = 5000,
+  refreshMs = 15000,
   tickMs = 1000,
 }: IncursionsRealtimeProviderProps) {
   const [status, setStatus] = useState<IncursionStatusResponse | null>(null);
@@ -223,14 +228,18 @@ export function IncursionsRealtimeProvider({
   }, [characterId]);
 
   const start = useCallback(
-    async (incursionId: string) => {
+    async (incursionId: string, approach: IncursionApproach) => {
       if (!enabled || !characterId) return null;
 
       setIsBusy(true);
       setErrorMessage(null);
 
       try {
-        const response = await startIncursion(characterId, incursionId);
+        const response = await startIncursion(
+          characterId,
+          incursionId,
+          approach,
+        );
         applyStatus({ activeSession: response.session ?? null });
         requestSocketSnapshot();
 
@@ -324,7 +333,9 @@ export function IncursionsRealtimeProvider({
     void refresh();
 
     const intervalId = window.setInterval(() => {
-      if (!socketRef.current?.connected) void refresh();
+      if (!socketRef.current?.connected && canRunNetworkRefresh()) {
+        void refresh();
+      }
     }, refreshMs);
 
     return () => window.clearInterval(intervalId);

@@ -15,6 +15,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
+import { DistributedLockService } from '../../common/redis/distributed-lock.service';
 import {
   AUTO_COMBAT_HUNTING_BASE_MAX_TRACKED_ENEMIES,
   AUTO_COMBAT_HUNTING_BASE_SECONDS_PER_ENEMY,
@@ -24,6 +25,7 @@ import {
   AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_EXPONENT,
   AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_SCALE,
   AUTO_COMBAT_MAX_COMBATS_PER_PROCESS,
+  AUTO_COMBAT_ROUND_DURATION_SECONDS,
   AUTO_COMBAT_TTK_PROGRESS_UPDATES_PER_SECOND,
 } from '../../common/config/auto-combat.config';
 import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
@@ -78,12 +80,14 @@ const AUTO_COMBAT_PREVIEW_MIN_ITERATIONS = 6;
 const AUTO_COMBAT_PREVIEW_MAX_ITERATIONS = 14;
 const AUTO_COMBAT_PREVIEW_MAX_COMBATS_PER_ITERATION = 5000;
 
-const AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS = 1;
+const AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS =
+  AUTO_COMBAT_ROUND_DURATION_SECONDS;
 
 const AUTO_COMBAT_REALTIME_TICK_MS = Math.max(
   250,
   Math.floor(1000 / AUTO_COMBAT_TTK_PROGRESS_UPDATES_PER_SECOND),
 );
+const AUTO_COMBAT_REALTIME_LOCK_TTL_MS = 30_000;
 const AUTO_COMBAT_STORED_EVENTS_LIMIT = 50;
 const AUTO_COMBAT_RECENT_EVENTS_LIMIT = 20;
 const AUTO_COMBAT_MAX_REALTIME_EVENTS_TO_EMIT = 20;
@@ -194,7 +198,7 @@ type AutoCombatRealtimeEvent = {
   actionId?: string | null;
   actionOrder?: number | null;
   phase?: AutoCombatRealtimePhase;
-  sessionStatus?: AutoCombatSessionStatus | string | null;
+  sessionStatus?: string | null;
   endReason?: string | null;
   shouldRedirectToInfirmary?: boolean;
   nextActor?: RealtimeActor | null;
@@ -773,6 +777,7 @@ export class AutoCombatService implements OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly activityGuard: ActivityGuardService,
     private readonly autoCombatGateway: AutoCombatGateway,
+    private readonly distributedLock: DistributedLockService,
   ) {}
 
   onModuleDestroy() {
@@ -2671,7 +2676,7 @@ export class AutoCombatService implements OnModuleDestroy {
 
   private scheduleImmediateSessionProcessing(
     userId: string,
-    sessionId: string,
+    _sessionId: string,
     characterId: string,
   ) {
     /**
@@ -2686,9 +2691,7 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const timeout = setTimeout(() => {
       this.immediateProcessingTimeouts.delete(characterId);
-      void this.processActiveSessionById(userId, sessionId).catch(() => {
-        this.stopRealtimeProcessingLoop(characterId);
-      });
+      void this.processRealtimeTick(userId, characterId);
     }, AUTO_COMBAT_REALTIME_TICK_MS);
 
     this.immediateProcessingTimeouts.set(characterId, timeout);
@@ -2699,49 +2702,66 @@ export class AutoCombatService implements OnModuleDestroy {
       return;
     }
 
-    const interval = setInterval(async () => {
-      try {
-        const activeSession = await this.prisma.autoCombatSession.findFirst({
-          where: {
-            characterId,
-            status: AutoCombatSessionStatus.ACTIVE,
-            phase: {
-              in: [
-                AutoCombatSessionPhase.HUNTING,
-                AutoCombatSessionPhase.COMBAT_ACTIVE,
-              ],
-            },
-            character: {
-              userId,
-            },
-          },
-          orderBy: {
-            startedAt: 'desc',
-          },
-          select: {
-            id: true,
-          },
-        });
-
-        if (!activeSession) {
-          this.stopRealtimeProcessingLoop(characterId);
-          return;
-        }
-
-        const response = await this.processActiveSessionById(
-          userId,
-          activeSession.id,
-        );
-
-        if (!response.hasActiveAutoCombat) {
-          this.stopRealtimeProcessingLoop(characterId);
-        }
-      } catch {
-        this.stopRealtimeProcessingLoop(characterId);
-      }
+    const interval = setInterval(() => {
+      void this.processRealtimeTick(userId, characterId);
     }, AUTO_COMBAT_REALTIME_TICK_MS);
 
     this.realtimeIntervals.set(characterId, interval);
+  }
+
+  private async processRealtimeTick(userId: string, characterId: string) {
+    const lockResult = await this.distributedLock.runExclusive(
+      `dead-idle:auto-combat:${characterId}`,
+      AUTO_COMBAT_REALTIME_LOCK_TTL_MS,
+      () => this.processRealtimeTickWithLock(userId, characterId),
+    );
+
+    if (!lockResult.acquired) return;
+  }
+
+  private async processRealtimeTickWithLock(
+    userId: string,
+    characterId: string,
+  ) {
+    try {
+      const activeSession = await this.prisma.autoCombatSession.findFirst({
+        where: {
+          characterId,
+          status: AutoCombatSessionStatus.ACTIVE,
+          phase: {
+            in: [
+              AutoCombatSessionPhase.HUNTING,
+              AutoCombatSessionPhase.COMBAT_ACTIVE,
+            ],
+          },
+          character: {
+            userId,
+          },
+        },
+        orderBy: {
+          startedAt: 'desc',
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!activeSession) {
+        this.stopRealtimeProcessingLoop(characterId);
+        return;
+      }
+
+      const response = await this.processActiveSessionById(
+        userId,
+        activeSession.id,
+      );
+
+      if (!response.hasActiveAutoCombat) {
+        this.stopRealtimeProcessingLoop(characterId);
+      }
+    } catch {
+      this.stopRealtimeProcessingLoop(characterId);
+    }
   }
 
   private stopRealtimeProcessingLoop(characterId: string) {
@@ -9140,7 +9160,7 @@ export class AutoCombatService implements OnModuleDestroy {
     actionId?: string | null;
     actionOrder?: number | null;
     phase?: AutoCombatRealtimePhase;
-    sessionStatus?: AutoCombatSessionStatus | string | null;
+    sessionStatus?: string | null;
     endReason?: string | null;
     shouldRedirectToInfirmary?: boolean;
     nextActor?: RealtimeActor | null;

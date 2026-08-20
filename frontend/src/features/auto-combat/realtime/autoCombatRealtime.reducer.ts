@@ -766,8 +766,10 @@ function publishDisplayTotalsIfAllowed(
 ): AutoCombatRealtimeTotalsState | null {
   const { forceCanonical = false, releaseEvent = null } = options ?? {};
 
-  if (releaseEvent && isDisplayTotalsReleaseEvent(releaseEvent)) {
-    return buildDisplayTotalsFromReleaseEvent(state, releaseEvent);
+  if (releaseEvent) {
+    return isDisplayTotalsReleaseEvent(releaseEvent)
+      ? buildDisplayTotalsFromReleaseEvent(state, releaseEvent)
+      : state.displayTotals;
   }
 
   if (!canPublishCanonicalDisplayTotals(state)) {
@@ -2720,11 +2722,8 @@ export function autoCombatRealtimeReducer(
         isSynchronizing: action.isSynchronizing,
         ...(shouldClearCombatView
           ? {
-              /**
-               * Sincronizacao deve descartar eventos pendentes, mas preservar
-               * o ultimo snapshot de mob/sessao para a UI derivar progresso
-               * por timestamp absoluto enquanto o refetch chega.
-               */
+              mob: null,
+              visual: null,
               activeEvent: null,
               activeEventImpactApplied: false,
               eventQueue: [],
@@ -2786,7 +2785,9 @@ export function autoCombatRealtimeReducer(
 
       return {
         ...nextState,
-        displayTotals: publishDisplayTotalsIfAllowed(nextState),
+        displayTotals: publishDisplayTotalsIfAllowed(nextState, {
+          releaseEvent: state.activeEvent,
+        }),
       };
     }
 

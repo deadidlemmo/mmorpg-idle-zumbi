@@ -1,9 +1,9 @@
-import statAgilityIcon from '../../../assets/images/stats/attributes/stat-agility.png';
-import statPrecisionIcon from '../../../assets/images/stats/attributes/stat-precision.png';
-import statStrengthIcon from '../../../assets/images/stats/attributes/stat-strength.png';
-import statTechniqueIcon from '../../../assets/images/stats/attributes/stat-technique.png';
-import statVitalityIcon from '../../../assets/images/stats/attributes/stat-vitality.png';
-import statWillpowerIcon from '../../../assets/images/stats/attributes/stat-willpower.png';
+import statAgilityIcon from '../../../assets/images/stats/attributes/stat-agility.webp';
+import statPrecisionIcon from '../../../assets/images/stats/attributes/stat-precision.webp';
+import statStrengthIcon from '../../../assets/images/stats/attributes/stat-strength.webp';
+import statTechniqueIcon from '../../../assets/images/stats/attributes/stat-technique.webp';
+import statVitalityIcon from '../../../assets/images/stats/attributes/stat-vitality.webp';
+import statWillpowerIcon from '../../../assets/images/stats/attributes/stat-willpower.webp';
 import type { DashboardStats } from '../../dashboard/types/dashboard.types';
 
 export const EMPTY_STATS: DashboardStats = {

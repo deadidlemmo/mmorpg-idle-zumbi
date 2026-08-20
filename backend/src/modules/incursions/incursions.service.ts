@@ -19,6 +19,12 @@ import { calculateLevelProgress } from '../../common/utils/level.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ClaimIncursionDto } from './dto/claim-incursion.dto';
 import { StartIncursionDto } from './dto/start-incursion.dto';
+import {
+  calculateIncursionFailureDamage,
+  getIncursionRiskProfile,
+  INCURSION_APPROACHES,
+  type IncursionApproach,
+} from './incursion-risk.util';
 
 const MIN_INCURSION_DURATION_SECONDS = 1800;
 
@@ -161,7 +167,15 @@ export class IncursionsService {
     }
 
     const now = new Date();
-    const endsAt = new Date(now.getTime() + incursion.durationSeconds * 1000);
+    const riskProfile = getIncursionRiskProfile(
+      incursion.riskLevel,
+      dto.approach ?? 'BALANCED',
+    );
+    const durationSeconds = Math.max(
+      1,
+      Math.round(incursion.durationSeconds * riskProfile.durationMultiplier),
+    );
+    const endsAt = new Date(now.getTime() + durationSeconds * 1000);
 
     let session;
 
@@ -220,6 +234,9 @@ export class IncursionsService {
               startedAt: now,
               endsAt,
               goldCostPaid: incursion.goldCost,
+              approach: riskProfile.approach,
+              successChance: riskProfile.successChance,
+              rewardMultiplier: riskProfile.rewardMultiplier,
             },
             include: this.sessionInclude(),
           });
@@ -262,7 +279,9 @@ export class IncursionsService {
     return this.formatRewardResult(
       result,
       now,
-      'Recompensas da incursão entregues.',
+      result.success
+        ? 'Recompensas da incursão entregues.'
+        : 'A incursão falhou e o sobrevivente voltou ferido.',
     );
   }
 
@@ -446,7 +465,87 @@ export class IncursionsService {
       }
 
       const effectiveCompletedAt = session.completedAt ?? session.endsAt;
-      const rewards = this.rollRewards(session.incursion.lootTable);
+      const character = await tx.character.findUniqueOrThrow({
+        where: { id: characterId },
+        select: {
+          level: true,
+          xp: true,
+          currentHp: true,
+          maxHp: true,
+        },
+      });
+      const outcomeRoll =
+        session.outcomeRoll ?? Number((Math.random() * 100).toFixed(2));
+      const success = outcomeRoll < session.successChance;
+
+      if (!success) {
+        const safeMaxHp = Math.max(1, character.maxHp ?? 1);
+        const safeCurrentHp = Math.max(1, character.currentHp ?? safeMaxHp);
+        const rawHpLoss = calculateIncursionFailureDamage(
+          safeMaxHp,
+          session.incursion.riskLevel,
+          session.approach as IncursionApproach,
+        );
+        const hpLost = Math.min(Math.max(0, safeCurrentHp - 1), rawHpLoss);
+        const outcomeSummary = `Falha: rolagem ${outcomeRoll.toFixed(2)} acima de ${session.successChance}%. O sobrevivente perdeu ${hpLost} HP.`;
+        const failed = await tx.characterIncursionSession.updateMany({
+          where: {
+            id: session.id,
+            characterId,
+            status: {
+              in: [
+                IncursionSessionStatus.ACTIVE,
+                IncursionSessionStatus.COMPLETED,
+              ],
+            },
+            claimedAt: null,
+          },
+          data: {
+            status: IncursionSessionStatus.FAILED,
+            completedAt: effectiveCompletedAt,
+            claimedAt: now,
+            outcomeRoll,
+            outcomeSummary,
+            generatedRewardsJson: [],
+          },
+        });
+
+        if (failed.count <= 0) {
+          throw new ConflictException(
+            'Esta incursão já foi resolvida por outra ação.',
+          );
+        }
+
+        if (hpLost > 0) {
+          await tx.character.update({
+            where: { id: characterId },
+            data: { currentHp: safeCurrentHp - hpLost },
+          });
+        }
+
+        const updatedSession =
+          await tx.characterIncursionSession.findUniqueOrThrow({
+            where: { id: session.id },
+            include: this.sessionInclude(),
+          });
+
+        return {
+          session: updatedSession,
+          rewards: [],
+          levelProgress: calculateLevelProgress(
+            character.level,
+            character.xp,
+            0,
+          ),
+          success: false,
+          hpLost,
+        };
+      }
+
+      const rewards = this.rollRewards(
+        session.incursion.lootTable,
+        session.rewardMultiplier,
+      );
       const xpReward = rewards
         .filter((reward) => reward.rewardType === IncursionRewardType.XP)
         .reduce((total, reward) => total + reward.quantity, 0);
@@ -473,6 +572,8 @@ export class IncursionsService {
           xpReward,
           goldReward,
           generatedRewardsJson: rewards,
+          outcomeRoll,
+          outcomeSummary: `Sucesso: rolagem ${outcomeRoll.toFixed(2)} dentro de ${session.successChance}%.`,
         },
       });
 
@@ -481,11 +582,6 @@ export class IncursionsService {
           'Esta incursão já foi recompensada ou atualizada por outra ação.',
         );
       }
-
-      const character = await tx.character.findUniqueOrThrow({
-        where: { id: characterId },
-        select: { level: true, xp: true },
-      });
 
       const levelProgress = calculateLevelProgress(
         character.level,
@@ -541,7 +637,13 @@ export class IncursionsService {
           include: this.sessionInclude(),
         });
 
-      return { session: updatedSession, rewards, levelProgress };
+      return {
+        session: updatedSession,
+        rewards,
+        levelProgress,
+        success: true,
+        hpLost: 0,
+      };
     });
   }
 
@@ -550,12 +652,16 @@ export class IncursionsService {
       session: any;
       rewards: ReturnType<IncursionsService['rollRewards']>;
       levelProgress: ReturnType<typeof calculateLevelProgress>;
+      success: boolean;
+      hpLost: number;
     },
     now: Date,
     message: string,
   ) {
     return {
       message,
+      success: result.success,
+      hpLost: result.hpLost,
       session: this.formatSession(result.session, now),
       xpGained: result.levelProgress.gainedXp,
       goldGained: result.session.goldReward,
@@ -624,7 +730,7 @@ export class IncursionsService {
     }
   }
 
-  private rollRewards(lootTable: any[]) {
+  private rollRewards(lootTable: any[], rewardMultiplier = 1) {
     const rewards: Array<{
       rewardType: IncursionRewardType;
       itemId: string | null;
@@ -649,9 +755,13 @@ export class IncursionsService {
         minQuantity,
         Math.floor(Number(loot.maxQuantity) || minQuantity),
       );
-      const quantity =
+      const baseQuantity =
         minQuantity +
         Math.floor(Math.random() * (maxQuantity - minQuantity + 1));
+      const quantity = Math.max(
+        1,
+        Math.round(baseQuantity * Math.max(0.1, rewardMultiplier)),
+      );
 
       if (quantity <= 0) continue;
 
@@ -700,6 +810,8 @@ export class IncursionsService {
   }
 
   private formatIncursion(incursion: any) {
+    const normalizedRiskLevel = Number(incursion.riskLevel as unknown);
+
     return {
       id: incursion.id,
       name: incursion.name,
@@ -714,6 +826,17 @@ export class IncursionsService {
       durationSeconds: incursion.durationSeconds,
       difficulty: incursion.difficulty,
       riskLevel: incursion.riskLevel,
+      approaches: INCURSION_APPROACHES.map((approach) => {
+        const profile = getIncursionRiskProfile(normalizedRiskLevel, approach);
+
+        return {
+          ...profile,
+          durationSeconds: Math.max(
+            1,
+            Math.round(incursion.durationSeconds * profile.durationMultiplier),
+          ),
+        };
+      }),
       isActive: incursion.isActive,
       sortOrder: incursion.sortOrder,
       rewardsPreview: incursion.lootTable.map((loot: any) =>
@@ -799,6 +922,17 @@ export class IncursionsService {
       goldCostPaid: session.goldCostPaid,
       xpReward: session.xpReward,
       goldReward: session.goldReward,
+      approach: session.approach,
+      successChance: session.successChance,
+      rewardMultiplier: session.rewardMultiplier,
+      outcomeRoll: session.outcomeRoll,
+      outcomeSummary: session.outcomeSummary,
+      success:
+        effectiveStatus === IncursionSessionStatus.CLAIMED
+          ? true
+          : effectiveStatus === IncursionSessionStatus.FAILED
+            ? false
+            : null,
       progressPercent: Math.round((elapsedMs / totalMs) * 100),
       remainingSeconds: Math.max(
         0,

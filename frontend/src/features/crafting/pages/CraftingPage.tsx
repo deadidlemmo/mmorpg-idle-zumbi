@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import npcArsenalNogueira from "../../../assets/images/npcs/npc_arsenal_nogueira.png";
+import npcArsenalNogueira from "../../../assets/images/npcs/npc_arsenal_nogueira.webp";
 import {
   CheckCircle2,
   ChevronDown,

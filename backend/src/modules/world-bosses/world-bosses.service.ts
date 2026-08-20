@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-redundant-type-constituents */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 import {
   BadRequestException,
   ConflictException,
@@ -9,6 +9,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   CharacterStatus,
   InventoryItemType,
@@ -17,6 +18,7 @@ import {
   WorldBossRewardType,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
+import { DistributedLockService } from '../../common/redis/distributed-lock.service';
 import { calculateLevelProgress } from '../../common/utils/level.util';
 import {
   calculateFullStats,
@@ -25,6 +27,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { JoinWorldBossDto } from './dto/join-world-boss.dto';
 import { LeaveWorldBossDto } from './dto/leave-world-boss.dto';
+import { isWorldBossTestUnlockEnabled } from './world-boss-test-unlock.util';
 
 const worldBossInclude = {
   map: {
@@ -70,8 +73,8 @@ type Tx = Prisma.TransactionClient;
 
 const WORLD_BOSS_ENTRY_WINDOW_SECONDS = 5 * 60;
 const WORLD_BOSS_PROCESSING_TICK_MS = 1000;
-// Temporario para QA: manter bosses liberados sem travas de horario ou nivel.
-const WORLD_BOSS_TEST_UNLOCK_ENABLED = true;
+const WORLD_BOSS_PROCESSING_LOCK_TTL_MS = 60_000;
+const WORLD_BOSS_PROCESSING_LOCK_KEY = 'dead-idle:scheduler:world-bosses';
 const WORLD_BOSS_ALWAYS_OPEN_TEST_TIER = 1;
 const WORLD_BOSS_ALWAYS_OPEN_TEST_SLOT = 0;
 const WORLD_BOSS_ALWAYS_OPEN_TEST_WINDOW_SECONDS = 24 * 60 * 60;
@@ -103,11 +106,19 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WorldBossesService.name);
   private processingInterval?: NodeJS.Timeout;
   private isProcessingEvents = false;
+  private readonly testUnlockEnabled: boolean;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityGuard: ActivityGuardService,
-  ) {}
+    private readonly distributedLock: DistributedLockService,
+    configService: ConfigService,
+  ) {
+    this.testUnlockEnabled = isWorldBossTestUnlockEnabled(
+      configService.get<string>('WORLD_BOSS_TEST_UNLOCK_ENABLED'),
+      configService.get<string>('NODE_ENV'),
+    );
+  }
 
   onModuleInit() {
     this.processingInterval = setInterval(() => {
@@ -222,6 +233,18 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     this.isProcessingEvents = true;
 
     try {
+      await this.distributedLock.runExclusive(
+        WORLD_BOSS_PROCESSING_LOCK_KEY,
+        WORLD_BOSS_PROCESSING_LOCK_TTL_MS,
+        () => this.processOpenEventsWithLock(),
+      );
+    } finally {
+      this.isProcessingEvents = false;
+    }
+  }
+
+  private async processOpenEventsWithLock() {
+    try {
       const now = new Date();
       const events = await this.prisma.worldBossEvent.findMany({
         where: {
@@ -252,7 +275,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
             nextEvent.worldBoss,
             new Date(),
           );
-          if (WORLD_BOSS_TEST_UNLOCK_ENABLED) {
+          if (this.testUnlockEnabled) {
             await this.ensureEventAvailableForTest(nextCycleEvent);
           }
         }
@@ -263,8 +286,6 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
           error instanceof Error ? error.message : String(error)
         }`,
       );
-    } finally {
-      this.isProcessingEvents = false;
     }
   }
 
@@ -659,7 +680,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       event = await this.ensureNextCycleEvent(event, boss, now);
     }
 
-    if (WORLD_BOSS_TEST_UNLOCK_ENABLED) {
+    if (this.testUnlockEnabled) {
       event = await this.ensureEventAvailableForTest(event);
     } else {
       event = await this.advanceEventState(event);
@@ -794,7 +815,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
 
   private isAlwaysOpenTestBoss(boss: any) {
     return Boolean(
-      WORLD_BOSS_TEST_UNLOCK_ENABLED &&
+      this.testUnlockEnabled &&
       Number(boss?.tier) === WORLD_BOSS_ALWAYS_OPEN_TEST_TIER &&
       this.getBossSlotIndex(boss) === WORLD_BOSS_ALWAYS_OPEN_TEST_SLOT,
     );
@@ -1417,7 +1438,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       throw new ForbiddenException(
         'Personagem precisa estar no mapa da Ameaça Global.',
       );
-    if (WORLD_BOSS_TEST_UNLOCK_ENABLED) return;
+    if (this.testUnlockEnabled) return;
 
     if (character.level < boss.minLevel)
       throw new ForbiddenException(
@@ -1466,7 +1487,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         canJoin: false,
         reason: 'Janela de entrada encerrada.',
       };
-    if (WORLD_BOSS_TEST_UNLOCK_ENABLED) {
+    if (this.testUnlockEnabled) {
       return { canJoin: true, reason: 'Liberado para teste.' };
     }
 

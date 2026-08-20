@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ShieldCheck, Swords, Timer, WalletCards } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import goldIcon from '../../../assets/images/coins/gold.png';
-import npcInfirmaryCelia from '../../../assets/images/npcs/npc_coleta_dona_celia.png';
+import goldIcon from '../../../assets/images/coins/gold.webp';
+import npcInfirmaryCelia from '../../../assets/images/npcs/npc_coleta_dona_celia.webp';
+import { canRunNetworkRefresh } from '../../../utils/networkRefresh';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
 import '../../dashboard/dashboard.css';
@@ -192,10 +193,13 @@ export function InfirmaryPage() {
 
   useEffect(() => {
     const refreshId = window.setInterval(() => {
-      if (status?.infirmary.treatment.active) {
+      if (
+        status?.infirmary.treatment.active &&
+        canRunNetworkRefresh()
+      ) {
         void loadStatus();
       }
-    }, 10_000);
+    }, 15_000);
 
     return () => window.clearInterval(refreshId);
   }, [loadStatus, status?.infirmary.treatment.active]);

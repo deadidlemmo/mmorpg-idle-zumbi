@@ -3,6 +3,7 @@ import {
   AUTO_COMBAT_TTK_MAX_SECONDS,
   AUTO_COMBAT_TTK_MIN_SECONDS,
 } from '../config/auto-combat.config';
+import { AUTO_COMBAT_BALANCE_TTK_POWER_EXPONENT } from '../config/combat-balance.config';
 import {
   calculateAutoCombatTtkSeconds,
   getAutoCombatBaseKillTimeSeconds,
@@ -29,20 +30,30 @@ describe('auto-combat TTK util', () => {
     const stronger = calculateAutoCombatTtkSeconds({
       baseKillTimeSeconds: 10,
       recommendedPower: 100,
-      playerOffensivePower: 200,
+      playerOffensivePower: 1_000,
     });
 
     expect(stronger).toBeLessThan(baseline);
   });
 
   it('rounds kill time up to a whole second', () => {
+    const baseKillTimeSeconds = 10;
+    const recommendedPower = 100;
+    const playerOffensivePower = 1_000;
+    const rawSeconds =
+      baseKillTimeSeconds *
+      Math.pow(
+        recommendedPower / playerOffensivePower,
+        AUTO_COMBAT_BALANCE_TTK_POWER_EXPONENT,
+      );
+
     expect(
       calculateAutoCombatTtkSeconds({
-        baseKillTimeSeconds: 10,
-        recommendedPower: 100,
-        playerOffensivePower: 150,
+        baseKillTimeSeconds,
+        recommendedPower,
+        playerOffensivePower,
       }),
-    ).toBe(8);
+    ).toBe(Math.ceil(rawSeconds));
   });
 
   it('increases kill time when player power is lower', () => {
@@ -65,14 +76,14 @@ describe('auto-combat TTK util', () => {
       calculateAutoCombatTtkSeconds({
         baseKillTimeSeconds: 5,
         recommendedPower: 1,
-        playerOffensivePower: 100_000,
+        playerOffensivePower: 100_000_000_000,
       }),
     ).toBe(AUTO_COMBAT_TTK_MIN_SECONDS);
 
     expect(
       calculateAutoCombatTtkSeconds({
         baseKillTimeSeconds: 35,
-        recommendedPower: 100_000,
+        recommendedPower: 1_000_000_000_000,
         playerOffensivePower: 1,
       }),
     ).toBe(AUTO_COMBAT_TTK_MAX_SECONDS);

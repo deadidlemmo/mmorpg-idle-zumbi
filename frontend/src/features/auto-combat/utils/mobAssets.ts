@@ -177,8 +177,8 @@ function createKeyVariants(key: string) {
    * Morcego de Caixa d’Água
    *
    * Pode existir como:
-   * morcego-de-caixa-dagua.png
-   * morcego-de-caixa-d-agua.png
+   * morcego-de-caixa-dagua.webp
+   * morcego-de-caixa-d-agua.webp
    */
   variants.add(key.replace(/-d-agua/g, '-dagua'));
   variants.add(key.replace(/-dagua/g, '-d-agua'));

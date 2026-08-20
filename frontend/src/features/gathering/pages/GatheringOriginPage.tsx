@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { ActivityProgressCard } from '../../../components/game/ActivityProgressCard';
-import npcArsenalNogueira from '../../../assets/images/npcs/npc_arsenal_nogueira.png';
-import npcColetaDonaCelia from '../../../assets/images/npcs/npc_coleta_dona_celia.png';
-import npcContencaoDrAlvaro from '../../../assets/images/npcs/npc_contencao_dr_alvaro.png';
-import npcDesmancheMarta from '../../../assets/images/npcs/npc_desmanche_marta.png';
-import npcPatrulhaRafa from '../../../assets/images/npcs/npc_patrulha_rafa.png';
-import npcTecnovarreduraLia from '../../../assets/images/npcs/npc_tecnovarredura_lia.png';
+import npcArsenalNogueira from '../../../assets/images/npcs/npc_arsenal_nogueira.webp';
+import npcColetaDonaCelia from '../../../assets/images/npcs/npc_coleta_dona_celia.webp';
+import npcContencaoDrAlvaro from '../../../assets/images/npcs/npc_contencao_dr_alvaro.webp';
+import npcDesmancheMarta from '../../../assets/images/npcs/npc_desmanche_marta.webp';
+import npcPatrulhaRafa from '../../../assets/images/npcs/npc_patrulha_rafa.webp';
+import npcTecnovarreduraLia from '../../../assets/images/npcs/npc_tecnovarredura_lia.webp';
 import {
   buildMapVisualStyle,
   getMapImageByName,

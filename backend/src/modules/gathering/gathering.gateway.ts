@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -8,6 +9,8 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
+import { PrismaService } from '../../prisma/prisma.service';
+import { SocketAuthService } from '../auth/socket-auth.service';
 import { StartGatheringDto } from './dto/start-gathering.dto';
 import { GatheringService } from './gathering.service';
 
@@ -15,10 +18,13 @@ interface GatheringSocketPayload {
   characterId?: string;
 }
 
-type GatheringSocket = Socket & {
-  data: {
-    gatheringCharacterIds?: Set<string>;
-  };
+type GatheringSocketData = {
+  userId?: string;
+  gatheringCharacterIds?: Set<string>;
+};
+
+type GatheringSocket = Omit<Socket, 'data'> & {
+  data: GatheringSocketData;
 };
 
 const GATHERING_NAMESPACE = '/gathering';
@@ -26,10 +32,6 @@ const GATHERING_TICK_MS = 1000;
 
 @WebSocketGateway({
   namespace: GATHERING_NAMESPACE,
-  cors: {
-    origin: true,
-    credentials: true,
-  },
 })
 export class GatheringGateway
   implements OnGatewayConnection, OnGatewayDisconnect
@@ -37,24 +39,53 @@ export class GatheringGateway
   @WebSocketServer()
   private readonly server!: Server;
 
+  private readonly logger = new Logger(GatheringGateway.name);
   private readonly clientsByCharacterId = new Map<string, Set<string>>();
+  private readonly userIdByCharacterId = new Map<string, string>();
   private readonly intervalsByCharacterId = new Map<
     string,
     ReturnType<typeof setInterval>
   >();
 
-  constructor(private readonly gatheringService: GatheringService) {}
+  constructor(
+    private readonly socketAuth: SocketAuthService,
+    private readonly prisma: PrismaService,
+    private readonly gatheringService: GatheringService,
+  ) {}
 
-  handleConnection(client: GatheringSocket) {
+  async handleConnection(client: GatheringSocket) {
     client.data.gatheringCharacterIds = new Set<string>();
 
-    const rawCharacterId = client.handshake.query.characterId;
-    const characterId = Array.isArray(rawCharacterId)
-      ? rawCharacterId[0]
-      : rawCharacterId;
+    try {
+      const token = this.extractToken(client);
 
-    if (typeof characterId === 'string' && characterId.trim().length > 0) {
-      void this.joinCharacterRoom(client, characterId);
+      if (!token) {
+        client.emit('gathering:error', {
+          message: 'Token de autenticação não enviado no WebSocket.',
+        });
+        client.disconnect(true);
+        return;
+      }
+
+      const user = await this.socketAuth.authenticate(token);
+
+      client.data.userId = user.id;
+      client.emit('gathering:connected', {
+        socketId: client.id,
+        userId: user.id,
+      });
+
+      const rawCharacterId = client.handshake.query.characterId;
+      const characterId = Array.isArray(rawCharacterId)
+        ? rawCharacterId[0]
+        : rawCharacterId;
+
+      if (typeof characterId === 'string' && characterId.trim().length > 0) {
+        await this.joinCharacterRoom(client, characterId);
+      }
+    } catch (error) {
+      this.emitError(client, error, 'Não foi possível autenticar o WebSocket.');
+      client.disconnect(true);
     }
   }
 
@@ -86,7 +117,7 @@ export class GatheringGateway
   }
 
   @SubscribeMessage('gathering:leave')
-  handleLeave(
+  async handleLeave(
     @ConnectedSocket() client: GatheringSocket,
     @MessageBody() payload: GatheringSocketPayload,
   ) {
@@ -96,7 +127,7 @@ export class GatheringGateway
       return null;
     }
 
-    client.leave(this.getRoomName(characterId));
+    await client.leave(this.getRoomName(characterId));
     client.data.gatheringCharacterIds?.delete(characterId);
     this.removeClientFromCharacter(client.id, characterId);
 
@@ -134,7 +165,7 @@ export class GatheringGateway
       return null;
     }
 
-    return this.emitStatusToRoom(characterId, 'gathering:status');
+    return this.emitStatusToClient(client, characterId, 'gathering:status');
   }
 
   @SubscribeMessage('gathering:start')
@@ -143,16 +174,19 @@ export class GatheringGateway
     @MessageBody() payload: StartGatheringDto,
   ) {
     const characterId = this.normalizeCharacterId(payload?.characterId);
+    const userId = this.getAuthenticatedUserId(client);
 
-    if (!characterId) {
+    if (!characterId || !userId) {
       client.emit('gathering:error', {
-        message: 'characterId inválido para iniciar gathering.',
+        message: userId
+          ? 'characterId inválido para iniciar gathering.'
+          : 'Socket não autenticado.',
       });
       return null;
     }
 
     try {
-      await this.gatheringService.start(payload);
+      await this.gatheringService.start(userId, payload);
       await this.joinCharacterRoom(client, characterId);
 
       return this.emitStatusToRoom(characterId, 'gathering:started');
@@ -168,16 +202,19 @@ export class GatheringGateway
     @MessageBody() payload: GatheringSocketPayload,
   ) {
     const characterId = this.normalizeCharacterId(payload?.characterId);
+    const userId = this.getAuthenticatedUserId(client);
 
-    if (!characterId) {
+    if (!characterId || !userId) {
       client.emit('gathering:error', {
-        message: 'characterId inválido para coletar gathering.',
+        message: userId
+          ? 'characterId inválido para coletar gathering.'
+          : 'Socket não autenticado.',
       });
       return null;
     }
 
     try {
-      const result = await this.gatheringService.collect(characterId);
+      const result = await this.gatheringService.collect(userId, characterId);
       await this.emitStatusToRoom(characterId, 'gathering:collected');
 
       return result;
@@ -193,19 +230,21 @@ export class GatheringGateway
     @MessageBody() payload: GatheringSocketPayload,
   ) {
     const characterId = this.normalizeCharacterId(payload?.characterId);
+    const userId = this.getAuthenticatedUserId(client);
 
-    if (!characterId) {
+    if (!characterId || !userId) {
       client.emit('gathering:error', {
-        message: 'characterId inválido para parar gathering.',
+        message: userId
+          ? 'characterId inválido para parar gathering.'
+          : 'Socket não autenticado.',
       });
       return null;
     }
 
     try {
-      const result = await this.gatheringService.stop(characterId);
+      const result = await this.gatheringService.stop(userId, characterId);
       await this.emitStatusToRoom(characterId, 'gathering:stopped');
-
-      this.stopCharacterIntervalIfInactive(characterId);
+      await this.stopCharacterIntervalIfInactive(userId, characterId);
 
       return result;
     } catch (error) {
@@ -219,36 +258,68 @@ export class GatheringGateway
     characterId: string,
   ) {
     const normalizedCharacterId = this.normalizeCharacterId(characterId);
+    const userId = this.getAuthenticatedUserId(client);
 
-    if (!normalizedCharacterId) {
-      return null;
+    if (!normalizedCharacterId || !userId) {
+      client.emit('gathering:error', { message: 'Socket não autenticado.' });
+      return { ok: false, message: 'Socket não autenticado.' };
     }
 
-    const roomName = this.getRoomName(normalizedCharacterId);
+    const character = await this.prisma.character.findFirst({
+      where: { id: normalizedCharacterId, userId, deletedAt: null },
+      select: { id: true, name: true },
+    });
 
-    client.join(roomName);
+    if (!character) {
+      client.emit('gathering:error', {
+        message: 'Personagem não encontrado para este usuário.',
+      });
+      return {
+        ok: false,
+        message: 'Personagem não encontrado para este usuário.',
+      };
+    }
+
+    const roomName = this.getRoomName(character.id);
 
     if (!client.data.gatheringCharacterIds) {
       client.data.gatheringCharacterIds = new Set<string>();
     }
 
-    client.data.gatheringCharacterIds.add(normalizedCharacterId);
-    this.addClientToCharacter(client.id, normalizedCharacterId);
-    this.ensureCharacterInterval(normalizedCharacterId);
+    if (!client.data.gatheringCharacterIds.has(character.id)) {
+      await client.join(roomName);
+      client.data.gatheringCharacterIds.add(character.id);
+      this.addClientToCharacter(client.id, character.id, userId);
+    }
 
-    return this.emitStatusToClient(
-      client,
-      normalizedCharacterId,
-      'gathering:status',
+    this.ensureCharacterInterval(character.id);
+
+    client.emit('gathering:joined', {
+      characterId: character.id,
+      characterName: character.name,
+      room: roomName,
+    });
+
+    this.logger.log(
+      `Socket ${client.id} entrou na sala ${roomName} | personagem=${character.name}`,
     );
+
+    await this.emitStatusToClient(client, character.id, 'gathering:status');
+
+    return { ok: true, characterId: character.id, room: roomName };
   }
 
-  private addClientToCharacter(clientId: string, characterId: string) {
+  private addClientToCharacter(
+    clientId: string,
+    characterId: string,
+    userId: string,
+  ) {
     const currentSet =
       this.clientsByCharacterId.get(characterId) ?? new Set<string>();
 
     currentSet.add(clientId);
     this.clientsByCharacterId.set(characterId, currentSet);
+    this.userIdByCharacterId.set(characterId, userId);
   }
 
   private removeClientFromCharacter(clientId: string, characterId: string) {
@@ -266,6 +337,7 @@ export class GatheringGateway
     }
 
     this.clientsByCharacterId.delete(characterId);
+    this.userIdByCharacterId.delete(characterId);
     this.clearCharacterInterval(characterId);
   }
 
@@ -292,10 +364,17 @@ export class GatheringGateway
     this.intervalsByCharacterId.delete(characterId);
   }
 
-  private async stopCharacterIntervalIfInactive(characterId: string) {
-    const status = await this.safeGetStatus(characterId);
+  private async stopCharacterIntervalIfInactive(
+    userId: string,
+    characterId: string,
+  ) {
+    try {
+      const status = await this.gatheringService.getStatus(userId, characterId);
 
-    if (!status?.active) {
+      if (!status.active) {
+        this.clearCharacterInterval(characterId);
+      }
+    } catch {
       this.clearCharacterInterval(characterId);
     }
   }
@@ -305,57 +384,86 @@ export class GatheringGateway
     characterId: string,
     eventName: string,
   ) {
-    const status = await this.safeGetStatus(characterId);
+    const userId = this.getAuthenticatedUserId(client);
 
-    if (!status) {
-      client.emit('gathering:error', {
-        message: 'Não foi possível carregar o status do gathering.',
-      });
+    if (!userId) {
+      client.emit('gathering:error', { message: 'Socket não autenticado.' });
       return null;
     }
 
-    client.emit(eventName, status);
-
-    return status;
+    try {
+      const status = await this.gatheringService.getStatus(userId, characterId);
+      client.emit(eventName, status);
+      return status;
+    } catch (error) {
+      this.emitError(client, error);
+      return null;
+    }
   }
 
   private async emitStatusToRoom(characterId: string, eventName: string) {
-    const status = await this.safeGetStatus(characterId);
+    const userId = this.userIdByCharacterId.get(characterId);
 
-    if (!status) {
-      this.server.to(this.getRoomName(characterId)).emit('gathering:error', {
-        message: 'Não foi possível carregar o status do gathering.',
-      });
-
+    if (!userId) {
       return null;
     }
 
-    this.server.to(this.getRoomName(characterId)).emit(eventName, status);
-
-    return status;
-  }
-
-  private async safeGetStatus(characterId: string) {
     try {
-      return await this.gatheringService.getStatus(characterId);
+      const status = await this.gatheringService.getStatus(userId, characterId);
+      this.server.to(this.getRoomName(characterId)).emit(eventName, status);
+
+      if (!status.active) {
+        this.clearCharacterInterval(characterId);
+      }
+
+      return status;
     } catch (error) {
-      const message = this.extractErrorMessage(error);
-
       this.server.to(this.getRoomName(characterId)).emit('gathering:error', {
-        message,
+        message: this.extractErrorMessage(error),
       });
-
+      this.clearCharacterInterval(characterId);
       return null;
     }
   }
 
-  private emitError(client: GatheringSocket, error: unknown) {
+  private extractToken(client: GatheringSocket) {
+    const auth = client.handshake.auth as Record<string, unknown> | undefined;
+    const authToken = auth?.token;
+
+    if (typeof authToken === 'string' && authToken.trim().length > 0) {
+      return authToken.trim();
+    }
+
+    const header = client.handshake.headers.authorization;
+
+    if (typeof header === 'string' && header.startsWith('Bearer ')) {
+      return header.slice('Bearer '.length).trim();
+    }
+
+    return null;
+  }
+
+  private getAuthenticatedUserId(client: GatheringSocket) {
+    return typeof client.data.userId === 'string' &&
+      client.data.userId.length > 0
+      ? client.data.userId
+      : null;
+  }
+
+  private emitError(
+    client: GatheringSocket,
+    error: unknown,
+    fallback = 'Erro inesperado no gathering em tempo real.',
+  ) {
     client.emit('gathering:error', {
-      message: this.extractErrorMessage(error),
+      message: this.extractErrorMessage(error, fallback),
     });
   }
 
-  private extractErrorMessage(error: unknown): string {
+  private extractErrorMessage(
+    error: unknown,
+    fallback = 'Erro inesperado no gathering em tempo real.',
+  ): string {
     if (error instanceof Error && error.message.trim().length > 0) {
       return error.message;
     }
@@ -369,7 +477,7 @@ export class GatheringGateway
       return (error as { message: string }).message;
     }
 
-    return 'Erro inesperado no gathering em tempo real.';
+    return fallback;
   }
 
   private normalizeCharacterId(value?: string | null): string | null {

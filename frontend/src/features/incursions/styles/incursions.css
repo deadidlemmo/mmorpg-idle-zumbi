@@ -697,6 +697,27 @@
   font-size: 0.9rem;
 }
 
+.incursions-current-card__risk {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  border-block: 1px solid rgba(231, 227, 216, 0.08);
+  padding-block: 0.62rem;
+  text-align: center;
+}
+
+.incursions-current-card__risk span,
+.incursions-current-card__risk strong {
+  min-width: 0;
+  color: #d8decf;
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
+.incursions-current-card__risk strong {
+  color: #f4d47b;
+}
+
 .incursions-primary-button,
 .incursions-secondary-button,
 .incursions-danger-button {
@@ -945,12 +966,102 @@
   scrollbar-width: thin;
 }
 
+.incursions-modal__approach,
 .incursions-modal__rewards,
 .incursions-modal__lock-message {
   border: 1px solid rgba(231, 227, 216, 0.08);
   border-radius: 0.95rem;
   padding: 0.72rem;
   background: rgba(0, 0, 0, 0.2);
+}
+
+.incursions-modal__section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.58rem;
+  margin-bottom: 0.64rem;
+  color: #d4e4c3;
+}
+
+.incursions-modal__section-title > div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.incursions-modal__section-title strong {
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.95rem;
+}
+
+.incursions-modal__section-title span {
+  color: #aeb7a6;
+  font-size: 0.72rem;
+}
+
+.incursions-approach-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.46rem;
+}
+
+.incursions-approach-selector > button {
+  display: grid;
+  min-width: 0;
+  gap: 0.38rem;
+  border: 1px solid rgba(231, 227, 216, 0.12);
+  border-radius: 0.48rem;
+  padding: 0.62rem;
+  background: rgba(255, 255, 255, 0.025);
+  color: #aeb7a6;
+  text-align: left;
+  cursor: pointer;
+}
+
+.incursions-approach-selector > button:hover,
+.incursions-approach-selector > button.is-selected {
+  border-color: rgba(174, 218, 120, 0.48);
+  background: rgba(110, 159, 67, 0.13);
+}
+
+.incursions-approach-selector > button.is-selected {
+  box-shadow: inset 0 0 0 1px rgba(174, 218, 120, 0.14);
+}
+
+.incursions-approach-selector__head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #eff5e8;
+}
+
+.incursions-approach-selector__head strong {
+  font-size: 0.78rem;
+}
+
+.incursions-approach-selector
+  > button
+  > span:not(.incursions-approach-selector__head) {
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.incursions-approach-selector__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.18rem 0.28rem;
+  border-top: 1px solid rgba(231, 227, 216, 0.08);
+  padding-top: 0.42rem;
+}
+
+.incursions-approach-selector__stats strong {
+  color: #e9cb73;
+}
+
+.incursions-modal__risk-note {
+  margin: 0.56rem 0 0;
+  color: #c9ab85 !important;
+  font-size: 0.69rem;
 }
 
 .incursions-modal__rewards-title,
@@ -1290,6 +1401,10 @@
 
   .incursions-modal__loot-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .incursions-approach-selector {
+    grid-template-columns: 1fr;
   }
 
   .incursion-loot-card {

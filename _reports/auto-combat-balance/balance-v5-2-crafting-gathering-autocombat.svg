@@ -75,35 +75,35 @@
         <text x="342" y="349" class="axis" text-anchor="middle">T5</text>
         <text x="342" y="248.70384615384614" class="small" text-anchor="middle">3.7h</text>
       
-        <rect x="378" y="271.2153846153846" width="32" height="55.784615384615385" fill="#f2ce45" rx="4" />
-        <rect x="378" y="244.45384615384614" width="32" height="26.76153846153846" fill="#6ee7b7" rx="4" />
-        <rect x="378" y="242.19230769230768" width="32" height="2.2615384615384615" fill="#8fb3ff" rx="4" />
+        <rect x="378" y="327" width="32" height="0" fill="#f2ce45" rx="4" />
+        <rect x="378" y="327" width="32" height="0" fill="#6ee7b7" rx="4" />
+        <rect x="378" y="327" width="32" height="2" fill="#8fb3ff" rx="4" />
         <text x="394" y="349" class="axis" text-anchor="middle">T6</text>
-        <text x="394" y="234.19230769230768" class="small" text-anchor="middle">4.5h</text>
+        <text x="394" y="319" class="small" text-anchor="middle">0.0h</text>
       
-        <rect x="430" y="255.19615384615383" width="32" height="71.80384615384615" fill="#f2ce45" rx="4" />
-        <rect x="430" y="220.7076923076923" width="32" height="34.48846153846154" fill="#6ee7b7" rx="4" />
-        <rect x="430" y="217.50384615384615" width="32" height="3.203846153846154" fill="#8fb3ff" rx="4" />
+        <rect x="430" y="327" width="32" height="0" fill="#f2ce45" rx="4" />
+        <rect x="430" y="327" width="32" height="0" fill="#6ee7b7" rx="4" />
+        <rect x="430" y="327" width="32" height="2" fill="#8fb3ff" rx="4" />
         <text x="446" y="349" class="axis" text-anchor="middle">T7</text>
-        <text x="446" y="209.50384615384615" class="small" text-anchor="middle">5.8h</text>
+        <text x="446" y="319" class="small" text-anchor="middle">0.0h</text>
       
-        <rect x="482" y="237.8576923076923" width="32" height="89.1423076923077" fill="#f2ce45" rx="4" />
-        <rect x="482" y="196.39615384615382" width="32" height="41.46153846153847" fill="#6ee7b7" rx="4" />
-        <rect x="482" y="192.06153846153845" width="32" height="4.334615384615385" fill="#8fb3ff" rx="4" />
+        <rect x="482" y="327" width="32" height="0" fill="#f2ce45" rx="4" />
+        <rect x="482" y="327" width="32" height="0" fill="#6ee7b7" rx="4" />
+        <rect x="482" y="327" width="32" height="2" fill="#8fb3ff" rx="4" />
         <text x="498" y="349" class="axis" text-anchor="middle">T8</text>
-        <text x="498" y="184.06153846153845" class="small" text-anchor="middle">7.2h</text>
+        <text x="498" y="319" class="small" text-anchor="middle">0.0h</text>
       
-        <rect x="534" y="208.64615384615385" width="32" height="118.35384615384615" fill="#f2ce45" rx="4" />
-        <rect x="534" y="152.86153846153846" width="32" height="55.784615384615385" fill="#6ee7b7" rx="4" />
-        <rect x="534" y="146.6423076923077" width="32" height="6.21923076923077" fill="#8fb3ff" rx="4" />
+        <rect x="534" y="327" width="32" height="0" fill="#f2ce45" rx="4" />
+        <rect x="534" y="327" width="32" height="0" fill="#6ee7b7" rx="4" />
+        <rect x="534" y="327" width="32" height="2" fill="#8fb3ff" rx="4" />
         <text x="550" y="349" class="axis" text-anchor="middle">T9</text>
-        <text x="550" y="138.6423076923077" class="small" text-anchor="middle">9.6h</text>
+        <text x="550" y="319" class="small" text-anchor="middle">0.0h</text>
       
-        <rect x="586" y="171.89615384615385" width="32" height="155.10384615384615" fill="#f2ce45" rx="4" />
-        <rect x="586" y="110.26923076923077" width="32" height="61.62692307692308" fill="#6ee7b7" rx="4" />
-        <rect x="586" y="101.41153846153847" width="32" height="8.857692307692307" fill="#8fb3ff" rx="4" />
+        <rect x="586" y="327" width="32" height="0" fill="#f2ce45" rx="4" />
+        <rect x="586" y="327" width="32" height="0" fill="#6ee7b7" rx="4" />
+        <rect x="586" y="327" width="32" height="2" fill="#8fb3ff" rx="4" />
         <text x="602" y="349" class="axis" text-anchor="middle">T10</text>
-        <text x="602" y="93.41153846153847" class="small" text-anchor="middle">12.0h</text>
+        <text x="602" y="319" class="small" text-anchor="middle">0.0h</text>
       
       
         <g transform="translate(70 375)">
@@ -163,8 +163,8 @@
           <text x="1210" y="324" class="axis" text-anchor="middle">T10</text>
         
       
-        <path d="M650.00,158.43 L712.22,162.48 L774.44,162.17 L836.67,161.02 L898.89,165.86 L961.11,163.66 L1023.33,164.28 L1085.56,167.36 L1147.78,162.92 L1210.00,178.36" fill="none" stroke="#6ee7b7" stroke-width="3" stroke-linecap="round" />
-        <circle cx="650" cy="158.428" r="4" fill="#6ee7b7" /><circle cx="712.2222222222222" cy="162.476" r="4" fill="#6ee7b7" /><circle cx="774.4444444444445" cy="162.16799999999998" r="4" fill="#6ee7b7" /><circle cx="836.6666666666666" cy="161.024" r="4" fill="#6ee7b7" /><circle cx="898.8888888888889" cy="165.864" r="4" fill="#6ee7b7" /><circle cx="961.1111111111111" cy="163.664" r="4" fill="#6ee7b7" /><circle cx="1023.3333333333333" cy="164.28" r="4" fill="#6ee7b7" /><circle cx="1085.5555555555557" cy="167.36" r="4" fill="#6ee7b7" /><circle cx="1147.7777777777778" cy="162.916" r="4" fill="#6ee7b7" /><circle cx="1210" cy="178.35999999999999" r="4" fill="#6ee7b7" />
+        <path d="M650.00,158.30 L712.22,162.48 L774.44,162.17 L836.67,161.02 L898.89,165.86 L961.11,302.00 L1023.33,302.00 L1085.56,302.00 L1147.78,302.00 L1210.00,302.00" fill="none" stroke="#6ee7b7" stroke-width="3" stroke-linecap="round" />
+        <circle cx="650" cy="158.29600000000002" r="4" fill="#6ee7b7" /><circle cx="712.2222222222222" cy="162.476" r="4" fill="#6ee7b7" /><circle cx="774.4444444444445" cy="162.16799999999998" r="4" fill="#6ee7b7" /><circle cx="836.6666666666666" cy="161.024" r="4" fill="#6ee7b7" /><circle cx="898.8888888888889" cy="165.864" r="4" fill="#6ee7b7" /><circle cx="961.1111111111111" cy="302" r="4" fill="#6ee7b7" /><circle cx="1023.3333333333333" cy="302" r="4" fill="#6ee7b7" /><circle cx="1085.5555555555557" cy="302" r="4" fill="#6ee7b7" /><circle cx="1147.7777777777778" cy="302" r="4" fill="#6ee7b7" /><circle cx="1210" cy="302" r="4" fill="#6ee7b7" />
       
       
         <g transform="translate(660 350)">
@@ -216,11 +216,11 @@
           <text x="620" y="722" class="axis" text-anchor="middle">T10</text>
         
       
-        <path d="M60.00,641.33 L122.22,641.33 L184.44,634.00 L246.67,634.00 L308.89,626.67 L371.11,626.67 L433.33,619.33 L495.56,619.33 L557.78,612.00 L620.00,612.00" fill="none" stroke="#f2ce45" stroke-width="3" stroke-linecap="round" />
-        <circle cx="60" cy="641.3333333333334" r="4" fill="#f2ce45" /><circle cx="122.22222222222223" cy="641.3333333333334" r="4" fill="#f2ce45" /><circle cx="184.44444444444446" cy="634" r="4" fill="#f2ce45" /><circle cx="246.66666666666666" cy="634" r="4" fill="#f2ce45" /><circle cx="308.8888888888889" cy="626.6666666666666" r="4" fill="#f2ce45" /><circle cx="371.1111111111111" cy="626.6666666666666" r="4" fill="#f2ce45" /><circle cx="433.3333333333333" cy="619.3333333333334" r="4" fill="#f2ce45" /><circle cx="495.55555555555554" cy="619.3333333333334" r="4" fill="#f2ce45" /><circle cx="557.7777777777778" cy="612" r="4" fill="#f2ce45" /><circle cx="620" cy="612" r="4" fill="#f2ce45" />
+        <path d="M60.00,641.33 L122.22,641.33 L184.44,634.00 L246.67,634.00 L308.89,626.67 L371.11,700.00 L433.33,700.00 L495.56,700.00 L557.78,700.00 L620.00,700.00" fill="none" stroke="#f2ce45" stroke-width="3" stroke-linecap="round" />
+        <circle cx="60" cy="641.3333333333334" r="4" fill="#f2ce45" /><circle cx="122.22222222222223" cy="641.3333333333334" r="4" fill="#f2ce45" /><circle cx="184.44444444444446" cy="634" r="4" fill="#f2ce45" /><circle cx="246.66666666666666" cy="634" r="4" fill="#f2ce45" /><circle cx="308.8888888888889" cy="626.6666666666666" r="4" fill="#f2ce45" /><circle cx="371.1111111111111" cy="700" r="4" fill="#f2ce45" /><circle cx="433.3333333333333" cy="700" r="4" fill="#f2ce45" /><circle cx="495.55555555555554" cy="700" r="4" fill="#f2ce45" /><circle cx="557.7777777777778" cy="700" r="4" fill="#f2ce45" /><circle cx="620" cy="700" r="4" fill="#f2ce45" />
       
-        <path d="M60.00,687.78 L122.22,685.33 L184.44,684.36 L246.67,681.42 L308.89,677.51 L371.11,670.67 L433.33,664.80 L495.56,656.98 L557.78,645.24 L620.00,640.84" fill="none" stroke="#6ee7b7" stroke-width="3" stroke-linecap="round" />
-        <circle cx="60" cy="687.7777777777778" r="4" fill="#6ee7b7" /><circle cx="122.22222222222223" cy="685.3333333333334" r="4" fill="#6ee7b7" /><circle cx="184.44444444444446" cy="684.3555555555556" r="4" fill="#6ee7b7" /><circle cx="246.66666666666666" cy="681.4222222222222" r="4" fill="#6ee7b7" /><circle cx="308.8888888888889" cy="677.5111111111111" r="4" fill="#6ee7b7" /><circle cx="371.1111111111111" cy="670.6666666666666" r="4" fill="#6ee7b7" /><circle cx="433.3333333333333" cy="664.8" r="4" fill="#6ee7b7" /><circle cx="495.55555555555554" cy="656.9777777777778" r="4" fill="#6ee7b7" /><circle cx="557.7777777777778" cy="645.2444444444444" r="4" fill="#6ee7b7" /><circle cx="620" cy="640.8444444444444" r="4" fill="#6ee7b7" />
+        <path d="M60.00,687.78 L122.22,685.33 L184.44,684.36 L246.67,681.42 L308.89,677.51 L371.11,700.00 L433.33,700.00 L495.56,700.00 L557.78,700.00 L620.00,700.00" fill="none" stroke="#6ee7b7" stroke-width="3" stroke-linecap="round" />
+        <circle cx="60" cy="687.7777777777778" r="4" fill="#6ee7b7" /><circle cx="122.22222222222223" cy="685.3333333333334" r="4" fill="#6ee7b7" /><circle cx="184.44444444444446" cy="684.3555555555556" r="4" fill="#6ee7b7" /><circle cx="246.66666666666666" cy="681.4222222222222" r="4" fill="#6ee7b7" /><circle cx="308.8888888888889" cy="677.5111111111111" r="4" fill="#6ee7b7" /><circle cx="371.1111111111111" cy="700" r="4" fill="#6ee7b7" /><circle cx="433.3333333333333" cy="700" r="4" fill="#6ee7b7" /><circle cx="495.55555555555554" cy="700" r="4" fill="#6ee7b7" /><circle cx="557.7777777777778" cy="700" r="4" fill="#6ee7b7" /><circle cx="620" cy="700" r="4" fill="#6ee7b7" />
       
       
         <g transform="translate(70 748)">
@@ -276,11 +276,11 @@
           <text x="1210" y="722" class="axis" text-anchor="middle">T10</text>
         
       
-        <path d="M650.00,595.03 L712.22,602.89 L774.44,625.51 L836.67,633.37 L898.89,648.77 L961.11,657.57 L1023.33,667.00 L1085.56,673.29 L1147.78,680.20 L1210.00,684.29" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" />
-        <circle cx="650" cy="595.0285714285715" r="4" fill="#f59e0b" /><circle cx="712.2222222222222" cy="602.8857142857144" r="4" fill="#f59e0b" /><circle cx="774.4444444444445" cy="625.5142857142857" r="4" fill="#f59e0b" /><circle cx="836.6666666666666" cy="633.3714285714286" r="4" fill="#f59e0b" /><circle cx="898.8888888888889" cy="648.7714285714286" r="4" fill="#f59e0b" /><circle cx="961.1111111111111" cy="657.5714285714286" r="4" fill="#f59e0b" /><circle cx="1023.3333333333333" cy="667" r="4" fill="#f59e0b" /><circle cx="1085.5555555555557" cy="673.2857142857143" r="4" fill="#f59e0b" /><circle cx="1147.7777777777778" cy="680.2" r="4" fill="#f59e0b" /><circle cx="1210" cy="684.2857142857143" r="4" fill="#f59e0b" />
+        <path d="M650.00,595.03 L712.22,602.89 L774.44,625.51 L836.67,633.37 L898.89,648.77 L961.11,700.00 L1023.33,700.00 L1085.56,700.00 L1147.78,700.00 L1210.00,700.00" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" />
+        <circle cx="650" cy="595.0285714285715" r="4" fill="#f59e0b" /><circle cx="712.2222222222222" cy="602.8857142857144" r="4" fill="#f59e0b" /><circle cx="774.4444444444445" cy="625.5142857142857" r="4" fill="#f59e0b" /><circle cx="836.6666666666666" cy="633.3714285714286" r="4" fill="#f59e0b" /><circle cx="898.8888888888889" cy="648.7714285714286" r="4" fill="#f59e0b" /><circle cx="961.1111111111111" cy="700" r="4" fill="#f59e0b" /><circle cx="1023.3333333333333" cy="700" r="4" fill="#f59e0b" /><circle cx="1085.5555555555557" cy="700" r="4" fill="#f59e0b" /><circle cx="1147.7777777777778" cy="700" r="4" fill="#f59e0b" /><circle cx="1210" cy="700" r="4" fill="#f59e0b" />
       
-        <path d="M650.00,490.37 L712.22,505.77 L774.44,551.34 L836.67,566.74 L898.89,597.86 L961.11,614.83 L1023.33,634.00 L1085.56,646.57 L1147.78,660.40 L1210.00,668.26" fill="none" stroke="#9bed5b" stroke-width="3" stroke-linecap="round" />
-        <circle cx="650" cy="490.37142857142857" r="4" fill="#9bed5b" /><circle cx="712.2222222222222" cy="505.7714285714286" r="4" fill="#9bed5b" /><circle cx="774.4444444444445" cy="551.3428571428572" r="4" fill="#9bed5b" /><circle cx="836.6666666666666" cy="566.7428571428571" r="4" fill="#9bed5b" /><circle cx="898.8888888888889" cy="597.8571428571429" r="4" fill="#9bed5b" /><circle cx="961.1111111111111" cy="614.8285714285714" r="4" fill="#9bed5b" /><circle cx="1023.3333333333333" cy="634" r="4" fill="#9bed5b" /><circle cx="1085.5555555555557" cy="646.5714285714286" r="4" fill="#9bed5b" /><circle cx="1147.7777777777778" cy="660.4" r="4" fill="#9bed5b" /><circle cx="1210" cy="668.2571428571429" r="4" fill="#9bed5b" />
+        <path d="M650.00,490.06 L712.22,505.77 L774.44,551.34 L836.67,566.74 L898.89,597.86 L961.11,700.00 L1023.33,700.00 L1085.56,700.00 L1147.78,700.00 L1210.00,700.00" fill="none" stroke="#9bed5b" stroke-width="3" stroke-linecap="round" />
+        <circle cx="650" cy="490.0571428571428" r="4" fill="#9bed5b" /><circle cx="712.2222222222222" cy="505.7714285714286" r="4" fill="#9bed5b" /><circle cx="774.4444444444445" cy="551.3428571428572" r="4" fill="#9bed5b" /><circle cx="836.6666666666666" cy="566.7428571428571" r="4" fill="#9bed5b" /><circle cx="898.8888888888889" cy="597.8571428571429" r="4" fill="#9bed5b" /><circle cx="961.1111111111111" cy="700" r="4" fill="#9bed5b" /><circle cx="1023.3333333333333" cy="700" r="4" fill="#9bed5b" /><circle cx="1085.5555555555557" cy="700" r="4" fill="#9bed5b" /><circle cx="1147.7777777777778" cy="700" r="4" fill="#9bed5b" /><circle cx="1210" cy="700" r="4" fill="#9bed5b" />
       
       
         <g transform="translate(660 748)">

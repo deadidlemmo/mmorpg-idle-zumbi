@@ -4,6 +4,7 @@ import type {
   CancelIncursionResponse,
   ClaimIncursionResponse,
   IncursionStatusResponse,
+  IncursionApproach,
   IncursionsAvailableResponse,
   StartIncursionResponse,
 } from "../types/incursions.types";
@@ -22,10 +23,14 @@ export async function getIncursionStatus(characterId: string) {
   return response.data;
 }
 
-export async function startIncursion(characterId: string, incursionId: string) {
+export async function startIncursion(
+  characterId: string,
+  incursionId: string,
+  approach: IncursionApproach,
+) {
   const response = await apiClient.post<StartIncursionResponse>(
     API_ENDPOINTS.incursions.start,
-    { characterId, incursionId },
+    { characterId, incursionId, approach },
   );
   return response.data;
 }

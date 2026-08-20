@@ -131,6 +131,25 @@ enum IncursionSessionStatus {
   CANCELLED
 }
 
+enum MissionType {
+  DAILY
+  WEEKLY
+  STORY
+}
+
+enum MissionStatus {
+  ACTIVE
+  COMPLETED
+  CLAIMED
+  EXPIRED
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
 enum WorldBossEventStatus {
   SCHEDULED
   LOBBY_OPEN
@@ -159,12 +178,90 @@ model User {
 
   premiumUntil DateTime?
 
+  tokenVersion Int       @default(0)
+  lastLoginAt  DateTime?
+
+  termsAcceptedAt   DateTime?
+  termsVersion      String?
+  privacyAcceptedAt DateTime?
+  privacyVersion    String?
+
+  isSuspended      Boolean   @default(false)
+  suspendedAt      DateTime?
+  suspensionReason String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  characters Character[]
+  characters             Character[]
+  passwordResetTokens    PasswordResetToken[]
+  auditLogs              AuditLog[]           @relation("AuditActor")
+  sentFriendRequests     Friendship[]         @relation("FriendRequester")
+  receivedFriendRequests Friendship[]         @relation("FriendAddressee")
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id String @id @default(uuid())
+
+  userId    String
+  tokenHash String @unique
+
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  requestedIp String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([userId, usedAt, createdAt])
+  @@map("password_reset_tokens")
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Friendship {
+  id String @id @default(uuid())
+
+  requesterId String
+  addresseeId String
+  pairKey     String           @unique
+  status      FriendshipStatus @default(PENDING)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  acceptedAt DateTime?
+
+  requester User @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([requesterId, status])
+  @@index([addresseeId, status])
+  @@map("friendships")
 }
 
 model GameClass {
@@ -311,6 +408,9 @@ model Character {
   craftingSessions          CraftingSession[]
   incursionSessions         CharacterIncursionSession[]
   worldBossParticipations   WorldBossParticipant[]
+  tutorialProgress          CharacterTutorialProgress?
+  missions                  CharacterMission[]
+  achievements              CharacterAchievement[]
 
   gatheringSkills CharacterGatheringSkill[]
   craftingSkill   CharacterCraftingSkill?
@@ -856,17 +956,17 @@ model AutoCombatSession {
   totalXpGained        Int @default(0)
   totalPotionsUsed     Int @default(0)
 
-  currentMobId       String?
-  currentMobHp       Int?
-  currentMobMaxHp    Int?
-  killProgressSeconds       Float @default(0)
-  estimatedKillTimeSeconds  Float?
-  baseKillTimeSeconds       Float?
-  playerOffensivePower      Float?
-  monsterRecommendedPower   Float?
-  currentMobIndex           Int?
-  currentRound       Int     @default(0)
-  currentCombatIndex Int     @default(1)
+  currentMobId             String?
+  currentMobHp             Int?
+  currentMobMaxHp          Int?
+  killProgressSeconds      Float   @default(0)
+  estimatedKillTimeSeconds Float?
+  baseKillTimeSeconds      Float?
+  playerOffensivePower     Float?
+  monsterRecommendedPower  Float?
+  currentMobIndex          Int?
+  currentRound             Int     @default(0)
+  currentCombatIndex       Int     @default(1)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1160,6 +1260,12 @@ model CharacterIncursionSession {
 
   generatedRewardsJson Json?
 
+  approach         String  @default("BALANCED")
+  successChance    Int     @default(85)
+  rewardMultiplier Float   @default(1)
+  outcomeRoll      Float?
+  outcomeSummary   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1175,6 +1281,106 @@ model CharacterIncursionSession {
   @@index([startedAt])
   @@index([endsAt])
   @@map("character_incursion_sessions")
+}
+
+model CharacterTutorialProgress {
+  id String @id @default(uuid())
+
+  characterId String    @unique
+  step        Int       @default(0)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  dismissedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@map("character_tutorial_progress")
+}
+
+model MissionDefinition {
+  id String @id @default(uuid())
+
+  key           String      @unique
+  title         String
+  description   String
+  type          MissionType
+  objectiveType String
+  targetValue   Int
+  rewardXp      Int         @default(0)
+  rewardGold    Int         @default(0)
+  isActive      Boolean     @default(true)
+  sortOrder     Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  assignments CharacterMission[]
+
+  @@index([type, isActive])
+  @@index([sortOrder])
+  @@map("mission_definitions")
+}
+
+model CharacterMission {
+  id String @id @default(uuid())
+
+  characterId String
+  missionId   String
+  periodKey   String
+  status      MissionStatus @default(ACTIVE)
+  progress    Int           @default(0)
+  targetValue Int
+  assignedAt  DateTime      @default(now())
+  expiresAt   DateTime?
+  completedAt DateTime?
+  claimedAt   DateTime?
+
+  character Character         @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  mission   MissionDefinition @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, missionId, periodKey])
+  @@index([characterId, status])
+  @@index([expiresAt])
+  @@map("character_missions")
+}
+
+model AchievementDefinition {
+  id String @id @default(uuid())
+
+  key         String   @unique
+  title       String
+  description String
+  metricKey   String
+  targetValue Int
+  rewardCash  Int      @default(0)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  characterAchievements CharacterAchievement[]
+
+  @@index([metricKey, isActive])
+  @@index([sortOrder])
+  @@map("achievement_definitions")
+}
+
+model CharacterAchievement {
+  id String @id @default(uuid())
+
+  characterId   String
+  achievementId String
+  progress      Int       @default(0)
+  unlockedAt    DateTime?
+  claimedAt     DateTime?
+
+  character   Character             @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  achievement AchievementDefinition @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, achievementId])
+  @@index([characterId, unlockedAt])
+  @@map("character_achievements")
 }
 
 model IncursionSessionReward {

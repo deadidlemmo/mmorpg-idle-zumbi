@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 import { UsePipes, ValidationPipe } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
@@ -10,6 +8,7 @@ import {
 } from '@nestjs/websockets';
 import { WorldBossEventStatus } from '@prisma/client';
 import type { Server, Socket } from 'socket.io';
+import { SocketAuthService } from '../auth/socket-auth.service';
 import { WorldBossesService } from './world-bosses.service';
 
 const WORLD_BOSS_STATUS_TICK_MS = 1000;
@@ -31,7 +30,6 @@ type WorldBossSocket = Socket & {
 
 @WebSocketGateway({
   namespace: '/world-bosses',
-  cors: { origin: true, credentials: true },
 })
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class WorldBossesGateway {
@@ -39,7 +37,7 @@ export class WorldBossesGateway {
   server!: Server;
 
   constructor(
-    private readonly jwtService: JwtService,
+    private readonly socketAuth: SocketAuthService,
     private readonly worldBossesService: WorldBossesService,
   ) {}
 
@@ -55,24 +53,14 @@ export class WorldBossesGateway {
         return;
       }
 
-      const payload = await this.jwtService.verifyAsync<{ sub?: string }>(
-        token,
-      );
+      const user = await this.socketAuth.authenticate(token);
 
-      if (!payload?.sub) {
-        client.emit('worldBoss:error', {
-          message: 'Token de autenticação inválido no WebSocket.',
-        });
-        client.disconnect(true);
-        return;
-      }
-
-      client.data.userId = payload.sub;
+      client.data.userId = user.id;
       client.data.joinedWorldBossRooms = new Set<string>();
       client.data.worldBossSubscriptions = new Map();
       client.emit('worldBoss:connected', {
         socketId: client.id,
-        userId: payload.sub,
+        userId: user.id,
       });
     } catch (error) {
       client.emit('worldBoss:error', {

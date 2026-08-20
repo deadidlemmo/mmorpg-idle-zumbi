@@ -1403,6 +1403,242 @@ export class CharactersService {
     };
   }
 
+  async getActivitySummary(userId: string, characterId: string) {
+    const character = await this.prisma.character.findFirst({
+      where: { id: characterId, userId, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        level: true,
+        xp: true,
+        status: true,
+        gold: true,
+        cash: true,
+        currentHp: true,
+        maxHp: true,
+        avatarKey: true,
+        deletedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        class: { select: { id: true, name: true, description: true } },
+        map: {
+          select: {
+            id: true,
+            name: true,
+            tier: true,
+            minLevel: true,
+            maxLevel: true,
+            description: true,
+          },
+        },
+      },
+    });
+
+    if (!character) {
+      throw new NotFoundException('Personagem não encontrado.');
+    }
+
+    const [autoCombat, gathering, incursion, worldBossParticipation] =
+      await Promise.all([
+        this.prisma.autoCombatSession.findFirst({
+          where: {
+            characterId,
+            status: AutoCombatSessionStatus.ACTIVE,
+            phase: { in: BLOCKING_AUTO_COMBAT_PHASES },
+          },
+          orderBy: { startedAt: 'desc' },
+          select: {
+            id: true,
+            status: true,
+            phase: true,
+            startedAt: true,
+            endsAt: true,
+            lastProcessedAt: true,
+            durationSeconds: true,
+            roundDurationSeconds: true,
+            mapId: true,
+            subMapId: true,
+            currentMobId: true,
+            currentMobHp: true,
+            currentMobMaxHp: true,
+            currentRound: true,
+            currentCombatIndex: true,
+            totalCombatsResolved: true,
+            totalRoundsResolved: true,
+            totalXpGained: true,
+            mobSummaries: { select: { kills: true } },
+            currentMob: {
+              select: {
+                id: true,
+                name: true,
+                level: true,
+                tier: true,
+                hp: true,
+                attack: true,
+                defense: true,
+                speed: true,
+                xpReward: true,
+              },
+            },
+            map: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                minLevel: true,
+                maxLevel: true,
+                description: true,
+              },
+            },
+            subMap: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                minLevel: true,
+                maxLevel: true,
+                map: {
+                  select: {
+                    id: true,
+                    name: true,
+                    tier: true,
+                    minLevel: true,
+                    maxLevel: true,
+                    description: true,
+                  },
+                },
+              },
+            },
+          },
+        }),
+        this.prisma.gatheringSession.findFirst({
+          where: { characterId, status: ActivityStatus.ACTIVE },
+          orderBy: { startedAt: 'desc' },
+          select: {
+            id: true,
+            status: true,
+            origin: true,
+            startedAt: true,
+            lastResolvedAt: true,
+            progressRemainder: true,
+            collectedQuantity: true,
+            collectedXp: true,
+            map: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                minLevel: true,
+                maxLevel: true,
+                description: true,
+              },
+            },
+            targetMaterial: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                rarity: true,
+                family: true,
+                materialOrigin: true,
+                baseGatheringRatePerHour: true,
+              },
+            },
+          },
+        }),
+        this.prisma.characterIncursionSession.findFirst({
+          where: { characterId, status: IncursionSessionStatus.ACTIVE },
+          orderBy: { startedAt: 'desc' },
+          select: {
+            id: true,
+            characterId: true,
+            incursionId: true,
+            status: true,
+            startedAt: true,
+            endsAt: true,
+            completedAt: true,
+            claimedAt: true,
+            goldCostPaid: true,
+            xpReward: true,
+            goldReward: true,
+            approach: true,
+            successChance: true,
+            rewardMultiplier: true,
+            incursion: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                tier: true,
+                minLevel: true,
+                maxLevel: true,
+                goldCost: true,
+                durationSeconds: true,
+                difficulty: true,
+                riskLevel: true,
+                map: { select: { id: true, name: true, tier: true } },
+              },
+            },
+          },
+        }),
+        this.prisma.worldBossParticipant.findFirst({
+          where: {
+            characterId,
+            leftAt: null,
+            event: {
+              status: {
+                in: [
+                  WorldBossEventStatus.SCHEDULED,
+                  WorldBossEventStatus.LOBBY_OPEN,
+                  WorldBossEventStatus.ACTIVE,
+                ],
+              },
+            },
+          },
+          select: { id: true, eventId: true, joinedAt: true },
+        }),
+      ]);
+
+    const formattedAutoCombat = autoCombat
+      ? this.formatActiveAutoCombatSession(autoCombat)
+      : null;
+    const currentHp = Math.max(0, character.currentHp ?? character.maxHp ?? 1);
+    const maxHp = Math.max(1, character.maxHp ?? currentHp ?? 1);
+
+    return {
+      serverNow: new Date().toISOString(),
+      character: {
+        ...character,
+        currentHp: this.clampHp(currentHp, maxHp),
+        maxHp,
+        classId: character.class.id,
+        className: character.class.name,
+        map: character.map ? this.formatMap(character.map) : null,
+        currentMap: character.map ? this.formatMap(character.map) : null,
+        wallet: { gold: character.gold, cash: character.cash },
+        currencies: { gold: character.gold, cash: character.cash },
+        ...this.buildCharacterXpPayload(character.level, character.xp),
+      },
+      activity: {
+        hasActiveAutoCombat: Boolean(autoCombat),
+        hasActiveGathering: Boolean(gathering),
+        hasActiveIncursion: Boolean(incursion),
+        hasActiveWorldBoss: Boolean(worldBossParticipation),
+        activeAutoCombatSession: formattedAutoCombat
+          ? {
+              ...formattedAutoCombat,
+              combatPreview: this.buildAutoCombatPreview(autoCombat),
+            }
+          : null,
+        activeGatheringSession: gathering,
+        activeIncursionSession: incursion
+          ? this.formatActiveIncursionSession(incursion)
+          : null,
+        activeWorldBossParticipation: worldBossParticipation,
+      },
+    };
+  }
+
   private formatActiveIncursionSession(session: any) {
     const now = new Date();
     const totalMs = Math.max(
@@ -1990,7 +2226,7 @@ export class CharactersService {
 
   private buildGatheringProductionPreview(
     activeGatheringSession: any,
-    gatheringSkill?: any | null,
+    gatheringSkill?: any,
     isPremium = false,
   ) {
     const now = new Date();

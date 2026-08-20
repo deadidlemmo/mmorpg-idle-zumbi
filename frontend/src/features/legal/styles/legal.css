@@ -1,0 +1,58 @@
+.legal-page {
+  min-height: 100vh;
+  color: var(--text-primary);
+  background: #0b0e0c;
+}
+
+.legal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(960px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.legal-header .game-logo {
+  width: 180px;
+}
+
+.legal-back {
+  color: var(--action-primary-hover);
+  font-weight: 700;
+}
+
+.legal-document {
+  width: min(760px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 56px 0 80px;
+}
+
+.legal-document h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  letter-spacing: 0;
+}
+
+.legal-updated {
+  margin: 0 0 40px;
+  color: var(--text-muted);
+}
+
+.legal-document section {
+  padding: 24px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.legal-document h2 {
+  margin: 0 0 12px;
+  font-size: 1.08rem;
+  letter-spacing: 0;
+}
+
+.legal-document p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.75;
+}

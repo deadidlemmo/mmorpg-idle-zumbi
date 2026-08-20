@@ -25,6 +25,13 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string;
   password: string;
+  acceptTerms: boolean;
+  acceptPrivacy: boolean;
+}
+
+export interface PasswordResetRequestResponse {
+  message: string;
+  developmentToken?: string;
 }
 
 export interface AuthResponse {

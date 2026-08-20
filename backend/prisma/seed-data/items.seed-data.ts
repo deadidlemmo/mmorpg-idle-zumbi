@@ -161,15 +161,12 @@ function getGlassCannonDefensivePadding(item: EquipmentSeedData) {
     };
   }
 
-  const tierOffset =
-    item.tier - GLASS_CANNON_DEFENSIVE_PADDING_START_TIER + 1;
+  const tierOffset = item.tier - GLASS_CANNON_DEFENSIVE_PADDING_START_TIER + 1;
   const slotPoints = BALANCED_EQUIPMENT_SLOT_POINTS_PER_TIER[item.slot] ?? 0;
   const totalPadding = Math.max(
     0,
     Math.round(
-      slotPoints *
-        tierOffset *
-        GLASS_CANNON_DEFENSIVE_PADDING_SLOT_MULTIPLIER,
+      slotPoints * tierOffset * GLASS_CANNON_DEFENSIVE_PADDING_SLOT_MULTIPLIER,
     ),
   );
   const vitalityBonus = Math.ceil(totalPadding * 0.6);
@@ -691,18 +688,20 @@ function createItemSlug(value: string) {
 function createLaunchGatheringMaterialDefinitions(): MaterialSeedDataWithGatheringProgression[] {
   return LAUNCH_GATHERING_MATERIAL_FAMILIES.flatMap((familyConfig) =>
     LAUNCH_GATHERING_MATERIAL_TIER_CONFIG.flatMap((tierConfig, tierIndex) =>
-      familyConfig.variantsByTier[tierIndex].map((materialName, variantIndex) => ({
-        name: materialName,
-        slug: createItemSlug(materialName),
-        description: `${materialName} obtido em ${familyConfig.activityLabel} no mapa ${tierConfig.mapName}. Material genérico da família ${familyConfig.family} para a base de crafting.`,
-        tier: tierConfig.tier,
-        family: familyConfig.family,
-        mapName: tierConfig.mapName,
-        materialOrigin: familyConfig.origin,
-        materialSlot: null,
-        isGatheringMaterial: true,
-        requiredGatheringLevel: tierConfig.requiredLevels[variantIndex],
-      })),
+      familyConfig.variantsByTier[tierIndex].map(
+        (materialName, variantIndex) => ({
+          name: materialName,
+          slug: createItemSlug(materialName),
+          description: `${materialName} obtido em ${familyConfig.activityLabel} no mapa ${tierConfig.mapName}. Material genérico da família ${familyConfig.family} para a base de crafting.`,
+          tier: tierConfig.tier,
+          family: familyConfig.family,
+          mapName: tierConfig.mapName,
+          materialOrigin: familyConfig.origin,
+          materialSlot: null,
+          isGatheringMaterial: true,
+          requiredGatheringLevel: tierConfig.requiredLevels[variantIndex],
+        }),
+      ),
     ),
   );
 }
@@ -710,13 +709,393 @@ function createLaunchGatheringMaterialDefinitions(): MaterialSeedDataWithGatheri
 export const materialDefinitions: MaterialSeedDataWithGatheringProgression[] =
   createLaunchGatheringMaterialDefinitions();
 
-// Catalogo de equipamentos finais/de set resetado intencionalmente.
-// Os equipamentos iniciais de aprendiz continuam em starterEquipmentDefinitions.
-const rawEquipmentDefinitions: EquipmentSeedData[] = [];
+type LaunchEquipmentFamilyConfig = {
+  className: 'Lutador' | 'Assassino' | 'Atirador' | 'Médico';
+  slot: ItemSlot;
+  family: string;
+  namesByTier: readonly string[];
+};
+
+const LAUNCH_EQUIPMENT_FAMILIES: readonly LaunchEquipmentFamilyConfig[] = [
+  {
+    className: 'Lutador',
+    slot: ItemSlot.ARMOR,
+    family: 'Armadura',
+    namesByTier: [
+      'Armadura de Retalhos Pesados',
+      'Armadura de Placas Oxidadas',
+      'Armadura de Maca Reforçada',
+      'Armadura de Bagageiro Rebitado',
+      'Armadura de Barreira Selada',
+    ],
+  },
+  {
+    className: 'Lutador',
+    slot: ItemSlot.PANTS,
+    family: 'Grevas',
+    namesByTier: [
+      'Grevas de Tábua Remendada',
+      'Grevas de Lataria Oxidada',
+      'Grevas de Tala Clínica',
+      'Grevas de Escada Rolante',
+      'Grevas de Câmara Selada',
+    ],
+  },
+  {
+    className: 'Lutador',
+    slot: ItemSlot.BOOTS,
+    family: 'Botas',
+    namesByTier: [
+      'Botas de Obra Remendadas',
+      'Botas de Ferrugem Cravada',
+      'Botas de Enfermaria Seladas',
+      'Botas de Esteira Quebrada',
+      'Botas de Quarentena Selada',
+    ],
+  },
+  {
+    className: 'Lutador',
+    slot: ItemSlot.HEAD,
+    family: 'Elmo',
+    namesByTier: [
+      'Elmo de Obra Rachado',
+      'Elmo de Soldador Enferrujado',
+      'Elmo de Visor Clínico',
+      'Elmo de Segurança do Terminal',
+      'Elmo de Câmara Selada',
+    ],
+  },
+  {
+    className: 'Lutador',
+    slot: ItemSlot.MAIN_HAND,
+    family: 'Maça',
+    namesByTier: [
+      'Maça de Ripa Cravada',
+      'Maça de Engrenagem Enferrujada',
+      'Maça de Suporte de Soro',
+      'Maça de Corrimão Rebitado',
+      'Maça de Grade de Quarentena',
+    ],
+  },
+  {
+    className: 'Lutador',
+    slot: ItemSlot.MAIN_HAND,
+    family: 'Machado',
+    namesByTier: [
+      'Machado de Lâmina Lascada',
+      'Machado de Chapa Rasgada',
+      'Machado de Bandeja Cirúrgica',
+      'Machado de Placa de Embarque',
+      'Machado de Porta de Contenção',
+    ],
+  },
+  {
+    className: 'Lutador',
+    slot: ItemSlot.OFF_HAND,
+    family: 'Escudo',
+    namesByTier: [
+      'Escudo de Tampa Amassada',
+      'Escudo de Portão Oxidado',
+      'Escudo de Maca Dobrada',
+      'Escudo de Painel de Embarque',
+      'Escudo de Barreira de Quarentena',
+    ],
+  },
+  {
+    className: 'Assassino',
+    slot: ItemSlot.MAIN_HAND,
+    family: 'Espada',
+    namesByTier: [
+      'Espada de Faca Alongada',
+      'Espada de Serra Oxidada',
+      'Espada de Bisturi Alongado',
+      'Espada de Sinalização Afiada',
+      'Espada de Lâmina Selada',
+    ],
+  },
+  {
+    className: 'Assassino',
+    slot: ItemSlot.MAIN_HAND,
+    family: 'Adagas',
+    namesByTier: [
+      'Adagas de Facas Trincadas',
+      'Adagas de Estilete Enferrujado',
+      'Adagas de Tesoura Cirúrgica',
+      'Adagas de Canivete de Embarque',
+      'Adagas de Contenção Verde',
+    ],
+  },
+  {
+    className: 'Assassino',
+    slot: ItemSlot.OFF_HAND,
+    family: 'Bombas',
+    namesByTier: [
+      'Bombas de Lata Fumacenta',
+      'Bombas de Ferrugem Seca',
+      'Bombas de Névoa Clínica',
+      'Bombas de Sinalização Queimada',
+      'Bombas de Quarentena Verde',
+    ],
+  },
+  {
+    className: 'Assassino',
+    slot: ItemSlot.HEAD,
+    family: 'Capuz',
+    namesByTier: [
+      'Capuz de Moletom Rasgado',
+      'Capuz de Oficina Sombreado',
+      'Capuz de Triagem Escura',
+      'Capuz de Embarque Oculto',
+      'Capuz de Quarentena Verde',
+    ],
+  },
+  {
+    className: 'Assassino',
+    slot: ItemSlot.ARMOR,
+    family: 'Traje',
+    namesByTier: [
+      'Traje de Rua Rasgado',
+      'Traje de Oficina Silencioso',
+      'Traje de Ala Isolada',
+      'Traje de Terminal Oculto',
+      'Traje de Quarentena Furtiva',
+    ],
+  },
+  {
+    className: 'Assassino',
+    slot: ItemSlot.PANTS,
+    family: 'Perneiras',
+    namesByTier: [
+      'Perneiras de Jeans Cortado',
+      'Perneiras de Oficina Enferrujada',
+      'Perneiras de Maca Silenciosa',
+      'Perneiras de Passageiro Oculto',
+      'Perneiras de Quarentena Leve',
+    ],
+  },
+  {
+    className: 'Assassino',
+    slot: ItemSlot.BOOTS,
+    family: 'Sapatilhas',
+    namesByTier: [
+      'Sapatilhas de Pano Escuro',
+      'Sapatilhas de Ferrugem Baixa',
+      'Sapatilhas de Enfermaria Silenciosa',
+      'Sapatilhas de Esteira Quebrada',
+      'Sapatilhas de Quarentena Selada',
+    ],
+  },
+  {
+    className: 'Médico',
+    slot: ItemSlot.MAIN_HAND,
+    family: 'Serra',
+    namesByTier: [
+      'Serra de Emergência Quebrada',
+      'Serra de Oficina Médica Oxidada',
+      'Serra Cirúrgica de Triagem',
+      'Serra de Resgate do Terminal',
+      'Serra de Contenção Verde',
+    ],
+  },
+  {
+    className: 'Médico',
+    slot: ItemSlot.MAIN_HAND,
+    family: 'Desfibrilador',
+    namesByTier: [
+      'Desfibrilador de Rádio Improvisado',
+      'Desfibrilador de Bobina Enferrujada',
+      'Desfibrilador de Leito Clínico',
+      'Desfibrilador de Cabine de Emergência',
+      'Desfibrilador de Quarentena',
+    ],
+  },
+  {
+    className: 'Médico',
+    slot: ItemSlot.OFF_HAND,
+    family: 'Injetor',
+    namesByTier: [
+      'Injetor de Soro Rachado',
+      'Injetor de Oficina Oxidado',
+      'Injetor de Triagem Clínica',
+      'Injetor de Emergência do Terminal',
+      'Injetor de Quarentena Verde',
+    ],
+  },
+  {
+    className: 'Médico',
+    slot: ItemSlot.HEAD,
+    family: 'Máscara',
+    namesByTier: [
+      'Máscara Clínica Rasgada',
+      'Máscara de Oficina Médica',
+      'Máscara de Isolamento Clínico',
+      'Máscara de Cabine Sanitária',
+      'Máscara de Quarentena Verde',
+    ],
+  },
+  {
+    className: 'Médico',
+    slot: ItemSlot.ARMOR,
+    family: 'Colete',
+    namesByTier: [
+      'Colete de Primeiros Socorros',
+      'Colete Paramédico Enferrujado',
+      'Colete de Triagem Clínica',
+      'Colete de Resgate do Terminal',
+      'Colete de Quarentena Verde',
+    ],
+  },
+  {
+    className: 'Médico',
+    slot: ItemSlot.PANTS,
+    family: 'Calças',
+    namesByTier: [
+      'Calças de Socorro Rasgadas',
+      'Calças de Oficina Sanitária',
+      'Calças de Triagem Clínica',
+      'Calças de Emergência do Terminal',
+      'Calças de Quarentena Leve',
+    ],
+  },
+  {
+    className: 'Médico',
+    slot: ItemSlot.BOOTS,
+    family: 'Sapatos',
+    namesByTier: [
+      'Sapatos de Enfermagem Gastos',
+      'Sapatos de Oficina Sanitária',
+      'Sapatos de Enfermaria Selada',
+      'Sapatos de Resgate do Terminal',
+      'Sapatos de Quarentena Verde',
+    ],
+  },
+  {
+    className: 'Atirador',
+    slot: ItemSlot.MAIN_HAND,
+    family: 'Rifle',
+    namesByTier: [
+      'Rifle de Cano Curto',
+      'Rifle de Oficina Oxidado',
+      'Rifle de Dardos Clínicos',
+      'Rifle de Sinalização de Embarque',
+      'Rifle de Contenção Verde',
+    ],
+  },
+  {
+    className: 'Atirador',
+    slot: ItemSlot.MAIN_HAND,
+    family: 'Pistola',
+    namesByTier: [
+      'Pistola de Gaveta Quebrada',
+      'Pistola de Chapa Enferrujada',
+      'Pistola de Sedativo Quebrada',
+      'Pistola de Segurança do Terminal',
+      'Pistola de Quarentena Selada',
+    ],
+  },
+  {
+    className: 'Atirador',
+    slot: ItemSlot.OFF_HAND,
+    family: 'Carregador',
+    namesByTier: [
+      'Carregador de Lata Amassada',
+      'Carregador de Oficina Oxidado',
+      'Carregador de Triagem Clínica',
+      'Carregador de Embarque Rápido',
+      'Carregador de Quarentena Verde',
+    ],
+  },
+  {
+    className: 'Atirador',
+    slot: ItemSlot.HEAD,
+    family: 'Viseira',
+    namesByTier: [
+      'Viseira de Mira Rachada',
+      'Viseira de Oficina Oxidada',
+      'Viseira de Triagem Balística',
+      'Viseira de Embarque Tático',
+      'Viseira de Quarentena Verde',
+    ],
+  },
+  {
+    className: 'Atirador',
+    slot: ItemSlot.ARMOR,
+    family: 'Jaqueta',
+    namesByTier: [
+      'Jaqueta de Couro Furado',
+      'Jaqueta de Oficina Oxidada',
+      'Jaqueta de Resgate Clínico',
+      'Jaqueta de Patrulha do Terminal',
+      'Jaqueta de Quarentena Balística',
+    ],
+  },
+  {
+    className: 'Atirador',
+    slot: ItemSlot.PANTS,
+    family: 'Cargueiras',
+    namesByTier: [
+      'Cargueiras de Rua Rasgadas',
+      'Cargueiras de Oficina Oleosa',
+      'Cargueiras de Maca de Campo',
+      'Cargueiras de Embarque Tático',
+      'Cargueiras de Quarentena Verde',
+    ],
+  },
+  {
+    className: 'Atirador',
+    slot: ItemSlot.BOOTS,
+    family: 'Coturnos',
+    namesByTier: [
+      'Coturnos de Patrulha Gasta',
+      'Coturnos de Ferrugem Baixa',
+      'Coturnos de Enfermaria Tática',
+      'Coturnos de Terminal Quebrado',
+      'Coturnos de Quarentena Verde',
+    ],
+  },
+];
+
+function getEquipmentRarityByTier(tier: number): Rarity {
+  if (tier >= 5) return Rarity.RARE;
+  if (tier >= 3) return Rarity.UNCOMMON;
+  return Rarity.COMMON;
+}
+
+function createLaunchEquipmentDefinitions(): EquipmentSeedData[] {
+  return LAUNCH_EQUIPMENT_FAMILIES.flatMap((familyConfig) => {
+    if (familyConfig.namesByTier.length !== 5) {
+      throw new Error(
+        `Família ${familyConfig.family} deve possuir exatamente cinco equipamentos de lançamento.`,
+      );
+    }
+
+    return familyConfig.namesByTier.map((name, tierIndex) => {
+      const tier = tierIndex + 1;
+      const tierConfig = LAUNCH_GATHERING_MATERIAL_TIER_CONFIG[tierIndex];
+
+      if (!tierConfig || tierConfig.tier !== tier) {
+        throw new Error(`Mapa de lançamento ausente para o Tier ${tier}.`);
+      }
+
+      return {
+        name,
+        description: `${familyConfig.family} de Tier ${tier} para ${familyConfig.className}, produzido com recursos de ${tierConfig.mapName}.`,
+        tier,
+        rarity: getEquipmentRarityByTier(tier),
+        slot: familyConfig.slot,
+        family: familyConfig.family,
+        className: familyConfig.className,
+        mapName: tierConfig.mapName,
+        isCraftable: true,
+      };
+    });
+  });
+}
+
+const rawEquipmentDefinitions = createLaunchEquipmentDefinitions();
 
 export const starterEquipmentDefinitions: EquipmentSeedData[] =
   normalizeEquipmentStats(rawStarterEquipmentDefinitions);
 
-export const equipmentDefinitions: EquipmentSeedData[] = normalizeEquipmentStats(
-  rawEquipmentDefinitions,
-);
+export const equipmentDefinitions: EquipmentSeedData[] =
+  normalizeEquipmentStats(rawEquipmentDefinitions);

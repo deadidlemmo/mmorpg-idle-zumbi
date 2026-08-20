@@ -1,5 +1,9 @@
 import { create } from 'zustand';
-import { loginRequest, registerRequest } from '../features/auth/api/auth.api';
+import {
+  getMeRequest,
+  loginRequest,
+  registerRequest,
+} from '../features/auth/api/auth.api';
 import type { AuthUser } from '../features/auth/types/auth.types';
 import { getAuthToken, removeAuthToken, setAuthToken } from '../services/api/authToken';
 
@@ -8,10 +12,17 @@ interface AuthState {
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitialized: boolean;
   error: string | null;
 
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    acceptTerms: boolean,
+    acceptPrivacy: boolean,
+  ) => Promise<void>;
+  initialize: () => Promise<void>;
   logout: () => void;
   clearError: () => void;
 }
@@ -50,12 +61,14 @@ function extractApiError(error: unknown): string {
 }
 
 const initialToken = getAuthToken();
+let initializationPromise: Promise<void> | null = null;
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: initialToken,
   isAuthenticated: Boolean(initialToken),
   isLoading: false,
+  isInitialized: false,
   error: null,
 
   async login(email, password) {
@@ -91,13 +104,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  async register(email, password) {
+  async register(email, password, acceptTerms, acceptPrivacy) {
     set({ isLoading: true, error: null });
 
     try {
       const response = await registerRequest({
         email: email.trim().toLowerCase(),
         password,
+        acceptTerms,
+        acceptPrivacy,
       });
 
       setAuthToken(response.accessToken);
@@ -124,6 +139,44 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  async initialize() {
+    if (initializationPromise) return initializationPromise;
+
+    initializationPromise = (async () => {
+      const token = getAuthToken();
+
+      if (!token) {
+        set({
+          user: null,
+          accessToken: null,
+          isAuthenticated: false,
+          isInitialized: true,
+        });
+        return;
+      }
+
+      try {
+        const user = await getMeRequest();
+        set({
+          user,
+          accessToken: token,
+          isAuthenticated: true,
+          isInitialized: true,
+        });
+      } catch {
+        removeAuthToken();
+        set({
+          user: null,
+          accessToken: null,
+          isAuthenticated: false,
+          isInitialized: true,
+        });
+      }
+    })();
+
+    await initializationPromise;
+  },
+
   logout() {
     removeAuthToken();
 
@@ -132,6 +185,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       accessToken: null,
       isAuthenticated: false,
       isLoading: false,
+      isInitialized: true,
       error: null,
     });
   },

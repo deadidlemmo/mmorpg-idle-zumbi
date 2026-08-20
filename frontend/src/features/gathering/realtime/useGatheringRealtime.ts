@@ -4,11 +4,11 @@ import {
     getGatheringSessionCollectedXp,
 } from '../types/gathering.types';
 import {
-    GatheringRealtimeContext,
     type GatheringRealtimeContextValue,
     type GatheringRealtimeLiveProduction,
     type GatheringRealtimeState,
 } from './GatheringRealtimeProvider';
+import { GatheringRealtimeContext } from './gatheringRealtimeContext';
 
 export function useGatheringRealtime(): GatheringRealtimeContextValue {
   const context = useContext(GatheringRealtimeContext);

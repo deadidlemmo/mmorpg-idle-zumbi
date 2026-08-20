@@ -12,14 +12,14 @@ This package prepares image generation for the 120 game mobs using the correct a
 
 The naming is global inside each tier:
 
-- Full body: `frontend/src/assets/images/mobs/full-body/mobN-tT.png`
-- Portrait: `frontend/src/assets/images/mobs/portraits/mobN-tT.png`
+- Full body: `frontend/src/assets/images/mobs/full-body/mobN-tT.webp`
+- Portrait: `frontend/src/assets/images/mobs/portraits/mobN-tT.webp`
 
 Examples:
 
-- `mob1-t1.png` = first global Tier 1 mob, Errante do Suburbio.
-- `mob9-t1.png` = Porteiro Infectado.
-- `mob12-t1.png` = Sindico Devorado.
+- `mob1-t1.webp` = first global Tier 1 mob, Errante do Suburbio.
+- `mob9-t1.webp` = Porteiro Infectado.
+- `mob12-t1.webp` = Sindico Devorado.
 
 Do not use `mob1-t1` for the first mob of the third Tier 1 submap. The numbering does not restart by submap.
 

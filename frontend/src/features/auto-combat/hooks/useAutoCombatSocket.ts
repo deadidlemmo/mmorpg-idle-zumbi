@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { getAuthToken } from '../../../services/api/authToken';
 import {
   connectAutoCombatSocket,
-  type AutoCombatConnectedPayload,
   type AutoCombatJoinedPayload,
   type AutoCombatLeftPayload,
   type AutoCombatSocket,
@@ -357,6 +356,8 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       processedPotionUsedFingerprintsRef.current.clear();
       processedGenericFingerprintsRef.current.clear();
 
+      // The socket snapshot must be cleared when the hook is disabled.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState((current) => {
         const next: UseAutoCombatSocketState = {
           socket: null,
@@ -657,9 +658,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       scheduleJoinCharacterRoom();
     }
 
-    function handleAuthenticatedConnection(
-      _payload: AutoCombatConnectedPayload,
-    ) {
+    function handleAuthenticatedConnection() {
       if (isDisposed) return;
 
       updateConnectionState({

@@ -1,5 +1,4 @@
 import { Logger } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
@@ -11,14 +10,7 @@ import {
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import { PrismaService } from '../../prisma/prisma.service';
-
-type JwtSocketPayload = {
-  sub: string;
-  email?: string;
-  role?: string;
-  iat?: number;
-  exp?: number;
-};
+import { SocketAuthService } from '../auth/socket-auth.service';
 
 type AutoCombatJoinPayload = {
   characterId?: string;
@@ -34,8 +26,8 @@ type AutoCombatSocketData = {
   joinedCharacterRooms?: Set<string>;
 };
 
-type AuthenticatedSocket = Socket & {
-  data: Socket['data'] & AutoCombatSocketData;
+type AuthenticatedSocket = Omit<Socket, 'data'> & {
+  data: AutoCombatSocketData;
 };
 
 type RealtimePayloadLike = {
@@ -52,10 +44,6 @@ type AutoCombatStatusPayloadLike = {
 
 @WebSocketGateway({
   namespace: '/auto-combat',
-  cors: {
-    origin: true,
-    credentials: true,
-  },
 })
 export class AutoCombatGateway
   implements OnGatewayConnection, OnGatewayDisconnect
@@ -80,7 +68,7 @@ export class AutoCombatGateway
   private readonly socketIdsByUserId = new Map<string, Set<string>>();
 
   constructor(
-    private readonly jwtService: JwtService,
+    private readonly socketAuth: SocketAuthService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -97,36 +85,7 @@ export class AutoCombatGateway
         return;
       }
 
-      const payload =
-        await this.jwtService.verifyAsync<JwtSocketPayload>(token);
-
-      if (!payload?.sub) {
-        client.emit('auto-combat:error', {
-          message: 'Token de autenticação inválido no WebSocket.',
-        });
-
-        client.disconnect(true);
-        return;
-      }
-
-      const user = await this.prisma.user.findUnique({
-        where: {
-          id: payload.sub,
-        },
-        select: {
-          id: true,
-          email: true,
-        },
-      });
-
-      if (!user) {
-        client.emit('auto-combat:error', {
-          message: 'Usuário do WebSocket não encontrado.',
-        });
-
-        client.disconnect(true);
-        return;
-      }
+      const user = await this.socketAuth.authenticate(token);
 
       client.data.userId = user.id;
       client.data.email = user.email;
@@ -521,14 +480,15 @@ export class AutoCombatGateway
       .toUpperCase();
   }
 
-  private extractToken(client: Socket) {
-    const authToken = client.handshake.auth?.token;
+  private extractToken(client: AuthenticatedSocket) {
+    const auth = client.handshake.auth as Record<string, unknown> | undefined;
+    const authToken = auth?.token;
 
     if (typeof authToken === 'string' && authToken.trim()) {
       return this.normalizeBearerToken(authToken);
     }
 
-    const authAccessToken = client.handshake.auth?.accessToken;
+    const authAccessToken = auth?.accessToken;
 
     if (typeof authAccessToken === 'string' && authAccessToken.trim()) {
       return this.normalizeBearerToken(authAccessToken);

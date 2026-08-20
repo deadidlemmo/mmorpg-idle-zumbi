@@ -11,6 +11,7 @@ import {
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 import { getAuthToken } from "../../../services/api/authToken";
+import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import { useLootNotifications } from "../../loot-notifications/lootNotificationContext";
 import {
   extractCraftingApiError,
@@ -590,7 +591,7 @@ export function CraftingRealtimeProvider({
 
     const intervalId = window.setInterval(
       () => {
-        if (!socketConnectedRef.current) {
+        if (!socketConnectedRef.current && canRunNetworkRefresh()) {
           void refresh();
         }
       },

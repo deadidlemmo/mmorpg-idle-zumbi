@@ -1,17 +1,18 @@
 export type IncursionRewardType =
-  | "XP"
-  | "GOLD"
-  | "MATERIAL"
-  | "CONSUMABLE"
-  | "EQUIPMENT"
-  | "ITEM";
+  "XP" | "GOLD" | "MATERIAL" | "CONSUMABLE" | "EQUIPMENT" | "ITEM";
 export type IncursionSessionStatus =
-  | "ACTIVE"
-  | "COMPLETED"
-  | "CLAIMED"
-  | "FAILED"
-  | "CANCELLED";
+  "ACTIVE" | "COMPLETED" | "CLAIMED" | "FAILED" | "CANCELLED";
 export type IncursionDifficulty = "LOW" | "MEDIUM" | "HIGH" | "EXTREME";
+export type IncursionApproach = "CAUTIOUS" | "BALANCED" | "AGGRESSIVE";
+
+export interface IncursionApproachProfile {
+  approach: IncursionApproach;
+  successChance: number;
+  rewardMultiplier: number;
+  durationMultiplier: number;
+  durationSeconds: number;
+  failureHpRatio: number;
+}
 
 export interface IncursionMapSummary {
   id: string;
@@ -63,6 +64,7 @@ export interface Incursion {
   durationSeconds: number;
   difficulty: IncursionDifficulty;
   riskLevel: number;
+  approaches: IncursionApproachProfile[];
   isActive: boolean;
   sortOrder?: number | null;
   isUnlocked?: boolean;
@@ -84,6 +86,12 @@ export interface IncursionSession {
   goldCostPaid: number;
   xpReward: number;
   goldReward: number;
+  approach: IncursionApproach;
+  successChance: number;
+  rewardMultiplier: number;
+  outcomeRoll?: number | null;
+  outcomeSummary?: string | null;
+  success?: boolean | null;
   progressPercent: number;
   remainingSeconds: number;
   canClaim: boolean;
@@ -131,6 +139,8 @@ export interface CancelIncursionResponse {
 
 export interface ClaimIncursionResponse {
   message: string;
+  success: boolean;
+  hpLost: number;
   session: IncursionSession;
   xpGained: number;
   goldGained: number;

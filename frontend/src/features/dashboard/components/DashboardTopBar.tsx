@@ -12,6 +12,7 @@ import {
   connectWorldBossSocket,
   type WorldBossSocket,
 } from '../../../services/websocket/socketClient';
+import { canRunNetworkRefresh } from '../../../utils/networkRefresh';
 import {
   getBattleTargetDisplayCounts,
   getRepeatingBattleTimelineProgress,
@@ -98,7 +99,7 @@ type LooseRecord = Record<string, unknown>;
 
 type DashboardTopBarActivityViewModel = DashboardTopBarActivityOverride;
 
-const WORLD_BOSS_TOPBAR_REFRESH_MS = 3000;
+const WORLD_BOSS_TOPBAR_REFRESH_MS = 15000;
 const WORLD_BOSS_ENTRY_WINDOW_SECONDS = 5 * 60;
 const WORLD_BOSS_ACTIVE_STATUSES = new Set([
   'SCHEDULED',
@@ -1364,7 +1365,9 @@ export function DashboardTopBar({
     void loadWorldBossStatus();
 
     const intervalId = window.setInterval(
-      () => void loadWorldBossStatus(),
+      () => {
+        if (canRunNetworkRefresh()) void loadWorldBossStatus();
+      },
       WORLD_BOSS_TOPBAR_REFRESH_MS,
     );
 

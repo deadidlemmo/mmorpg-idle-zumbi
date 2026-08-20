@@ -4,6 +4,7 @@ import type {
     AuthResponse,
     AuthUser,
     LoginRequest,
+    PasswordResetRequestResponse,
     RegisterRequest,
 } from '../types/auth.types';
 
@@ -31,6 +32,26 @@ export async function registerRequest(
 
 export async function getMeRequest(): Promise<AuthUser> {
   const response = await apiClient.get<AuthUser>(API_ENDPOINTS.auth.me);
+
+  return response.data;
+}
+
+export async function requestPasswordReset(
+  email: string,
+): Promise<PasswordResetRequestResponse> {
+  const response = await apiClient.post<PasswordResetRequestResponse>(
+    API_ENDPOINTS.auth.requestPasswordReset,
+    { email },
+  );
+
+  return response.data;
+}
+
+export async function confirmPasswordReset(token: string, password: string) {
+  const response = await apiClient.post<{ message: string }>(
+    API_ENDPOINTS.auth.confirmPasswordReset,
+    { token, password },
+  );
 
   return response.data;
 }

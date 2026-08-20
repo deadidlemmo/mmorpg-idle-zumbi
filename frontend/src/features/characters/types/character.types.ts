@@ -1,7 +1,7 @@
-import assassinoEmblem from '../../../assets/images/classes/class-assassino.png';
-import atiradorEmblem from '../../../assets/images/classes/class-atirador.png';
-import lutadorEmblem from '../../../assets/images/classes/class-lutador.png';
-import medicoEmblem from '../../../assets/images/classes/class-medico.png';
+import assassinoEmblem from '../../../assets/images/classes/class-assassino.webp';
+import atiradorEmblem from '../../../assets/images/classes/class-atirador.webp';
+import lutadorEmblem from '../../../assets/images/classes/class-lutador.webp';
+import medicoEmblem from '../../../assets/images/classes/class-medico.webp';
 
 export type CharacterClassId = 'lutador' | 'atirador' | 'assassino' | 'medico';
 

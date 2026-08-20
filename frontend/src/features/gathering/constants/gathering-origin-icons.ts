@@ -1,9 +1,9 @@
-import arsenalIcon from '../../../assets/images/gathering/skills/gathering-arsenal.png';
-import coletaIcon from '../../../assets/images/gathering/skills/gathering-coleta.png';
-import contencaoIcon from '../../../assets/images/gathering/skills/gathering-contencao.png';
-import desmancheIcon from '../../../assets/images/gathering/skills/gathering-desmanche.png';
-import patrulhaIcon from '../../../assets/images/gathering/skills/gathering-patrulha.png';
-import tecnovarreduraIcon from '../../../assets/images/gathering/skills/gathering-tecnovarredura.png';
+import arsenalIcon from '../../../assets/images/gathering/skills/gathering-arsenal.webp';
+import coletaIcon from '../../../assets/images/gathering/skills/gathering-coleta.webp';
+import contencaoIcon from '../../../assets/images/gathering/skills/gathering-contencao.webp';
+import desmancheIcon from '../../../assets/images/gathering/skills/gathering-desmanche.webp';
+import patrulhaIcon from '../../../assets/images/gathering/skills/gathering-patrulha.webp';
+import tecnovarreduraIcon from '../../../assets/images/gathering/skills/gathering-tecnovarredura.webp';
 import {
   isGatheringAllowedOrigin,
   type GatheringAllowedOrigin,

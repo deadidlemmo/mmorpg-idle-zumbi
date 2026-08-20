@@ -12,6 +12,7 @@ import {
   type LootNotificationPayload,
 } from "../../loot-notifications/lootNotificationContext";
 import type { CharacterOverviewResponse } from "../../dashboard/types/dashboard.types";
+import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import {
   getAutoCombatRecentEvents,
   getAutoCombatStatus,
@@ -1482,6 +1483,8 @@ export function AutoCombatRealtimeProvider({
     if (!autoLoad || !normalizedCharacterId || refreshMs <= 0) return;
 
     const intervalId = window.setInterval(() => {
+      if (!canRunNetworkRefresh()) return;
+
       if (socketState.isConnected && socketState.isJoined) {
         return;
       }

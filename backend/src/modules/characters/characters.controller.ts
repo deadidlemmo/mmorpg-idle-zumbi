@@ -39,6 +39,11 @@ export class CharactersController {
     return this.charactersService.getOverview(request.user.id, id);
   }
 
+  @Get(':id/activity-summary')
+  getActivitySummary(@Req() request: any, @Param('id') id: string) {
+    return this.charactersService.getActivitySummary(request.user.id, id);
+  }
+
   @Patch(':id/current-map')
   updateCurrentMap(
     @Req() request: any,

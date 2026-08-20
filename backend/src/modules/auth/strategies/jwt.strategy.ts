@@ -8,6 +8,7 @@ type JwtPayload = {
   sub: string;
   email: string;
   role: string;
+  tokenVersion: number;
 };
 
 @Injectable()
@@ -25,10 +26,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     const user = await this.usersService.findById(payload.sub);
 
-    if (!user) {
-      throw new UnauthorizedException('Usuário não encontrado.');
+    if (
+      !user ||
+      user.isSuspended ||
+      payload.tokenVersion !== user.tokenVersion
+    ) {
+      throw new UnauthorizedException('Sessao invalida ou expirada.');
     }
 
-    return user;
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      termsVersion: user.termsVersion,
+      privacyVersion: user.privacyVersion,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
   }
 }
