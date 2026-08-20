@@ -61,6 +61,7 @@ describe('AutoCombat status concurrency (e2e)', () => {
       sub: fixture.user.id,
       email: fixture.user.email,
       role: fixture.user.role,
+      tokenVersion: fixture.user.tokenVersion,
     });
 
     const statusPath = `/auto-combat/${fixture.character.id}/status`;

@@ -55,6 +55,7 @@ describe('AutoCombat map isolation (e2e)', () => {
       sub: fixture.user.id,
       email: fixture.user.email,
       role: fixture.user.role,
+      tokenVersion: fixture.user.tokenVersion,
     });
 
     const startMapAResponse = await request(app.getHttpServer())
