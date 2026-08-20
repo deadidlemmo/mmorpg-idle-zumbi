@@ -8,6 +8,9 @@ const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) throw new Error('DATABASE_URL nao configurada.');
 
+const postgresCliUrl = new URL(databaseUrl);
+postgresCliUrl.searchParams.delete('schema');
+
 const outputArgument = process.argv.find((argument) =>
   argument.startsWith('--output='),
 );
@@ -22,7 +25,7 @@ await mkdir(path.dirname(outputPath), { recursive: true });
 const result = spawnSync(
   'pg_dump',
   [
-    `--dbname=${databaseUrl}`,
+    `--dbname=${postgresCliUrl.toString()}`,
     '--format=custom',
     '--compress=9',
     '--no-owner',
