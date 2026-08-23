@@ -25,6 +25,12 @@ import {
 } from '../../auto-combat/utils/battle-timeline';
 import { getMobPortraitImage } from '../../auto-combat/utils/mobAssets';
 import { useAutoCombatRealtime } from '../../auto-combat/realtime/useAutoCombatRealtime';
+import {
+  getAutoCombatPresentationCssTimeline,
+  getAutoCombatPresentationNowMs,
+  getAutoCombatPresentationProgress,
+  type AutoCombatPresentationTimeline,
+} from '../../auto-combat/utils/presentation-timeline';
 import { useCraftingRealtime } from '../../crafting/realtime/useCraftingRealtime';
 import { getGatheringOriginIcon } from '../../gathering/constants/gathering-origin-icons';
 import { useGatheringRealtime } from '../../gathering/realtime/useGatheringRealtime';
@@ -70,6 +76,7 @@ export interface DashboardTopBarActivityOverride {
     elapsedSeconds: number;
     direction?: 'drain' | 'fill';
     timingFunction?: string;
+    iterationCount?: number | 'infinite';
   } | null;
   badge?: string | null;
   titleText?: string;
@@ -593,6 +600,8 @@ function getAutoCombatKills(autoCombatState: unknown): number | null {
 function getAutoCombatBattleProgress(
   autoCombatState: unknown,
   nowMs: number,
+  presentationTimeline?: AutoCombatPresentationTimeline | null,
+  presentationNowMs = getAutoCombatPresentationNowMs(),
 ): {
   mobName: string;
   total: number;
@@ -605,6 +614,7 @@ function getAutoCombatBattleProgress(
   const session = getAutoCombatSessionRecord(autoCombatState);
   const statusCurrentMob = getRecordField(status, 'currentMob');
   const sessionCurrentMob = getRecordField(session, 'currentMob');
+  const displayedMob = getAutoCombatMobRecord(autoCombatState);
   const selection =
     getRecordField(status, 'battleSelection') ??
     getRecordField(session, 'battleSelection');
@@ -653,6 +663,26 @@ function getAutoCombatBattleProgress(
   const battleSecondTickProgress = getSecondTickCycleProgress(
     battleTimelineProgress,
   );
+  const displayedEnemyInstanceId =
+    getStringField(displayedMob, 'enemyInstanceId') ??
+    getStringField(session, 'currentEnemyInstanceId') ??
+    getStringField(session, 'enemyInstanceId');
+  const canUsePresentationTimeline = Boolean(
+    presentationTimeline &&
+    (!displayedEnemyInstanceId ||
+      displayedEnemyInstanceId === presentationTimeline.enemyInstanceId),
+  );
+  const presentationProgress = canUsePresentationTimeline
+    ? getAutoCombatPresentationProgress({
+        timeline: presentationTimeline,
+        nowMs: presentationNowMs,
+      })
+    : null;
+  const activeEvent = getRecordField(autoCombatState, 'activeEvent');
+  const isSpawnAwaitingImpact = Boolean(
+    getStringField(activeEvent, 'type')?.toUpperCase() === 'MOB_SPAWNED' &&
+    getField(autoCombatState, 'activeEventImpactApplied') !== true,
+  );
   const selectionMob = getRecordField(selection, 'mob');
   const total =
     getNumberField(selection, 'total') ??
@@ -695,11 +725,16 @@ function getAutoCombatBattleProgress(
 
   if (!mobName) return null;
 
-  const progressPercent = battleSecondTickProgress
-    ? battleSecondTickProgress.progressPercent
-    : progressRecord && getNumberField(progressRecord, 'progressPercent') !== null
-      ? clampPercent(getNumberField(progressRecord, 'progressPercent'))
-      : null;
+  const progressPercent = isSpawnAwaitingImpact
+    ? 0
+    : presentationProgress
+      ? presentationProgress.progressPercent
+      : battleSecondTickProgress
+        ? battleSecondTickProgress.progressPercent
+        : progressRecord &&
+            getNumberField(progressRecord, 'progressPercent') !== null
+          ? clampPercent(getNumberField(progressRecord, 'progressPercent'))
+          : null;
 
   return {
     mobName,
@@ -707,7 +742,13 @@ function getAutoCombatBattleProgress(
     remaining: displayCounts.remaining,
     defeated: displayCounts.defeated,
     progressPercent,
-    progressTimeline: null,
+    progressTimeline:
+      presentationProgress && !isSpawnAwaitingImpact
+        ? getAutoCombatPresentationCssTimeline({
+            timeline: presentationTimeline,
+            nowMs: presentationNowMs,
+          })
+        : null,
   };
 }
 
@@ -922,6 +963,8 @@ function isAutoCombatActive(autoCombatState: unknown): boolean {
 function buildAutoCombatActivity(
   autoCombatState: unknown,
   nowMs: number,
+  presentationTimeline?: AutoCombatPresentationTimeline | null,
+  presentationNowMs = getAutoCombatPresentationNowMs(),
 ): DashboardTopBarActivityViewModel | null {
   if (!isAutoCombatActive(autoCombatState)) return null;
 
@@ -949,7 +992,12 @@ function buildAutoCombatActivity(
     };
   }
 
-  const battleProgress = getAutoCombatBattleProgress(autoCombatState, nowMs);
+  const battleProgress = getAutoCombatBattleProgress(
+    autoCombatState,
+    nowMs,
+    presentationTimeline,
+    presentationNowMs,
+  );
 
   if (battleProgress) {
     const progressPercent =
@@ -1447,7 +1495,14 @@ export function DashboardTopBar({
   const activity = useMemo(() => {
     const autoCombatActivity = suppressAutoCombatActivityFallback
       ? null
-      : buildAutoCombatActivity(autoCombatState, nowMs);
+      : buildAutoCombatActivity(
+          autoCombatState,
+          nowMs,
+          autoCombatRealtime.presentationTimelineEnabled
+            ? autoCombatRealtime.presentationTimeline
+            : null,
+          getAutoCombatPresentationNowMs(),
+        );
 
     return (
       activityOverride ??
@@ -1460,6 +1515,8 @@ export function DashboardTopBar({
     );
   }, [
     activityOverride,
+    autoCombatRealtime.presentationTimeline,
+    autoCombatRealtime.presentationTimelineEnabled,
     autoCombatState,
     craftingState,
     gatheringState,
@@ -1506,6 +1563,8 @@ export function DashboardTopBar({
           ),
           direction: activity.progressTimeline.direction ?? 'drain',
           timingFunction: activity.progressTimeline.timingFunction,
+          iterationCount:
+            activity.progressTimeline.iterationCount ?? 'infinite',
         }
       : null;
   const activityTimelineKey = activityTimeline
@@ -1535,7 +1594,7 @@ export function DashboardTopBar({
         animationTimingFunction:
           activityAnimationTimeline.timingFunction ?? 'linear',
         animationFillMode: 'both',
-        animationIterationCount: 'infinite',
+        animationIterationCount: activityAnimationTimeline.iterationCount,
         transitionDuration: '0ms',
       }
     : {

@@ -13,10 +13,18 @@ import {
 } from "../../loot-notifications/lootNotificationContext";
 import type { CharacterOverviewResponse } from "../../dashboard/types/dashboard.types";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
+import { useAuthStore } from "../../../store/auth.store";
 import { getEquipmentItemImageUrl } from "../../equipment/utils/equipmentItemAssets";
 import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
 import { getBattleTimelineRecoveryDelayMs } from "../utils/battle-timeline";
 import { resolveAutoCombatTelemetryContext } from "../utils/auto-combat-telemetry";
+import {
+  buildAutoCombatPresentationTimeline,
+  getAutoCombatPresentationDurationMs,
+  getAutoCombatPresentationNowMs,
+  getAutoCombatPresentationQueueDelayMs,
+  isAutoCombatPresentationTimelineEnabled,
+} from "../utils/presentation-timeline";
 import {
   getAutoCombatRecentEvents,
   getAutoCombatStatus,
@@ -483,11 +491,75 @@ export function AutoCombatRealtimeProvider({
   refreshMs = 10000,
 }: AutoCombatRealtimeProviderProps) {
   const normalizedCharacterId = characterId ?? null;
+  const userRole = useAuthStore((authState) => authState.user?.role ?? null);
 
   const [state, dispatch] = useReducer(
     autoCombatRealtimeReducer,
     normalizedCharacterId,
     getInitialState,
+  );
+  const presentationTimelineEnabled =
+    isAutoCombatPresentationTimelineEnabled({
+      userRole,
+      flagValue: import.meta.env.VITE_AUTO_COMBAT_PRESENTATION_TIMELINE_V2,
+    });
+  const presentationDurationMs = getAutoCombatPresentationDurationMs(
+    state.mob?.battleProgress,
+    state.session?.battleProgress,
+  );
+  const presentationEnemyInstanceId =
+    state.visualCycleEnemyInstanceId ??
+    state.mob?.enemyInstanceId ??
+    state.session?.currentEnemyInstanceId ??
+    state.session?.enemyInstanceId ??
+    null;
+  const activePresentationEventType = String(state.activeEvent?.type ?? "")
+    .trim()
+    .toUpperCase();
+  const queuedPresentationEventType = String(state.eventQueue[0]?.type ?? "")
+    .trim()
+    .toUpperCase();
+  const isPresentationSpawnPending = Boolean(
+    (activePresentationEventType === "MOB_SPAWNED" &&
+      !state.activeEventImpactApplied) ||
+    (!state.activeEvent && queuedPresentationEventType === "MOB_SPAWNED"),
+  );
+  const isPresentationCombatActive = Boolean(
+    presentationTimelineEnabled &&
+    !state.isSynchronizing &&
+    !isTerminalSessionStatus(state.session?.status) &&
+    String(state.session?.phase ?? "")
+      .trim()
+      .toUpperCase() === "COMBAT_ACTIVE" &&
+    presentationEnemyInstanceId &&
+    !isPresentationSpawnPending &&
+    presentationDurationMs,
+  );
+  const presentationCycleToken = isPresentationCombatActive
+    ? [
+        state.session?.id ?? "session",
+        presentationEnemyInstanceId,
+      ].join(":")
+    : null;
+  const presentationStartedAtMs = useMemo(
+    () =>
+      presentationCycleToken ? getAutoCombatPresentationNowMs() : null,
+    [presentationCycleToken],
+  );
+  const presentationTimeline = useMemo(
+    () =>
+      buildAutoCombatPresentationTimeline({
+        sessionId: state.session?.id,
+        enemyInstanceId: presentationEnemyInstanceId,
+        startedAtMs: presentationStartedAtMs,
+        durationMs: presentationDurationMs,
+      }),
+    [
+      presentationDurationMs,
+      presentationEnemyInstanceId,
+      presentationStartedAtMs,
+      state.session?.id,
+    ],
   );
 
   const stateRef = useRef(state);
@@ -1860,13 +1932,26 @@ export function AutoCombatRealtimeProvider({
     }
 
     if (state.eventQueue.length > 0) {
+      const presentationDelayMs = presentationTimelineEnabled
+        ? getAutoCombatPresentationQueueDelayMs({
+            timeline: presentationTimeline,
+            event: state.eventQueue[0],
+            nextEvent: state.eventQueue[1] ?? null,
+            nowMs: getAutoCombatPresentationNowMs(),
+          })
+        : 0;
+      const processDelayMs = Math.max(
+        NEXT_EVENT_PROCESS_DELAY_MS,
+        presentationDelayMs,
+      );
+
       activeEventTimeoutRef.current = window.setTimeout(() => {
         dispatch({
           type: "PROCESS_NEXT_EVENT",
         });
 
         activeEventTimeoutRef.current = null;
-      }, NEXT_EVENT_PROCESS_DELAY_MS);
+      }, processDelayMs);
 
       return () => {
         clearScheduledActiveEvent();
@@ -1879,6 +1964,8 @@ export function AutoCombatRealtimeProvider({
     state.activeEvent,
     state.activeEventImpactApplied,
     state.eventQueue,
+    presentationTimeline,
+    presentationTimelineEnabled,
   ]);
 
   useEffect(() => {
@@ -1917,6 +2004,9 @@ export function AutoCombatRealtimeProvider({
       activeEventImpactApplied: state.activeEventImpactApplied,
       battleLogEvents: state.battleLogEvents,
 
+      presentationTimelineEnabled,
+      presentationTimeline,
+
       hydrateOverview,
       hydrateStatus,
       enqueueRealtimeEvent,
@@ -1932,6 +2022,8 @@ export function AutoCombatRealtimeProvider({
     };
   }, [
     state,
+    presentationTimelineEnabled,
+    presentationTimeline,
     hydrateOverview,
     hydrateStatus,
     enqueueRealtimeEvent,

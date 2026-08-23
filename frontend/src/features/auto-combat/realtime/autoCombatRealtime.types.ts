@@ -15,6 +15,7 @@ import type {
   StartAutoCombatPayload,
 } from "../types/auto-combat.types";
 import type { AutoCombatRealtimeState as AutoCombatRealtimeReducerState } from "./autoCombatRealtime.reducer";
+import type { AutoCombatPresentationTimeline } from "../utils/presentation-timeline";
 
 export type AutoCombatRealtimeSessionStatus =
   | "ACTIVE"
@@ -379,6 +380,10 @@ export type AutoCombatRealtimeContextValue = {
   activeEvent: AutoCombatRealtimeEvent | null;
   activeEventImpactApplied: boolean;
   battleLogEvents: AutoCombatRealtimeEvent[];
+
+  /** Timeline local de apresentacao. Nunca altera HP, recompensas ou abates. */
+  presentationTimelineEnabled: boolean;
+  presentationTimeline: AutoCombatPresentationTimeline | null;
 
   hydrateOverview: (overview: CharacterOverviewResponse | null) => void;
   hydrateStatus: (status: AutoCombatStatusResponse | null) => void;

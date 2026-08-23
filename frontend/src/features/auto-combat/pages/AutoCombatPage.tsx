@@ -129,6 +129,11 @@ import {
   getMobPortraitImage,
   getMobProgressionSortRank,
 } from "../utils/mobAssets";
+import {
+  getAutoCombatPresentationCssTimeline,
+  getAutoCombatPresentationNowMs,
+  getAutoCombatPresentationProgress,
+} from "../utils/presentation-timeline";
 import { selectVisibleCharacterProgress } from "../utils/visible-progress";
 
 const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
@@ -796,6 +801,7 @@ function AutoCombatVisualTelemetryReporter({
   expectedDurationMs,
   remainingPercent,
   isAwaitingImpact,
+  usesPresentationClock,
   reportTelemetry,
 }: {
   enemyInstanceId?: string | null;
@@ -803,6 +809,7 @@ function AutoCombatVisualTelemetryReporter({
   expectedDurationMs?: number | null;
   remainingPercent: number;
   isAwaitingImpact: boolean;
+  usesPresentationClock: boolean;
   reportTelemetry: (
     payload: Omit<AutoCombatClientTelemetryPayload, "characterId">,
   ) => void;
@@ -852,7 +859,12 @@ function AutoCombatVisualTelemetryReporter({
     tracking.reported = true;
     reportTelemetry({
       kind: "VISUAL_CYCLE",
-      visualDurationMs: Math.max(0, Date.now() - tracking.startedAtMs),
+      visualDurationMs: Math.max(
+        0,
+        (usesPresentationClock
+          ? getAutoCombatPresentationNowMs()
+          : Date.now()) - tracking.startedAtMs,
+      ),
       expectedDurationMs: tracking.expectedDurationMs,
     });
   }, [
@@ -861,10 +873,42 @@ function AutoCombatVisualTelemetryReporter({
     isAwaitingImpact,
     remainingPercent,
     reportTelemetry,
+    usesPresentationClock,
     visualCycleStartedAtMs,
   ]);
 
   return null;
+}
+
+type AutoCombatPresentationCssTimeline = NonNullable<
+  ReturnType<typeof getAutoCombatPresentationCssTimeline>
+>;
+
+function AutoCombatBattleProgressFill({
+  timeline,
+  progressPercent,
+}: {
+  timeline: AutoCombatPresentationCssTimeline | null;
+  progressPercent: number;
+}) {
+  const [anchoredTimeline] = useState(timeline);
+  const style = anchoredTimeline
+    ? ({
+        width: "100%",
+        transformOrigin: "left center",
+        animationName: "autoCombatBattleTimelineDrain",
+        animationDuration: `${anchoredTimeline.durationSeconds}s`,
+        animationDelay: `${-anchoredTimeline.elapsedSeconds}s`,
+        animationTimingFunction: anchoredTimeline.timingFunction ?? "linear",
+        animationFillMode: "both",
+        animationIterationCount: anchoredTimeline.iterationCount,
+        transitionDuration: "0ms",
+      } as CSSProperties)
+    : ({
+        width: `${clampPercent(progressPercent)}%`,
+      } as CSSProperties);
+
+  return <b style={style} />;
 }
 
 export function AutoCombatPage() {
@@ -875,6 +919,11 @@ export function AutoCombatPage() {
   const requestedMapId = searchParams.get("mapId") ?? "";
   const requestedSubMapId = searchParams.get("subMapId") ?? "";
   const realtimeContext = useAutoCombatRealtime();
+  const presentationTimelineEnabled =
+    realtimeContext.presentationTimelineEnabled;
+  const presentationTimeline = presentationTimelineEnabled
+    ? realtimeContext.presentationTimeline
+    : null;
   const reportAutoCombatTelemetry = realtimeContext.reportTelemetry;
   const realtimeActions = getRealtimeActions(realtimeContext);
   const realtimeState =
@@ -2527,8 +2576,19 @@ export function AutoCombatPage() {
     fallbackServerNow: activeBattleProgressServerNow,
     fallbackProgressUpdatedAt: activeBattleProgressServerNow,
   });
+  const activePresentationTimelineProgress =
+    presentationTimeline &&
+    (!activeMobEnemyInstanceId ||
+      presentationTimeline.enemyInstanceId === activeMobEnemyInstanceId)
+      ? getAutoCombatPresentationProgress({
+          timeline: presentationTimeline,
+          nowMs: getAutoCombatPresentationNowMs(),
+        })
+      : null;
+  const activeDisplayBattleTimelineProgress =
+    activePresentationTimelineProgress ?? activeBattleTimelineProgress;
   const activeBattleSecondTickProgress = getSecondTickCycleProgress(
-    activeBattleTimelineProgress,
+    activeDisplayBattleTimelineProgress,
   );
   const fallbackEstimatedKillTimeSeconds = Math.max(
     0,
@@ -2553,7 +2613,7 @@ export function AutoCombatPage() {
     0,
     activeEstimatedKillTimeSeconds || Number.MAX_SAFE_INTEGER,
   );
-  const activeKillProgressTickSeconds = activeBattleTimelineProgress
+  const activeKillProgressTickSeconds = activeDisplayBattleTimelineProgress
     ? (activeBattleSecondTickProgress?.elapsedSeconds ?? 0)
     : Math.floor(activeKillProgressSnapshotSeconds);
   const activeKillProgressSeconds = clampNumber(
@@ -2564,7 +2624,7 @@ export function AutoCombatPage() {
   const hasTtkBattleProgress =
     showActiveSession && activeEstimatedKillTimeSeconds > 0;
   const isBattleCycleVisuallyComplete = Boolean(
-    activeBattleTimelineProgress?.isComplete,
+    activeDisplayBattleTimelineProgress?.isComplete,
   );
   const confirmedMobDefeatedEventScope = getMobFeedbackScopeFromEvent(
     providerPublicActiveEvent,
@@ -2593,15 +2653,24 @@ export function AutoCombatPage() {
         activeEstimatedKillTimeSeconds,
       )
     : 0;
+  const isPresentationCycleAwaitingAnchor = Boolean(
+    presentationTimelineEnabled &&
+    showActiveSession &&
+    hasTtkBattleProgress &&
+    !activePresentationTimelineProgress &&
+    !isMobDefeatVisuallyConfirmed,
+  );
   const isMobSpawnAwaitingImpact =
     providerActiveEventType === "MOB_SPAWNED" &&
     !realtimeState.activeEventImpactApplied &&
     !hasDefeatedMobSnapshot;
+  const shouldHoldBattleAtFullProgress =
+    isMobSpawnAwaitingImpact || isPresentationCycleAwaitingAnchor;
   const shouldHoldCountdownAtLastSecond =
     hasTtkBattleProgress &&
     isBattleCycleVisuallyComplete &&
     !isMobDefeatVisuallyConfirmed;
-  const displayedKillRemainingSeconds = isMobSpawnAwaitingImpact
+  const displayedKillRemainingSeconds = shouldHoldBattleAtFullProgress
     ? activeEstimatedKillTimeSeconds
     : isMobDefeatVisuallyConfirmed || isBattleBatchVisuallyComplete
       ? 0
@@ -2609,6 +2678,7 @@ export function AutoCombatPage() {
         ? Math.min(1, activeEstimatedKillTimeSeconds)
         : activeKillRemainingSeconds;
   const visibleBattleCycleRemainingPercent =
+    activePresentationTimelineProgress?.remainingPercent ??
     getVisibleBattleCycleRemainingPercent({
       progress: activeBattleTimelineProgress,
       visualCycleStartedAtMs: localVisualCycleStartedAtMs,
@@ -2622,14 +2692,23 @@ export function AutoCombatPage() {
         ? 100 - activeBattleTimelineProgress.progressPercent
         : undefined),
     mobHpPercent: activeMobHpPercent,
-    isMobSpawnAwaitingImpact,
+    isMobSpawnAwaitingImpact: shouldHoldBattleAtFullProgress,
     isMobDefeated: isMobDefeatVisuallyConfirmed,
   });
-  const activeBattleCountdownStyle = {
-    width: `${clampPercent(activeTopBarBattleProgressPercent)}%`,
-  } as CSSProperties;
+  const activeBattleProgressTimelineCandidate =
+    activePresentationTimelineProgress &&
+    !shouldHoldBattleAtFullProgress &&
+    !isMobDefeatVisuallyConfirmed
+      ? getAutoCombatPresentationCssTimeline({
+          timeline: presentationTimeline,
+          nowMs: getAutoCombatPresentationNowMs(),
+        })
+      : null;
+  const activeBattleProgressTimeline =
+    activeBattleProgressTimelineCandidate;
 
-  const activeBattleProgressElementKey = activeBattleImpactTargetKey;
+  const activeBattleProgressElementKey =
+    activePresentationTimelineProgress?.key ?? activeBattleImpactTargetKey;
   const formatTtkSeconds = (value: number) =>
     value <= 0
       ? "0s"
@@ -3728,7 +3807,7 @@ export function AutoCombatPage() {
           imageUrl: getMobPortraitImage(activeMobName),
           icon: "AC",
           progressPercent: activeTopBarBattleProgressPercent,
-          progressTimeline: null,
+          progressTimeline: activeBattleProgressTimeline,
           badge:
             displayedBattleTargetTotal > 0
               ? `${displayedBattleTargetDefeated}`
@@ -4083,6 +4162,9 @@ export function AutoCombatPage() {
       setLocalSessionTotals(null);
       setLocalBattleLogEvents([]);
       setLocalActiveEvent(null);
+      if (presentationTimelineEnabled) {
+        setAutoCombatStatus(null);
+      }
 
       const response = realtimeActions.start
         ? await realtimeActions.start({
@@ -4373,6 +4455,9 @@ export function AutoCombatPage() {
       setLocalSessionTotals(null);
       setLocalBattleLogEvents([]);
       setLocalActiveEvent(null);
+      if (presentationTimelineEnabled) {
+        setAutoCombatStatus(null);
+      }
 
       const response = realtimeActions.startBattle
         ? await realtimeActions.startBattle(battleSelection)
@@ -4541,10 +4626,16 @@ export function AutoCombatPage() {
     >
       <AutoCombatVisualTelemetryReporter
         enemyInstanceId={activeMobEnemyInstanceId}
-        visualCycleStartedAtMs={localVisualCycleStartedAtMs}
-        expectedDurationMs={activeBattleTimelineProgress?.cycleDurationMs}
+        visualCycleStartedAtMs={
+          activePresentationTimelineProgress?.startedAtMs ??
+          localVisualCycleStartedAtMs
+        }
+        expectedDurationMs={
+          activeDisplayBattleTimelineProgress?.cycleDurationMs
+        }
         remainingPercent={activeTopBarBattleProgressPercent}
-        isAwaitingImpact={isMobSpawnAwaitingImpact}
+        isAwaitingImpact={shouldHoldBattleAtFullProgress}
+        usesPresentationClock={Boolean(activePresentationTimelineProgress)}
         reportTelemetry={reportAutoCombatTelemetry}
       />
       <div
@@ -4936,9 +5027,12 @@ export function AutoCombatPage() {
                             aria-label={`Progresso do abate: ${activeKillProgressLabel}. Vida do alvo: ${activeMobHpDisplayLabel}`}
                           >
                             <i>
-                              <b
+                              <AutoCombatBattleProgressFill
                                 key={activeBattleProgressElementKey}
-                                style={activeBattleCountdownStyle}
+                                timeline={activeBattleProgressTimeline}
+                                progressPercent={
+                                  activeTopBarBattleProgressPercent
+                                }
                               />
                             </i>
                             <span>
@@ -4956,7 +5050,7 @@ export function AutoCombatPage() {
 
                           <i>
                             <b
-                              key={activeBattleProgressElementKey}
+                              key={activeBattleImpactTargetKey}
                               style={activeMobHpStyle}
                             />
                           </i>
