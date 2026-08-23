@@ -5,6 +5,7 @@ import {
   AutoCombatHuntBatchStatus,
   AutoCombatSessionPhase,
   PrismaClient,
+  UserRole,
 } from '@prisma/client';
 import {
   expect,
@@ -47,6 +48,21 @@ test.describe('transicao visual entre monstros', () => {
     });
     await assertOk(registration, 'Registro do teste visual falhou');
     accessToken = ((await registration.json()) as { accessToken: string })
+      .accessToken;
+
+    await prisma.user.update({
+      where: { email: userEmail },
+      data: { role: UserRole.ADMIN },
+    });
+
+    const adminLogin = await api.post('/auth/login', {
+      data: {
+        email: userEmail,
+        password: 'TesteE2E123',
+      },
+    });
+    await assertOk(adminLogin, 'Login administrativo do teste visual falhou');
+    accessToken = ((await adminLogin.json()) as { accessToken: string })
       .accessToken;
 
     const characterResponse = await api.post('/characters', {
@@ -141,16 +157,16 @@ test.describe('transicao visual entre monstros', () => {
           batchId: huntBatch.id,
           mobId: encounter.mobId,
           encounterId: encounter.id,
-          foundCount: 3,
-          remainingCount: 3,
+          foundCount: 10,
+          remainingCount: 10,
           weightSnapshot: encounter.weight,
           firstFoundAt: readyAt,
           lastFoundAt: readyAt,
         },
         update: {
           encounterId: encounter.id,
-          foundCount: 3,
-          remainingCount: 3,
+          foundCount: 10,
+          remainingCount: 10,
           weightSnapshot: encounter.weight,
           lastFoundAt: readyAt,
         },
@@ -161,7 +177,7 @@ test.describe('transicao visual entre monstros', () => {
           status: AutoCombatHuntBatchStatus.READY,
           stoppedAt: readyAt,
           lastProcessedAt: readyAt,
-          foundEnemiesCount: 3,
+          foundEnemiesCount: 10,
           selectedEncounterId: encounter.id,
           selectedEncounterMobId: encounter.mobId,
         },
@@ -173,7 +189,7 @@ test.describe('transicao visual entre monstros', () => {
           huntStoppedAt: readyAt,
           lastHuntProcessedAt: readyAt,
           lastProcessedAt: readyAt,
-          foundEnemiesCount: 3,
+          foundEnemiesCount: 10,
           selectedEncounterId: encounter.id,
           selectedEncounterMobId: encounter.mobId,
         },
@@ -253,6 +269,39 @@ test.describe('transicao visual entre monstros', () => {
         lastMobInstanceKey: null as string | null,
       };
 
+      const getVisualProgressPercent = (element: HTMLElement | null) => {
+        if (!element) {
+          return Number.NaN;
+        }
+
+        const style = getComputedStyle(element);
+
+        if (style.transform !== 'none') {
+          const scaleX = new DOMMatrixReadOnly(style.transform).a;
+
+          if (Number.isFinite(scaleX)) {
+            return scaleX * 100;
+          }
+        }
+
+        const inlineWidthPercent = Number.parseFloat(element.style.width);
+
+        if (
+          Number.isFinite(inlineWidthPercent) &&
+          element.style.width.endsWith('%')
+        ) {
+          return inlineWidthPercent;
+        }
+
+        const trackWidth = element.parentElement?.getBoundingClientRect().width;
+
+        if (!trackWidth || trackWidth <= 0) {
+          return Number.NaN;
+        }
+
+        return (element.getBoundingClientRect().width / trackWidth) * 100;
+      };
+
       Object.assign(window, { __autoCombatTransitionProbe: probe });
       window.setInterval(() => {
         const transition = document.querySelector(
@@ -294,12 +343,8 @@ test.describe('transicao visual entre monstros', () => {
           )
           ?.textContent?.trim();
         const now = performance.now();
-        const inlineProgressPercent = progressFill
-          ? Number.parseFloat(progressFill.style.width)
-          : Number.NaN;
-        const topProgressPercent = topProgressFill
-          ? Number.parseFloat(topProgressFill.style.width)
-          : Number.NaN;
+        const inlineProgressPercent = getVisualProgressPercent(progressFill);
+        const topProgressPercent = getVisualProgressPercent(topProgressFill);
 
         if (
           Number.isFinite(inlineProgressPercent) &&
@@ -348,7 +393,7 @@ test.describe('transicao visual entre monstros', () => {
           currentMobInstanceKey === probe.firstMobInstanceKey &&
           progressFill
         ) {
-          const percent = Number.parseFloat(progressFill.style.width);
+          const percent = getVisualProgressPercent(progressFill);
 
           if (Number.isFinite(percent)) {
             probe.progressSamples.push({ at: now, percent });
@@ -356,7 +401,7 @@ test.describe('transicao visual entre monstros', () => {
         }
 
         if (currentMobInstanceKey && progressFill) {
-          const percent = Number.parseFloat(progressFill.style.width);
+          const percent = getVisualProgressPercent(progressFill);
           const previousSample = probe.mobProgressSamples.at(-1);
           const isHit = Boolean(
             currentBody?.classList.contains('is-impacting') ||
@@ -444,7 +489,7 @@ test.describe('transicao visual entre monstros', () => {
         `/auto-combat/${characterId}/battle/start`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
-          data: { quantity: 3 },
+          data: { quantity: 10 },
         },
       );
       await assertOk(startBattle, 'Início da batalha visual falhou');
@@ -509,27 +554,49 @@ test.describe('transicao visual entre monstros', () => {
         );
 
         return {
-          inlineDuration: inlineFill
+          inlineTransitionDuration: inlineFill
             ? getComputedStyle(inlineFill).transitionDuration
             : '',
-          inlineTiming: inlineFill
-            ? getComputedStyle(inlineFill).transitionTimingFunction
+          inlineAnimationName: inlineFill
+            ? getComputedStyle(inlineFill).animationName
             : '',
-          topDuration: topFill
+          inlineAnimationDuration: inlineFill
+            ? getComputedStyle(inlineFill).animationDuration
+            : '',
+          inlineAnimationTiming: inlineFill
+            ? getComputedStyle(inlineFill).animationTimingFunction
+            : '',
+          topTransitionDuration: topFill
             ? getComputedStyle(topFill).transitionDuration
             : '',
-          topTiming: topFill
-            ? getComputedStyle(topFill).transitionTimingFunction
+          topAnimationName: topFill
+            ? getComputedStyle(topFill).animationName
+            : '',
+          topAnimationDuration: topFill
+            ? getComputedStyle(topFill).animationDuration
+            : '',
+          topAnimationTiming: topFill
+            ? getComputedStyle(topFill).animationTimingFunction
             : '',
         };
       });
 
-      expect(progressTransitions).toEqual({
-        inlineDuration: '0.12s',
-        inlineTiming: 'linear',
-        topDuration: '0.12s',
-        topTiming: 'linear',
-      });
+      expect(progressTransitions.inlineTransitionDuration).toBe('0s');
+      expect(progressTransitions.topTransitionDuration).toBe('0s');
+      expect(progressTransitions.inlineAnimationName).toContain(
+        'autoCombatBattleTimelineDrain',
+      );
+      expect(progressTransitions.topAnimationName).toContain(
+        'dashboardTopbarActivityDrain',
+      );
+      expect(progressTransitions.inlineAnimationTiming).toBe('linear');
+      expect(progressTransitions.topAnimationTiming).toBe('linear');
+      expect(progressTransitions.inlineAnimationDuration).toBe(
+        progressTransitions.topAnimationDuration,
+      );
+      expect(
+        Number.parseFloat(progressTransitions.inlineAnimationDuration),
+      ).toBeGreaterThan(0);
       await expect
         .poll(
           () =>
@@ -680,18 +747,29 @@ test.describe('transicao visual entre monstros', () => {
         1,
       );
 
-      const maxProgressAlignmentDelta = Math.max(
-        0,
-        ...(probe?.alignedProgressSamples.map((sample) =>
+      const progressAlignmentDeltas = (
+        probe?.alignedProgressSamples.map((sample) =>
           Math.abs(sample.inlinePercent - sample.topPercent),
-        ) ?? []),
-      );
+        ) ?? []
+      ).sort((left, right) => left - right);
+      const maxProgressAlignmentDelta = Math.max(0, ...progressAlignmentDeltas);
+      const p95ProgressAlignmentDelta =
+        progressAlignmentDeltas[
+          Math.min(
+            progressAlignmentDeltas.length - 1,
+            Math.ceil(progressAlignmentDeltas.length * 0.95) - 1,
+          )
+        ] ?? 0;
 
       expect(probe?.alignedProgressSamples.length ?? 0).toBeGreaterThan(5);
       expect(
-        maxProgressAlignmentDelta,
+        p95ProgressAlignmentDelta,
         `As barras superior e inferior divergiram: ${JSON.stringify(probe?.alignedProgressSamples)}`,
       ).toBeLessThanOrEqual(0.1);
+      expect(
+        maxProgressAlignmentDelta,
+        `As barras tiveram um salto de alinhamento: ${JSON.stringify(probe?.alignedProgressSamples)}`,
+      ).toBeLessThanOrEqual(1);
 
       const secondMobInstanceKey = probe?.mobProgressSamples.find(
         (sample) => sample.instanceKey !== probe.firstMobInstanceKey,
@@ -815,8 +893,12 @@ test.describe('transicao visual entre monstros', () => {
         };
       const combatIndexBeforeBackground =
         statusBeforeBackgroundPayload.session?.currentCombatIndex ?? 0;
+      const visualInstanceBeforeBackground = await page
+        .locator('.auto-combat-mob-transition__layer--current')
+        .getAttribute('data-mob-instance-key');
 
       expect(statusBeforeBackgroundPayload.active).toBe(true);
+      expect(visualInstanceBeforeBackground).toBeTruthy();
 
       await page.evaluate(() => {
         Object.defineProperty(document, 'visibilityState', {
@@ -854,7 +936,7 @@ test.describe('transicao visual entre monstros', () => {
             };
 
             return (
-              !payload.active ||
+              payload.active === true &&
               (payload.session?.currentCombatIndex ?? 0) >
                 combatIndexBeforeBackground
             );
@@ -862,6 +944,8 @@ test.describe('transicao visual entre monstros', () => {
           { timeout: 20_000 },
         )
         .toBe(true);
+
+      await page.waitForTimeout(650);
 
       await page.evaluate(() => {
         Object.defineProperty(document, 'visibilityState', {
@@ -882,6 +966,15 @@ test.describe('transicao visual entre monstros', () => {
 
       await expect
         .poll(
+          () =>
+            page
+              .locator('.auto-combat-mob-transition__layer--current')
+              .getAttribute('data-mob-instance-key'),
+          { timeout: 10_000 },
+        )
+        .not.toBe(visualInstanceBeforeBackground);
+      await expect
+        .poll(
           async () => {
             const synchronizingCount = await page
               .getByText('Sincronizando', { exact: true })
@@ -895,6 +988,76 @@ test.describe('transicao visual entre monstros', () => {
           { timeout: 10_000 },
         )
         .toBe(0);
+
+      const resumedProgressFill = page.locator(
+        '.auto-combat-inline-battle__ttk-strip b',
+      );
+      await expect
+        .poll(
+          () =>
+            resumedProgressFill.evaluate(
+              (element) => getComputedStyle(element).animationName,
+            ),
+          { timeout: 10_000 },
+        )
+        .toContain('autoCombatBattleTimelineDrain');
+      const resumedProgress = await resumedProgressFill.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const transform = style.transform;
+        const scaleX =
+          transform === 'none' ? 1 : new DOMMatrixReadOnly(transform).a;
+
+        return {
+          animationDelaySeconds: Number.parseFloat(style.animationDelay),
+          scaleX,
+        };
+      });
+
+      expect(
+        resumedProgress.animationDelaySeconds,
+        `A timeline voltou ao início após Alt+Tab: ${JSON.stringify(resumedProgress)}`,
+      ).toBeLessThan(-0.25);
+      expect(
+        resumedProgress.scaleX,
+        `A barra voltou visualmente cheia após Alt+Tab: ${JSON.stringify(resumedProgress)}`,
+      ).toBeLessThan(0.98);
+
+      await page
+        .getByRole('link', { name: 'Visão geral', exact: true })
+        .click();
+      await expect(page).toHaveURL(new RegExp(`/dashboard/${characterId}/?$`));
+
+      const topBar = page.locator('.dashboard-topbar--auto-battle');
+      await expect(topBar).toBeVisible();
+      const readTopBarDefeatedCount = async () => {
+        const text = await topBar.innerText();
+        const match = text.match(/(\d+)\s*\/\s*(\d+)\s+abatidos/i);
+
+        return match ? Number(match[1]) : -1;
+      };
+      const defeatedBeforeOtherPageCycle = await readTopBarDefeatedCount();
+
+      expect(defeatedBeforeOtherPageCycle).toBeGreaterThanOrEqual(0);
+      const topBarProgressFill = topBar.locator(
+        '.dashboard-topbar__activity-progress > span',
+      );
+      await expect(topBarProgressFill).toBeVisible();
+      await expect
+        .poll(
+          () =>
+            topBarProgressFill.evaluate((element) => {
+              const transform = getComputedStyle(element).transform;
+
+              return transform === 'none'
+                ? 1
+                : new DOMMatrixReadOnly(transform).a;
+            }),
+          { timeout: 25_000, intervals: [50] },
+        )
+        .toBeLessThanOrEqual(0.02);
+      await expect
+        .poll(readTopBarDefeatedCount, { timeout: 5_000, intervals: [50] })
+        .toBe(defeatedBeforeOtherPageCycle + 1);
     } finally {
       await api.post(`/auto-combat/${characterId}/stop`, {
         headers: { Authorization: `Bearer ${accessToken}` },

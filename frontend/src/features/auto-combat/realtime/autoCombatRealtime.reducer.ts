@@ -3,6 +3,10 @@ import type {
   AutoCombatRealtimeEvent,
   AutoCombatStatusResponse,
 } from "../types/auto-combat.types";
+import {
+  getBattleTimelineProgress,
+  getServerClientOffsetMs,
+} from "../utils/battle-timeline";
 import type {
   AutoCombatRealtimeCharacterState,
   AutoCombatRealtimeLocationState,
@@ -458,6 +462,39 @@ function getStatusSnapshotSequence(status: AutoCombatStatusResponse | null) {
         session?.latestEventSequence,
     ) ?? null
   );
+}
+
+function getStatusVisualCycleStartedAtMs(
+  status: AutoCombatStatusResponse,
+  clientNowMs: number,
+) {
+  const session = getStatusSession(status);
+  const source =
+    status.currentMob?.battleProgress ??
+    status.battleProgress ??
+    session?.battleProgress ??
+    null;
+
+  if (!source) {
+    return clientNowMs;
+  }
+
+  const serverReference =
+    source.serverNow ?? status.serverNow ?? source.progressUpdatedAt;
+  const serverClientOffsetMs = getServerClientOffsetMs(
+    serverReference,
+    clientNowMs,
+  );
+  const progress = getBattleTimelineProgress({
+    source,
+    nowMs: clientNowMs + serverClientOffsetMs,
+    fallbackServerNow: status.serverNow,
+    fallbackProgressUpdatedAt: source.progressUpdatedAt,
+  });
+
+  return progress
+    ? clientNowMs - progress.cycleElapsedMs
+    : clientNowMs;
 }
 
 function shouldDeferAheadCombatStatus(params: {
@@ -2034,26 +2071,27 @@ function hydrateFromStatus(
     ? baseState.mob
     : (mobFromStatus ??
       (!sessionChanged && !statusIsTerminal ? baseState.mob : null));
-  const previousEnemyInstanceId = normalizeScopeString(
-    baseState.mob?.enemyInstanceId,
-  );
   const nextEnemyInstanceId = normalizeScopeString(nextMob?.enemyInstanceId);
-  const startsNewVisualCycle = Boolean(
-    !sessionChanged &&
-    statusIsActive &&
-    previousEnemyInstanceId &&
+  const hasMatchingVisualCycle = Boolean(
     nextEnemyInstanceId &&
-    previousEnemyInstanceId !== nextEnemyInstanceId,
+    baseState.visualCycleEnemyInstanceId === nextEnemyInstanceId &&
+    typeof baseState.visualCycleStartedAtMs === "number" &&
+    Number.isFinite(baseState.visualCycleStartedAtMs),
   );
-  const visualCycleEnemyInstanceId = startsNewVisualCycle
-    ? nextEnemyInstanceId
-    : baseState.visualCycleEnemyInstanceId === nextEnemyInstanceId
-      ? baseState.visualCycleEnemyInstanceId
+  const shouldAnchorActiveVisualCycle = Boolean(
+    !sessionChanged && statusIsActive && nextEnemyInstanceId,
+  );
+  const visualCycleEnemyInstanceId = hasMatchingVisualCycle
+    ? baseState.visualCycleEnemyInstanceId
+    : shouldAnchorActiveVisualCycle
+      ? nextEnemyInstanceId
       : null;
-  const visualCycleStartedAtMs = startsNewVisualCycle
-    ? now()
+  const visualCycleStartedAtMs = hasMatchingVisualCycle
+    ? baseState.visualCycleStartedAtMs
     : visualCycleEnemyInstanceId
-      ? baseState.visualCycleStartedAtMs
+      ? baseState.isSynchronizing
+        ? getStatusVisualCycleStartedAtMs(status, now())
+        : now()
       : null;
 
   /**

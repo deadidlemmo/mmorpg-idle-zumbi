@@ -4,8 +4,10 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
+import { useLocation } from "react-router-dom";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import {
   useLootNotifications,
@@ -17,12 +19,17 @@ import { useAuthStore } from "../../../store/auth.store";
 import { getEquipmentItemImageUrl } from "../../equipment/utils/equipmentItemAssets";
 import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
 import { getBattleTimelineRecoveryDelayMs } from "../utils/battle-timeline";
-import { resolveAutoCombatTelemetryContext } from "../utils/auto-combat-telemetry";
+import {
+  resolveAutoCombatTelemetryContext,
+  shouldUseCondensedAutoCombatPlayback,
+} from "../utils/auto-combat-telemetry";
 import {
   buildAutoCombatPresentationTimeline,
   getAutoCombatPresentationDurationMs,
   getAutoCombatPresentationNowMs,
   getAutoCombatPresentationQueueDelayMs,
+  getAutoCombatPresentationStartedAtMs,
+  getAutoCombatPresentationWallClockNowMs,
   isAutoCombatPresentationTimelineEnabled,
 } from "../utils/presentation-timeline";
 import {
@@ -67,6 +74,10 @@ interface AutoCombatRealtimeProviderProps {
 
 type ReloadOptions = {
   reason?: string;
+};
+
+type SnapshotSynchronizationOptions = {
+  clearCombatView?: boolean;
 };
 
 type LooseAutoCombatStatus = AutoCombatStatusResponse & {
@@ -491,6 +502,7 @@ export function AutoCombatRealtimeProvider({
   refreshMs = 10000,
 }: AutoCombatRealtimeProviderProps) {
   const normalizedCharacterId = characterId ?? null;
+  const { pathname } = useLocation();
   const userRole = useAuthStore((authState) => authState.user?.role ?? null);
 
   const [state, dispatch] = useReducer(
@@ -498,6 +510,8 @@ export function AutoCombatRealtimeProvider({
     normalizedCharacterId,
     getInitialState,
   );
+  const [presentationResumeVersion, setPresentationResumeVersion] =
+    useState(0);
   const presentationTimelineEnabled =
     isAutoCombatPresentationTimelineEnabled({
       userRole,
@@ -526,7 +540,6 @@ export function AutoCombatRealtimeProvider({
   );
   const isPresentationCombatActive = Boolean(
     presentationTimelineEnabled &&
-    !state.isSynchronizing &&
     !isTerminalSessionStatus(state.session?.status) &&
     String(state.session?.phase ?? "")
       .trim()
@@ -541,10 +554,27 @@ export function AutoCombatRealtimeProvider({
         presentationEnemyInstanceId,
       ].join(":")
     : null;
+  const presentationVisualCycleStartedAtMs =
+    state.visualCycleEnemyInstanceId === presentationEnemyInstanceId
+      ? state.visualCycleStartedAtMs
+      : null;
   const presentationStartedAtMs = useMemo(
-    () =>
-      presentationCycleToken ? getAutoCombatPresentationNowMs() : null,
-    [presentationCycleToken],
+    () => {
+      void presentationResumeVersion;
+
+      return presentationCycleToken
+        ? getAutoCombatPresentationStartedAtMs({
+            monotonicNowMs: getAutoCombatPresentationNowMs(),
+            wallClockNowMs: getAutoCombatPresentationWallClockNowMs(),
+            visualCycleStartedAtMs: presentationVisualCycleStartedAtMs,
+          })
+        : null;
+    },
+    [
+      presentationCycleToken,
+      presentationResumeVersion,
+      presentationVisualCycleStartedAtMs,
+    ],
   );
   const presentationTimeline = useMemo(
     () =>
@@ -561,6 +591,14 @@ export function AutoCombatRealtimeProvider({
       state.session?.id,
     ],
   );
+  const presentationContext = resolveAutoCombatTelemetryContext({
+    pathname,
+    hidden: false,
+  });
+  const useCondensedEventPlayback = shouldUseCondensedAutoCombatPlayback({
+    presentationTimelineEnabled,
+    context: presentationContext,
+  });
 
   const stateRef = useRef(state);
   const isLoadingRef = useRef(false);
@@ -645,15 +683,18 @@ export function AutoCombatRealtimeProvider({
     });
   }, [clearScheduledActiveEvent]);
 
-  const enterSnapshotSynchronization = useCallback(() => {
-    flushVisualQueueWithoutAnimation();
+  const enterSnapshotSynchronization = useCallback(
+    (options?: SnapshotSynchronizationOptions) => {
+      flushVisualQueueWithoutAnimation();
 
-    dispatch({
-      type: "SET_SYNCHRONIZING",
-      isSynchronizing: true,
-      clearCombatView: true,
-    });
-  }, [flushVisualQueueWithoutAnimation]);
+      dispatch({
+        type: "SET_SYNCHRONIZING",
+        isSynchronizing: true,
+        clearCombatView: options?.clearCombatView ?? true,
+      });
+    },
+    [flushVisualQueueWithoutAnimation],
+  );
 
   const hydrateOverview = useCallback(
     (overview: CharacterOverviewResponse | null) => {
@@ -907,7 +948,7 @@ export function AutoCombatRealtimeProvider({
         if (isBackgrounded) {
           suppressLootNotificationsUntilCatchUpRef.current = true;
           lootSuppressionRequiresFreshStatusRef.current = true;
-          enterSnapshotSynchronization();
+          enterSnapshotSynchronization({ clearCombatView: false });
 
           if (statusData) {
             publishConfirmedLootNotifications(statusData, null);
@@ -1123,7 +1164,7 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
-      enterSnapshotSynchronization();
+      enterSnapshotSynchronization({ clearCombatView: false });
 
       void loadRecentEventsForReconciliation(reason);
 
@@ -1407,7 +1448,7 @@ export function AutoCombatRealtimeProvider({
       if (isBackgrounded) {
         suppressLootNotificationsUntilCatchUpRef.current = true;
         lootSuppressionRequiresFreshStatusRef.current = true;
-        enterSnapshotSynchronization();
+        enterSnapshotSynchronization({ clearCombatView: false });
         publishConfirmedLootNotifications(payload, null);
       } else {
         lootSuppressionRequiresFreshStatusRef.current = false;
@@ -1506,7 +1547,7 @@ export function AutoCombatRealtimeProvider({
         lastInactiveStatusSignatureRef.current = null;
         suppressLootNotificationsUntilCatchUpRef.current = true;
         lootSuppressionRequiresFreshStatusRef.current = true;
-        enterSnapshotSynchronization();
+        enterSnapshotSynchronization({ clearCombatView: false });
         scheduleReload(0, {
           reason: "background-realtime-event",
         });
@@ -1765,30 +1806,43 @@ export function AutoCombatRealtimeProvider({
       });
     }
 
+    function enterBackgroundedUiState() {
+      markTelemetryBackgrounded();
+      suppressLootNotificationsUntilCatchUpRef.current = true;
+      lootSuppressionRequiresFreshStatusRef.current = true;
+
+      if (wasBackgroundedRef.current) {
+        return;
+      }
+
+      wasBackgroundedRef.current = true;
+      enterSnapshotSynchronization({ clearCombatView: false });
+    }
+
+    function resumeBackgroundedUiState(reason: string) {
+      if (!wasBackgroundedRef.current) {
+        return false;
+      }
+
+      wasBackgroundedRef.current = false;
+      setPresentationResumeVersion((current) => current + 1);
+      reconcileAfterReturningToPage(reason);
+
+      return true;
+    }
+
     function handleVisibilityChange() {
       if (!isDocumentVisible()) {
-        markTelemetryBackgrounded();
-        wasBackgroundedRef.current = true;
-        suppressLootNotificationsUntilCatchUpRef.current = true;
-        lootSuppressionRequiresFreshStatusRef.current = true;
-        enterSnapshotSynchronization();
+        enterBackgroundedUiState();
         return;
       }
 
       reportTelemetryVisibilityReturn();
-
-      if (wasBackgroundedRef.current) {
-        wasBackgroundedRef.current = false;
-        reconcileAfterReturningToPage("visibility-return");
-      }
+      resumeBackgroundedUiState("visibility-return");
     }
 
     function handleWindowBlur() {
-      markTelemetryBackgrounded();
-      wasBackgroundedRef.current = true;
-      suppressLootNotificationsUntilCatchUpRef.current = true;
-      lootSuppressionRequiresFreshStatusRef.current = true;
-      enterSnapshotSynchronization();
+      enterBackgroundedUiState();
     }
 
     function handleWindowFocus() {
@@ -1798,9 +1852,7 @@ export function AutoCombatRealtimeProvider({
 
       reportTelemetryVisibilityReturn();
 
-      if (wasBackgroundedRef.current) {
-        wasBackgroundedRef.current = false;
-        reconcileAfterReturningToPage("window-focus-after-background");
+      if (resumeBackgroundedUiState("window-focus-after-background")) {
         return;
       }
 
@@ -1818,7 +1870,9 @@ export function AutoCombatRealtimeProvider({
 
       reportTelemetryVisibilityReturn();
 
-      reconcileAfterReturningToPage("pageshow");
+      if (!resumeBackgroundedUiState("pageshow-after-background")) {
+        reconcileAfterReturningToPage("pageshow");
+      }
     }
 
     function handleWindowOffline() {
@@ -1888,7 +1942,7 @@ export function AutoCombatRealtimeProvider({
         dispatch({
           type: "SET_SYNCHRONIZING",
           isSynchronizing: true,
-          clearCombatView: true,
+          clearCombatView: false,
         });
       }
 
@@ -1896,10 +1950,17 @@ export function AutoCombatRealtimeProvider({
     }
 
     if (state.activeEvent) {
-      const playbackTiming = getRealtimeEventPlaybackTiming({
+      const detailedPlaybackTiming = getRealtimeEventPlaybackTiming({
         event: state.activeEvent,
         nextEvent: state.eventQueue[0] ?? null,
       });
+      const playbackTiming = useCondensedEventPlayback
+        ? {
+            impactDelay: 0,
+            totalDelay: NEXT_EVENT_PROCESS_DELAY_MS,
+            visibleAfterImpactDelay: NEXT_EVENT_PROCESS_DELAY_MS,
+          }
+        : detailedPlaybackTiming;
       const clearDelay = state.activeEventImpactApplied
         ? playbackTiming.visibleAfterImpactDelay
         : playbackTiming.totalDelay;
@@ -1966,6 +2027,7 @@ export function AutoCombatRealtimeProvider({
     state.eventQueue,
     presentationTimeline,
     presentationTimelineEnabled,
+    useCondensedEventPlayback,
   ]);
 
   useEffect(() => {

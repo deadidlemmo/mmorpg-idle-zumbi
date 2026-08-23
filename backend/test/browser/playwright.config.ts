@@ -46,6 +46,7 @@ export default defineConfig({
         VITE_API_URL: apiUrl,
         VITE_SOCKET_URL: apiUrl,
         VITE_E2E: 'true',
+        VITE_AUTO_COMBAT_PRESENTATION_TIMELINE_V2: 'true',
       },
     },
   ],

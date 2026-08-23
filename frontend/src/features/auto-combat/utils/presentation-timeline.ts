@@ -56,6 +56,35 @@ export function getAutoCombatPresentationNowMs() {
   return Date.now();
 }
 
+export function getAutoCombatPresentationWallClockNowMs() {
+  return Date.now();
+}
+
+export function getAutoCombatPresentationStartedAtMs(params: {
+  monotonicNowMs: number;
+  wallClockNowMs: number;
+  visualCycleStartedAtMs?: number | null;
+}) {
+  const monotonicNowMs = toFiniteNumber(params.monotonicNowMs);
+
+  if (monotonicNowMs === null) {
+    return null;
+  }
+
+  const wallClockNowMs = toFiniteNumber(params.wallClockNowMs);
+  const visualCycleStartedAtMs = toFiniteNumber(
+    params.visualCycleStartedAtMs,
+  );
+
+  if (wallClockNowMs === null || visualCycleStartedAtMs === null) {
+    return monotonicNowMs;
+  }
+
+  const elapsedMs = Math.max(0, wallClockNowMs - visualCycleStartedAtMs);
+
+  return monotonicNowMs - elapsedMs;
+}
+
 export function isAutoCombatPresentationTimelineEnabled(params: {
   userRole?: string | null;
   flagValue?: string | boolean | null;

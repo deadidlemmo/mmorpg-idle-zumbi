@@ -6,6 +6,7 @@ import {
   getAutoCombatPresentationCssTimeline,
   getAutoCombatPresentationProgress,
   getAutoCombatPresentationQueueDelayMs,
+  getAutoCombatPresentationStartedAtMs,
   isAutoCombatPresentationTimelineEnabled,
 } from "./presentation-timeline.ts";
 
@@ -81,6 +82,33 @@ test("latencia de transporte nao comprime a duracao visual local", () => {
       0,
     );
   }
+});
+
+test("preserva a ancora visual ao retornar de uma aba oculta", () => {
+  const initialStartedAtMs = getAutoCombatPresentationStartedAtMs({
+    monotonicNowMs: 5_000,
+    wallClockNowMs: 100_000,
+    visualCycleStartedAtMs: 98_750,
+  });
+  const resumedStartedAtMs = getAutoCombatPresentationStartedAtMs({
+    monotonicNowMs: 65_000,
+    wallClockNowMs: 160_000,
+    visualCycleStartedAtMs: 98_750,
+  });
+
+  assert.equal(initialStartedAtMs, 3_750);
+  assert.equal(resumedStartedAtMs, 3_750);
+});
+
+test("inicia no relogio monotono quando ainda nao existe ancora visual", () => {
+  assert.equal(
+    getAutoCombatPresentationStartedAtMs({
+      monotonicNowMs: 7_500,
+      wallClockNowMs: 100_000,
+      visualCycleStartedAtMs: null,
+    }),
+    7_500,
+  );
 });
 
 test("segura o hit fatal ate a barra completar", () => {

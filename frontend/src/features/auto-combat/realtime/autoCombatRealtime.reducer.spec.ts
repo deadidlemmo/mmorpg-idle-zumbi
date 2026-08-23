@@ -401,6 +401,125 @@ test("ressincronizacao limpa mob visual antigo sem apagar sessao ativa", () => {
   assert.equal(syncing.eventQueue.length, 0);
 });
 
+test("ressincronizacao de visibilidade preserva o mob e a ancora do ciclo atual", () => {
+  const visualCycleStartedAtMs = Date.now() - 1_250;
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    session: {
+      ...makeState().session,
+      phase: "COMBAT_ACTIVE",
+      enemyInstanceId: "enemy-1",
+      currentEnemyInstanceId: "enemy-1",
+    },
+    mob: {
+      ...makeState().mob,
+      enemyInstanceId: "enemy-1",
+    },
+    visualCycleEnemyInstanceId: "enemy-1",
+    visualCycleStartedAtMs,
+  };
+  const syncing = autoCombatRealtimeReducer(state, {
+    type: "SET_SYNCHRONIZING",
+    isSynchronizing: true,
+    clearCombatView: false,
+  });
+  const hydrated = autoCombatRealtimeReducer(syncing, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: {
+      active: true,
+      hasActiveAutoCombat: true,
+      serverNow: new Date().toISOString(),
+      character: { id: "char-1", currentHp: 100, maxHp: 100 },
+      session: {
+        id: "session-1",
+        characterId: "char-1",
+        status: "ACTIVE",
+        phase: "COMBAT_ACTIVE",
+        enemyInstanceId: "enemy-1",
+        currentEnemyInstanceId: "enemy-1",
+      },
+      currentMob: {
+        id: "mob-1",
+        name: "Zumbi",
+        enemyInstanceId: "enemy-1",
+        currentHp: 100,
+        maxHp: 100,
+        battleProgress: {
+          progressSeconds: 2,
+          cycleDurationMs: 8_000,
+        },
+      },
+    } as never,
+  });
+
+  assert.equal(syncing.mob?.enemyInstanceId, "enemy-1");
+  assert.equal(hydrated.visualCycleEnemyInstanceId, "enemy-1");
+  assert.equal(hydrated.visualCycleStartedAtMs, visualCycleStartedAtMs);
+});
+
+test("ressincronizacao ancora um novo mob no progresso do snapshot", () => {
+  const snapshotNowMs = Date.now();
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    session: {
+      ...makeState().session,
+      phase: "COMBAT_ACTIVE",
+      enemyInstanceId: "enemy-1",
+      currentEnemyInstanceId: "enemy-1",
+    },
+    mob: {
+      ...makeState().mob,
+      enemyInstanceId: "enemy-1",
+    },
+    visualCycleEnemyInstanceId: "enemy-1",
+    visualCycleStartedAtMs: snapshotNowMs - 7_000,
+    isSynchronizing: true,
+  };
+  const hydrated = autoCombatRealtimeReducer(state, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: {
+      active: true,
+      hasActiveAutoCombat: true,
+      serverNow: new Date(snapshotNowMs).toISOString(),
+      character: { id: "char-1", currentHp: 99, maxHp: 100 },
+      session: {
+        id: "session-1",
+        characterId: "char-1",
+        status: "ACTIVE",
+        phase: "COMBAT_ACTIVE",
+        enemyInstanceId: "enemy-2",
+        currentEnemyInstanceId: "enemy-2",
+        battleProgress: {
+          progressSeconds: 2,
+          progressUpdatedAt: new Date(snapshotNowMs).toISOString(),
+          serverNow: new Date(snapshotNowMs).toISOString(),
+          cycleDurationMs: 8_000,
+        },
+      },
+      currentMob: {
+        id: "mob-1",
+        name: "Zumbi",
+        enemyInstanceId: "enemy-2",
+        currentHp: 100,
+        maxHp: 100,
+        battleProgress: {
+          progressSeconds: 2,
+          progressUpdatedAt: new Date(snapshotNowMs).toISOString(),
+          serverNow: new Date(snapshotNowMs).toISOString(),
+          cycleDurationMs: 8_000,
+        },
+      },
+    } as never,
+  });
+  const resumedElapsedMs = Date.now() - (hydrated.visualCycleStartedAtMs ?? 0);
+
+  assert.equal(hydrated.visualCycleEnemyInstanceId, "enemy-2");
+  assert.ok(resumedElapsedMs >= 1_900);
+  assert.ok(resumedElapsedMs <= 2_200);
+});
+
 test("múltiplas ações em autocombat avançam em sequência monotônica", () => {
   const firstImpact = autoCombatRealtimeReducer(
     enqueueAndProcess(makeState(), makeHit(1, 70)),

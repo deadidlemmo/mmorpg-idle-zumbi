@@ -84,6 +84,15 @@ export function resolveAutoCombatTelemetryContext(params?: {
     : "other-page";
 }
 
+export function shouldUseCondensedAutoCombatPlayback(params: {
+  presentationTimelineEnabled: boolean;
+  context: AutoCombatTelemetryContext;
+}) {
+  return (
+    params.presentationTimelineEnabled && params.context === "other-page"
+  );
+}
+
 function getEventTimestampMs(event: AutoCombatRealtimeEvent) {
   const candidates = [event.serverTime, event.createdAt];
 

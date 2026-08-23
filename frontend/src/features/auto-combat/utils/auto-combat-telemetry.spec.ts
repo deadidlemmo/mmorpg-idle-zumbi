@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildAutoCombatEventTelemetry,
   resolveAutoCombatTelemetryContext,
+  shouldUseCondensedAutoCombatPlayback,
 } from "./auto-combat-telemetry";
 
 test("mede atraso percebido, fila e lacuna de sequência", () => {
@@ -91,5 +92,29 @@ test("resolve os quatro contextos operacionais da coleta", () => {
       hidden: false,
     }),
     "other-page",
+  );
+});
+
+test("condensa a fila visual somente fora da tela de combate com a timeline ativa", () => {
+  assert.equal(
+    shouldUseCondensedAutoCombatPlayback({
+      presentationTimelineEnabled: true,
+      context: "other-page",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldUseCondensedAutoCombatPlayback({
+      presentationTimelineEnabled: true,
+      context: "combat-page",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldUseCondensedAutoCombatPlayback({
+      presentationTimelineEnabled: false,
+      context: "other-page",
+    }),
+    false,
   );
 });
