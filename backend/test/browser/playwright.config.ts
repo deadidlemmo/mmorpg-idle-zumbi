@@ -30,6 +30,8 @@ export default defineConfig({
       env: {
         ...process.env,
         APP_PORT: new URL(apiUrl).port || '3000',
+        NODE_ENV: 'test',
+        E2E_RATE_LIMIT_DISABLED: 'true',
         FRONTEND_URL: frontendUrl,
       },
     },

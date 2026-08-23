@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import type { Redis } from 'ioredis';
@@ -36,6 +36,7 @@ import { MailModule } from './common/mail/mail.module';
 import { ObservabilityModule } from './common/observability/observability.module';
 import { REDIS_COORDINATION_CLIENT } from './common/redis/redis.constants';
 import { RedisThrottlerStorage } from './common/redis/redis-throttler.storage';
+import { isConfigEnabled } from './common/redis/redis-client.factory';
 
 @Module({
   imports: [
@@ -47,11 +48,18 @@ import { RedisThrottlerStorage } from './common/redis/redis-throttler.storage';
     RedisCoordinationModule,
     ThrottlerModule.forRootAsync({
       imports: [RedisCoordinationModule],
-      inject: [REDIS_COORDINATION_CLIENT],
-      useFactory: (redis: Redis | null) => ({
-        throttlers: [{ name: 'default', ttl: 60_000, limit: 300 }],
-        ...(redis ? { storage: new RedisThrottlerStorage(redis) } : {}),
-      }),
+      inject: [REDIS_COORDINATION_CLIENT, ConfigService],
+      useFactory: (redis: Redis | null, configService: ConfigService) => {
+        const disableRateLimitForE2e =
+          configService.get<string>('NODE_ENV')?.trim().toLowerCase() ===
+            'test' && isConfigEnabled(configService, 'E2E_RATE_LIMIT_DISABLED');
+
+        return {
+          throttlers: [{ name: 'default', ttl: 60_000, limit: 300 }],
+          skipIf: () => disableRateLimitForE2e,
+          ...(redis ? { storage: new RedisThrottlerStorage(redis) } : {}),
+        };
+      },
     }),
     AuditModule,
     MailModule,
