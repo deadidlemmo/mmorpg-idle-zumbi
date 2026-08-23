@@ -1,5 +1,6 @@
 import { io, type Socket } from "socket.io-client";
 import type {
+  AutoCombatClientTelemetryPayload,
   AutoCombatRealtimeActor,
   AutoCombatRealtimeEvent,
   AutoCombatRealtimeEventType,
@@ -68,6 +69,7 @@ export type AutoCombatServerToClientEvents = {
 export type AutoCombatClientToServerEvents = {
   "auto-combat:join": (payload: { characterId: string }) => void;
   "auto-combat:leave": (payload: { characterId: string }) => void;
+  "auto-combat:telemetry": (payload: AutoCombatClientTelemetryPayload) => void;
 };
 
 export type AutoCombatSocket = Socket<

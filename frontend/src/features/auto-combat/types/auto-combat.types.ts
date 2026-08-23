@@ -96,6 +96,18 @@ export type AutoCombatRealtimeEventType =
   | "SESSION_ERROR"
   | string;
 
+export type AutoCombatClientTelemetryPayload = {
+  characterId: string;
+  kind: "EVENT_RECEIVED" | "VISUAL_CYCLE";
+  eventType?: string | null;
+  transitDelayMs?: number | null;
+  queueDepth?: number | null;
+  sequenceGap?: number | null;
+  outOfOrder?: boolean;
+  visualDurationMs?: number | null;
+  expectedDurationMs?: number | null;
+};
+
 export type AutoCombatRealtimeActor = "PLAYER" | "MOB" | "SYSTEM" | string;
 
 export type AutoCombatRealtimeTarget = "PLAYER" | "MOB" | "SYSTEM" | string;

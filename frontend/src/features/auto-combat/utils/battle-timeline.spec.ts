@@ -89,6 +89,39 @@ test("novo alvo entra com barra cheia sem perder o fim autoritativo do ciclo", (
   );
 });
 
+test("linha de base registra a compressao visual causada pela latencia", () => {
+  const cycleStartedAtMs = Date.parse("2026-08-23T12:00:00.000Z");
+  const cycleDurationMs = 1_000;
+
+  for (const latencyMs of [250, 500, 800, 1_500]) {
+    const visualCycleStartedAtMs = cycleStartedAtMs + latencyMs;
+    const expectedVisibleDurationMs = Math.max(0, cycleDurationMs - latencyMs);
+    const progress = getBattleVisualTimelineProgress({
+      source: { cycleStartedAt: cycleStartedAtMs, cycleDurationMs },
+      nowMs: visualCycleStartedAtMs,
+    });
+
+    assert.equal(
+      getVisibleBattleCycleRemainingPercent({
+        progress,
+        visualCycleStartedAtMs,
+        clientNowMs: visualCycleStartedAtMs,
+      }),
+      expectedVisibleDurationMs > 0 ? 100 : 0,
+      `inicio visual com ${latencyMs} ms de latencia`,
+    );
+    assert.equal(
+      getVisibleBattleCycleRemainingPercent({
+        progress,
+        visualCycleStartedAtMs,
+        clientNowMs: visualCycleStartedAtMs + expectedVisibleDurationMs,
+      }),
+      0,
+      `fim visual com ${latencyMs} ms de latencia`,
+    );
+  }
+});
+
 test("agenda reconciliacao depois que o snapshot visual ultrapassa o fim", () => {
   const snapshotReceivedAtMs = Date.parse("2026-08-21T12:00:04.000Z");
   const source = {

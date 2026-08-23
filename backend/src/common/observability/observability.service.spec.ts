@@ -83,8 +83,25 @@ describe('ObservabilityService', () => {
       errorRatePercent: 50,
       averageDurationMs: 60,
       maxDurationMs: 80,
+      sampleWindowMinutes: 15,
+      recentLatency: {
+        samples: 2,
+        average: 60,
+        p50: 40,
+        p95: 80,
+        p99: 80,
+        max: 80,
+      },
     });
     expect(snapshot.http.routes[0].route).toBe('GET /characters/:id/status');
+    expect(snapshot.http.routes[0].recentLatency).toEqual({
+      samples: 2,
+      average: 60,
+      p50: 40,
+      p95: 80,
+      p99: 80,
+      max: 80,
+    });
     expect(snapshot.health.backup.lastBackup).toMatchObject({
       status: 'success',
     });
@@ -146,5 +163,103 @@ describe('ObservabilityService', () => {
     expect(metrics).toContain(
       'dead_idle_backup_last_verification_timestamp_seconds 1787308200',
     );
+  });
+
+  it('registra a linha de base operacional do auto-combate', async () => {
+    const { service } = createService();
+
+    service.setAutoCombatActiveLoops(2);
+    service.recordAutoCombatTick({ durationMs: 80, acquired: true });
+    service.recordAutoCombatTick({ durationMs: 240, acquired: false });
+    service.recordAutoCombatTickError();
+    service.recordAutoCombatProcessingLockWait(150);
+    service.recordAutoCombatRealtimeEvent({
+      eventType: 'MOB_SPAWNED',
+      emissionDelayMs: 35,
+    });
+    service.recordAutoCombatSocketConnection(true);
+    service.recordAutoCombatClientTelemetry({
+      kind: 'EVENT_RECEIVED',
+      eventType: 'MOB_SPAWNED',
+      transitDelayMs: 480,
+      queueDepth: 3,
+      sequenceGap: 2,
+      outOfOrder: true,
+    });
+    service.recordAutoCombatClientTelemetry({
+      kind: 'VISUAL_CYCLE',
+      visualDurationMs: 420,
+      expectedDurationMs: 1000,
+    });
+
+    const snapshot = await service.getOperationalSnapshot();
+
+    expect(snapshot.autoCombat).toMatchObject({
+      sampleWindowMinutes: 15,
+      ticks: 2,
+      tickErrors: 1,
+      distributedLockMisses: 1,
+      activeLoops: 2,
+      realtimeEventsEmitted: 1,
+      realtimeEventsByType: { MOB_SPAWNED: 1 },
+      socketConnections: 1,
+      activeSockets: 1,
+      clientEventReports: 1,
+      clientEventsByType: { MOB_SPAWNED: 1 },
+      visualCycleReports: 1,
+      sequenceGaps: 2,
+      outOfOrderEvents: 1,
+      compressedVisualCycles: 1,
+      tickDuration: {
+        samples: 2,
+        average: 160,
+        p50: 80,
+        p95: 240,
+      },
+      clientEventTransitDelay: {
+        samples: 1,
+        p95: 480,
+      },
+      visualCycleRatioPercent: {
+        samples: 1,
+        p50: 42,
+      },
+    });
+
+    const metrics = service.renderPrometheusMetrics();
+    expect(metrics).toContain('dead_idle_auto_combat_ticks_total 2');
+    expect(metrics).toContain(
+      'dead_idle_auto_combat_client_event_transit_delay_ms{stat="p95"} 480',
+    );
+    expect(metrics).toContain(
+      'dead_idle_auto_combat_realtime_events_by_type_total{event_type="MOB_SPAWNED"} 1',
+    );
+  });
+
+  it('remove amostras anteriores a janela movel de quinze minutos', async () => {
+    const nowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(Date.parse('2026-08-23T12:00:00.000Z'));
+
+    try {
+      const { service } = createService();
+      service.recordAutoCombatTick({ durationMs: 900, acquired: true });
+
+      nowSpy.mockReturnValue(Date.parse('2026-08-23T12:16:00.000Z'));
+      service.recordAutoCombatTick({ durationMs: 120, acquired: true });
+
+      const snapshot = await service.getOperationalSnapshot();
+
+      expect(snapshot.autoCombat.tickDuration).toEqual({
+        samples: 1,
+        average: 120,
+        p50: 120,
+        p95: 120,
+        p99: 120,
+        max: 120,
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 });

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleDestroy,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import {
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { DistributedLockService } from '../../common/redis/distributed-lock.service';
+import { ObservabilityService } from '../../common/observability/observability.service';
 import {
   AUTO_COMBAT_HUNTING_BASE_MAX_TRACKED_ENEMIES,
   AUTO_COMBAT_HUNTING_BASE_SECONDS_PER_ENEMY,
@@ -759,6 +761,8 @@ type RealtimeRoundResult = {
 
 @Injectable()
 export class AutoCombatService implements OnModuleDestroy {
+  private readonly logger = new Logger(AutoCombatService.name);
+
   private readonly realtimeIntervals = new Map<
     string,
     ReturnType<typeof setInterval>
@@ -778,6 +782,7 @@ export class AutoCombatService implements OnModuleDestroy {
     private readonly activityGuard: ActivityGuardService,
     private readonly autoCombatGateway: AutoCombatGateway,
     private readonly distributedLock: DistributedLockService,
+    private readonly observability: ObservabilityService,
   ) {}
 
   onModuleDestroy() {
@@ -793,6 +798,7 @@ export class AutoCombatService implements OnModuleDestroy {
     this.immediateProcessingTimeouts.clear();
     this.processingLocks.clear();
     this.potionUsageByCombat.clear();
+    this.observability.setAutoCombatActiveLoops(0);
   }
 
   private async waitForProcessingLockRelease(characterId: string) {
@@ -806,6 +812,10 @@ export class AutoCombatService implements OnModuleDestroy {
         setTimeout(resolve, AUTO_COMBAT_STATUS_LOCK_POLL_MS);
       });
     }
+
+    this.observability.recordAutoCombatProcessingLockWait(
+      Date.now() - startedAt,
+    );
   }
 
   private aggregateMapEncounters(subMaps: any[]) {
@@ -2714,16 +2724,27 @@ export class AutoCombatService implements OnModuleDestroy {
     }, AUTO_COMBAT_REALTIME_TICK_MS);
 
     this.realtimeIntervals.set(characterId, interval);
+    this.observability.setAutoCombatActiveLoops(this.realtimeIntervals.size);
   }
 
   private async processRealtimeTick(userId: string, characterId: string) {
-    const lockResult = await this.distributedLock.runExclusive(
-      `dead-idle:auto-combat:${characterId}`,
-      AUTO_COMBAT_REALTIME_LOCK_TTL_MS,
-      () => this.processRealtimeTickWithLock(userId, characterId),
-    );
+    const startedAt = Date.now();
+    let acquired = false;
 
-    if (!lockResult.acquired) return;
+    try {
+      const lockResult = await this.distributedLock.runExclusive(
+        `dead-idle:auto-combat:${characterId}`,
+        AUTO_COMBAT_REALTIME_LOCK_TTL_MS,
+        () => this.processRealtimeTickWithLock(userId, characterId),
+      );
+
+      acquired = lockResult.acquired;
+    } finally {
+      this.observability.recordAutoCombatTick({
+        durationMs: Date.now() - startedAt,
+        acquired,
+      });
+    }
   }
 
   private async processRealtimeTickWithLock(
@@ -2766,7 +2787,15 @@ export class AutoCombatService implements OnModuleDestroy {
       if (!response.hasActiveAutoCombat) {
         this.stopRealtimeProcessingLoop(characterId);
       }
-    } catch {
+    } catch (error) {
+      this.observability.recordAutoCombatTickError();
+      this.logger.warn(
+        JSON.stringify({
+          event: 'auto_combat_realtime_tick_failed',
+          characterId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
       this.stopRealtimeProcessingLoop(characterId);
     }
   }
@@ -2787,6 +2816,7 @@ export class AutoCombatService implements OnModuleDestroy {
 
     clearInterval(interval);
     this.realtimeIntervals.delete(characterId);
+    this.observability.setAutoCombatActiveLoops(this.realtimeIntervals.size);
   }
 
   private loadAutoCombatSession(userId: string, sessionId: string) {
@@ -9759,6 +9789,14 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     for (const event of events) {
+      const eventServerTime = Date.parse(event.serverTime ?? '');
+      this.observability.recordAutoCombatRealtimeEvent({
+        eventType: event.type,
+        emissionDelayMs: Number.isFinite(eventServerTime)
+          ? Math.max(0, Date.now() - eventServerTime)
+          : null,
+      });
+
       switch (event.type) {
         case 'MOB_SPAWNED':
           this.autoCombatGateway.emitMobSpawned(characterId, event);

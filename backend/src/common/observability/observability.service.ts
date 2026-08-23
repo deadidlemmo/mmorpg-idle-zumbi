@@ -17,6 +17,46 @@ type RouteMetrics = {
   errors: number;
   durationMs: number;
   maxDurationMs: number;
+  recentDurations: TimedMetricSample[];
+};
+
+type TimedMetricSample = {
+  value: number;
+  recordedAt: number;
+};
+
+type MetricSeriesSummary = {
+  samples: number;
+  average: number;
+  p50: number;
+  p95: number;
+  p99: number;
+  max: number;
+};
+
+type AutoCombatOperationalMetrics = {
+  ticks: number;
+  tickErrors: number;
+  distributedLockMisses: number;
+  activeLoops: number;
+  realtimeEventsEmitted: number;
+  realtimeEventsByType: Map<string, number>;
+  socketConnections: number;
+  socketDisconnects: number;
+  activeSockets: number;
+  clientEventReports: number;
+  clientEventsByType: Map<string, number>;
+  visualCycleReports: number;
+  sequenceGaps: number;
+  outOfOrderEvents: number;
+  compressedVisualCycles: number;
+  tickDurations: TimedMetricSample[];
+  processingLockWaitDurations: TimedMetricSample[];
+  eventEmissionDelays: TimedMetricSample[];
+  clientEventTransitDelays: TimedMetricSample[];
+  clientQueueDepths: TimedMetricSample[];
+  visualCycleDurations: TimedMetricSample[];
+  visualCycleRatios: TimedMetricSample[];
 };
 
 type AlertContext = {
@@ -26,10 +66,52 @@ type AlertContext = {
   requestDurationMs?: number;
 };
 
+const METRIC_WINDOW_MS = 15 * 60 * 1000;
+const MAX_SERIES_SAMPLES = 50_000;
+const AUTO_COMBAT_EVENT_TYPES = new Set([
+  'HUNT_TARGET_FOUND',
+  'MOB_SPAWNED',
+  'PLAYER_HIT',
+  'MOB_HIT',
+  'DODGE',
+  'POTION_USED',
+  'MOB_DEFEATED',
+  'PLAYER_DEFEATED',
+  'SESSION_STARTED',
+  'SESSION_UPDATED',
+  'SESSION_FINISHED',
+  'SESSION_STOPPED',
+  'SESSION_ERROR',
+]);
+
 @Injectable()
 export class ObservabilityService {
   private readonly logger = new Logger(ObservabilityService.name);
   private readonly metrics = new Map<string, RouteMetrics>();
+  private readonly autoCombatMetrics: AutoCombatOperationalMetrics = {
+    ticks: 0,
+    tickErrors: 0,
+    distributedLockMisses: 0,
+    activeLoops: 0,
+    realtimeEventsEmitted: 0,
+    realtimeEventsByType: new Map<string, number>(),
+    socketConnections: 0,
+    socketDisconnects: 0,
+    activeSockets: 0,
+    clientEventReports: 0,
+    clientEventsByType: new Map<string, number>(),
+    visualCycleReports: 0,
+    sequenceGaps: 0,
+    outOfOrderEvents: 0,
+    compressedVisualCycles: 0,
+    tickDurations: [],
+    processingLockWaitDurations: [],
+    eventEmissionDelays: [],
+    clientEventTransitDelays: [],
+    clientQueueDepths: [],
+    visualCycleDurations: [],
+    visualCycleRatios: [],
+  };
   private readonly recentErrors: number[] = [];
   private readonly lastAlertAt = new Map<string, number>();
   private inFlightRequests = 0;
@@ -62,11 +144,13 @@ export class ObservabilityService {
       errors: 0,
       durationMs: 0,
       maxDurationMs: 0,
+      recentDurations: [],
     };
 
     current.requests += 1;
     current.durationMs += params.durationMs;
     current.maxDurationMs = Math.max(current.maxDurationMs, params.durationMs);
+    this.recordSeriesSample(current.recentDurations, params.durationMs);
 
     if (params.statusCode >= 500) {
       current.errors += 1;
@@ -91,6 +175,147 @@ export class ObservabilityService {
           durationMs: params.durationMs,
         }),
       );
+    }
+  }
+
+  recordAutoCombatTick(params: { durationMs: number; acquired: boolean }) {
+    this.autoCombatMetrics.ticks += 1;
+    this.recordSeriesSample(
+      this.autoCombatMetrics.tickDurations,
+      params.durationMs,
+    );
+
+    if (!params.acquired) {
+      this.autoCombatMetrics.distributedLockMisses += 1;
+    }
+  }
+
+  recordAutoCombatTickError() {
+    this.autoCombatMetrics.tickErrors += 1;
+  }
+
+  setAutoCombatActiveLoops(activeLoops: number) {
+    this.autoCombatMetrics.activeLoops = Math.max(
+      0,
+      Math.floor(Number(activeLoops) || 0),
+    );
+  }
+
+  recordAutoCombatProcessingLockWait(durationMs: number) {
+    this.recordSeriesSample(
+      this.autoCombatMetrics.processingLockWaitDurations,
+      durationMs,
+    );
+  }
+
+  recordAutoCombatRealtimeEvent(params: {
+    eventType?: string | null;
+    emissionDelayMs?: number | null;
+  }) {
+    this.autoCombatMetrics.realtimeEventsEmitted += 1;
+    this.incrementMetricCounter(
+      this.autoCombatMetrics.realtimeEventsByType,
+      this.normalizeAutoCombatEventType(params.eventType),
+    );
+
+    if (
+      params.emissionDelayMs !== null &&
+      params.emissionDelayMs !== undefined
+    ) {
+      this.recordSeriesSample(
+        this.autoCombatMetrics.eventEmissionDelays,
+        params.emissionDelayMs,
+      );
+    }
+  }
+
+  recordAutoCombatSocketConnection(connected: boolean) {
+    if (connected) {
+      this.autoCombatMetrics.socketConnections += 1;
+      this.autoCombatMetrics.activeSockets += 1;
+      return;
+    }
+
+    this.autoCombatMetrics.socketDisconnects += 1;
+    this.autoCombatMetrics.activeSockets = Math.max(
+      0,
+      this.autoCombatMetrics.activeSockets - 1,
+    );
+  }
+
+  recordAutoCombatClientTelemetry(params: {
+    kind: 'EVENT_RECEIVED' | 'VISUAL_CYCLE';
+    eventType?: string | null;
+    transitDelayMs?: number | null;
+    queueDepth?: number | null;
+    sequenceGap?: number | null;
+    outOfOrder?: boolean;
+    visualDurationMs?: number | null;
+    expectedDurationMs?: number | null;
+  }) {
+    if (params.kind === 'EVENT_RECEIVED') {
+      this.autoCombatMetrics.clientEventReports += 1;
+      this.incrementMetricCounter(
+        this.autoCombatMetrics.clientEventsByType,
+        this.normalizeAutoCombatEventType(params.eventType),
+      );
+
+      if (
+        params.transitDelayMs !== null &&
+        params.transitDelayMs !== undefined
+      ) {
+        this.recordSeriesSample(
+          this.autoCombatMetrics.clientEventTransitDelays,
+          params.transitDelayMs,
+        );
+      }
+
+      if (params.queueDepth !== null && params.queueDepth !== undefined) {
+        this.recordSeriesSample(
+          this.autoCombatMetrics.clientQueueDepths,
+          params.queueDepth,
+        );
+      }
+
+      this.autoCombatMetrics.sequenceGaps += Math.max(
+        0,
+        Math.floor(Number(params.sequenceGap) || 0),
+      );
+
+      if (params.outOfOrder) {
+        this.autoCombatMetrics.outOfOrderEvents += 1;
+      }
+
+      return;
+    }
+
+    const visualDurationMs = this.toNonNegativeFiniteNumber(
+      params.visualDurationMs,
+    );
+    const expectedDurationMs = this.toNonNegativeFiniteNumber(
+      params.expectedDurationMs,
+    );
+
+    if (visualDurationMs === null || expectedDurationMs === null) {
+      return;
+    }
+
+    this.autoCombatMetrics.visualCycleReports += 1;
+    this.recordSeriesSample(
+      this.autoCombatMetrics.visualCycleDurations,
+      visualDurationMs,
+    );
+
+    if (expectedDurationMs > 0) {
+      const ratioPercent = (visualDurationMs / expectedDurationMs) * 100;
+      this.recordSeriesSample(
+        this.autoCombatMetrics.visualCycleRatios,
+        ratioPercent,
+      );
+
+      if (ratioPercent < 90) {
+        this.autoCombatMetrics.compressedVisualCycles += 1;
+      }
     }
   }
 
@@ -150,20 +375,25 @@ export class ObservabilityService {
       ...publicHealth,
       backup: this.backupStatusService.getStatus(),
     };
-    const routeMetrics = [...this.metrics.entries()].map(([route, metric]) => ({
-      route,
-      requests: metric.requests,
-      errors: metric.errors,
-      errorRatePercent:
-        metric.requests > 0
-          ? Number(((metric.errors / metric.requests) * 100).toFixed(2))
-          : 0,
-      averageDurationMs:
-        metric.requests > 0
-          ? Number((metric.durationMs / metric.requests).toFixed(2))
-          : 0,
-      maxDurationMs: metric.maxDurationMs,
-    }));
+    const routeMetrics = [...this.metrics.entries()].map(([route, metric]) => {
+      const recentLatency = this.summarizeSeries(metric.recentDurations);
+
+      return {
+        route,
+        requests: metric.requests,
+        errors: metric.errors,
+        errorRatePercent:
+          metric.requests > 0
+            ? Number(((metric.errors / metric.requests) * 100).toFixed(2))
+            : 0,
+        averageDurationMs:
+          metric.requests > 0
+            ? Number((metric.durationMs / metric.requests).toFixed(2))
+            : 0,
+        maxDurationMs: metric.maxDurationMs,
+        recentLatency,
+      };
+    });
     const totals = routeMetrics.reduce(
       (result, metric) => ({
         requests: result.requests + metric.requests,
@@ -174,11 +404,16 @@ export class ObservabilityService {
       }),
       { requests: 0, errors: 0, durationMs: 0, maxDurationMs: 0 },
     );
+    const httpLatency = this.summarizeSeries(
+      [...this.metrics.values()].flatMap((metric) => metric.recentDurations),
+    );
+    const autoCombat = this.buildAutoCombatSnapshot();
 
     return {
       generatedAt: new Date().toISOString(),
       health,
       http: {
+        sampleWindowMinutes: METRIC_WINDOW_MS / 60_000,
         inFlightRequests: this.inFlightRequests,
         requests: totals.requests,
         errors: totals.errors,
@@ -191,12 +426,16 @@ export class ObservabilityService {
             ? Number((totals.durationMs / totals.requests).toFixed(2))
             : 0,
         maxDurationMs: totals.maxDurationMs,
+        recentLatency: httpLatency,
         routes: routeMetrics
           .sort(
-            (left, right) => right.averageDurationMs - left.averageDurationMs,
+            (left, right) =>
+              right.recentLatency.p95 - left.recentLatency.p95 ||
+              right.averageDurationMs - left.averageDurationMs,
           )
           .slice(0, 10),
       },
+      autoCombat,
     };
   }
 
@@ -219,6 +458,19 @@ export class ObservabilityService {
       lines.push(
         `dead_idle_http_request_duration_ms_max{${labels}} ${metric.maxDurationMs}`,
       );
+      const recentLatency = this.summarizeSeries(metric.recentDurations);
+      lines.push(
+        `dead_idle_http_request_duration_recent_samples{${labels}} ${recentLatency.samples}`,
+      );
+      lines.push(
+        `dead_idle_http_request_duration_ms_p50{${labels}} ${recentLatency.p50}`,
+      );
+      lines.push(
+        `dead_idle_http_request_duration_ms_p95{${labels}} ${recentLatency.p95}`,
+      );
+      lines.push(
+        `dead_idle_http_request_duration_ms_p99{${labels}} ${recentLatency.p99}`,
+      );
     }
 
     const memory = process.memoryUsage();
@@ -232,6 +484,7 @@ export class ObservabilityService {
     lines.push(`dead_idle_process_resident_memory_bytes ${memory.rss}`);
     lines.push('# TYPE dead_idle_process_heap_used_bytes gauge');
     lines.push(`dead_idle_process_heap_used_bytes ${memory.heapUsed}`);
+    this.appendAutoCombatPrometheusMetrics(lines);
     const backup = this.backupStatusService.getStatus();
     lines.push('# TYPE dead_idle_backup_last_success_timestamp_seconds gauge');
     lines.push(
@@ -385,6 +638,231 @@ export class ObservabilityService {
     if (!value) return 0;
     const timestamp = Date.parse(value);
     return Number.isFinite(timestamp) ? Math.floor(timestamp / 1000) : 0;
+  }
+
+  private buildAutoCombatSnapshot() {
+    return {
+      sampleWindowMinutes: METRIC_WINDOW_MS / 60_000,
+      ticks: this.autoCombatMetrics.ticks,
+      tickErrors: this.autoCombatMetrics.tickErrors,
+      distributedLockMisses: this.autoCombatMetrics.distributedLockMisses,
+      activeLoops: this.autoCombatMetrics.activeLoops,
+      realtimeEventsEmitted: this.autoCombatMetrics.realtimeEventsEmitted,
+      realtimeEventsByType: this.toMetricCounterRecord(
+        this.autoCombatMetrics.realtimeEventsByType,
+      ),
+      socketConnections: this.autoCombatMetrics.socketConnections,
+      socketDisconnects: this.autoCombatMetrics.socketDisconnects,
+      activeSockets: this.autoCombatMetrics.activeSockets,
+      clientEventReports: this.autoCombatMetrics.clientEventReports,
+      clientEventsByType: this.toMetricCounterRecord(
+        this.autoCombatMetrics.clientEventsByType,
+      ),
+      visualCycleReports: this.autoCombatMetrics.visualCycleReports,
+      sequenceGaps: this.autoCombatMetrics.sequenceGaps,
+      outOfOrderEvents: this.autoCombatMetrics.outOfOrderEvents,
+      compressedVisualCycles: this.autoCombatMetrics.compressedVisualCycles,
+      tickDuration: this.summarizeSeries(this.autoCombatMetrics.tickDurations),
+      processingLockWait: this.summarizeSeries(
+        this.autoCombatMetrics.processingLockWaitDurations,
+      ),
+      eventEmissionDelay: this.summarizeSeries(
+        this.autoCombatMetrics.eventEmissionDelays,
+      ),
+      clientEventTransitDelay: this.summarizeSeries(
+        this.autoCombatMetrics.clientEventTransitDelays,
+      ),
+      clientQueueDepth: this.summarizeSeries(
+        this.autoCombatMetrics.clientQueueDepths,
+      ),
+      visualCycleDuration: this.summarizeSeries(
+        this.autoCombatMetrics.visualCycleDurations,
+      ),
+      visualCycleRatioPercent: this.summarizeSeries(
+        this.autoCombatMetrics.visualCycleRatios,
+      ),
+    };
+  }
+
+  private appendAutoCombatPrometheusMetrics(lines: string[]) {
+    const snapshot = this.buildAutoCombatSnapshot();
+    const counters = {
+      dead_idle_auto_combat_ticks_total: snapshot.ticks,
+      dead_idle_auto_combat_tick_errors_total: snapshot.tickErrors,
+      dead_idle_auto_combat_distributed_lock_misses_total:
+        snapshot.distributedLockMisses,
+      dead_idle_auto_combat_realtime_events_emitted_total:
+        snapshot.realtimeEventsEmitted,
+      dead_idle_auto_combat_socket_connections_total:
+        snapshot.socketConnections,
+      dead_idle_auto_combat_socket_disconnects_total:
+        snapshot.socketDisconnects,
+      dead_idle_auto_combat_client_event_reports_total:
+        snapshot.clientEventReports,
+      dead_idle_auto_combat_visual_cycle_reports_total:
+        snapshot.visualCycleReports,
+      dead_idle_auto_combat_sequence_gaps_total: snapshot.sequenceGaps,
+      dead_idle_auto_combat_out_of_order_events_total:
+        snapshot.outOfOrderEvents,
+      dead_idle_auto_combat_compressed_visual_cycles_total:
+        snapshot.compressedVisualCycles,
+    };
+
+    for (const [name, value] of Object.entries(counters)) {
+      lines.push(`# TYPE ${name} counter`);
+      lines.push(`${name} ${value}`);
+    }
+
+    lines.push(
+      '# TYPE dead_idle_auto_combat_realtime_events_by_type_total counter',
+    );
+    for (const [eventType, value] of Object.entries(
+      snapshot.realtimeEventsByType,
+    )) {
+      lines.push(
+        `dead_idle_auto_combat_realtime_events_by_type_total{event_type="${eventType}"} ${value}`,
+      );
+    }
+
+    lines.push(
+      '# TYPE dead_idle_auto_combat_client_events_by_type_total counter',
+    );
+    for (const [eventType, value] of Object.entries(
+      snapshot.clientEventsByType,
+    )) {
+      lines.push(
+        `dead_idle_auto_combat_client_events_by_type_total{event_type="${eventType}"} ${value}`,
+      );
+    }
+
+    lines.push('# TYPE dead_idle_auto_combat_active_loops gauge');
+    lines.push(`dead_idle_auto_combat_active_loops ${snapshot.activeLoops}`);
+    lines.push('# TYPE dead_idle_auto_combat_active_sockets gauge');
+    lines.push(
+      `dead_idle_auto_combat_active_sockets ${snapshot.activeSockets}`,
+    );
+
+    const series: Array<[string, MetricSeriesSummary]> = [
+      ['tick_duration_ms', snapshot.tickDuration],
+      ['processing_lock_wait_ms', snapshot.processingLockWait],
+      ['event_emission_delay_ms', snapshot.eventEmissionDelay],
+      ['client_event_transit_delay_ms', snapshot.clientEventTransitDelay],
+      ['client_queue_depth', snapshot.clientQueueDepth],
+      ['visual_cycle_duration_ms', snapshot.visualCycleDuration],
+      ['visual_cycle_ratio_percent', snapshot.visualCycleRatioPercent],
+    ];
+
+    for (const [name, summary] of series) {
+      const metricName = `dead_idle_auto_combat_${name}`;
+      lines.push(`# TYPE ${metricName} gauge`);
+      lines.push(`${metricName}{stat="samples"} ${summary.samples}`);
+      lines.push(`${metricName}{stat="average"} ${summary.average}`);
+      lines.push(`${metricName}{stat="p50"} ${summary.p50}`);
+      lines.push(`${metricName}{stat="p95"} ${summary.p95}`);
+      lines.push(`${metricName}{stat="p99"} ${summary.p99}`);
+      lines.push(`${metricName}{stat="max"} ${summary.max}`);
+    }
+  }
+
+  private recordSeriesSample(
+    series: TimedMetricSample[],
+    rawValue: number,
+    now = Date.now(),
+  ) {
+    const value = this.toNonNegativeFiniteNumber(rawValue);
+
+    if (value === null) {
+      return;
+    }
+
+    series.push({ value, recordedAt: now });
+    this.pruneSeries(series, now);
+  }
+
+  private summarizeSeries(
+    series: TimedMetricSample[],
+    now = Date.now(),
+  ): MetricSeriesSummary {
+    this.pruneSeries(series, now);
+    const values = series
+      .map((sample) => sample.value)
+      .sort((left, right) => left - right);
+
+    if (values.length === 0) {
+      return { samples: 0, average: 0, p50: 0, p95: 0, p99: 0, max: 0 };
+    }
+
+    const total = values.reduce((sum, value) => sum + value, 0);
+
+    return {
+      samples: values.length,
+      average: this.roundMetric(total / values.length),
+      p50: this.roundMetric(this.getPercentile(values, 0.5)),
+      p95: this.roundMetric(this.getPercentile(values, 0.95)),
+      p99: this.roundMetric(this.getPercentile(values, 0.99)),
+      max: this.roundMetric(values[values.length - 1]),
+    };
+  }
+
+  private pruneSeries(series: TimedMetricSample[], now = Date.now()) {
+    const cutoff = now - METRIC_WINDOW_MS;
+    let firstValidIndex = 0;
+
+    while (
+      firstValidIndex < series.length &&
+      series[firstValidIndex].recordedAt < cutoff
+    ) {
+      firstValidIndex += 1;
+    }
+
+    if (firstValidIndex > 0) {
+      series.splice(0, firstValidIndex);
+    }
+
+    if (series.length > MAX_SERIES_SAMPLES) {
+      series.splice(0, series.length - MAX_SERIES_SAMPLES);
+    }
+  }
+
+  private getPercentile(sortedValues: number[], percentile: number) {
+    const index = Math.max(
+      0,
+      Math.min(
+        sortedValues.length - 1,
+        Math.ceil(sortedValues.length * percentile) - 1,
+      ),
+    );
+
+    return sortedValues[index];
+  }
+
+  private roundMetric(value: number) {
+    return Number(value.toFixed(2));
+  }
+
+  private incrementMetricCounter(counter: Map<string, number>, key: string) {
+    counter.set(key, (counter.get(key) ?? 0) + 1);
+  }
+
+  private toMetricCounterRecord(counter: Map<string, number>) {
+    return Object.fromEntries(
+      [...counter.entries()].sort(([left], [right]) =>
+        left.localeCompare(right),
+      ),
+    );
+  }
+
+  private normalizeAutoCombatEventType(value?: string | null) {
+    const normalized =
+      typeof value === 'string' ? value.trim().toUpperCase() : '';
+
+    return AUTO_COMBAT_EVENT_TYPES.has(normalized) ? normalized : 'OTHER';
+  }
+
+  private toNonNegativeFiniteNumber(value: unknown) {
+    const parsed = Number(value);
+
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
   }
 
   private normalizeRoute(route: string) {

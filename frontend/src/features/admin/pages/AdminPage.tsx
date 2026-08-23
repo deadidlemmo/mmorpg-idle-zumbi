@@ -32,6 +32,7 @@ import {
   setAdminUserSuspension,
   type AdminCosmeticEntitlement,
   type AdminAuditLog,
+  type AdminMetricSeries,
   type AdminOperations,
   type AdminProductMetrics,
   type AdminSummary,
@@ -89,6 +90,25 @@ function formatBackupState(state?: "healthy" | "stale" | "failed" | "unknown") {
   if (state === "stale") return "Desatualizado";
   if (state === "failed") return "Falhou";
   return "Sem dados";
+}
+
+function formatMetricNumber(value: number) {
+  return value.toLocaleString("pt-BR", {
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatMetricSampleCount(series?: AdminMetricSeries) {
+  return series?.samples ?? 0;
+}
+
+function formatMetricPercentile(
+  series: AdminMetricSeries | undefined,
+  percentile: "p50" | "p95" | "p99" | "max",
+  suffix = " ms",
+) {
+  if (!series?.samples) return "Sem amostras";
+  return `${formatMetricNumber(series[percentile])}${suffix}`;
 }
 
 function Pagination({
@@ -299,6 +319,7 @@ export function AdminPage() {
   const backup = operations?.health.backup;
   const backupTimestamp =
     backup?.lastVerification?.verifiedAt ?? backup?.lastVerification?.failedAt;
+  const autoCombatMetrics = operations?.autoCombat;
 
   return (
     <main className="admin-page" aria-busy={isLoading}>
@@ -464,7 +485,9 @@ export function AdminPage() {
                       <td>{tier.materialStock.toLocaleString("pt-BR")}</td>
                       <td
                         className={
-                          tier.netMaterialFlow < 0 ? "is-negative" : "is-positive"
+                          tier.netMaterialFlow < 0
+                            ? "is-negative"
+                            : "is-positive"
                         }
                       >
                         {tier.netMaterialFlow > 0 ? "+" : ""}
@@ -479,8 +502,9 @@ export function AdminPage() {
         </div>
 
         <p className="admin-product-note">
-          D1 e D7 consideram login na janela exata de 24 horas. Marcos anteriores
-          ao rastreamento dedicado usam o histórico operacional disponível.
+          D1 e D7 consideram login na janela exata de 24 horas. Marcos
+          anteriores ao rastreamento dedicado usam o histórico operacional
+          disponível.
         </p>
       </section>
 
@@ -616,6 +640,22 @@ export function AdminPage() {
                     : "..."}
                 </dd>
               </div>
+              <div>
+                <dt>
+                  Amostras recentes (
+                  {operations?.http.sampleWindowMinutes ?? 15}
+                  min)
+                </dt>
+                <dd>{operations?.http.recentLatency?.samples ?? 0}</dd>
+              </div>
+              <div>
+                <dt>p50 / p95 / p99</dt>
+                <dd>
+                  {operations?.http.recentLatency?.samples
+                    ? `${formatMetricNumber(operations.http.recentLatency.p50)} / ${formatMetricNumber(operations.http.recentLatency.p95)} / ${formatMetricNumber(operations.http.recentLatency.p99)} ms`
+                    : "Sem amostras"}
+                </dd>
+              </div>
             </dl>
           </article>
         </div>
@@ -637,13 +677,157 @@ export function AdminPage() {
           )}
         </div>
 
+        <div
+          className="admin-autocombat-observability"
+          aria-label="Linha de base do auto-combate"
+        >
+          <header>
+            <div>
+              <Activity size={18} />
+              <div>
+                <strong>Auto-combate</strong>
+                <span>
+                  Percentis em janela móvel de{" "}
+                  {autoCombatMetrics?.sampleWindowMinutes ?? 15} min; contadores
+                  desde o último boot.
+                </span>
+              </div>
+            </div>
+            <span
+              className={
+                autoCombatMetrics?.compressedVisualCycles
+                  ? "is-warning"
+                  : "is-neutral"
+              }
+            >
+              {autoCombatMetrics
+                ? `${autoCombatMetrics.visualCycleReports} ciclos medidos`
+                : "Aguardando dados"}
+            </span>
+          </header>
+
+          <dl>
+            <div>
+              <dt>Loops / sockets ativos</dt>
+              <dd>
+                {autoCombatMetrics
+                  ? `${autoCombatMetrics.activeLoops} / ${autoCombatMetrics.activeSockets}`
+                  : "Sem dados"}
+              </dd>
+              <span>Processadores e clientes conectados</span>
+            </div>
+            <div>
+              <dt>Ticks / erros</dt>
+              <dd>
+                {autoCombatMetrics
+                  ? `${autoCombatMetrics.ticks.toLocaleString("pt-BR")} / ${autoCombatMetrics.tickErrors.toLocaleString("pt-BR")}`
+                  : "Sem dados"}
+              </dd>
+              <span>
+                p95{" "}
+                {formatMetricPercentile(autoCombatMetrics?.tickDuration, "p95")}
+              </span>
+            </div>
+            <div>
+              <dt>Locks não adquiridos</dt>
+              <dd>
+                {autoCombatMetrics?.distributedLockMisses.toLocaleString(
+                  "pt-BR",
+                ) ?? "Sem dados"}
+              </dd>
+              <span>
+                Espera p95{" "}
+                {formatMetricPercentile(
+                  autoCombatMetrics?.processingLockWait,
+                  "p95",
+                )}
+              </span>
+            </div>
+            <div>
+              <dt>Emissão de eventos p95</dt>
+              <dd>
+                {formatMetricPercentile(
+                  autoCombatMetrics?.eventEmissionDelay,
+                  "p95",
+                )}
+              </dd>
+              <span>
+                {formatMetricSampleCount(autoCombatMetrics?.eventEmissionDelay)}{" "}
+                amostras · {autoCombatMetrics?.realtimeEventsEmitted ?? 0}{" "}
+                eventos ·{" "}
+                {autoCombatMetrics?.realtimeEventsByType?.MOB_DEFEATED ?? 0}{" "}
+                derrotas
+              </span>
+            </div>
+            <div>
+              <dt>Trânsito cliente p50 / p95</dt>
+              <dd>
+                {autoCombatMetrics?.clientEventTransitDelay.samples
+                  ? `${formatMetricNumber(autoCombatMetrics.clientEventTransitDelay.p50)} / ${formatMetricNumber(autoCombatMetrics.clientEventTransitDelay.p95)} ms`
+                  : "Sem amostras"}
+              </dd>
+              <span>
+                {autoCombatMetrics?.clientEventReports ?? 0} recebidos ·{" "}
+                {autoCombatMetrics?.clientEventsByType?.MOB_DEFEATED ?? 0}{" "}
+                derrotas
+              </span>
+            </div>
+            <div>
+              <dt>Fila visual p95</dt>
+              <dd>
+                {formatMetricPercentile(
+                  autoCombatMetrics?.clientQueueDepth,
+                  "p95",
+                  " eventos",
+                )}
+              </dd>
+              <span>
+                {autoCombatMetrics?.sequenceGaps ?? 0} lacunas ·{" "}
+                {autoCombatMetrics?.outOfOrderEvents ?? 0} fora de ordem
+              </span>
+            </div>
+            <div>
+              <dt>Duração visual p50</dt>
+              <dd>
+                {formatMetricPercentile(
+                  autoCombatMetrics?.visualCycleDuration,
+                  "p50",
+                )}
+              </dd>
+              <span>
+                Relação p50{" "}
+                {formatMetricPercentile(
+                  autoCombatMetrics?.visualCycleRatioPercent,
+                  "p50",
+                  "%",
+                )}
+              </span>
+            </div>
+            <div>
+              <dt>Ciclos comprimidos</dt>
+              <dd>{autoCombatMetrics?.compressedVisualCycles ?? 0}</dd>
+              <span>Duração observada abaixo de 90% da prevista</span>
+            </div>
+          </dl>
+        </div>
+
         {operations?.http.routes.length ? (
           <div className="admin-route-list">
-            <h3>Rotas com maior latência média</h3>
+            <h3>
+              Rotas com maior latência recente (
+              {operations.http.sampleWindowMinutes ?? 15}
+              min)
+            </h3>
             {operations.http.routes.slice(0, 5).map((route) => (
               <div key={route.route}>
                 <code>{route.route}</code>
-                <span>{route.averageDurationMs} ms</span>
+                <span>{route.recentLatency?.samples ?? 0} amostras</span>
+                <span>
+                  p95 {formatMetricPercentile(route.recentLatency, "p95")}
+                </span>
+                <span>
+                  máx {formatMetricPercentile(route.recentLatency, "max")}
+                </span>
                 <span>{route.errorRatePercent}% erro</span>
               </div>
             ))}

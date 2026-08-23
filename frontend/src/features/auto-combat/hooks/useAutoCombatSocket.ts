@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAuthToken } from '../../../services/api/authToken';
 import {
   connectAutoCombatSocket,
@@ -8,9 +8,11 @@ import {
   type AutoCombatSocketError,
 } from '../../../services/websocket/socketClient';
 import type {
+  AutoCombatClientTelemetryPayload,
   AutoCombatRealtimeEvent,
   AutoCombatStatusResponse,
 } from '../types/auto-combat.types';
+import { buildAutoCombatEventTelemetry } from '../utils/auto-combat-telemetry';
 
 type UseAutoCombatSocketOptions = {
   characterId?: string | null;
@@ -28,6 +30,7 @@ type UseAutoCombatSocketOptions = {
   onMobDefeated?: (payload: AutoCombatRealtimeEvent) => void;
   onPlayerDefeated?: (payload: AutoCombatRealtimeEvent) => void;
   onPotionUsed?: (payload: AutoCombatRealtimeEvent) => void;
+  getQueueDepth?: () => number;
 
   onError?: (message: string) => void;
 };
@@ -82,7 +85,9 @@ function getStatusSession(payload: AutoCombatStatusResponse | null) {
 function getStatusCharacterId(payload: AutoCombatStatusResponse | null) {
   if (!payload) return null;
 
-  return payload.character?.id ?? getStatusSession(payload)?.characterId ?? null;
+  return (
+    payload.character?.id ?? getStatusSession(payload)?.characterId ?? null
+  );
 }
 
 function isStatusForCharacter(
@@ -104,15 +109,23 @@ function isEventForCharacter(
 }
 
 function getRealtimeEventType(payload: AutoCombatRealtimeEvent | null) {
-  return String(payload?.type ?? '').trim().toUpperCase();
+  return String(payload?.type ?? '')
+    .trim()
+    .toUpperCase();
 }
 
 function isActiveStatus(status?: string | null) {
-  return String(status ?? '').trim().toUpperCase() === 'ACTIVE';
+  return (
+    String(status ?? '')
+      .trim()
+      .toUpperCase() === 'ACTIVE'
+  );
 }
 
 function isTerminalStatus(status?: string | null) {
-  const normalizedStatus = String(status ?? '').trim().toUpperCase();
+  const normalizedStatus = String(status ?? '')
+    .trim()
+    .toUpperCase();
 
   return (
     normalizedStatus === 'FINISHED' ||
@@ -277,6 +290,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     onMobDefeated,
     onPlayerDefeated,
     onPotionUsed,
+    getQueueDepth,
     onError,
   } = options;
 
@@ -300,6 +314,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     onMobDefeated,
     onPlayerDefeated,
     onPotionUsed,
+    getQueueDepth,
     onError,
   });
 
@@ -325,6 +340,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       onMobDefeated,
       onPlayerDefeated,
       onPotionUsed,
+      getQueueDepth,
       onError,
     };
   }, [
@@ -339,6 +355,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     onMobDefeated,
     onPlayerDefeated,
     onPotionUsed,
+    getQueueDepth,
     onError,
   ]);
 
@@ -379,6 +396,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
      * string | null | undefined não atribuível a string.
      */
     const activeCharacterId = characterId;
+    const latestSequenceBySession = new Map<string, number>();
 
     const token = getAuthToken();
 
@@ -720,8 +738,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       isJoiningCharacterRoom = false;
 
       const message =
-        error?.message ||
-        'Não foi possível conectar ao WebSocket do combate.';
+        error?.message || 'Não foi possível conectar ao WebSocket do combate.';
 
       updateConnectionState({
         isConnected: false,
@@ -842,6 +859,27 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
 
       if (!shouldProcessRealtimeEvent(payload)) {
         return;
+      }
+
+      const sessionKey = String(payload.sessionId ?? 'unknown');
+      const previousSequence = latestSequenceBySession.get(sessionKey) ?? null;
+      const telemetry = buildAutoCombatEventTelemetry({
+        characterId: activeCharacterId,
+        event: payload,
+        receivedAtMs: Date.now(),
+        queueDepth: handlersRef.current.getQueueDepth?.() ?? 0,
+        previousSequence,
+      });
+
+      if (
+        telemetry.sequence !== null &&
+        (previousSequence === null || telemetry.sequence > previousSequence)
+      ) {
+        latestSequenceBySession.set(sessionKey, telemetry.sequence);
+      }
+
+      if (currentSocket.connected && hasJoinedCharacterRoom) {
+        currentSocket.emit('auto-combat:telemetry', telemetry.payload);
       }
 
       clearSocketError();
@@ -998,10 +1036,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       currentSocket.off('connect_error', handleConnectError);
       currentSocket.off('exception', handleSocketError);
 
-      currentSocket.off(
-        'auto-combat:connected',
-        handleAuthenticatedConnection,
-      );
+      currentSocket.off('auto-combat:connected', handleAuthenticatedConnection);
       currentSocket.off('auto-combat:joined', handleJoined);
       currentSocket.off('auto-combat:left', handleLeft);
       currentSocket.off('auto-combat:error', handleSocketError);
@@ -1021,11 +1056,26 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     };
   }, [characterId, enabled]);
 
+  const reportTelemetry = useCallback(
+    (payload: Omit<AutoCombatClientTelemetryPayload, 'characterId'>) => {
+      if (!characterId || !state.socket?.connected || !state.isJoined) {
+        return;
+      }
+
+      state.socket.emit('auto-combat:telemetry', {
+        ...payload,
+        characterId,
+      });
+    },
+    [characterId, state.isJoined, state.socket],
+  );
+
   return {
     socket: state.socket,
     isConnected: state.isConnected,
     isJoined: state.isJoined,
     errorMessage: state.errorMessage,
     lastEvent: state.lastEvent,
+    reportTelemetry,
   };
 }

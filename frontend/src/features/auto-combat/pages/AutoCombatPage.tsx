@@ -46,6 +46,7 @@ import type {
   RealtimeSessionTotalsState,
 } from "../types/auto-combat-page.types";
 import type {
+  AutoCombatClientTelemetryPayload,
   AutoCombatEncounterViewModel,
   AutoCombatMapViewModel,
   AutoCombatRealtimeEvent,
@@ -789,6 +790,83 @@ function formatDropQuantity(
   return min === max ? `x${min}` : `x${min}-${max}`;
 }
 
+function AutoCombatVisualTelemetryReporter({
+  enemyInstanceId,
+  visualCycleStartedAtMs,
+  expectedDurationMs,
+  remainingPercent,
+  isAwaitingImpact,
+  reportTelemetry,
+}: {
+  enemyInstanceId?: string | null;
+  visualCycleStartedAtMs?: number | null;
+  expectedDurationMs?: number | null;
+  remainingPercent: number;
+  isAwaitingImpact: boolean;
+  reportTelemetry: (
+    payload: Omit<AutoCombatClientTelemetryPayload, "characterId">,
+  ) => void;
+}) {
+  const trackingRef = useRef<{
+    key: string;
+    startedAtMs: number;
+    expectedDurationMs: number;
+    reported: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    const startedAtMs =
+      typeof visualCycleStartedAtMs === "number"
+        ? visualCycleStartedAtMs
+        : null;
+    const expectedMs = Math.max(0, expectedDurationMs ?? 0);
+
+    if (!enemyInstanceId || startedAtMs === null || expectedMs <= 0) {
+      if (!enemyInstanceId) {
+        trackingRef.current = null;
+      }
+
+      return;
+    }
+
+    const key = `${enemyInstanceId}:${startedAtMs}`;
+    const currentTracking = trackingRef.current;
+    const tracking =
+      currentTracking?.key === key
+        ? currentTracking
+        : {
+            key,
+            startedAtMs,
+            expectedDurationMs: expectedMs,
+            reported: false,
+          };
+
+    if (currentTracking !== tracking) {
+      trackingRef.current = tracking;
+    }
+
+    if (tracking.reported || isAwaitingImpact || remainingPercent > 0) {
+      return;
+    }
+
+    tracking.reported = true;
+    reportTelemetry({
+      kind: "VISUAL_CYCLE",
+      visualDurationMs: Math.max(0, Date.now() - tracking.startedAtMs),
+      expectedDurationMs: tracking.expectedDurationMs,
+    });
+  }, [
+    enemyInstanceId,
+    expectedDurationMs,
+    isAwaitingImpact,
+    remainingPercent,
+    reportTelemetry,
+    visualCycleStartedAtMs,
+  ]);
+
+  return null;
+}
+
 export function AutoCombatPage() {
   "use no memo";
 
@@ -797,6 +875,7 @@ export function AutoCombatPage() {
   const requestedMapId = searchParams.get("mapId") ?? "";
   const requestedSubMapId = searchParams.get("subMapId") ?? "";
   const realtimeContext = useAutoCombatRealtime();
+  const reportAutoCombatTelemetry = realtimeContext.reportTelemetry;
   const realtimeActions = getRealtimeActions(realtimeContext);
   const realtimeState =
     useAutoCombatRealtimeState() as AutoCombatRealtimeStateLoose;
@@ -1203,9 +1282,12 @@ export function AutoCombatPage() {
   useEffect(() => {
     if (!showActiveSession && !showHuntStage) return undefined;
 
-    const intervalId = window.setInterval(() => {
-      setSessionClockNowMs(Date.now());
-    }, showActiveSession && isBackendCombatPhase ? 100 : 1000);
+    const intervalId = window.setInterval(
+      () => {
+        setSessionClockNowMs(Date.now());
+      },
+      showActiveSession && isBackendCombatPhase ? 100 : 1000,
+    );
 
     return () => {
       window.clearInterval(intervalId);
@@ -3817,8 +3899,7 @@ export function AutoCombatPage() {
       ? providerPublicActiveEvent
       : null;
   const xpFeedbackBreakdown = getXpFeedbackBreakdown(xpFeedbackEvent);
-  const shouldShowXpFeedback =
-    Boolean(xpFeedbackBreakdown && xpFeedbackEvent);
+  const shouldShowXpFeedback = Boolean(xpFeedbackBreakdown && xpFeedbackEvent);
   const xpFeedbackKey =
     shouldShowXpFeedback && xpFeedbackEvent
       ? `mob-xp-${getXpFeedbackDisplayKey(xpFeedbackEvent)}`
@@ -3830,9 +3911,7 @@ export function AutoCombatPage() {
         baseXp={xpFeedbackBreakdown.baseXp}
         totalXp={xpFeedbackBreakdown.totalXp}
         premiumBonusXp={xpFeedbackBreakdown.premiumBonusXp}
-        premiumPotentialBonusXp={
-          xpFeedbackBreakdown.premiumPotentialBonusXp
-        }
+        premiumPotentialBonusXp={xpFeedbackBreakdown.premiumPotentialBonusXp}
         premiumTotalXp={xpFeedbackBreakdown.premiumTotalXp}
         isPremiumActive={xpFeedbackBreakdown.isPremiumActive}
         variant="feedback"
@@ -4460,6 +4539,14 @@ export function AutoCombatPage() {
         autoCombatTopBarActivityOverride === null
       }
     >
+      <AutoCombatVisualTelemetryReporter
+        enemyInstanceId={activeMobEnemyInstanceId}
+        visualCycleStartedAtMs={localVisualCycleStartedAtMs}
+        expectedDurationMs={activeBattleTimelineProgress?.cycleDurationMs}
+        remainingPercent={activeTopBarBattleProgressPercent}
+        isAwaitingImpact={isMobSpawnAwaitingImpact}
+        reportTelemetry={reportAutoCombatTelemetry}
+      />
       <div
         className={[
           "auto-combat-page",
@@ -4855,7 +4942,8 @@ export function AutoCombatPage() {
                               />
                             </i>
                             <span>
-                              {activeMobHpDisplayLabel} · {activeKillProgressLabel}
+                              {activeMobHpDisplayLabel} ·{" "}
+                              {activeKillProgressLabel}
                             </span>
                           </div>
                         ) : null}

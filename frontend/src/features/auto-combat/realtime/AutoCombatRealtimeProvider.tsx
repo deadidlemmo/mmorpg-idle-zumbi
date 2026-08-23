@@ -821,7 +821,6 @@ export function AutoCombatRealtimeProvider({
           if (statusData) {
             publishConfirmedLootNotifications(statusData, null);
           }
-
         } else {
           lootSuppressionRequiresFreshStatusRef.current = false;
         }
@@ -1226,11 +1225,7 @@ export function AutoCombatRealtimeProvider({
         throw error;
       }
     },
-    [
-      clearScheduledReload,
-      clearSessionVisualState,
-      normalizedCharacterId,
-    ],
+    [clearScheduledReload, clearSessionVisualState, normalizedCharacterId],
   );
 
   const stop = useCallback(async () => {
@@ -1414,6 +1409,12 @@ export function AutoCombatRealtimeProvider({
     state,
   });
 
+  const getRealtimeQueueDepth = useCallback(() => {
+    const currentState = stateRef.current;
+
+    return currentState.eventQueue.length + (currentState.activeEvent ? 1 : 0);
+  }, []);
+
   const socketState = useAutoCombatSocket({
     characterId: normalizedCharacterId,
     enabled: shouldEnableSocket,
@@ -1424,6 +1425,7 @@ export function AutoCombatRealtimeProvider({
     onStopped: handleStoppedPayload,
 
     onRealtimeEvent: handleRealtimeEvent,
+    getQueueDepth: getRealtimeQueueDepth,
 
     onError: (message) => {
       dispatch({
@@ -1814,6 +1816,7 @@ export function AutoCombatRealtimeProvider({
       hydrateOverview,
       hydrateStatus,
       enqueueRealtimeEvent,
+      reportTelemetry: socketState.reportTelemetry,
       clearRealtimeQueue,
       clearSessionVisualState,
 
@@ -1828,6 +1831,7 @@ export function AutoCombatRealtimeProvider({
     hydrateOverview,
     hydrateStatus,
     enqueueRealtimeEvent,
+    socketState.reportTelemetry,
     clearRealtimeQueue,
     clearSessionVisualState,
     reload,

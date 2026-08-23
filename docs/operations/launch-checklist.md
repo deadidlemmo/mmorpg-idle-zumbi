@@ -27,6 +27,9 @@
 5. Publicar o frontend e executar `npm run test:browser:e2e` para validar token
    expirado, F5, reconnect e tutorial.
 6. Consultar `GET /metrics` com `Authorization: Bearer <METRICS_TOKEN>`.
+7. No painel administrativo, registrar a linha de base de pelo menos 15 minutos
+   para p50/p95/p99 HTTP, ticks e locks do auto-combate, atraso dos eventos,
+   fila do cliente e duracao visual. Comparar novas versoes contra essa base.
 
 ## Gates obrigatorios
 

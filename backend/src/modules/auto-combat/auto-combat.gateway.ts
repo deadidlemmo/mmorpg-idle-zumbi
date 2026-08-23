@@ -9,6 +9,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
+import { ObservabilityService } from '../../common/observability/observability.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SocketAuthService } from '../auth/socket-auth.service';
 
@@ -24,6 +25,8 @@ type AutoCombatSocketData = {
   userId?: string;
   email?: string | null;
   joinedCharacterRooms?: Set<string>;
+  telemetryWindowStartedAt?: number;
+  telemetryReportsInWindow?: number;
 };
 
 type AuthenticatedSocket = Omit<Socket, 'data'> & {
@@ -41,6 +44,21 @@ type AutoCombatStatusPayloadLike = {
     status?: string | null;
   } | null;
 };
+
+type AutoCombatTelemetryPayload = {
+  characterId?: string;
+  kind?: 'EVENT_RECEIVED' | 'VISUAL_CYCLE';
+  eventType?: string | null;
+  transitDelayMs?: number | null;
+  queueDepth?: number | null;
+  sequenceGap?: number | null;
+  outOfOrder?: boolean;
+  visualDurationMs?: number | null;
+  expectedDurationMs?: number | null;
+};
+
+const AUTO_COMBAT_TELEMETRY_WINDOW_MS = 60_000;
+const AUTO_COMBAT_TELEMETRY_MAX_REPORTS_PER_WINDOW = 600;
 
 @WebSocketGateway({
   namespace: '/auto-combat',
@@ -70,6 +88,7 @@ export class AutoCombatGateway
   constructor(
     private readonly socketAuth: SocketAuthService,
     private readonly prisma: PrismaService,
+    private readonly observability: ObservabilityService,
   ) {}
 
   async handleConnection(client: AuthenticatedSocket) {
@@ -90,8 +109,11 @@ export class AutoCombatGateway
       client.data.userId = user.id;
       client.data.email = user.email;
       client.data.joinedCharacterRooms = new Set<string>();
+      client.data.telemetryWindowStartedAt = Date.now();
+      client.data.telemetryReportsInWindow = 0;
 
       this.registerPresence(user.id, client.id);
+      this.observability.recordAutoCombatSocketConnection(true);
 
       await client.join(this.getUserRoom(user.id));
 
@@ -113,6 +135,7 @@ export class AutoCombatGateway
   handleDisconnect(client: AuthenticatedSocket) {
     if (client.data.userId) {
       this.unregisterPresence(client.data.userId, client.id);
+      this.observability.recordAutoCombatSocketConnection(false);
     }
 
     client.data.joinedCharacterRooms?.clear();
@@ -274,6 +297,56 @@ export class AutoCombatGateway
       characterId,
       room,
     };
+  }
+
+  @SubscribeMessage('auto-combat:telemetry')
+  handleTelemetry(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: AutoCombatTelemetryPayload,
+  ) {
+    const characterId = this.normalizeId(payload?.characterId);
+
+    if (
+      !client.data.userId ||
+      !characterId ||
+      !client.data.joinedCharacterRooms?.has(
+        this.getCharacterRoom(characterId),
+      ) ||
+      !this.consumeTelemetryQuota(client)
+    ) {
+      return { ok: false };
+    }
+
+    if (payload.kind === 'EVENT_RECEIVED') {
+      this.observability.recordAutoCombatClientTelemetry({
+        kind: payload.kind,
+        eventType: payload.eventType,
+        transitDelayMs: this.normalizeMetric(payload.transitDelayMs, 60_000),
+        queueDepth: this.normalizeMetric(payload.queueDepth, 1000),
+        sequenceGap: this.normalizeMetric(payload.sequenceGap, 1000),
+        outOfOrder: payload.outOfOrder === true,
+      });
+
+      return { ok: true };
+    }
+
+    if (payload.kind === 'VISUAL_CYCLE') {
+      this.observability.recordAutoCombatClientTelemetry({
+        kind: payload.kind,
+        visualDurationMs: this.normalizeMetric(
+          payload.visualDurationMs,
+          60_000,
+        ),
+        expectedDurationMs: this.normalizeMetric(
+          payload.expectedDurationMs,
+          60_000,
+        ),
+      });
+
+      return { ok: true };
+    }
+
+    return { ok: false };
   }
 
   emitStatus(characterId: string, payload: unknown) {
@@ -533,6 +606,36 @@ export class AutoCombatGateway
     const trimmed = value.trim();
 
     return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private consumeTelemetryQuota(client: AuthenticatedSocket) {
+    const now = Date.now();
+    const windowStartedAt = client.data.telemetryWindowStartedAt ?? now;
+
+    if (now - windowStartedAt >= AUTO_COMBAT_TELEMETRY_WINDOW_MS) {
+      client.data.telemetryWindowStartedAt = now;
+      client.data.telemetryReportsInWindow = 1;
+      return true;
+    }
+
+    const reports = client.data.telemetryReportsInWindow ?? 0;
+
+    if (reports >= AUTO_COMBAT_TELEMETRY_MAX_REPORTS_PER_WINDOW) {
+      return false;
+    }
+
+    client.data.telemetryReportsInWindow = reports + 1;
+    return true;
+  }
+
+  private normalizeMetric(value: unknown, maximum: number) {
+    const parsed = Number(value);
+
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+
+    return Math.min(maximum, Math.max(0, parsed));
   }
 
   private getUserRoom(userId: string) {

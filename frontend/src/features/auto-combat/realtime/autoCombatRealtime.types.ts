@@ -4,6 +4,7 @@ import type {
   DashboardCharacterViewModel,
 } from "../../dashboard/types/dashboard.types";
 import type {
+  AutoCombatClientTelemetryPayload,
   AutoCombatRealtimeEvent,
   AutoCombatRealtimePhase,
   AutoCombatStatusResponse,
@@ -382,6 +383,9 @@ export type AutoCombatRealtimeContextValue = {
   hydrateOverview: (overview: CharacterOverviewResponse | null) => void;
   hydrateStatus: (status: AutoCombatStatusResponse | null) => void;
   enqueueRealtimeEvent: (event: AutoCombatRealtimeEvent) => void;
+  reportTelemetry: (
+    payload: Omit<AutoCombatClientTelemetryPayload, "characterId">,
+  ) => void;
 
   clearRealtimeQueue: () => void;
   clearSessionVisualState: () => void;

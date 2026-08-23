@@ -123,11 +123,19 @@ function createServiceHarness(updateCount = 1) {
       }),
     ),
   };
+  const observability = {
+    setAutoCombatActiveLoops: jest.fn(),
+    recordAutoCombatProcessingLockWait: jest.fn(),
+    recordAutoCombatTick: jest.fn(),
+    recordAutoCombatTickError: jest.fn(),
+    recordAutoCombatRealtimeEvent: jest.fn(),
+  };
   const service = new AutoCombatService(
     prisma as never,
     activityGuard as never,
     gateway as never,
     distributedLock as never,
+    observability as never,
   );
 
   jest.spyOn(service as any, 'getOrCreateHuntingSkill').mockResolvedValue({

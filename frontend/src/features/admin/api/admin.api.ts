@@ -42,7 +42,8 @@ export interface AdminUser {
 
 export interface AdminCosmeticEntitlement {
   id: string;
-  source: "PURCHASE" | "BUNDLE" | "SEASON_PASS" | "EVENT" | "ACHIEVEMENT" | "ADMIN";
+  source:
+    "PURCHASE" | "BUNDLE" | "SEASON_PASS" | "EVENT" | "ACHIEVEMENT" | "ADMIN";
   sourceReference: string | null;
   grantedAt: string;
   expiresAt: string | null;
@@ -69,6 +70,15 @@ export interface AdminUsersResponse extends PageResponse {
 
 export interface AdminAuditLogsResponse extends PageResponse {
   logs: AdminAuditLog[];
+}
+
+export interface AdminMetricSeries {
+  samples: number;
+  average: number;
+  p50: number;
+  p95: number;
+  p99: number;
+  max: number;
 }
 
 export interface AdminOperations {
@@ -118,12 +128,14 @@ export interface AdminOperations {
     }>;
   };
   http: {
+    sampleWindowMinutes?: number;
     inFlightRequests: number;
     requests: number;
     errors: number;
     errorRatePercent: number;
     averageDurationMs: number;
     maxDurationMs: number;
+    recentLatency?: AdminMetricSeries;
     routes: Array<{
       route: string;
       requests: number;
@@ -131,7 +143,33 @@ export interface AdminOperations {
       errorRatePercent: number;
       averageDurationMs: number;
       maxDurationMs: number;
+      recentLatency?: AdminMetricSeries;
     }>;
+  };
+  autoCombat?: {
+    sampleWindowMinutes: number;
+    ticks: number;
+    tickErrors: number;
+    distributedLockMisses: number;
+    activeLoops: number;
+    realtimeEventsEmitted: number;
+    realtimeEventsByType: Record<string, number>;
+    socketConnections: number;
+    socketDisconnects: number;
+    activeSockets: number;
+    clientEventReports: number;
+    clientEventsByType: Record<string, number>;
+    visualCycleReports: number;
+    sequenceGaps: number;
+    outOfOrderEvents: number;
+    compressedVisualCycles: number;
+    tickDuration: AdminMetricSeries;
+    processingLockWait: AdminMetricSeries;
+    eventEmissionDelay: AdminMetricSeries;
+    clientEventTransitDelay: AdminMetricSeries;
+    clientQueueDepth: AdminMetricSeries;
+    visualCycleDuration: AdminMetricSeries;
+    visualCycleRatioPercent: AdminMetricSeries;
   };
 }
 
