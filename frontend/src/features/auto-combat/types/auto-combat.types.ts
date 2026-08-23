@@ -98,14 +98,39 @@ export type AutoCombatRealtimeEventType =
 
 export type AutoCombatClientTelemetryPayload = {
   characterId: string;
-  kind: "EVENT_RECEIVED" | "VISUAL_CYCLE";
+  kind:
+    | "EVENT_RECEIVED"
+    | "EVENT_DISPOSITION"
+    | "VISUAL_CYCLE"
+    | "VISIBILITY"
+    | "RECONCILIATION"
+    | "LIFECYCLE";
+  context?: AutoCombatTelemetryContext;
   eventType?: string | null;
   transitDelayMs?: number | null;
   queueDepth?: number | null;
   sequenceGap?: number | null;
   outOfOrder?: boolean;
+  disposition?: "DUPLICATE" | "SUPPRESSED" | null;
+  dispositionReason?: string | null;
+  reconciledEvents?: number | null;
+  realSequenceGaps?: number | null;
+  hiddenDurationMs?: number | null;
+  lifecycle?: "RECONNECTED" | null;
   visualDurationMs?: number | null;
   expectedDurationMs?: number | null;
+  afterVisibilityReturn?: boolean;
+};
+
+export type AutoCombatTelemetryContext =
+  | "combat-page"
+  | "other-page"
+  | "tab-hidden"
+  | "reconnected";
+
+export type AutoCombatTelemetryMetadata = {
+  context: AutoCombatTelemetryContext;
+  afterVisibilityReturn?: boolean;
 };
 
 export type AutoCombatRealtimeActor = "PLAYER" | "MOB" | "SYSTEM" | string;

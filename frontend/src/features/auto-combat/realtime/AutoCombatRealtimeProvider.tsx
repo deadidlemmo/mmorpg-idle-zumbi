@@ -16,6 +16,7 @@ import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import { getEquipmentItemImageUrl } from "../../equipment/utils/equipmentItemAssets";
 import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
 import { getBattleTimelineRecoveryDelayMs } from "../utils/battle-timeline";
+import { resolveAutoCombatTelemetryContext } from "../utils/auto-combat-telemetry";
 import {
   getAutoCombatRecentEvents,
   getAutoCombatStatus,
@@ -26,9 +27,11 @@ import {
 } from "../api/auto-combat.api";
 import { useAutoCombatSocket } from "../hooks/useAutoCombatSocket";
 import type {
+  AutoCombatClientTelemetryPayload,
   AutoCombatRealtimeEvent,
   AutoCombatRewardLootViewModel,
   AutoCombatStatusResponse,
+  AutoCombatTelemetryMetadata,
   StartAutoCombatBattlePayload,
   StartAutoCombatPayload,
 } from "../types/auto-combat.types";
@@ -68,6 +71,7 @@ const AFTER_START_RELOAD_DELAY_MS = 700;
 const AFTER_VISIBILITY_RELOAD_DELAY_MS = 120;
 const STALLED_COMBAT_SNAPSHOT_GRACE_MS = 1_750;
 const STALLED_COMBAT_SNAPSHOT_TIMER_PADDING_MS = 50;
+const AFTER_VISIBILITY_TELEMETRY_WINDOW_MS = 15_000;
 
 const NEXT_EVENT_PROCESS_DELAY_MS = 40;
 type AutoCombatLootNotificationTracker = {
@@ -498,6 +502,13 @@ export function AutoCombatRealtimeProvider({
   const pendingReloadOptionsRef = useRef<ReloadOptions | null>(null);
   const recentEventsRequestRef = useRef(0);
   const wasBackgroundedRef = useRef(false);
+  const hiddenStartedAtRef = useRef<number | null>(null);
+  const lastVisibilityReturnAtRef = useRef<number | null>(null);
+  const telemetryReporterRef = useRef<
+    (
+      payload: Omit<AutoCombatClientTelemetryPayload, "characterId">,
+    ) => void
+  >(() => undefined);
   const wasSocketConnectedRef = useRef(false);
   const wasSocketJoinedRef = useRef(false);
   const lastInactiveStatusSignatureRef = useRef<string | null>(null);
@@ -531,6 +542,8 @@ export function AutoCombatRealtimeProvider({
     pendingReloadOptionsRef.current = null;
     wasSocketConnectedRef.current = false;
     wasSocketJoinedRef.current = false;
+    hiddenStartedAtRef.current = null;
+    lastVisibilityReturnAtRef.current = null;
   }, [normalizedCharacterId]);
 
   const clearScheduledReload = useCallback(() => {
@@ -608,6 +621,12 @@ export function AutoCombatRealtimeProvider({
           event,
         })
       ) {
+        telemetryReporterRef.current({
+          kind: "EVENT_DISPOSITION",
+          eventType: String(event.type ?? "UNKNOWN").toUpperCase(),
+          disposition: "SUPPRESSED",
+          dispositionReason: "STATE_REJECTED",
+        });
         return;
       }
 
@@ -944,6 +963,14 @@ export function AutoCombatRealtimeProvider({
         const sessionId = response.session?.id ?? null;
 
         if (response.needsSnapshot) {
+          telemetryReporterRef.current({
+            kind: "RECONCILIATION",
+            context: /socket|network|offline|online/i.test(reason)
+              ? "reconnected"
+              : resolveAutoCombatTelemetryContext(),
+            reconciledEvents: 0,
+            realSequenceGaps: 1,
+          });
           flushVisualQueueWithoutAnimation();
 
           dispatch({
@@ -974,6 +1001,14 @@ export function AutoCombatRealtimeProvider({
           sessionId,
           events,
           applySnapshot: false,
+        });
+        telemetryReporterRef.current({
+          kind: "RECONCILIATION",
+          context: /socket|network|offline|online/i.test(reason)
+            ? "reconnected"
+            : resolveAutoCombatTelemetryContext(),
+          reconciledEvents: events.length,
+          realSequenceGaps: 0,
         });
 
         if (import.meta.env.DEV) {
@@ -1379,10 +1414,23 @@ export function AutoCombatRealtimeProvider({
           event: payload,
         })
       ) {
+        telemetryReporterRef.current({
+          kind: "EVENT_DISPOSITION",
+          eventType: String(payload.type ?? "UNKNOWN").toUpperCase(),
+          disposition: "SUPPRESSED",
+          dispositionReason: "STATE_REJECTED",
+        });
         return;
       }
 
       if (isUiBackgrounded()) {
+        telemetryReporterRef.current({
+          kind: "EVENT_DISPOSITION",
+          context: "tab-hidden",
+          eventType: String(payload.type ?? "UNKNOWN").toUpperCase(),
+          disposition: "SUPPRESSED",
+          dispositionReason: "TAB_HIDDEN",
+        });
         lastInactiveStatusSignatureRef.current = null;
         suppressLootNotificationsUntilCatchUpRef.current = true;
         lootSuppressionRequiresFreshStatusRef.current = true;
@@ -1415,6 +1463,19 @@ export function AutoCombatRealtimeProvider({
     return currentState.eventQueue.length + (currentState.activeEvent ? 1 : 0);
   }, []);
 
+  const getTelemetryMetadata = useCallback((): AutoCombatTelemetryMetadata => {
+    const now = Date.now();
+    const lastVisibilityReturnAt = lastVisibilityReturnAtRef.current;
+
+    return {
+      context: resolveAutoCombatTelemetryContext(),
+      ...(lastVisibilityReturnAt !== null &&
+      now - lastVisibilityReturnAt <= AFTER_VISIBILITY_TELEMETRY_WINDOW_MS
+        ? { afterVisibilityReturn: true }
+        : {}),
+    };
+  }, []);
+
   const socketState = useAutoCombatSocket({
     characterId: normalizedCharacterId,
     enabled: shouldEnableSocket,
@@ -1426,6 +1487,7 @@ export function AutoCombatRealtimeProvider({
 
     onRealtimeEvent: handleRealtimeEvent,
     getQueueDepth: getRealtimeQueueDepth,
+    getTelemetryMetadata,
 
     onError: (message) => {
       dispatch({
@@ -1434,6 +1496,10 @@ export function AutoCombatRealtimeProvider({
       });
     },
   });
+
+  useEffect(() => {
+    telemetryReporterRef.current = socketState.reportTelemetry;
+  }, [socketState.reportTelemetry]);
 
   useEffect(() => {
     dispatch({
@@ -1597,14 +1663,47 @@ export function AutoCombatRealtimeProvider({
   useEffect(() => {
     if (!normalizedCharacterId) return;
 
+    function markTelemetryBackgrounded() {
+      if (hiddenStartedAtRef.current !== null) {
+        return;
+      }
+
+      hiddenStartedAtRef.current = Date.now();
+      telemetryReporterRef.current({
+        kind: "VISIBILITY",
+        context: "tab-hidden",
+      });
+    }
+
+    function reportTelemetryVisibilityReturn() {
+      const hiddenStartedAt = hiddenStartedAtRef.current;
+
+      if (hiddenStartedAt === null) {
+        return;
+      }
+
+      const returnedAt = Date.now();
+      hiddenStartedAtRef.current = null;
+      lastVisibilityReturnAtRef.current = returnedAt;
+      telemetryReporterRef.current({
+        kind: "VISIBILITY",
+        context: resolveAutoCombatTelemetryContext(),
+        hiddenDurationMs: Math.max(0, returnedAt - hiddenStartedAt),
+        afterVisibilityReturn: true,
+      });
+    }
+
     function handleVisibilityChange() {
       if (!isDocumentVisible()) {
+        markTelemetryBackgrounded();
         wasBackgroundedRef.current = true;
         suppressLootNotificationsUntilCatchUpRef.current = true;
         lootSuppressionRequiresFreshStatusRef.current = true;
         enterSnapshotSynchronization();
         return;
       }
+
+      reportTelemetryVisibilityReturn();
 
       if (wasBackgroundedRef.current) {
         wasBackgroundedRef.current = false;
@@ -1613,6 +1712,7 @@ export function AutoCombatRealtimeProvider({
     }
 
     function handleWindowBlur() {
+      markTelemetryBackgrounded();
       wasBackgroundedRef.current = true;
       suppressLootNotificationsUntilCatchUpRef.current = true;
       lootSuppressionRequiresFreshStatusRef.current = true;
@@ -1623,6 +1723,8 @@ export function AutoCombatRealtimeProvider({
       if (!isDocumentVisible()) {
         return;
       }
+
+      reportTelemetryVisibilityReturn();
 
       if (wasBackgroundedRef.current) {
         wasBackgroundedRef.current = false;
@@ -1641,6 +1743,8 @@ export function AutoCombatRealtimeProvider({
       if (!isDocumentVisible()) {
         return;
       }
+
+      reportTelemetryVisibilityReturn();
 
       reconcileAfterReturningToPage("pageshow");
     }

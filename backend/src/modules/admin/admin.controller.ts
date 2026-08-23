@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   Req,
   UseGuards,
@@ -31,6 +32,11 @@ export class AdminController {
   @Get('operations')
   getOperations() {
     return this.adminService.getOperations();
+  }
+
+  @Post('operations/auto-combat/capture')
+  startAutoCombatCapture(@Req() request: { user: { id: string } }) {
+    return this.adminService.startAutoCombatCapture(request.user.id);
   }
 
   @Get('product')

@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
   admin: {
     summary: "/admin/summary",
     operations: "/admin/operations",
+    startAutoCombatCapture: "/admin/operations/auto-combat/capture",
     product: "/admin/product",
     users: "/admin/users",
     userSuspension: (userId: string) => `/admin/users/${userId}/suspension`,

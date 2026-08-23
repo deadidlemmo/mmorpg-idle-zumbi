@@ -9789,7 +9789,9 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     for (const event of events) {
-      const eventServerTime = Date.parse(event.serverTime ?? '');
+      const eventServerTime = Date.parse(
+        event.serverTime ?? event.createdAt ?? '',
+      );
       this.observability.recordAutoCombatRealtimeEvent({
         eventType: event.type,
         emissionDelayMs: Number.isFinite(eventServerTime)

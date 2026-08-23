@@ -70,6 +70,23 @@ export class AdminService {
     return this.observabilityService.getOperationalSnapshot();
   }
 
+  async startAutoCombatCapture(actorUserId: string) {
+    const capture = this.observabilityService.startAutoCombatCapture();
+
+    await this.auditService.record({
+      actorUserId,
+      action: 'ADMIN_AUTO_COMBAT_CAPTURE_STARTED',
+      entityType: 'OperationalCapture',
+      entityId: capture.id,
+      metadata: {
+        startedAt: capture.startedAt,
+        source: capture.source,
+      },
+    });
+
+    return { capture };
+  }
+
   async getSummary() {
     const [
       users,

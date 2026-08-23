@@ -11,8 +11,12 @@ import type {
   AutoCombatClientTelemetryPayload,
   AutoCombatRealtimeEvent,
   AutoCombatStatusResponse,
+  AutoCombatTelemetryMetadata,
 } from '../types/auto-combat.types';
-import { buildAutoCombatEventTelemetry } from '../utils/auto-combat-telemetry';
+import {
+  buildAutoCombatEventTelemetry,
+  resolveAutoCombatTelemetryContext,
+} from '../utils/auto-combat-telemetry';
 
 type UseAutoCombatSocketOptions = {
   characterId?: string | null;
@@ -31,6 +35,7 @@ type UseAutoCombatSocketOptions = {
   onPlayerDefeated?: (payload: AutoCombatRealtimeEvent) => void;
   onPotionUsed?: (payload: AutoCombatRealtimeEvent) => void;
   getQueueDepth?: () => number;
+  getTelemetryMetadata?: () => AutoCombatTelemetryMetadata;
 
   onError?: (message: string) => void;
 };
@@ -291,6 +296,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     onPlayerDefeated,
     onPotionUsed,
     getQueueDepth,
+    getTelemetryMetadata,
     onError,
   } = options;
 
@@ -315,12 +321,14 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     onPlayerDefeated,
     onPotionUsed,
     getQueueDepth,
+    getTelemetryMetadata,
     onError,
   });
 
   const activeCharacterIdRef = useRef<string | null>(characterId ?? null);
   const lastEventKeyRef = useRef('');
   const lastErrorMessageRef = useRef('');
+  const hasJoinedOnceRef = useRef(false);
 
   const processedRealtimeEventKeysRef = useRef<Set<string>>(new Set());
   const processedMobSpawnFingerprintsRef = useRef<Set<string>>(new Set());
@@ -341,6 +349,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       onPlayerDefeated,
       onPotionUsed,
       getQueueDepth,
+      getTelemetryMetadata,
       onError,
     };
   }, [
@@ -356,6 +365,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     onPlayerDefeated,
     onPotionUsed,
     getQueueDepth,
+    getTelemetryMetadata,
     onError,
   ]);
 
@@ -368,6 +378,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       activeCharacterIdRef.current = null;
       lastEventKeyRef.current = '';
       lastErrorMessageRef.current = '';
+      hasJoinedOnceRef.current = false;
       processedRealtimeEventKeysRef.current.clear();
       processedMobSpawnFingerprintsRef.current.clear();
       processedPotionUsedFingerprintsRef.current.clear();
@@ -444,6 +455,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
 
     lastEventKeyRef.current = '';
     lastErrorMessageRef.current = '';
+    hasJoinedOnceRef.current = false;
     processedRealtimeEventKeysRef.current.clear();
     processedMobSpawnFingerprintsRef.current.clear();
     processedPotionUsedFingerprintsRef.current.clear();
@@ -661,6 +673,28 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       }, delayMs);
     }
 
+    function getClientTelemetryMetadata(): AutoCombatTelemetryMetadata {
+      return (
+        handlersRef.current.getTelemetryMetadata?.() ?? {
+          context: resolveAutoCombatTelemetryContext(),
+        }
+      );
+    }
+
+    function emitTelemetry(
+      payload: Omit<AutoCombatClientTelemetryPayload, 'characterId'>,
+    ) {
+      if (!currentSocket.connected || !hasJoinedCharacterRoom) {
+        return;
+      }
+
+      currentSocket.emit('auto-combat:telemetry', {
+        ...getClientTelemetryMetadata(),
+        ...payload,
+        characterId: activeCharacterId,
+      });
+    }
+
     function handleConnect() {
       if (isDisposed) return;
 
@@ -696,12 +730,22 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
 
       hasJoinedCharacterRoom = true;
       isJoiningCharacterRoom = false;
+      const isReconnect = hasJoinedOnceRef.current;
+      hasJoinedOnceRef.current = true;
 
       updateConnectionState({
         isJoined: true,
       });
 
       clearSocketError();
+
+      if (isReconnect) {
+        emitTelemetry({
+          kind: 'LIFECYCLE',
+          context: 'reconnected',
+          lifecycle: 'RECONNECTED',
+        });
+      }
     }
 
     function handleLeft(payload: AutoCombatLeftPayload) {
@@ -858,6 +902,12 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       }
 
       if (!shouldProcessRealtimeEvent(payload)) {
+        emitTelemetry({
+          kind: 'EVENT_DISPOSITION',
+          eventType: getRealtimeEventType(payload),
+          disposition: 'DUPLICATE',
+          dispositionReason: 'CLIENT_DEDUPE',
+        });
         return;
       }
 
@@ -869,6 +919,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
         receivedAtMs: Date.now(),
         queueDepth: handlersRef.current.getQueueDepth?.() ?? 0,
         previousSequence,
+        metadata: getClientTelemetryMetadata(),
       });
 
       if (
@@ -878,9 +929,7 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
         latestSequenceBySession.set(sessionKey, telemetry.sequence);
       }
 
-      if (currentSocket.connected && hasJoinedCharacterRoom) {
-        currentSocket.emit('auto-combat:telemetry', telemetry.payload);
-      }
+      emitTelemetry(telemetry.payload);
 
       clearSocketError();
       setLastRealtimeEvent(payload);
@@ -1063,6 +1112,9 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
       }
 
       state.socket.emit('auto-combat:telemetry', {
+        ...(handlersRef.current.getTelemetryMetadata?.() ?? {
+          context: resolveAutoCombatTelemetryContext(),
+        }),
         ...payload,
         characterId,
       });

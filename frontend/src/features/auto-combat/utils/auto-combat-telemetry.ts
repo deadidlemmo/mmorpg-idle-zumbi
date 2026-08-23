@@ -1,6 +1,8 @@
 import type {
   AutoCombatClientTelemetryPayload,
   AutoCombatRealtimeEvent,
+  AutoCombatTelemetryContext,
+  AutoCombatTelemetryMetadata,
 } from "../types/auto-combat.types";
 
 type BuildEventTelemetryParams = {
@@ -9,6 +11,7 @@ type BuildEventTelemetryParams = {
   receivedAtMs: number;
   queueDepth: number;
   previousSequence?: number | null;
+  metadata?: AutoCombatTelemetryMetadata;
 };
 
 export type AutoCombatEventTelemetryResult = {
@@ -38,6 +41,9 @@ export function buildAutoCombatEventTelemetry(
     payload: {
       characterId: params.characterId,
       kind: "EVENT_RECEIVED",
+      ...(params.metadata?.context
+        ? { context: params.metadata.context }
+        : {}),
       eventType: String(params.event.type ?? "UNKNOWN").toUpperCase(),
       transitDelayMs,
       queueDepth: Math.max(0, Math.floor(Number(params.queueDepth) || 0)),
@@ -46,8 +52,36 @@ export function buildAutoCombatEventTelemetry(
         sequence !== null &&
         previousSequence !== null &&
         sequence < previousSequence,
+      ...(params.metadata?.afterVisibilityReturn
+        ? { afterVisibilityReturn: true }
+        : {}),
     },
   };
+}
+
+export function resolveAutoCombatTelemetryContext(params?: {
+  pathname?: string | null;
+  hidden?: boolean;
+  reconnected?: boolean;
+}): AutoCombatTelemetryContext {
+  if (params?.reconnected) {
+    return "reconnected";
+  }
+
+  const hidden = params?.hidden ??
+    (typeof document !== "undefined" && document.visibilityState === "hidden");
+
+  if (hidden) {
+    return "tab-hidden";
+  }
+
+  const pathname =
+    params?.pathname ??
+    (typeof window !== "undefined" ? window.location.pathname : "");
+
+  return /\/dashboard\/[^/]+\/auto-combat\/?$/i.test(pathname)
+    ? "combat-page"
+    : "other-page";
 }
 
 function getEventTimestampMs(event: AutoCombatRealtimeEvent) {

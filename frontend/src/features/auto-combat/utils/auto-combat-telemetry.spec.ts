@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildAutoCombatEventTelemetry } from "./auto-combat-telemetry";
+import {
+  buildAutoCombatEventTelemetry,
+  resolveAutoCombatTelemetryContext,
+} from "./auto-combat-telemetry";
 
 test("mede atraso percebido, fila e lacuna de sequência", () => {
   const result = buildAutoCombatEventTelemetry({
@@ -43,4 +46,50 @@ test("marca evento fora de ordem sem produzir atraso negativo", () => {
   assert.equal(result.payload.transitDelayMs, 0);
   assert.equal(result.payload.sequenceGap, 0);
   assert.equal(result.payload.outOfOrder, true);
+});
+
+test("classifica contexto e marca eventos recebidos apos retorno da aba", () => {
+  const result = buildAutoCombatEventTelemetry({
+    characterId: "character-1",
+    event: {
+      type: "MOB_DEFEATED",
+      sequence: 20,
+      serverTime: "2026-08-23T09:00:00.000Z",
+    },
+    receivedAtMs: Date.parse("2026-08-23T09:00:00.250Z"),
+    queueDepth: 1,
+    previousSequence: 19,
+    metadata: {
+      context: "combat-page",
+      afterVisibilityReturn: true,
+    },
+  });
+
+  assert.equal(result.payload.context, "combat-page");
+  assert.equal(result.payload.afterVisibilityReturn, true);
+});
+
+test("resolve os quatro contextos operacionais da coleta", () => {
+  assert.equal(
+    resolveAutoCombatTelemetryContext({ hidden: true }),
+    "tab-hidden",
+  );
+  assert.equal(
+    resolveAutoCombatTelemetryContext({ reconnected: true }),
+    "reconnected",
+  );
+  assert.equal(
+    resolveAutoCombatTelemetryContext({
+      pathname: "/dashboard/character-1/auto-combat",
+      hidden: false,
+    }),
+    "combat-page",
+  );
+  assert.equal(
+    resolveAutoCombatTelemetryContext({
+      pathname: "/dashboard/character-1/inventory",
+      hidden: false,
+    }),
+    "other-page",
+  );
 });

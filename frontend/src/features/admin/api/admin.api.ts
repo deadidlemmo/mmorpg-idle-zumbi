@@ -83,6 +83,12 @@ export interface AdminMetricSeries {
 
 export interface AdminOperations {
   generatedAt: string;
+  capture: {
+    id: string;
+    source: "BOOT" | "ADMIN";
+    startedAt: string;
+    elapsedSeconds: number;
+  };
   health: {
     status: "ok" | "degraded";
     ready: boolean;
@@ -136,6 +142,13 @@ export interface AdminOperations {
     averageDurationMs: number;
     maxDurationMs: number;
     recentLatency?: AdminMetricSeries;
+    recentErrors: Array<{
+      method: string;
+      route: string;
+      statusCode: number;
+      durationMs: number;
+      recordedAt: string;
+    }>;
     routes: Array<{
       route: string;
       requests: number;
@@ -161,6 +174,48 @@ export interface AdminOperations {
     clientEventsByType: Record<string, number>;
     visualCycleReports: number;
     sequenceGaps: number;
+    candidateSequenceGaps: number;
+    duplicateEvents: number;
+    suppressedEvents: number;
+    reconciliationRuns: number;
+    reconciledEvents: number;
+    realSequenceGaps: number;
+    visibilityReturns: number;
+    reconnects: number;
+    visualCyclesAfterVisibilityReturn: number;
+    telemetryByContext: Record<
+      "combat-page" | "other-page" | "tab-hidden" | "reconnected" | "unknown",
+      {
+        reports: number;
+        eventsReceived: number;
+        duplicateEvents: number;
+        suppressedEvents: number;
+        reconciliationRuns: number;
+        reconciledEvents: number;
+        realSequenceGaps: number;
+        visualCycles: number;
+        visualCyclesAfterVisibilityReturn: number;
+        visibilityReturns: number;
+        reconnects: number;
+      }
+    >;
+    coverage: {
+      eventEmissionDelay: {
+        eligible: number;
+        sampled: number;
+        percent: number;
+      };
+      clientTransitDelay: {
+        eligible: number;
+        sampled: number;
+        percent: number;
+      };
+    };
+    rates: {
+      ticksPerSecond: number;
+      eventsPerSecond: number;
+      clientReportsPerSecond: number;
+    };
     outOfOrderEvents: number;
     compressedVisualCycles: number;
     tickDuration: AdminMetricSeries;
@@ -170,6 +225,9 @@ export interface AdminOperations {
     clientQueueDepth: AdminMetricSeries;
     visualCycleDuration: AdminMetricSeries;
     visualCycleRatioPercent: AdminMetricSeries;
+    hiddenDuration: AdminMetricSeries;
+    visualCycleAfterVisibilityDuration: AdminMetricSeries;
+    visualCycleAfterVisibilityRatioPercent: AdminMetricSeries;
   };
 }
 
@@ -240,6 +298,13 @@ export async function getAdminOperations() {
   const response = await apiClient.get<AdminOperations>(
     API_ENDPOINTS.admin.operations,
   );
+  return response.data;
+}
+
+export async function startAdminAutoCombatCapture() {
+  const response = await apiClient.post<{
+    capture: AdminOperations["capture"];
+  }>(API_ENDPOINTS.admin.startAutoCombatCapture);
   return response.data;
 }
 

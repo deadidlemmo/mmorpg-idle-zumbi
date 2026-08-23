@@ -31,6 +31,28 @@
    para p50/p95/p99 HTTP, ticks e locks do auto-combate, atraso dos eventos,
    fila do cliente e duracao visual. Comparar novas versoes contra essa base.
 
+## Coleta limpa do auto-combate
+
+1. Abra `Operacao do jogo > Auto-combate` e clique em
+   `Iniciar coleta limpa`. O painel deve exibir um novo identificador e o tempo
+   decorrido da captura.
+2. Execute apenas um cenario por captura: `combat-page`, `other-page`,
+   `tab-hidden` ou `reconnected`. Inicie outra coleta antes de trocar o cenario.
+3. Para `tab-hidden`, deixe a aba oculta e volte para ela. Confirme a duracao
+   oculta, a reconciliacao e as medidas visuais marcadas como pos-retorno.
+4. Confira separadamente eventos duplicados, suprimidos, reconciliados,
+   lacunas candidatas e lacunas reais. Lacuna candidata nao deve ser tratada
+   como perda confirmada antes da reconciliacao.
+5. A cobertura de atraso de emissao e de transito deve comparar amostras
+   elegiveis e registradas desde o inicio da captura. Os percentis continuam
+   usando uma janela movel de 15 minutos.
+6. Se houver erro `5xx`, registre a rota normalizada, status, duracao e horario
+   mostrados no painel.
+
+O botao chama `POST /admin/operations/auto-combat/capture`. Ele cria uma nova
+linha de base logica para o painel, mas nao zera os contadores monotonicamente
+crescentes expostos em `GET /metrics`.
+
 ## Gates obrigatorios
 
 - CI verde em lint, testes, builds, migrations, seed,

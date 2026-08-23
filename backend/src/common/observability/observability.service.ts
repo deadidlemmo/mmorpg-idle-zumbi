@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'node:crypto';
 import type { Redis } from 'ioredis';
 import { REDIS_COORDINATION_CLIENT } from '../redis/redis.constants';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -23,6 +24,16 @@ type RouteMetrics = {
 type TimedMetricSample = {
   value: number;
   recordedAt: number;
+  sequence: number;
+};
+
+type HttpErrorSample = {
+  method: string;
+  route: string;
+  statusCode: number;
+  durationMs: number;
+  recordedAt: number;
+  sequence: number;
 };
 
 type MetricSeriesSummary = {
@@ -32,6 +43,27 @@ type MetricSeriesSummary = {
   p95: number;
   p99: number;
   max: number;
+};
+
+type AutoCombatTelemetryContext =
+  | 'combat-page'
+  | 'other-page'
+  | 'tab-hidden'
+  | 'reconnected'
+  | 'unknown';
+
+type AutoCombatContextCounters = {
+  reports: number;
+  eventsReceived: number;
+  duplicateEvents: number;
+  suppressedEvents: number;
+  reconciliationRuns: number;
+  reconciledEvents: number;
+  realSequenceGaps: number;
+  visualCycles: number;
+  visualCyclesAfterVisibilityReturn: number;
+  visibilityReturns: number;
+  reconnects: number;
 };
 
 type AutoCombatOperationalMetrics = {
@@ -48,8 +80,22 @@ type AutoCombatOperationalMetrics = {
   clientEventsByType: Map<string, number>;
   visualCycleReports: number;
   sequenceGaps: number;
+  duplicateEvents: number;
+  suppressedEvents: number;
+  reconciliationRuns: number;
+  reconciledEvents: number;
+  realSequenceGaps: number;
+  visibilityReturns: number;
+  reconnects: number;
+  eventEmissionDelaySamples: number;
+  clientTransitDelaySamples: number;
   outOfOrderEvents: number;
   compressedVisualCycles: number;
+  visualCyclesAfterVisibilityReturn: number;
+  telemetryByContext: Map<
+    AutoCombatTelemetryContext,
+    AutoCombatContextCounters
+  >;
   tickDurations: TimedMetricSample[];
   processingLockWaitDurations: TimedMetricSample[];
   eventEmissionDelays: TimedMetricSample[];
@@ -57,6 +103,53 @@ type AutoCombatOperationalMetrics = {
   clientQueueDepths: TimedMetricSample[];
   visualCycleDurations: TimedMetricSample[];
   visualCycleRatios: TimedMetricSample[];
+  hiddenDurations: TimedMetricSample[];
+  visualCycleAfterVisibilityDurations: TimedMetricSample[];
+  visualCycleAfterVisibilityRatios: TimedMetricSample[];
+};
+
+type AutoCombatCounterBaseline = {
+  ticks: number;
+  tickErrors: number;
+  distributedLockMisses: number;
+  realtimeEventsEmitted: number;
+  realtimeEventsByType: Map<string, number>;
+  socketConnections: number;
+  socketDisconnects: number;
+  clientEventReports: number;
+  clientEventsByType: Map<string, number>;
+  visualCycleReports: number;
+  sequenceGaps: number;
+  duplicateEvents: number;
+  suppressedEvents: number;
+  reconciliationRuns: number;
+  reconciledEvents: number;
+  realSequenceGaps: number;
+  visibilityReturns: number;
+  reconnects: number;
+  eventEmissionDelaySamples: number;
+  clientTransitDelaySamples: number;
+  outOfOrderEvents: number;
+  compressedVisualCycles: number;
+  visualCyclesAfterVisibilityReturn: number;
+  telemetryByContext: Map<
+    AutoCombatTelemetryContext,
+    AutoCombatContextCounters
+  >;
+};
+
+type HttpCounterBaseline = Map<
+  string,
+  Pick<RouteMetrics, 'requests' | 'errors' | 'durationMs'>
+>;
+
+type AutoCombatCapture = {
+  id: string;
+  startedAt: number;
+  minimumSampleSequence: number;
+  source: 'BOOT' | 'ADMIN';
+  autoCombatBaseline: AutoCombatCounterBaseline;
+  httpBaseline: HttpCounterBaseline;
 };
 
 type AlertContext = {
@@ -68,6 +161,14 @@ type AlertContext = {
 
 const METRIC_WINDOW_MS = 15 * 60 * 1000;
 const MAX_SERIES_SAMPLES = 50_000;
+const MAX_RECENT_HTTP_ERRORS = 250;
+const AUTO_COMBAT_TELEMETRY_CONTEXTS: AutoCombatTelemetryContext[] = [
+  'combat-page',
+  'other-page',
+  'tab-hidden',
+  'reconnected',
+  'unknown',
+];
 const AUTO_COMBAT_EVENT_TYPES = new Set([
   'HUNT_TARGET_FOUND',
   'MOB_SPAWNED',
@@ -102,8 +203,36 @@ export class ObservabilityService {
     clientEventsByType: new Map<string, number>(),
     visualCycleReports: 0,
     sequenceGaps: 0,
+    duplicateEvents: 0,
+    suppressedEvents: 0,
+    reconciliationRuns: 0,
+    reconciledEvents: 0,
+    realSequenceGaps: 0,
+    visibilityReturns: 0,
+    reconnects: 0,
+    eventEmissionDelaySamples: 0,
+    clientTransitDelaySamples: 0,
     outOfOrderEvents: 0,
     compressedVisualCycles: 0,
+    visualCyclesAfterVisibilityReturn: 0,
+    telemetryByContext: new Map(
+      AUTO_COMBAT_TELEMETRY_CONTEXTS.map((context) => [
+        context,
+        {
+          reports: 0,
+          eventsReceived: 0,
+          duplicateEvents: 0,
+          suppressedEvents: 0,
+          reconciliationRuns: 0,
+          reconciledEvents: 0,
+          realSequenceGaps: 0,
+          visualCycles: 0,
+          visualCyclesAfterVisibilityReturn: 0,
+          visibilityReturns: 0,
+          reconnects: 0,
+        },
+      ]),
+    ),
     tickDurations: [],
     processingLockWaitDurations: [],
     eventEmissionDelays: [],
@@ -111,10 +240,16 @@ export class ObservabilityService {
     clientQueueDepths: [],
     visualCycleDurations: [],
     visualCycleRatios: [],
+    hiddenDurations: [],
+    visualCycleAfterVisibilityDurations: [],
+    visualCycleAfterVisibilityRatios: [],
   };
   private readonly recentErrors: number[] = [];
+  private readonly recentHttpErrors: HttpErrorSample[] = [];
   private readonly lastAlertAt = new Map<string, number>();
+  private autoCombatCapture: AutoCombatCapture;
   private inFlightRequests = 0;
+  private metricSampleSequence = 0;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -124,7 +259,9 @@ export class ObservabilityService {
     private readonly redis: Redis | null,
     private readonly backupStatusService: BackupStatusService,
     private readonly alertDispatcher: OperationalAlertDispatcher,
-  ) {}
+  ) {
+    this.autoCombatCapture = this.createAutoCombatCapture('BOOT');
+  }
 
   startRequest() {
     this.inFlightRequests += 1;
@@ -153,8 +290,18 @@ export class ObservabilityService {
     this.recordSeriesSample(current.recentDurations, params.durationMs);
 
     if (params.statusCode >= 500) {
+      const recordedAt = Date.now();
       current.errors += 1;
-      this.recentErrors.push(Date.now());
+      this.recentErrors.push(recordedAt);
+      this.recentHttpErrors.push({
+        method: params.method.toUpperCase(),
+        route: normalizedRoute,
+        statusCode: Math.floor(params.statusCode),
+        durationMs: Math.max(0, params.durationMs),
+        recordedAt,
+        sequence: this.nextMetricSampleSequence(),
+      });
+      this.pruneRecentHttpErrors(recordedAt);
     }
 
     this.metrics.set(key, current);
@@ -218,13 +365,15 @@ export class ObservabilityService {
       this.normalizeAutoCombatEventType(params.eventType),
     );
 
-    if (
-      params.emissionDelayMs !== null &&
-      params.emissionDelayMs !== undefined
-    ) {
+    const emissionDelayMs = this.toNonNegativeFiniteNumber(
+      params.emissionDelayMs,
+    );
+
+    if (emissionDelayMs !== null) {
+      this.autoCombatMetrics.eventEmissionDelaySamples += 1;
       this.recordSeriesSample(
         this.autoCombatMetrics.eventEmissionDelays,
-        params.emissionDelayMs,
+        emissionDelayMs,
       );
     }
   }
@@ -244,29 +393,49 @@ export class ObservabilityService {
   }
 
   recordAutoCombatClientTelemetry(params: {
-    kind: 'EVENT_RECEIVED' | 'VISUAL_CYCLE';
+    kind:
+      | 'EVENT_RECEIVED'
+      | 'EVENT_DISPOSITION'
+      | 'VISUAL_CYCLE'
+      | 'VISIBILITY'
+      | 'RECONCILIATION'
+      | 'LIFECYCLE';
+    context?: string | null;
     eventType?: string | null;
     transitDelayMs?: number | null;
     queueDepth?: number | null;
     sequenceGap?: number | null;
     outOfOrder?: boolean;
+    disposition?: 'DUPLICATE' | 'SUPPRESSED' | null;
+    reconciledEvents?: number | null;
+    realSequenceGaps?: number | null;
+    hiddenDurationMs?: number | null;
+    lifecycle?: 'RECONNECTED' | null;
     visualDurationMs?: number | null;
     expectedDurationMs?: number | null;
+    afterVisibilityReturn?: boolean;
   }) {
+    const context = this.normalizeAutoCombatTelemetryContext(params.context);
+    const contextCounters = this.getAutoCombatContextCounters(context);
+    contextCounters.reports += 1;
+
     if (params.kind === 'EVENT_RECEIVED') {
       this.autoCombatMetrics.clientEventReports += 1;
+      contextCounters.eventsReceived += 1;
       this.incrementMetricCounter(
         this.autoCombatMetrics.clientEventsByType,
         this.normalizeAutoCombatEventType(params.eventType),
       );
 
-      if (
-        params.transitDelayMs !== null &&
-        params.transitDelayMs !== undefined
-      ) {
+      const transitDelayMs = this.toNonNegativeFiniteNumber(
+        params.transitDelayMs,
+      );
+
+      if (transitDelayMs !== null) {
+        this.autoCombatMetrics.clientTransitDelaySamples += 1;
         this.recordSeriesSample(
           this.autoCombatMetrics.clientEventTransitDelays,
-          params.transitDelayMs,
+          transitDelayMs,
         );
       }
 
@@ -289,6 +458,63 @@ export class ObservabilityService {
       return;
     }
 
+    if (params.kind === 'EVENT_DISPOSITION') {
+      if (params.disposition === 'DUPLICATE') {
+        this.autoCombatMetrics.duplicateEvents += 1;
+        contextCounters.duplicateEvents += 1;
+      } else if (params.disposition === 'SUPPRESSED') {
+        this.autoCombatMetrics.suppressedEvents += 1;
+        contextCounters.suppressedEvents += 1;
+      }
+
+      return;
+    }
+
+    if (params.kind === 'RECONCILIATION') {
+      const reconciledEvents = Math.max(
+        0,
+        Math.floor(Number(params.reconciledEvents) || 0),
+      );
+      const realSequenceGaps = Math.max(
+        0,
+        Math.floor(Number(params.realSequenceGaps) || 0),
+      );
+
+      this.autoCombatMetrics.reconciliationRuns += 1;
+      this.autoCombatMetrics.reconciledEvents += reconciledEvents;
+      this.autoCombatMetrics.realSequenceGaps += realSequenceGaps;
+      contextCounters.reconciliationRuns += 1;
+      contextCounters.reconciledEvents += reconciledEvents;
+      contextCounters.realSequenceGaps += realSequenceGaps;
+      return;
+    }
+
+    if (params.kind === 'VISIBILITY') {
+      const hiddenDurationMs = this.toNonNegativeFiniteNumber(
+        params.hiddenDurationMs,
+      );
+
+      if (hiddenDurationMs !== null) {
+        this.autoCombatMetrics.visibilityReturns += 1;
+        contextCounters.visibilityReturns += 1;
+        this.recordSeriesSample(
+          this.autoCombatMetrics.hiddenDurations,
+          hiddenDurationMs,
+        );
+      }
+
+      return;
+    }
+
+    if (params.kind === 'LIFECYCLE') {
+      if (params.lifecycle === 'RECONNECTED') {
+        this.autoCombatMetrics.reconnects += 1;
+        contextCounters.reconnects += 1;
+      }
+
+      return;
+    }
+
     const visualDurationMs = this.toNonNegativeFiniteNumber(
       params.visualDurationMs,
     );
@@ -301,10 +527,20 @@ export class ObservabilityService {
     }
 
     this.autoCombatMetrics.visualCycleReports += 1;
+    contextCounters.visualCycles += 1;
     this.recordSeriesSample(
       this.autoCombatMetrics.visualCycleDurations,
       visualDurationMs,
     );
+
+    if (params.afterVisibilityReturn) {
+      this.autoCombatMetrics.visualCyclesAfterVisibilityReturn += 1;
+      contextCounters.visualCyclesAfterVisibilityReturn += 1;
+      this.recordSeriesSample(
+        this.autoCombatMetrics.visualCycleAfterVisibilityDurations,
+        visualDurationMs,
+      );
+    }
 
     if (expectedDurationMs > 0) {
       const ratioPercent = (visualDurationMs / expectedDurationMs) * 100;
@@ -313,10 +549,22 @@ export class ObservabilityService {
         ratioPercent,
       );
 
+      if (params.afterVisibilityReturn) {
+        this.recordSeriesSample(
+          this.autoCombatMetrics.visualCycleAfterVisibilityRatios,
+          ratioPercent,
+        );
+      }
+
       if (ratioPercent < 90) {
         this.autoCombatMetrics.compressedVisualCycles += 1;
       }
     }
+  }
+
+  startAutoCombatCapture() {
+    this.autoCombatCapture = this.createAutoCombatCapture('ADMIN');
+    return this.buildCaptureMetadata();
   }
 
   async getHealth() {
@@ -370,30 +618,47 @@ export class ObservabilityService {
   }
 
   async getOperationalSnapshot() {
+    const now = Date.now();
+    const capture = this.autoCombatCapture;
     const publicHealth = await this.getHealth();
     const health = {
       ...publicHealth,
       backup: this.backupStatusService.getStatus(),
     };
-    const routeMetrics = [...this.metrics.entries()].map(([route, metric]) => {
-      const recentLatency = this.summarizeSeries(metric.recentDurations);
+    const routeMetrics = [...this.metrics.entries()]
+      .map(([route, metric]) => {
+        const baseline = capture.httpBaseline.get(route);
+        const requests = Math.max(
+          0,
+          metric.requests - (baseline?.requests ?? 0),
+        );
+        const errors = Math.max(0, metric.errors - (baseline?.errors ?? 0));
+        const durationMs = Math.max(
+          0,
+          metric.durationMs - (baseline?.durationMs ?? 0),
+        );
+        const recentLatency = this.summarizeSeries(
+          metric.recentDurations,
+          now,
+          capture.startedAt,
+          capture.minimumSampleSequence,
+        );
 
-      return {
-        route,
-        requests: metric.requests,
-        errors: metric.errors,
-        errorRatePercent:
-          metric.requests > 0
-            ? Number(((metric.errors / metric.requests) * 100).toFixed(2))
-            : 0,
-        averageDurationMs:
-          metric.requests > 0
-            ? Number((metric.durationMs / metric.requests).toFixed(2))
-            : 0,
-        maxDurationMs: metric.maxDurationMs,
-        recentLatency,
-      };
-    });
+        return {
+          route,
+          requests,
+          errors,
+          errorRatePercent:
+            requests > 0 ? Number(((errors / requests) * 100).toFixed(2)) : 0,
+          averageDurationMs:
+            requests > 0 ? Number((durationMs / requests).toFixed(2)) : 0,
+          maxDurationMs: recentLatency.max,
+          recentLatency,
+        };
+      })
+      .filter(
+        (metric) => metric.requests > 0 || metric.recentLatency.samples > 0,
+      );
     const totals = routeMetrics.reduce(
       (result, metric) => ({
         requests: result.requests + metric.requests,
@@ -406,11 +671,16 @@ export class ObservabilityService {
     );
     const httpLatency = this.summarizeSeries(
       [...this.metrics.values()].flatMap((metric) => metric.recentDurations),
+      now,
+      capture.startedAt,
+      capture.minimumSampleSequence,
     );
-    const autoCombat = this.buildAutoCombatSnapshot();
+    const autoCombat = this.buildAutoCombatSnapshot(capture);
+    this.pruneRecentHttpErrors(now);
 
     return {
       generatedAt: new Date().toISOString(),
+      capture: this.buildCaptureMetadata(now),
       health,
       http: {
         sampleWindowMinutes: METRIC_WINDOW_MS / 60_000,
@@ -427,6 +697,21 @@ export class ObservabilityService {
             : 0,
         maxDurationMs: totals.maxDurationMs,
         recentLatency: httpLatency,
+        recentErrors: this.recentHttpErrors
+          .filter(
+            (error) =>
+              error.recordedAt >= capture.startedAt &&
+              error.sequence > capture.minimumSampleSequence,
+          )
+          .slice(-20)
+          .reverse()
+          .map((error) => ({
+            method: error.method,
+            route: error.route,
+            statusCode: error.statusCode,
+            durationMs: error.durationMs,
+            recordedAt: new Date(error.recordedAt).toISOString(),
+          })),
         routes: routeMetrics
           .sort(
             (left, right) =>
@@ -603,6 +888,24 @@ export class ObservabilityService {
     }
   }
 
+  private pruneRecentHttpErrors(now = Date.now()) {
+    const cutoff = now - METRIC_WINDOW_MS;
+
+    while (
+      this.recentHttpErrors[0] &&
+      this.recentHttpErrors[0].recordedAt < cutoff
+    ) {
+      this.recentHttpErrors.shift();
+    }
+
+    if (this.recentHttpErrors.length > MAX_RECENT_HTTP_ERRORS) {
+      this.recentHttpErrors.splice(
+        0,
+        this.recentHttpErrors.length - MAX_RECENT_HTTP_ERRORS,
+      );
+    }
+  }
+
   private emitOperationalAlerts(requestDurationMs: number) {
     const now = Date.now();
     const backup = this.backupStatusService.getStatus(now);
@@ -640,46 +943,200 @@ export class ObservabilityService {
     return Number.isFinite(timestamp) ? Math.floor(timestamp / 1000) : 0;
   }
 
-  private buildAutoCombatSnapshot() {
+  private buildAutoCombatSnapshot(capture?: AutoCombatCapture) {
+    const baseline = capture?.autoCombatBaseline;
+    const minimumRecordedAt = capture?.startedAt ?? 0;
+    const minimumSampleSequence = capture?.minimumSampleSequence ?? 0;
+    const now = Date.now();
+    const ticks = this.counterDelta(
+      this.autoCombatMetrics.ticks,
+      baseline?.ticks,
+    );
+    const realtimeEventsEmitted = this.counterDelta(
+      this.autoCombatMetrics.realtimeEventsEmitted,
+      baseline?.realtimeEventsEmitted,
+    );
+    const clientEventReports = this.counterDelta(
+      this.autoCombatMetrics.clientEventReports,
+      baseline?.clientEventReports,
+    );
+    const eventEmissionDelaySamples = this.counterDelta(
+      this.autoCombatMetrics.eventEmissionDelaySamples,
+      baseline?.eventEmissionDelaySamples,
+    );
+    const clientTransitDelaySamples = this.counterDelta(
+      this.autoCombatMetrics.clientTransitDelaySamples,
+      baseline?.clientTransitDelaySamples,
+    );
+    const elapsedSeconds = Math.max(
+      0.001,
+      (now - (capture?.startedAt ?? now)) / 1000,
+    );
+
     return {
       sampleWindowMinutes: METRIC_WINDOW_MS / 60_000,
-      ticks: this.autoCombatMetrics.ticks,
-      tickErrors: this.autoCombatMetrics.tickErrors,
-      distributedLockMisses: this.autoCombatMetrics.distributedLockMisses,
+      ticks,
+      tickErrors: this.counterDelta(
+        this.autoCombatMetrics.tickErrors,
+        baseline?.tickErrors,
+      ),
+      distributedLockMisses: this.counterDelta(
+        this.autoCombatMetrics.distributedLockMisses,
+        baseline?.distributedLockMisses,
+      ),
       activeLoops: this.autoCombatMetrics.activeLoops,
-      realtimeEventsEmitted: this.autoCombatMetrics.realtimeEventsEmitted,
-      realtimeEventsByType: this.toMetricCounterRecord(
+      realtimeEventsEmitted,
+      realtimeEventsByType: this.toMetricCounterDeltaRecord(
         this.autoCombatMetrics.realtimeEventsByType,
+        baseline?.realtimeEventsByType,
       ),
-      socketConnections: this.autoCombatMetrics.socketConnections,
-      socketDisconnects: this.autoCombatMetrics.socketDisconnects,
+      socketConnections: this.counterDelta(
+        this.autoCombatMetrics.socketConnections,
+        baseline?.socketConnections,
+      ),
+      socketDisconnects: this.counterDelta(
+        this.autoCombatMetrics.socketDisconnects,
+        baseline?.socketDisconnects,
+      ),
       activeSockets: this.autoCombatMetrics.activeSockets,
-      clientEventReports: this.autoCombatMetrics.clientEventReports,
-      clientEventsByType: this.toMetricCounterRecord(
+      clientEventReports,
+      clientEventsByType: this.toMetricCounterDeltaRecord(
         this.autoCombatMetrics.clientEventsByType,
+        baseline?.clientEventsByType,
       ),
-      visualCycleReports: this.autoCombatMetrics.visualCycleReports,
-      sequenceGaps: this.autoCombatMetrics.sequenceGaps,
-      outOfOrderEvents: this.autoCombatMetrics.outOfOrderEvents,
-      compressedVisualCycles: this.autoCombatMetrics.compressedVisualCycles,
-      tickDuration: this.summarizeSeries(this.autoCombatMetrics.tickDurations),
+      visualCycleReports: this.counterDelta(
+        this.autoCombatMetrics.visualCycleReports,
+        baseline?.visualCycleReports,
+      ),
+      sequenceGaps: this.counterDelta(
+        this.autoCombatMetrics.sequenceGaps,
+        baseline?.sequenceGaps,
+      ),
+      candidateSequenceGaps: this.counterDelta(
+        this.autoCombatMetrics.sequenceGaps,
+        baseline?.sequenceGaps,
+      ),
+      duplicateEvents: this.counterDelta(
+        this.autoCombatMetrics.duplicateEvents,
+        baseline?.duplicateEvents,
+      ),
+      suppressedEvents: this.counterDelta(
+        this.autoCombatMetrics.suppressedEvents,
+        baseline?.suppressedEvents,
+      ),
+      reconciliationRuns: this.counterDelta(
+        this.autoCombatMetrics.reconciliationRuns,
+        baseline?.reconciliationRuns,
+      ),
+      reconciledEvents: this.counterDelta(
+        this.autoCombatMetrics.reconciledEvents,
+        baseline?.reconciledEvents,
+      ),
+      realSequenceGaps: this.counterDelta(
+        this.autoCombatMetrics.realSequenceGaps,
+        baseline?.realSequenceGaps,
+      ),
+      visibilityReturns: this.counterDelta(
+        this.autoCombatMetrics.visibilityReturns,
+        baseline?.visibilityReturns,
+      ),
+      reconnects: this.counterDelta(
+        this.autoCombatMetrics.reconnects,
+        baseline?.reconnects,
+      ),
+      visualCyclesAfterVisibilityReturn: this.counterDelta(
+        this.autoCombatMetrics.visualCyclesAfterVisibilityReturn,
+        baseline?.visualCyclesAfterVisibilityReturn,
+      ),
+      telemetryByContext: this.buildAutoCombatContextSnapshot(
+        baseline?.telemetryByContext,
+      ),
+      coverage: {
+        eventEmissionDelay: this.buildCoverage(
+          eventEmissionDelaySamples,
+          realtimeEventsEmitted,
+        ),
+        clientTransitDelay: this.buildCoverage(
+          clientTransitDelaySamples,
+          clientEventReports,
+        ),
+      },
+      rates: {
+        ticksPerSecond: this.roundMetric(ticks / elapsedSeconds),
+        eventsPerSecond: this.roundMetric(
+          realtimeEventsEmitted / elapsedSeconds,
+        ),
+        clientReportsPerSecond: this.roundMetric(
+          clientEventReports / elapsedSeconds,
+        ),
+      },
+      outOfOrderEvents: this.counterDelta(
+        this.autoCombatMetrics.outOfOrderEvents,
+        baseline?.outOfOrderEvents,
+      ),
+      compressedVisualCycles: this.counterDelta(
+        this.autoCombatMetrics.compressedVisualCycles,
+        baseline?.compressedVisualCycles,
+      ),
+      tickDuration: this.summarizeSeries(
+        this.autoCombatMetrics.tickDurations,
+        now,
+        minimumRecordedAt,
+        minimumSampleSequence,
+      ),
       processingLockWait: this.summarizeSeries(
         this.autoCombatMetrics.processingLockWaitDurations,
+        now,
+        minimumRecordedAt,
+        minimumSampleSequence,
       ),
       eventEmissionDelay: this.summarizeSeries(
         this.autoCombatMetrics.eventEmissionDelays,
+        now,
+        minimumRecordedAt,
+        minimumSampleSequence,
       ),
       clientEventTransitDelay: this.summarizeSeries(
         this.autoCombatMetrics.clientEventTransitDelays,
+        now,
+        minimumRecordedAt,
+        minimumSampleSequence,
       ),
       clientQueueDepth: this.summarizeSeries(
         this.autoCombatMetrics.clientQueueDepths,
+        now,
+        minimumRecordedAt,
+        minimumSampleSequence,
       ),
       visualCycleDuration: this.summarizeSeries(
         this.autoCombatMetrics.visualCycleDurations,
+        now,
+        minimumRecordedAt,
+        minimumSampleSequence,
       ),
       visualCycleRatioPercent: this.summarizeSeries(
         this.autoCombatMetrics.visualCycleRatios,
+        now,
+        minimumRecordedAt,
+        minimumSampleSequence,
+      ),
+      hiddenDuration: this.summarizeSeries(
+        this.autoCombatMetrics.hiddenDurations,
+        now,
+        minimumRecordedAt,
+        minimumSampleSequence,
+      ),
+      visualCycleAfterVisibilityDuration: this.summarizeSeries(
+        this.autoCombatMetrics.visualCycleAfterVisibilityDurations,
+        now,
+        minimumRecordedAt,
+        minimumSampleSequence,
+      ),
+      visualCycleAfterVisibilityRatioPercent: this.summarizeSeries(
+        this.autoCombatMetrics.visualCycleAfterVisibilityRatios,
+        now,
+        minimumRecordedAt,
+        minimumSampleSequence,
       ),
     };
   }
@@ -702,6 +1159,17 @@ export class ObservabilityService {
       dead_idle_auto_combat_visual_cycle_reports_total:
         snapshot.visualCycleReports,
       dead_idle_auto_combat_sequence_gaps_total: snapshot.sequenceGaps,
+      dead_idle_auto_combat_duplicate_events_total: snapshot.duplicateEvents,
+      dead_idle_auto_combat_suppressed_events_total: snapshot.suppressedEvents,
+      dead_idle_auto_combat_reconciliation_runs_total:
+        snapshot.reconciliationRuns,
+      dead_idle_auto_combat_reconciled_events_total: snapshot.reconciledEvents,
+      dead_idle_auto_combat_real_sequence_gaps_total: snapshot.realSequenceGaps,
+      dead_idle_auto_combat_visibility_returns_total:
+        snapshot.visibilityReturns,
+      dead_idle_auto_combat_reconnects_total: snapshot.reconnects,
+      dead_idle_auto_combat_visual_cycles_after_visibility_return_total:
+        snapshot.visualCyclesAfterVisibilityReturn,
       dead_idle_auto_combat_out_of_order_events_total:
         snapshot.outOfOrderEvents,
       dead_idle_auto_combat_compressed_visual_cycles_total:
@@ -735,6 +1203,19 @@ export class ObservabilityService {
       );
     }
 
+    lines.push(
+      '# TYPE dead_idle_auto_combat_client_telemetry_by_context_total counter',
+    );
+    for (const [context, metrics] of Object.entries(
+      snapshot.telemetryByContext,
+    )) {
+      for (const [metric, value] of Object.entries(metrics)) {
+        lines.push(
+          `dead_idle_auto_combat_client_telemetry_by_context_total{context="${context}",metric="${metric}"} ${value}`,
+        );
+      }
+    }
+
     lines.push('# TYPE dead_idle_auto_combat_active_loops gauge');
     lines.push(`dead_idle_auto_combat_active_loops ${snapshot.activeLoops}`);
     lines.push('# TYPE dead_idle_auto_combat_active_sockets gauge');
@@ -750,6 +1231,15 @@ export class ObservabilityService {
       ['client_queue_depth', snapshot.clientQueueDepth],
       ['visual_cycle_duration_ms', snapshot.visualCycleDuration],
       ['visual_cycle_ratio_percent', snapshot.visualCycleRatioPercent],
+      ['hidden_duration_ms', snapshot.hiddenDuration],
+      [
+        'visual_cycle_after_visibility_duration_ms',
+        snapshot.visualCycleAfterVisibilityDuration,
+      ],
+      [
+        'visual_cycle_after_visibility_ratio_percent',
+        snapshot.visualCycleAfterVisibilityRatioPercent,
+      ],
     ];
 
     for (const [name, summary] of series) {
@@ -775,16 +1265,27 @@ export class ObservabilityService {
       return;
     }
 
-    series.push({ value, recordedAt: now });
+    series.push({
+      value,
+      recordedAt: now,
+      sequence: this.nextMetricSampleSequence(),
+    });
     this.pruneSeries(series, now);
   }
 
   private summarizeSeries(
     series: TimedMetricSample[],
     now = Date.now(),
+    minimumRecordedAt = 0,
+    minimumSequence = 0,
   ): MetricSeriesSummary {
     this.pruneSeries(series, now);
+    const cutoff = Math.max(now - METRIC_WINDOW_MS, minimumRecordedAt);
     const values = series
+      .filter(
+        (sample) =>
+          sample.recordedAt >= cutoff && sample.sequence > minimumSequence,
+      )
       .map((sample) => sample.value)
       .sort((left, right) => left - right);
 
@@ -844,12 +1345,207 @@ export class ObservabilityService {
     counter.set(key, (counter.get(key) ?? 0) + 1);
   }
 
-  private toMetricCounterRecord(counter: Map<string, number>) {
-    return Object.fromEntries(
-      [...counter.entries()].sort(([left], [right]) =>
-        left.localeCompare(right),
+  private toMetricCounterDeltaRecord(
+    counter: Map<string, number>,
+    baseline?: Map<string, number>,
+  ): Record<string, number> {
+    const entries = [...counter.entries()]
+      .map(([key, value]): [string, number] => [
+        key,
+        this.counterDelta(value, baseline?.get(key)),
+      ])
+      .filter(([, value]) => value > 0)
+      .sort(([left], [right]) => left.localeCompare(right));
+
+    return Object.fromEntries(entries);
+  }
+
+  private createAutoCombatCapture(
+    source: AutoCombatCapture['source'],
+  ): AutoCombatCapture {
+    return {
+      id: randomUUID(),
+      startedAt: Date.now(),
+      minimumSampleSequence: this.metricSampleSequence,
+      source,
+      autoCombatBaseline: this.snapshotAutoCombatCounters(),
+      httpBaseline: new Map(
+        [...this.metrics.entries()].map(([route, metric]) => [
+          route,
+          {
+            requests: metric.requests,
+            errors: metric.errors,
+            durationMs: metric.durationMs,
+          },
+        ]),
       ),
-    );
+    };
+  }
+
+  private buildCaptureMetadata(now = Date.now()) {
+    return {
+      id: this.autoCombatCapture.id,
+      source: this.autoCombatCapture.source,
+      startedAt: new Date(this.autoCombatCapture.startedAt).toISOString(),
+      elapsedSeconds: Math.max(
+        0,
+        Math.floor((now - this.autoCombatCapture.startedAt) / 1000),
+      ),
+    };
+  }
+
+  private snapshotAutoCombatCounters(): AutoCombatCounterBaseline {
+    return {
+      ticks: this.autoCombatMetrics.ticks,
+      tickErrors: this.autoCombatMetrics.tickErrors,
+      distributedLockMisses: this.autoCombatMetrics.distributedLockMisses,
+      realtimeEventsEmitted: this.autoCombatMetrics.realtimeEventsEmitted,
+      realtimeEventsByType: new Map(
+        this.autoCombatMetrics.realtimeEventsByType,
+      ),
+      socketConnections: this.autoCombatMetrics.socketConnections,
+      socketDisconnects: this.autoCombatMetrics.socketDisconnects,
+      clientEventReports: this.autoCombatMetrics.clientEventReports,
+      clientEventsByType: new Map(this.autoCombatMetrics.clientEventsByType),
+      visualCycleReports: this.autoCombatMetrics.visualCycleReports,
+      sequenceGaps: this.autoCombatMetrics.sequenceGaps,
+      duplicateEvents: this.autoCombatMetrics.duplicateEvents,
+      suppressedEvents: this.autoCombatMetrics.suppressedEvents,
+      reconciliationRuns: this.autoCombatMetrics.reconciliationRuns,
+      reconciledEvents: this.autoCombatMetrics.reconciledEvents,
+      realSequenceGaps: this.autoCombatMetrics.realSequenceGaps,
+      visibilityReturns: this.autoCombatMetrics.visibilityReturns,
+      reconnects: this.autoCombatMetrics.reconnects,
+      eventEmissionDelaySamples:
+        this.autoCombatMetrics.eventEmissionDelaySamples,
+      clientTransitDelaySamples:
+        this.autoCombatMetrics.clientTransitDelaySamples,
+      outOfOrderEvents: this.autoCombatMetrics.outOfOrderEvents,
+      compressedVisualCycles: this.autoCombatMetrics.compressedVisualCycles,
+      visualCyclesAfterVisibilityReturn:
+        this.autoCombatMetrics.visualCyclesAfterVisibilityReturn,
+      telemetryByContext: new Map(
+        [...this.autoCombatMetrics.telemetryByContext.entries()].map(
+          ([context, counters]) => [context, { ...counters }],
+        ),
+      ),
+    };
+  }
+
+  private buildAutoCombatContextSnapshot(
+    baseline?: Map<AutoCombatTelemetryContext, AutoCombatContextCounters>,
+  ): Record<AutoCombatTelemetryContext, AutoCombatContextCounters> {
+    return Object.fromEntries(
+      AUTO_COMBAT_TELEMETRY_CONTEXTS.map((context) => {
+        const current = this.getAutoCombatContextCounters(context);
+        const previous = baseline?.get(context);
+
+        return [
+          context,
+          {
+            reports: this.counterDelta(current.reports, previous?.reports),
+            eventsReceived: this.counterDelta(
+              current.eventsReceived,
+              previous?.eventsReceived,
+            ),
+            duplicateEvents: this.counterDelta(
+              current.duplicateEvents,
+              previous?.duplicateEvents,
+            ),
+            suppressedEvents: this.counterDelta(
+              current.suppressedEvents,
+              previous?.suppressedEvents,
+            ),
+            reconciliationRuns: this.counterDelta(
+              current.reconciliationRuns,
+              previous?.reconciliationRuns,
+            ),
+            reconciledEvents: this.counterDelta(
+              current.reconciledEvents,
+              previous?.reconciledEvents,
+            ),
+            realSequenceGaps: this.counterDelta(
+              current.realSequenceGaps,
+              previous?.realSequenceGaps,
+            ),
+            visualCycles: this.counterDelta(
+              current.visualCycles,
+              previous?.visualCycles,
+            ),
+            visualCyclesAfterVisibilityReturn: this.counterDelta(
+              current.visualCyclesAfterVisibilityReturn,
+              previous?.visualCyclesAfterVisibilityReturn,
+            ),
+            visibilityReturns: this.counterDelta(
+              current.visibilityReturns,
+              previous?.visibilityReturns,
+            ),
+            reconnects: this.counterDelta(
+              current.reconnects,
+              previous?.reconnects,
+            ),
+          },
+        ] as [AutoCombatTelemetryContext, AutoCombatContextCounters];
+      }),
+    ) as Record<AutoCombatTelemetryContext, AutoCombatContextCounters>;
+  }
+
+  private getAutoCombatContextCounters(
+    context: AutoCombatTelemetryContext,
+  ): AutoCombatContextCounters {
+    const existing = this.autoCombatMetrics.telemetryByContext.get(context);
+
+    if (existing) {
+      return existing;
+    }
+
+    const counters: AutoCombatContextCounters = {
+      reports: 0,
+      eventsReceived: 0,
+      duplicateEvents: 0,
+      suppressedEvents: 0,
+      reconciliationRuns: 0,
+      reconciledEvents: 0,
+      realSequenceGaps: 0,
+      visualCycles: 0,
+      visualCyclesAfterVisibilityReturn: 0,
+      visibilityReturns: 0,
+      reconnects: 0,
+    };
+    this.autoCombatMetrics.telemetryByContext.set(context, counters);
+    return counters;
+  }
+
+  private normalizeAutoCombatTelemetryContext(
+    value?: string | null,
+  ): AutoCombatTelemetryContext {
+    const normalized = String(value ?? '')
+      .trim()
+      .toLowerCase() as AutoCombatTelemetryContext;
+
+    return AUTO_COMBAT_TELEMETRY_CONTEXTS.includes(normalized)
+      ? normalized
+      : 'unknown';
+  }
+
+  private buildCoverage(sampled: number, eligible: number) {
+    return {
+      eligible,
+      sampled,
+      percent:
+        eligible > 0
+          ? this.roundMetric(Math.min(100, (sampled / eligible) * 100))
+          : 0,
+    };
+  }
+
+  private nextMetricSampleSequence() {
+    this.metricSampleSequence += 1;
+    return this.metricSampleSequence;
+  }
+
+  private counterDelta(current: number, baseline = 0) {
+    return Math.max(0, current - baseline);
   }
 
   private normalizeAutoCombatEventType(value?: string | null) {
@@ -860,6 +1556,14 @@ export class ObservabilityService {
   }
 
   private toNonNegativeFiniteNumber(value: unknown) {
+    if (
+      value === null ||
+      value === undefined ||
+      (typeof value === 'string' && value.trim() === '')
+    ) {
+      return null;
+    }
+
     const parsed = Number(value);
 
     return Number.isFinite(parsed) ? Math.max(0, parsed) : null;

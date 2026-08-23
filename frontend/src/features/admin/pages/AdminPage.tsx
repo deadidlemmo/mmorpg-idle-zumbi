@@ -10,6 +10,7 @@ import {
   Gauge,
   HardDrive,
   PackagePlus,
+  Play,
   RefreshCw,
   Search,
   Server,
@@ -30,6 +31,7 @@ import {
   grantAdminCosmetics,
   revokeAdminCosmetic,
   setAdminUserSuspension,
+  startAdminAutoCombatCapture,
   type AdminCosmeticEntitlement,
   type AdminAuditLog,
   type AdminMetricSeries,
@@ -180,6 +182,7 @@ export function AdminPage() {
   const [reason, setReason] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isStartingCapture, setIsStartingCapture] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -316,10 +319,28 @@ export function AdminPage() {
     }
   }
 
+  async function startCleanAutoCombatCapture() {
+    setIsStartingCapture(true);
+    setError(null);
+
+    try {
+      await startAdminAutoCombatCapture();
+      setOperations(await getAdminOperations());
+    } catch {
+      setError("Não foi possível iniciar uma nova coleta de auto-combate.");
+    } finally {
+      setIsStartingCapture(false);
+    }
+  }
+
   const backup = operations?.health.backup;
   const backupTimestamp =
     backup?.lastVerification?.verifiedAt ?? backup?.lastVerification?.failedAt;
   const autoCombatMetrics = operations?.autoCombat;
+  const autoCombatCapture = operations?.capture;
+  const autoCombatCoverage = autoCombatMetrics?.coverage;
+  const autoCombatRates = autoCombatMetrics?.rates;
+  const autoCombatContexts = autoCombatMetrics?.telemetryByContext;
 
   return (
     <main className="admin-page" aria-busy={isLoading}>
@@ -693,17 +714,27 @@ export function AdminPage() {
                 </span>
               </div>
             </div>
-            <span
-              className={
-                autoCombatMetrics?.compressedVisualCycles
-                  ? "is-warning"
-                  : "is-neutral"
-              }
-            >
-              {autoCombatMetrics
-                ? `${autoCombatMetrics.visualCycleReports} ciclos medidos`
-                : "Aguardando dados"}
-            </span>
+            <div className="admin-autocombat-header-actions">
+              <div className="admin-autocombat-capture">
+                <strong title={autoCombatCapture?.id}>
+                  Coleta {autoCombatCapture?.id.slice(0, 8) ?? "..."}
+                </strong>
+                <span>
+                  {autoCombatCapture
+                    ? `${formatDate(autoCombatCapture.startedAt)} · ${formatDuration(autoCombatCapture.elapsedSeconds)}`
+                    : "Aguardando dados"}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="admin-capture-button"
+                disabled={isStartingCapture}
+                onClick={() => void startCleanAutoCombatCapture()}
+              >
+                <Play size={15} />
+                {isStartingCapture ? "Iniciando..." : "Iniciar coleta limpa"}
+              </button>
+            </div>
           </header>
 
           <dl>
@@ -808,7 +839,120 @@ export function AdminPage() {
               <dd>{autoCombatMetrics?.compressedVisualCycles ?? 0}</dd>
               <span>Duração observada abaixo de 90% da prevista</span>
             </div>
+            <div>
+              <dt>Duplicados / suprimidos</dt>
+              <dd>
+                {autoCombatMetrics
+                  ? `${autoCombatMetrics.duplicateEvents} / ${autoCombatMetrics.suppressedEvents}`
+                  : "Sem dados"}
+              </dd>
+              <span>Transporte repetido / apresentação descartada</span>
+            </div>
+            <div>
+              <dt>Reconciliações / eventos</dt>
+              <dd>
+                {autoCombatMetrics
+                  ? `${autoCombatMetrics.reconciliationRuns} / ${autoCombatMetrics.reconciledEvents}`
+                  : "Sem dados"}
+              </dd>
+              <span>
+                {autoCombatMetrics?.realSequenceGaps ?? 0} lacunas reais ·{" "}
+                {autoCombatMetrics?.candidateSequenceGaps ?? 0} candidatas
+              </span>
+            </div>
+            <div>
+              <dt>Retornos / reconexões</dt>
+              <dd>
+                {autoCombatMetrics
+                  ? `${autoCombatMetrics.visibilityReturns} / ${autoCombatMetrics.reconnects}`
+                  : "Sem dados"}
+              </dd>
+              <span>
+                Aba oculta p50{" "}
+                {formatMetricPercentile(
+                  autoCombatMetrics?.hiddenDuration,
+                  "p50",
+                )}
+              </span>
+            </div>
+            <div>
+              <dt>Ciclos após alt-tab</dt>
+              <dd>
+                {autoCombatMetrics?.visualCyclesAfterVisibilityReturn ?? 0}
+              </dd>
+              <span>
+                p50{" "}
+                {formatMetricPercentile(
+                  autoCombatMetrics?.visualCycleAfterVisibilityDuration,
+                  "p50",
+                )}{" "}
+                ·{" "}
+                {formatMetricPercentile(
+                  autoCombatMetrics?.visualCycleAfterVisibilityRatioPercent,
+                  "p50",
+                  "%",
+                )}
+              </span>
+            </div>
+            <div>
+              <dt>Cobertura emissão / trânsito</dt>
+              <dd>
+                {autoCombatCoverage
+                  ? `${autoCombatCoverage.eventEmissionDelay.percent}% / ${autoCombatCoverage.clientTransitDelay.percent}%`
+                  : "Sem dados"}
+              </dd>
+              <span>
+                {autoCombatCoverage
+                  ? `${autoCombatCoverage.eventEmissionDelay.sampled}/${autoCombatCoverage.eventEmissionDelay.eligible} · ${autoCombatCoverage.clientTransitDelay.sampled}/${autoCombatCoverage.clientTransitDelay.eligible}`
+                  : "Amostras / eventos elegíveis"}
+              </span>
+            </div>
+            <div>
+              <dt>Ticks / eventos por segundo</dt>
+              <dd>
+                {autoCombatRates
+                  ? `${formatMetricNumber(autoCombatRates.ticksPerSecond)} / ${formatMetricNumber(autoCombatRates.eventsPerSecond)}`
+                  : "Sem dados"}
+              </dd>
+              <span>
+                Cliente{" "}
+                {formatMetricNumber(
+                  autoCombatRates?.clientReportsPerSecond ?? 0,
+                )}{" "}
+                relatórios/s
+              </span>
+            </div>
           </dl>
+
+          {autoCombatContexts ? (
+            <div className="admin-autocombat-contexts">
+              <h3>Contextos da coleta</h3>
+              <div className="admin-autocombat-context-grid">
+                {(
+                  [
+                    ["combat-page", "Tela de combate"],
+                    ["other-page", "Outras páginas"],
+                    ["tab-hidden", "Aba oculta"],
+                    ["reconnected", "Reconectado"],
+                  ] as const
+                ).map(([context, label]) => {
+                  const metrics = autoCombatContexts[context];
+
+                  return (
+                    <article key={context}>
+                      <strong>{label}</strong>
+                      <span>{metrics.reports} relatórios</span>
+                      <span>{metrics.eventsReceived} recebidos</span>
+                      <span>{metrics.duplicateEvents} duplicados</span>
+                      <span>{metrics.suppressedEvents} suprimidos</span>
+                      <span>{metrics.reconciledEvents} reconciliados</span>
+                      <span>{metrics.realSequenceGaps} lacunas reais</span>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {operations?.http.routes.length ? (
@@ -829,6 +973,26 @@ export function AdminPage() {
                   máx {formatMetricPercentile(route.recentLatency, "max")}
                 </span>
                 <span>{route.errorRatePercent}% erro</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {operations?.http.recentErrors?.length ? (
+          <div className="admin-http-error-list">
+            <h3>Erros 5xx desta coleta</h3>
+            {operations.http.recentErrors.map((httpError) => (
+              <div
+                key={`${httpError.recordedAt}:${httpError.method}:${httpError.route}`}
+              >
+                <code>
+                  {httpError.method} {httpError.route}
+                </code>
+                <strong>{httpError.statusCode}</strong>
+                <span>{formatMetricNumber(httpError.durationMs)} ms</span>
+                <time dateTime={httpError.recordedAt}>
+                  {formatDate(httpError.recordedAt)}
+                </time>
               </div>
             ))}
           </div>

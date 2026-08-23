@@ -47,14 +47,27 @@ type AutoCombatStatusPayloadLike = {
 
 type AutoCombatTelemetryPayload = {
   characterId?: string;
-  kind?: 'EVENT_RECEIVED' | 'VISUAL_CYCLE';
+  kind?:
+    | 'EVENT_RECEIVED'
+    | 'EVENT_DISPOSITION'
+    | 'VISUAL_CYCLE'
+    | 'VISIBILITY'
+    | 'RECONCILIATION'
+    | 'LIFECYCLE';
+  context?: string | null;
   eventType?: string | null;
   transitDelayMs?: number | null;
   queueDepth?: number | null;
   sequenceGap?: number | null;
   outOfOrder?: boolean;
+  disposition?: 'DUPLICATE' | 'SUPPRESSED' | null;
+  reconciledEvents?: number | null;
+  realSequenceGaps?: number | null;
+  hiddenDurationMs?: number | null;
+  lifecycle?: 'RECONNECTED' | null;
   visualDurationMs?: number | null;
   expectedDurationMs?: number | null;
+  afterVisibilityReturn?: boolean;
 };
 
 const AUTO_COMBAT_TELEMETRY_WINDOW_MS = 60_000;
@@ -320,6 +333,7 @@ export class AutoCombatGateway
     if (payload.kind === 'EVENT_RECEIVED') {
       this.observability.recordAutoCombatClientTelemetry({
         kind: payload.kind,
+        context: payload.context,
         eventType: payload.eventType,
         transitDelayMs: this.normalizeMetric(payload.transitDelayMs, 60_000),
         queueDepth: this.normalizeMetric(payload.queueDepth, 1000),
@@ -330,9 +344,25 @@ export class AutoCombatGateway
       return { ok: true };
     }
 
+    if (payload.kind === 'EVENT_DISPOSITION') {
+      this.observability.recordAutoCombatClientTelemetry({
+        kind: payload.kind,
+        context: payload.context,
+        eventType: payload.eventType,
+        disposition:
+          payload.disposition === 'DUPLICATE' ||
+          payload.disposition === 'SUPPRESSED'
+            ? payload.disposition
+            : null,
+      });
+
+      return { ok: true };
+    }
+
     if (payload.kind === 'VISUAL_CYCLE') {
       this.observability.recordAutoCombatClientTelemetry({
         kind: payload.kind,
+        context: payload.context,
         visualDurationMs: this.normalizeMetric(
           payload.visualDurationMs,
           60_000,
@@ -341,6 +371,47 @@ export class AutoCombatGateway
           payload.expectedDurationMs,
           60_000,
         ),
+        afterVisibilityReturn: payload.afterVisibilityReturn === true,
+      });
+
+      return { ok: true };
+    }
+
+    if (payload.kind === 'VISIBILITY') {
+      this.observability.recordAutoCombatClientTelemetry({
+        kind: payload.kind,
+        context: payload.context,
+        hiddenDurationMs: this.normalizeMetric(
+          payload.hiddenDurationMs,
+          24 * 60 * 60 * 1000,
+        ),
+      });
+
+      return { ok: true };
+    }
+
+    if (payload.kind === 'RECONCILIATION') {
+      this.observability.recordAutoCombatClientTelemetry({
+        kind: payload.kind,
+        context: payload.context,
+        reconciledEvents: this.normalizeMetric(
+          payload.reconciledEvents,
+          10_000,
+        ),
+        realSequenceGaps: this.normalizeMetric(
+          payload.realSequenceGaps,
+          10_000,
+        ),
+      });
+
+      return { ok: true };
+    }
+
+    if (payload.kind === 'LIFECYCLE') {
+      this.observability.recordAutoCombatClientTelemetry({
+        kind: payload.kind,
+        context: payload.context,
+        lifecycle: payload.lifecycle === 'RECONNECTED' ? 'RECONNECTED' : null,
       });
 
       return { ok: true };
