@@ -8,6 +8,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { AutoCombatRealtimeProvider } from "../features/auto-combat/realtime/AutoCombatRealtimeProvider";
+import { AutoCombatDefeatCoordinator } from "../features/auto-combat/realtime/AutoCombatDefeatCoordinator";
 import { CraftingRealtimeProvider } from "../features/crafting/realtime/CraftingRealtimeProvider";
 import { GatheringRealtimeProvider } from "../features/gathering/realtime/GatheringRealtimeProvider";
 import { IncursionsRealtimeProvider } from "../features/incursions/realtime/IncursionsRealtimeProvider";
@@ -201,6 +202,7 @@ function DashboardRealtimeRoute() {
         autoLoad
         refreshMs={15000}
       >
+        <AutoCombatDefeatCoordinator characterId={characterId} />
         <GatheringRealtimeProvider
           key={`gathering-${characterId}`}
           characterId={characterId}

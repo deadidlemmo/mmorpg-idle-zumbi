@@ -74,6 +74,7 @@ import {
   assertAutoCombatPhaseTransition,
   buildHuntCycleKey,
 } from './auto-combat-state-machine';
+import { getAutoCombatNextRealtimeTickDelayMs } from './auto-combat-realtime-scheduler';
 import { StartAutoCombatBattleDto } from './dto/start-auto-combat-battle.dto';
 import { PreviewAutoCombatDto } from './dto/preview-auto-combat.dto';
 import { StartAutoCombatDto } from './dto/start-auto-combat.dto';
@@ -105,6 +106,12 @@ class AutoCombatSessionConcurrencyError extends Error {
     this.name = 'AutoCombatSessionConcurrencyError';
   }
 }
+
+type AutoCombatRealtimeLoop = {
+  userId: string;
+  timer: ReturnType<typeof setTimeout> | null;
+  running: boolean;
+};
 
 type CombatWinner = 'PLAYER' | 'MOB';
 
@@ -193,6 +200,7 @@ type AutoCombatRealtimeEventType =
 type AutoCombatRealtimeEvent = {
   characterId?: string;
   sessionId?: string;
+  activityInstanceId?: string | null;
   sequence?: number;
   eventKey?: string | null;
   enemyInstanceId?: string | null;
@@ -218,8 +226,10 @@ type AutoCombatRealtimeEvent = {
   battleProgressSeconds?: number;
   battleProgressPercent?: number;
   cycleStartedAt?: string | null;
+  cycleEndsAt?: string | null;
   cycleDurationMs?: number;
   cycleDurationSeconds?: number;
+  remainingMs?: number;
   progressUpdatedAt?: string | null;
   estimatedKillTimeSeconds?: number;
   baseKillTimeSeconds?: number;
@@ -763,15 +773,7 @@ type RealtimeRoundResult = {
 export class AutoCombatService implements OnModuleDestroy {
   private readonly logger = new Logger(AutoCombatService.name);
 
-  private readonly realtimeIntervals = new Map<
-    string,
-    ReturnType<typeof setInterval>
-  >();
-
-  private readonly immediateProcessingTimeouts = new Map<
-    string,
-    ReturnType<typeof setTimeout>
-  >();
+  private readonly realtimeLoops = new Map<string, AutoCombatRealtimeLoop>();
 
   private readonly processingLocks = new Set<string>();
 
@@ -786,16 +788,11 @@ export class AutoCombatService implements OnModuleDestroy {
   ) {}
 
   onModuleDestroy() {
-    for (const interval of this.realtimeIntervals.values()) {
-      clearInterval(interval);
+    for (const loop of this.realtimeLoops.values()) {
+      if (loop.timer) clearTimeout(loop.timer);
     }
 
-    for (const timeout of this.immediateProcessingTimeouts.values()) {
-      clearTimeout(timeout);
-    }
-
-    this.realtimeIntervals.clear();
-    this.immediateProcessingTimeouts.clear();
+    this.realtimeLoops.clear();
     this.processingLocks.clear();
     this.potionUsageByCombat.clear();
     this.observability.setAutoCombatActiveLoops(0);
@@ -1776,14 +1773,16 @@ export class AutoCombatService implements OnModuleDestroy {
 
     if (activeSession) {
       await this.ensureResponsiveRoundDuration(activeSession.id);
-      const response = await this.processActiveSessionById(
-        userId,
-        activeSession.id,
-        {
-          emitRealtimeEvents: false,
-          waitForActiveProcessing: true,
-        },
-      );
+      const hasLocalProcessor = this.realtimeLoops.has(character.id);
+      const response = hasLocalProcessor
+        ? await this.buildSessionResponse(activeSession.id, {
+            message: 'Sessão ativa sincronizada.',
+            processing: this.buildEmptyProcessingSummary(),
+          })
+        : await this.processActiveSessionById(userId, activeSession.id, {
+            emitRealtimeEvents: false,
+            waitForActiveProcessing: true,
+          });
 
       if (response.active) {
         this.startRealtimeProcessingLoop(userId, character.id);
@@ -2700,31 +2699,98 @@ export class AutoCombatService implements OnModuleDestroy {
      * O nome foi mantido por compatibilidade, mas o processamento não é mais
      * instantâneo: a primeira rodada respeita o roundDurationSeconds.
      */
-    const existingTimeout = this.immediateProcessingTimeouts.get(characterId);
+    this.startRealtimeProcessingLoop(userId, characterId);
 
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-    }
+    const loop = this.realtimeLoops.get(characterId);
 
-    const timeout = setTimeout(() => {
-      this.immediateProcessingTimeouts.delete(characterId);
-      void this.processRealtimeTick(userId, characterId);
-    }, AUTO_COMBAT_REALTIME_TICK_MS);
+    if (!loop || loop.running) return;
 
-    this.immediateProcessingTimeouts.set(characterId, timeout);
+    this.scheduleRealtimeProcessingTick(
+      characterId,
+      loop,
+      AUTO_COMBAT_REALTIME_TICK_MS,
+      true,
+    );
   }
 
   private startRealtimeProcessingLoop(userId: string, characterId: string) {
-    if (this.realtimeIntervals.has(characterId)) {
+    const existingLoop = this.realtimeLoops.get(characterId);
+
+    if (existingLoop) {
+      existingLoop.userId = userId;
+
+      if (!existingLoop.running && !existingLoop.timer) {
+        this.scheduleRealtimeProcessingTick(
+          characterId,
+          existingLoop,
+          AUTO_COMBAT_REALTIME_TICK_MS,
+        );
+      }
+
       return;
     }
 
-    const interval = setInterval(() => {
-      void this.processRealtimeTick(userId, characterId);
-    }, AUTO_COMBAT_REALTIME_TICK_MS);
+    const loop: AutoCombatRealtimeLoop = {
+      userId,
+      timer: null,
+      running: false,
+    };
 
-    this.realtimeIntervals.set(characterId, interval);
-    this.observability.setAutoCombatActiveLoops(this.realtimeIntervals.size);
+    this.realtimeLoops.set(characterId, loop);
+    this.scheduleRealtimeProcessingTick(
+      characterId,
+      loop,
+      AUTO_COMBAT_REALTIME_TICK_MS,
+    );
+    this.observability.setAutoCombatActiveLoops(this.realtimeLoops.size);
+  }
+
+  private scheduleRealtimeProcessingTick(
+    characterId: string,
+    loop: AutoCombatRealtimeLoop,
+    delayMs: number,
+    replace = false,
+  ) {
+    if (this.realtimeLoops.get(characterId) !== loop || loop.running) return;
+
+    if (loop.timer) {
+      if (!replace) return;
+      clearTimeout(loop.timer);
+    }
+
+    loop.timer = setTimeout(
+      () => {
+        loop.timer = null;
+        void this.runRealtimeProcessingTick(characterId, loop);
+      },
+      Math.max(0, Math.ceil(delayMs)),
+    );
+  }
+
+  private async runRealtimeProcessingTick(
+    characterId: string,
+    loop: AutoCombatRealtimeLoop,
+  ) {
+    if (this.realtimeLoops.get(characterId) !== loop || loop.running) return;
+
+    loop.running = true;
+
+    try {
+      const nextDelayMs = await this.processRealtimeTick(
+        loop.userId,
+        characterId,
+      );
+
+      if (
+        nextDelayMs !== null &&
+        this.realtimeLoops.get(characterId) === loop
+      ) {
+        loop.running = false;
+        this.scheduleRealtimeProcessingTick(characterId, loop, nextDelayMs);
+      }
+    } finally {
+      loop.running = false;
+    }
   }
 
   private async processRealtimeTick(userId: string, characterId: string) {
@@ -2739,6 +2805,15 @@ export class AutoCombatService implements OnModuleDestroy {
       );
 
       acquired = lockResult.acquired;
+
+      if (!lockResult.acquired) {
+        return AUTO_COMBAT_REALTIME_TICK_MS;
+      }
+
+      return getAutoCombatNextRealtimeTickDelayMs(
+        lockResult.value,
+        AUTO_COMBAT_REALTIME_TICK_MS,
+      );
     } finally {
       this.observability.recordAutoCombatTick({
         durationMs: Date.now() - startedAt,
@@ -2776,7 +2851,7 @@ export class AutoCombatService implements OnModuleDestroy {
 
       if (!activeSession) {
         this.stopRealtimeProcessingLoop(characterId);
-        return;
+        return null;
       }
 
       const response = await this.processActiveSessionById(
@@ -2787,6 +2862,8 @@ export class AutoCombatService implements OnModuleDestroy {
       if (!response.hasActiveAutoCombat) {
         this.stopRealtimeProcessingLoop(characterId);
       }
+
+      return response;
     } catch (error) {
       this.observability.recordAutoCombatTickError();
       this.logger.warn(
@@ -2797,26 +2874,18 @@ export class AutoCombatService implements OnModuleDestroy {
         }),
       );
       this.stopRealtimeProcessingLoop(characterId);
+      return null;
     }
   }
 
   private stopRealtimeProcessingLoop(characterId: string) {
-    const timeout = this.immediateProcessingTimeouts.get(characterId);
+    const loop = this.realtimeLoops.get(characterId);
 
-    if (timeout) {
-      clearTimeout(timeout);
-      this.immediateProcessingTimeouts.delete(characterId);
-    }
+    if (!loop) return;
 
-    const interval = this.realtimeIntervals.get(characterId);
-
-    if (!interval) {
-      return;
-    }
-
-    clearInterval(interval);
-    this.realtimeIntervals.delete(characterId);
-    this.observability.setAutoCombatActiveLoops(this.realtimeIntervals.size);
+    if (loop.timer) clearTimeout(loop.timer);
+    this.realtimeLoops.delete(characterId);
+    this.observability.setAutoCombatActiveLoops(this.realtimeLoops.size);
   }
 
   private loadAutoCombatSession(userId: string, sessionId: string) {
@@ -3317,16 +3386,16 @@ export class AutoCombatService implements OnModuleDestroy {
           aggregateResult.events.length - realtimeEventsToEmit.length,
         );
 
-      const response = await this.buildSessionResponse(session.id, {
-        message: this.getProcessingResultMessage(aggregateResult),
-        processing: this.buildProcessingSummary(aggregateResult, true),
-      });
-
       if (realtimeEventsToEmit.length > 0) {
         this.emitRealtimeEvents(session.characterId, realtimeEventsToEmit, {
           persist: false,
         });
       }
+
+      const response = await this.buildSessionResponse(session.id, {
+        message: this.getProcessingResultMessage(aggregateResult),
+        processing: this.buildProcessingSummary(aggregateResult, true),
+      });
 
       this.autoCombatGateway.emitSessionUpdated(session.characterId, response);
       this.autoCombatGateway.emitStatus(session.characterId, response);
@@ -7371,13 +7440,23 @@ export class AutoCombatService implements OnModuleDestroy {
       1,
       Math.round(estimatedKillTimeSeconds * 1000),
     );
+    const cycleEndsAt = new Date(cycleStartedAt.getTime() + cycleDurationMs);
+    const enemyInstanceId = this.buildEnemyInstanceId({
+      sessionId: session.id,
+      combatIndex: session.currentCombatIndex,
+      mobId: session.currentMobId ?? currentMob.id ?? null,
+    });
 
     return {
+      activityInstanceId: session.id,
+      enemyInstanceId,
       progressSeconds,
       progressPercent,
       cycleStartedAt: cycleStartedAt.toISOString(),
+      cycleEndsAt: cycleEndsAt.toISOString(),
       cycleDurationMs,
       cycleDurationSeconds: estimatedKillTimeSeconds,
+      remainingMs: Math.max(0, cycleEndsAt.getTime() - now.getTime()),
       progressUpdatedAt: now.toISOString(),
       serverNow: now.toISOString(),
       estimatedKillTimeSeconds,
@@ -9220,8 +9299,10 @@ export class AutoCombatService implements OnModuleDestroy {
     battleProgressSeconds?: number;
     battleProgressPercent?: number;
     cycleStartedAt?: string | Date | null;
+    cycleEndsAt?: string | Date | null;
     cycleDurationMs?: number;
     cycleDurationSeconds?: number;
+    remainingMs?: number;
     progressUpdatedAt?: string | Date | null;
     estimatedKillTimeSeconds?: number;
     baseKillTimeSeconds?: number;
@@ -9301,10 +9382,27 @@ export class AutoCombatService implements OnModuleDestroy {
             progressUpdatedAtDate.getTime() - battleProgressSeconds * 1000,
           ).toISOString()
         : null);
+    const cycleStartedAtDate = cycleStartedAt ? new Date(cycleStartedAt) : null;
+    const cycleEndsAt =
+      this.toOptionalIsoString(params.cycleEndsAt) ??
+      (cycleDurationMs &&
+      cycleStartedAtDate &&
+      Number.isFinite(cycleStartedAtDate.getTime())
+        ? new Date(cycleStartedAtDate.getTime() + cycleDurationMs).toISOString()
+        : null);
+    const cycleEndsAtDate = cycleEndsAt ? new Date(cycleEndsAt) : null;
+    const remainingMs = Math.max(
+      0,
+      Number(params.remainingMs) ||
+        (cycleEndsAtDate && Number.isFinite(cycleEndsAtDate.getTime())
+          ? cycleEndsAtDate.getTime() - new Date(createdAt).getTime()
+          : 0),
+    );
 
     return {
       characterId: params.context.characterId,
       sessionId: params.context.sessionId,
+      activityInstanceId: params.context.sessionId,
       enemyInstanceId,
       turnId: params.turnId ?? null,
       actionId: params.actionId ?? null,
@@ -9329,10 +9427,12 @@ export class AutoCombatService implements OnModuleDestroy {
       battleProgressSeconds: params.battleProgressSeconds,
       battleProgressPercent: params.battleProgressPercent,
       cycleStartedAt,
+      cycleEndsAt,
       cycleDurationMs,
       cycleDurationSeconds: cycleDurationMs
         ? cycleDurationMs / 1000
         : undefined,
+      remainingMs,
       progressUpdatedAt,
       estimatedKillTimeSeconds:
         estimatedKillTimeSeconds > 0 ? estimatedKillTimeSeconds : undefined,

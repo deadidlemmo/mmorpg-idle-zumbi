@@ -1,7 +1,4 @@
-import type {
-  AutoCombatBattleProgressViewModel,
-  AutoCombatRealtimeEvent,
-} from "../types/auto-combat.types";
+import type { AutoCombatBattleProgressViewModel } from "../types/auto-combat.types";
 import { getCycleProgress, type CycleProgress } from "./battle-timeline";
 
 const MIN_PRESENTATION_DURATION_MS = 1_000;
@@ -31,12 +28,6 @@ function toFiniteNumber(value: unknown) {
   const parsed = Number(value);
 
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function normalizeEventType(event?: AutoCombatRealtimeEvent | null) {
-  return String(event?.type ?? "")
-    .trim()
-    .toUpperCase();
 }
 
 function normalizeScope(value: unknown) {
@@ -72,9 +63,7 @@ export function getAutoCombatPresentationStartedAtMs(params: {
   }
 
   const wallClockNowMs = toFiniteNumber(params.wallClockNowMs);
-  const visualCycleStartedAtMs = toFiniteNumber(
-    params.visualCycleStartedAtMs,
-  );
+  const visualCycleStartedAtMs = toFiniteNumber(params.visualCycleStartedAtMs);
 
   if (wallClockNowMs === null || visualCycleStartedAtMs === null) {
     return monotonicNowMs;
@@ -86,16 +75,13 @@ export function getAutoCombatPresentationStartedAtMs(params: {
 }
 
 export function isAutoCombatPresentationTimelineEnabled(params: {
-  userRole?: string | null;
   flagValue?: string | boolean | null;
 }) {
-  const flagEnabled =
-    params.flagValue === true ||
-    String(params.flagValue ?? "")
-      .trim()
-      .toLowerCase() === "true";
+  const normalizedFlag = String(params.flagValue ?? "")
+    .trim()
+    .toLowerCase();
 
-  return flagEnabled && params.userRole?.trim().toUpperCase() === "ADMIN";
+  return params.flagValue !== false && normalizedFlag !== "false";
 }
 
 export function getAutoCombatPresentationDurationMs(
@@ -117,9 +103,7 @@ export function getAutoCombatPresentationDurationMs(
 
     if (rawDurationMs === null || rawDurationMs <= 0) continue;
 
-    const roundedDurationMs = Math.ceil(rawDurationMs / 1_000) * 1_000;
-
-    return Math.max(MIN_PRESENTATION_DURATION_MS, roundedDurationMs);
+    return Math.max(MIN_PRESENTATION_DURATION_MS, Math.ceil(rawDurationMs));
   }
 
   return null;
@@ -135,7 +119,12 @@ export function buildAutoCombatPresentationTimeline(params: {
   const startedAtMs = toFiniteNumber(params.startedAtMs);
   const durationMs = toFiniteNumber(params.durationMs);
 
-  if (!enemyInstanceId || startedAtMs === null || !durationMs || durationMs <= 0) {
+  if (
+    !enemyInstanceId ||
+    startedAtMs === null ||
+    !durationMs ||
+    durationMs <= 0
+  ) {
     return null;
   }
 
@@ -177,70 +166,6 @@ export function getAutoCombatPresentationProgress(params: {
     cycleDurationMs: timeline.durationMs,
     remainingPercent: Math.max(0, 100 - progress.progressPercent),
   };
-}
-
-export function isAutoCombatMobCompletionEvent(params: {
-  event?: AutoCombatRealtimeEvent | null;
-  nextEvent?: AutoCombatRealtimeEvent | null;
-}) {
-  const eventType = normalizeEventType(params.event);
-
-  if (eventType === "MOB_DEFEATED") {
-    return true;
-  }
-
-  if (eventType !== "PLAYER_HIT") {
-    return false;
-  }
-
-  const event = params.event;
-  const target = String(event?.target ?? "")
-    .trim()
-    .toUpperCase();
-  const mobHpAfter =
-    toFiniteNumber(event?.mobHpAfter) ??
-    (target === "MOB" ? toFiniteNumber(event?.targetHpAfter) : null);
-
-  return (
-    (mobHpAfter !== null && mobHpAfter <= 0) ||
-    normalizeEventType(params.nextEvent) === "MOB_DEFEATED"
-  );
-}
-
-export function getAutoCombatPresentationQueueDelayMs(params: {
-  timeline?: AutoCombatPresentationTimeline | null;
-  event?: AutoCombatRealtimeEvent | null;
-  nextEvent?: AutoCombatRealtimeEvent | null;
-  nowMs: number;
-}) {
-  const { timeline, event } = params;
-
-  if (
-    !timeline ||
-    !event ||
-    !isAutoCombatMobCompletionEvent({
-      event,
-      nextEvent: params.nextEvent,
-    })
-  ) {
-    return 0;
-  }
-
-  const eventEnemyInstanceId = normalizeScope(event.enemyInstanceId);
-
-  if (
-    eventEnemyInstanceId &&
-    eventEnemyInstanceId !== timeline.enemyInstanceId
-  ) {
-    return 0;
-  }
-
-  const progress = getAutoCombatPresentationProgress({
-    timeline,
-    nowMs: params.nowMs,
-  });
-
-  return Math.max(0, Math.ceil(progress?.remainingMs ?? 0));
 }
 
 export function getAutoCombatPresentationCssTimeline(params: {

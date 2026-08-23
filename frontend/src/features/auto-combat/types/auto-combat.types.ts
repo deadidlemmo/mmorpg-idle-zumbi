@@ -154,6 +154,7 @@ export interface AutoCombatRealtimeEvent {
   eventId?: string | null;
   characterId?: string | null;
   sessionId?: string | null;
+  activityInstanceId?: string | null;
   sequence?: number | null;
   eventKey?: string | null;
   enemyInstanceId?: string | null;
@@ -183,8 +184,10 @@ export interface AutoCombatRealtimeEvent {
   battleProgressSeconds?: number | null;
   battleProgressPercent?: number | null;
   cycleStartedAt?: string | number | Date | null;
+  cycleEndsAt?: string | number | Date | null;
   cycleDurationMs?: number | null;
   cycleDurationSeconds?: number | null;
+  remainingMs?: number | null;
   progressUpdatedAt?: string | number | Date | null;
   estimatedKillTimeSeconds?: number | null;
   baseKillTimeSeconds?: number | null;
@@ -346,11 +349,15 @@ export interface AutoCombatMobDropViewModel {
 }
 
 export interface AutoCombatBattleProgressViewModel {
+  activityInstanceId?: string | null;
+  enemyInstanceId?: string | null;
   progressSeconds?: number | null;
   progressPercent?: number | null;
   cycleStartedAt?: string | number | Date | null;
+  cycleEndsAt?: string | number | Date | null;
   cycleDurationMs?: number | null;
   cycleDurationSeconds?: number | null;
+  remainingMs?: number | null;
   progressUpdatedAt?: string | number | Date | null;
   serverNow?: string | number | Date | null;
   estimatedKillTimeSeconds?: number | null;

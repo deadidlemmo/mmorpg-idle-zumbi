@@ -15,7 +15,6 @@ import {
 } from "../../loot-notifications/lootNotificationContext";
 import type { CharacterOverviewResponse } from "../../dashboard/types/dashboard.types";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
-import { useAuthStore } from "../../../store/auth.store";
 import { getEquipmentItemImageUrl } from "../../equipment/utils/equipmentItemAssets";
 import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
 import { getBattleTimelineRecoveryDelayMs } from "../utils/battle-timeline";
@@ -27,11 +26,11 @@ import {
   buildAutoCombatPresentationTimeline,
   getAutoCombatPresentationDurationMs,
   getAutoCombatPresentationNowMs,
-  getAutoCombatPresentationQueueDelayMs,
   getAutoCombatPresentationStartedAtMs,
   getAutoCombatPresentationWallClockNowMs,
   isAutoCombatPresentationTimelineEnabled,
 } from "../utils/presentation-timeline";
+import { getMobPortraitImage } from "../utils/mobAssets";
 import {
   getAutoCombatRecentEvents,
   getAutoCombatStatus,
@@ -58,7 +57,12 @@ import {
 import { AutoCombatRealtimeContext } from "./autoCombatRealtime.context";
 import type { AutoCombatRealtimeContextValue } from "./autoCombatRealtime.types";
 import {
+  isAutoCombatDefeatEvent,
+  isAutoCombatDefeatStatus,
+} from "./autoCombatDefeat";
+import {
   buildMobSpawnedEventFromStatus,
+  getRealtimeEventKey,
   getRealtimeEventPlaybackTiming,
   getStatusSession,
   isStatusActive,
@@ -93,6 +97,7 @@ const STALLED_COMBAT_SNAPSHOT_TIMER_PADDING_MS = 50;
 const AFTER_VISIBILITY_TELEMETRY_WINDOW_MS = 15_000;
 
 const NEXT_EVENT_PROCESS_DELAY_MS = 40;
+const AUTO_COMBAT_XP_FORMATTER = new Intl.NumberFormat("pt-BR");
 type AutoCombatLootNotificationTracker = {
   sessionId: string | null;
   totalsByItemId: Map<string, number>;
@@ -163,6 +168,40 @@ function getLootImageUrl(loot: AutoCombatRewardLootViewModel) {
     getGatheringMaterialImageUrl(localAssetCandidate) ??
     getEquipmentItemImageUrl(localAssetCandidate)
   );
+}
+
+function getConfirmedXpAmount(value: unknown) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 0;
+  }
+
+  return Math.floor(parsed);
+}
+
+function getDefeatNotificationDescription(event: AutoCombatRealtimeEvent) {
+  const baseXp = getConfirmedXpAmount(event.baseXpGained);
+  const premiumBonusXp = getConfirmedXpAmount(event.premiumBonusXp);
+  const totalXp =
+    getConfirmedXpAmount(event.xpGained) || baseXp + premiumBonusXp;
+  const details: string[] = [];
+
+  if (totalXp > 0) {
+    details.push(`+${AUTO_COMBAT_XP_FORMATTER.format(totalXp)} EXP`);
+  }
+
+  if (premiumBonusXp > 0) {
+    details.push(
+      `inclui +${AUTO_COMBAT_XP_FORMATTER.format(premiumBonusXp)} Premium`,
+    );
+  }
+
+  if (event.leveledUp && getConfirmedXpAmount(event.characterLevel) > 0) {
+    details.push(`Nv. ${Math.floor(Number(event.characterLevel))}`);
+  }
+
+  return details.length > 0 ? details.join(" · ") : "Recompensa confirmada";
 }
 
 function buildAutoCombatLootTotals(status: AutoCombatStatusResponse | null) {
@@ -453,6 +492,25 @@ function shouldAcceptRealtimeEvent(params: {
   return isSameSession(currentSessionId, eventSessionId);
 }
 
+function shouldAcceptTerminalDefeatEvent(params: {
+  state: AutoCombatRealtimeState;
+  event: AutoCombatRealtimeEvent;
+}) {
+  const { state, event } = params;
+  const currentCharacterId = state.characterId ?? null;
+  const eventCharacterId = event.characterId ?? null;
+
+  if (
+    currentCharacterId &&
+    eventCharacterId &&
+    currentCharacterId !== eventCharacterId
+  ) {
+    return false;
+  }
+
+  return isSameSession(state.session?.id ?? null, event.sessionId ?? null);
+}
+
 function normalizeInitialMobSpawnedEvent(params: {
   event: AutoCombatRealtimeEvent;
   characterId: string;
@@ -503,20 +561,16 @@ export function AutoCombatRealtimeProvider({
 }: AutoCombatRealtimeProviderProps) {
   const normalizedCharacterId = characterId ?? null;
   const { pathname } = useLocation();
-  const userRole = useAuthStore((authState) => authState.user?.role ?? null);
 
   const [state, dispatch] = useReducer(
     autoCombatRealtimeReducer,
     normalizedCharacterId,
     getInitialState,
   );
-  const [presentationResumeVersion, setPresentationResumeVersion] =
-    useState(0);
-  const presentationTimelineEnabled =
-    isAutoCombatPresentationTimelineEnabled({
-      userRole,
-      flagValue: import.meta.env.VITE_AUTO_COMBAT_PRESENTATION_TIMELINE_V2,
-    });
+  const [presentationResumeVersion, setPresentationResumeVersion] = useState(0);
+  const presentationTimelineEnabled = isAutoCombatPresentationTimelineEnabled({
+    flagValue: import.meta.env.VITE_AUTO_COMBAT_PRESENTATION_TIMELINE_V2,
+  });
   const presentationDurationMs = getAutoCombatPresentationDurationMs(
     state.mob?.battleProgress,
     state.session?.battleProgress,
@@ -549,33 +603,27 @@ export function AutoCombatRealtimeProvider({
     presentationDurationMs,
   );
   const presentationCycleToken = isPresentationCombatActive
-    ? [
-        state.session?.id ?? "session",
-        presentationEnemyInstanceId,
-      ].join(":")
+    ? [state.session?.id ?? "session", presentationEnemyInstanceId].join(":")
     : null;
   const presentationVisualCycleStartedAtMs =
     state.visualCycleEnemyInstanceId === presentationEnemyInstanceId
       ? state.visualCycleStartedAtMs
       : null;
-  const presentationStartedAtMs = useMemo(
-    () => {
-      void presentationResumeVersion;
+  const presentationStartedAtMs = useMemo(() => {
+    void presentationResumeVersion;
 
-      return presentationCycleToken
-        ? getAutoCombatPresentationStartedAtMs({
-            monotonicNowMs: getAutoCombatPresentationNowMs(),
-            wallClockNowMs: getAutoCombatPresentationWallClockNowMs(),
-            visualCycleStartedAtMs: presentationVisualCycleStartedAtMs,
-          })
-        : null;
-    },
-    [
-      presentationCycleToken,
-      presentationResumeVersion,
-      presentationVisualCycleStartedAtMs,
-    ],
-  );
+    return presentationCycleToken
+      ? getAutoCombatPresentationStartedAtMs({
+          monotonicNowMs: getAutoCombatPresentationNowMs(),
+          wallClockNowMs: getAutoCombatPresentationWallClockNowMs(),
+          visualCycleStartedAtMs: presentationVisualCycleStartedAtMs,
+        })
+      : null;
+  }, [
+    presentationCycleToken,
+    presentationResumeVersion,
+    presentationVisualCycleStartedAtMs,
+  ]);
   const presentationTimeline = useMemo(
     () =>
       buildAutoCombatPresentationTimeline({
@@ -604,6 +652,7 @@ export function AutoCombatRealtimeProvider({
   const isLoadingRef = useRef(false);
   const activeEventTimeoutRef = useRef<number | null>(null);
   const activeEventImpactTimeoutRef = useRef<number | null>(null);
+  const notifiedDefeatEventKeysRef = useRef<Set<string>>(new Set());
   const reloadTimeoutRef = useRef<number | null>(null);
   const reloadRequestRef = useRef(0);
   const reloadExecutorRef = useRef<(options?: ReloadOptions) => Promise<void>>(
@@ -611,13 +660,12 @@ export function AutoCombatRealtimeProvider({
   );
   const pendingReloadOptionsRef = useRef<ReloadOptions | null>(null);
   const recentEventsRequestRef = useRef(0);
+  const terminalDefeatSessionRef = useRef<string | null>(null);
   const wasBackgroundedRef = useRef(false);
   const hiddenStartedAtRef = useRef<number | null>(null);
   const lastVisibilityReturnAtRef = useRef<number | null>(null);
   const telemetryReporterRef = useRef<
-    (
-      payload: Omit<AutoCombatClientTelemetryPayload, "characterId">,
-    ) => void
+    (payload: Omit<AutoCombatClientTelemetryPayload, "characterId">) => void
   >(() => undefined);
   const wasSocketConnectedRef = useRef(false);
   const wasSocketJoinedRef = useRef(false);
@@ -629,7 +677,7 @@ export function AutoCombatRealtimeProvider({
     totalsByItemId: new Map(),
     hasBaseline: false,
   });
-  const { notifyLootBatch } = useLootNotifications();
+  const { notifyLoot, notifyLootBatch } = useLootNotifications();
 
   useEffect(() => {
     stateRef.current = state;
@@ -654,6 +702,8 @@ export function AutoCombatRealtimeProvider({
     wasSocketJoinedRef.current = false;
     hiddenStartedAtRef.current = null;
     lastVisibilityReturnAtRef.current = null;
+    notifiedDefeatEventKeysRef.current.clear();
+    terminalDefeatSessionRef.current = null;
   }, [normalizedCharacterId]);
 
   const clearScheduledReload = useCallback(() => {
@@ -674,6 +724,58 @@ export function AutoCombatRealtimeProvider({
       activeEventImpactTimeoutRef.current = null;
     }
   }, []);
+
+  const publishDefeatNotification = useCallback(
+    (event: AutoCombatRealtimeEvent) => {
+      if (
+        !normalizedCharacterId ||
+        String(event.type ?? "")
+          .trim()
+          .toUpperCase() !== "MOB_DEFEATED"
+      ) {
+        return;
+      }
+
+      const eventKey = getRealtimeEventKey(event);
+
+      if (notifiedDefeatEventKeysRef.current.has(eventKey)) {
+        return;
+      }
+
+      notifiedDefeatEventKeysRef.current.add(eventKey);
+
+      if (notifiedDefeatEventKeysRef.current.size > 80) {
+        const oldestEventKey = notifiedDefeatEventKeysRef.current
+          .values()
+          .next().value;
+
+        if (oldestEventKey) {
+          notifiedDefeatEventKeysRef.current.delete(oldestEventKey);
+        }
+      }
+
+      const mobName =
+        String(event.mobName ?? stateRef.current.mob?.name ?? "").trim() ||
+        "Ameaça eliminada";
+
+      notifyLoot({
+        idempotencyKey: [
+          "auto-combat-defeat",
+          normalizedCharacterId,
+          eventKey,
+        ].join("|"),
+        itemName: mobName,
+        quantity: 1,
+        imageUrl: getMobPortraitImage(mobName),
+        source: "auto-combat",
+        kind: "combat-result",
+        eyebrow: "Alvo eliminado",
+        description: getDefeatNotificationDescription(event),
+        displayQuantity: false,
+      });
+    },
+    [normalizedCharacterId, notifyLoot],
+  );
 
   const flushVisualQueueWithoutAnimation = useCallback(() => {
     clearScheduledActiveEvent();
@@ -696,6 +798,59 @@ export function AutoCombatRealtimeProvider({
     [flushVisualQueueWithoutAnimation],
   );
 
+  const terminateDefeatedPresentation = useCallback(
+    (params: {
+      source: "event" | "status";
+      status?: AutoCombatStatusResponse | null;
+      event?: AutoCombatRealtimeEvent | null;
+    }) => {
+      if (!normalizedCharacterId) return;
+
+      const { source, status = null, event = null } = params;
+      const sessionId =
+        getStatusSession(status)?.id ??
+        event?.sessionId ??
+        stateRef.current.session?.id ??
+        null;
+      const terminalKey = sessionId ?? `${normalizedCharacterId}:defeated`;
+      const shouldReconcileCanonicalStatus =
+        source === "event" && terminalDefeatSessionRef.current !== terminalKey;
+
+      terminalDefeatSessionRef.current = terminalKey;
+      clearScheduledActiveEvent();
+      clearScheduledReload();
+
+      // Invalida respostas iniciadas antes da derrota para que um snapshot ACTIVE
+      // atrasado não restaure a apresentação que acabou de ser encerrada.
+      reloadRequestRef.current += 1;
+      recentEventsRequestRef.current += 1;
+      isLoadingRef.current = false;
+      pendingReloadOptionsRef.current = null;
+      lastInactiveStatusSignatureRef.current = null;
+
+      dispatch({
+        type: "TERMINATE_DEFEATED",
+        characterId: normalizedCharacterId,
+        source,
+        status,
+        event,
+      });
+
+      if (shouldReconcileCanonicalStatus) {
+        window.setTimeout(() => {
+          void reloadExecutorRef.current({
+            reason: "player-defeated-event",
+          });
+        }, 0);
+      }
+    },
+    [
+      clearScheduledActiveEvent,
+      clearScheduledReload,
+      normalizedCharacterId,
+    ],
+  );
+
   const hydrateOverview = useCallback(
     (overview: CharacterOverviewResponse | null) => {
       if (!normalizedCharacterId) return;
@@ -713,13 +868,61 @@ export function AutoCombatRealtimeProvider({
     (status: AutoCombatStatusResponse | null) => {
       if (!normalizedCharacterId) return;
 
+      if (isAutoCombatDefeatStatus(status)) {
+        terminateDefeatedPresentation({
+          source: "status",
+          status,
+        });
+        return;
+      }
+
+      if (isStatusActive(status)) {
+        const incomingSessionId = getStatusSession(status)?.id ?? null;
+        const terminalSessionKey = terminalDefeatSessionRef.current;
+
+        if (
+          terminalSessionKey &&
+          (!incomingSessionId ||
+            terminalSessionKey === incomingSessionId ||
+            terminalSessionKey === `${normalizedCharacterId}:defeated`)
+        ) {
+          return;
+        }
+
+        terminalDefeatSessionRef.current = null;
+      }
+
       dispatch({
         type: "HYDRATE_STATUS",
         characterId: normalizedCharacterId,
         status,
       });
     },
-    [normalizedCharacterId],
+    [normalizedCharacterId, terminateDefeatedPresentation],
+  );
+
+  const hydrateCharacterHealth = useCallback(
+    (payload: { currentHp: number; maxHp: number; isDefeated: boolean }) => {
+      if (!normalizedCharacterId) return;
+
+      if (!payload.isDefeated && payload.currentHp > 0) {
+        terminalDefeatSessionRef.current = null;
+        clearScheduledReload();
+        reloadRequestRef.current += 1;
+        recentEventsRequestRef.current += 1;
+        isLoadingRef.current = false;
+        pendingReloadOptionsRef.current = null;
+      }
+
+      dispatch({
+        type: "HYDRATE_CHARACTER_HEALTH",
+        characterId: normalizedCharacterId,
+        currentHp: payload.currentHp,
+        maxHp: payload.maxHp,
+        isDefeated: payload.isDefeated,
+      });
+    },
+    [clearScheduledReload, normalizedCharacterId],
   );
 
   const enqueueRealtimeEvent = useCallback(
@@ -727,6 +930,17 @@ export function AutoCombatRealtimeProvider({
       if (!normalizedCharacterId) return;
 
       const currentState = stateRef.current;
+
+      if (
+        isAutoCombatDefeatEvent(event) &&
+        shouldAcceptTerminalDefeatEvent({ state: currentState, event })
+      ) {
+        terminateDefeatedPresentation({
+          source: "event",
+          event,
+        });
+        return;
+      }
 
       if (
         !shouldAcceptRealtimeEvent({
@@ -745,13 +959,21 @@ export function AutoCombatRealtimeProvider({
 
       lastInactiveStatusSignatureRef.current = null;
 
+      if (!isUiBackgrounded()) {
+        publishDefeatNotification(event);
+      }
+
       dispatch({
         type: "ENQUEUE_EVENT",
         characterId: normalizedCharacterId,
         event,
       });
     },
-    [normalizedCharacterId],
+    [
+      normalizedCharacterId,
+      publishDefeatNotification,
+      terminateDefeatedPresentation,
+    ],
   );
 
   const clearRealtimeQueue = useCallback(() => {
@@ -762,6 +984,7 @@ export function AutoCombatRealtimeProvider({
 
   const clearSessionVisualState = useCallback(() => {
     clearScheduledActiveEvent();
+    terminalDefeatSessionRef.current = null;
 
     dispatch({
       type: "CLEAR_SESSION_VISUAL_STATE",
@@ -917,16 +1140,6 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
-      const currentState = stateRef.current;
-
-      if (
-        currentState.hasLoadedOnce &&
-        isStatusInactiveOrTerminal(currentState.status) &&
-        isTerminalSessionStatus(currentState.session?.status)
-      ) {
-        return;
-      }
-
       const requestId = reloadRequestRef.current + 1;
       reloadRequestRef.current = requestId;
       pendingReloadOptionsRef.current = null;
@@ -966,11 +1179,7 @@ export function AutoCombatRealtimeProvider({
         }
 
         if (statusData) {
-          dispatch({
-            type: "HYDRATE_STATUS",
-            characterId: normalizedCharacterId,
-            status: statusData,
-          });
+          hydrateStatus(statusData);
         }
 
         dispatch({
@@ -1001,6 +1210,7 @@ export function AutoCombatRealtimeProvider({
     },
     [
       enterSnapshotSynchronization,
+      hydrateStatus,
       normalizedCharacterId,
       publishConfirmedLootNotifications,
     ],
@@ -1197,11 +1407,7 @@ export function AutoCombatRealtimeProvider({
         const session = getStatusSession(response);
         const sessionId = session?.id ?? null;
 
-        dispatch({
-          type: "HYDRATE_STATUS",
-          characterId: normalizedCharacterId,
-          status: response,
-        });
+        hydrateStatus(response);
 
         const initialMobSpawnedEvent = buildMobSpawnedEventFromStatus({
           status: response,
@@ -1251,6 +1457,7 @@ export function AutoCombatRealtimeProvider({
     [
       clearScheduledReload,
       clearSessionVisualState,
+      hydrateStatus,
       normalizedCharacterId,
       scheduleReload,
     ],
@@ -1267,11 +1474,7 @@ export function AutoCombatRealtimeProvider({
 
       const response = await stopAutoCombatHunt(normalizedCharacterId);
 
-      dispatch({
-        type: "HYDRATE_STATUS",
-        characterId: normalizedCharacterId,
-        status: response,
-      });
+      hydrateStatus(response);
 
       dispatch({
         type: "CLEAR_QUEUE",
@@ -1302,6 +1505,7 @@ export function AutoCombatRealtimeProvider({
   }, [
     clearScheduledReload,
     flushVisualQueueWithoutAnimation,
+    hydrateStatus,
     normalizedCharacterId,
     scheduleReload,
   ]);
@@ -1326,11 +1530,7 @@ export function AutoCombatRealtimeProvider({
         const session = getStatusSession(response);
         const sessionId = session?.id ?? null;
 
-        dispatch({
-          type: "HYDRATE_STATUS",
-          characterId: normalizedCharacterId,
-          status: response,
-        });
+        hydrateStatus(response);
 
         const initialMobSpawnedEvent = buildMobSpawnedEventFromStatus({
           status: response,
@@ -1373,7 +1573,12 @@ export function AutoCombatRealtimeProvider({
         throw error;
       }
     },
-    [clearScheduledReload, clearSessionVisualState, normalizedCharacterId],
+    [
+      clearScheduledReload,
+      clearSessionVisualState,
+      hydrateStatus,
+      normalizedCharacterId,
+    ],
   );
 
   const stop = useCallback(async () => {
@@ -1389,11 +1594,7 @@ export function AutoCombatRealtimeProvider({
       lastInactiveStatusSignatureRef.current =
         getStableStatusSignature(response);
 
-      dispatch({
-        type: "HYDRATE_STATUS",
-        characterId: normalizedCharacterId,
-        status: response,
-      });
+      hydrateStatus(response);
 
       dispatch({
         type: "CLEAR_QUEUE",
@@ -1422,12 +1623,21 @@ export function AutoCombatRealtimeProvider({
   }, [
     clearScheduledReload,
     flushVisualQueueWithoutAnimation,
+    hydrateStatus,
     normalizedCharacterId,
   ]);
 
   const handleStatusPayload = useCallback(
     (payload: AutoCombatStatusResponse) => {
       if (!normalizedCharacterId) return;
+
+      if (isAutoCombatDefeatStatus(payload)) {
+        terminateDefeatedPresentation({
+          source: "status",
+          status: payload,
+        });
+        return;
+      }
 
       const isInactivePayload = isStatusInactiveOrTerminal(payload);
 
@@ -1454,16 +1664,14 @@ export function AutoCombatRealtimeProvider({
         lootSuppressionRequiresFreshStatusRef.current = false;
       }
 
-      dispatch({
-        type: "HYDRATE_STATUS",
-        characterId: normalizedCharacterId,
-        status: payload,
-      });
+      hydrateStatus(payload);
     },
     [
       enterSnapshotSynchronization,
+      hydrateStatus,
       normalizedCharacterId,
       publishConfirmedLootNotifications,
+      terminateDefeatedPresentation,
     ],
   );
 
@@ -1475,15 +1683,11 @@ export function AutoCombatRealtimeProvider({
         getStableStatusSignature(payload);
       lootSuppressionRequiresFreshStatusRef.current = false;
 
-      dispatch({
-        type: "HYDRATE_STATUS",
-        characterId: normalizedCharacterId,
-        status: payload,
-      });
+      hydrateStatus(payload);
 
       clearScheduledReload();
     },
-    [clearScheduledReload, normalizedCharacterId],
+    [clearScheduledReload, hydrateStatus, normalizedCharacterId],
   );
 
   const handleStoppedPayload = useCallback(
@@ -1496,11 +1700,7 @@ export function AutoCombatRealtimeProvider({
         getStableStatusSignature(payload);
       lootSuppressionRequiresFreshStatusRef.current = false;
 
-      dispatch({
-        type: "HYDRATE_STATUS",
-        characterId: normalizedCharacterId,
-        status: payload,
-      });
+      hydrateStatus(payload);
 
       dispatch({
         type: "CLEAR_QUEUE",
@@ -1511,6 +1711,7 @@ export function AutoCombatRealtimeProvider({
     [
       clearScheduledReload,
       flushVisualQueueWithoutAnimation,
+      hydrateStatus,
       normalizedCharacterId,
     ],
   );
@@ -1520,6 +1721,20 @@ export function AutoCombatRealtimeProvider({
       if (!normalizedCharacterId) return;
 
       const currentState = stateRef.current;
+
+      if (
+        isAutoCombatDefeatEvent(payload) &&
+        shouldAcceptTerminalDefeatEvent({
+          state: currentState,
+          event: payload,
+        })
+      ) {
+        terminateDefeatedPresentation({
+          source: "event",
+          event: payload,
+        });
+        return;
+      }
 
       if (
         !shouldAcceptRealtimeEvent({
@@ -1555,6 +1770,7 @@ export function AutoCombatRealtimeProvider({
       }
 
       lastInactiveStatusSignatureRef.current = null;
+      publishDefeatNotification(payload);
 
       dispatch({
         type: "ENQUEUE_EVENT",
@@ -1562,7 +1778,13 @@ export function AutoCombatRealtimeProvider({
         event: payload,
       });
     },
-    [enterSnapshotSynchronization, normalizedCharacterId, scheduleReload],
+    [
+      enterSnapshotSynchronization,
+      normalizedCharacterId,
+      publishDefeatNotification,
+      scheduleReload,
+      terminateDefeatedPresentation,
+    ],
   );
 
   const shouldEnableSocket = shouldKeepAutoCombatSocketEnabled({
@@ -1993,26 +2215,13 @@ export function AutoCombatRealtimeProvider({
     }
 
     if (state.eventQueue.length > 0) {
-      const presentationDelayMs = presentationTimelineEnabled
-        ? getAutoCombatPresentationQueueDelayMs({
-            timeline: presentationTimeline,
-            event: state.eventQueue[0],
-            nextEvent: state.eventQueue[1] ?? null,
-            nowMs: getAutoCombatPresentationNowMs(),
-          })
-        : 0;
-      const processDelayMs = Math.max(
-        NEXT_EVENT_PROCESS_DELAY_MS,
-        presentationDelayMs,
-      );
-
       activeEventTimeoutRef.current = window.setTimeout(() => {
         dispatch({
           type: "PROCESS_NEXT_EVENT",
         });
 
         activeEventTimeoutRef.current = null;
-      }, processDelayMs);
+      }, NEXT_EVENT_PROCESS_DELAY_MS);
 
       return () => {
         clearScheduledActiveEvent();
@@ -2025,8 +2234,6 @@ export function AutoCombatRealtimeProvider({
     state.activeEvent,
     state.activeEventImpactApplied,
     state.eventQueue,
-    presentationTimeline,
-    presentationTimelineEnabled,
     useCondensedEventPlayback,
   ]);
 
@@ -2071,6 +2278,7 @@ export function AutoCombatRealtimeProvider({
 
       hydrateOverview,
       hydrateStatus,
+      hydrateCharacterHealth,
       enqueueRealtimeEvent,
       reportTelemetry: socketState.reportTelemetry,
       clearRealtimeQueue,
@@ -2088,6 +2296,7 @@ export function AutoCombatRealtimeProvider({
     presentationTimeline,
     hydrateOverview,
     hydrateStatus,
+    hydrateCharacterHealth,
     enqueueRealtimeEvent,
     socketState.reportTelemetry,
     clearRealtimeQueue,

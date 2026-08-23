@@ -95,7 +95,7 @@ test("resolve os quatro contextos operacionais da coleta", () => {
   );
 });
 
-test("condensa a fila visual somente fora da tela de combate com a timeline ativa", () => {
+test("aplica eventos sem atraso artificial nas telas visiveis com timeline ativa", () => {
   assert.equal(
     shouldUseCondensedAutoCombatPlayback({
       presentationTimelineEnabled: true,
@@ -108,7 +108,7 @@ test("condensa a fila visual somente fora da tela de combate com a timeline ativ
       presentationTimelineEnabled: true,
       context: "combat-page",
     }),
-    false,
+    true,
   );
   assert.equal(
     shouldUseCondensedAutoCombatPlayback({

@@ -4,7 +4,7 @@ import type {
   AutoCombatRealtimeEvent,
   AutoCombatRealtimePhase,
   AutoCombatStatusResponse,
-} from '../types/auto-combat.types';
+} from "../types/auto-combat.types";
 import type {
   AutoCombatRealtimeActor,
   AutoCombatRealtimeCharacterState,
@@ -15,7 +15,7 @@ import type {
   AutoCombatRealtimeTarget,
   AutoCombatRealtimeTotalsState,
   AutoCombatRealtimeVisualState,
-} from './autoCombatRealtime.types';
+} from "./autoCombatRealtime.types";
 
 type LooseNumberRecord = Record<string, unknown>;
 
@@ -46,10 +46,10 @@ type ProgressSource = {
 };
 
 type StatusSessionLike = NonNullable<
-  | AutoCombatStatusResponse['session']
-  | AutoCombatStatusResponse['activeSession']
-  | AutoCombatStatusResponse['autoCombatSession']
-  | AutoCombatStatusResponse['lastSession']
+  | AutoCombatStatusResponse["session"]
+  | AutoCombatStatusResponse["activeSession"]
+  | AutoCombatStatusResponse["autoCombatSession"]
+  | AutoCombatStatusResponse["lastSession"]
 >;
 
 type AutoCombatSessionLike = {
@@ -140,11 +140,11 @@ export const AUTO_COMBAT_REALTIME_EVENT_DELAY_MS = {
 } as const;
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 export function toSafeNumber(value: unknown, fallback = 0) {
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     return fallback;
   }
 
@@ -154,7 +154,7 @@ export function toSafeNumber(value: unknown, fallback = 0) {
 }
 
 export function getOptionalNumber(value: unknown) {
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     return undefined;
   }
 
@@ -188,7 +188,7 @@ export function getHighestOptionalNumber(...values: unknown[]) {
 }
 
 export function getOptionalBoolean(value: unknown) {
-  return typeof value === 'boolean' ? value : undefined;
+  return typeof value === "boolean" ? value : undefined;
 }
 
 export function clampNumber(value: unknown, min: number, max: number) {
@@ -216,53 +216,57 @@ export function calculatePercent(current?: number | null, max?: number | null) {
 export function normalizeRealtimeEventType(
   typeOrEvent?: string | AutoCombatRealtimeEvent | null,
 ) {
-  if (typeof typeOrEvent === 'string') {
+  if (typeof typeOrEvent === "string") {
     return typeOrEvent.trim().toUpperCase();
   }
 
-  return String(typeOrEvent?.type ?? '').trim().toUpperCase();
+  return String(typeOrEvent?.type ?? "")
+    .trim()
+    .toUpperCase();
 }
 
 export function normalizeSessionStatus(status?: string | null) {
-  return String(status ?? '').trim().toUpperCase();
+  return String(status ?? "")
+    .trim()
+    .toUpperCase();
 }
 
 export function isActiveSessionStatus(status?: string | null) {
-  return normalizeSessionStatus(status) === 'ACTIVE';
+  return normalizeSessionStatus(status) === "ACTIVE";
 }
 
 export function isTerminalSessionStatus(status?: string | null) {
   const normalizedStatus = normalizeSessionStatus(status);
 
   return (
-    normalizedStatus === 'FINISHED' ||
-    normalizedStatus === 'STOPPED' ||
-    normalizedStatus === 'DEFEATED' ||
-    normalizedStatus === 'FAILED' ||
-    normalizedStatus === 'CANCELLED'
+    normalizedStatus === "FINISHED" ||
+    normalizedStatus === "STOPPED" ||
+    normalizedStatus === "DEFEATED" ||
+    normalizedStatus === "FAILED" ||
+    normalizedStatus === "CANCELLED"
   );
 }
 
 export function isMobDefeatedEvent(event?: AutoCombatRealtimeEvent | null) {
-  return normalizeRealtimeEventType(event) === 'MOB_DEFEATED';
+  return normalizeRealtimeEventType(event) === "MOB_DEFEATED";
 }
 
 export function isPlayerDefeatedEvent(event?: AutoCombatRealtimeEvent | null) {
-  return normalizeRealtimeEventType(event) === 'PLAYER_DEFEATED';
+  return normalizeRealtimeEventType(event) === "PLAYER_DEFEATED";
 }
 
 export function isMobSpawnedEvent(event?: AutoCombatRealtimeEvent | null) {
-  return normalizeRealtimeEventType(event) === 'MOB_SPAWNED';
+  return normalizeRealtimeEventType(event) === "MOB_SPAWNED";
 }
 
 export function isPotionUsedEvent(event?: AutoCombatRealtimeEvent | null) {
-  return normalizeRealtimeEventType(event) === 'POTION_USED';
+  return normalizeRealtimeEventType(event) === "POTION_USED";
 }
 
 export function isDamageEvent(event?: AutoCombatRealtimeEvent | null) {
   const type = normalizeRealtimeEventType(event);
 
-  return type === 'PLAYER_HIT' || type === 'MOB_HIT';
+  return type === "PLAYER_HIT" || type === "MOB_HIT";
 }
 
 export function getRealtimeEventDelay(event?: AutoCombatRealtimeEvent | null) {
@@ -274,14 +278,14 @@ export function getRealtimeEventDelay(event?: AutoCombatRealtimeEvent | null) {
       ? nextActionAt - actionStartedAt
       : null;
 
-  if (eventType === 'MOB_DEFEATED') {
+  if (eventType === "MOB_DEFEATED") {
     return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.MOB_DEFEATED;
   }
 
   if (
     timelineDelay !== null &&
     timelineDelay > 0 &&
-    eventType !== 'MOB_SPAWNED'
+    eventType !== "MOB_SPAWNED"
   ) {
     return clampNumber(
       timelineDelay,
@@ -290,27 +294,27 @@ export function getRealtimeEventDelay(event?: AutoCombatRealtimeEvent | null) {
     );
   }
 
-  if (eventType === 'MOB_SPAWNED') {
+  if (eventType === "MOB_SPAWNED") {
     return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.MOB_SPAWNED;
   }
 
-  if (eventType === 'PLAYER_HIT') {
+  if (eventType === "PLAYER_HIT") {
     return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.PLAYER_HIT;
   }
 
-  if (eventType === 'MOB_HIT') {
+  if (eventType === "MOB_HIT") {
     return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.MOB_HIT;
   }
 
-  if (eventType === 'DODGE') {
+  if (eventType === "DODGE") {
     return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.DODGE;
   }
 
-  if (eventType === 'POTION_USED') {
+  if (eventType === "POTION_USED") {
     return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.POTION_USED;
   }
 
-  if (eventType === 'PLAYER_DEFEATED') {
+  if (eventType === "PLAYER_DEFEATED") {
     return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.PLAYER_DEFEATED;
   }
 
@@ -321,7 +325,7 @@ export function getRealtimeEventImpactDelay(
   event: AutoCombatRealtimeEvent | null | undefined,
   eventDelay = getRealtimeEventDelay(event),
 ) {
-  if (normalizeRealtimeEventType(event) === 'MOB_DEFEATED') {
+  if (normalizeRealtimeEventType(event) === "MOB_DEFEATED") {
     return Math.min(
       Math.max(0, eventDelay),
       AUTO_COMBAT_REALTIME_DEFEATED_IMPACT_DELAY_MS,
@@ -342,9 +346,9 @@ export function getRealtimeEventPlaybackTiming(params: {
   const nextEventType = normalizeRealtimeEventType(params.nextEvent);
   const baseEventDelay = getRealtimeEventDelay(params.event);
   const isQueuedKillingHit =
-    eventType === 'PLAYER_HIT' && nextEventType === 'MOB_DEFEATED';
+    eventType === "PLAYER_HIT" && nextEventType === "MOB_DEFEATED";
   const isQueuedSpawnFollowUp =
-    eventType === 'MOB_SPAWNED' && Boolean(nextEventType);
+    eventType === "MOB_SPAWNED" && Boolean(nextEventType);
   const eventDelay = isQueuedKillingHit
     ? AUTO_COMBAT_REALTIME_QUEUED_KILLING_HIT_DELAY_MS
     : isQueuedSpawnFollowUp
@@ -354,10 +358,7 @@ export function getRealtimeEventPlaybackTiming(params: {
     params.event,
     eventDelay,
   );
-  const visibleAfterImpactDelay = Math.max(
-    0,
-    eventDelay - defaultImpactDelay,
-  );
+  const visibleAfterImpactDelay = Math.max(0, eventDelay - defaultImpactDelay);
 
   return {
     impactDelay: defaultImpactDelay,
@@ -451,8 +452,8 @@ export function shouldIgnoreFallbackForNewSession(
 ) {
   return Boolean(
     incomingSessionId &&
-      fallbackSessionId &&
-      incomingSessionId !== fallbackSessionId,
+    fallbackSessionId &&
+    incomingSessionId !== fallbackSessionId,
   );
 }
 
@@ -465,68 +466,68 @@ export function getRealtimeEventKey(payload: AutoCombatRealtimeEvent) {
   }
 
   return [
-    event.eventId ?? event.id ?? 'no-event-id',
-    event.sessionId ?? 'no-session',
-    event.characterId ?? 'no-character',
-    event.sequence ?? 'no-sequence',
-    event.turnId ?? 'no-turn',
-    event.actionId ?? 'no-action',
-    event.actionOrder ?? 'no-action-order',
-    event.type ?? 'no-type',
-    event.createdAt ?? 'no-created-at',
-    event.serverTime ?? 'no-server-time',
+    event.eventId ?? event.id ?? "no-event-id",
+    event.sessionId ?? "no-session",
+    event.characterId ?? "no-character",
+    event.sequence ?? "no-sequence",
+    event.turnId ?? "no-turn",
+    event.actionId ?? "no-action",
+    event.actionOrder ?? "no-action-order",
+    event.type ?? "no-type",
+    event.createdAt ?? "no-created-at",
+    event.serverTime ?? "no-server-time",
 
-    event.enemyInstanceId ?? 'no-enemy-instance',
-    event.mobId ?? 'no-mob',
-    event.mobName ?? 'no-mob-name',
-    event.round ?? 'no-round',
-    event.combatIndex ?? 'no-combat',
+    event.enemyInstanceId ?? "no-enemy-instance",
+    event.mobId ?? "no-mob",
+    event.mobName ?? "no-mob-name",
+    event.round ?? "no-round",
+    event.combatIndex ?? "no-combat",
 
-    event.message ?? 'no-message',
-    event.damage ?? 'no-damage',
-    event.healedAmount ?? 'no-heal',
+    event.message ?? "no-message",
+    event.damage ?? "no-damage",
+    event.healedAmount ?? "no-heal",
 
-    event.characterCurrentHp ?? 'no-character-hp',
-    event.characterMaxHp ?? 'no-character-max-hp',
-    event.mobCurrentHp ?? 'no-mob-hp',
-    event.mobMaxHp ?? 'no-mob-max-hp',
+    event.characterCurrentHp ?? "no-character-hp",
+    event.characterMaxHp ?? "no-character-max-hp",
+    event.mobCurrentHp ?? "no-mob-hp",
+    event.mobMaxHp ?? "no-mob-max-hp",
 
-    event.characterXp ?? event.totalXp ?? 'no-xp',
-    event.characterLevel ?? 'no-level',
-    event.xpGained ?? 'no-xp-gained',
+    event.characterXp ?? event.totalXp ?? "no-xp",
+    event.characterLevel ?? "no-level",
+    event.xpGained ?? "no-xp-gained",
 
-    event.totalCombats ?? 'no-total-combats',
-    event.totalRounds ?? 'no-total-rounds',
-    event.totalKills ?? 'no-kills',
-    event.totalXpGained ?? 'no-total-xp',
-    event.totalLoot ?? 'no-total-loot',
-    event.potionsUsed ?? 'no-potions',
+    event.totalCombats ?? "no-total-combats",
+    event.totalRounds ?? "no-total-rounds",
+    event.totalKills ?? "no-kills",
+    event.totalXpGained ?? "no-total-xp",
+    event.totalLoot ?? "no-total-loot",
+    event.potionsUsed ?? "no-potions",
 
-    event.potionItemId ?? 'no-potion-item',
-    event.potionQuantityBefore ?? 'no-potion-before',
-    event.potionQuantityAfter ?? 'no-potion-after',
-    event.potionQuantityRemaining ?? 'no-potion-remaining',
-    event.potionUsedQuantity ?? 'no-potion-used-quantity',
+    event.potionItemId ?? "no-potion-item",
+    event.potionQuantityBefore ?? "no-potion-before",
+    event.potionQuantityAfter ?? "no-potion-after",
+    event.potionQuantityRemaining ?? "no-potion-remaining",
+    event.potionUsedQuantity ?? "no-potion-used-quantity",
 
-    event.actor ?? 'no-actor',
-    event.target ?? 'no-target',
-  ].join('|');
+    event.actor ?? "no-actor",
+    event.target ?? "no-target",
+  ].join("|");
 }
 
 export function getMobSpawnFingerprint(payload: AutoCombatRealtimeEvent) {
   if (!isMobSpawnedEvent(payload)) {
-    return '';
+    return "";
   }
 
   const event = payload as RealtimeEventLoose;
 
   if (event.enemyInstanceId) {
     return [
-      event.sessionId ?? 'no-session',
-      event.characterId ?? 'no-character',
+      event.sessionId ?? "no-session",
+      event.characterId ?? "no-character",
       event.enemyInstanceId,
-      'mob-spawned',
-    ].join('|');
+      "mob-spawned",
+    ].join("|");
   }
 
   /**
@@ -540,74 +541,76 @@ export function getMobSpawnFingerprint(payload: AutoCombatRealtimeEvent) {
    */
   if (payload.combatIndex !== null && payload.combatIndex !== undefined) {
     return [
-      payload.sessionId ?? 'no-session',
-      payload.characterId ?? 'no-character',
+      payload.sessionId ?? "no-session",
+      payload.characterId ?? "no-character",
       payload.combatIndex,
-      'mob-spawned',
-    ].join('|');
+      "mob-spawned",
+    ].join("|");
   }
 
   return [
-    payload.sessionId ?? 'no-session',
-    payload.characterId ?? 'no-character',
-    payload.mobId ?? 'no-mob',
-    payload.mobName ?? 'no-mob-name',
-    'mob-spawned',
-  ].join('|');
+    payload.sessionId ?? "no-session",
+    payload.characterId ?? "no-character",
+    payload.mobId ?? "no-mob",
+    payload.mobName ?? "no-mob-name",
+    "mob-spawned",
+  ].join("|");
 }
 
 export function getPotionUsedFingerprint(payload: AutoCombatRealtimeEvent) {
   if (!isPotionUsedEvent(payload)) {
-    return '';
+    return "";
   }
 
   const event = payload as RealtimeEventLoose;
 
   return [
-    event.sessionId ?? 'no-session',
-    event.characterId ?? 'no-character',
-    event.potionItemId ?? 'no-potion-item',
-    event.potionQuantityBefore ?? 'no-before',
-    event.potionQuantityAfter ?? 'no-after',
-    event.potionQuantityRemaining ?? 'no-remaining',
-    event.potionUsedQuantity ?? 'no-used-quantity',
-    event.characterCurrentHp ?? 'no-character-hp',
-    event.characterMaxHp ?? 'no-character-max-hp',
-    event.round ?? 'no-round',
-    event.combatIndex ?? 'no-combat',
-  ].join('|');
+    event.sessionId ?? "no-session",
+    event.characterId ?? "no-character",
+    event.potionItemId ?? "no-potion-item",
+    event.potionQuantityBefore ?? "no-before",
+    event.potionQuantityAfter ?? "no-after",
+    event.potionQuantityRemaining ?? "no-remaining",
+    event.potionUsedQuantity ?? "no-used-quantity",
+    event.characterCurrentHp ?? "no-character-hp",
+    event.characterMaxHp ?? "no-character-max-hp",
+    event.round ?? "no-round",
+    event.combatIndex ?? "no-combat",
+  ].join("|");
 }
 
-export function getGenericRealtimeFingerprint(payload: AutoCombatRealtimeEvent) {
+export function getGenericRealtimeFingerprint(
+  payload: AutoCombatRealtimeEvent,
+) {
   const event = payload as RealtimeEventLoose;
 
   if (event.sequence !== null && event.sequence !== undefined) {
-    return '';
+    return "";
   }
 
   return [
-    event.sessionId ?? 'no-session',
-    event.characterId ?? 'no-character',
-    event.type ?? 'no-type',
-    event.enemyInstanceId ?? 'no-enemy-instance',
-    event.turnId ?? 'no-turn',
-    event.actionId ?? 'no-action',
-    event.actionOrder ?? 'no-action-order',
-    event.mobId ?? 'no-mob',
-    event.round ?? 'no-round',
-    event.combatIndex ?? 'no-combat',
-    event.damage ?? 'no-damage',
-    event.healedAmount ?? 'no-heal',
-    event.characterCurrentHp ?? 'no-character-hp',
-    event.mobCurrentHp ?? 'no-mob-hp',
-    event.characterXp ?? event.totalXp ?? 'no-xp',
-    event.totalKills ?? 'no-kills',
-    event.potionsUsed ?? 'no-potions',
-    event.potionItemId ?? 'no-potion-item',
-    event.potionQuantityBefore ?? 'no-potion-before',
-    event.potionQuantityAfter ?? 'no-potion-after',
-    event.potionQuantityRemaining ?? 'no-potion-remaining',
-  ].join('|');
+    event.sessionId ?? "no-session",
+    event.characterId ?? "no-character",
+    event.type ?? "no-type",
+    event.enemyInstanceId ?? "no-enemy-instance",
+    event.turnId ?? "no-turn",
+    event.actionId ?? "no-action",
+    event.actionOrder ?? "no-action-order",
+    event.mobId ?? "no-mob",
+    event.round ?? "no-round",
+    event.combatIndex ?? "no-combat",
+    event.damage ?? "no-damage",
+    event.healedAmount ?? "no-heal",
+    event.characterCurrentHp ?? "no-character-hp",
+    event.mobCurrentHp ?? "no-mob-hp",
+    event.characterXp ?? event.totalXp ?? "no-xp",
+    event.totalKills ?? "no-kills",
+    event.potionsUsed ?? "no-potions",
+    event.potionItemId ?? "no-potion-item",
+    event.potionQuantityBefore ?? "no-potion-before",
+    event.potionQuantityAfter ?? "no-potion-after",
+    event.potionQuantityRemaining ?? "no-potion-remaining",
+  ].join("|");
 }
 
 export function isSameRealtimeEvent(
@@ -663,8 +666,8 @@ export function isSameRealtimeEvent(
 
   return Boolean(
     firstGenericFingerprint &&
-      secondGenericFingerprint &&
-      firstGenericFingerprint === secondGenericFingerprint,
+    secondGenericFingerprint &&
+    firstGenericFingerprint === secondGenericFingerprint,
   );
 }
 
@@ -679,19 +682,19 @@ export function resolveRealtimeActor(
   }
 
   if (
-    eventType === 'PLAYER_HIT' ||
-    eventType === 'MOB_DEFEATED' ||
-    eventType === 'POTION_USED'
+    eventType === "PLAYER_HIT" ||
+    eventType === "MOB_DEFEATED" ||
+    eventType === "POTION_USED"
   ) {
-    return 'PLAYER';
+    return "PLAYER";
   }
 
-  if (eventType === 'MOB_HIT' || eventType === 'PLAYER_DEFEATED') {
-    return 'MOB';
+  if (eventType === "MOB_HIT" || eventType === "PLAYER_DEFEATED") {
+    return "MOB";
   }
 
-  if (eventType === 'MOB_SPAWNED') {
-    return 'SYSTEM';
+  if (eventType === "MOB_SPAWNED") {
+    return "SYSTEM";
   }
 
   return current?.actor ?? undefined;
@@ -708,19 +711,19 @@ export function resolveRealtimeTarget(
   }
 
   if (
-    eventType === 'PLAYER_HIT' ||
-    eventType === 'MOB_DEFEATED' ||
-    eventType === 'MOB_SPAWNED'
+    eventType === "PLAYER_HIT" ||
+    eventType === "MOB_DEFEATED" ||
+    eventType === "MOB_SPAWNED"
   ) {
-    return 'MOB';
+    return "MOB";
   }
 
   if (
-    eventType === 'MOB_HIT' ||
-    eventType === 'PLAYER_DEFEATED' ||
-    eventType === 'POTION_USED'
+    eventType === "MOB_HIT" ||
+    eventType === "PLAYER_DEFEATED" ||
+    eventType === "POTION_USED"
   ) {
-    return 'PLAYER';
+    return "PLAYER";
   }
 
   return current?.target ?? undefined;
@@ -804,7 +807,8 @@ export function buildCharacterStateFromProgressSource(
   return {
     ...fallback,
 
-    level: level !== undefined ? Math.max(1, Math.floor(level)) : fallback?.level,
+    level:
+      level !== undefined ? Math.max(1, Math.floor(level)) : fallback?.level,
 
     xp: totalXp !== undefined ? Math.max(0, Math.floor(totalXp)) : fallback?.xp,
 
@@ -937,14 +941,14 @@ export function buildCharacterStateFromRealtimeEvent(
   const nextCurrentHp =
     isPlayerDefeatedEvent(event) && event.characterCurrentHp === undefined
       ? 0
-      : getOptionalNumber(event.characterHpAfter) ??
+      : (getOptionalNumber(event.characterHpAfter) ??
         getOptionalNumber(event.characterCurrentHp) ??
-        fallback?.currentHp;
+        fallback?.currentHp);
 
   const hpPercent =
     nextCurrentHp !== undefined && nextMaxHp !== undefined
       ? calculatePercent(nextCurrentHp, nextMaxHp)
-      : getOptionalNumber(event.characterHpPercent) ?? fallback?.hpPercent;
+      : (getOptionalNumber(event.characterHpPercent) ?? fallback?.hpPercent);
 
   const nextCurrentLevelStartXp =
     getOptionalNumber(event.currentLevelStartXp) ??
@@ -1107,7 +1111,8 @@ export function buildCharacterStateFromRealtimeEvent(
         : fallback?.xpIntoCurrentLevel,
 
     xpNeededForNextLevel:
-      nextXpNeededForNextLevel !== null && nextXpNeededForNextLevel !== undefined
+      nextXpNeededForNextLevel !== null &&
+      nextXpNeededForNextLevel !== undefined
         ? Math.max(0, Math.floor(nextXpNeededForNextLevel))
         : fallback?.xpNeededForNextLevel,
 
@@ -1188,7 +1193,9 @@ export function buildSessionStateFromStatus(
       null,
 
     roundDurationSeconds:
-      session.roundDurationSeconds ?? safeFallback?.roundDurationSeconds ?? null,
+      session.roundDurationSeconds ??
+      safeFallback?.roundDurationSeconds ??
+      null,
 
     currentRound: session.currentRound ?? safeFallback?.currentRound ?? null,
 
@@ -1255,9 +1262,15 @@ export function buildSessionStateFromStatus(
     nextActor:
       session.nextActor ?? status?.nextActor ?? safeFallback?.nextActor ?? null,
     lastActionAt:
-      session.lastActionAt ?? status?.lastActionAt ?? safeFallback?.lastActionAt ?? null,
+      session.lastActionAt ??
+      status?.lastActionAt ??
+      safeFallback?.lastActionAt ??
+      null,
     nextActionAt:
-      session.nextActionAt ?? status?.nextActionAt ?? safeFallback?.nextActionAt ?? null,
+      session.nextActionAt ??
+      status?.nextActionAt ??
+      safeFallback?.nextActionAt ??
+      null,
 
     updatedAt: Date.now(),
   };
@@ -1310,15 +1323,15 @@ export function buildMobStateFromStatus(
   const currentMob = status?.currentMob;
   const session = getStatusSession(status);
   const incomingSessionIsTerminal = isTerminalSessionStatus(session?.status);
-  const incomingPhase = String(session?.phase ?? status?.phase ?? '')
+  const incomingPhase = String(session?.phase ?? status?.phase ?? "")
     .trim()
     .toUpperCase();
 
   if (
     !currentMob &&
     (incomingSessionIsTerminal ||
-      incomingPhase === 'ENCOUNTER_READY' ||
-      incomingPhase === 'HUNTING')
+      incomingPhase === "ENCOUNTER_READY" ||
+      incomingPhase === "HUNTING")
   ) {
     return null;
   }
@@ -1326,7 +1339,9 @@ export function buildMobStateFromStatus(
   if (!currentMob) return fallback ?? null;
 
   const battleProgress = normalizeBattleProgress(
-    currentMob.battleProgress ?? status?.battleProgress ?? session?.battleProgress,
+    currentMob.battleProgress ??
+      status?.battleProgress ??
+      session?.battleProgress,
     fallback?.battleProgress,
   );
 
@@ -1336,9 +1351,7 @@ export function buildMobStateFromStatus(
     fallback?.maxHp;
 
   const currentHp =
-    getOptionalNumber(currentMob.currentHp) ??
-    fallback?.currentHp ??
-    maxHp;
+    getOptionalNumber(currentMob.currentHp) ?? fallback?.currentHp ?? maxHp;
 
   return {
     ...fallback,
@@ -1379,7 +1392,7 @@ export function buildMobStateFromRealtimeEvent(
   fallback?: AutoCombatRealtimeMobState | null,
 ): AutoCombatRealtimeMobState | null {
   const eventType = normalizeRealtimeEventType(event);
-  const isSpawnEvent = eventType === 'MOB_SPAWNED';
+  const isSpawnEvent = eventType === "MOB_SPAWNED";
   const maxHp =
     getOptionalNumber(event.mobMaxHp) ??
     fallback?.maxHp ??
@@ -1431,7 +1444,8 @@ export function buildMobStateFromRealtimeEvent(
     name: event.mobName ?? fallback?.name ?? null,
 
     currentHp,
-    maxHp: maxHp !== undefined ? Math.max(0, Math.floor(maxHp)) : fallback?.maxHp,
+    maxHp:
+      maxHp !== undefined ? Math.max(0, Math.floor(maxHp)) : fallback?.maxHp,
 
     hpPercent:
       event.mobHpPercent ??
@@ -1481,14 +1495,23 @@ function normalizeBattleProgress(
     null;
 
   return {
+    activityInstanceId:
+      value?.activityInstanceId ?? fallback?.activityInstanceId ?? null,
+    enemyInstanceId:
+      value?.enemyInstanceId ?? fallback?.enemyInstanceId ?? null,
     progressSeconds,
     progressPercent,
     cycleStartedAt: value?.cycleStartedAt ?? fallback?.cycleStartedAt ?? null,
+    cycleEndsAt: value?.cycleEndsAt ?? fallback?.cycleEndsAt ?? null,
     cycleDurationMs,
     cycleDurationSeconds:
       explicitCycleDurationSeconds ??
       (cycleDurationMs !== null ? cycleDurationMs / 1000 : undefined) ??
       getOptionalNumber(fallback?.cycleDurationSeconds) ??
+      null,
+    remainingMs:
+      getOptionalNumber(value?.remainingMs) ??
+      getOptionalNumber(fallback?.remainingMs) ??
       null,
     progressUpdatedAt:
       value?.progressUpdatedAt ?? fallback?.progressUpdatedAt ?? null,
@@ -1514,13 +1537,16 @@ function normalizeBattleProgress(
       getOptionalNumber(value?.killsPerHour) ??
       getOptionalNumber(fallback?.killsPerHour) ??
       null,
-    difficultyLabel: value?.difficultyLabel ?? fallback?.difficultyLabel ?? null,
+    difficultyLabel:
+      value?.difficultyLabel ?? fallback?.difficultyLabel ?? null,
     mobIndex:
       getOptionalNumber(value?.mobIndex) ??
       getOptionalNumber(fallback?.mobIndex) ??
       null,
     tier:
-      getOptionalNumber(value?.tier) ?? getOptionalNumber(fallback?.tier) ?? null,
+      getOptionalNumber(value?.tier) ??
+      getOptionalNumber(fallback?.tier) ??
+      null,
   };
 }
 
@@ -1685,8 +1711,8 @@ export function buildCanonicalSessionTotalsFromStatus(
 
   const isPremiumActive = Boolean(
     session?.isPremiumActive ??
-      status?.sessionSummary?.progression?.isPremiumActive ??
-      false,
+    status?.sessionSummary?.progression?.isPremiumActive ??
+    false,
   );
 
   const normalizedXp = normalizeSessionXpBreakdown({
@@ -1782,26 +1808,28 @@ export function buildTotalsStateFromRealtimeEvent(
 
   const totalKills =
     getOptionalNumber(looseEvent.totalKills) ??
-    (eventType === 'MOB_DEFEATED' ? currentKills + 1 : safeFallback?.totalKills);
+    (eventType === "MOB_DEFEATED"
+      ? currentKills + 1
+      : safeFallback?.totalKills);
 
   const totalXpGained =
     getOptionalNumber(looseEvent.totalXpGained) ??
-    (eventType === 'MOB_DEFEATED' && eventXpGained !== undefined
+    (eventType === "MOB_DEFEATED" && eventXpGained !== undefined
       ? currentXpGained + eventXpGained
       : safeFallback?.totalXpGained);
 
   const baseXpGained =
-    eventType === 'MOB_DEFEATED' && eventBaseXpGained !== undefined
+    eventType === "MOB_DEFEATED" && eventBaseXpGained !== undefined
       ? currentBaseXpGained + eventBaseXpGained
       : safeFallback?.baseXpGained;
 
   const premiumBonusXp =
-    eventType === 'MOB_DEFEATED' && eventPremiumBonusXp !== undefined
+    eventType === "MOB_DEFEATED" && eventPremiumBonusXp !== undefined
       ? currentPremiumBonusXp + eventPremiumBonusXp
       : safeFallback?.premiumBonusXp;
 
   const premiumPotentialBonusXp =
-    eventType === 'MOB_DEFEATED' && eventPremiumPotentialBonusXp !== undefined
+    eventType === "MOB_DEFEATED" && eventPremiumPotentialBonusXp !== undefined
       ? currentPremiumPotentialBonusXp + eventPremiumPotentialBonusXp
       : safeFallback?.premiumPotentialBonusXp;
 
@@ -1812,17 +1840,18 @@ export function buildTotalsStateFromRealtimeEvent(
       : safeFallback?.premiumTotalXp;
 
   const potionsUsed =
-    eventType === 'POTION_USED'
+    eventType === "POTION_USED"
       ? getHighestOptionalNumber(
           looseEvent.potionsUsed,
           currentPotionsUsed + 1,
           1,
         )
-      : getOptionalNumber(looseEvent.potionsUsed) ?? safeFallback?.potionsUsed;
+      : (getOptionalNumber(looseEvent.potionsUsed) ??
+        safeFallback?.potionsUsed);
 
   const currentCombatIndex =
     getOptionalNumber(event.combatIndex) ??
-    (eventType === 'MOB_DEFEATED' && totalKills !== undefined
+    (eventType === "MOB_DEFEATED" && totalKills !== undefined
       ? totalKills + 1
       : safeFallback?.currentCombatIndex);
 
@@ -1832,7 +1861,7 @@ export function buildTotalsStateFromRealtimeEvent(
   const totalCombats =
     getHighestOptionalNumber(
       looseEvent.totalCombats,
-      eventType === 'MOB_DEFEATED' ? totalKills : undefined,
+      eventType === "MOB_DEFEATED" ? totalKills : undefined,
       safeFallback?.totalCombats,
       totalKills,
     ) ?? safeFallback?.totalCombats;
@@ -1853,7 +1882,7 @@ export function buildTotalsStateFromRealtimeEvent(
     totalRounds:
       totalRounds !== undefined
         ? Math.max(0, Math.floor(totalRounds))
-        : safeFallback?.totalRounds ?? 0,
+        : (safeFallback?.totalRounds ?? 0),
 
     totalKills:
       totalKills !== undefined ? Math.max(0, Math.floor(totalKills)) : 0,
@@ -1861,39 +1890,42 @@ export function buildTotalsStateFromRealtimeEvent(
     totalXpGained:
       totalXpGained !== undefined
         ? Math.max(0, Math.floor(totalXpGained))
-        : safeFallback?.totalXpGained ?? 0,
+        : (safeFallback?.totalXpGained ?? 0),
 
     baseXpGained:
       baseXpGained !== undefined
         ? Math.max(0, Math.floor(baseXpGained))
-        : safeFallback?.baseXpGained ?? 0,
+        : (safeFallback?.baseXpGained ?? 0),
 
     premiumBonusXp:
       premiumBonusXp !== undefined
         ? Math.max(0, Math.floor(premiumBonusXp))
-        : safeFallback?.premiumBonusXp ?? 0,
+        : (safeFallback?.premiumBonusXp ?? 0),
 
     premiumPotentialBonusXp:
       premiumPotentialBonusXp !== undefined
         ? Math.max(0, Math.floor(premiumPotentialBonusXp))
-        : safeFallback?.premiumPotentialBonusXp ?? 0,
+        : (safeFallback?.premiumPotentialBonusXp ?? 0),
 
     premiumTotalXp:
       premiumTotalXp !== undefined
         ? Math.max(0, Math.floor(premiumTotalXp))
-        : safeFallback?.premiumTotalXp ?? 0,
+        : (safeFallback?.premiumTotalXp ?? 0),
 
     isPremiumActive:
       looseEvent.isPremiumActive ?? safeFallback?.isPremiumActive ?? false,
 
     totalLoot:
-      getHighestOptionalNumber(looseEvent.totalLoot, safeFallback?.totalLoot, 0) ??
-      0,
+      getHighestOptionalNumber(
+        looseEvent.totalLoot,
+        safeFallback?.totalLoot,
+        0,
+      ) ?? 0,
 
     potionsUsed:
       potionsUsed !== undefined
         ? Math.max(0, Math.floor(potionsUsed))
-        : safeFallback?.potionsUsed ?? 0,
+        : (safeFallback?.potionsUsed ?? 0),
 
     updatedAt: Date.now(),
   };
@@ -1911,7 +1943,8 @@ export function buildPotionStateFromRealtimeEvent(
     ...fallback,
 
     potionItemId: looseEvent.potionItemId ?? fallback?.potionItemId ?? null,
-    potionItemName: looseEvent.potionItemName ?? fallback?.potionItemName ?? null,
+    potionItemName:
+      looseEvent.potionItemName ?? fallback?.potionItemName ?? null,
 
     quantityBefore:
       getOptionalNumber(looseEvent.potionQuantityBefore) ??
@@ -1961,14 +1994,14 @@ export function buildVisualStateFromRealtimeEvent(
     ...fallback,
 
     lastMessage: event.message ?? fallback?.lastMessage ?? null,
-    lastDamage: isDamage ? damage ?? 0 : 0,
+    lastDamage: isDamage ? (damage ?? 0) : 0,
     lastEventType: eventType || fallback?.lastEventType || null,
 
     actor: resolveRealtimeActor(event, fallback) ?? fallback?.actor ?? null,
     target: resolveRealtimeTarget(event, fallback) ?? fallback?.target ?? null,
 
     isCritical: event.isCritical ?? false,
-    isDodged: event.isDodged ?? eventType === 'DODGE',
+    isDodged: event.isDodged ?? eventType === "DODGE",
 
     updatedAt: Date.now(),
   };
@@ -2003,7 +2036,8 @@ export function mergeTotalsKeepingHighest(
       ) ?? current.currentCombatIndex,
 
     totalCombats:
-      getHighestOptionalNumber(current.totalCombats, incoming.totalCombats) ?? 0,
+      getHighestOptionalNumber(current.totalCombats, incoming.totalCombats) ??
+      0,
 
     totalRounds:
       getHighestOptionalNumber(current.totalRounds, incoming.totalRounds) ?? 0,
@@ -2012,13 +2046,12 @@ export function mergeTotalsKeepingHighest(
       getHighestOptionalNumber(current.totalKills, incoming.totalKills) ?? 0,
 
     totalXpGained:
-      getHighestOptionalNumber(
-        current.totalXpGained,
-        incoming.totalXpGained,
-      ) ?? 0,
+      getHighestOptionalNumber(current.totalXpGained, incoming.totalXpGained) ??
+      0,
 
     baseXpGained:
-      getHighestOptionalNumber(current.baseXpGained, incoming.baseXpGained) ?? 0,
+      getHighestOptionalNumber(current.baseXpGained, incoming.baseXpGained) ??
+      0,
 
     premiumBonusXp:
       getHighestOptionalNumber(
@@ -2095,7 +2128,8 @@ export function mergeCharacterKeepingHighestXp(
     nextLevelXp: incoming.nextLevelXp ?? current.nextLevelXp,
     xpProgressPercent: incoming.xpProgressPercent ?? current.xpProgressPercent,
 
-    xpIntoCurrentLevel: incoming.xpIntoCurrentLevel ?? current.xpIntoCurrentLevel,
+    xpIntoCurrentLevel:
+      incoming.xpIntoCurrentLevel ?? current.xpIntoCurrentLevel,
     xpNeededForNextLevel:
       incoming.xpNeededForNextLevel ?? current.xpNeededForNextLevel,
     currentLevelStartXp:
@@ -2132,7 +2166,7 @@ export function buildMobSpawnedEventFromStatus(params: {
     return null;
   }
 
-  const mobName = currentMob.name ?? 'Ameaça infectada';
+  const mobName = currentMob.name ?? "Ameaça infectada";
 
   const mobMaxHp = Math.max(
     0,
@@ -2169,7 +2203,15 @@ export function buildMobSpawnedEventFromStatus(params: {
   return {
     characterId: status.character?.id ?? session?.characterId ?? undefined,
     sessionId: session?.id ?? undefined,
-    type: 'MOB_SPAWNED',
+    activityInstanceId:
+      currentMob.battleProgress?.activityInstanceId ?? session?.id ?? undefined,
+    enemyInstanceId:
+      currentMob.enemyInstanceId ??
+      currentMob.battleProgress?.enemyInstanceId ??
+      session?.currentEnemyInstanceId ??
+      session?.enemyInstanceId ??
+      undefined,
+    type: "MOB_SPAWNED",
 
     mobId: currentMob.id ?? undefined,
     mobName,
@@ -2185,19 +2227,37 @@ export function buildMobSpawnedEventFromStatus(params: {
         ? clampPercent((characterCurrentHp / characterMaxHp) * 100)
         : 0,
 
-    actor: 'SYSTEM',
-    target: 'MOB',
+    actor: "SYSTEM",
+    target: "MOB",
     round: session?.currentRound ?? 0,
     combatIndex,
     message: `${mobName} apareceu.`,
+
+    battleProgressSeconds:
+      currentMob.battleProgress?.progressSeconds ?? undefined,
+    battleProgressPercent:
+      currentMob.battleProgress?.progressPercent ?? undefined,
+    cycleStartedAt: currentMob.battleProgress?.cycleStartedAt ?? undefined,
+    cycleEndsAt: currentMob.battleProgress?.cycleEndsAt ?? undefined,
+    cycleDurationMs: currentMob.battleProgress?.cycleDurationMs ?? undefined,
+    cycleDurationSeconds:
+      currentMob.battleProgress?.cycleDurationSeconds ?? undefined,
+    remainingMs: currentMob.battleProgress?.remainingMs ?? undefined,
+    progressUpdatedAt:
+      currentMob.battleProgress?.progressUpdatedAt ?? undefined,
+    serverTime:
+      String(currentMob.battleProgress?.serverNow ?? status.serverNow ?? "") ||
+      undefined,
+    estimatedKillTimeSeconds:
+      currentMob.battleProgress?.estimatedKillTimeSeconds ?? undefined,
 
     /**
      * createdAt determinístico:
      * evita que o mesmo spawn vindo do status seja considerado evento diferente
      * a cada hidratação/reload.
      */
-    createdAt: `status-spawn-${session?.id ?? 'no-session'}-${
-      status.character?.id ?? session?.characterId ?? 'no-character'
+    createdAt: `status-spawn-${session?.id ?? "no-session"}-${
+      status.character?.id ?? session?.characterId ?? "no-character"
     }-${combatIndex}-${currentMob.id ?? mobName}`,
   };
 }

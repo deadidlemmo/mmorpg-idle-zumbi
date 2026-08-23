@@ -8,6 +8,7 @@ import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
 import '../../dashboard/dashboard.css';
 import type { DashboardCharacterViewModel } from '../../dashboard/types/dashboard.types';
+import { useAutoCombatRealtime } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import { buildGatheringDashboardCharacter } from '../../gathering/utils/gathering-dashboard-character';
 import '../../gathering/styles/gathering.css';
 import {
@@ -64,6 +65,7 @@ function getLiveProgressPercent(response: InfirmaryStatusResponse | null) {
 export function InfirmaryPage() {
   const { characterId } = useParams();
   const safeCharacterId = characterId ?? '';
+  const { hydrateCharacterHealth } = useAutoCombatRealtime();
   const [character, setCharacter] =
     useState<DashboardCharacterViewModel | null>(null);
   const [status, setStatus] = useState<InfirmaryStatusResponse | null>(null);
@@ -103,6 +105,17 @@ export function InfirmaryPage() {
     [],
   );
 
+  const reconcileAutoCombatHealth = useCallback(
+    (response: InfirmaryStatusResponse) => {
+      hydrateCharacterHealth({
+        currentHp: response.character.currentHp,
+        maxHp: response.character.maxHp,
+        isDefeated: response.infirmary.isDefeated,
+      });
+    },
+    [hydrateCharacterHealth],
+  );
+
   const loadStatus = useCallback(
     async (showLoading = false) => {
       if (!safeCharacterId) {
@@ -117,6 +130,7 @@ export function InfirmaryPage() {
         const response = await getInfirmaryStatus(safeCharacterId);
         setStatus(response);
         mergeCharacter(response);
+        reconcileAutoCombatHealth(response);
       } catch (error) {
         setErrorMessage(extractInfirmaryApiError(error));
       } finally {
@@ -125,7 +139,7 @@ export function InfirmaryPage() {
         }
       }
     },
-    [mergeCharacter, safeCharacterId],
+    [mergeCharacter, reconcileAutoCombatHealth, safeCharacterId],
   );
 
   useEffect(() => {
@@ -165,6 +179,7 @@ export function InfirmaryPage() {
           },
         });
         setStatus(infirmaryResponse);
+        reconcileAutoCombatHealth(infirmaryResponse);
       } catch (error) {
         if (isMounted) {
           setErrorMessage(extractInfirmaryApiError(error));
@@ -181,7 +196,7 @@ export function InfirmaryPage() {
     return () => {
       isMounted = false;
     };
-  }, [safeCharacterId]);
+  }, [reconcileAutoCombatHealth, safeCharacterId]);
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
@@ -238,6 +253,7 @@ export function InfirmaryPage() {
 
       setStatus(response);
       mergeCharacter(response);
+      reconcileAutoCombatHealth(response);
       setFeedbackMessage(response.message ?? 'Enfermaria atualizada.');
     } catch (error) {
       setErrorMessage(extractInfirmaryApiError(error));
@@ -288,11 +304,17 @@ export function InfirmaryPage() {
     status?.infirmary.autoCombatRecovery ?? status?.autoCombatRecovery ?? null;
   const preservedTrackedEnemiesCount = Math.max(
     0,
-    Math.floor(Number(autoCombatRecovery?.preservedTrackedEnemiesCount) || 0),
+    Math.floor(
+      Number(
+        autoCombatRecovery?.preservedTrackedEnemiesCount ??
+          status?.infirmary.preservedTrackedEnemiesCount,
+      ) || 0,
+    ),
   );
   const hasPreservedTrackedEnemies = Boolean(
-    autoCombatRecovery?.hasPreservedTrackedEnemies &&
-      preservedTrackedEnemiesCount > 0,
+    (autoCombatRecovery?.hasPreservedTrackedEnemies ??
+      status?.infirmary.hasPreservedTrackedEnemies ??
+      preservedTrackedEnemiesCount > 0) && preservedTrackedEnemiesCount > 0,
   );
   const autoCombatReturnUrl = autoCombatRecovery?.mapId
     ? `/dashboard/${safeCharacterId}/auto-combat?mapId=${encodeURIComponent(
@@ -442,7 +464,7 @@ export function InfirmaryPage() {
 
                 <div className="infirmary-auto-combat-recovery__body">
                   <span>Combate interrompido</span>
-                  <strong>
+                  <strong data-testid="infirmary-preserved-enemies-count">
                     {preservedTrackedEnemiesCount} ameaça
                     {preservedTrackedEnemiesCount === 1 ? '' : 's'} preservada
                     {preservedTrackedEnemiesCount === 1 ? '' : 's'}

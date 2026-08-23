@@ -17,6 +17,11 @@ import type {
   AutoCombatRealtimeVisualState,
 } from "./autoCombatRealtime.types";
 import {
+  getPreservedTrackedEnemiesCount,
+  isAutoCombatDefeatStatus,
+  shouldRedirectAutoCombatToInfirmary,
+} from "./autoCombatDefeat";
+import {
   buildCharacterStateFromProgressSource,
   buildCharacterStateFromRealtimeEvent,
   buildCharacterStateFromStatus,
@@ -44,6 +49,14 @@ import {
   toSafeNumber,
 } from "./autoCombatRealtime.utils";
 
+export type AutoCombatTerminalDefeatState = {
+  sessionId: string | null;
+  detectedAt: number;
+  source: "event" | "status";
+  shouldRedirectToInfirmary: boolean;
+  preservedTrackedEnemiesCount: number;
+};
+
 export type AutoCombatRealtimeState = {
   characterId: string | null;
 
@@ -57,6 +70,8 @@ export type AutoCombatRealtimeState = {
   status: AutoCombatStatusResponse | null;
   /** Snapshot terminal aguardando a conclusao da fila visual atual. */
   pendingTerminalStatus: AutoCombatStatusResponse | null;
+  /** Derrota canônica mantida fora da fila visual para navegação global. */
+  terminalDefeat: AutoCombatTerminalDefeatState | null;
   snapshotSequence: number | null;
 
   session: AutoCombatRealtimeSessionState | null;
@@ -162,6 +177,20 @@ export type AutoCombatRealtimeAction =
       status: AutoCombatStatusResponse | null;
     }
   | {
+      type: "TERMINATE_DEFEATED";
+      characterId: string;
+      source: "event" | "status";
+      status?: AutoCombatStatusResponse | null;
+      event?: AutoCombatRealtimeEvent | null;
+    }
+  | {
+      type: "HYDRATE_CHARACTER_HEALTH";
+      characterId: string;
+      currentHp: number;
+      maxHp: number;
+      isDefeated: boolean;
+    }
+  | {
       type: "HYDRATE_RECENT_EVENTS";
       characterId: string;
       sessionId?: string | null;
@@ -218,6 +247,7 @@ export const initialAutoCombatRealtimeState: AutoCombatRealtimeState = {
 
   status: null,
   pendingTerminalStatus: null,
+  terminalDefeat: null,
   snapshotSequence: null,
 
   session: null,
@@ -492,9 +522,35 @@ function getStatusVisualCycleStartedAtMs(
     fallbackProgressUpdatedAt: source.progressUpdatedAt,
   });
 
-  return progress
-    ? clientNowMs - progress.cycleElapsedMs
-    : clientNowMs;
+  return progress ? clientNowMs - progress.cycleElapsedMs : clientNowMs;
+}
+
+function getEventVisualCycleStartedAtMs(
+  event: AutoCombatRealtimeEvent,
+  clientNowMs: number,
+) {
+  const serverReference = event.serverTime ?? event.progressUpdatedAt;
+  const serverClientOffsetMs = getServerClientOffsetMs(
+    serverReference,
+    clientNowMs,
+  );
+  const progress = getBattleTimelineProgress({
+    source: {
+      cycleStartedAt:
+        event.cycleStartedAt ?? event.actionStartedAt ?? event.serverTime,
+      cycleDurationMs: event.cycleDurationMs,
+      cycleDurationSeconds: event.cycleDurationSeconds,
+      progressSeconds: event.battleProgressSeconds,
+      estimatedKillTimeSeconds: event.estimatedKillTimeSeconds,
+      progressUpdatedAt: event.progressUpdatedAt ?? event.serverTime,
+      serverNow: event.serverTime,
+    },
+    nowMs: clientNowMs + serverClientOffsetMs,
+    fallbackServerNow: event.serverTime,
+    fallbackProgressUpdatedAt: event.progressUpdatedAt ?? event.serverTime,
+  });
+
+  return progress ? clientNowMs - progress.cycleElapsedMs : clientNowMs;
 }
 
 function shouldDeferAheadCombatStatus(params: {
@@ -1001,6 +1057,98 @@ function clearRealtimeRuntimeState(
       ? null
       : state.lastAppliedEventTimestamp,
 
+    updatedAt: now(),
+  };
+}
+
+function terminateDefeatedSession(
+  state: AutoCombatRealtimeState,
+  action: Extract<
+    AutoCombatRealtimeAction,
+    { type: "TERMINATE_DEFEATED" }
+  >,
+): AutoCombatRealtimeState {
+  if (state.characterId && state.characterId !== action.characterId) {
+    return state;
+  }
+
+  const status = action.status ?? state.status;
+  const event = action.event ?? null;
+  const statusSession = status
+    ? buildSessionStateFromStatus(status, state.session)
+    : state.session;
+  const statusCharacter = status
+    ? buildCharacterStateFromStatus(status, state.character)
+    : state.character;
+  const character = event
+    ? buildCharacterStateFromRealtimeEvent(event, statusCharacter)
+    : statusCharacter;
+  const eventSequence = event
+    ? getStoredRealtimeEventSequence(event)
+    : null;
+  const statusSequence = status ? getStatusSnapshotSequence(status) : null;
+  const sessionId =
+    statusSession?.id ?? event?.sessionId ?? state.session?.id ?? null;
+  const existingDefeat =
+    state.terminalDefeat?.sessionId === sessionId
+      ? state.terminalDefeat
+      : null;
+  const terminalSession: AutoCombatRealtimeSessionState = {
+    ...(statusSession ?? state.session ?? {}),
+    id: sessionId,
+    characterId: action.characterId,
+    status: "DEFEATED",
+    phase: "PLAYER_DEFEATED",
+    finishedAt:
+      statusSession?.finishedAt ??
+      event?.createdAt ??
+      state.session?.finishedAt ??
+      null,
+    updatedAt: now(),
+  };
+  const clearedState = clearRealtimeRuntimeState(state, {
+    clearStatus: false,
+    clearSession: false,
+    clearMob: true,
+    clearTotals: true,
+    clearDisplayTotals: true,
+    clearVisual: true,
+    clearPotion: true,
+    clearEventCaches: true,
+    clearBattleLog: true,
+  });
+
+  return {
+    ...clearedState,
+    characterId: action.characterId,
+    status,
+    pendingTerminalStatus: null,
+    terminalDefeat: {
+      sessionId,
+      detectedAt: existingDefeat?.detectedAt ?? now(),
+      source: action.source,
+      shouldRedirectToInfirmary: shouldRedirectAutoCombatToInfirmary({
+        status,
+        event,
+        fallbackCurrentHp: character?.currentHp,
+      }),
+      preservedTrackedEnemiesCount: Math.max(
+        existingDefeat?.preservedTrackedEnemiesCount ?? 0,
+        getPreservedTrackedEnemiesCount(status),
+      ),
+    },
+    snapshotSequence:
+      statusSequence ?? eventSequence ?? state.snapshotSequence,
+    session: terminalSession,
+    character,
+    location: status
+      ? buildLocationStateFromStatus(status, state.location)
+      : state.location,
+    lastAppliedEventSequence:
+      eventSequence ?? statusSequence ?? state.lastAppliedEventSequence,
+    isJoined: false,
+    hasLoadedOnce: true,
+    isSynchronizing: false,
     updatedAt: now(),
   };
 }
@@ -1739,20 +1887,29 @@ function buildOverviewLocationState(
 
   const character = overview.character as unknown as Record<string, unknown>;
   const progression = overview.progression as
-    Record<string, unknown> | undefined;
+    | Record<string, unknown>
+    | undefined;
   const activity = overview.activity as Record<string, unknown> | undefined;
   const activeAutoCombatSession = activity?.activeAutoCombatSession as
-    Record<string, unknown> | null | undefined;
+    | Record<string, unknown>
+    | null
+    | undefined;
   const activeAutoCombatMap = activeAutoCombatSession?.map as
-    Record<string, unknown> | null | undefined;
+    | Record<string, unknown>
+    | null
+    | undefined;
 
   const currentMap = character.currentMap as
-    Record<string, unknown> | null | undefined;
+    | Record<string, unknown>
+    | null
+    | undefined;
 
   const map = character.map as Record<string, unknown> | null | undefined;
 
   const progressionCurrentMap = progression?.currentMap as
-    Record<string, unknown> | null | undefined;
+    | Record<string, unknown>
+    | null
+    | undefined;
 
   const mapName =
     typeof activeAutoCombatMap?.name === "string"
@@ -1842,6 +1999,10 @@ function hydrateFromOverview(
     characterId,
     character,
     location,
+    terminalDefeat:
+      character?.currentHp !== undefined && character.currentHp > 0
+        ? null
+        : state.terminalDefeat,
 
     hasLoadedOnce: true,
     updatedAt: now(),
@@ -2079,7 +2240,7 @@ function hydrateFromStatus(
     Number.isFinite(baseState.visualCycleStartedAtMs),
   );
   const shouldAnchorActiveVisualCycle = Boolean(
-    !sessionChanged && statusIsActive && nextEnemyInstanceId,
+    statusIsActive && nextEnemyInstanceId,
   );
   const visualCycleEnemyInstanceId = hasMatchingVisualCycle
     ? baseState.visualCycleEnemyInstanceId
@@ -2089,9 +2250,7 @@ function hydrateFromStatus(
   const visualCycleStartedAtMs = hasMatchingVisualCycle
     ? baseState.visualCycleStartedAtMs
     : visualCycleEnemyInstanceId
-      ? baseState.isSynchronizing
-        ? getStatusVisualCycleStartedAtMs(status, now())
-        : now()
+      ? getStatusVisualCycleStartedAtMs(status, now())
       : null;
 
   /**
@@ -2218,7 +2377,7 @@ function applyRealtimeEventSnapshot(
     ? eventEnemyInstanceId
     : state.visualCycleEnemyInstanceId;
   const visualCycleStartedAtMs = startsNewVisualCycle
-    ? now()
+    ? getEventVisualCycleStartedAtMs(event, now())
     : state.visualCycleStartedAtMs;
 
   const nextDisplayTotals = isDisplayTotalsReleaseEvent(event)
@@ -2902,17 +3061,20 @@ function applyPendingTerminalStatusIfReady(
 function resetSessionVisualState(
   state: AutoCombatRealtimeState,
 ): AutoCombatRealtimeState {
-  return clearRealtimeRuntimeState(state, {
-    clearStatus: true,
-    clearSession: true,
-    clearMob: true,
-    clearTotals: true,
-    clearDisplayTotals: true,
-    clearVisual: true,
-    clearPotion: true,
-    clearEventCaches: true,
-    clearBattleLog: true,
-  });
+  return {
+    ...clearRealtimeRuntimeState(state, {
+      clearStatus: true,
+      clearSession: true,
+      clearMob: true,
+      clearTotals: true,
+      clearDisplayTotals: true,
+      clearVisual: true,
+      clearPotion: true,
+      clearEventCaches: true,
+      clearBattleLog: true,
+    }),
+    terminalDefeat: null,
+  };
 }
 
 export function autoCombatRealtimeReducer(
@@ -3014,7 +3176,82 @@ export function autoCombatRealtimeReducer(
     }
 
     case "HYDRATE_STATUS": {
-      return hydrateFromStatus(state, action.characterId, action.status);
+      if (isAutoCombatDefeatStatus(action.status)) {
+        return terminateDefeatedSession(state, {
+          type: "TERMINATE_DEFEATED",
+          characterId: action.characterId,
+          source: "status",
+          status: action.status,
+        });
+      }
+
+      if (isStatusActive(action.status) && state.terminalDefeat) {
+        const incomingSessionId = getStatusSession(action.status)?.id ?? null;
+
+        if (
+          !incomingSessionId ||
+          incomingSessionId === state.terminalDefeat.sessionId
+        ) {
+          return state;
+        }
+      }
+
+      const nextState = hydrateFromStatus(
+        state,
+        action.characterId,
+        action.status,
+      );
+
+      return isStatusActive(action.status)
+        ? { ...nextState, terminalDefeat: null }
+        : nextState;
+    }
+
+    case "TERMINATE_DEFEATED": {
+      return terminateDefeatedSession(state, action);
+    }
+
+    case "HYDRATE_CHARACTER_HEALTH": {
+      if (
+        state.characterId &&
+        state.characterId !== action.characterId
+      ) {
+        return state;
+      }
+
+      const currentHp = Math.max(0, Math.floor(Number(action.currentHp) || 0));
+      const maxHp = Math.max(1, Math.floor(Number(action.maxHp) || 1));
+      const recovered = !action.isDefeated && currentHp > 0;
+
+      return {
+        ...state,
+        characterId: action.characterId,
+        character: {
+          ...(state.character ?? {}),
+          id: state.character?.id ?? action.characterId,
+          currentHp,
+          maxHp,
+          hpPercent: Math.max(0, Math.min(100, (currentHp / maxHp) * 100)),
+          updatedAt: now(),
+        },
+        status: state.status
+          ? {
+              ...state.status,
+              character: state.status.character
+                ? {
+                    ...state.status.character,
+                    currentHp,
+                    maxHp,
+                  }
+                : state.status.character,
+              shouldRedirectToInfirmary: recovered
+                ? false
+                : state.status.shouldRedirectToInfirmary,
+            }
+          : state.status,
+        terminalDefeat: recovered ? null : state.terminalDefeat,
+        updatedAt: now(),
+      };
     }
 
     case "HYDRATE_RECENT_EVENTS": {

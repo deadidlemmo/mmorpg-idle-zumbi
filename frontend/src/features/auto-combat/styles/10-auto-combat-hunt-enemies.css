@@ -4524,8 +4524,7 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
     "header"
-    "target"
-    "receipt";
+    "target";
   justify-items: center;
   align-items: start;
   width: min(100%, 860px);
@@ -4806,8 +4805,7 @@
     grid-template-columns: 1fr;
     grid-template-areas:
       "header"
-      "target"
-      "receipt";
+      "target";
     gap: 0.8rem;
   }
 }

@@ -41,9 +41,7 @@ export function buildAutoCombatEventTelemetry(
     payload: {
       characterId: params.characterId,
       kind: "EVENT_RECEIVED",
-      ...(params.metadata?.context
-        ? { context: params.metadata.context }
-        : {}),
+      ...(params.metadata?.context ? { context: params.metadata.context } : {}),
       eventType: String(params.event.type ?? "UNKNOWN").toUpperCase(),
       transitDelayMs,
       queueDepth: Math.max(0, Math.floor(Number(params.queueDepth) || 0)),
@@ -68,7 +66,8 @@ export function resolveAutoCombatTelemetryContext(params?: {
     return "reconnected";
   }
 
-  const hidden = params?.hidden ??
+  const hidden =
+    params?.hidden ??
     (typeof document !== "undefined" && document.visibilityState === "hidden");
 
   if (hidden) {
@@ -89,7 +88,8 @@ export function shouldUseCondensedAutoCombatPlayback(params: {
   context: AutoCombatTelemetryContext;
 }) {
   return (
-    params.presentationTimelineEnabled && params.context === "other-page"
+    params.presentationTimelineEnabled &&
+    (params.context === "combat-page" || params.context === "other-page")
   );
 }
 

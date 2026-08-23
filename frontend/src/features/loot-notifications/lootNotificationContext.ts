@@ -9,6 +9,11 @@ export type LootNotificationSource =
   | 'system'
   | (string & {});
 
+export type LootNotificationKind =
+  | 'loot'
+  | 'combat-result'
+  | (string & {});
+
 export interface LootNotificationPayload {
   idempotencyKey: string;
   itemId?: string | null;
@@ -17,6 +22,10 @@ export interface LootNotificationPayload {
   imageUrl?: string | null;
   rarity?: string | null;
   source?: LootNotificationSource;
+  kind?: LootNotificationKind;
+  eyebrow?: string | null;
+  description?: string | null;
+  displayQuantity?: boolean;
 }
 
 export interface LootNotificationContextValue {

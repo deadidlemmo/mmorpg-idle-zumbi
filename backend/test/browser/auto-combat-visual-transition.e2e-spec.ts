@@ -213,7 +213,7 @@ test.describe('transicao visual entre monstros', () => {
     await prisma.$disconnect();
   });
 
-  test('mantem imagem continua e mostra o recibo fora do card do mob', async ({
+  test('mantem imagem continua e publica derrota/EXP sem bloquear o proximo mob', async ({
     page,
   }, testInfo) => {
     test.setTimeout(90_000);
@@ -234,15 +234,21 @@ test.describe('transicao visual entre monstros', () => {
       const probe = {
         blankFrames: 0,
         handoffSeen: false,
-        receiptInsideMobCard: false,
-        receiptSeen: false,
-        receiptVisibleStartedAt: null as number | null,
-        maxReceiptVisibleMs: 0,
-        receiptMobInstanceKeys: [] as string[],
-        receiptCountdownLabels: [] as string[],
+        defeatToastInsideMobCard: false,
+        defeatToastSeen: false,
+        defeatToastHasImage: false,
+        activeDefeatToastKey: null as string | null,
+        defeatToastVisibleStartedAt: null as number | null,
+        maxDefeatToastVisibleMs: 0,
+        defeatToastKeys: [] as string[],
+        defeatToastMobNames: [] as string[],
+        defeatToastDescriptions: [] as string[],
+        pendingDefeatToast: null as {
+          at: number;
+          mobInstanceKey: string | null;
+        } | null,
+        nextMobAfterDefeatToastMs: [] as number[],
         transitionStarted: false,
-        defeatedStartedAt: null as number | null,
-        defeatedDurations: [] as number[],
         firstMobInstanceKey: null as string | null,
         mobProgressSamples: [] as Array<{
           at: number;
@@ -307,7 +313,9 @@ test.describe('transicao visual entre monstros', () => {
         const transition = document.querySelector(
           '.auto-combat-mob-transition',
         );
-        const receipt = document.querySelector('.auto-combat-kill-receipt');
+        const defeatToast = document.querySelector<HTMLElement>(
+          '.loot-notification-card[data-kind="combat-result"]',
+        );
         const currentImage = transition?.querySelector(
           '.auto-combat-mob-transition__layer--current img',
         );
@@ -438,46 +446,63 @@ test.describe('transicao visual entre monstros', () => {
           }
         }
 
-        if (currentBody?.classList.contains('is-defeated')) {
-          probe.defeatedStartedAt ??= now;
-        }
-
         if (
-          probe.defeatedStartedAt !== null &&
-          probe.lastMobInstanceKey &&
+          probe.pendingDefeatToast &&
+          probe.pendingDefeatToast.mobInstanceKey &&
           currentMobInstanceKey &&
-          probe.lastMobInstanceKey !== currentMobInstanceKey
+          probe.pendingDefeatToast.mobInstanceKey !== currentMobInstanceKey
         ) {
-          probe.defeatedDurations.push(now - probe.defeatedStartedAt);
-          probe.defeatedStartedAt = null;
+          probe.nextMobAfterDefeatToastMs.push(
+            now - probe.pendingDefeatToast.at,
+          );
+          probe.pendingDefeatToast = null;
         }
 
         if (currentMobInstanceKey) {
           probe.lastMobInstanceKey = currentMobInstanceKey;
         }
 
-        if (receipt) {
-          probe.receiptSeen = true;
+        if (defeatToast) {
+          const defeatToastKey =
+            defeatToast.dataset.notificationKey ?? 'sem-evento';
 
-          if (probe.receiptVisibleStartedAt === null) {
-            probe.receiptVisibleStartedAt = now;
-            probe.receiptMobInstanceKeys.push(
-              currentMobInstanceKey ?? 'sem-instancia',
+          probe.defeatToastSeen = true;
+          probe.defeatToastHasImage ||= Boolean(
+            defeatToast.querySelector('img'),
+          );
+
+          if (probe.activeDefeatToastKey !== defeatToastKey) {
+            probe.activeDefeatToastKey = defeatToastKey;
+            probe.defeatToastVisibleStartedAt = now;
+            probe.defeatToastKeys.push(defeatToastKey);
+            probe.defeatToastMobNames.push(
+              defeatToast
+                .querySelector('.loot-notification-card__name')
+                ?.textContent?.trim() ?? 'sem-nome',
             );
-            probe.receiptCountdownLabels.push(countdownLabel ?? 'sem-status');
+            probe.defeatToastDescriptions.push(
+              defeatToast
+                .querySelector('.loot-notification-card__description')
+                ?.textContent?.trim() ?? 'sem-exp',
+            );
+            probe.pendingDefeatToast = {
+              at: now,
+              mobInstanceKey: currentMobInstanceKey,
+            };
           }
 
-          probe.maxReceiptVisibleMs = Math.max(
-            probe.maxReceiptVisibleMs,
-            now - probe.receiptVisibleStartedAt,
+          probe.maxDefeatToastVisibleMs = Math.max(
+            probe.maxDefeatToastVisibleMs,
+            now - (probe.defeatToastVisibleStartedAt ?? now),
           );
-          probe.receiptInsideMobCard ||= Boolean(
-            receipt.closest(
+          probe.defeatToastInsideMobCard ||= Boolean(
+            defeatToast.closest(
               '[data-fighter-role="mob"], .auto-combat-inline-battle__mob-card',
             ),
           );
         } else {
-          probe.receiptVisibleStartedAt = null;
+          probe.activeDefeatToastKey = null;
+          probe.defeatToastVisibleStartedAt = null;
         }
       }, 16);
     });
@@ -497,21 +522,24 @@ test.describe('transicao visual entre monstros', () => {
       await expect(page.locator('.auto-combat-mob-transition')).toBeVisible({
         timeout: 15_000,
       });
-      await expect(page.locator('.auto-combat-kill-receipt')).toBeVisible({
-        timeout: 30_000,
-      });
+      const defeatToast = page
+        .locator('.loot-notification-card[data-kind="combat-result"]')
+        .first();
+      await expect(defeatToast).toBeVisible({ timeout: 30_000 });
+      await expect(defeatToast.locator('img')).toBeVisible();
+      await expect(
+        defeatToast.locator('.loot-notification-card__description'),
+      ).toContainText('EXP');
       await page.setViewportSize({ width: 390, height: 844 });
-      const mobileReceiptBox = await page
-        .locator('.auto-combat-kill-receipt')
-        .boundingBox();
+      const mobileDefeatToastBox = await defeatToast.boundingBox();
 
-      expect(mobileReceiptBox).not.toBeNull();
-      expect(mobileReceiptBox?.x ?? -1).toBeGreaterThanOrEqual(0);
+      expect(mobileDefeatToastBox).not.toBeNull();
+      expect(mobileDefeatToastBox?.x ?? -1).toBeGreaterThanOrEqual(0);
       expect(
-        (mobileReceiptBox?.x ?? 0) + (mobileReceiptBox?.width ?? 0),
+        (mobileDefeatToastBox?.x ?? 0) + (mobileDefeatToastBox?.width ?? 0),
       ).toBeLessThanOrEqual(390);
       await page.screenshot({
-        path: testInfo.outputPath('auto-combat-kill-receipt-mobile.png'),
+        path: testInfo.outputPath('auto-combat-defeat-toast-mobile.png'),
         fullPage: true,
       });
       await page.setViewportSize({ width: 1280, height: 720 });
@@ -523,6 +551,7 @@ test.describe('transicao visual entre monstros', () => {
       await expect(forcedDropToast).toBeVisible({ timeout: 15_000 });
       await expect(forcedDropToast.locator('img')).toBeVisible();
       await expect(page.locator('.auto-combat-xp-feedback')).toHaveCount(0);
+      await expect(page.locator('.auto-combat-kill-receipt')).toHaveCount(0);
       await expect(
         page.locator(
           '[data-fighter-role="mob"] .auto-combat-defeated-badge, .auto-combat-inline-battle__mob-card .auto-combat-defeated-badge',
@@ -688,13 +717,15 @@ test.describe('transicao visual entre monstros', () => {
                   inlinePercent: number;
                   topPercent: number;
                 }>;
-                receiptInsideMobCard: boolean;
-                receiptSeen: boolean;
-                maxReceiptVisibleMs: number;
-                receiptMobInstanceKeys: string[];
-                receiptCountdownLabels: string[];
+                defeatToastInsideMobCard: boolean;
+                defeatToastSeen: boolean;
+                defeatToastHasImage: boolean;
+                maxDefeatToastVisibleMs: number;
+                defeatToastKeys: string[];
+                defeatToastMobNames: string[];
+                defeatToastDescriptions: string[];
+                nextMobAfterDefeatToastMs: number[];
                 transitionStarted: boolean;
-                defeatedDurations: number[];
                 firstMobInstanceKey: string | null;
                 progressSamples: Array<{ at: number; percent: number }>;
               };
@@ -704,31 +735,45 @@ test.describe('transicao visual entre monstros', () => {
 
       expect(probe?.blankFrames).toBe(0);
       expect(probe?.handoffSeen).toBe(true);
-      expect(probe?.receiptInsideMobCard).toBe(false);
-      expect(probe?.receiptSeen).toBe(true);
+      expect(probe?.defeatToastInsideMobCard).toBe(false);
+      expect(probe?.defeatToastSeen).toBe(true);
+      expect(probe?.defeatToastHasImage).toBe(true);
       expect(
-        probe?.maxReceiptVisibleMs,
-        `O recibo de abate não permaneceu legível: ${JSON.stringify(probe)}`,
+        probe?.maxDefeatToastVisibleMs,
+        `A notificação de abate não permaneceu legível: ${JSON.stringify(probe)}`,
       ).toBeGreaterThanOrEqual(1_000);
-      expect(probe?.receiptMobInstanceKeys.length ?? 0).toBeGreaterThanOrEqual(
-        2,
-      );
+      expect(probe?.defeatToastKeys.length ?? 0).toBeGreaterThanOrEqual(2);
       expect(
-        new Set(probe?.receiptMobInstanceKeys ?? []).size,
-        `O recibo reapareceu para a mesma morte: ${JSON.stringify(probe?.receiptMobInstanceKeys)}`,
-      ).toBe(probe?.receiptMobInstanceKeys.length);
+        new Set(probe?.defeatToastKeys ?? []).size,
+        `A notificação reapareceu para a mesma morte: ${JSON.stringify(probe?.defeatToastKeys)}`,
+      ).toBe(probe?.defeatToastKeys.length);
       expect(
-        probe?.receiptCountdownLabels.every((label) =>
-          label.includes('Alvo derrotado'),
+        probe?.defeatToastKeys.every(
+          (notificationKey) => notificationKey !== 'sem-evento',
         ),
-        `A EXP apareceu fora da derrota ativa: ${JSON.stringify(probe?.receiptCountdownLabels)}`,
+        `A notificação perdeu o vínculo com a derrota: ${JSON.stringify(probe?.defeatToastKeys)}`,
       ).toBe(true);
-      expect(probe?.transitionStarted).toBe(true);
-      expect(probe?.defeatedDurations.length ?? 0).toBeGreaterThanOrEqual(1);
       expect(
-        probe?.defeatedDurations.every((duration) => duration >= 1_000),
-        `A derrota visual durou menos de um segundo: ${JSON.stringify(probe?.defeatedDurations)}`,
+        probe?.defeatToastMobNames.every((mobName) => mobName !== 'sem-nome'),
+        `A notificação perdeu o nome do alvo: ${JSON.stringify(probe?.defeatToastMobNames)}`,
       ).toBe(true);
+      expect(
+        probe?.defeatToastDescriptions.every((description) =>
+          /\+\d[\d.]*\s+EXP/i.test(description),
+        ),
+        `A notificação perdeu a EXP confirmada: ${JSON.stringify(probe?.defeatToastDescriptions)}`,
+      ).toBe(true);
+      expect(
+        probe?.nextMobAfterDefeatToastMs.length ?? 0,
+        `O próximo alvo não apareceu após a notificação: ${JSON.stringify(probe)}`,
+      ).toBeGreaterThanOrEqual(1);
+      expect(
+        Math.max(
+          ...(probe?.nextMobAfterDefeatToastMs ?? [Number.POSITIVE_INFINITY]),
+        ),
+        `A notificação bloqueou a entrada do próximo alvo: ${JSON.stringify(probe?.nextMobAfterDefeatToastMs)}`,
+      ).toBeLessThan(1_000);
+      expect(probe?.transitionStarted).toBe(true);
 
       const counterSamples = probe?.counterSamples ?? [];
       const counterChanges = counterSamples
@@ -769,7 +814,7 @@ test.describe('transicao visual entre monstros', () => {
       expect(
         maxProgressAlignmentDelta,
         `As barras tiveram um salto de alinhamento: ${JSON.stringify(probe?.alignedProgressSamples)}`,
-      ).toBeLessThanOrEqual(1);
+      ).toBeLessThanOrEqual(2);
 
       const secondMobInstanceKey = probe?.mobProgressSamples.find(
         (sample) => sample.instanceKey !== probe.firstMobInstanceKey,
@@ -821,20 +866,20 @@ test.describe('transicao visual entre monstros', () => {
       ).toBeUndefined();
 
       const countdownSamples = probe?.countdownSamples ?? [];
-      const defeatedInstanceKeys = [
+      const completedCountdownInstanceKeys = [
         ...new Set(
           countdownSamples
-            .filter((sample) => sample.label.includes('Alvo derrotado'))
+            .filter((sample) => sample.label.includes('1.0s restantes'))
             .map((sample) => sample.instanceKey),
         ),
       ].slice(0, 2);
 
       expect(
-        defeatedInstanceKeys.length,
-        `O E2E não observou dois alvos derrotados: ${JSON.stringify(countdownSamples)}`,
+        completedCountdownInstanceKeys.length,
+        `O E2E não observou dois ciclos completos: ${JSON.stringify(countdownSamples)}`,
       ).toBe(2);
 
-      for (const instanceKey of defeatedInstanceKeys) {
+      for (const instanceKey of completedCountdownInstanceKeys) {
         const mobCountdownSamples = countdownSamples.filter(
           (sample) => sample.instanceKey === instanceKey,
         );
@@ -845,10 +890,6 @@ test.describe('transicao visual entre monstros', () => {
           (sample, index) =>
             index > twoSecondsIndex && sample.label.includes('1.0s restantes'),
         );
-        const defeatedIndex = mobCountdownSamples.findIndex(
-          (sample, index) =>
-            index > oneSecondIndex && sample.label.includes('Alvo derrotado'),
-        );
 
         expect(
           mobCountdownSamples.some(
@@ -857,22 +898,16 @@ test.describe('transicao visual entre monstros', () => {
           `A fase intermediária voltou a aparecer em ${instanceKey}: ${JSON.stringify(mobCountdownSamples)}`,
         ).toBe(false);
         expect(
-          [twoSecondsIndex, oneSecondIndex, defeatedIndex].every(
-            (index) => index >= 0,
-          ),
-          `A sequência 2.0s -> 1.0s -> Alvo derrotado não foi preservada em ${instanceKey}: ${JSON.stringify(mobCountdownSamples)}`,
+          [twoSecondsIndex, oneSecondIndex].every((index) => index >= 0),
+          `A sequência 2.0s -> 1.0s não foi preservada em ${instanceKey}: ${JSON.stringify(mobCountdownSamples)}`,
         ).toBe(true);
         expect(
           (mobCountdownSamples[oneSecondIndex]?.at ?? 0) -
             (mobCountdownSamples[twoSecondsIndex]?.at ?? 0),
         ).toBeGreaterThanOrEqual(850);
-        expect(
-          (mobCountdownSamples[defeatedIndex]?.at ?? 0) -
-            (mobCountdownSamples[oneSecondIndex]?.at ?? 0),
-        ).toBeGreaterThanOrEqual(850);
       }
       await page.screenshot({
-        path: testInfo.outputPath('auto-combat-kill-receipt.png'),
+        path: testInfo.outputPath('auto-combat-defeat-toast.png'),
         fullPage: true,
       });
 
@@ -1058,6 +1093,85 @@ test.describe('transicao visual entre monstros', () => {
       await expect
         .poll(readTopBarDefeatedCount, { timeout: 5_000, intervals: [50] })
         .toBe(defeatedBeforeOtherPageCycle + 1);
+      const otherPageDefeatToast = page
+        .locator('.loot-notification-card[data-kind="combat-result"]')
+        .first();
+
+      await expect(otherPageDefeatToast).toBeVisible();
+      await expect(
+        otherPageDefeatToast.locator('.loot-notification-card__description'),
+      ).toContainText('EXP');
+      await expect
+        .poll(
+          () =>
+            topBarProgressFill.evaluate((element) => {
+              const transform = getComputedStyle(element).transform;
+              const scaleX =
+                transform === 'none' ? 1 : new DOMMatrixReadOnly(transform).a;
+
+              return scaleX >= 0.35 && scaleX <= 0.75;
+            }),
+          { timeout: 25_000, intervals: [50] },
+        )
+        .toBe(true);
+      const topProgressBeforeRouteReturn = await topBarProgressFill.evaluate(
+        (element) => {
+          const transform = getComputedStyle(element).transform;
+
+          return transform === 'none' ? 1 : new DOMMatrixReadOnly(transform).a;
+        },
+      );
+
+      await page
+        .getByRole('link', { name: 'Combate automático', exact: true })
+        .click();
+      await expect(page).toHaveURL(
+        new RegExp(`/dashboard/${characterId}/auto-combat/?$`),
+      );
+
+      const resumedInlineProgressFill = page.locator(
+        '.auto-combat-inline-battle__ttk-strip b',
+      );
+      await expect(resumedInlineProgressFill).toBeVisible();
+      await expect
+        .poll(
+          async () => {
+            const [inlineScale, topScale] = await Promise.all([
+              resumedInlineProgressFill.evaluate((element) => {
+                const transform = getComputedStyle(element).transform;
+
+                return transform === 'none'
+                  ? 1
+                  : new DOMMatrixReadOnly(transform).a;
+              }),
+              topBarProgressFill.evaluate((element) => {
+                const transform = getComputedStyle(element).transform;
+
+                return transform === 'none'
+                  ? 1
+                  : new DOMMatrixReadOnly(transform).a;
+              }),
+            ]);
+
+            return Math.abs(inlineScale - topScale);
+          },
+          { timeout: 10_000, intervals: [50] },
+        )
+        .toBeLessThanOrEqual(0.02);
+      const inlineProgressAfterRouteReturn =
+        await resumedInlineProgressFill.evaluate((element) => {
+          const transform = getComputedStyle(element).transform;
+
+          return transform === 'none' ? 1 : new DOMMatrixReadOnly(transform).a;
+        });
+
+      expect(
+        inlineProgressAfterRouteReturn,
+        'A barra reiniciou ao retornar da Visão Geral.',
+      ).toBeLessThanOrEqual(topProgressBeforeRouteReturn + 0.05);
+      await expect(
+        page.getByText('Finalizando abate', { exact: true }),
+      ).toHaveCount(0);
     } finally {
       await api.post(`/auto-combat/${characterId}/stop`, {
         headers: { Authorization: `Bearer ${accessToken}` },

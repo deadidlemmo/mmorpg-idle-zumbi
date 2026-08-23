@@ -387,6 +387,11 @@ export type AutoCombatRealtimeContextValue = {
 
   hydrateOverview: (overview: CharacterOverviewResponse | null) => void;
   hydrateStatus: (status: AutoCombatStatusResponse | null) => void;
+  hydrateCharacterHealth: (payload: {
+    currentHp: number;
+    maxHp: number;
+    isDefeated: boolean;
+  }) => void;
   enqueueRealtimeEvent: (event: AutoCombatRealtimeEvent) => void;
   reportTelemetry: (
     payload: Omit<AutoCombatClientTelemetryPayload, "characterId">,

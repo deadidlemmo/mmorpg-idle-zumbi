@@ -1,6 +1,6 @@
 .loot-notification-stack {
   position: fixed;
-  right: max(1rem, env(safe-area-inset-right));
+  right: max(5.25rem, env(safe-area-inset-right));
   bottom: max(1rem, env(safe-area-inset-bottom));
   z-index: 80;
   display: flex;
@@ -26,10 +26,14 @@
   border-left: 0.25rem solid rgb(var(--loot-source-rgb));
   border-radius: var(--radius-lg);
   color: var(--text-primary);
-  background:
-    linear-gradient(135deg, rgba(var(--surface-3-rgb), 0.94), rgba(var(--bg-secondary-rgb), 0.96)),
-    var(--card-bg);
+  background-color: #0c1110;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--surface-3-rgb), 0.98),
+    rgba(var(--bg-secondary-rgb), 0.99)
+  );
   box-shadow: var(--shadow-md), var(--shadow-inner);
+  pointer-events: auto;
   animation: loot-notification-enter 240ms ease-out both,
     loot-notification-leave 260ms ease-in 3.9s forwards;
 }
@@ -49,6 +53,10 @@
 
 .loot-notification-card[data-source='auto-combat'] {
   --loot-source-rgb: 194, 74, 74;
+}
+
+.loot-notification-card[data-kind='combat-result'] {
+  min-height: 4.1rem;
 }
 
 .loot-notification-card[data-source='gathering'] {
@@ -141,6 +149,7 @@
   min-width: 0;
   flex-direction: column;
   gap: 0.05rem;
+  padding-right: 1.55rem;
 }
 
 .loot-notification-card__eyebrow {
@@ -164,6 +173,49 @@
   white-space: nowrap;
 }
 
+.loot-notification-card__description {
+  overflow: hidden;
+  color: rgba(var(--text-primary-rgb), 0.72);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loot-notification-card__close {
+  position: absolute;
+  top: 0.38rem;
+  right: 0.38rem;
+  z-index: 2;
+  display: grid;
+  width: 1.45rem;
+  height: 1.45rem;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(var(--text-primary-rgb), 0.12);
+  border-radius: 50%;
+  color: rgba(var(--text-primary-rgb), 0.7);
+  background: rgba(var(--bg-primary-rgb), 0.58);
+  cursor: pointer;
+}
+
+.loot-notification-card__close:hover {
+  color: var(--text-primary);
+  border-color: rgba(var(--text-primary-rgb), 0.28);
+  background: rgba(var(--bg-primary-rgb), 0.88);
+}
+
+.loot-notification-card__close:focus-visible {
+  outline: 2px solid rgb(var(--loot-source-rgb));
+  outline-offset: 2px;
+}
+
+.loot-notification-card__close svg {
+  width: 0.82rem;
+  height: 0.82rem;
+}
+
 @keyframes loot-notification-enter {
   from {
     opacity: 0;
@@ -185,9 +237,9 @@
 
 @media (max-width: 720px) {
   .loot-notification-stack {
-    right: max(0.75rem, env(safe-area-inset-right));
+    right: max(4.5rem, env(safe-area-inset-right));
     bottom: max(0.75rem, env(safe-area-inset-bottom));
-    width: min(16.25rem, calc(100vw - 1.5rem));
+    width: min(16.25rem, calc(100vw - 5.25rem));
   }
 
   .loot-notification-card {
@@ -205,6 +257,10 @@
 
   .loot-notification-card__name {
     font-size: 0.88rem;
+  }
+
+  .loot-notification-card__description {
+    font-size: 0.64rem;
   }
 }
 

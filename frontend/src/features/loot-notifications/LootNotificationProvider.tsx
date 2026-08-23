@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { X } from 'lucide-react';
 import {
   LootNotificationContext,
   type LootNotificationContextValue,
@@ -108,6 +109,9 @@ export function LootNotificationProvider({
         const source = String(payload.source ?? 'system')
           .trim()
           .toLowerCase();
+        const kind = String(payload.kind ?? 'loot').trim().toLowerCase();
+        const eyebrow = payload.eyebrow?.trim() || null;
+        const description = payload.description?.trim() || null;
 
         if (!idempotencyKey || !itemName || quantity <= 0) {
           continue;
@@ -126,6 +130,10 @@ export function LootNotificationProvider({
           itemName,
           quantity,
           source,
+          kind: kind || 'loot',
+          eyebrow,
+          description,
+          displayQuantity: payload.displayQuantity ?? true,
           createdAt,
         });
       }
@@ -191,6 +199,8 @@ export function LootNotificationProvider({
             className="loot-notification-card"
             data-rarity={String(notification.rarity ?? 'COMMON').toLowerCase()}
             data-source={String(notification.source ?? 'system').toLowerCase()}
+            data-kind={String(notification.kind ?? 'loot').toLowerCase()}
+            data-notification-key={notification.idempotencyKey}
           >
             <span className="loot-notification-card__icon" aria-hidden="true">
               {notification.imageUrl ? (
@@ -202,14 +212,29 @@ export function LootNotificationProvider({
 
             <span className="loot-notification-card__body">
               <span className="loot-notification-card__eyebrow">
-                {getSourceLabel(notification.source)}
+                {notification.eyebrow ?? getSourceLabel(notification.source)}
               </span>
               <strong className="loot-notification-card__name">
-                {notification.quantity > 1
+                {notification.displayQuantity !== false &&
+                notification.quantity > 1
                   ? `+${notification.quantity} ${notification.itemName}`
                   : notification.itemName}
               </strong>
+              {notification.description ? (
+                <span className="loot-notification-card__description">
+                  {notification.description}
+                </span>
+              ) : null}
             </span>
+
+            <button
+              type="button"
+              className="loot-notification-card__close"
+              aria-label={`Fechar notificação de ${notification.itemName}`}
+              onClick={() => removeNotification(notification.id)}
+            >
+              <X aria-hidden="true" />
+            </button>
           </article>
         ))}
       </div>

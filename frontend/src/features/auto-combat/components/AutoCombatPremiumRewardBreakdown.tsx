@@ -1,8 +1,5 @@
 import { Link } from "react-router-dom";
-import { BadgeCheck } from "lucide-react";
 import { PremiumPlaceholderIcon } from "../../../components/PremiumPlaceholderIcon";
-
-type AutoCombatPremiumRewardBreakdownVariant = "summary" | "feedback";
 
 type AutoCombatPremiumRewardBreakdownProps = {
   baseXp: number;
@@ -13,7 +10,6 @@ type AutoCombatPremiumRewardBreakdownProps = {
   isPremiumActive?: boolean | null;
   membershipHref?: string;
   showCta?: boolean;
-  variant?: AutoCombatPremiumRewardBreakdownVariant;
   className?: string;
 };
 
@@ -42,7 +38,6 @@ export function AutoCombatPremiumRewardBreakdown({
   isPremiumActive = false,
   membershipHref,
   showCta = true,
-  variant = "summary",
   className = "",
 }: AutoCombatPremiumRewardBreakdownProps) {
   const safeBaseXp = toXpValue(baseXp);
@@ -64,10 +59,9 @@ export function AutoCombatPremiumRewardBreakdown({
     return null;
   }
 
-  const isFeedback = variant === "feedback";
   const rootClassName = [
     "auto-combat-premium-reward",
-    `auto-combat-premium-reward--${variant}`,
+    "auto-combat-premium-reward--summary",
     isPremiumActive
       ? "auto-combat-premium-reward--active"
       : "auto-combat-premium-reward--locked",
@@ -79,80 +73,18 @@ export function AutoCombatPremiumRewardBreakdown({
   const headline = `+${formatXp(safeTotalXp)} EXP recebida`;
   const badgeText = isPremiumActive ? "Premium ativo" : "Premium disponível";
   const bonusLabel = isPremiumActive
-    ? isFeedback
-      ? "Premium"
-      : "Bônus Premium"
-    : isFeedback
-      ? "Perdida"
-      : "Bônus perdido";
+    ? "Bônus Premium"
+    : "Bônus perdido";
   const totalLabel = isPremiumActive
-    ? isFeedback
-      ? "Total"
-      : "Total recebido"
-    : isFeedback
-      ? "Com Premium"
-      : "Com Premium";
-  const baseLabel = isPremiumActive
-    ? isFeedback
-      ? "Base"
-      : "EXP Base"
-    : isFeedback
-      ? "Recebida"
-      : "EXP recebida";
+    ? "Total recebido"
+    : "Com Premium";
+  const baseLabel = isPremiumActive ? "EXP Base" : "EXP recebida";
   const totalDisplayXp = isPremiumActive ? safeTotalXp : safePremiumTotalXp;
   const showFreeMessage = !isPremiumActive && safePremiumDeltaXp > 0;
   const showPremiumMessage = isPremiumActive && safePremiumDeltaXp > 0;
 
-  if (isFeedback) {
-    return (
-      <div
-        className={[
-          "auto-combat-kill-receipt",
-          isPremiumActive
-            ? "auto-combat-kill-receipt--premium-active"
-            : "auto-combat-kill-receipt--premium-locked",
-          className,
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        role="status"
-        aria-live="polite"
-      >
-        <span className="auto-combat-kill-receipt__outcome">
-          <BadgeCheck size={16} strokeWidth={2.4} aria-hidden="true" />
-          Alvo eliminado
-        </span>
-
-        <span className="auto-combat-kill-receipt__divider" aria-hidden="true" />
-
-        <strong className="auto-combat-kill-receipt__xp">
-          +{formatXp(isPremiumActive ? safeBaseXp : safeTotalXp)} EXP
-        </strong>
-
-        {hasPremiumValue ? (
-          <span className="auto-combat-kill-receipt__premium">
-            <PremiumPlaceholderIcon className="auto-combat-kill-receipt__premium-icon" />
-            {isPremiumActive
-              ? `+${formatXp(safePremiumDeltaXp)} Premium`
-              : `+${formatXp(safePremiumDeltaXp)} com Premium`}
-          </span>
-        ) : null}
-
-        {isPremiumActive && safeTotalXp > safeBaseXp ? (
-          <span className="auto-combat-kill-receipt__total">
-            Total {formatXp(safeTotalXp)}
-          </span>
-        ) : null}
-      </div>
-    );
-  }
-
   return (
-    <div
-      className={rootClassName}
-      role={isFeedback ? "status" : undefined}
-      aria-live={isFeedback ? "polite" : undefined}
-    >
+    <div className={rootClassName}>
       <div className="auto-combat-premium-reward__header">
         <span className="auto-combat-premium-reward__badge">
           <PremiumPlaceholderIcon className="auto-combat-premium-reward__icon" />
@@ -167,7 +99,9 @@ export function AutoCombatPremiumRewardBreakdown({
       <div className="auto-combat-premium-reward__metrics">
         <span>
           <small>{baseLabel}</small>
-          <strong>{formatXp(isPremiumActive ? safeBaseXp : safeTotalXp)}</strong>
+          <strong>
+            {formatXp(isPremiumActive ? safeBaseXp : safeTotalXp)}
+          </strong>
         </span>
 
         <span className="auto-combat-premium-reward__metric--premium">

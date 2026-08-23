@@ -76,7 +76,6 @@ export function AutoCombatSessionSummary({
             premiumTotalXp={premiumTotalXp}
             isPremiumActive={isPremiumActive}
             membershipHref={membershipHref}
-            variant="summary"
           />
         </div>
 

@@ -75,6 +75,37 @@ function enqueueAndProcess(
   });
 }
 
+function makeDefeatedStatus(preservedTrackedEnemiesCount = 4) {
+  return {
+    active: false,
+    hasActiveAutoCombat: false,
+    shouldRedirectToInfirmary: true,
+    endReason: "PLAYER_DEFEATED",
+    character: {
+      id: "char-1",
+      currentHp: 0,
+      maxHp: 100,
+    },
+    session: {
+      id: "session-1",
+      characterId: "char-1",
+      status: "DEFEATED",
+      phase: "PLAYER_DEFEATED",
+      preservedTrackedEnemiesCount,
+      autoCombatRecovery: {
+        hasPreservedTrackedEnemies: preservedTrackedEnemiesCount > 0,
+        preservedTrackedEnemiesCount,
+        huntBatchId: "batch-1",
+      },
+    },
+    autoCombatRecovery: {
+      hasPreservedTrackedEnemies: preservedTrackedEnemiesCount > 0,
+      preservedTrackedEnemiesCount,
+      huntBatchId: "batch-1",
+    },
+  } as never;
+}
+
 test("agenda dano visual antes de aplicar o impacto", () => {
   const event = makeHit(1, 70);
   const started = enqueueAndProcess(makeState(), event);
@@ -520,6 +551,99 @@ test("ressincronizacao ancora um novo mob no progresso do snapshot", () => {
   assert.ok(resumedElapsedMs <= 2_200);
 });
 
+test("primeiro snapshot ancora a barra no relogio absoluto do servidor", () => {
+  const snapshotNowMs = Date.now();
+  const hydrated = autoCombatRealtimeReducer(
+    {
+      ...initialAutoCombatRealtimeState,
+      characterId: "char-1",
+    },
+    {
+      type: "HYDRATE_STATUS",
+      characterId: "char-1",
+      status: {
+        active: true,
+        hasActiveAutoCombat: true,
+        serverNow: new Date(snapshotNowMs).toISOString(),
+        character: { id: "char-1", currentHp: 100, maxHp: 100 },
+        session: {
+          id: "session-1",
+          characterId: "char-1",
+          status: "ACTIVE",
+          phase: "COMBAT_ACTIVE",
+          enemyInstanceId: "enemy-1",
+          currentEnemyInstanceId: "enemy-1",
+          battleProgress: {
+            cycleStartedAt: new Date(snapshotNowMs - 3_000).toISOString(),
+            cycleDurationMs: 8_000,
+            serverNow: new Date(snapshotNowMs).toISOString(),
+          },
+        },
+        currentMob: {
+          id: "mob-1",
+          name: "Zumbi",
+          enemyInstanceId: "enemy-1",
+          currentHp: 100,
+          maxHp: 100,
+          battleProgress: {
+            cycleStartedAt: new Date(snapshotNowMs - 3_000).toISOString(),
+            cycleDurationMs: 8_000,
+            serverNow: new Date(snapshotNowMs).toISOString(),
+          },
+        },
+      } as never,
+    },
+  );
+  const elapsedMs = Date.now() - (hydrated.visualCycleStartedAtMs ?? 0);
+
+  assert.equal(hydrated.visualCycleEnemyInstanceId, "enemy-1");
+  assert.ok(elapsedMs >= 2_900);
+  assert.ok(elapsedMs <= 3_200);
+});
+
+test("spawn recebido com atraso preserva a ancora enviada pelo servidor", () => {
+  const serverNowMs = Date.now();
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    visualCycleEnemyInstanceId: "enemy-1",
+    visualCycleStartedAtMs: serverNowMs - 8_000,
+    session: {
+      ...makeState().session,
+      phase: "COMBAT_ACTIVE",
+      enemyInstanceId: "enemy-1",
+      currentEnemyInstanceId: "enemy-1",
+    },
+    mob: {
+      ...makeState().mob,
+      enemyInstanceId: "enemy-1",
+    },
+  };
+  const spawnEvent = {
+    characterId: "char-1",
+    sessionId: "session-1",
+    type: "MOB_SPAWNED",
+    sequence: 2,
+    combatIndex: 2,
+    mobId: "mob-1",
+    mobName: "Zumbi",
+    enemyInstanceId: "enemy-2",
+    mobCurrentHp: 100,
+    mobMaxHp: 100,
+    cycleStartedAt: new Date(serverNowMs - 2_000).toISOString(),
+    cycleDurationMs: 8_000,
+    serverTime: new Date(serverNowMs).toISOString(),
+  } as AutoCombatRealtimeEvent;
+  const impacted = autoCombatRealtimeReducer(
+    enqueueAndProcess(state, spawnEvent),
+    { type: "APPLY_ACTIVE_EVENT_IMPACT" },
+  );
+  const elapsedMs = Date.now() - (impacted.visualCycleStartedAtMs ?? 0);
+
+  assert.equal(impacted.visualCycleEnemyInstanceId, "enemy-2");
+  assert.ok(elapsedMs >= 1_900);
+  assert.ok(elapsedMs <= 2_200);
+});
+
 test("múltiplas ações em autocombat avançam em sequência monotônica", () => {
   const firstImpact = autoCombatRealtimeReducer(
     enqueueAndProcess(makeState(), makeHit(1, 70)),
@@ -947,4 +1071,143 @@ test("MOB_DEFEATED soma Base e Premium sobre totais canônicos após F5", () => 
   assert.equal(afterDefeat.displayTotals?.baseXpGained, 73);
   assert.equal(afterDefeat.displayTotals?.premiumBonusXp, 10);
   assert.equal(afterDefeat.displayTotals?.premiumTotalXp, 83);
+});
+
+test("PLAYER_DEFEATED encerra atomicamente toda a apresentação", () => {
+  const queuedEvent = makeHit(2, 40);
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    isConnected: true,
+    isJoined: true,
+    eventQueue: [queuedEvent],
+    activeEvent: makeHit(1, 70),
+    activeEventImpactApplied: true,
+    battleLogEvents: [makeHit(1, 70)],
+    visual: { lastEventType: "PLAYER_HIT", updatedAt: Date.now() },
+    totals: { sessionId: "session-1", totalKills: 3 },
+    displayTotals: { sessionId: "session-1", totalKills: 3 },
+    queuedEventKeys: ["queued-event"],
+    processedEventKeys: ["processed-event"],
+  };
+  const event = {
+    characterId: "char-1",
+    sessionId: "session-1",
+    type: "PLAYER_DEFEATED",
+    actor: "MOB",
+    target: "PLAYER",
+    characterCurrentHp: 0,
+    characterMaxHp: 100,
+    sessionStatus: "DEFEATED",
+    endReason: "PLAYER_DEFEATED",
+    shouldRedirectToInfirmary: true,
+    sequence: 3,
+  } as AutoCombatRealtimeEvent;
+
+  const defeated = autoCombatRealtimeReducer(state, {
+    type: "TERMINATE_DEFEATED",
+    characterId: "char-1",
+    source: "event",
+    event,
+  });
+
+  assert.equal(defeated.session?.status, "DEFEATED");
+  assert.equal(defeated.session?.phase, "PLAYER_DEFEATED");
+  assert.equal(defeated.character?.currentHp, 0);
+  assert.equal(defeated.mob, null);
+  assert.equal(defeated.visual, null);
+  assert.equal(defeated.totals, null);
+  assert.equal(defeated.displayTotals, null);
+  assert.equal(defeated.activeEvent, null);
+  assert.deepEqual(defeated.eventQueue, []);
+  assert.deepEqual(defeated.battleLogEvents, []);
+  assert.deepEqual(defeated.queuedEventKeys, []);
+  assert.deepEqual(defeated.processedEventKeys, []);
+  assert.equal(defeated.isJoined, false);
+  assert.equal(defeated.isSynchronizing, false);
+  assert.equal(defeated.terminalDefeat?.source, "event");
+  assert.equal(defeated.terminalDefeat?.shouldRedirectToInfirmary, true);
+});
+
+test("snapshot DEFEATED preserva a contagem e não aguarda a fila visual", () => {
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    eventQueue: [makeHit(2, 40)],
+    activeEvent: makeHit(1, 70),
+    activeEventImpactApplied: false,
+  };
+
+  const defeated = autoCombatRealtimeReducer(state, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: makeDefeatedStatus(7),
+  });
+
+  assert.equal(defeated.session?.status, "DEFEATED");
+  assert.equal(defeated.terminalDefeat?.source, "status");
+  assert.equal(defeated.terminalDefeat?.preservedTrackedEnemiesCount, 7);
+  assert.equal(defeated.terminalDefeat?.shouldRedirectToInfirmary, true);
+  assert.equal(defeated.activeEvent, null);
+  assert.deepEqual(defeated.eventQueue, []);
+});
+
+test("cura confirmada pela enfermaria libera a navegação global", () => {
+  const defeated = autoCombatRealtimeReducer(makeState(), {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: makeDefeatedStatus(5),
+  });
+
+  const recovered = autoCombatRealtimeReducer(defeated, {
+    type: "HYDRATE_CHARACTER_HEALTH",
+    characterId: "char-1",
+    currentHp: 100,
+    maxHp: 100,
+    isDefeated: false,
+  });
+
+  assert.equal(recovered.character?.currentHp, 100);
+  assert.equal(recovered.character?.maxHp, 100);
+  assert.equal(recovered.terminalDefeat, null);
+  assert.equal(recovered.status?.shouldRedirectToInfirmary, false);
+});
+
+test("snapshot ACTIVE antigo não reabre a sessão derrotada", () => {
+  const defeated = autoCombatRealtimeReducer(makeState(), {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: makeDefeatedStatus(5),
+  });
+  const staleActiveStatus = {
+    active: true,
+    hasActiveAutoCombat: true,
+    character: { id: "char-1", name: "Sobrevivente", currentHp: 100, maxHp: 100 },
+    session: {
+      id: "session-1",
+      characterId: "char-1",
+      status: "ACTIVE",
+      phase: "COMBAT_ACTIVE",
+    },
+  } as never;
+
+  const stale = autoCombatRealtimeReducer(defeated, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: staleActiveStatus,
+  });
+
+  assert.equal(stale.session?.status, "DEFEATED");
+  assert.equal(stale.terminalDefeat?.shouldRedirectToInfirmary, true);
+
+  const replacement = autoCombatRealtimeReducer(defeated, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: {
+      ...staleActiveStatus,
+      session: { ...staleActiveStatus.session, id: "session-2" },
+    },
+  });
+
+  assert.equal(replacement.session?.id, "session-2");
+  assert.equal(replacement.session?.status, "ACTIVE");
+  assert.equal(replacement.terminalDefeat, null);
 });

@@ -1,6 +1,6 @@
 # AUTOCOMBAT.md - Sistema de Auto-combate
 
-Ultima revisao: 2026-06-08.
+Ultima revisao: 2026-08-23.
 
 Este documento descreve o sistema atual de auto-combate do projeto com base no codigo local. O backend, o schema Prisma, os DTOs e os tipos do frontend continuam sendo a fonte da verdade. Quando uma regra nao estiver clara no codigo, ela deve ser confirmada manualmente antes de virar comportamento definitivo.
 
@@ -23,6 +23,7 @@ Arquivos principais:
 backend/src/modules/auto-combat/auto-combat.controller.ts
 backend/src/modules/auto-combat/auto-combat.service.ts
 backend/src/modules/auto-combat/auto-combat.gateway.ts
+backend/src/modules/auto-combat/auto-combat-realtime-scheduler.ts
 backend/src/modules/auto-combat/auto-combat-state-machine.ts
 backend/src/modules/auto-combat/dto/start-auto-combat.dto.ts
 backend/src/modules/auto-combat/dto/start-auto-combat-battle.dto.ts
@@ -91,17 +92,17 @@ Controller: `backend/src/modules/auto-combat/auto-combat.controller.ts`.
 
 Todas as rotas do controller usam `@UseGuards(JwtAuthGuard)`.
 
-| Metodo | Rota | Uso |
-| --- | --- | --- |
-| `GET` | `/auto-combat/online-count` | Retorna jogadores online no gateway. |
-| `POST` | `/auto-combat/start` | Alias legado para iniciar auto-combate/caca. |
-| `POST` | `/auto-combat/hunt/start` | Inicia ou retoma a fase de caca. |
-| `POST` | `/auto-combat/:characterId/hunt/stop` | Para a caca sem necessariamente tratar como stop geral da sessao. |
-| `POST` | `/auto-combat/:characterId/battle/start` | Inicia batalha a partir de `ENCOUNTER_READY`. |
-| `POST` | `/auto-combat/preview` | Calcula preview/projecao. |
-| `GET` | `/auto-combat/:characterId/status` | Retorna snapshot sem cache. |
-| `GET` | `/auto-combat/:characterId/recent-events` | Retorna eventos recentes; aceita `afterSequence`. |
-| `POST` | `/auto-combat/:characterId/stop` | Para a sessao de auto-combate. |
+| Metodo | Rota                                      | Uso                                                               |
+| ------ | ----------------------------------------- | ----------------------------------------------------------------- |
+| `GET`  | `/auto-combat/online-count`               | Retorna jogadores online no gateway.                              |
+| `POST` | `/auto-combat/start`                      | Alias legado para iniciar auto-combate/caca.                      |
+| `POST` | `/auto-combat/hunt/start`                 | Inicia ou retoma a fase de caca.                                  |
+| `POST` | `/auto-combat/:characterId/hunt/stop`     | Para a caca sem necessariamente tratar como stop geral da sessao. |
+| `POST` | `/auto-combat/:characterId/battle/start`  | Inicia batalha a partir de `ENCOUNTER_READY`.                     |
+| `POST` | `/auto-combat/preview`                    | Calcula preview/projecao.                                         |
+| `GET`  | `/auto-combat/:characterId/status`        | Retorna snapshot sem cache.                                       |
+| `GET`  | `/auto-combat/:characterId/recent-events` | Retorna eventos recentes; aceita `afterSequence`.                 |
+| `POST` | `/auto-combat/:characterId/stop`          | Para a sessao de auto-combate.                                    |
 
 O frontend usa `startAutoCombat()` apontando para `API_ENDPOINTS.autoCombat.startHunt`.
 
@@ -266,6 +267,15 @@ PREMIUM_IDLE_PROGRESS_LIMIT_SECONDS = 12h
 
 O usuario premium e identificado por `User.premiumUntil`. A UI de membership nao deve ser fonte da verdade para bonus ou limite.
 
+## Derrota e recuperacao
+
+- `PLAYER_DEFEATED` e snapshots com sessao `DEFEATED` encerram imediatamente a apresentacao no provider global.
+- Fila visual, mob, barras e totais temporarios sao limpos antes do redirecionamento para a enfermaria.
+- O redirecionamento ocorre no nivel do dashboard, inclusive fora da pagina de auto-combate.
+- F5, reconexao ou perda do evento terminal reconciliam a derrota pelo snapshot REST.
+- O lote de caca nao e cancelado: ameacas restantes ficam em `AutoCombatHuntBatchStatus.READY`.
+- A enfermaria exibe a quantidade preservada e, depois da cura, o mesmo lote pode ser associado a uma nova sessao.
+
 ## ActivityGuard
 
 Auto-combate deve respeitar `ActivityGuardService`.
@@ -362,6 +372,11 @@ Campos importantes para nao quebrar:
 - `battleTargetRemaining`
 - `battleSelection`
 - `battleProgress`
+- `activityInstanceId`
+- `cycleStartedAt`
+- `cycleEndsAt`
+- `remainingMs`
+- `serverTime`
 
 Regras:
 
@@ -370,7 +385,31 @@ Regras:
 - Apos reconnect, buscar snapshot/status e aplicar eventos faltantes.
 - Apos alt-tab longo ou retorno offline, processar/reconciliar pelo backend.
 - Se houver gap de eventos, usar snapshot; nao tentar "inventar" eventos no frontend.
-- O visual pode animar e atrasar eventos, mas nao pode mudar estado canonico.
+- As barras da pagina e do topo devem usar a mesma ancora absoluta do servidor.
+- Latencia, F5, reconnect ou alt-tab nao reiniciam um ciclo no frontend: o
+  percentual e derivado de `cycleStartedAt`, `cycleEndsAt` e `serverTime`.
+- A derrota e a EXP confirmadas sao exibidas em uma notificacao global com o
+  retrato do monstro. A notificacao nao reserva espaco no card nem bloqueia o
+  proximo ciclo canonico.
+- A timeline absoluta e o comportamento padrao para todos os jogadores. A
+  variavel `VITE_AUTO_COMBAT_PRESENTATION_TIMELINE_V2=false` existe apenas como
+  rollback explicito da apresentacao.
+
+## Agendamento realtime
+
+Cada sessao local possui um unico loop aguardado. O proximo `setTimeout` so e
+agendado depois que o tick atual termina; nao deve haver `setInterval` capaz de
+sobrepor processamentos da mesma sessao.
+
+O atraso do proximo tick e calculado pelo snapshot canonico:
+
+- combate ativo: tempo restante ate `cycleEndsAt`, com limites defensivos;
+- caca: intervalo de fallback configurado;
+- sessao inativa: loop encerrado.
+
+Eventos persistidos devem ser emitidos antes da montagem de snapshots REST mais
+caros. `GET /status` faz leitura de snapshot quando o processador local ja esta
+ativo e so executa catch-up controlado quando nao existe loop local.
 
 ## Retencao de eventos
 

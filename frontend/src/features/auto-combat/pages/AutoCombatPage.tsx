@@ -23,7 +23,6 @@ import "../auto-combat.css";
 import { AutoCombatBattleLog } from "../components/AutoCombatBattleLog";
 import { AutoCombatMobTransition } from "../components/AutoCombatMobTransition";
 import { AutoCombatPremiumBenefitsCard } from "../components/AutoCombatPremiumBenefitsCard";
-import { AutoCombatPremiumRewardBreakdown } from "../components/AutoCombatPremiumRewardBreakdown";
 import { AutoCombatSessionSummary } from "../components/AutoCombatSessionSummary";
 import { AutoCombatStatsTab } from "../components/AutoCombatStatsTab";
 import { AutoCombatTabs } from "../components/AutoCombatTabs";
@@ -508,20 +507,6 @@ function getMobFeedbackScopeFromEvent(
   });
 }
 
-function getMobFeedbackScopeKey(scope?: MobFeedbackScope | null) {
-  if (!scope) {
-    return "";
-  }
-
-  return [
-    scope.sessionId ?? "session:any",
-    scope.enemyInstanceId ? `enemy:${scope.enemyInstanceId}` : "enemy:any",
-    scope.combatIndex ? `combat:${scope.combatIndex}` : "combat:any",
-    scope.mobId ? `mob:${scope.mobId}` : "mob:any",
-    scope.mobName ? `name:${scope.mobName}` : "name:any",
-  ].join("|");
-}
-
 function hasUsefulMobFeedbackScope(scope?: MobFeedbackScope | null) {
   return Boolean(
     scope?.enemyInstanceId ||
@@ -580,148 +565,6 @@ function hasMobFeedbackScopeMismatch(
   }
 
   return false;
-}
-
-type AutoCombatLooseRecord = Record<string, unknown>;
-
-function getAutoCombatLooseRecord(value: unknown) {
-  return value && typeof value === "object"
-    ? (value as AutoCombatLooseRecord)
-    : null;
-}
-
-function getAutoCombatStringField(source: unknown, key: string): string | null {
-  const record = getAutoCombatLooseRecord(source);
-  const value = record?.[key];
-
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  return String(value);
-}
-
-function getAutoCombatBooleanField(source: unknown, key: string) {
-  const record = getAutoCombatLooseRecord(source);
-
-  return record?.[key] === true;
-}
-
-function normalizeAutoCombatStatusField(value: unknown) {
-  return String(value ?? "")
-    .trim()
-    .toUpperCase();
-}
-
-function shouldRedirectAutoCombatToInfirmary(params: {
-  status?: AutoCombatStatusResponse | null;
-  session?: unknown;
-  event?: AutoCombatRealtimeEvent | null;
-}) {
-  const { status, session, event } = params;
-  const characterCurrentHp = getOptionalPositiveInteger(
-    status?.character?.currentHp,
-  );
-  const eventCharacterHp =
-    getOptionalPositiveInteger(event?.characterCurrentHp) ??
-    getOptionalPositiveInteger(event?.characterHpAfter);
-
-  if (characterCurrentHp !== null && characterCurrentHp > 0) {
-    return false;
-  }
-
-  const sessionStatus = normalizeAutoCombatStatusField(
-    getAutoCombatStringField(session, "status"),
-  );
-  const eventSessionStatus = normalizeAutoCombatStatusField(
-    event?.sessionStatus,
-  );
-  const endReason = normalizeAutoCombatStatusField(
-    status?.endReason ??
-      getAutoCombatStringField(session, "endReason") ??
-      event?.endReason,
-  );
-  const eventType = normalizeRealtimeEventType(event?.type);
-  const hasDefeatSignal = Boolean(
-    status?.shouldRedirectToInfirmary ||
-    getAutoCombatBooleanField(session, "shouldRedirectToInfirmary") ||
-    event?.shouldRedirectToInfirmary ||
-    status?.sessionSummary?.defeated ||
-    sessionStatus === "DEFEATED" ||
-    eventSessionStatus === "DEFEATED" ||
-    endReason === "PLAYER_DEFEATED" ||
-    eventType === "PLAYER_DEFEATED",
-  );
-
-  if (!hasDefeatSignal) {
-    return false;
-  }
-
-  if (characterCurrentHp !== null) {
-    return characterCurrentHp <= 0;
-  }
-
-  if (eventCharacterHp !== null) {
-    return eventCharacterHp <= 0;
-  }
-
-  return true;
-}
-
-function getXpFeedbackBreakdown(event?: AutoCombatRealtimeEvent | null) {
-  const eventType = normalizeRealtimeEventType(event?.type);
-
-  if (!event || eventType !== "MOB_DEFEATED") {
-    return null;
-  }
-
-  const totalXp = getOptionalPositiveInteger(event.xpGained);
-
-  if (!totalXp || totalXp <= 0) {
-    return null;
-  }
-
-  const baseXp = getOptionalPositiveInteger(event.baseXpGained) ?? totalXp;
-  const premiumBonusXp = getOptionalPositiveInteger(event.premiumBonusXp) ?? 0;
-  const premiumPotentialBonusXp =
-    getOptionalPositiveInteger(event.premiumPotentialBonusXp) ?? 0;
-  const premiumTotalXp =
-    getOptionalPositiveInteger(event.premiumTotalXp) ??
-    baseXp + Math.max(premiumBonusXp, premiumPotentialBonusXp);
-
-  return {
-    baseXp,
-    totalXp,
-    premiumBonusXp,
-    premiumPotentialBonusXp,
-    premiumTotalXp,
-    isPremiumActive: Boolean(event.isPremiumActive || premiumBonusXp > 0),
-  };
-}
-
-function getXpFeedbackDisplayKey(event?: AutoCombatRealtimeEvent | null) {
-  const breakdown = getXpFeedbackBreakdown(event);
-
-  if (!event || !breakdown) {
-    return "";
-  }
-
-  const feedbackScope = getMobFeedbackScopeFromEvent(event);
-
-  if (!hasUsefulMobFeedbackScope(feedbackScope)) {
-    return getRealtimeEventKey(event);
-  }
-
-  return [
-    getMobFeedbackScopeKey(feedbackScope),
-    `round:${event.round ?? "any"}`,
-    `kills:${event.totalKills ?? "any"}`,
-    `combats:${event.totalCombats ?? "any"}`,
-    `total:${breakdown.totalXp}`,
-    `base:${breakdown.baseXp}`,
-    `premium:${breakdown.premiumBonusXp}`,
-    `potential:${breakdown.premiumPotentialBonusXp}`,
-  ].join("|");
 }
 
 function getMapRarityClassName(tier?: number | string | null) {
@@ -1779,18 +1622,6 @@ export function AutoCombatPage() {
   const activeBattleLogEvent = showActiveSession
     ? (providerPublicActiveEvent ?? localActiveEvent)
     : null;
-  const shouldDeferInfirmaryRedirect =
-    isLoading || isRealtimeSynchronizing || !effectiveStatus;
-  const shouldRedirectToInfirmary = Boolean(
-    characterId &&
-    !shouldDeferInfirmaryRedirect &&
-    shouldRedirectAutoCombatToInfirmary({
-      status: effectiveStatus,
-      session: effectiveSession,
-      event: activeBattleLogEvent ?? providerActiveEvent,
-    }),
-  );
-
   const visibleMobFeedbackScope = useMemo(
     () =>
       showActiveSession
@@ -2098,10 +1929,6 @@ export function AutoCombatPage() {
 
   if (!characterId) {
     return <Navigate to="/characters" replace />;
-  }
-
-  if (shouldRedirectToInfirmary) {
-    return <Navigate to={`/dashboard/${characterId}/infirmary`} replace />;
   }
 
   if (isLoading) {
@@ -2704,8 +2531,7 @@ export function AutoCombatPage() {
           nowMs: getAutoCombatPresentationNowMs(),
         })
       : null;
-  const activeBattleProgressTimeline =
-    activeBattleProgressTimelineCandidate;
+  const activeBattleProgressTimeline = activeBattleProgressTimelineCandidate;
 
   const activeBattleProgressElementKey =
     activePresentationTimelineProgress?.key ?? activeBattleImpactTargetKey;
@@ -3971,32 +3797,6 @@ export function AutoCombatPage() {
     .filter(Boolean)
     .join(" ");
 
-  const xpFeedbackEvent =
-    !isCombatViewSynchronizing &&
-    activeVisualEventType === "MOB_DEFEATED" &&
-    activeVisualEventMatchesVisibleMob
-      ? providerPublicActiveEvent
-      : null;
-  const xpFeedbackBreakdown = getXpFeedbackBreakdown(xpFeedbackEvent);
-  const shouldShowXpFeedback = Boolean(xpFeedbackBreakdown && xpFeedbackEvent);
-  const xpFeedbackKey =
-    shouldShowXpFeedback && xpFeedbackEvent
-      ? `mob-xp-${getXpFeedbackDisplayKey(xpFeedbackEvent)}`
-      : "";
-  const killReceipt =
-    shouldShowXpFeedback && xpFeedbackBreakdown ? (
-      <AutoCombatPremiumRewardBreakdown
-        key={xpFeedbackKey}
-        baseXp={xpFeedbackBreakdown.baseXp}
-        totalXp={xpFeedbackBreakdown.totalXp}
-        premiumBonusXp={xpFeedbackBreakdown.premiumBonusXp}
-        premiumPotentialBonusXp={xpFeedbackBreakdown.premiumPotentialBonusXp}
-        premiumTotalXp={xpFeedbackBreakdown.premiumTotalXp}
-        isPremiumActive={xpFeedbackBreakdown.isPremiumActive}
-        variant="feedback"
-        showCta={false}
-      />
-    ) : null;
   const playerFighterClassName = [
     "auto-combat-fighter-card",
     "auto-combat-fighter-card--player",
@@ -4659,12 +4459,6 @@ export function AutoCombatPage() {
 
           <AutoCombatTabs activeTab={activeTab} onChange={setActiveTab} />
 
-          {!showActiveSession && killReceipt ? (
-            <div className="auto-combat-kill-receipt-slot auto-combat-kill-receipt-slot--standalone">
-              {killReceipt}
-            </div>
-          ) : null}
-
           {activeTab === "battle" ? (
             <div className="auto-combat-tab-panel">
               {!showHuntStage && !showActiveSession ? (
@@ -5068,10 +4862,6 @@ export function AutoCombatPage() {
                             </small>
                           ) : null}
                         </div>
-                      </div>
-
-                      <div className="auto-combat-kill-receipt-slot auto-combat-kill-receipt-slot--inline">
-                        {killReceipt}
                       </div>
 
                       <div className="auto-combat-inline-battle__footer">
@@ -5496,10 +5286,6 @@ export function AutoCombatPage() {
                           ) : null}
                         </div>
                       </div>
-                    </div>
-
-                    <div className="auto-combat-kill-receipt-slot auto-combat-kill-receipt-slot--arena">
-                      {killReceipt}
                     </div>
 
                     <div className="auto-combat-stage-actions auto-combat-stage-actions--session">
