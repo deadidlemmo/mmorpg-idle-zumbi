@@ -246,7 +246,8 @@ cd backend
 npm run start:dev
 ```
 
-Porta padrao: `3000`, configuravel por `APP_PORT`.
+Porta padrao: `3000`, configuravel por `PORT` (hospedagem) ou `APP_PORT`
+(ambiente local). `PORT` tem precedencia quando ambas estiverem definidas.
 
 O backend habilita CORS com lista de origens locais e dominios `trycloudflare.com`, usa `credentials: true` e aplica `ValidationPipe` global com `whitelist`, `forbidNonWhitelisted` e `transform`.
 
