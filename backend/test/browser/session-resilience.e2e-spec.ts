@@ -390,6 +390,8 @@ test.describe('resiliencia da sessao e tutorial', () => {
   });
 
   test('avanca e persiste todas as etapas do tutorial', async ({ page }) => {
+    await prisma.gatheringSession.deleteMany({ where: { characterId } });
+    await prisma.craftingSession.deleteMany({ where: { characterId } });
     await prisma.characterTutorialProgress.upsert({
       where: { characterId },
       create: { characterId },
@@ -405,6 +407,25 @@ test.describe('resiliencia da sessao e tutorial', () => {
     const tutorial = page.getByRole('complementary', {
       name: 'Tutorial do sobrevivente',
     });
+    const permanentObjective = page.getByRole('complementary', {
+      name: 'Objetivo inicial permanente',
+    });
+    await expect(permanentObjective).toBeVisible();
+    await expect(permanentObjective.getByText('0/6')).toBeVisible();
+    await expect(permanentObjective.getByText('Recurso')).toBeVisible();
+    await expect(permanentObjective.getByText('T1 criado')).toBeVisible();
+    await expect(permanentObjective.getByText('Slots')).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      )
+      .toBe(true);
+    await page.setViewportSize({ width: 1280, height: 720 });
+
     await expect(tutorial.getByText('Conheça o abrigo')).toBeVisible();
     await tutorial.getByRole('button', { name: 'Entendi' }).click();
 
@@ -446,16 +467,20 @@ test.describe('resiliencia da sessao e tutorial', () => {
         updatedAt: new Date(tutorialAfterMap.updatedAt.getTime() + 1),
       },
     });
-    await expect(tutorial.getByText('Fabrique seu primeiro item')).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(
+      tutorial.getByText('Fabrique seu primeiro equipamento T1'),
+    ).toBeVisible({ timeout: 10_000 });
 
     const tutorialAfterGathering =
       await prisma.characterTutorialProgress.findUniqueOrThrow({
         where: { characterId },
       });
     const recipe = await prisma.craftingRecipe.findFirst({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        tier: 1,
+        outputItem: { slot: ItemSlot.MAIN_HAND },
+      },
       select: { id: true, outputItemId: true, outputQuantity: true },
     });
     if (!recipe) {
@@ -479,16 +504,16 @@ test.describe('resiliencia da sessao e tutorial', () => {
         updatedAt: craftedAt,
       },
     });
-    await expect(tutorial.getByText('Equipe o sobrevivente')).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(tutorial.getByText('Equipe seu primeiro item T1')).toBeVisible(
+      { timeout: 10_000 },
+    );
 
     const tutorialAfterCrafting =
       await prisma.characterTutorialProgress.findUniqueOrThrow({
         where: { characterId },
       });
     const equipmentItem = await prisma.item.findFirst({
-      where: { slot: ItemSlot.MAIN_HAND },
+      where: { id: recipe.outputItemId, tier: 1, slot: ItemSlot.MAIN_HAND },
       select: { id: true },
     });
     if (!equipmentItem) {
@@ -511,6 +536,8 @@ test.describe('resiliencia da sessao e tutorial', () => {
     await expect(
       page.getByRole('complementary', { name: 'Tutorial do sobrevivente' }),
     ).toHaveCount(0, { timeout: 10_000 });
+    await expect(permanentObjective).toBeVisible();
+    await expect(permanentObjective.getByText('1/6')).toBeVisible();
     await expect
       .poll(async () => {
         const progress = await prisma.characterTutorialProgress.findUnique({
@@ -549,6 +576,14 @@ test.describe('resiliencia da sessao e tutorial', () => {
       await expect(
         page.getByRole('heading', { name: 'Infraestrutura' }),
       ).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Produto e primeira hora' }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('group', { name: 'Período das métricas' }),
+      ).toBeVisible();
+      await expect(page.locator('.admin-economy table')).toBeVisible();
+      await expect(page.getByText('T1', { exact: true }).first()).toBeVisible();
       await expect(page.getByText('PostgreSQL', { exact: true })).toBeVisible();
       await expect(page.getByText('Backups', { exact: true })).toBeVisible();
       await expect(page.getByText('HTTP', { exact: true })).toBeVisible();

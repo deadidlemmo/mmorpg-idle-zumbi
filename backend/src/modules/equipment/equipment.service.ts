@@ -4,6 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InventoryItemType, ItemSlot, Prisma } from '@prisma/client';
+import { AuditService } from '../../common/audit/audit.service';
+import {
+  PRODUCT_EVENT_ACTIONS,
+  PRODUCT_MILESTONE_KEYS,
+} from '../../common/audit/product-events.constants';
 import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
@@ -42,7 +47,10 @@ type CharacterEquipmentContainer = {
 
 @Injectable()
 export class EquipmentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async findByCharacter(userId: string, characterId: string) {
     const character = await this.prisma.character.findFirst({
@@ -253,6 +261,38 @@ export class EquipmentService {
         currentHp: newCurrentHp,
       },
     });
+
+    const equippedT1Slots = newEquipmentItems.filter(
+      (equippedItem) => (equippedItem?.tier ?? 0) >= 1,
+    ).length;
+
+    if (item.tier === 1) {
+      this.auditService.recordMilestoneSafely({
+        actorUserId: userId,
+        action: PRODUCT_EVENT_ACTIONS.FIRST_T1_EQUIPPED,
+        entityType: 'Character',
+        entityId: character.id,
+        deduplicationKey: PRODUCT_MILESTONE_KEYS.firstT1Equipped(character.id),
+        metadata: {
+          itemId: item.id,
+          itemName: item.name,
+          slot: item.slot,
+        },
+      });
+    }
+
+    if (equippedT1Slots === 6) {
+      this.auditService.recordMilestoneSafely({
+        actorUserId: userId,
+        action: PRODUCT_EVENT_ACTIONS.FIRST_T1_SET_COMPLETED,
+        entityType: 'Character',
+        entityId: character.id,
+        deduplicationKey: PRODUCT_MILESTONE_KEYS.firstT1SetCompleted(
+          character.id,
+        ),
+        metadata: { equippedT1Slots },
+      });
+    }
 
     return {
       message: `${item.name} equipado com sucesso.`,

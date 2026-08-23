@@ -14,6 +14,11 @@ import {
   Prisma,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
+import { AuditService } from '../../common/audit/audit.service';
+import {
+  PRODUCT_EVENT_ACTIONS,
+  PRODUCT_MILESTONE_KEYS,
+} from '../../common/audit/product-events.constants';
 import {
   GATHERING_AFFINITY_PRODUCTION_MULTIPLIER,
   GATHERING_AFFINITY_XP_MULTIPLIER,
@@ -476,6 +481,7 @@ export class GatheringService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityGuard: ActivityGuardService,
+    private readonly auditService: AuditService,
   ) {}
 
   private validateGatheringOrigin(origin: MaterialOrigin) {
@@ -948,6 +954,23 @@ export class GatheringService {
           quantity: 0,
         },
       };
+    }
+
+    if (reward.quantity > 0) {
+      this.auditService.recordMilestoneSafely({
+        actorUserId: userId,
+        action: PRODUCT_EVENT_ACTIONS.FIRST_RESOURCE_COLLECTED,
+        entityType: 'Character',
+        entityId: characterId,
+        deduplicationKey:
+          PRODUCT_MILESTONE_KEYS.firstResourceCollected(characterId),
+        metadata: {
+          itemId: session.targetMaterialId,
+          itemTier: session.targetMaterial.tier,
+          origin: session.origin,
+          quantity: reward.quantity,
+        },
+      });
     }
 
     return {

@@ -10,6 +10,7 @@ export function mergeTutorialUpdate(
   return {
     ...current,
     ...update,
-    steps: current.steps,
+    steps: update.steps ?? current.steps,
+    objective: update.objective ?? current.objective,
   };
 }

@@ -5,11 +5,18 @@ import {
 } from '@nestjs/common';
 import {
   IncursionSessionStatus,
+  InventoryItemType,
+  ItemSlot,
   MissionStatus,
   MissionType,
   Prisma,
 } from '@prisma/client';
 import { calculateLevelProgress } from '../../common/utils/level.util';
+import { AuditService } from '../../common/audit/audit.service';
+import {
+  PRODUCT_EVENT_ACTIONS,
+  PRODUCT_MILESTONE_KEYS,
+} from '../../common/audit/product-events.constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateTutorialDto } from './dto/update-tutorial.dto';
 
@@ -40,17 +47,17 @@ const TUTORIAL_STEPS = [
   },
   {
     key: 'crafting',
-    title: 'Fabrique seu primeiro item',
+    title: 'Fabrique seu primeiro equipamento T1',
     description:
-      'Use os materiais coletados em Criação. Esta etapa avança quando a fabricação for concluída.',
+      'Use os materiais coletados em Criação. A etapa avança quando um equipamento T1 ficar pronto.',
     href: 'crafting',
     actionLabel: 'Abrir criação',
   },
   {
     key: 'equipment',
-    title: 'Equipe o sobrevivente',
+    title: 'Equipe seu primeiro item T1',
     description:
-      'Abra Equipamentos e vista pelo menos um item para preparar o personagem para o combate.',
+      'Abra Equipamentos e substitua uma peça de Aprendiz pelo equipamento T1 criado.',
     href: 'equipment',
     actionLabel: 'Abrir equipamentos',
   },
@@ -68,11 +75,14 @@ type AchievementProgressWithDefinition = Prisma.CharacterAchievementGetPayload<{
 
 @Injectable()
 export class ProgressionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async getDashboard(userId: string, characterId: string) {
     const character = await this.getCharacterOrThrow(userId, characterId);
-    const tutorial = await this.getTutorialProgress(characterId);
+    const tutorial = await this.getTutorialProgress(userId, characterId);
 
     await this.ensureMissionAssignments(characterId);
     const [missions, achievements] = await Promise.all([
@@ -90,7 +100,7 @@ export class ProgressionService {
 
   async getTutorial(userId: string, characterId: string) {
     await this.getCharacterOrThrow(userId, characterId);
-    return this.getTutorialProgress(characterId);
+    return this.getTutorialProgress(userId, characterId);
   }
 
   async updateTutorial(
@@ -108,7 +118,7 @@ export class ProgressionService {
     const step = Math.max(existing.step, requestedStep);
     const completed = existing.completed || step >= TUTORIAL_STEPS.length;
 
-    return this.prisma.characterTutorialProgress.update({
+    const updated = await this.prisma.characterTutorialProgress.update({
       where: { characterId },
       data: {
         step,
@@ -119,19 +129,32 @@ export class ProgressionService {
           : existing.dismissedAt,
       },
     });
+
+    this.recordTutorialAdvancement({
+      userId,
+      characterId,
+      previousStep: existing.step,
+      nextStep: updated.step,
+      completed: updated.completed,
+    });
+
+    return this.getTutorialProgress(userId, characterId);
   }
 
-  private async reconcileTutorialProgress(tutorial: {
-    id: string;
-    characterId: string;
-    step: number;
-    completed: boolean;
-    completedAt: Date | null;
-    dismissedAt: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }) {
-    if (tutorial.completed || tutorial.dismissedAt || tutorial.step < 2) {
+  private async reconcileTutorialProgress(
+    userId: string,
+    tutorial: {
+      id: string;
+      characterId: string;
+      step: number;
+      completed: boolean;
+      completedAt: Date | null;
+      dismissedAt: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+    },
+  ) {
+    if (tutorial.completed || tutorial.step < 2) {
       return tutorial;
     }
 
@@ -143,7 +166,6 @@ export class ProgressionService {
           where: {
             characterId: tutorial.characterId,
             collectedQuantity: { gt: 0 },
-            updatedAt: { gte: tutorial.updatedAt },
           },
           select: { id: true },
         }),
@@ -153,7 +175,21 @@ export class ProgressionService {
         await this.prisma.craftingSession.findFirst({
           where: {
             characterId: tutorial.characterId,
-            completedAt: { gte: tutorial.updatedAt },
+            status: 'COMPLETED',
+            completedAt: { not: null },
+            outputItem: {
+              tier: 1,
+              slot: {
+                in: [
+                  ItemSlot.MAIN_HAND,
+                  ItemSlot.OFF_HAND,
+                  ItemSlot.HEAD,
+                  ItemSlot.ARMOR,
+                  ItemSlot.PANTS,
+                  ItemSlot.BOOTS,
+                ],
+              },
+            },
           },
           select: { id: true },
         }),
@@ -163,14 +199,13 @@ export class ProgressionService {
         await this.prisma.equipment.findFirst({
           where: {
             characterId: tutorial.characterId,
-            updatedAt: { gte: tutorial.updatedAt },
             OR: [
-              { mainHandId: { not: null } },
-              { offHandId: { not: null } },
-              { headId: { not: null } },
-              { armorId: { not: null } },
-              { pantsId: { not: null } },
-              { bootsId: { not: null } },
+              { mainHand: { tier: 1 } },
+              { offHand: { tier: 1 } },
+              { head: { tier: 1 } },
+              { armor: { tier: 1 } },
+              { pants: { tier: 1 } },
+              { boots: { tier: 1 } },
             ],
           },
           select: { id: true },
@@ -186,12 +221,11 @@ export class ProgressionService {
     const completed = nextStep >= TUTORIAL_STEPS.length;
     const now = new Date();
 
-    await this.prisma.characterTutorialProgress.updateMany({
+    const advanced = await this.prisma.characterTutorialProgress.updateMany({
       where: {
         id: tutorial.id,
         step: tutorial.step,
         completed: false,
-        dismissedAt: null,
       },
       data: {
         step: nextStep,
@@ -200,20 +234,232 @@ export class ProgressionService {
       },
     });
 
+    if (advanced.count === 1) {
+      this.recordTutorialAdvancement({
+        userId,
+        characterId: tutorial.characterId,
+        previousStep: tutorial.step,
+        nextStep,
+        completed,
+      });
+    }
+
     return this.prisma.characterTutorialProgress.findUniqueOrThrow({
       where: { id: tutorial.id },
     });
   }
 
-  private async getTutorialProgress(characterId: string) {
+  private async getTutorialProgress(userId: string, characterId: string) {
     const storedTutorial = await this.prisma.characterTutorialProgress.upsert({
       where: { characterId },
       update: {},
       create: { characterId },
     });
-    const tutorial = await this.reconcileTutorialProgress(storedTutorial);
+    const tutorial = await this.reconcileTutorialProgress(
+      userId,
+      storedTutorial,
+    );
 
-    return { ...tutorial, steps: TUTORIAL_STEPS };
+    return {
+      ...tutorial,
+      steps: TUTORIAL_STEPS,
+      objective: await this.buildT1Objective(characterId),
+    };
+  }
+
+  private async buildT1Objective(characterId: string) {
+    const equipmentSlots = [
+      ItemSlot.MAIN_HAND,
+      ItemSlot.OFF_HAND,
+      ItemSlot.HEAD,
+      ItemSlot.ARMOR,
+      ItemSlot.PANTS,
+      ItemSlot.BOOTS,
+    ];
+    const [collectedResource, craftedT1, equipment, availableT1Items] =
+      await Promise.all([
+        this.prisma.gatheringSession.findFirst({
+          where: { characterId, collectedQuantity: { gt: 0 } },
+          select: { id: true },
+        }),
+        this.prisma.craftingSession.findFirst({
+          where: {
+            characterId,
+            status: 'COMPLETED',
+            completedAt: { not: null },
+            outputItem: { tier: 1, slot: { in: equipmentSlots } },
+          },
+          select: { id: true },
+        }),
+        this.prisma.equipment.findUnique({
+          where: { characterId },
+          select: {
+            mainHand: { select: { tier: true } },
+            offHand: { select: { tier: true } },
+            head: { select: { tier: true } },
+            armor: { select: { tier: true } },
+            pants: { select: { tier: true } },
+            boots: { select: { tier: true } },
+          },
+        }),
+        this.prisma.inventoryItem.count({
+          where: {
+            characterId,
+            quantity: { gt: 0 },
+            type: InventoryItemType.EQUIPMENT,
+            item: { tier: 1, slot: { in: equipmentSlots } },
+          },
+        }),
+      ]);
+    const equippedItems = equipment
+      ? [
+          equipment.mainHand,
+          equipment.offHand,
+          equipment.head,
+          equipment.armor,
+          equipment.pants,
+          equipment.boots,
+        ]
+      : [];
+    const equippedT1Slots = equippedItems.filter(
+      (item) => (item?.tier ?? 0) >= 1,
+    ).length;
+    const completed = equippedT1Slots === equipmentSlots.length;
+    const collected = Boolean(collectedResource);
+    const crafted = Boolean(craftedT1);
+    const completedUnits =
+      Number(collected) + Number(crafted) + equippedT1Slots;
+    const totalUnits = equipmentSlots.length + 2;
+
+    let currentAction = {
+      key: 'gather-first-resource',
+      title: 'Colete materiais para seu primeiro T1',
+      description:
+        'Inicie uma expedição T1 e aguarde a primeira unidade chegar à mochila.',
+      href: 'gathering',
+      actionLabel: 'Abrir expedições',
+    };
+
+    if (availableT1Items > 0 && !completed) {
+      currentAction = {
+        key: 'equip-next-t1',
+        title: 'Equipe a próxima peça T1',
+        description: `Há ${availableT1Items} peça(s) T1 na mochila. Substitua os itens de Aprendiz para avançar o conjunto.`,
+        href: 'equipment',
+        actionLabel: 'Abrir equipamentos',
+      };
+    } else if (collected && !crafted) {
+      currentAction = {
+        key: 'craft-first-t1',
+        title: 'Fabrique seu primeiro equipamento T1',
+        description:
+          'Use os materiais da expedição em uma receita T1 da sua classe.',
+        href: 'crafting',
+        actionLabel: 'Abrir criação',
+      };
+    } else if (!completed && equippedT1Slots > 0) {
+      currentAction = {
+        key: 'complete-t1-set',
+        title: 'Complete seu conjunto T1',
+        description: `Você já preparou ${equippedT1Slots} de ${equipmentSlots.length} slots. Fabrique a próxima peça que ainda falta.`,
+        href: 'crafting',
+        actionLabel: 'Criar próxima peça',
+      };
+    } else if (crafted && !completed) {
+      currentAction = {
+        key: 'equip-first-t1',
+        title: 'Equipe seu primeiro item T1',
+        description:
+          'Abra Equipamentos e substitua uma peça de Aprendiz pelo item criado.',
+        href: 'equipment',
+        actionLabel: 'Abrir equipamentos',
+      };
+    }
+
+    if (completed) {
+      currentAction = {
+        key: 't1-set-completed',
+        title: 'Primeiro conjunto T1 completo',
+        description:
+          'Os seis slots estão preparados. Seu sobrevivente concluiu a jornada inicial.',
+        href: 'auto-combat',
+        actionLabel: 'Testar conjunto',
+      };
+    }
+
+    return {
+      ...currentAction,
+      completed,
+      equippedT1Slots,
+      targetT1Slots: equipmentSlots.length,
+      progressPercent: Math.round((completedUnits / totalUnits) * 100),
+      checklist: [
+        {
+          key: 'resource',
+          label: 'Recurso',
+          current: collected ? 1 : 0,
+          target: 1,
+          completed: collected,
+        },
+        {
+          key: 'craft',
+          label: 'T1 criado',
+          current: crafted ? 1 : 0,
+          target: 1,
+          completed: crafted,
+        },
+        {
+          key: 'equipment',
+          label: 'Slots',
+          current: equippedT1Slots,
+          target: equipmentSlots.length,
+          completed,
+        },
+      ],
+    };
+  }
+
+  private recordTutorialAdvancement(params: {
+    userId: string;
+    characterId: string;
+    previousStep: number;
+    nextStep: number;
+    completed: boolean;
+  }) {
+    for (
+      let completedStep = params.previousStep;
+      completedStep < params.nextStep && completedStep < TUTORIAL_STEPS.length;
+      completedStep += 1
+    ) {
+      const definition = TUTORIAL_STEPS[completedStep];
+      this.auditService.recordMilestoneSafely({
+        actorUserId: params.userId,
+        action: PRODUCT_EVENT_ACTIONS.TUTORIAL_STEP_COMPLETED,
+        entityType: 'Character',
+        entityId: params.characterId,
+        deduplicationKey: PRODUCT_MILESTONE_KEYS.tutorialStep(
+          params.characterId,
+          completedStep,
+        ),
+        metadata: {
+          step: completedStep,
+          stepKey: definition.key,
+          title: definition.title,
+        },
+      });
+    }
+
+    if (params.completed) {
+      this.auditService.recordMilestoneSafely({
+        actorUserId: params.userId,
+        action: PRODUCT_EVENT_ACTIONS.TUTORIAL_COMPLETED,
+        entityType: 'Character',
+        entityId: params.characterId,
+        deduplicationKey: PRODUCT_MILESTONE_KEYS.tutorialCompleted(
+          params.characterId,
+        ),
+      });
+    }
   }
 
   async claimMission(userId: string, characterId: string, missionId: string) {

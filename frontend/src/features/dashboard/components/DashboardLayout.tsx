@@ -372,6 +372,11 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: "☣",
   },
   {
+    label: "Ranking",
+    path: "rankings",
+    icon: "★",
+  },
+  {
     label: "Aliados",
     path: "allies",
     icon: "◎",
@@ -398,6 +403,7 @@ const DASHBOARD_WORLD_NAV_ITEMS = [
   "maps",
   "incursions",
   "world-bosses",
+  "rankings",
   "allies",
 ]
   .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))

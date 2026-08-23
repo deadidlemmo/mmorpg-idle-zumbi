@@ -1,11 +1,11 @@
-import { Transform } from 'class-transformer';
-import { IsEmail, MaxLength } from 'class-validator';
+import { Transform, type TransformFnParams } from 'class-transformer';
+import { IsUUID } from 'class-validator';
 
 export class SendFriendRequestDto {
-  @IsEmail({}, { message: 'Informe um e-mail valido.' })
-  @MaxLength(120)
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim().toLowerCase() : undefined,
-  )
-  email: string;
+  @IsUUID('4', { message: 'Personagem inválido.' })
+  @Transform(({ value }: TransformFnParams): unknown => {
+    const input: unknown = value;
+    return typeof input === 'string' ? input.trim() : input;
+  })
+  targetCharacterId: string;
 }

@@ -98,6 +98,176 @@
   font-size: 0.78rem;
 }
 
+.admin-period-control {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 42px);
+  border: 1px solid #313a33;
+  background: #111512;
+}
+
+.admin-period-control button {
+  min-height: 34px;
+  border: 0;
+  border-right: 1px solid #313a33;
+  color: #8f9991;
+  background: transparent;
+  cursor: pointer;
+}
+
+.admin-period-control button:last-child {
+  border-right: 0;
+}
+
+.admin-period-control button.is-active {
+  color: #e7efdf;
+  background: #26351f;
+  box-shadow: inset 0 -2px #8fbd67;
+}
+
+.admin-product-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 18px;
+  border: 1px solid #293029;
+  background: #293029;
+}
+
+.admin-product-kpis article {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  padding: 16px;
+  background: #111512;
+}
+
+.admin-product-kpis span,
+.admin-product-kpis small,
+.admin-funnel header span,
+.admin-economy header span {
+  color: #89938a;
+  font-size: 0.76rem;
+}
+
+.admin-product-kpis strong {
+  overflow-wrap: anywhere;
+  color: #eff3e8;
+  font-size: 1.35rem;
+}
+
+.admin-product-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.85fr) minmax(540px, 1.4fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.admin-funnel,
+.admin-economy {
+  min-width: 0;
+  border: 1px solid #293029;
+  background: #111512;
+}
+
+.admin-funnel > header,
+.admin-economy > header {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  border-bottom: 1px solid #252c27;
+}
+
+.admin-funnel > header > div,
+.admin-economy > header {
+  min-width: 0;
+}
+
+.admin-funnel > header > div,
+.admin-economy > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 10px;
+}
+
+.admin-funnel > header time {
+  flex: 0 0 auto;
+  color: #79827a;
+  font-size: 0.7rem;
+}
+
+.admin-funnel ol {
+  display: grid;
+  gap: 13px;
+  margin: 0;
+  padding: 14px;
+  list-style: none;
+}
+
+.admin-funnel li {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-funnel li > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.78rem;
+}
+
+.admin-funnel li > div span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-funnel li > i {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  background: #202721;
+}
+
+.admin-funnel li > i > em {
+  display: block;
+  height: 100%;
+  background: #8fbd67;
+  transition: width 240ms ease;
+}
+
+.admin-funnel li > small,
+.admin-product-note {
+  color: #747f76;
+  font-size: 0.68rem;
+}
+
+.admin-economy .admin-table-wrap {
+  margin-top: 0;
+}
+
+.admin-economy .admin-table td,
+.admin-economy .admin-table th {
+  white-space: nowrap;
+}
+
+.admin-economy td.is-positive {
+  color: #9bc96f;
+}
+
+.admin-economy td.is-negative {
+  color: #df7b72;
+}
+
+.admin-product-note {
+  margin: 10px 0 0;
+}
+
 .admin-operations-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -564,6 +734,18 @@
     flex-direction: column;
   }
 
+  .admin-product-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-product-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-period-control {
+    align-self: flex-start;
+  }
+
   .admin-operations-grid {
     grid-template-columns: 1fr;
   }
@@ -602,6 +784,20 @@
 @media (min-width: 761px) and (max-width: 1040px) {
   .admin-operations-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-product-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-product-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 440px) {
+  .admin-product-kpis {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

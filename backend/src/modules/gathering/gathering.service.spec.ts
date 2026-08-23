@@ -11,7 +11,11 @@ describe('GatheringService ownership', () => {
         findFirst: jest.fn(),
       },
     };
-    const service = new GatheringService(prisma as never, {} as never);
+    const service = new GatheringService(
+      prisma as never,
+      {} as never,
+      {} as never,
+    );
 
     await expect(
       service.getStatus('user-1', 'foreign-character'),

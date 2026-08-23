@@ -319,6 +319,70 @@ export class CosmeticsService {
     return this.resolveAppearanceContext(character, new Date());
   }
 
+  async getResolvedAppearances(characterIds: string[]) {
+    const uniqueCharacterIds = Array.from(new Set(characterIds));
+    if (uniqueCharacterIds.length === 0) return {};
+
+    const characters = await this.prisma.character.findMany({
+      where: {
+        id: { in: uniqueCharacterIds },
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        userId: true,
+        classId: true,
+        avatarKey: true,
+        class: { select: { id: true, name: true } },
+        user: { select: { premiumUntil: true } },
+        appearance: { include: appearanceInclude },
+      },
+    });
+    const now = new Date();
+    const selectedCosmeticIds = Array.from(
+      new Set(
+        characters.flatMap((character) =>
+          this.getSelectedCosmetics(character.appearance).map(
+            (cosmetic) => cosmetic.id,
+          ),
+        ),
+      ),
+    );
+    const entitlements = selectedCosmeticIds.length
+      ? await this.prisma.userCosmeticEntitlement.findMany({
+          where: {
+            userId: {
+              in: Array.from(new Set(characters.map(({ userId }) => userId))),
+            },
+            cosmeticId: { in: selectedCosmeticIds },
+            revokedAt: null,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+          select: { userId: true, cosmeticId: true },
+        })
+      : [];
+    const entitlementIdsByUser = new Map<string, Set<string>>();
+
+    for (const entitlement of entitlements) {
+      const cosmeticIds =
+        entitlementIdsByUser.get(entitlement.userId) ?? new Set<string>();
+      cosmeticIds.add(entitlement.cosmeticId);
+      entitlementIdsByUser.set(entitlement.userId, cosmeticIds);
+    }
+
+    return Object.fromEntries(
+      characters.map((character) => [
+        character.id,
+        this.buildResolvedAppearance(
+          character,
+          now,
+          entitlementIdsByUser.get(character.userId) ?? new Set<string>(),
+        ),
+      ]),
+    );
+  }
+
   async grantCosmetics(actorUserId: string, dto: GrantCosmeticsDto) {
     const hasCosmeticTarget = Boolean(dto.cosmeticKey);
     const hasCollectionTarget = Boolean(dto.collectionKey);
@@ -505,6 +569,15 @@ export class CosmeticsService {
       selectedCosmetics.map((cosmetic) => cosmetic.id),
       now,
     );
+
+    return this.buildResolvedAppearance(character, now, entitlementIds);
+  }
+
+  private buildResolvedAppearance(
+    character: AppearanceContext,
+    now: Date,
+    entitlementIds: Set<string>,
+  ) {
     const premiumActive = isPremiumActive(character.user, now);
     const resolve = (cosmetic: CosmeticWithRelations | null | undefined) => {
       if (!cosmetic) return null;

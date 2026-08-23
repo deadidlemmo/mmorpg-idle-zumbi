@@ -12,7 +12,7 @@ describe('EquipmentService', () => {
     },
     $transaction: jest.fn(),
   };
-  const service = new EquipmentService(prisma as never);
+  const service = new EquipmentService(prisma as never, {} as never);
 
   beforeEach(() => {
     jest.clearAllMocks();

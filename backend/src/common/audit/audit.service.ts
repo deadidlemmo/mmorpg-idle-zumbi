@@ -7,6 +7,7 @@ export interface AuditEntryInput {
   action: string;
   entityType: string;
   entityId?: string | null;
+  deduplicationKey?: string | null;
   metadata?: Prisma.InputJsonValue;
   ipAddress?: string | null;
   userAgent?: string | null;
@@ -25,6 +26,7 @@ export class AuditService {
         action: entry.action,
         entityType: entry.entityType,
         entityId: entry.entityId ?? null,
+        deduplicationKey: entry.deduplicationKey ?? null,
         metadata: entry.metadata,
         ipAddress: entry.ipAddress ?? null,
         userAgent: entry.userAgent ?? null,
@@ -40,5 +42,26 @@ export class AuditService {
         }`,
       );
     });
+  }
+
+  recordMilestoneSafely(entry: AuditEntryInput & { deduplicationKey: string }) {
+    void this.record(entry).catch((error) => {
+      if (this.isUniqueConstraintError(error)) return;
+
+      this.logger.warn(
+        `Falha ao registrar marco ${entry.action}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    });
+  }
+
+  private isUniqueConstraintError(error: unknown) {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2002'
+    );
   }
 }

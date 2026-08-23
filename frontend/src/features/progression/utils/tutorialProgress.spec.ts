@@ -31,6 +31,18 @@ describe("mergeTutorialUpdate", () => {
           actionLabel: "Abrir mapas",
         },
       ],
+      objective: {
+        key: "gather-first-resource",
+        title: "Colete materiais para seu primeiro T1",
+        description: "Inicie uma expedição T1.",
+        href: "gathering",
+        actionLabel: "Abrir expedições",
+        completed: false,
+        equippedT1Slots: 0,
+        targetT1Slots: 6,
+        progressPercent: 0,
+        checklist: [],
+      },
     };
     const update: TutorialUpdateResponse = {
       id: "tutorial-1",
@@ -39,6 +51,8 @@ describe("mergeTutorialUpdate", () => {
       completed: false,
       completedAt: null,
       dismissedAt: null,
+      steps: current.steps,
+      objective: current.objective,
     };
 
     const merged = mergeTutorialUpdate(current, update);

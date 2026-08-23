@@ -11,7 +11,7 @@ import { CosmeticsService } from './cosmetics.service';
 
 describe('CosmeticsService', () => {
   const prisma = {
-    character: { findFirst: jest.fn() },
+    character: { findFirst: jest.fn(), findMany: jest.fn() },
     cosmetic: { findMany: jest.fn() },
     characterAppearance: { upsert: jest.fn() },
     userCosmeticEntitlement: {
@@ -149,6 +149,32 @@ describe('CosmeticsService', () => {
     await expect(
       service.getResolvedAppearance('character-1'),
     ).resolves.toMatchObject({
+      avatarKey: premiumAvatar.assetKey,
+      avatar: { key: premiumAvatar.key },
+    });
+  });
+
+  it('resolve aparências em lote sem repetir personagens', async () => {
+    prisma.character.findMany.mockResolvedValue([
+      characterContext({
+        premiumUntil: new Date('2999-01-01T00:00:00.000Z'),
+      }),
+    ]);
+
+    const result = await service.getResolvedAppearances([
+      'character-1',
+      'character-1',
+    ]);
+
+    expect(prisma.character.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: { in: ['character-1'] },
+          deletedAt: null,
+        },
+      }),
+    );
+    expect(result['character-1']).toMatchObject({
       avatarKey: premiumAvatar.assetKey,
       avatar: { key: premiumAvatar.key },
     });

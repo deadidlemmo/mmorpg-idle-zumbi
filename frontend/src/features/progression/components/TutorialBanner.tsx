@@ -1,4 +1,4 @@
-import { ArrowRight, Check, RefreshCw, X } from "lucide-react";
+import { ArrowRight, Check, RefreshCw, Target, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
@@ -76,8 +76,12 @@ export function TutorialBanner({ characterId }: { characterId: string }) {
   }, [location.pathname, refreshTutorial]);
 
   useEffect(() => {
-    if (!tutorial || tutorial.completed || tutorial.dismissedAt) return;
-    if (tutorial.step < 2) return;
+    if (!tutorial) return;
+
+    const tutorialNeedsRefresh =
+      !tutorial.completed && !tutorial.dismissedAt && tutorial.step >= 2;
+    const objectiveNeedsRefresh = !tutorial.objective.completed;
+    if (!tutorialNeedsRefresh && !objectiveNeedsRefresh) return;
 
     const refreshId = window.setInterval(() => {
       if (canRunNetworkRefresh()) void refreshTutorial();
@@ -119,7 +123,7 @@ export function TutorialBanner({ characterId }: { characterId: string }) {
       .finally(() => setIsBusy(false));
   }, [characterId, location.pathname, tutorial]);
 
-  if (!tutorial || tutorial.completed || tutorial.dismissedAt) return null;
+  if (!tutorial) return null;
 
   const stepIndex = Math.min(tutorial.step, tutorial.steps.length - 1);
   const currentStep = tutorial.steps[stepIndex];
@@ -131,6 +135,10 @@ export function TutorialBanner({ characterId }: { characterId: string }) {
     characterId,
     currentStep,
   );
+  const showTutorial = !tutorial.completed && !tutorial.dismissedAt;
+  const showObjective = !tutorial.objective.completed;
+
+  if (!showTutorial && !showObjective) return null;
 
   async function handlePrimaryAction() {
     setErrorMessage(null);
@@ -186,47 +194,97 @@ export function TutorialBanner({ characterId }: { characterId: string }) {
         : currentStep.actionLabel;
 
   return (
-    <aside className="tutorial-banner" aria-label="Tutorial do sobrevivente">
-      <div className="tutorial-banner__mark">
-        <Check size={18} />
-      </div>
-      <div className="tutorial-banner__content">
-        <span>
-          Passo {stepIndex + 1} de {stepsLength}
-        </span>
-        <strong>{currentStep.title}</strong>
-        <p>{currentStep.description}</p>
-        <i aria-hidden="true">
-          <em style={{ width: `${progress}%` }} />
-        </i>
-        {errorMessage ? (
-          <small className="tutorial-banner__error" role="alert">
-            {errorMessage}
-          </small>
-        ) : null}
-      </div>
-      <button
-        type="button"
-        disabled={isBusy}
-        onClick={() => void handlePrimaryAction()}
-      >
-        {primaryLabel}
-        {stepIndex > 0 && isOnTarget ? (
-          <RefreshCw size={15} />
-        ) : (
-          <ArrowRight size={15} />
-        )}
-      </button>
-      <button
-        className="tutorial-banner__dismiss"
-        type="button"
-        title="Dispensar tutorial"
-        aria-label="Dispensar tutorial"
-        disabled={isBusy}
-        onClick={() => void dismiss()}
-      >
-        <X size={16} />
-      </button>
-    </aside>
+    <div className="new-player-guidance">
+      {showTutorial ? (
+        <aside
+          className="tutorial-banner"
+          aria-label="Tutorial do sobrevivente"
+        >
+          <div className="tutorial-banner__mark">
+            <Check size={18} />
+          </div>
+          <div className="tutorial-banner__content">
+            <span>
+              Passo {stepIndex + 1} de {stepsLength}
+            </span>
+            <strong>{currentStep.title}</strong>
+            <p>{currentStep.description}</p>
+            <i aria-hidden="true">
+              <em style={{ width: `${progress}%` }} />
+            </i>
+            {errorMessage ? (
+              <small className="tutorial-banner__error" role="alert">
+                {errorMessage}
+              </small>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            disabled={isBusy}
+            onClick={() => void handlePrimaryAction()}
+          >
+            {primaryLabel}
+            {stepIndex > 0 && isOnTarget ? (
+              <RefreshCw size={15} />
+            ) : (
+              <ArrowRight size={15} />
+            )}
+          </button>
+          <button
+            className="tutorial-banner__dismiss"
+            type="button"
+            title="Ocultar tutorial"
+            aria-label="Ocultar tutorial"
+            disabled={isBusy}
+            onClick={() => void dismiss()}
+          >
+            <X size={16} />
+          </button>
+        </aside>
+      ) : null}
+
+      {showObjective ? (
+        <aside
+          className="onboarding-objective"
+          aria-label="Objetivo inicial permanente"
+        >
+          <div className="onboarding-objective__mark">
+            <Target size={18} />
+          </div>
+          <div className="onboarding-objective__content">
+            <span>Meta inicial · Conjunto T1</span>
+            <strong>{tutorial.objective.title}</strong>
+            <p>{tutorial.objective.description}</p>
+            <i aria-hidden="true">
+              <em
+                style={{ width: `${tutorial.objective.progressPercent}%` }}
+              />
+            </i>
+          </div>
+          <ul aria-label="Progresso da meta inicial">
+            {tutorial.objective.checklist.map((item) => (
+              <li className={item.completed ? "is-complete" : ""} key={item.key}>
+                <Check size={13} />
+                <span>{item.label}</span>
+                <strong>
+                  {item.current}/{item.target}
+                </strong>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() =>
+              navigate(
+                `/dashboard/${characterId}/${tutorial.objective.href}`,
+              )
+            }
+          >
+            {tutorial.objective.actionLabel}
+            <ArrowRight size={15} />
+          </button>
+        </aside>
+      ) : null}
+    </div>
   );
 }

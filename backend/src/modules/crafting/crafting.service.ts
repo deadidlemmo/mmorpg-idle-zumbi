@@ -24,6 +24,11 @@ import {
 } from '../../common/config/crafting.config';
 import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
+import { AuditService } from '../../common/audit/audit.service';
+import {
+  PRODUCT_EVENT_ACTIONS,
+  PRODUCT_MILESTONE_KEYS,
+} from '../../common/audit/product-events.constants';
 import {
   applyPremiumXpBonus,
   isPremiumActive,
@@ -142,6 +147,7 @@ export class CraftingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityGuard: ActivityGuardService,
+    private readonly auditService: AuditService,
   ) {}
 
   async listCharacterRecipes(params: {
@@ -220,7 +226,7 @@ export class CraftingService {
       getIdleProgressLimitSeconds(premiumActive);
 
     const resolvedCraftingSessions =
-      await this.resolveCompletedCraftingSessions(characterId);
+      await this.resolveCompletedCraftingSessions(userId, characterId);
     const activeCraftingSession =
       await this.findActiveCraftingSession(characterId);
 
@@ -961,8 +967,10 @@ export class CraftingService {
       throw new ForbiddenException('Você não pode acessar este personagem.');
     }
 
-    const completedSessions =
-      await this.resolveCompletedCraftingSessions(characterId);
+    const completedSessions = await this.resolveCompletedCraftingSessions(
+      userId,
+      characterId,
+    );
     const activeSession = await this.findActiveCraftingSession(characterId);
     const craftingSkill = await this.getOrCreateCraftingSkill(characterId);
     const craftingSkillViewModel =
@@ -1032,7 +1040,7 @@ export class CraftingService {
       );
     }
 
-    await this.resolveCompletedCraftingSessions(dto.characterId);
+    await this.resolveCompletedCraftingSessions(userId, dto.characterId);
     await this.activityGuard.ensureCanStartCrafting({
       characterId: dto.characterId,
       userId,
@@ -1319,7 +1327,7 @@ export class CraftingService {
       );
     }
 
-    await this.resolveCompletedCraftingSessions(characterId);
+    await this.resolveCompletedCraftingSessions(userId, characterId);
 
     const activeSession = await this.findActiveCraftingSession(characterId);
 
@@ -1382,7 +1390,10 @@ export class CraftingService {
     });
   }
 
-  private async resolveCompletedCraftingSessions(characterId: string) {
+  private async resolveCompletedCraftingSessions(
+    userId: string,
+    characterId: string,
+  ) {
     const now = new Date();
     const sessions = await this.prisma.craftingSession.findMany({
       where: {
@@ -1498,6 +1509,26 @@ export class CraftingService {
 
       if (completedSession) {
         completedSessions.push(completedSession);
+
+        if (
+          completedSession.outputItem.tier === 1 &&
+          completedSession.outputItem.slot !== ItemSlot.CONSUMABLE &&
+          completedSession.outputItem.slot !== ItemSlot.MATERIAL
+        ) {
+          this.auditService.recordMilestoneSafely({
+            actorUserId: userId,
+            action: PRODUCT_EVENT_ACTIONS.FIRST_T1_CRAFTED,
+            entityType: 'Character',
+            entityId: characterId,
+            deduplicationKey:
+              PRODUCT_MILESTONE_KEYS.firstT1Crafted(characterId),
+            metadata: {
+              itemId: completedSession.outputItem.id,
+              itemName: completedSession.outputItem.name,
+              slot: completedSession.outputItem.slot,
+            },
+          });
+        }
       }
     }
 

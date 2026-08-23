@@ -135,6 +135,62 @@ export interface AdminOperations {
   };
 }
 
+export interface AdminProductMetrics {
+  generatedAt: string;
+  period: {
+    days: number;
+    startedAt: string;
+    endedAt: string;
+  };
+  funnel: {
+    windowHours: number;
+    cohortUsers: number;
+    steps: Array<{
+      key: string;
+      label: string;
+      count: number;
+      rateFromStartPercent: number;
+      rateFromPreviousPercent: number;
+    }>;
+  };
+  retention: {
+    definition: string;
+    d1: {
+      eligibleUsers: number;
+      retainedUsers: number;
+      retentionPercent: number;
+    };
+    d7: {
+      eligibleUsers: number;
+      retainedUsers: number;
+      retentionPercent: number;
+    };
+  };
+  timeToFirstEquipment: {
+    definition: string;
+    samples: number;
+    exactTrackedSamples: number;
+    averageSeconds: number | null;
+    p50Seconds: number | null;
+    p90Seconds: number | null;
+  };
+  economy: {
+    definition: string;
+    tiers: Array<{
+      tier: number;
+      gatheredUnits: number;
+      consumedUnits: number;
+      craftedUnits: number;
+      materialStock: number;
+      netMaterialFlow: number;
+    }>;
+  };
+  coverage: {
+    milestoneTrackingStartedAt: string | null;
+    usesHistoricalFallback: boolean;
+  };
+}
+
 export async function getAdminSummary() {
   const response = await apiClient.get<AdminSummary>(
     API_ENDPOINTS.admin.summary,
@@ -145,6 +201,14 @@ export async function getAdminSummary() {
 export async function getAdminOperations() {
   const response = await apiClient.get<AdminOperations>(
     API_ENDPOINTS.admin.operations,
+  );
+  return response.data;
+}
+
+export async function getAdminProductMetrics(days = 30) {
+  const response = await apiClient.get<AdminProductMetrics>(
+    API_ENDPOINTS.admin.product,
+    { params: { days } },
   );
   return response.data;
 }

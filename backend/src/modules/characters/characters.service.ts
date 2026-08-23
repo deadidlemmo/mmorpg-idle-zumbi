@@ -40,6 +40,11 @@ import { getLevelProgress } from '../../common/utils/level.util';
 import { isPremiumActive } from '../../common/utils/membership.util';
 import { calculateFullStats } from '../../common/utils/stats.util';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
+import { AuditService } from '../../common/audit/audit.service';
+import {
+  PRODUCT_EVENT_ACTIONS,
+  PRODUCT_MILESTONE_KEYS,
+} from '../../common/audit/product-events.constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CosmeticsService } from '../cosmetics/cosmetics.service';
 import { CreateCharacterDto } from './dto/create-character.dto';
@@ -175,6 +180,7 @@ export class CharactersService {
     private readonly prisma: PrismaService,
     private readonly activityGuard: ActivityGuardService,
     private readonly cosmeticsService: CosmeticsService,
+    private readonly auditService: AuditService,
   ) {}
 
   async create(userId: string, createCharacterDto: CreateCharacterDto) {
@@ -442,6 +448,18 @@ export class CharactersService {
           },
         },
       });
+    });
+
+    this.auditService.recordMilestoneSafely({
+      actorUserId: userId,
+      action: PRODUCT_EVENT_ACTIONS.CHARACTER_CREATED,
+      entityType: 'Character',
+      entityId: character.id,
+      deduplicationKey: PRODUCT_MILESTONE_KEYS.characterCreated(character.id),
+      metadata: {
+        className: character.class.name,
+        mapId: character.mapId,
+      },
     });
 
     const equipmentItems = this.getEquipmentItems(character);

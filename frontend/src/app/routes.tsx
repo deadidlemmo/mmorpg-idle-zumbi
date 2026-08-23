@@ -49,6 +49,11 @@ const SocialPage = lazy(() =>
     default: module.SocialPage,
   })),
 );
+const RankingPage = lazy(() =>
+  import("../features/social/pages/RankingPage").then((module) => ({
+    default: module.RankingPage,
+  })),
+);
 const AppearancePage = lazy(() =>
   import("../features/cosmetics/pages/AppearancePage").then((module) => ({
     default: module.AppearancePage,
@@ -320,6 +325,8 @@ export function AppRoutes() {
             <Route path="incursions" element={<IncursionsPage />} />
 
             <Route path="world-bosses" element={<WorldBossesPage />} />
+
+            <Route path="rankings" element={<RankingPage />} />
 
             <Route path="allies" element={<SocialPage />} />
 

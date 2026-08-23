@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
   admin: {
     summary: "/admin/summary",
     operations: "/admin/operations",
+    product: "/admin/product",
     users: "/admin/users",
     userSuspension: (userId: string) => `/admin/users/${userId}/suspension`,
     auditLogs: "/admin/audit-logs",
@@ -29,6 +30,8 @@ export const API_ENDPOINTS = {
 
   social: {
     friends: "/social/friends",
+    searchCharacters: "/social/characters/search",
+    rankings: "/social/rankings",
     request: "/social/friends/request",
     accept: (friendshipId: string) => `/social/friends/${friendshipId}/accept`,
     remove: (friendshipId: string) => `/social/friends/${friendshipId}`,

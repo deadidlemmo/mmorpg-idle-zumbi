@@ -1,9 +1,15 @@
+.new-player-guidance {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
 .tutorial-banner {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 0.75rem;
   align-items: center;
-  margin-bottom: 1rem;
+  margin: 0;
   border: 1px solid rgba(205, 179, 91, 0.3);
   border-radius: 0.45rem;
   padding: 0.72rem;
@@ -90,6 +96,126 @@
   width: 2.35rem;
   height: 2.35rem;
   padding: 0;
+}
+
+.onboarding-objective {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) minmax(360px, 0.9fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  border: 1px solid rgba(115, 163, 75, 0.34);
+  border-radius: 0.45rem;
+  padding: 0.72rem;
+  background: rgba(18, 30, 19, 0.92);
+}
+
+.onboarding-objective__mark {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  place-items: center;
+  border: 1px solid rgba(141, 191, 91, 0.34);
+  color: #a8d174;
+}
+
+.onboarding-objective__content {
+  display: grid;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.onboarding-objective__content > span {
+  color: #8fba64;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.onboarding-objective__content > strong {
+  overflow-wrap: anywhere;
+  color: #f0f3e7;
+}
+
+.onboarding-objective__content > p {
+  margin: 0;
+  color: #aeb8ad;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.onboarding-objective__content > i {
+  display: block;
+  height: 0.3rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.onboarding-objective__content > i > em {
+  display: block;
+  height: 100%;
+  background: #8fba5b;
+  transition: width 240ms ease;
+}
+
+.onboarding-objective > ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-objective > ul li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.3rem;
+  align-items: center;
+  min-height: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.35rem 0.45rem;
+  color: #89938a;
+  font-size: 0.66rem;
+}
+
+.onboarding-objective > ul li svg {
+  color: #58625a;
+}
+
+.onboarding-objective > ul li span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onboarding-objective > ul li strong {
+  color: #bdc6bc;
+  font-size: 0.66rem;
+}
+
+.onboarding-objective > ul li.is-complete {
+  border-color: rgba(143, 186, 91, 0.25);
+  color: #b9d49e;
+}
+
+.onboarding-objective > ul li.is-complete svg {
+  color: #9bc96f;
+}
+
+.onboarding-objective > button {
+  display: inline-flex;
+  min-width: 9.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(143, 186, 91, 0.38);
+  border-radius: 0.4rem;
+  padding: 0.55rem 0.72rem;
+  background: rgba(97, 137, 60, 0.2);
+  color: #e9ecdf;
+  cursor: pointer;
 }
 
 .progression-page {
@@ -269,6 +395,16 @@
   color: #acb2a7;
 }
 
+@media (max-width: 1100px) {
+  .onboarding-objective {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .onboarding-objective > ul {
+    grid-column: 2 / 4;
+  }
+}
+
 @media (max-width: 760px) {
   .tutorial-banner {
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -282,6 +418,19 @@
   .tutorial-banner__dismiss {
     grid-column: 3;
     grid-row: 1;
+  }
+
+  .onboarding-objective {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .onboarding-objective > ul,
+  .onboarding-objective > button {
+    grid-column: 1 / -1;
+  }
+
+  .onboarding-objective > button {
+    width: 100%;
   }
 
   .progression-header {

@@ -23,6 +23,7 @@ import { Link } from "react-router-dom";
 import {
   getAdminAuditLogs,
   getAdminOperations,
+  getAdminProductMetrics,
   getAdminSummary,
   getAdminUserCosmetics,
   getAdminUsers,
@@ -32,6 +33,7 @@ import {
   type AdminCosmeticEntitlement,
   type AdminAuditLog,
   type AdminOperations,
+  type AdminProductMetrics,
   type AdminSummary,
   type AdminUser,
 } from "../api/admin.api";
@@ -53,6 +55,26 @@ function formatUptime(seconds: number) {
   const days = Math.floor(seconds / 86_400);
   const hours = Math.floor((seconds % 86_400) / 3_600);
   return days > 0 ? `${days}d ${hours}h` : `${hours}h`;
+}
+
+function formatDuration(seconds?: number | null) {
+  if (seconds === null || seconds === undefined) return "Sem dados";
+  if (seconds < 60) return `${seconds}s`;
+
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}min`;
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours < 24) {
+    return remainingMinutes > 0
+      ? `${hours}h ${remainingMinutes}min`
+      : `${hours}h`;
+  }
+
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
 }
 
 function formatDependencyStatus(status?: "up" | "down" | "disabled") {
@@ -110,6 +132,9 @@ function Pagination({
 export function AdminPage() {
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [operations, setOperations] = useState<AdminOperations | null>(null);
+  const [productMetrics, setProductMetrics] =
+    useState<AdminProductMetrics | null>(null);
+  const [productPeriodDays, setProductPeriodDays] = useState(30);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
   const [search, setSearch] = useState("");
@@ -145,16 +170,19 @@ export function AdminPage() {
       const [
         summaryResponse,
         operationsResponse,
+        productResponse,
         usersResponse,
         auditResponse,
       ] = await Promise.all([
         getAdminSummary(),
         getAdminOperations(),
+        getAdminProductMetrics(productPeriodDays),
         getAdminUsers(appliedSearch, usersPage),
         getAdminAuditLogs(auditPage),
       ]);
       setSummary(summaryResponse);
       setOperations(operationsResponse);
+      setProductMetrics(productResponse);
       setUsers(usersResponse.users);
       setUsersPageCount(usersResponse.pageCount);
       setAuditLogs(auditResponse.logs);
@@ -164,7 +192,7 @@ export function AdminPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [appliedSearch, auditPage, usersPage]);
+  }, [appliedSearch, auditPage, productPeriodDays, usersPage]);
 
   useEffect(() => {
     // A sincronizacao inicial e executada pelo carregador assincrono da pagina.
@@ -303,6 +331,157 @@ export function AdminPage() {
             <span>{label}</span>
           </article>
         ))}
+      </section>
+
+      <section className="admin-section admin-product-section">
+        <div className="admin-section-heading">
+          <div>
+            <h2>Produto e primeira hora</h2>
+            <p>Ativação, retenção e circulação econômica T1-T5.</p>
+          </div>
+          <div
+            className="admin-period-control"
+            role="group"
+            aria-label="Período das métricas"
+          >
+            {[7, 30, 90].map((days) => (
+              <button
+                className={productPeriodDays === days ? "is-active" : ""}
+                key={days}
+                type="button"
+                aria-pressed={productPeriodDays === days}
+                onClick={() => setProductPeriodDays(days)}
+              >
+                {days}d
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="admin-product-kpis">
+          <article>
+            <span>Retenção D1</span>
+            <strong>
+              {productMetrics?.retention.d1.retentionPercent ?? 0}%
+            </strong>
+            <small>
+              {productMetrics?.retention.d1.retainedUsers ?? 0} de{" "}
+              {productMetrics?.retention.d1.eligibleUsers ?? 0} elegíveis
+            </small>
+          </article>
+          <article>
+            <span>Retenção D7</span>
+            <strong>
+              {productMetrics?.retention.d7.retentionPercent ?? 0}%
+            </strong>
+            <small>
+              {productMetrics?.retention.d7.retainedUsers ?? 0} de{" "}
+              {productMetrics?.retention.d7.eligibleUsers ?? 0} elegíveis
+            </small>
+          </article>
+          <article>
+            <span>Primeiro T1 equipado</span>
+            <strong>
+              {formatDuration(productMetrics?.timeToFirstEquipment.p50Seconds)}
+            </strong>
+            <small>
+              Mediana de {productMetrics?.timeToFirstEquipment.samples ?? 0}{" "}
+              personagens
+            </small>
+          </article>
+          <article>
+            <span>P90 até o primeiro T1</span>
+            <strong>
+              {formatDuration(productMetrics?.timeToFirstEquipment.p90Seconds)}
+            </strong>
+            <small>
+              {productMetrics?.timeToFirstEquipment.exactTrackedSamples ?? 0}{" "}
+              amostras com marco exato
+            </small>
+          </article>
+        </div>
+
+        <div className="admin-product-grid">
+          <div className="admin-funnel" aria-label="Funil da primeira hora">
+            <header>
+              <div>
+                <strong>Funil da primeira hora</strong>
+                <span>
+                  Coorte de {productMetrics?.funnel.cohortUsers ?? 0} contas
+                </span>
+              </div>
+              <time>
+                {productMetrics
+                  ? formatDate(productMetrics.generatedAt)
+                  : "Carregando"}
+              </time>
+            </header>
+            <ol>
+              {productMetrics?.funnel.steps.map((step) => (
+                <li key={step.key}>
+                  <div>
+                    <span>{step.label}</span>
+                    <strong>{step.count}</strong>
+                  </div>
+                  <i aria-hidden="true">
+                    <em style={{ width: `${step.rateFromStartPercent}%` }} />
+                  </i>
+                  <small>
+                    {step.rateFromStartPercent}% da coorte ·{" "}
+                    {step.rateFromPreviousPercent}% da etapa anterior
+                  </small>
+                </li>
+              )) ?? null}
+            </ol>
+          </div>
+
+          <div className="admin-economy" aria-label="Economia por tier">
+            <header>
+              <strong>Economia por tier</strong>
+              <span>Fluxo no período e estoque atual</span>
+            </header>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Tier</th>
+                    <th>Coletado</th>
+                    <th>Consumido</th>
+                    <th>Criado</th>
+                    <th>Estoque</th>
+                    <th>Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productMetrics?.economy.tiers.map((tier) => (
+                    <tr key={tier.tier}>
+                      <td>
+                        <strong>T{tier.tier}</strong>
+                      </td>
+                      <td>{tier.gatheredUnits.toLocaleString("pt-BR")}</td>
+                      <td>{tier.consumedUnits.toLocaleString("pt-BR")}</td>
+                      <td>{tier.craftedUnits.toLocaleString("pt-BR")}</td>
+                      <td>{tier.materialStock.toLocaleString("pt-BR")}</td>
+                      <td
+                        className={
+                          tier.netMaterialFlow < 0 ? "is-negative" : "is-positive"
+                        }
+                      >
+                        {tier.netMaterialFlow > 0 ? "+" : ""}
+                        {tier.netMaterialFlow.toLocaleString("pt-BR")}
+                      </td>
+                    </tr>
+                  )) ?? null}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <p className="admin-product-note">
+          D1 e D7 consideram login na janela exata de 24 horas. Marcos anteriores
+          ao rastreamento dedicado usam o histórico operacional disponível.
+        </p>
       </section>
 
       <section className="admin-section">

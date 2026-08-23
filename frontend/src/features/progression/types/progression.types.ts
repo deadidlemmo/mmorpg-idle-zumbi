@@ -19,9 +19,29 @@ export interface TutorialProgress {
   createdAt?: string;
   updatedAt?: string;
   steps: TutorialStep[];
+  objective: OnboardingObjective;
 }
 
-export type TutorialUpdateResponse = Omit<TutorialProgress, "steps">;
+export interface OnboardingObjective {
+  key: string;
+  title: string;
+  description: string;
+  href: string;
+  actionLabel: string;
+  completed: boolean;
+  equippedT1Slots: number;
+  targetT1Slots: number;
+  progressPercent: number;
+  checklist: Array<{
+    key: string;
+    label: string;
+    current: number;
+    target: number;
+    completed: boolean;
+  }>;
+}
+
+export type TutorialUpdateResponse = TutorialProgress;
 
 export interface CharacterMission {
   id: string;

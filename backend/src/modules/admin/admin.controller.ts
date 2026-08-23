@@ -13,6 +13,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AdminService } from './admin.service';
+import { GetProductMetricsDto } from './dto/get-product-metrics.dto';
 import { ListAdminUsersDto } from './dto/list-admin-users.dto';
 import { UpdateUserSuspensionDto } from './dto/update-user-suspension.dto';
 
@@ -30,6 +31,11 @@ export class AdminController {
   @Get('operations')
   getOperations() {
     return this.adminService.getOperations();
+  }
+
+  @Get('product')
+  getProductMetrics(@Query() query: GetProductMetricsDto) {
+    return this.adminService.getProductMetrics(query.days);
   }
 
   @Get('users')
