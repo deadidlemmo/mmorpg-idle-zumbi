@@ -10,6 +10,7 @@ import {
   formatMaterialOrigin,
   getInventoryBonusList,
   getInventoryItemIcon,
+  getInventoryItemImageUrl,
   getInventoryItemInitials,
   getInventoryPrimaryDetail,
 } from '../utils/inventory.utils';
@@ -24,9 +25,6 @@ interface InventoryItemDetailsModalProps {
 }
 
 type InventoryItemWithVisualMetadata = InventoryEntry['item'] & {
-  image?: string | null;
-  imageUrl?: string | null;
-  iconUrl?: string | null;
   quality?: string | null;
   value?: number | string | null;
   goldValue?: number | string | null;
@@ -64,10 +62,6 @@ function formatValue(value?: number | string | null) {
 
 function getItemLevel(item: InventoryItemWithVisualMetadata) {
   return item.level ?? item.requiredLevel ?? item.minLevel ?? null;
-}
-
-function getItemImageUrl(item: InventoryItemWithVisualMetadata) {
-  return item.imageUrl ?? item.iconUrl ?? item.image ?? null;
 }
 
 function buildDetails(entry: InventoryEntry): Array<[string, string]> {
@@ -134,7 +128,7 @@ export function InventoryItemDetailsModal({
 
   const itemName = item.name?.trim() || 'Item desconhecido';
   const description = item.description?.trim();
-  const imageUrl = getItemImageUrl(item);
+  const imageUrl = getInventoryItemImageUrl(entry);
 
   const bonuses = getInventoryBonusList(item);
   const rarity = item.rarity ?? 'COMMON';
@@ -180,7 +174,11 @@ export function InventoryItemDetailsModal({
             aria-hidden="true"
           >
             {imageUrl ? (
-              <img src={imageUrl} alt="" />
+              <img
+                className="inventory-item-card__image"
+                src={imageUrl}
+                alt=""
+              />
             ) : (
               <>
                 <span className="inventory-item-card__glyph">

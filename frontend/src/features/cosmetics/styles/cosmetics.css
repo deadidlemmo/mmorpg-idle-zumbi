@@ -1,0 +1,441 @@
+.character-portrait {
+  position: relative;
+  isolation: isolate;
+}
+
+.character-portrait > img {
+  display: block;
+}
+
+.character-portrait__frame {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 4 !important;
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  border: 2px solid var(--portrait-accent, #7bcf55);
+  border-radius: inherit;
+  pointer-events: none;
+  font-size: 0 !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(4, 8, 7, 0.7),
+    inset 0 0 18px color-mix(in srgb, var(--portrait-accent) 22%, transparent),
+    0 0 16px color-mix(in srgb, var(--portrait-accent) 24%, transparent);
+}
+
+.character-portrait__frame::before,
+.character-portrait__frame::after {
+  content: "";
+  position: absolute;
+  width: 24%;
+  height: 24%;
+  border-color: color-mix(in srgb, var(--portrait-accent) 80%, #f3f6e9);
+  filter: drop-shadow(
+    0 0 4px color-mix(in srgb, var(--portrait-accent) 45%, transparent)
+  );
+}
+
+.character-portrait__frame::before {
+  top: 5px;
+  left: 5px;
+  border-top: 3px solid;
+  border-left: 3px solid;
+}
+
+.character-portrait__frame::after {
+  right: 5px;
+  bottom: 5px;
+  border-right: 3px solid;
+  border-bottom: 3px solid;
+}
+
+.character-portrait.is-frame-helix-orbit {
+  --portrait-accent: #65d8e8 !important;
+}
+
+.character-portrait.is-frame-helix-orbit .character-portrait__frame {
+  border: 2px solid #65d8e8;
+  outline: 1px solid rgba(157, 108, 240, 0.72);
+  outline-offset: -7px;
+  background: transparent;
+  box-shadow:
+    inset 0 0 0 2px rgba(3, 12, 15, 0.78),
+    inset 0 0 22px rgba(101, 216, 232, 0.18),
+    0 0 9px rgba(101, 216, 232, 0.34),
+    0 0 19px rgba(157, 108, 240, 0.18);
+  animation: cosmetic-frame-helix-pulse 3.6s ease-in-out infinite;
+}
+
+.character-portrait.is-frame-helix-orbit .character-portrait__frame::before,
+.character-portrait.is-frame-helix-orbit .character-portrait__frame::after {
+  width: 34%;
+  height: 34%;
+  border-color: #e9feff;
+  filter: drop-shadow(0 0 4px rgba(101, 216, 232, 0.8))
+    drop-shadow(0 0 8px rgba(157, 108, 240, 0.45));
+}
+
+.character-portrait.is-frame-crimson-aegis {
+  --portrait-accent: #ef5a56 !important;
+}
+
+.character-portrait.is-frame-crimson-aegis .character-portrait__frame {
+  border: 3px solid #b9272b;
+  outline: 1px solid rgba(245, 225, 205, 0.82);
+  outline-offset: -7px;
+  background:
+    linear-gradient(135deg, rgba(239, 90, 86, 0.18), transparent 28%),
+    linear-gradient(315deg, rgba(239, 90, 86, 0.18), transparent 28%);
+  box-shadow:
+    inset 0 0 0 2px rgba(22, 5, 6, 0.9),
+    inset 0 0 18px rgba(239, 90, 86, 0.18),
+    0 0 0 1px rgba(111, 24, 26, 0.8),
+    0 0 16px rgba(239, 90, 86, 0.28);
+  animation: cosmetic-frame-crimson-pulse 2.8s ease-in-out infinite;
+}
+
+.character-portrait.is-frame-crimson-aegis .character-portrait__frame::before,
+.character-portrait.is-frame-crimson-aegis .character-portrait__frame::after {
+  width: 38%;
+  height: 18%;
+  border-width: 4px;
+  border-color: #f6d7c0;
+  filter: drop-shadow(0 0 3px rgba(246, 215, 192, 0.7))
+    drop-shadow(0 0 7px rgba(239, 90, 86, 0.66));
+}
+
+.cosmetic-surface {
+  position: relative;
+  isolation: isolate;
+}
+
+.cosmetic-profile-card {
+  --profile-accent: #84b85c;
+  display: grid;
+  grid-template-columns: 7.2rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+  min-height: 10.5rem;
+  padding: 1rem;
+  overflow: hidden;
+  border: 1px solid
+    color-mix(in srgb, var(--profile-accent) 52%, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(19, 24, 22, 0.97), rgba(7, 12, 10, 0.98)),
+    #0a100e;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 14px 34px rgba(0, 0, 0, 0.28);
+}
+
+.cosmetic-profile-card.has-cosmetic-banner {
+  background:
+    linear-gradient(90deg, rgba(9, 13, 12, 0.32), rgba(6, 11, 9, 0.87)),
+    var(--profile-banner-image) center / cover no-repeat,
+    #0a100e;
+}
+
+.cosmetic-profile-card > *:not(.cosmetic-effect-layer) {
+  position: relative;
+  z-index: 3;
+}
+
+.cosmetic-profile-card__portrait {
+  display: grid;
+  width: 7.2rem;
+  height: 8.4rem;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid
+    color-mix(in srgb, var(--profile-accent) 58%, rgba(255, 255, 255, 0.18));
+  border-radius: 8px;
+  background: rgba(3, 7, 6, 0.72);
+}
+
+.cosmetic-profile-card__portrait > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.cosmetic-profile-card__identity {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.cosmetic-profile-card__kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--profile-accent);
+  font-family: var(--font-title);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cosmetic-profile-card__kicker strong {
+  display: inline-grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border: 1px solid var(--profile-accent);
+  border-radius: 50%;
+  background: rgba(3, 8, 6, 0.76);
+  color: #f4f6ed;
+  font-size: 0.58rem;
+}
+
+.cosmetic-profile-card h1,
+.cosmetic-profile-card h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #f5f2e7;
+  font-family: var(--font-title);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.cosmetic-profile-card__identity > p {
+  margin: 0;
+  color: color-mix(in srgb, var(--profile-accent) 72%, #e8ece0);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.cosmetic-profile-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.cosmetic-profile-card__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 0.25rem 0.45rem;
+  background: rgba(2, 6, 5, 0.58);
+  color: #c7cec1;
+  font-size: 0.68rem;
+}
+
+@media (max-width: 520px) {
+  .cosmetic-profile-card {
+    grid-template-columns: 5.4rem minmax(0, 1fr);
+    gap: 0.7rem;
+    min-height: 8rem;
+    padding: 0.75rem;
+  }
+
+  .cosmetic-profile-card__portrait {
+    width: 5.4rem;
+    height: 6.4rem;
+  }
+
+  .cosmetic-profile-card h1,
+  .cosmetic-profile-card h2 {
+    font-size: 1.45rem;
+  }
+}
+
+.cosmetic-effect-layer {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2 !important;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.is-effect-signal-scan .cosmetic-effect-layer::before {
+  content: "";
+  position: absolute;
+  inset: -25% 0 auto;
+  height: 24%;
+  opacity: 0;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--hero-accent, #72d94c) 18%, transparent),
+    transparent
+  );
+  animation: cosmetic-scan 5.8s ease-in-out infinite;
+}
+
+.is-effect-helix-orbit .cosmetic-effect-layer::before,
+.is-effect-helix-orbit .cosmetic-effect-layer::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 74%;
+  height: 42%;
+  border: 1px solid rgba(119, 232, 244, 0.72);
+  border-radius: 50%;
+  opacity: 0;
+  box-shadow:
+    inset 0 0 12px rgba(101, 216, 232, 0.12),
+    0 0 10px rgba(101, 216, 232, 0.22),
+    0 0 18px rgba(157, 108, 240, 0.12);
+  animation: cosmetic-helix-orbit 5.4s ease-in-out infinite;
+}
+
+.is-effect-helix-orbit .cosmetic-effect-layer::after {
+  width: 48%;
+  height: 72%;
+  border-color: rgba(173, 126, 245, 0.58);
+  animation-delay: -2.7s;
+  animation-direction: reverse;
+}
+
+.is-effect-crimson-rift .cosmetic-effect-layer::before {
+  content: "";
+  position: absolute;
+  top: -58%;
+  left: -26%;
+  width: 10%;
+  height: 210%;
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(239, 90, 86, 0.08) 28%,
+    rgba(255, 220, 196, 0.72) 49%,
+    rgba(239, 90, 86, 0.18) 66%,
+    transparent
+  );
+  filter: drop-shadow(0 0 8px rgba(239, 90, 86, 0.62));
+  transform: rotate(24deg);
+  animation: cosmetic-crimson-rift 5.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.is-effect-crimson-rift .cosmetic-effect-layer::after {
+  content: "";
+  position: absolute;
+  right: 10%;
+  bottom: 13%;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #ffe2c9;
+  box-shadow:
+    -16px 11px 0 rgba(239, 90, 86, 0.78),
+    18px -12px 0 rgba(255, 220, 196, 0.64),
+    38px 8px 0 rgba(239, 90, 86, 0.5),
+    -36px -22px 0 rgba(239, 90, 86, 0.42);
+  animation: cosmetic-crimson-sparks 3.9s ease-out infinite;
+}
+
+@keyframes cosmetic-scan {
+  0%,
+  14% {
+    transform: translateY(-30%);
+    opacity: 0;
+  }
+  24% {
+    opacity: 0.72;
+  }
+  58% {
+    opacity: 0.32;
+  }
+  70%,
+  100% {
+    transform: translateY(620%);
+    opacity: 0;
+  }
+}
+
+@keyframes cosmetic-frame-helix-pulse {
+  0%,
+  100% {
+    filter: brightness(0.92) saturate(0.92);
+  }
+  50% {
+    filter: brightness(1.16) saturate(1.12);
+  }
+}
+
+@keyframes cosmetic-frame-crimson-pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 2px rgba(22, 5, 6, 0.9),
+      inset 0 0 18px rgba(239, 90, 86, 0.16),
+      0 0 0 1px rgba(111, 24, 26, 0.8),
+      0 0 11px rgba(239, 90, 86, 0.2);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 2px rgba(22, 5, 6, 0.9),
+      inset 0 0 24px rgba(239, 90, 86, 0.26),
+      0 0 0 1px rgba(111, 24, 26, 0.8),
+      0 0 20px rgba(239, 90, 86, 0.42);
+  }
+}
+
+@keyframes cosmetic-helix-orbit {
+  0%,
+  12% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-18deg) scale(0.82);
+  }
+  28%,
+  64% {
+    opacity: 0.54;
+  }
+  88%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(22deg) scale(1.18);
+  }
+}
+
+@keyframes cosmetic-crimson-rift {
+  0%,
+  18% {
+    left: -26%;
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.86;
+  }
+  48% {
+    opacity: 0.22;
+  }
+  58%,
+  100% {
+    left: 116%;
+    opacity: 0;
+  }
+}
+
+@keyframes cosmetic-crimson-sparks {
+  0%,
+  30% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.5);
+  }
+  46% {
+    opacity: 0.82;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-24px, -38px) scale(0.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cosmetic-effect-layer::before,
+  .cosmetic-effect-layer::after,
+  .character-portrait__frame {
+    animation: none !important;
+  }
+}

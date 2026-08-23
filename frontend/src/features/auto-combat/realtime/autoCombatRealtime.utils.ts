@@ -116,11 +116,17 @@ type RealtimeEventLoose = AutoCombatRealtimeEvent & {
  * Ajuste atual:
  * - Spawn: 350ms, apenas para o jogador perceber que o mob nasceu.
  * - Eventos de ação: 950ms, ritmo ágil sem embolar os turnos.
+ * - Derrota: 1300ms, inclusive quando o próximo alvo já está enfileirado.
  */
 export const AUTO_COMBAT_REALTIME_DEFAULT_EVENT_DELAY_MS = 950;
 export const AUTO_COMBAT_REALTIME_SPAWN_EVENT_DELAY_MS = 350;
+export const AUTO_COMBAT_REALTIME_DEFEATED_EVENT_DELAY_MS = 1300;
+export const AUTO_COMBAT_REALTIME_DEFEATED_IMPACT_DELAY_MS = 160;
+const AUTO_COMBAT_REALTIME_DEFAULT_IMPACT_RATIO = 0.55;
 const AUTO_COMBAT_REALTIME_MIN_TIMELINE_DELAY_MS = 650;
 const AUTO_COMBAT_REALTIME_MAX_TIMELINE_DELAY_MS = 1500;
+const AUTO_COMBAT_REALTIME_QUEUED_KILLING_HIT_DELAY_MS = 240;
+const AUTO_COMBAT_REALTIME_QUEUED_SPAWN_DELAY_MS = 180;
 
 export const AUTO_COMBAT_REALTIME_EVENT_DELAY_MS = {
   MOB_SPAWNED: AUTO_COMBAT_REALTIME_SPAWN_EVENT_DELAY_MS,
@@ -128,7 +134,7 @@ export const AUTO_COMBAT_REALTIME_EVENT_DELAY_MS = {
   MOB_HIT: AUTO_COMBAT_REALTIME_DEFAULT_EVENT_DELAY_MS,
   DODGE: AUTO_COMBAT_REALTIME_DEFAULT_EVENT_DELAY_MS,
   POTION_USED: AUTO_COMBAT_REALTIME_DEFAULT_EVENT_DELAY_MS,
-  MOB_DEFEATED: AUTO_COMBAT_REALTIME_DEFAULT_EVENT_DELAY_MS,
+  MOB_DEFEATED: AUTO_COMBAT_REALTIME_DEFEATED_EVENT_DELAY_MS,
   PLAYER_DEFEATED: AUTO_COMBAT_REALTIME_DEFAULT_EVENT_DELAY_MS,
   DEFAULT: AUTO_COMBAT_REALTIME_DEFAULT_EVENT_DELAY_MS,
 } as const;
@@ -268,6 +274,10 @@ export function getRealtimeEventDelay(event?: AutoCombatRealtimeEvent | null) {
       ? nextActionAt - actionStartedAt
       : null;
 
+  if (eventType === 'MOB_DEFEATED') {
+    return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.MOB_DEFEATED;
+  }
+
   if (
     timelineDelay !== null &&
     timelineDelay > 0 &&
@@ -300,15 +310,60 @@ export function getRealtimeEventDelay(event?: AutoCombatRealtimeEvent | null) {
     return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.POTION_USED;
   }
 
-  if (eventType === 'MOB_DEFEATED') {
-    return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.MOB_DEFEATED;
-  }
-
   if (eventType === 'PLAYER_DEFEATED') {
     return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.PLAYER_DEFEATED;
   }
 
   return AUTO_COMBAT_REALTIME_EVENT_DELAY_MS.DEFAULT;
+}
+
+export function getRealtimeEventImpactDelay(
+  event: AutoCombatRealtimeEvent | null | undefined,
+  eventDelay = getRealtimeEventDelay(event),
+) {
+  if (normalizeRealtimeEventType(event) === 'MOB_DEFEATED') {
+    return Math.min(
+      Math.max(0, eventDelay),
+      AUTO_COMBAT_REALTIME_DEFEATED_IMPACT_DELAY_MS,
+    );
+  }
+
+  return Math.max(
+    0,
+    Math.floor(eventDelay * AUTO_COMBAT_REALTIME_DEFAULT_IMPACT_RATIO),
+  );
+}
+
+export function getRealtimeEventPlaybackTiming(params: {
+  event: AutoCombatRealtimeEvent | null | undefined;
+  nextEvent?: AutoCombatRealtimeEvent | null;
+}) {
+  const eventType = normalizeRealtimeEventType(params.event);
+  const nextEventType = normalizeRealtimeEventType(params.nextEvent);
+  const baseEventDelay = getRealtimeEventDelay(params.event);
+  const isQueuedKillingHit =
+    eventType === 'PLAYER_HIT' && nextEventType === 'MOB_DEFEATED';
+  const isQueuedSpawnFollowUp =
+    eventType === 'MOB_SPAWNED' && Boolean(nextEventType);
+  const eventDelay = isQueuedKillingHit
+    ? AUTO_COMBAT_REALTIME_QUEUED_KILLING_HIT_DELAY_MS
+    : isQueuedSpawnFollowUp
+      ? AUTO_COMBAT_REALTIME_QUEUED_SPAWN_DELAY_MS
+      : baseEventDelay;
+  const defaultImpactDelay = getRealtimeEventImpactDelay(
+    params.event,
+    eventDelay,
+  );
+  const visibleAfterImpactDelay = Math.max(
+    0,
+    eventDelay - defaultImpactDelay,
+  );
+
+  return {
+    impactDelay: defaultImpactDelay,
+    totalDelay: defaultImpactDelay + visibleAfterImpactDelay,
+    visibleAfterImpactDelay,
+  };
 }
 
 function parseOptionalTimestamp(value?: string | Date | null) {
@@ -1323,6 +1378,8 @@ export function buildMobStateFromRealtimeEvent(
   event: AutoCombatRealtimeEvent,
   fallback?: AutoCombatRealtimeMobState | null,
 ): AutoCombatRealtimeMobState | null {
+  const eventType = normalizeRealtimeEventType(event);
+  const isSpawnEvent = eventType === 'MOB_SPAWNED';
   const maxHp =
     getOptionalNumber(event.mobMaxHp) ??
     fallback?.maxHp ??
@@ -1343,10 +1400,15 @@ export function buildMobStateFromRealtimeEvent(
     {
       progressSeconds: event.battleProgressSeconds,
       progressPercent: event.battleProgressPercent,
-      cycleStartedAt: event.cycleStartedAt,
+      cycleStartedAt: isSpawnEvent
+        ? (event.cycleStartedAt ?? event.actionStartedAt ?? event.serverTime)
+        : event.cycleStartedAt,
       cycleDurationMs: event.cycleDurationMs,
       cycleDurationSeconds: event.cycleDurationSeconds,
-      progressUpdatedAt: event.progressUpdatedAt ?? event.serverTime,
+      progressUpdatedAt:
+        event.progressUpdatedAt ??
+        (isSpawnEvent ? event.actionStartedAt : undefined) ??
+        event.serverTime,
       serverNow: event.serverTime,
       estimatedKillTimeSeconds: event.estimatedKillTimeSeconds,
       baseKillTimeSeconds: event.baseKillTimeSeconds,

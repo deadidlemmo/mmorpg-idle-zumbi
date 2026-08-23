@@ -1,34 +1,34 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
+import assert from "node:assert/strict";
+import test from "node:test";
 import {
   autoCombatRealtimeReducer,
   initialAutoCombatRealtimeState,
   type AutoCombatRealtimeState,
-} from './autoCombatRealtime.reducer';
-import type { AutoCombatRealtimeEvent } from '../types/auto-combat.types';
+} from "./autoCombatRealtime.reducer";
+import type { AutoCombatRealtimeEvent } from "../types/auto-combat.types";
 
 function makeState(): AutoCombatRealtimeState {
   return {
     ...initialAutoCombatRealtimeState,
-    characterId: 'char-1',
+    characterId: "char-1",
     hasLoadedOnce: true,
     session: {
-      id: 'session-1',
-      characterId: 'char-1',
-      status: 'ACTIVE',
+      id: "session-1",
+      characterId: "char-1",
+      status: "ACTIVE",
       currentRound: 1,
       currentCombatIndex: 1,
     },
     character: {
-      id: 'char-1',
-      name: 'Sobrevivente',
+      id: "char-1",
+      name: "Sobrevivente",
       currentHp: 100,
       maxHp: 100,
       hpPercent: 100,
     },
     mob: {
-      id: 'mob-1',
-      name: 'Zumbi',
+      id: "mob-1",
+      name: "Zumbi",
       currentHp: 100,
       maxHp: 100,
       hpPercent: 100,
@@ -36,15 +36,18 @@ function makeState(): AutoCombatRealtimeState {
   };
 }
 
-function makeHit(sequence: number, mobCurrentHp: number): AutoCombatRealtimeEvent {
+function makeHit(
+  sequence: number,
+  mobCurrentHp: number,
+): AutoCombatRealtimeEvent {
   return {
-    characterId: 'char-1',
-    sessionId: 'session-1',
-    type: 'PLAYER_HIT',
-    actor: 'PLAYER',
-    target: 'MOB',
-    mobId: 'mob-1',
-    mobName: 'Zumbi',
+    characterId: "char-1",
+    sessionId: "session-1",
+    type: "PLAYER_HIT",
+    actor: "PLAYER",
+    target: "MOB",
+    mobId: "mob-1",
+    mobName: "Zumbi",
     mobCurrentHp,
     mobMaxHp: 100,
     characterCurrentHp: 100,
@@ -62,17 +65,17 @@ function enqueueAndProcess(
   event: AutoCombatRealtimeEvent,
 ) {
   const queued = autoCombatRealtimeReducer(state, {
-    type: 'ENQUEUE_EVENT',
-    characterId: 'char-1',
+    type: "ENQUEUE_EVENT",
+    characterId: "char-1",
     event,
   });
 
   return autoCombatRealtimeReducer(queued, {
-    type: 'PROCESS_NEXT_EVENT',
+    type: "PROCESS_NEXT_EVENT",
   });
 }
 
-test('agenda dano visual antes de aplicar o impacto', () => {
+test("agenda dano visual antes de aplicar o impacto", () => {
   const event = makeHit(1, 70);
   const started = enqueueAndProcess(makeState(), event);
 
@@ -82,7 +85,7 @@ test('agenda dano visual antes de aplicar o impacto', () => {
   assert.equal(started.battleLogEvents.length, 0);
 
   const impacted = autoCombatRealtimeReducer(started, {
-    type: 'APPLY_ACTIVE_EVENT_IMPACT',
+    type: "APPLY_ACTIVE_EVENT_IMPACT",
   });
 
   assert.equal(impacted.activeEventImpactApplied, true);
@@ -90,26 +93,26 @@ test('agenda dano visual antes de aplicar o impacto', () => {
   assert.equal(impacted.battleLogEvents.at(0), event);
 });
 
-test('status durante evento ativo não faz rollback do HP visual', () => {
+test("status durante evento ativo não faz rollback do HP visual", () => {
   const started = enqueueAndProcess(makeState(), makeHit(1, 70));
 
   const hydrated = autoCombatRealtimeReducer(started, {
-    type: 'HYDRATE_STATUS',
-    characterId: 'char-1',
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
     status: {
       active: true,
       hasActiveAutoCombat: true,
-      character: { id: 'char-1', currentHp: 100, maxHp: 100 },
+      character: { id: "char-1", currentHp: 100, maxHp: 100 },
       session: {
-        id: 'session-1',
-        characterId: 'char-1',
-        status: 'ACTIVE',
+        id: "session-1",
+        characterId: "char-1",
+        status: "ACTIVE",
         currentRound: 1,
         currentCombatIndex: 1,
       },
       currentMob: {
-        id: 'mob-1',
-        name: 'Zumbi',
+        id: "mob-1",
+        name: "Zumbi",
         currentHp: 70,
         maxHp: 100,
       },
@@ -120,10 +123,272 @@ test('status durante evento ativo não faz rollback do HP visual', () => {
   assert.equal(hydrated.activeEventImpactApplied, false);
 });
 
-test('ressincronizacao limpa mob visual antigo sem apagar sessao ativa', () => {
+test("status adiantado aguarda o evento de abate antes de trocar a instancia visual", () => {
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    snapshotSequence: 3,
+    lastAppliedEventSequence: 3,
+    session: {
+      ...makeState().session,
+      currentCombatIndex: 1,
+      enemyInstanceId: "enemy-1",
+      currentEnemyInstanceId: "enemy-1",
+      battleTargetTotal: 4,
+      battleTargetRemaining: 4,
+      battleProgress: {
+        cycleStartedAt: "2026-05-11T00:00:00.000Z",
+        cycleDurationMs: 8_000,
+      },
+      phase: "COMBAT_ACTIVE",
+    },
+    mob: {
+      ...makeState().mob,
+      enemyInstanceId: "enemy-1",
+      battleProgress: {
+        cycleStartedAt: "2026-05-11T00:00:00.000Z",
+        cycleDurationMs: 8_000,
+      },
+    },
+  };
+  const status = {
+    active: true,
+    hasActiveAutoCombat: true,
+    snapshotSequence: 4,
+    latestEventSequence: 4,
+    character: { id: "char-1", currentHp: 99, maxHp: 100 },
+    session: {
+      id: "session-1",
+      characterId: "char-1",
+      status: "ACTIVE",
+      currentRound: 2,
+      currentCombatIndex: 2,
+      enemyInstanceId: "enemy-2",
+      currentEnemyInstanceId: "enemy-2",
+      battleTargetTotal: 4,
+      battleTargetRemaining: 3,
+      battleProgress: {
+        cycleStartedAt: "2026-05-11T00:00:08.000Z",
+        cycleDurationMs: 8_000,
+      },
+      snapshotSequence: 4,
+      latestEventSequence: 4,
+      phase: "COMBAT_ACTIVE",
+    },
+    currentMob: {
+      id: "mob-1",
+      name: "Zumbi",
+      enemyInstanceId: "enemy-2",
+      currentHp: 100,
+      maxHp: 100,
+      battleProgress: {
+        cycleStartedAt: "2026-05-11T00:00:08.000Z",
+        cycleDurationMs: 8_000,
+      },
+    },
+  } as never;
+
+  const deferred = autoCombatRealtimeReducer(state, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status,
+  });
+
+  assert.equal(deferred.mob?.enemyInstanceId, "enemy-1");
+  assert.equal(deferred.session?.currentEnemyInstanceId, "enemy-1");
+  assert.equal(deferred.session?.currentCombatIndex, 1);
+  assert.equal(deferred.session?.battleTargetRemaining, 4);
+  assert.equal(
+    deferred.session?.battleProgress?.cycleStartedAt,
+    "2026-05-11T00:00:00.000Z",
+  );
+  assert.equal(deferred.character?.currentHp, 100);
+
+  const defeatEvent = {
+    characterId: "char-1",
+    sessionId: "session-1",
+    type: "MOB_DEFEATED",
+    actor: "PLAYER",
+    target: "MOB",
+    mobId: "mob-1",
+    mobName: "Zumbi",
+    enemyInstanceId: "enemy-1",
+    mobCurrentHp: 0,
+    mobMaxHp: 100,
+    characterCurrentHp: 99,
+    characterMaxHp: 100,
+    combatIndex: 1,
+    battleTargetTotal: 4,
+    battleTargetRemaining: 3,
+    cycleStartedAt: "2026-05-11T00:00:08.000Z",
+    cycleDurationMs: 8_000,
+    sequence: 4,
+  } as AutoCombatRealtimeEvent;
+  const impacted = autoCombatRealtimeReducer(
+    enqueueAndProcess(deferred, defeatEvent),
+    { type: "APPLY_ACTIVE_EVENT_IMPACT" },
+  );
+  const hydratedDuringDefeat = autoCombatRealtimeReducer(impacted, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status,
+  });
+
+  assert.equal(hydratedDuringDefeat.mob?.enemyInstanceId, "enemy-1");
+  assert.equal(hydratedDuringDefeat.session?.currentEnemyInstanceId, "enemy-1");
+  assert.equal(hydratedDuringDefeat.session?.currentCombatIndex, 1);
+  assert.equal(hydratedDuringDefeat.session?.battleTargetRemaining, 3);
+
+  const released = autoCombatRealtimeReducer(hydratedDuringDefeat, {
+    type: "CLEAR_ACTIVE_EVENT",
+  });
+
+  assert.equal(released.mob?.enemyInstanceId, "enemy-2");
+  assert.equal(released.session?.currentEnemyInstanceId, "enemy-2");
+  assert.equal(released.session?.currentCombatIndex, 2);
+  assert.equal(released.session?.battleTargetRemaining, 3);
+  assert.equal(released.visualCycleEnemyInstanceId, "enemy-2");
+  assert.ok(released.visualCycleStartedAtMs);
+});
+
+test("mantém a âncora visual do segundo mob durante os golpes", () => {
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    visualCycleEnemyInstanceId: "enemy-2",
+    visualCycleStartedAtMs: 10_000,
+    session: {
+      ...makeState().session,
+      currentCombatIndex: 2,
+      enemyInstanceId: "enemy-2",
+      currentEnemyInstanceId: "enemy-2",
+    },
+    mob: {
+      ...makeState().mob,
+      enemyInstanceId: "enemy-2",
+    },
+  };
+  const firstHit = {
+    ...makeHit(5, 80),
+    combatIndex: 2,
+    enemyInstanceId: "enemy-2",
+    mobHpBefore: 100,
+    mobHpAfter: 80,
+    targetHpBefore: 100,
+    targetHpAfter: 80,
+  } as AutoCombatRealtimeEvent;
+  const started = enqueueAndProcess(state, firstHit);
+
+  assert.equal(started.mob?.currentHp, 100);
+  assert.equal(started.visualCycleEnemyInstanceId, "enemy-2");
+  assert.equal(started.visualCycleStartedAtMs, 10_000);
+
+  const impacted = autoCombatRealtimeReducer(started, {
+    type: "APPLY_ACTIVE_EVENT_IMPACT",
+  });
+
+  assert.equal(impacted.mob?.currentHp, 80);
+  assert.equal(impacted.visualCycleEnemyInstanceId, "enemy-2");
+  assert.equal(impacted.visualCycleStartedAtMs, 10_000);
+  assert.equal(impacted.activeEventImpactApplied, true);
+});
+
+test("snapshot terminal aguarda o impacto e o recibo do ultimo mob", () => {
+  const killingHit = {
+    ...makeHit(5, 0),
+    enemyInstanceId: "enemy-2",
+    combatIndex: 2,
+    mobHpBefore: 100,
+    mobHpAfter: 0,
+    targetHpBefore: 100,
+    targetHpAfter: 0,
+  } as AutoCombatRealtimeEvent;
+  const defeated = {
+    ...killingHit,
+    type: "MOB_DEFEATED",
+    sequence: 6,
+    battleTargetTotal: 2,
+    battleTargetRemaining: 0,
+  } as AutoCombatRealtimeEvent;
+  const terminalStatus = {
+    active: false,
+    hasActiveAutoCombat: false,
+    snapshotSequence: 6,
+    character: { id: "char-1", currentHp: 100, maxHp: 100 },
+    session: {
+      id: "session-1",
+      characterId: "char-1",
+      status: "FINISHED",
+      currentRound: 5,
+      currentCombatIndex: 2,
+      enemyInstanceId: "enemy-2",
+      currentEnemyInstanceId: "enemy-2",
+      battleTargetTotal: 2,
+      battleTargetRemaining: 0,
+      snapshotSequence: 6,
+      latestEventSequence: 6,
+      phase: "MOB_DEFEATED",
+    },
+    currentMob: {
+      id: "mob-1",
+      name: "Zumbi",
+      enemyInstanceId: "enemy-2",
+      currentHp: 0,
+      maxHp: 100,
+    },
+  } as never;
+  const queued = autoCombatRealtimeReducer(makeState(), {
+    type: "ENQUEUE_EVENT",
+    characterId: "char-1",
+    event: killingHit,
+  });
+  const withDefeatQueued = autoCombatRealtimeReducer(queued, {
+    type: "ENQUEUE_EVENT",
+    characterId: "char-1",
+    event: defeated,
+  });
+  const started = autoCombatRealtimeReducer(withDefeatQueued, {
+    type: "PROCESS_NEXT_EVENT",
+  });
+  const deferredTerminal = autoCombatRealtimeReducer(started, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: terminalStatus,
+  });
+
+  assert.equal(deferredTerminal.session?.status, "ACTIVE");
+  assert.equal(deferredTerminal.mob?.currentHp, 100);
+  assert.equal(deferredTerminal.pendingTerminalStatus, terminalStatus);
+
+  const hitImpacted = autoCombatRealtimeReducer(deferredTerminal, {
+    type: "APPLY_ACTIVE_EVENT_IMPACT",
+  });
+  assert.equal(hitImpacted.mob?.currentHp, 0);
+
+  const hitReleased = autoCombatRealtimeReducer(hitImpacted, {
+    type: "CLEAR_ACTIVE_EVENT",
+  });
+  assert.equal(hitReleased.session?.status, "ACTIVE");
+  assert.equal(hitReleased.eventQueue.length, 1);
+
+  const defeatStarted = autoCombatRealtimeReducer(hitReleased, {
+    type: "PROCESS_NEXT_EVENT",
+  });
+  const defeatImpacted = autoCombatRealtimeReducer(defeatStarted, {
+    type: "APPLY_ACTIVE_EVENT_IMPACT",
+  });
+  const finished = autoCombatRealtimeReducer(defeatImpacted, {
+    type: "CLEAR_ACTIVE_EVENT",
+  });
+
+  assert.equal(finished.session?.status, "FINISHED");
+  assert.equal(finished.pendingTerminalStatus, null);
+  assert.equal(finished.eventQueue.length, 0);
+  assert.equal(finished.mob?.currentHp, 0);
+});
+
+test("ressincronizacao limpa mob visual antigo sem apagar sessao ativa", () => {
   const state = makeState();
   const syncing = autoCombatRealtimeReducer(state, {
-    type: 'SET_SYNCHRONIZING',
+    type: "SET_SYNCHRONIZING",
     isSynchronizing: true,
     clearCombatView: true,
   });
@@ -136,64 +401,68 @@ test('ressincronizacao limpa mob visual antigo sem apagar sessao ativa', () => {
   assert.equal(syncing.eventQueue.length, 0);
 });
 
-test('múltiplas ações em autocombat avançam em sequência monotônica', () => {
+test("múltiplas ações em autocombat avançam em sequência monotônica", () => {
   const firstImpact = autoCombatRealtimeReducer(
     enqueueAndProcess(makeState(), makeHit(1, 70)),
-    { type: 'APPLY_ACTIVE_EVENT_IMPACT' },
+    { type: "APPLY_ACTIVE_EVENT_IMPACT" },
   );
   const firstCleared = autoCombatRealtimeReducer(firstImpact, {
-    type: 'CLEAR_ACTIVE_EVENT',
+    type: "CLEAR_ACTIVE_EVENT",
   });
 
   const secondImpact = autoCombatRealtimeReducer(
     enqueueAndProcess(firstCleared, makeHit(2, 30)),
-    { type: 'APPLY_ACTIVE_EVENT_IMPACT' },
+    { type: "APPLY_ACTIVE_EVENT_IMPACT" },
   );
 
   assert.equal(secondImpact.mob?.currentHp, 30);
   assert.deepEqual(
-    secondImpact.battleLogEvents.map((event) => (event as { sequence?: number }).sequence),
+    secondImpact.battleLogEvents.map(
+      (event) => (event as { sequence?: number }).sequence,
+    ),
     [2, 1],
   );
 });
 
-test('eventos atrasados não reordenam nem restauram estado antigo', () => {
+test("eventos atrasados não reordenam nem restauram estado antigo", () => {
   const firstImpact = autoCombatRealtimeReducer(
     enqueueAndProcess(makeState(), makeHit(1, 70)),
-    { type: 'APPLY_ACTIVE_EVENT_IMPACT' },
+    { type: "APPLY_ACTIVE_EVENT_IMPACT" },
   );
   const firstCleared = autoCombatRealtimeReducer(firstImpact, {
-    type: 'CLEAR_ACTIVE_EVENT',
+    type: "CLEAR_ACTIVE_EVENT",
   });
   const secondImpact = autoCombatRealtimeReducer(
     enqueueAndProcess(firstCleared, makeHit(2, 30)),
-    { type: 'APPLY_ACTIVE_EVENT_IMPACT' },
+    { type: "APPLY_ACTIVE_EVENT_IMPACT" },
   );
 
   const restored = autoCombatRealtimeReducer(secondImpact, {
-    type: 'HYDRATE_RECENT_EVENTS',
-    characterId: 'char-1',
-    sessionId: 'session-1',
+    type: "HYDRATE_RECENT_EVENTS",
+    characterId: "char-1",
+    sessionId: "session-1",
     events: [makeHit(1, 70)],
     applySnapshot: true,
   });
 
   assert.equal(restored.mob?.currentHp, 30);
   assert.deepEqual(
-    restored.battleLogEvents.map((event) => (event as { sequence?: number }).sequence),
+    restored.battleLogEvents.map(
+      (event) => (event as { sequence?: number }).sequence,
+    ),
     [2, 1],
   );
 });
 
-test('status canônico não antecipa EXP antes do MOB_DEFEATED visual', () => {
+test("status canônico não antecipa EXP antes do MOB_DEFEATED visual", () => {
   const pendingHit = makeHit(4, 10);
   const state: AutoCombatRealtimeState = {
     ...makeState(),
     activeEvent: pendingHit,
     activeEventImpactApplied: true,
     character: {
-      id: 'char-1',
-      name: 'Sobrevivente',
+      id: "char-1",
+      name: "Sobrevivente",
       currentHp: 60,
       maxHp: 100,
       hpPercent: 60,
@@ -205,7 +474,7 @@ test('status canônico não antecipa EXP antes do MOB_DEFEATED visual', () => {
       xpProgressPercent: 50,
     },
     displayTotals: {
-      sessionId: 'session-1',
+      sessionId: "session-1",
       totalKills: 0,
       totalCombats: 0,
       totalRounds: 4,
@@ -216,14 +485,14 @@ test('status canônico não antecipa EXP antes do MOB_DEFEATED visual', () => {
   };
 
   const hydrated = autoCombatRealtimeReducer(state, {
-    type: 'HYDRATE_STATUS',
-    characterId: 'char-1',
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
     status: {
       active: true,
       hasActiveAutoCombat: true,
       character: {
-        id: 'char-1',
-        name: 'Sobrevivente',
+        id: "char-1",
+        name: "Sobrevivente",
         level: 1,
         xp: 150,
         totalXp: 150,
@@ -234,9 +503,9 @@ test('status canônico não antecipa EXP antes do MOB_DEFEATED visual', () => {
         xpProgressPercent: 75,
       },
       session: {
-        id: 'session-1',
-        characterId: 'char-1',
-        status: 'ACTIVE',
+        id: "session-1",
+        characterId: "char-1",
+        status: "ACTIVE",
         currentRound: 5,
         currentCombatIndex: 1,
         totalCombatsResolved: 1,
@@ -244,8 +513,8 @@ test('status canônico não antecipa EXP antes do MOB_DEFEATED visual', () => {
         totalXpGained: 50,
       },
       currentMob: {
-        id: 'mob-1',
-        name: 'Zumbi',
+        id: "mob-1",
+        name: "Zumbi",
         currentHp: 0,
         maxHp: 100,
       },
@@ -258,12 +527,12 @@ test('status canônico não antecipa EXP antes do MOB_DEFEATED visual', () => {
   assert.equal(hydrated.displayTotals?.totalXpGained, 0);
 });
 
-test('POTION_USED não herda EXP canônica pendente de status antes do abate', () => {
+test("POTION_USED não herda EXP canônica pendente de status antes do abate", () => {
   const state: AutoCombatRealtimeState = {
     ...makeState(),
     character: {
-      id: 'char-1',
-      name: 'Sobrevivente',
+      id: "char-1",
+      name: "Sobrevivente",
       currentHp: 40,
       maxHp: 100,
       hpPercent: 40,
@@ -275,7 +544,7 @@ test('POTION_USED não herda EXP canônica pendente de status antes do abate', (
       xpProgressPercent: 50,
     },
     totals: {
-      sessionId: 'session-1',
+      sessionId: "session-1",
       totalKills: 1,
       totalCombats: 1,
       totalRounds: 5,
@@ -284,7 +553,7 @@ test('POTION_USED não herda EXP canônica pendente de status antes do abate', (
       potionsUsed: 1,
     },
     displayTotals: {
-      sessionId: 'session-1',
+      sessionId: "session-1",
       totalKills: 0,
       totalCombats: 0,
       totalRounds: 4,
@@ -295,13 +564,13 @@ test('POTION_USED não herda EXP canônica pendente de status antes do abate', (
   };
 
   const potionEvent = {
-    characterId: 'char-1',
-    sessionId: 'session-1',
-    type: 'POTION_USED',
-    actor: 'PLAYER',
-    target: 'PLAYER',
-    mobId: 'mob-1',
-    mobName: 'Zumbi',
+    characterId: "char-1",
+    sessionId: "session-1",
+    type: "POTION_USED",
+    actor: "PLAYER",
+    target: "PLAYER",
+    mobId: "mob-1",
+    mobName: "Zumbi",
     mobCurrentHp: 10,
     mobMaxHp: 100,
     characterCurrentHp: 90,
@@ -312,13 +581,13 @@ test('POTION_USED não herda EXP canônica pendente de status antes do abate', (
     totalKills: 0,
     totalXpGained: 0,
     potionsUsed: 1,
-    createdAt: '2026-05-11T00:00:05.000Z',
+    createdAt: "2026-05-11T00:00:05.000Z",
     sequence: 5,
   } as AutoCombatRealtimeEvent;
 
   const afterPotion = autoCombatRealtimeReducer(
     enqueueAndProcess(state, potionEvent),
-    { type: 'CLEAR_ACTIVE_EVENT' },
+    { type: "CLEAR_ACTIVE_EVENT" },
   );
 
   assert.equal(afterPotion.character?.totalXp, 100);
@@ -327,13 +596,13 @@ test('POTION_USED não herda EXP canônica pendente de status antes do abate', (
   assert.equal(afterPotion.displayTotals?.totalXpGained, 0);
 
   const defeatEvent = {
-    characterId: 'char-1',
-    sessionId: 'session-1',
-    type: 'MOB_DEFEATED',
-    actor: 'PLAYER',
-    target: 'MOB',
-    mobId: 'mob-1',
-    mobName: 'Zumbi',
+    characterId: "char-1",
+    sessionId: "session-1",
+    type: "MOB_DEFEATED",
+    actor: "PLAYER",
+    target: "MOB",
+    mobId: "mob-1",
+    mobName: "Zumbi",
     mobCurrentHp: 0,
     mobMaxHp: 100,
     characterCurrentHp: 90,
@@ -349,13 +618,13 @@ test('POTION_USED não herda EXP canônica pendente de status antes do abate', (
     totalKills: 1,
     totalXpGained: 50,
     potionsUsed: 1,
-    createdAt: '2026-05-11T00:00:06.000Z',
+    createdAt: "2026-05-11T00:00:06.000Z",
     sequence: 6,
   } as AutoCombatRealtimeEvent;
 
   const afterDefeat = autoCombatRealtimeReducer(
     enqueueAndProcess(afterPotion, defeatEvent),
-    { type: 'APPLY_ACTIVE_EVENT_IMPACT' },
+    { type: "APPLY_ACTIVE_EVENT_IMPACT" },
   );
 
   assert.equal(afterDefeat.character?.totalXp, 150);
@@ -364,15 +633,15 @@ test('POTION_USED não herda EXP canônica pendente de status antes do abate', (
   assert.equal(afterDefeat.displayTotals?.totalXpGained, 50);
 });
 
-test('overview canônico não antecipa EXP durante timeline visual pendente', () => {
+test("overview canônico não antecipa EXP durante timeline visual pendente", () => {
   const pendingHit = makeHit(5, 10);
   const state: AutoCombatRealtimeState = {
     ...makeState(),
     activeEvent: pendingHit,
     activeEventImpactApplied: true,
     character: {
-      id: 'char-1',
-      name: 'Sobrevivente',
+      id: "char-1",
+      name: "Sobrevivente",
       currentHp: 70,
       maxHp: 100,
       hpPercent: 70,
@@ -386,12 +655,12 @@ test('overview canônico não antecipa EXP durante timeline visual pendente', ()
   };
 
   const hydrated = autoCombatRealtimeReducer(state, {
-    type: 'HYDRATE_OVERVIEW',
-    characterId: 'char-1',
+    type: "HYDRATE_OVERVIEW",
+    characterId: "char-1",
     overview: {
       character: {
-        id: 'char-1',
-        name: 'Sobrevivente',
+        id: "char-1",
+        name: "Sobrevivente",
         level: 1,
         xp: 150,
         totalXp: 150,
@@ -409,12 +678,12 @@ test('overview canônico não antecipa EXP durante timeline visual pendente', ()
   assert.equal(hydrated.character?.xpProgressPercent, 50);
 });
 
-test('status canônico reconcilia totais quando não há timeline visual pendente', () => {
+test("status canônico reconcilia totais quando não há timeline visual pendente", () => {
   const state: AutoCombatRealtimeState = {
     ...makeState(),
     character: {
-      id: 'char-1',
-      name: 'Sobrevivente',
+      id: "char-1",
+      name: "Sobrevivente",
       currentHp: 60,
       maxHp: 100,
       hpPercent: 60,
@@ -426,7 +695,7 @@ test('status canônico reconcilia totais quando não há timeline visual pendent
       xpProgressPercent: 50,
     },
     displayTotals: {
-      sessionId: 'session-1',
+      sessionId: "session-1",
       totalKills: 0,
       totalCombats: 0,
       totalRounds: 4,
@@ -437,14 +706,14 @@ test('status canônico reconcilia totais quando não há timeline visual pendent
   };
 
   const hydrated = autoCombatRealtimeReducer(state, {
-    type: 'HYDRATE_STATUS',
-    characterId: 'char-1',
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
     status: {
       active: true,
       hasActiveAutoCombat: true,
       character: {
-        id: 'char-1',
-        name: 'Sobrevivente',
+        id: "char-1",
+        name: "Sobrevivente",
         level: 1,
         xp: 150,
         totalXp: 150,
@@ -455,9 +724,9 @@ test('status canônico reconcilia totais quando não há timeline visual pendent
         xpProgressPercent: 75,
       },
       session: {
-        id: 'session-1',
-        characterId: 'char-1',
-        status: 'ACTIVE',
+        id: "session-1",
+        characterId: "char-1",
+        status: "ACTIVE",
         currentRound: 5,
         currentCombatIndex: 2,
         totalCombatsResolved: 1,
@@ -481,8 +750,8 @@ test('status canônico reconcilia totais quando não há timeline visual pendent
         },
       },
       currentMob: {
-        id: 'mob-2',
-        name: 'Zumbi Novo',
+        id: "mob-2",
+        name: "Zumbi Novo",
         currentHp: 100,
         maxHp: 100,
       },
@@ -498,11 +767,11 @@ test('status canônico reconcilia totais quando não há timeline visual pendent
   assert.equal(hydrated.displayTotals?.premiumBonusXp, 5);
 });
 
-test('MOB_DEFEATED soma Base e Premium sobre totais canônicos após F5', () => {
+test("MOB_DEFEATED soma Base e Premium sobre totais canônicos após F5", () => {
   const state: AutoCombatRealtimeState = {
     ...makeState(),
     totals: {
-      sessionId: 'session-1',
+      sessionId: "session-1",
       currentCombatIndex: 16,
       totalKills: 15,
       totalCombats: 15,
@@ -520,13 +789,13 @@ test('MOB_DEFEATED soma Base e Premium sobre totais canônicos após F5', () => 
   };
 
   const defeatEvent = {
-    characterId: 'char-1',
-    sessionId: 'session-1',
-    type: 'MOB_DEFEATED',
-    actor: 'PLAYER',
-    target: 'MOB',
-    mobId: 'mob-16',
-    mobName: 'Zumbi',
+    characterId: "char-1",
+    sessionId: "session-1",
+    type: "MOB_DEFEATED",
+    actor: "PLAYER",
+    target: "MOB",
+    mobId: "mob-16",
+    mobName: "Zumbi",
     mobCurrentHp: 0,
     mobMaxHp: 100,
     characterCurrentHp: 90,
@@ -545,13 +814,13 @@ test('MOB_DEFEATED soma Base e Premium sobre totais canônicos após F5', () => 
     totalXpGained: 83,
     totalLoot: 21,
     potionsUsed: 0,
-    createdAt: '2026-05-11T00:00:07.000Z',
+    createdAt: "2026-05-11T00:00:07.000Z",
     sequence: 61,
   } as AutoCombatRealtimeEvent;
 
   const afterDefeat = autoCombatRealtimeReducer(
     enqueueAndProcess(state, defeatEvent),
-    { type: 'APPLY_ACTIVE_EVENT_IMPACT' },
+    { type: "APPLY_ACTIVE_EVENT_IMPACT" },
   );
 
   assert.equal(afterDefeat.displayTotals?.totalKills, 16);

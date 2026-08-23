@@ -43,6 +43,7 @@ import {
   formatMaterialOrigin,
   getInventoryBonusList,
   getInventoryItemIcon,
+  getInventoryItemImageUrl,
   getInventoryItemInitials,
   getInventoryPrimaryDetail,
 } from '../utils/inventory.utils';
@@ -516,6 +517,7 @@ function InventoryDesktopDetailsPanel({
   const typeLabel = formatInventoryType(entry);
   const primaryDetail = getInventoryPrimaryDetail(entry);
   const details = buildDetails(entry);
+  const imageUrl = getInventoryItemImageUrl(entry);
 
   const hasStats =
     bonuses.length > 0 ||
@@ -541,11 +543,22 @@ function InventoryDesktopDetailsPanel({
           className="inventory-item-card__icon inventory-details-panel__icon"
           aria-hidden="true"
         >
-          <span className="inventory-item-card__glyph">
-            {getInventoryItemIcon(entry)}
-          </span>
+          {imageUrl ? (
+            <img
+              className="inventory-item-card__image"
+              src={imageUrl}
+              alt=""
+              loading="lazy"
+            />
+          ) : (
+            <>
+              <span className="inventory-item-card__glyph">
+                {getInventoryItemIcon(entry)}
+              </span>
 
-          <strong>{getInventoryItemInitials(item)}</strong>
+              <strong>{getInventoryItemInitials(item)}</strong>
+            </>
+          )}
         </div>
 
         <span className="inventory-details-panel__eyebrow">
@@ -686,6 +699,7 @@ function InventoryBlackMarketSaleModal({
     maxQuantity > 0 ? Math.min(quantity, maxQuantity) : 0;
   const totalValue = unitValue * effectiveQuantity;
   const canSell = maxQuantity > 0 && !isBusy;
+  const imageUrl = getInventoryItemImageUrl(entry);
   const quickQuantities = [1, 5, 10].filter(
     (quickQuantity) => quickQuantity <= Math.max(1, maxQuantity),
   );
@@ -723,11 +737,21 @@ function InventoryBlackMarketSaleModal({
             className="inventory-item-card__icon inventory-black-market-modal__icon"
             aria-hidden="true"
           >
-            <span className="inventory-item-card__glyph">
-              {getInventoryItemIcon(entry)}
-            </span>
+            {imageUrl ? (
+              <img
+                className="inventory-item-card__image"
+                src={imageUrl}
+                alt=""
+              />
+            ) : (
+              <>
+                <span className="inventory-item-card__glyph">
+                  {getInventoryItemIcon(entry)}
+                </span>
 
-            <strong>{getInventoryItemInitials(item)}</strong>
+                <strong>{getInventoryItemInitials(item)}</strong>
+              </>
+            )}
           </div>
 
           <span>Mercado Negro</span>
@@ -1573,7 +1597,7 @@ export function InventoryPage() {
                     <strong>Banco vazio</strong>
                     <p>
                       Selecione um item da mochila e use Enviar ao banco para
-                      liberar espa\u00e7o no invent\u00e1rio.
+                      liberar espaço no inventário.
                     </p>
                   </div>
                 ) : null}

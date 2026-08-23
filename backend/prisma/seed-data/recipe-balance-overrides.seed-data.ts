@@ -31,10 +31,10 @@ export const recipeQuantityPolicyByTier: Record<
   RecipeQuantityTierPolicy
 > = {
   1: {
-    mainGatheringQuantity: 80,
-    secondaryGatheringQuantity: 40,
-    biomaterialDropQuantity: 9,
-    residueDropQuantity: 16,
+    mainGatheringQuantity: 20,
+    secondaryGatheringQuantity: 10,
+    biomaterialDropQuantity: 2,
+    residueDropQuantity: 4,
   },
   2: {
     mainGatheringQuantity: 80,

@@ -16,6 +16,11 @@ import {
 import { getGatheringXpPerUnitForTier } from '../src/common/config/gathering.config';
 import { classDefinitions } from './seed-data/classes.seed-data';
 import { consumableDefinitions } from './seed-data/consumables.seed-data';
+import {
+  cosmeticCollectionDefinitions,
+  cosmeticDefinitions,
+  retiredCosmeticCollectionKeys,
+} from './seed-data/cosmetics.seed-data';
 import { encounterDefinitions } from './seed-data/encounters.seed-data';
 import { gatheringDefinitions } from './seed-data/gathering.seed-data';
 import { incursionDefinitions } from './seed-data/incursions.seed-data';
@@ -1152,6 +1157,92 @@ async function main() {
     classesByName.set(gameClass.name, gameClass);
   }
 
+  console.log('Criando/atualizando catálogo de cosméticos...');
+
+  const cosmeticCollectionsByKey = new Map<string, string>();
+
+  for (const collectionDefinition of cosmeticCollectionDefinitions) {
+    const collection = await prisma.cosmeticCollection.upsert({
+      where: { key: collectionDefinition.key },
+      update: {
+        name: collectionDefinition.name,
+        description: collectionDefinition.description,
+        coverAssetKey: collectionDefinition.coverAssetKey ?? null,
+        sortOrder: collectionDefinition.sortOrder,
+        isActive: true,
+      },
+      create: {
+        ...collectionDefinition,
+        isActive: true,
+      },
+    });
+
+    cosmeticCollectionsByKey.set(collection.key, collection.id);
+  }
+
+  for (const cosmeticDefinition of cosmeticDefinitions) {
+    const collectionId = cosmeticCollectionsByKey.get(
+      cosmeticDefinition.collectionKey,
+    );
+
+    if (!collectionId) {
+      throw new Error(
+        `Coleção cosmética não encontrada: ${cosmeticDefinition.collectionKey}`,
+      );
+    }
+
+    const classId = cosmeticDefinition.className
+      ? getRequiredClass(classesByName, cosmeticDefinition.className).id
+      : null;
+
+    const data = {
+      name: cosmeticDefinition.name,
+      description: cosmeticDefinition.description,
+      type: cosmeticDefinition.type,
+      accessType: cosmeticDefinition.accessType,
+      rarity: cosmeticDefinition.rarity,
+      assetKey: cosmeticDefinition.assetKey ?? null,
+      effectPreset: cosmeticDefinition.effectPreset ?? null,
+      displayText: cosmeticDefinition.displayText ?? null,
+      accentColor: cosmeticDefinition.accentColor ?? null,
+      avatarPresentation: cosmeticDefinition.avatarPresentation ?? null,
+      avatarRepresentation: cosmeticDefinition.avatarRepresentation ?? null,
+      representationLabel: cosmeticDefinition.representationLabel ?? null,
+      classId,
+      collectionId,
+      isActive: true,
+      sortOrder: cosmeticDefinition.sortOrder,
+    };
+
+    await prisma.cosmetic.upsert({
+      where: { key: cosmeticDefinition.key },
+      update: data,
+      create: {
+        key: cosmeticDefinition.key,
+        ...data,
+      },
+    });
+  }
+
+  const retiredCollections = await prisma.cosmeticCollection.findMany({
+    where: { key: { in: [...retiredCosmeticCollectionKeys] } },
+    select: { id: true },
+  });
+
+  if (retiredCollections.length > 0) {
+    const retiredCollectionIds = retiredCollections.map(
+      (collection) => collection.id,
+    );
+    await prisma.cosmetic.updateMany({
+      where: { collectionId: { in: retiredCollectionIds } },
+      data: { isActive: false },
+    });
+    await prisma.cosmeticCollection.updateMany({
+      where: { id: { in: retiredCollectionIds } },
+      data: { isActive: false },
+    });
+  }
+
   console.log('Criando/atualizando mapas e submapas...');
 
   const mapsByName = new Map<string, GameMap>();
@@ -1426,6 +1517,8 @@ async function main() {
       'T9-T10+': Rarity.LEGENDARY,
     },
     classes: Array.from(classesByName.keys()),
+    colecoesCosmeticasRegistradas: cosmeticCollectionDefinitions.length,
+    cosmeticosRegistrados: cosmeticDefinitions.length,
     mapasRegistrados: mapDefinitions.length,
     subMapasRegistrados: mapDefinitions.reduce(
       (total, mapDefinition) => total + mapDefinition.subMaps.length,

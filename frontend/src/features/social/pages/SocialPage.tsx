@@ -2,6 +2,7 @@ import { isAxiosError } from "axios";
 import {
   Check,
   Clock3,
+  Eye,
   MailPlus,
   Send,
   Trash2,
@@ -10,7 +11,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { CharacterPortrait } from "../../cosmetics/components/CharacterPortrait";
 import { normalizeClassName } from "../../characters/api/characters.api";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
@@ -66,21 +68,25 @@ function FriendshipRow({
   isBusy,
   onAccept,
   onRemove,
+  onInspect,
 }: {
   friendship: Friendship;
   kind: "friend" | "incoming" | "outgoing";
   isBusy: boolean;
   onAccept?: () => void;
   onRemove: () => void;
+  onInspect?: () => void;
 }) {
   const leadCharacter = friendship.user.characters[0];
-  const initials = leadCharacter?.name.slice(0, 2).toUpperCase() ?? "--";
 
   return (
     <article className="social-row">
-      <div className="social-row__avatar" aria-hidden="true">
-        {initials}
-      </div>
+      <CharacterPortrait
+        className="social-row__avatar"
+        name={leadCharacter?.name ?? friendship.user.email}
+        avatarKey={leadCharacter?.avatarKey}
+        decorative
+      />
       <div className="social-row__identity">
         <strong>{leadCharacter?.name ?? friendship.user.email}</strong>
         <span>
@@ -106,6 +112,17 @@ function FriendshipRow({
         )}
       </div>
       <div className="social-row__actions">
+        {onInspect ? (
+          <button
+            className="is-inspect"
+            type="button"
+            title="Inspecionar personagem"
+            aria-label="Inspecionar personagem"
+            onClick={onInspect}
+          >
+            <Eye size={16} />
+          </button>
+        ) : null}
         {kind === "incoming" && onAccept ? (
           <button
             className="is-primary"
@@ -134,6 +151,7 @@ function FriendshipRow({
 
 export function SocialPage() {
   const { characterId } = useParams();
+  const navigate = useNavigate();
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
@@ -290,6 +308,14 @@ export function SocialPage() {
                       void execute(friendship.id, () =>
                         removeFriendship(friendship.id),
                       )
+                    }
+                    onInspect={
+                      friendship.user.characters[0]
+                        ? () =>
+                            navigate(
+                              `/dashboard/${characterId}/inspect/${friendship.user.characters[0].id}`,
+                            )
+                        : undefined
                     }
                   />
                 ))}

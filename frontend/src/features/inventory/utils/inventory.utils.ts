@@ -4,6 +4,9 @@ import type {
   InventoryFilterOption,
   InventoryItemDetails,
 } from '../types/inventory.types';
+import { getConsumableItemImageUrl } from '../../consumables/utils/consumableItemAssets';
+import { getEquipmentItemImageUrl } from '../../equipment/utils/equipmentItemAssets';
+import { getGatheringMaterialImageUrl } from '../../gathering/utils/gatheringMaterialAssets';
 
 const FILTER_ORDER: Array<Omit<InventoryFilterOption, 'count'>> = [
   { key: 'ALL', label: 'Todos' },
@@ -135,6 +138,31 @@ export function getInventoryItemIcon(entry: InventoryEntry) {
   if (category === 'RESOURCE') return '◈';
 
   return '▦';
+}
+
+export function getInventoryItemImageUrl(entry: InventoryEntry) {
+  const category = getInventoryItemCategory(entry);
+
+  if (category === 'EQUIPMENT') {
+    return getEquipmentItemImageUrl(entry.item);
+  }
+
+  if (category === 'CONSUMABLE') {
+    return getConsumableItemImageUrl(entry.item);
+  }
+
+  if (category === 'MATERIAL') {
+    return getGatheringMaterialImageUrl(entry.item);
+  }
+
+  return (
+    entry.item.imageUrl ??
+    entry.item.iconUrl ??
+    entry.item.image ??
+    entry.item.iconPath ??
+    entry.item.icon ??
+    null
+  );
 }
 
 export function getInventoryPrimaryDetail(entry: InventoryEntry) {

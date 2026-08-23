@@ -291,6 +291,7 @@ export function EquipmentPage() {
   const totalStats = equipmentResponse?.stats?.totalPrimaryStats;
   const equipmentStats = equipmentResponse?.stats?.equipmentBonusStats;
   const derivedStats = equipmentResponse?.stats?.derivedCombatStats;
+  const equipmentProgression = equipmentResponse?.stats?.equipmentProgression;
 
   return (
     <DashboardLayout character={character} hideHero>
@@ -420,6 +421,33 @@ export function EquipmentPage() {
                 <dd>{derivedStats?.maxHp ?? character.maxHp}</dd>
               </div>
             </dl>
+
+            {equipmentProgression ? (
+              <div className="equipment-progression">
+                <div>
+                  <span>SINERGIA DE EQUIPAMENTO</span>
+                  <strong>{equipmentProgression.craftedPieces}/6 peças</strong>
+                </div>
+                <div className="equipment-progression__track" aria-hidden="true">
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <i
+                      key={index}
+                      className={
+                        index < equipmentProgression.craftedPieces
+                          ? 'is-active'
+                          : ''
+                      }
+                    />
+                  ))}
+                </div>
+                <small>
+                  +{equipmentProgression.bonusPercent}% em ataque, defesa e vida
+                  {equipmentProgression.nextMilestone
+                    ? ` · próximo bônus com ${equipmentProgression.nextMilestone} peças`
+                    : ' · bônus máximo ativo'}
+                </small>
+              </div>
+            ) : null}
           </aside>
         </div>
 

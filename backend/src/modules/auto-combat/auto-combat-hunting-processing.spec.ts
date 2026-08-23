@@ -874,7 +874,7 @@ describe('AutoCombatService hunting processing', () => {
     });
   });
 
-  it('finaliza a caca quando o limite da sessao e atingido durante o processamento', async () => {
+  it('preserva os rastreados quando o limite da caca e atingido', async () => {
     const { service, tx, gateway } = createServiceHarness();
     const now = new Date('2026-06-02T12:00:00.000Z');
     const session = createSession({
@@ -883,6 +883,25 @@ describe('AutoCombatService hunting processing', () => {
       lastProcessedAt: new Date(now.getTime() - 90_000),
       lastHuntProcessedAt: new Date(now.getTime() - 90_000),
       endsAt: now,
+      huntBatch: {
+        id: 'hunt-batch-1',
+        status: AutoCombatHuntBatchStatus.HUNTING,
+        lastProcessedAt: new Date(now.getTime() - 90_000),
+        foundEnemiesCount: 1,
+        huntingXpGained: 0,
+        selectedEncounter: null,
+        selectedEncounterId: null,
+        selectedEncounterMobId: null,
+        mobs: [
+          {
+            mobId: 'mob-1',
+            encounterId: 'encounter-1',
+            foundCount: 1,
+            remainingCount: 1,
+            weightSnapshot: 100,
+          },
+        ],
+      },
     });
 
     await (service as any).processHuntingSession(session);
@@ -890,12 +909,22 @@ describe('AutoCombatService hunting processing', () => {
     expect(tx.autoCombatSession.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          status: AutoCombatSessionStatus.FINISHED,
-          finishedAt: now,
+          phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+          huntStoppedAt: now,
         }),
       }),
     );
-    expect(gateway.emitFinished).toHaveBeenCalled();
+    expect(tx.autoCombatHuntBatch.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: AutoCombatHuntBatchStatus.READY,
+          stoppedAt: now,
+          consumedAt: null,
+          cancelledAt: null,
+        }),
+      }),
+    );
+    expect(gateway.emitFinished).not.toHaveBeenCalled();
   });
 
   it('aborta sem duplicar contadores quando outra chamada ja processou o mesmo intervalo', async () => {

@@ -10,17 +10,25 @@ import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import { getOnlinePlayersStatus } from "../api/dashboard.api";
 import { useAutoCombatRealtimeState } from "../../auto-combat/realtime/useAutoCombatRealtime";
 import { normalizeClassName } from "../../characters/api/characters.api";
-import { getAvatarImage } from "../../characters/constants/avatar-options";
 import {
   getCharacterClass,
   getCharacterInitials,
 } from "../../characters/types/character.types";
+import { CharacterPortrait } from "../../cosmetics/components/CharacterPortrait";
+import {
+  getCosmeticEffectClass,
+  getCosmeticImage,
+  resolveCharacterPortraitImage,
+} from "../../cosmetics/constants/cosmetic-assets";
 import type { DashboardCharacterViewModel } from "../types/dashboard.types";
+import { TutorialBanner } from "../../progression/components/TutorialBanner";
+import { GeneralChatDock } from "../../chat/components/GeneralChatDock";
 import {
   DashboardTopBar,
   type DashboardTopBarActivityOverride,
   type DashboardTopBarResource,
 } from "./DashboardTopBar";
+import "../dashboard.css";
 
 interface DashboardLayoutProps {
   character: DashboardCharacterViewModel;
@@ -323,6 +331,11 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: "◇",
   },
   {
+    label: "Aparência",
+    path: "appearance",
+    icon: "◉",
+  },
+  {
     label: "Mercador",
     path: "consumables",
     icon: "$",
@@ -372,6 +385,7 @@ const DASHBOARD_MAIN_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter((item) =>
 const DASHBOARD_MANAGEMENT_NAV_ITEMS = [
   "inventory",
   "equipment",
+  "appearance",
   "crafting",
   "consumables",
   "infirmary",
@@ -1293,21 +1307,43 @@ function DashboardLayoutContent({
   const dashboardBasePath = `/dashboard/${characterId}`;
   const gatheringBasePath = `${dashboardBasePath}/gathering`;
   const isGatheringRoute = location.pathname.startsWith(gatheringBasePath);
+  const isOverviewRoute =
+    location.pathname.replace(/\/+$/, "") === dashboardBasePath;
 
   const classKey = normalizeClassName(
     getDashboardCharacterClassKey(heroCharacter),
   );
   const classData = getCharacterClass(classKey);
 
-  const avatarImage =
-    heroCharacter.avatarUrl ??
-    (heroCharacter.avatarKey ? getAvatarImage(heroCharacter.avatarKey) : null);
+  const appearance = heroCharacter.appearance ?? null;
+  const avatarImage = resolveCharacterPortraitImage({
+    avatarKey: heroCharacter.avatarKey,
+    avatarUrl: heroCharacter.avatarUrl,
+    appearance,
+  });
+  const bannerImage = getCosmeticImage(appearance?.profileBanner?.assetKey);
+  const overviewBackgroundImage = getCosmeticImage(
+    appearance?.overviewBackground?.assetKey,
+  );
+  const cosmeticEffectClass = getCosmeticEffectClass(
+    appearance?.profileEffect?.effectPreset,
+  );
 
   const characterMapName = getDashboardCharacterMapName(heroCharacter);
 
   const classStyle = {
-    "--class-accent": classData.accentColor,
+    "--class-accent": appearance?.accentColor ?? classData.accentColor,
+    ...(bannerImage
+      ? { "--hero-banner-image": `url("${bannerImage}")` }
+      : {}),
   } as CSSProperties;
+
+  const shellStyle =
+    isOverviewRoute && overviewBackgroundImage
+      ? ({
+          "--dashboard-overview-image": `url("${overviewBackgroundImage}")`,
+        } as CSSProperties)
+      : undefined;
 
   const xpProgress = useMemo(() => {
     return buildXpProgress(heroCharacter);
@@ -1392,7 +1428,17 @@ function DashboardLayoutContent({
   }
 
   return (
-    <div className="dashboard-shell">
+    <div
+      className={[
+        "dashboard-shell",
+        isOverviewRoute && overviewBackgroundImage
+          ? "dashboard-shell--cosmetic-overview"
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={shellStyle}
+    >
       {isSidebarOpen ? (
         <button
           type="button"
@@ -1716,22 +1762,49 @@ function DashboardLayoutContent({
         </div>
 
         {!hideHero ? (
-          <section className="dashboard-hero" style={classStyle}>
-            <div className="dashboard-hero__avatar">
-              {avatarImage ? (
-                <img src={avatarImage} alt={heroCharacter.name} />
-              ) : (
-                <span>{getCharacterInitials(heroCharacter.name)}</span>
-              )}
-            </div>
+          <section
+            className={[
+              "dashboard-hero",
+              "cosmetic-surface",
+              bannerImage ? "has-cosmetic-banner" : "",
+              cosmeticEffectClass,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={classStyle}
+          >
+            <span className="cosmetic-effect-layer" aria-hidden="true" />
+            <CharacterPortrait
+              className="dashboard-hero__avatar"
+              name={heroCharacter.name}
+              avatarKey={heroCharacter.avatarKey}
+              avatarUrl={heroCharacter.avatarUrl}
+              appearance={appearance}
+            />
 
             <div className="dashboard-hero__content">
               <div className="dashboard-hero__identity">
-                <span>{classData.label}</span>
+                <div className="dashboard-hero__identity-kicker">
+                  <span>{classData.label}</span>
+                  {appearance?.badge?.displayText ? (
+                    <strong
+                      className="dashboard-hero__cosmetic-badge"
+                      title={appearance.badge.name}
+                    >
+                      {appearance.badge.displayText}
+                    </strong>
+                  ) : null}
+                </div>
 
                 <div className="dashboard-hero__heading">
                   <h2>{heroCharacter.name}</h2>
                 </div>
+
+                {appearance?.title?.displayText ? (
+                  <small className="dashboard-hero__cosmetic-title">
+                    {appearance.title.displayText}
+                  </small>
+                ) : null}
 
                 <div className="dashboard-hero__meta">
                   <strong>{characterMapName}</strong>
@@ -1843,8 +1916,10 @@ function DashboardLayoutContent({
           </section>
         ) : null}
 
+        <TutorialBanner characterId={characterId} />
         {children}
       </main>
+      <GeneralChatDock characterId={characterId} />
     </div>
   );
 }

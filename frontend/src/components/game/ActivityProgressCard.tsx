@@ -1,4 +1,15 @@
-import type { CSSProperties, ReactNode } from 'react';
+import {
+  useLayoutEffect,
+  useRef,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
+import {
+  shouldResetCycleProgress,
+  type ActivityProgressAnimation,
+} from './activityProgressCard.utils';
+
+export type { ActivityProgressAnimation } from './activityProgressCard.utils';
 
 export type ActivityProgressCardPill = {
   className?: string;
@@ -32,6 +43,7 @@ type ActivityProgressCardProps = {
   overlay?: ReactNode;
   pills?: ActivityProgressCardPill[];
   progressLabel?: string;
+  progressAnimation?: ActivityProgressAnimation;
   progressPercent?: number | null;
   progressTitle?: string;
   style?: CSSProperties;
@@ -64,12 +76,45 @@ export function ActivityProgressCard({
   label,
   overlay,
   pills = [],
+  progressAnimation = 'none',
   progressLabel,
   progressPercent,
   progressTitle,
   style,
 }: ActivityProgressCardProps) {
   const progress = clampProgress(progressPercent);
+  const previousProgressRef = useRef(progress);
+  const progressFillRef = useRef<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    const previousProgress = previousProgressRef.current;
+    const progressFill = progressFillRef.current;
+
+    previousProgressRef.current = progress;
+
+    if (
+      !progressFill ||
+      !shouldResetCycleProgress({
+        animation: progressAnimation,
+        current: progress,
+        previous: previousProgress,
+      })
+    ) {
+      return undefined;
+    }
+
+    progressFill.classList.add('activity-progress-card__fill--resetting');
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      progressFill.classList.remove('activity-progress-card__fill--resetting');
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      progressFill.classList.remove('activity-progress-card__fill--resetting');
+    };
+  }, [progress, progressAnimation]);
+
   const rootStyle =
     progressPercent === null || progressPercent === undefined
       ? style
@@ -81,7 +126,13 @@ export function ActivityProgressCard({
 
   return (
     <Root
-      className={joinClassNames('auto-combat-hunt-skill-card', className)}
+      className={joinClassNames(
+        'auto-combat-hunt-skill-card',
+        progressAnimation !== 'none'
+          ? `activity-progress-card--${progressAnimation}-progress`
+          : '',
+        className,
+      )}
       aria-label={ariaLabel}
       title={cardTitle}
       style={rootStyle}
@@ -137,7 +188,7 @@ export function ActivityProgressCard({
             aria-valuenow={progressLabel ? Math.round(progress) : undefined}
             title={progressTitle}
           >
-            <i aria-hidden="true" />
+            <i ref={progressFillRef} aria-hidden="true" />
           </div>
 
           {pills.length > 0 ? (

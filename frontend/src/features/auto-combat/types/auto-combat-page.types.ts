@@ -145,6 +145,7 @@ export type RealtimeCombatState = {
   sessionId?: string | null;
 
   mobId?: string | null;
+  enemyInstanceId?: string | null;
   mobName?: string | null;
   mobCurrentHp?: number | null;
   mobMaxHp?: number | null;
@@ -243,6 +244,8 @@ export type RealtimeSessionTotalsState = {
 export type AutoCombatRealtimeStateLoose = {
   status?: AutoCombatStatusResponse | null;
   autoCombatStatus?: AutoCombatStatusResponse | null;
+  visualCycleEnemyInstanceId?: string | null;
+  visualCycleStartedAtMs?: number | null;
 
   session?: AutoCombatSessionApiViewModel | null;
   activeSession?: AutoCombatSessionApiViewModel | null;
@@ -279,6 +282,7 @@ export type AutoCombatRealtimeStateLoose = {
 
   mob?: {
     id?: string | null;
+    enemyInstanceId?: string | null;
     name?: string | null;
 
     currentHp?: number | null;

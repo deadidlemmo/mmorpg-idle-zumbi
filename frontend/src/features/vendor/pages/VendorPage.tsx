@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { HeartPulse, Package, Search, ShoppingCart } from "lucide-react";
 import goldIcon from "../../../assets/images/coins/gold.webp";
+import { getConsumableItemImageUrl } from "../../consumables/utils/consumableItemAssets";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import "../../dashboard/dashboard.css";
@@ -99,6 +100,8 @@ function VendorShopItemCard({
   item: VendorItemSummary;
   onInspect: () => void;
 }) {
+  const imageUrl = getConsumableItemImageUrl(item);
+
   return (
     <button
       type="button"
@@ -110,8 +113,14 @@ function VendorShopItemCard({
     >
       <div className="vendor-shop-card__visual">
         <span className="vendor-shop-card__icon" aria-hidden="true">
-          <HeartPulse size={26} />
-          <small>{getItemInitials(item.name)}</small>
+          {imageUrl ? (
+            <img src={imageUrl} alt="" loading="lazy" />
+          ) : (
+            <>
+              <HeartPulse size={26} />
+              <small>{getItemInitials(item.name)}</small>
+            </>
+          )}
         </span>
       </div>
 
@@ -156,6 +165,7 @@ function VendorItemPurchaseModal({
   const totalPrice = item.buyPrice * quantity;
   const isUnavailable = maxQuantity <= 0;
   const quickQuantities = [1, 5, 10];
+  const imageUrl = getConsumableItemImageUrl(item);
 
   return (
     <div
@@ -181,8 +191,14 @@ function VendorItemPurchaseModal({
 
         <div className="vendor-item-modal__hero">
           <span className="vendor-item-modal__icon" aria-hidden="true">
-            <HeartPulse size={40} />
-            <small>{getItemInitials(item.name)}</small>
+            {imageUrl ? (
+              <img src={imageUrl} alt="" />
+            ) : (
+              <>
+                <HeartPulse size={40} />
+                <small>{getItemInitials(item.name)}</small>
+              </>
+            )}
           </span>
 
           <h2 id="vendor-item-modal-title">{item.name}</h2>

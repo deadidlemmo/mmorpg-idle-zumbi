@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { BadgeCheck } from "lucide-react";
 import { PremiumPlaceholderIcon } from "../../../components/PremiumPlaceholderIcon";
 
 type AutoCombatPremiumRewardBreakdownVariant = "summary" | "feedback";
@@ -101,6 +102,50 @@ export function AutoCombatPremiumRewardBreakdown({
   const totalDisplayXp = isPremiumActive ? safeTotalXp : safePremiumTotalXp;
   const showFreeMessage = !isPremiumActive && safePremiumDeltaXp > 0;
   const showPremiumMessage = isPremiumActive && safePremiumDeltaXp > 0;
+
+  if (isFeedback) {
+    return (
+      <div
+        className={[
+          "auto-combat-kill-receipt",
+          isPremiumActive
+            ? "auto-combat-kill-receipt--premium-active"
+            : "auto-combat-kill-receipt--premium-locked",
+          className,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        role="status"
+        aria-live="polite"
+      >
+        <span className="auto-combat-kill-receipt__outcome">
+          <BadgeCheck size={16} strokeWidth={2.4} aria-hidden="true" />
+          Alvo eliminado
+        </span>
+
+        <span className="auto-combat-kill-receipt__divider" aria-hidden="true" />
+
+        <strong className="auto-combat-kill-receipt__xp">
+          +{formatXp(isPremiumActive ? safeBaseXp : safeTotalXp)} EXP
+        </strong>
+
+        {hasPremiumValue ? (
+          <span className="auto-combat-kill-receipt__premium">
+            <PremiumPlaceholderIcon className="auto-combat-kill-receipt__premium-icon" />
+            {isPremiumActive
+              ? `+${formatXp(safePremiumDeltaXp)} Premium`
+              : `+${formatXp(safePremiumDeltaXp)} com Premium`}
+          </span>
+        ) : null}
+
+        {isPremiumActive && safeTotalXp > safeBaseXp ? (
+          <span className="auto-combat-kill-receipt__total">
+            Total {formatXp(safeTotalXp)}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div

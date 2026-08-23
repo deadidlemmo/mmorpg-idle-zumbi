@@ -68,6 +68,57 @@ export interface CraftingOutputItemViewModel {
   };
 }
 
+export interface CraftingEquipmentProgressionViewModel {
+  craftedPieces: number;
+  activeMilestone: number;
+  nextMilestone: number | null;
+  bonusPercent: number;
+}
+
+export interface CraftingUpgradePreview {
+  currentItem?: {
+    id: string;
+    name: string;
+    tier: number;
+  } | null;
+  attributeDeltas: {
+    strength: number;
+    vitality: number;
+    agility: number;
+    precision: number;
+    technique: number;
+    willpower: number;
+  };
+  combatDeltas: {
+    attack: number;
+    defense: number;
+    maxHp: number;
+    speed: number;
+  };
+  offensivePower: {
+    current: number;
+    candidate: number;
+    percentDelta: number;
+  };
+  equipmentProgression: {
+    current: CraftingEquipmentProgressionViewModel;
+    candidate: CraftingEquipmentProgressionViewModel;
+  };
+  killSpeed?: {
+    target: {
+      id: string;
+      name: string;
+      tier: number;
+      level: number;
+    };
+    currentTtkSeconds: number;
+    candidateTtkSeconds: number;
+    currentKillsPerMinute: number;
+    candidateKillsPerMinute: number;
+    percentDelta: number;
+  } | null;
+}
+
 export interface CraftingIngredientViewModel {
   id: string;
   itemId: string;
@@ -172,6 +223,7 @@ export interface CraftingRecipeViewModel {
   };
   missingByOrigin: CraftingMissingByOriginGroup[];
   nextActions: CraftingNextAction[];
+  upgradePreview?: CraftingUpgradePreview | null;
   outputItem: CraftingOutputItemViewModel;
   ingredients: CraftingIngredientViewModel[];
   missingIngredients: CraftingIngredientViewModel[];

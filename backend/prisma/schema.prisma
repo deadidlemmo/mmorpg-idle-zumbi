@@ -35,6 +35,43 @@ enum Rarity {
   LEGENDARY
 }
 
+enum CosmeticType {
+  AVATAR
+  AVATAR_FRAME
+  PROFILE_BANNER
+  OVERVIEW_BACKGROUND
+  PROFILE_EFFECT
+  TITLE
+  BADGE
+}
+
+enum CosmeticAccessType {
+  FREE
+  PREMIUM
+  ENTITLEMENT
+}
+
+enum AvatarPresentation {
+  MASCULINE
+  FEMININE
+}
+
+enum AvatarRepresentation {
+  WHITE
+  JAPANESE
+  BLACK
+  OTHER
+}
+
+enum CosmeticGrantSource {
+  PURCHASE
+  BUNDLE
+  SEASON_PASS
+  EVENT
+  ACHIEVEMENT
+  ADMIN
+}
+
 enum ItemSlot {
   MAIN_HAND
   OFF_HAND
@@ -195,9 +232,11 @@ model User {
 
   characters             Character[]
   passwordResetTokens    PasswordResetToken[]
-  auditLogs              AuditLog[]           @relation("AuditActor")
-  sentFriendRequests     Friendship[]         @relation("FriendRequester")
-  receivedFriendRequests Friendship[]         @relation("FriendAddressee")
+  auditLogs              AuditLog[]                @relation("AuditActor")
+  sentFriendRequests     Friendship[]              @relation("FriendRequester")
+  receivedFriendRequests Friendship[]              @relation("FriendAddressee")
+  chatMessages           ChatMessage[]
+  cosmeticEntitlements   UserCosmeticEntitlement[]
 
   @@map("users")
 }
@@ -264,6 +303,26 @@ model Friendship {
   @@map("friendships")
 }
 
+model ChatMessage {
+  id String @id @default(uuid())
+
+  userId      String
+  characterId String
+  content     String @db.VarChar(300)
+
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([characterId, createdAt])
+  @@index([deletedAt])
+  @@map("chat_messages")
+}
+
 model GameClass {
   id          String @id @default(uuid())
   name        String @unique
@@ -281,6 +340,7 @@ model GameClass {
 
   characters Character[]
   items      Item[]
+  cosmetics  Cosmetic[]
 
   @@map("game_classes")
 }
@@ -411,6 +471,8 @@ model Character {
   tutorialProgress          CharacterTutorialProgress?
   missions                  CharacterMission[]
   achievements              CharacterAchievement[]
+  chatMessages              ChatMessage[]
+  appearance                CharacterAppearance?
 
   gatheringSkills CharacterGatheringSkill[]
   craftingSkill   CharacterCraftingSkill?
@@ -427,6 +489,133 @@ model Character {
   @@index([deletedAt])
   @@index([userId, status])
   @@map("characters")
+}
+
+model CosmeticCollection {
+  id            String  @id @default(uuid())
+  key           String  @unique @db.VarChar(80)
+  name          String  @db.VarChar(100)
+  description   String?
+  coverAssetKey String? @db.VarChar(100)
+
+  isActive  Boolean   @default(true)
+  sortOrder Int       @default(0)
+  startsAt  DateTime?
+  endsAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cosmetics Cosmetic[]
+
+  @@index([isActive, sortOrder])
+  @@index([startsAt, endsAt])
+  @@map("cosmetic_collections")
+}
+
+model Cosmetic {
+  id          String  @id @default(uuid())
+  key         String  @unique @db.VarChar(100)
+  name        String  @db.VarChar(100)
+  description String?
+
+  type       CosmeticType
+  accessType CosmeticAccessType @default(ENTITLEMENT)
+  rarity     Rarity             @default(COMMON)
+
+  assetKey     String? @db.VarChar(120)
+  effectPreset String? @db.VarChar(60)
+  displayText  String? @db.VarChar(80)
+  accentColor  String? @db.VarChar(16)
+
+  avatarPresentation  AvatarPresentation?
+  avatarRepresentation AvatarRepresentation?
+  representationLabel String?              @db.VarChar(40)
+
+  classId      String?
+  collectionId String?
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  class      GameClass?          @relation(fields: [classId], references: [id], onDelete: SetNull)
+  collection CosmeticCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+
+  entitlements UserCosmeticEntitlement[]
+
+  avatarAppearances             CharacterAppearance[] @relation("AppearanceAvatar")
+  avatarFrameAppearances        CharacterAppearance[] @relation("AppearanceAvatarFrame")
+  profileBannerAppearances      CharacterAppearance[] @relation("AppearanceProfileBanner")
+  overviewBackgroundAppearances CharacterAppearance[] @relation("AppearanceOverviewBackground")
+  profileEffectAppearances      CharacterAppearance[] @relation("AppearanceProfileEffect")
+  titleAppearances              CharacterAppearance[] @relation("AppearanceTitle")
+  badgeAppearances              CharacterAppearance[] @relation("AppearanceBadge")
+
+  @@index([type, isActive, sortOrder])
+  @@index([accessType])
+  @@index([classId])
+  @@index([collectionId])
+  @@index([type, classId, avatarPresentation, avatarRepresentation])
+  @@map("cosmetics")
+}
+
+model UserCosmeticEntitlement {
+  id       String @id @default(uuid())
+  grantKey String @unique @db.VarChar(220)
+
+  userId     String
+  cosmeticId String
+  source     CosmeticGrantSource
+
+  sourceReference String?   @db.VarChar(120)
+  grantedAt       DateTime  @default(now())
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cosmetic Cosmetic @relation(fields: [cosmeticId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, expiresAt])
+  @@index([cosmeticId])
+  @@index([source, sourceReference])
+  @@map("user_cosmetic_entitlements")
+}
+
+model CharacterAppearance {
+  characterId String @id
+
+  avatarCosmeticId             String?
+  avatarFrameCosmeticId        String?
+  profileBannerCosmeticId      String?
+  overviewBackgroundCosmeticId String?
+  profileEffectCosmeticId      String?
+  titleCosmeticId              String?
+  badgeCosmeticId              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  avatarCosmetic             Cosmetic? @relation("AppearanceAvatar", fields: [avatarCosmeticId], references: [id], onDelete: SetNull)
+  avatarFrameCosmetic        Cosmetic? @relation("AppearanceAvatarFrame", fields: [avatarFrameCosmeticId], references: [id], onDelete: SetNull)
+  profileBannerCosmetic      Cosmetic? @relation("AppearanceProfileBanner", fields: [profileBannerCosmeticId], references: [id], onDelete: SetNull)
+  overviewBackgroundCosmetic Cosmetic? @relation("AppearanceOverviewBackground", fields: [overviewBackgroundCosmeticId], references: [id], onDelete: SetNull)
+  profileEffectCosmetic      Cosmetic? @relation("AppearanceProfileEffect", fields: [profileEffectCosmeticId], references: [id], onDelete: SetNull)
+  titleCosmetic              Cosmetic? @relation("AppearanceTitle", fields: [titleCosmeticId], references: [id], onDelete: SetNull)
+  badgeCosmetic              Cosmetic? @relation("AppearanceBadge", fields: [badgeCosmeticId], references: [id], onDelete: SetNull)
+
+  @@index([avatarCosmeticId])
+  @@index([avatarFrameCosmeticId])
+  @@index([profileBannerCosmeticId])
+  @@index([overviewBackgroundCosmeticId])
+  @@index([profileEffectCosmeticId])
+  @@index([titleCosmeticId])
+  @@index([badgeCosmeticId])
+  @@map("character_appearances")
 }
 
 model CharacterGatheringSkill {

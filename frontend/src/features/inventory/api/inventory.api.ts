@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from '../../../services/api/endpoints';
 import { apiClient } from '../../../services/api/apiClient';
 import type {
+  DashboardEquipmentProgression,
   DashboardDerivedStats,
   DashboardEquipmentViewModel,
   DashboardStats,
@@ -54,6 +55,7 @@ export interface CharacterEquipmentResponse {
     gatheringBonusStats?: DashboardStats;
     totalPrimaryStats?: DashboardStats;
     derivedCombatStats?: DashboardDerivedStats;
+    equipmentProgression?: DashboardEquipmentProgression;
   };
   [key: string]: unknown;
 }

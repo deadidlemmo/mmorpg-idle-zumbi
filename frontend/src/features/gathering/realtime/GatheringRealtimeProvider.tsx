@@ -8,6 +8,7 @@ import {
 } from 'react';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
+import { getAuthToken } from '../../../services/api/authToken';
 import { canRunNetworkRefresh } from '../../../utils/networkRefresh';
 import { useLootNotifications } from '../../loot-notifications/lootNotificationContext';
 import {
@@ -26,6 +27,7 @@ import type {
   GatheringSessionViewModel,
   GatheringSkillViewModel,
   GatheringStatusResponse,
+  StartGatheringResponse,
 } from '../types/gathering.types';
 import { getGatheringMaterialImageUrl } from '../utils/gatheringMaterialAssets';
 import { GatheringRealtimeContext } from './gatheringRealtimeContext';
@@ -92,7 +94,7 @@ export interface GatheringRealtimeContextValue {
   refresh: () => Promise<GatheringStatusResponse | null>;
   start: (
     payload: GatheringRealtimeStartPayload,
-  ) => Promise<GatheringStatusResponse | null>;
+  ) => Promise<StartGatheringResponse | null>;
   collect: () => Promise<unknown>;
   stop: () => Promise<unknown>;
 
@@ -680,51 +682,6 @@ function buildState(params: {
   };
 }
 
-function getStoredAuthToken(): string | null {
-  const keys = [
-    'authToken',
-    'accessToken',
-    'token',
-    'jwt',
-    'deadIdle.authToken',
-    'zumbi.authToken',
-  ];
-
-  for (const key of keys) {
-    const value = window.localStorage.getItem(key);
-
-    if (value && value.trim().length > 0) {
-      return value.trim();
-    }
-  }
-
-  const objectKeys = ['auth', 'user', 'session', 'deadIdle.auth'];
-
-  for (const key of objectKeys) {
-    const raw = window.localStorage.getItem(key);
-
-    if (!raw) continue;
-
-    try {
-      const parsed = JSON.parse(raw) as LooseRecord;
-
-      const token =
-        parsed.authToken ??
-        parsed.accessToken ??
-        parsed.token ??
-        parsed.jwt;
-
-      if (typeof token === 'string' && token.trim().length > 0) {
-        return token.trim();
-      }
-    } catch {
-      // Ignora valores que não são JSON.
-    }
-  }
-
-  return null;
-}
-
 function normalizeSocketBaseUrl(rawUrl: string): string {
   return rawUrl
     .trim()
@@ -1133,20 +1090,26 @@ export function GatheringRealtimeProvider({
       setErrorMessage(null);
 
       try {
-        await startGatheringRequest({
+        const response = await startGatheringRequest({
           characterId,
           mapId: payload.mapId,
           origin: payload.origin,
           targetMaterialId: payload.targetMaterialId,
         });
 
-        requestSocketSnapshot();
-
-        if (socketConnectedRef.current) {
-          return statusRef.current;
+        if (response.previousGathering) {
+          publishGatheringLootNotification({
+            collected: response.previousGathering.collected,
+            session: response.previousGathering.session,
+            targetMaterial: response.previousGathering.session.targetMaterial,
+            inventoryItem: response.previousGathering.inventoryItem ?? null,
+          });
         }
 
-        return await refresh();
+        requestSocketSnapshot();
+        await refresh();
+
+        return response;
       } catch (error) {
         if (isMountedRef.current) {
           setErrorMessage(extractGatheringApiError(error));
@@ -1159,7 +1122,13 @@ export function GatheringRealtimeProvider({
         }
       }
     },
-    [characterId, enabled, refresh, requestSocketSnapshot],
+    [
+      characterId,
+      enabled,
+      publishGatheringLootNotification,
+      refresh,
+      requestSocketSnapshot,
+    ],
   );
 
   const collect = useCallback(async () => {
@@ -1274,7 +1243,15 @@ export function GatheringRealtimeProvider({
       return undefined;
     }
 
-    const token = getStoredAuthToken();
+    const token = getAuthToken();
+
+    if (!token) {
+      socketConnectedRef.current = false;
+      setIsSocketConnected((previous) => (previous ? false : previous));
+      setErrorMessage(null);
+      return undefined;
+    }
+
     const socketUrl = getGatheringSocketUrl();
 
     const socket = io(socketUrl, {

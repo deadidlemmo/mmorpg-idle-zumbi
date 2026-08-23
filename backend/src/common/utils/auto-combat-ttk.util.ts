@@ -98,10 +98,10 @@ export function calculatePlayerOffensivePower(stats: AutoCombatTtkStatsInput) {
   const technique = Math.max(0, Number(stats.technique) || 0);
   const agility = Math.max(0, Number(stats.agility) || 0);
 
-  const attackSpeed = 1 + speed / 120;
-  const hitChance = Math.min(1.35, Math.max(0.65, 0.85 + precision / 220));
-  const critChance = Math.min(0.65, Math.max(0, technique / 300));
-  const critDamageMultiplier = 1.5 + Math.min(0.75, agility / 400);
+  const attackSpeed = 1 + Math.min(60, speed) / 600;
+  const hitChance = Math.min(1, Math.max(0.92, 0.92 + precision / 1_000));
+  const critChance = Math.min(0.25, Math.max(0, technique / 800));
+  const critDamageMultiplier = 1.5 + Math.min(0.25, agility / 800);
   const averageCritMultiplier = 1 + critChance * (critDamageMultiplier - 1);
   const passive = getAutoCombatClassPassive(stats.className);
 

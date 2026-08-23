@@ -3,6 +3,7 @@ import type { InventoryEntry } from '../types/inventory.types';
 import {
   formatInventoryType,
   getInventoryItemIcon,
+  getInventoryItemImageUrl,
   getInventoryItemInitials,
 } from '../utils/inventory.utils';
 
@@ -99,6 +100,7 @@ export function InventoryItemCard({ entry, onSelect }: InventoryItemCardProps) {
 
   const quantity = Math.max(0, Math.floor(Number(entry.quantity) || 0));
   const quantityLabel = formatQuantity(quantity);
+  const imageUrl = getInventoryItemImageUrl(entry);
 
   function updateTooltipPlacement() {
     const cardElement = cardRef.current;
@@ -150,11 +152,22 @@ export function InventoryItemCard({ entry, onSelect }: InventoryItemCardProps) {
 
         <div className="inventory-item-card__content">
           <div className="inventory-item-card__icon" aria-hidden="true">
-            <span className="inventory-item-card__glyph">
-              {getInventoryItemIcon(entry)}
-            </span>
+            {imageUrl ? (
+              <img
+                className="inventory-item-card__image"
+                src={imageUrl}
+                alt=""
+                loading="lazy"
+              />
+            ) : (
+              <>
+                <span className="inventory-item-card__glyph">
+                  {getInventoryItemIcon(entry)}
+                </span>
 
-            <strong>{getInventoryItemInitials(item)}</strong>
+                <strong>{getInventoryItemInitials(item)}</strong>
+              </>
+            )}
           </div>
         </div>
 

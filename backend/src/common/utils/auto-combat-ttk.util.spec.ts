@@ -36,6 +36,23 @@ describe('auto-combat TTK util', () => {
     expect(stronger).toBeLessThan(baseline);
   });
 
+  it('turns a meaningful power upgrade into visible kill speed', () => {
+    const baseline = calculateAutoCombatTtkSeconds({
+      baseKillTimeSeconds: 24,
+      recommendedPower: 54,
+      playerOffensivePower: 48,
+    });
+    const upgraded = calculateAutoCombatTtkSeconds({
+      baseKillTimeSeconds: 24,
+      recommendedPower: 54,
+      playerOffensivePower: 70,
+    });
+
+    expect(baseline).toBe(27);
+    expect(upgraded).toBe(20);
+    expect(60 / upgraded).toBeGreaterThanOrEqual((60 / baseline) * 1.3);
+  });
+
   it('rounds kill time up to a whole second', () => {
     const baseKillTimeSeconds = 10;
     const recommendedPower = 100;

@@ -579,6 +579,16 @@
   font-weight: 950;
 }
 
+.vendor-shop-card__icon img,
+.vendor-item-modal__icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 3px;
+  object-fit: contain;
+  filter: drop-shadow(0 7px 10px rgba(0, 0, 0, 0.36));
+}
+
 .vendor-shop-card__content {
   display: grid;
   justify-items: center;

@@ -21,6 +21,7 @@ type ActivityGuardParams = {
   userId?: string;
   client?: PrismaService | Prisma.TransactionClient;
   lockCharacter?: boolean;
+  allowActiveGathering?: boolean;
   worldBossEventId?: string;
 };
 
@@ -313,7 +314,7 @@ export class ActivityGuardService {
       'Personagens derrotados ou com 0 de HP não podem iniciar gathering. Cure o personagem antes.',
     );
 
-    if (state.hasActiveGathering) {
+    if (state.hasActiveGathering && !params.allowActiveGathering) {
       throw new ConflictException({
         message: 'Este personagem já possui um gathering ativo.',
         activeGathering: state.activeGatheringSession,

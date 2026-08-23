@@ -68,8 +68,11 @@ describe('catálogo de lançamento T1-T5', () => {
         (item.precisionBonus ?? 0) +
         (item.techniqueBonus ?? 0) +
         (item.willpowerBonus ?? 0);
+      const baseBudget = STAT_BUDGET_BY_SLOT[item.slot] * item.tier;
+      const expectedBudget =
+        item.tier === 1 ? Math.round(baseBudget * 1.25) : baseBudget;
 
-      expect(statTotal).toBe(STAT_BUDGET_BY_SLOT[item.slot] * item.tier);
+      expect(statTotal).toBe(expectedBudget);
     }
   });
 
@@ -114,6 +117,37 @@ describe('catálogo de lançamento T1-T5', () => {
     }
   });
 
+  it('mantém a primeira receita rápida o bastante para apresentar o loop', () => {
+    const tierOneRecipes = recipeDefinitions.filter(
+      (recipe) => recipe.tier === 1,
+    );
+
+    for (const recipe of tierOneRecipes) {
+      const main = recipe.ingredients.find(
+        (ingredient) => ingredient.role === CraftIngredientRole.MAIN_COMPONENT,
+      );
+      const secondary = recipe.ingredients.find(
+        (ingredient) => ingredient.role === CraftIngredientRole.SHARED_MATERIAL,
+      );
+      const mobDrops = recipe.ingredients
+        .filter(
+          (ingredient) => ingredient.role === CraftIngredientRole.RARE_MOB_DROP,
+        )
+        .map((ingredient) => ingredient.quantity)
+        .sort((left, right) => left - right);
+
+      expect(main?.quantity).toBe(20);
+      expect(secondary?.quantity).toBe(10);
+      expect(mobDrops).toEqual([2, 4]);
+      expect(
+        recipe.ingredients.reduce(
+          (total, ingredient) => total + ingredient.quantity,
+          0,
+        ),
+      ).toBe(36);
+    }
+  });
+
   it('usa todos os materiais T1-T5 e distribui a demanda igualmente', () => {
     const usedNames = new Set(
       recipeDefinitions.flatMap((recipe) =>
@@ -141,7 +175,7 @@ describe('catálogo de lançamento T1-T5', () => {
     }
 
     expect(Object.values(demandByOrigin)).toEqual([
-      3080, 3080, 3080, 3080, 3080, 3080,
+      2660, 2660, 2660, 2660, 2660, 2660,
     ]);
   });
 });

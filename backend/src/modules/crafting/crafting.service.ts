@@ -12,7 +12,7 @@ import {
   ItemSlot,
   MaterialOrigin,
 } from '@prisma/client';
-import type { CharacterCraftingSkill } from '@prisma/client';
+import type { CharacterCraftingSkill, Prisma } from '@prisma/client';
 import {
   CRAFTING_LEVEL_CAP,
   getCraftingDurationSecondsForTier,
@@ -28,6 +28,14 @@ import {
   applyPremiumXpBonus,
   isPremiumActive,
 } from '../../common/utils/membership.util';
+import {
+  calculateFullStats,
+  calculateGatheringPrimaryBonus,
+} from '../../common/utils/stats.util';
+import {
+  calculateAutoCombatTtk,
+  calculatePlayerOffensivePower,
+} from '../../common/utils/auto-combat-ttk.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CraftItemDto } from './dto/craft-item.dto';
 
@@ -86,6 +94,11 @@ type RecipeNextAction = {
 type CraftingSkillSnapshot = Pick<
   CharacterCraftingSkill,
   'id' | 'characterId' | 'level' | 'xp' | 'totalXp'
+>;
+
+type CraftingSkillDatabaseClient = Pick<
+  Prisma.TransactionClient,
+  'characterCraftingSkill'
 >;
 
 type CraftingProgressResult = {
@@ -166,11 +179,24 @@ export class CraftingService {
         userId: true,
         name: true,
         level: true,
+        mapId: true,
         status: true,
         class: {
           select: {
             id: true,
             name: true,
+            baseStrength: true,
+            baseVitality: true,
+            baseAgility: true,
+            basePrecision: true,
+            baseTechnique: true,
+            baseWillpower: true,
+          },
+        },
+        gatheringSkills: {
+          select: {
+            origin: true,
+            level: true,
           },
         },
         user: {
@@ -223,25 +249,81 @@ export class CraftingService {
       where: {
         characterId,
       },
-      select: {
-        mainHandId: true,
-        offHandId: true,
-        headId: true,
-        armorId: true,
-        pantsId: true,
-        bootsId: true,
+      include: {
+        mainHand: true,
+        offHand: true,
+        head: true,
+        armor: true,
+        pants: true,
+        boots: true,
       },
     });
 
-    const equippedItemIds = new Set(
+    const equippedItemsBySlot = new Map(
       [
-        equipment?.mainHandId,
-        equipment?.offHandId,
-        equipment?.headId,
-        equipment?.armorId,
-        equipment?.pantsId,
-        equipment?.bootsId,
-      ].filter(Boolean) as string[],
+        equipment?.mainHand,
+        equipment?.offHand,
+        equipment?.head,
+        equipment?.armor,
+        equipment?.pants,
+        equipment?.boots,
+      ]
+        .filter(Boolean)
+        .map((item) => [item!.slot, item!]),
+    );
+    const currentEquipmentItems = Array.from(equippedItemsBySlot.values());
+    const gatheringBonus = calculateGatheringPrimaryBonus(
+      character.gatheringSkills,
+    );
+    const currentStats = calculateFullStats(
+      character.class,
+      currentEquipmentItems,
+      character.level,
+      gatheringBonus,
+    );
+    const currentOffensivePower = calculatePlayerOffensivePower({
+      className: character.class.name,
+      attack: currentStats.derivedCombatStats.attack,
+      speed: currentStats.derivedCombatStats.speed,
+      precision: currentStats.totalPrimaryStats.precision,
+      technique: currentStats.totalPrimaryStats.technique,
+      agility: currentStats.totalPrimaryStats.agility,
+    });
+    const comparisonMob = character.mapId
+      ? await this.prisma.mob.findFirst({
+          where: {
+            mapId: character.mapId,
+          },
+          orderBy: [{ level: 'desc' }, { hp: 'desc' }],
+          select: {
+            id: true,
+            name: true,
+            tier: true,
+            level: true,
+            hp: true,
+            attack: true,
+            defense: true,
+            speed: true,
+            xpReward: true,
+          },
+        })
+      : null;
+    const currentTtk = comparisonMob
+      ? calculateAutoCombatTtk({
+          mob: comparisonMob,
+          playerStats: {
+            className: character.class.name,
+            attack: currentStats.derivedCombatStats.attack,
+            speed: currentStats.derivedCombatStats.speed,
+            precision: currentStats.totalPrimaryStats.precision,
+            technique: currentStats.totalPrimaryStats.technique,
+            agility: currentStats.totalPrimaryStats.agility,
+          },
+        })
+      : null;
+
+    const equippedItemIds = new Set(
+      currentEquipmentItems.map((item) => item.id),
     );
 
     const recipes = await this.prisma.craftingRecipe.findMany({
@@ -472,6 +554,51 @@ export class CraftingService {
 
       const ownedQuantity = inventoryByItemId.get(recipe.outputItem.id) ?? 0;
       const isEquipped = equippedItemIds.has(recipe.outputItem.id);
+      const currentSlotItem = equippedItemsBySlot.get(recipe.outputItem.slot);
+      const isClassCompatible =
+        !recipe.outputItem.classId ||
+        recipe.outputItem.classId === character.class.id;
+      const candidateEquipmentItems = [
+        ...currentEquipmentItems.filter(
+          (item) => item.slot !== recipe.outputItem.slot,
+        ),
+        recipe.outputItem,
+      ];
+      const candidateStats = isClassCompatible
+        ? calculateFullStats(
+            character.class,
+            candidateEquipmentItems,
+            character.level,
+            gatheringBonus,
+          )
+        : null;
+      const candidateOffensivePower = candidateStats
+        ? calculatePlayerOffensivePower({
+            className: character.class.name,
+            attack: candidateStats.derivedCombatStats.attack,
+            speed: candidateStats.derivedCombatStats.speed,
+            precision: candidateStats.totalPrimaryStats.precision,
+            technique: candidateStats.totalPrimaryStats.technique,
+            agility: candidateStats.totalPrimaryStats.agility,
+          })
+        : null;
+      const candidateTtk =
+        candidateStats && comparisonMob
+          ? calculateAutoCombatTtk({
+              mob: comparisonMob,
+              playerStats: {
+                className: character.class.name,
+                attack: candidateStats.derivedCombatStats.attack,
+                speed: candidateStats.derivedCombatStats.speed,
+                precision: candidateStats.totalPrimaryStats.precision,
+                technique: candidateStats.totalPrimaryStats.technique,
+                agility: candidateStats.totalPrimaryStats.agility,
+              },
+            })
+          : null;
+      const getStatDelta = (stat: keyof typeof recipe.outputItem) =>
+        Number(recipe.outputItem[stat] ?? 0) -
+        Number(currentSlotItem?.[stat] ?? 0);
 
       return {
         recipeId: recipe.id,
@@ -522,6 +649,84 @@ export class CraftingService {
           maxCraftableTimes: isUnlocked ? maxCraftableTimes : 0,
           missingByOrigin,
         }),
+
+        upgradePreview:
+          candidateStats && candidateOffensivePower !== null
+            ? {
+                currentItem: currentSlotItem
+                  ? {
+                      id: currentSlotItem.id,
+                      name: currentSlotItem.name,
+                      tier: currentSlotItem.tier,
+                    }
+                  : null,
+                attributeDeltas: {
+                  strength: getStatDelta('strengthBonus'),
+                  vitality: getStatDelta('vitalityBonus'),
+                  agility: getStatDelta('agilityBonus'),
+                  precision: getStatDelta('precisionBonus'),
+                  technique: getStatDelta('techniqueBonus'),
+                  willpower: getStatDelta('willpowerBonus'),
+                },
+                combatDeltas: {
+                  attack:
+                    candidateStats.derivedCombatStats.attack -
+                    currentStats.derivedCombatStats.attack,
+                  defense:
+                    candidateStats.derivedCombatStats.defense -
+                    currentStats.derivedCombatStats.defense,
+                  maxHp:
+                    candidateStats.derivedCombatStats.maxHp -
+                    currentStats.derivedCombatStats.maxHp,
+                  speed:
+                    candidateStats.derivedCombatStats.speed -
+                    currentStats.derivedCombatStats.speed,
+                },
+                offensivePower: {
+                  current: Number(currentOffensivePower.toFixed(2)),
+                  candidate: Number(candidateOffensivePower.toFixed(2)),
+                  percentDelta: Number(
+                    (
+                      ((candidateOffensivePower - currentOffensivePower) /
+                        currentOffensivePower) *
+                      100
+                    ).toFixed(1),
+                  ),
+                },
+                equipmentProgression: {
+                  current: currentStats.equipmentProgression,
+                  candidate: candidateStats.equipmentProgression,
+                },
+                killSpeed:
+                  comparisonMob && currentTtk && candidateTtk
+                    ? {
+                        target: {
+                          id: comparisonMob.id,
+                          name: comparisonMob.name,
+                          tier: comparisonMob.tier,
+                          level: comparisonMob.level,
+                        },
+                        currentTtkSeconds: currentTtk.estimatedKillTimeSeconds,
+                        candidateTtkSeconds:
+                          candidateTtk.estimatedKillTimeSeconds,
+                        currentKillsPerMinute: Number(
+                          currentTtk.killsPerMinute.toFixed(2),
+                        ),
+                        candidateKillsPerMinute: Number(
+                          candidateTtk.killsPerMinute.toFixed(2),
+                        ),
+                        percentDelta: Number(
+                          (
+                            ((candidateTtk.killsPerMinute -
+                              currentTtk.killsPerMinute) /
+                              currentTtk.killsPerMinute) *
+                            100
+                          ).toFixed(1),
+                        ),
+                      }
+                    : null,
+              }
+            : null,
 
         outputItem: {
           id: recipe.outputItem.id,
@@ -978,15 +1183,10 @@ export class CraftingService {
         });
       }
 
-      const activeCraftingSkill = await tx.characterCraftingSkill.upsert({
-        where: {
-          characterId: dto.characterId,
-        },
-        update: {},
-        create: {
-          characterId: dto.characterId,
-        },
-      });
+      const activeCraftingSkill = await this.getOrCreateCraftingSkill(
+        dto.characterId,
+        tx,
+      );
 
       if (activeCraftingSkill.level < requiredCraftingLevel) {
         throw new BadRequestException(
@@ -1255,15 +1455,10 @@ export class CraftingService {
           },
         });
 
-        const activeCraftingSkill = await tx.characterCraftingSkill.upsert({
-          where: {
-            characterId,
-          },
-          update: {},
-          create: {
-            characterId,
-          },
-        });
+        const activeCraftingSkill = await this.getOrCreateCraftingSkill(
+          characterId,
+          tx,
+        );
 
         const craftingProgress = this.applyCraftingXp({
           skill: activeCraftingSkill,
@@ -1508,13 +1703,29 @@ export class CraftingService {
     return 99;
   }
 
-  private async getOrCreateCraftingSkill(characterId: string) {
-    return this.prisma.characterCraftingSkill.upsert({
+  private async getOrCreateCraftingSkill(
+    characterId: string,
+    database: CraftingSkillDatabaseClient = this.prisma,
+  ) {
+    const existingSkill = await database.characterCraftingSkill.findUnique({
       where: {
         characterId,
       },
-      update: {},
-      create: {
+    });
+
+    if (existingSkill) {
+      return existingSkill;
+    }
+
+    await database.characterCraftingSkill.createMany({
+      data: {
+        characterId,
+      },
+      skipDuplicates: true,
+    });
+
+    return database.characterCraftingSkill.findUniqueOrThrow({
+      where: {
         characterId,
       },
     });

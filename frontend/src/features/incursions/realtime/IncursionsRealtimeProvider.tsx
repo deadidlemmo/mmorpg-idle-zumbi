@@ -342,8 +342,11 @@ export function IncursionsRealtimeProvider({
   }, [autoLoad, characterId, enabled, refresh, refreshMs]);
 
   useEffect(() => {
-    if (!enabled || !characterId) {
+    const token = getAuthToken();
+
+    if (!enabled || !characterId || !token) {
       setIsSocketConnected(false);
+      setErrorMessage(null);
       return undefined;
     }
 
@@ -351,7 +354,7 @@ export function IncursionsRealtimeProvider({
       transports: ["websocket", "polling"],
       withCredentials: true,
       auth: {
-        token: getAuthToken(),
+        token,
         characterId,
       },
       query: { characterId },

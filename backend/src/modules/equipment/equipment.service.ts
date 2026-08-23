@@ -552,6 +552,7 @@ export class EquipmentService {
       gatheringBonusStats: stats.gatheringBonusStats,
       totalPrimaryStats: stats.totalPrimaryStats,
       derivedCombatStats: stats.derivedCombatStats,
+      equipmentProgression: stats.equipmentProgression,
     };
   }
 

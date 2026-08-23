@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { getEquipmentItemImageUrl } from '../../equipment/utils/equipmentItemAssets';
 import { getEquipmentRarityFromItem } from '../constants/equipment-rarity';
 import type { DashboardEquipmentItem } from '../types/dashboard.types';
 
@@ -17,12 +18,6 @@ interface DashboardEquipmentSlotProps {
   isSelected?: boolean;
   onSelect?: () => void;
 }
-
-type EquipmentItemWithIcon = DashboardEquipmentItem & {
-  iconUrl?: string | null;
-  imageUrl?: string | null;
-  image?: string | null;
-};
 
 const SLOT_LABELS: Record<EquipmentSlotKey, string> = {
   head: 'Elmo',
@@ -98,12 +93,6 @@ function formatTier(tier?: number | null) {
   return `T${tier}`;
 }
 
-function getItemImage(item?: EquipmentItemWithIcon | null) {
-  if (!item) return null;
-
-  return item.iconUrl ?? item.imageUrl ?? item.image ?? null;
-}
-
 export function DashboardEquipmentSlot({
   label,
   item,
@@ -114,7 +103,7 @@ export function DashboardEquipmentSlot({
   const normalizedSlotKey = normalizeSlotKey(label, slotKey);
   const rarityMeta = getEquipmentRarityFromItem(item);
   const tierLabel = formatTier(item?.tier);
-  const imageUrl = getItemImage(item as EquipmentItemWithIcon | null);
+  const imageUrl = getEquipmentItemImageUrl(item);
   const hasItem = Boolean(item);
   const hasImage = Boolean(imageUrl);
 

@@ -1,10 +1,14 @@
 import { useEffect } from 'react';
 import { AppRoutes } from './app/routes';
+import { subscribeToAuthSessionExpired } from './services/api/authToken';
 import { useAuthStore } from './store/auth.store';
 
 function App() {
   const initialize = useAuthStore((state) => state.initialize);
   const isInitialized = useAuthStore((state) => state.isInitialized);
+  const logout = useAuthStore((state) => state.logout);
+
+  useEffect(() => subscribeToAuthSessionExpired(logout), [logout]);
 
   useEffect(() => {
     void initialize();

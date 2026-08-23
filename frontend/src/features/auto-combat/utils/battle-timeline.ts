@@ -267,6 +267,97 @@ export function getRepeatingBattleTimelineProgress(params: {
   };
 }
 
+export function getBattleVisualTimelineProgress(params: {
+  source?: BattleTimelineSource | null;
+  nowMs: number;
+  fallbackServerNow?: TimelineTimestamp;
+  fallbackProgressUpdatedAt?: TimelineTimestamp;
+}) {
+  return getBattleTimelineProgress(params);
+}
+
+export function getVisibleBattleCycleRemainingPercent(params: {
+  progress:
+    | (CycleProgress & { cycleStartedAtMs: number; cycleDurationMs: number })
+    | null
+    | undefined;
+  visualCycleStartedAtMs?: number | null;
+  clientNowMs: number;
+  serverClientOffsetMs?: number;
+}) {
+  const { progress } = params;
+  const visualCycleStartedAtMs = toFiniteNumber(
+    params.visualCycleStartedAtMs,
+  );
+  const clientNowMs = toFiniteNumber(params.clientNowMs);
+
+  if (!progress || visualCycleStartedAtMs === null || clientNowMs === null) {
+    return null;
+  }
+
+  const serverClientOffsetMs =
+    toFiniteNumber(params.serverClientOffsetMs) ?? 0;
+  const authoritativeCycleEndsAtMs =
+    progress.cycleStartedAtMs + progress.cycleDurationMs;
+  const visibleCycleStartedAtServerMs = Math.max(
+    progress.cycleStartedAtMs,
+    visualCycleStartedAtMs + serverClientOffsetMs,
+  );
+  const visibleCycleDurationMs =
+    authoritativeCycleEndsAtMs - visibleCycleStartedAtServerMs;
+
+  if (visibleCycleDurationMs <= 0) {
+    return 0;
+  }
+
+  const visibleElapsedMs = Math.max(
+    0,
+    clientNowMs + serverClientOffsetMs - visibleCycleStartedAtServerMs,
+  );
+
+  return (
+    (1 - clamp01(visibleElapsedMs / visibleCycleDurationMs)) * 100
+  );
+}
+
+export function getBattleTimelineRecoveryDelayMs(params: {
+  source?: BattleTimelineSource | null;
+  snapshotReceivedAtMs: number;
+  nowMs: number;
+  graceMs: number;
+}) {
+  const snapshotReceivedAtMs = toFiniteNumber(params.snapshotReceivedAtMs);
+  const nowMs = toFiniteNumber(params.nowMs);
+
+  if (snapshotReceivedAtMs === null || nowMs === null) {
+    return null;
+  }
+
+  const serverReference =
+    params.source?.serverNow ?? params.source?.progressUpdatedAt;
+  const serverClientOffsetMs = getServerClientOffsetMs(
+    serverReference,
+    snapshotReceivedAtMs,
+  );
+  const progress = getBattleTimelineProgress({
+    source: params.source,
+    nowMs: nowMs + serverClientOffsetMs,
+    fallbackServerNow: serverReference,
+    fallbackProgressUpdatedAt: params.source?.progressUpdatedAt,
+  });
+
+  if (!progress) {
+    return null;
+  }
+
+  const recoveryAtMs =
+    progress.cycleStartedAtMs +
+    progress.cycleDurationMs +
+    Math.max(0, params.graceMs);
+
+  return Math.max(0, recoveryAtMs - (nowMs + serverClientOffsetMs));
+}
+
 export function getCountdownTimeline(
   progress:
     | (CycleProgress & { cycleStartedAtMs: number; cycleDurationMs: number })
@@ -319,6 +410,23 @@ export function getSecondTickCycleProgress(
     progressPercent,
     remainingPercent: 100 - progressPercent,
   };
+}
+
+export function getBattleTopBarProgressPercent(params: {
+  timelineRemainingPercent?: unknown;
+  mobHpPercent?: unknown;
+  isMobSpawnAwaitingImpact?: boolean;
+  isMobDefeated?: boolean;
+}) {
+  if (params.isMobDefeated) return 0;
+  if (params.isMobSpawnAwaitingImpact) return 100;
+
+  const timelineRemainingPercent = toFiniteNumber(
+    params.timelineRemainingPercent,
+  );
+  const mobHpPercent = toFiniteNumber(params.mobHpPercent) ?? 0;
+
+  return clamp01((timelineRemainingPercent ?? mobHpPercent) / 100) * 100;
 }
 
 export function getRepeatingSecondTickFillPercent(params: {

@@ -2049,6 +2049,10 @@ export class AutoCombatService implements OnModuleDestroy {
     const mob = encounter.mob;
     const battleQuantity = battleSelection.quantity;
     const now = new Date();
+    const battleDurationSeconds = getIdleProgressLimitSeconds(
+      isPremiumActive(loadedSession.character.user, now),
+    );
+    const battleEndsAt = this.addSeconds(now, battleDurationSeconds);
     const characterStats = this.calculateCharacterFighterStats(
       loadedSession.character,
     );
@@ -2155,6 +2159,9 @@ export class AutoCombatService implements OnModuleDestroy {
             loadedSession,
             AutoCombatSessionPhase.COMBAT_ACTIVE,
             {
+              endsAt: battleEndsAt,
+              durationSeconds: battleDurationSeconds,
+              finishedAt: null,
               lastProcessedAt: now,
               currentMobId: mob.id,
               currentMobHp: mob.hp,
@@ -3386,6 +3393,19 @@ export class AutoCombatService implements OnModuleDestroy {
 
     if (enemiesFoundNow <= 0) {
       if (now.getTime() >= session.endsAt.getTime()) {
+        if (previousTrackedEnemiesRemaining > 0) {
+          const readyResponse = await this.markHuntingSessionAsReady(
+            session,
+            huntBatch,
+            session.endsAt,
+            'Limite de tempo da caça atingido. Os monstros rastreados continuam aguardando o combate.',
+          );
+
+          this.stopRealtimeProcessingLoop(session.characterId);
+
+          return readyResponse;
+        }
+
         const finishedSession = await this.finishActiveSessionAtEnd(session);
         const response = await this.buildSessionResponse(finishedSession.id, {
           message: 'Caça finalizada pelo limite de tempo.',
@@ -3529,14 +3549,11 @@ export class AutoCombatService implements OnModuleDestroy {
           trackedEncounter?.mobId ?? session.selectedEncounterMobId,
       };
 
-    if (didReachSessionLimit) {
-      sessionUpdateData.status = AutoCombatSessionStatus.FINISHED;
-      sessionUpdateData.finishedAt = session.endsAt;
-    }
-
-    if (didReachHuntLimit) {
+    if (didReachHuntLimit || didReachSessionLimit) {
       sessionUpdateData.phase = AutoCombatSessionPhase.ENCOUNTER_READY;
-      sessionUpdateData.huntStoppedAt = processedAt;
+      sessionUpdateData.huntStoppedAt = didReachSessionLimit
+        ? session.endsAt
+        : processedAt;
       sessionUpdateData.currentMobId = null;
       sessionUpdateData.currentMobHp = null;
       sessionUpdateData.currentMobMaxHp = null;
@@ -3566,8 +3583,10 @@ export class AutoCombatService implements OnModuleDestroy {
               : {}),
             ...(didReachSessionLimit
               ? {
-                  status: AutoCombatHuntBatchStatus.CANCELLED,
-                  cancelledAt: session.endsAt,
+                  status: AutoCombatHuntBatchStatus.READY,
+                  stoppedAt: session.endsAt,
+                  consumedAt: null,
+                  cancelledAt: null,
                 }
               : {}),
           }
@@ -3637,7 +3656,7 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const response = await this.buildSessionResponse(updatedSession.id, {
       message: didReachSessionLimit
-        ? `Caça finalizada pelo limite de tempo. ${enemiesFoundNow} ameaça(s) rastreada(s).`
+        ? `Limite de tempo da caça atingido. ${enemiesFoundNow} ameaça(s) rastreada(s) e preservada(s) para combate.`
         : didReachHuntLimit
           ? `Limite de rastreio atingido neste mapa. ${enemiesFoundNow} ameaça(s) rastreada(s).`
           : `${enemiesFoundNow} ameaça(s) rastreada(s) durante a caça.`,
@@ -3652,9 +3671,7 @@ export class AutoCombatService implements OnModuleDestroy {
     }
 
     if (didReachSessionLimit) {
-      this.clearPotionUsageForSession(updatedSession.id);
       this.stopRealtimeProcessingLoop(session.characterId);
-      this.autoCombatGateway.emitFinished(session.characterId, response);
     }
 
     return response;

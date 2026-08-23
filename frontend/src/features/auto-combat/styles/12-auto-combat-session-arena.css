@@ -806,8 +806,9 @@
   animation: autoCombatDefeatedBadge 560ms ease-out both;
 }
 
-.auto-combat-fighter-card--mob .auto-combat-defeated-badge {
-  animation: autoCombatMobDeathBadgeFeedback 4800ms ease-out both;
+.auto-combat-fighter-card--mob .auto-combat-defeated-badge,
+.auto-combat-inline-battle__mob-card .auto-combat-defeated-badge {
+  animation: autoCombatMobDeathBadgeFeedback 420ms ease-out both;
 }
 
 .auto-combat-defeated-badge--player {
@@ -1261,8 +1262,8 @@
 
 @keyframes autoCombatMobDeathBadgeFeedback {
   0% { opacity: 0; transform: translate3d(0, -8px, 0) scale(0.92); }
-  8% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-  82% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  18% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  72% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
   100% { opacity: 0; transform: translate3d(0, -8px, 0) scale(0.96); }
 }
 

@@ -36,6 +36,20 @@
   color: #f4f0df;
 }
 
+.tutorial-banner__content > p {
+  max-width: 62rem;
+  margin: 0;
+  color: #b8bdb2;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.tutorial-banner__error {
+  color: #f29b92;
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
 .tutorial-banner__content > i,
 .progression-item__track {
   display: block;
@@ -67,6 +81,7 @@
 }
 
 .tutorial-banner > button:first-of-type {
+  min-width: 9.5rem;
   border-color: rgba(143, 186, 91, 0.38);
   background: rgba(97, 137, 60, 0.2);
 }
@@ -261,6 +276,7 @@
 
   .tutorial-banner > button:first-of-type {
     grid-column: 2 / 4;
+    width: 100%;
   }
 
   .tutorial-banner__dismiss {

@@ -237,6 +237,8 @@ export function buildGatheringDashboardCharacter(
     currentMap:
       character.currentMap ?? safeOverview.progression?.currentMap ?? null,
 
+    stats: safeOverview.stats ?? character.stats ?? null,
+
     equipment: character.equipment ?? safeOverview.equipment ?? {},
     inventory: character.inventory ?? [],
 

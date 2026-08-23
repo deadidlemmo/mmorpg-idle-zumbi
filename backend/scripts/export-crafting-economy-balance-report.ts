@@ -79,7 +79,7 @@ const ECONOMY_DOCS_DIR = resolve(
   'docs',
   'economia-crafting-csv',
 );
-const REPORT_BASENAME = 'balance-v5-2-crafting-gathering-autocombat';
+const REPORT_BASENAME = 'balance-v5-4-crafting-gathering-autocombat';
 const FREE_SESSION_HOURS = 6;
 const PREMIUM_SESSION_HOURS = 12;
 
@@ -214,7 +214,9 @@ function getGatheringRatePerHour(params: {
     ? GATHERING_AFFINITY_PRODUCTION_MULTIPLIER
     : 1;
 
-  return baseRate * getGatheringRateMultiplier(gatheringLevel) * affinityMultiplier;
+  return (
+    baseRate * getGatheringRateMultiplier(gatheringLevel) * affinityMultiplier
+  );
 }
 
 function getAutoCombatSecondsPerKill(tier: number) {
@@ -299,7 +301,8 @@ function getDropEconomy(params: {
     weightedDropChancePercent,
     expectedQuantityPerEncounter,
     expectedKills,
-    expectedHours: (expectedKills * getAutoCombatSecondsPerKill(params.tier)) / 3600,
+    expectedHours:
+      (expectedKills * getAutoCombatSecondsPerKill(params.tier)) / 3600,
   };
 }
 
@@ -384,7 +387,9 @@ function buildTierRows(recipeRows: RecipeEconomyRow[]) {
       recipes: tierRows.length,
       gatheringLevel: REALISTIC_GATHERING_LEVEL_BY_TIER[tier],
       huntingLevel: REALISTIC_HUNTING_LEVEL_BY_TIER[tier],
-      gatheringQuantity: round(average(tierRows.map((row) => row.gatheringQuantity))),
+      gatheringQuantity: round(
+        average(tierRows.map((row) => row.gatheringQuantity)),
+      ),
       autoCombatDropQuantity: round(
         average(tierRows.map((row) => row.autoCombatDropQuantity)),
       ),
@@ -419,7 +424,11 @@ function escapeXml(value: string) {
     .replace(/"/g, '&quot;');
 }
 
-function renderLegend(items: Array<{ label: string; color: string }>, x: number, y: number) {
+function renderLegend(
+  items: Array<{ label: string; color: string }>,
+  x: number,
+  y: number,
+) {
   return items
     .map(
       (item, index) => `
@@ -466,10 +475,14 @@ function renderStackedHoursChart(rows: TierEconomyRow[], x: number, y: number) {
       <text x="${x}" y="${y - 26}" class="title">Tempo medio por item craftado</text>
       <text x="${x}" y="${y - 8}" class="subtitle">Gathering + AutoCombat + duracao do craft, com niveis realistas por tier.</text>
       <rect x="${x}" y="${y}" width="${chartWidth}" height="${chartHeight}" class="plot" />
-      ${[0, 3, 6, 9, 12].map((value) => `
+      ${[0, 3, 6, 9, 12]
+        .map(
+          (value) => `
         <line x1="${x}" x2="${x + chartWidth}" y1="${lineY(value)}" y2="${lineY(value)}" class="grid" />
         <text x="${x - 10}" y="${lineY(value) + 4}" class="axis" text-anchor="end">${value}h</text>
-      `).join('')}
+      `,
+        )
+        .join('')}
       <line x1="${x}" x2="${x + chartWidth}" y1="${lineY(6)}" y2="${lineY(6)}" class="free-line" />
       <line x1="${x}" x2="${x + chartWidth}" y1="${lineY(12)}" y2="${lineY(12)}" class="premium-line" />
       ${bars}
@@ -504,7 +517,11 @@ function renderLineChart(params: {
   const chartHeight = 220;
   const originY = params.y + chartHeight;
   const stepX = chartWidth / (params.rows.length - 1);
-  const point = (row: TierEconomyRow, index: number, key: keyof TierEconomyRow) => {
+  const point = (
+    row: TierEconomyRow,
+    index: number,
+    key: keyof TierEconomyRow,
+  ) => {
     const value = Number(row[key]);
     return {
       x: params.x + index * stepX,
@@ -515,10 +532,13 @@ function renderLineChart(params: {
 
   const paths = params.series
     .map((series) => {
-      const points = params.rows.map((row, index) => point(row, index, series.key));
+      const points = params.rows.map((row, index) =>
+        point(row, index, series.key),
+      );
       const d = points
-        .map((candidate, index) =>
-          `${index === 0 ? 'M' : 'L'}${candidate.x.toFixed(2)},${candidate.y.toFixed(2)}`,
+        .map(
+          (candidate, index) =>
+            `${index === 0 ? 'M' : 'L'}${candidate.x.toFixed(2)},${candidate.y.toFixed(2)}`,
         )
         .join(' ');
 
@@ -539,18 +559,22 @@ function renderLineChart(params: {
       <text x="${params.x}" y="${params.y - 26}" class="title">${escapeXml(params.title)}</text>
       <text x="${params.x}" y="${params.y - 8}" class="subtitle">${escapeXml(params.subtitle)}</text>
       <rect x="${params.x}" y="${params.y}" width="${chartWidth}" height="${chartHeight}" class="plot" />
-      ${[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-        const value = params.maxValue * ratio;
-        const gridY = originY - ratio * chartHeight;
-        return `
+      ${[0, 0.25, 0.5, 0.75, 1]
+        .map((ratio) => {
+          const value = params.maxValue * ratio;
+          const gridY = originY - ratio * chartHeight;
+          return `
           <line x1="${params.x}" x2="${params.x + chartWidth}" y1="${gridY}" y2="${gridY}" class="grid" />
           <text x="${params.x - 10}" y="${gridY + 4}" class="axis" text-anchor="end">${round(value, 1)}</text>
         `;
-      }).join('')}
+        })
+        .join('')}
       ${params.rows
-        .map((row, index) => `
+        .map(
+          (row, index) => `
           <text x="${params.x + index * stepX}" y="${originY + 22}" class="axis" text-anchor="middle">T${row.tier}</text>
-        `)
+        `,
+        )
         .join('')}
       ${paths}
       ${renderLegend(
@@ -587,7 +611,7 @@ function renderSvg(tierRows: TierEconomyRow[]) {
     .pill-text { fill: ${SERIES_COLORS.text}; font: 700 12px Arial, sans-serif; }
   </style>
   <rect class="bg" width="1320" height="980" />
-  <text x="48" y="58" class="headline">Balance V5.2 - Crafting, Gathering e AutoCombat</text>
+  <text x="48" y="58" class="headline">Balance V5.4 - Crafting, Gathering e AutoCombat</text>
   <text x="48" y="82" class="subtitle">Custo medio para criar 1 equipamento por tier. Considera sessoes free 6h, premium 12h, niveis realistas de gathering/caca e drops reais ponderados pela aparicao dos mobs ativos.</text>
   <g transform="translate(48 112)">
     <rect class="panel" width="1224" height="810" rx="14" />

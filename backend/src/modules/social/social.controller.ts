@@ -26,6 +26,17 @@ export class SocialController {
     return this.socialService.list(request.user.id);
   }
 
+  @Get('characters/:characterId/profile')
+  getCharacterProfile(
+    @Req() request: AuthenticatedRequest,
+    @Param('characterId') characterId: string,
+  ) {
+    return this.socialService.getPublicCharacterProfile(
+      request.user.id,
+      characterId,
+    );
+  }
+
   @Post('friends/request')
   sendRequest(
     @Req() request: AuthenticatedRequest,

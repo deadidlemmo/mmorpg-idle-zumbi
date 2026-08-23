@@ -1,5 +1,5 @@
-import { apiClient } from '../../../services/api/apiClient';
-import { API_ENDPOINTS } from '../../../services/api/endpoints';
+import { apiClient } from "../../../services/api/apiClient";
+import { API_ENDPOINTS } from "../../../services/api/endpoints";
 
 export interface AdminAuditLog {
   id: string;
@@ -40,18 +40,128 @@ export interface AdminUser {
   _count: { characters: number };
 }
 
+export interface AdminCosmeticEntitlement {
+  id: string;
+  source: "PURCHASE" | "BUNDLE" | "SEASON_PASS" | "EVENT" | "ACHIEVEMENT" | "ADMIN";
+  sourceReference: string | null;
+  grantedAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  isActive: boolean;
+  cosmetic: {
+    key: string;
+    name: string;
+    type: string;
+    collection: { key: string; name: string } | null;
+  };
+}
+
+interface PageResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+}
+
+export interface AdminUsersResponse extends PageResponse {
+  users: AdminUser[];
+}
+
+export interface AdminAuditLogsResponse extends PageResponse {
+  logs: AdminAuditLog[];
+}
+
+export interface AdminOperations {
+  generatedAt: string;
+  health: {
+    status: "ok" | "degraded";
+    ready: boolean;
+    checkedAt: string;
+    uptimeSeconds: number;
+    dependencies: {
+      database: "up" | "down";
+      redis: "up" | "down" | "disabled";
+    };
+    memory: {
+      rssBytes: number;
+      heapUsedBytes: number;
+      heapTotalBytes: number;
+    };
+    backup: {
+      state: "healthy" | "stale" | "failed" | "unknown";
+      maxAgeHours: number;
+      verificationMaxAgeHours: number;
+      backupAgeHours: number | null;
+      verificationAgeHours: number | null;
+      lastBackup: {
+        status: "success" | "failed";
+        file?: string;
+        createdAt?: string;
+        failedAt?: string;
+      } | null;
+      lastVerification: {
+        status: "success" | "failed";
+        verifiedAt?: string;
+        failedAt?: string;
+      } | null;
+      lastRestore: {
+        status: "success" | "failed";
+        targetDatabase?: string;
+        restoredAt?: string;
+        failedAt?: string;
+      } | null;
+    };
+    alerts: Array<{
+      code: string;
+      severity: "warning" | "critical";
+      message: string;
+    }>;
+  };
+  http: {
+    inFlightRequests: number;
+    requests: number;
+    errors: number;
+    errorRatePercent: number;
+    averageDurationMs: number;
+    maxDurationMs: number;
+    routes: Array<{
+      route: string;
+      requests: number;
+      errors: number;
+      errorRatePercent: number;
+      averageDurationMs: number;
+      maxDurationMs: number;
+    }>;
+  };
+}
+
 export async function getAdminSummary() {
-  const response = await apiClient.get<AdminSummary>(API_ENDPOINTS.admin.summary);
+  const response = await apiClient.get<AdminSummary>(
+    API_ENDPOINTS.admin.summary,
+  );
   return response.data;
 }
-export async function getAdminUsers(search = '') {
-  const response = await apiClient.get<{
-    users: AdminUser[];
-    total: number;
-    page: number;
-    pageSize: number;
-    pageCount: number;
-  }>(API_ENDPOINTS.admin.users, { params: { search, pageSize: 50 } });
+
+export async function getAdminOperations() {
+  const response = await apiClient.get<AdminOperations>(
+    API_ENDPOINTS.admin.operations,
+  );
+  return response.data;
+}
+
+export async function getAdminUsers(search = "", page = 1, pageSize = 25) {
+  const response = await apiClient.get<AdminUsersResponse>(
+    API_ENDPOINTS.admin.users,
+    { params: { search, page, pageSize } },
+  );
+  return response.data;
+}
+
+export async function getAdminAuditLogs(page = 1, pageSize = 25) {
+  const response = await apiClient.get<AdminAuditLogsResponse>(
+    API_ENDPOINTS.admin.auditLogs,
+    { params: { page, pageSize } },
+  );
   return response.data;
 }
 
@@ -63,6 +173,36 @@ export async function setAdminUserSuspension(
   const response = await apiClient.patch<{ user: AdminUser }>(
     API_ENDPOINTS.admin.userSuspension(userId),
     { suspended, reason },
+  );
+  return response.data;
+}
+
+export async function getAdminUserCosmetics(userId: string) {
+  const response = await apiClient.get<{
+    user: { id: string; email: string };
+    entitlements: AdminCosmeticEntitlement[];
+  }>(API_ENDPOINTS.admin.userCosmetics(userId));
+  return response.data;
+}
+
+export async function grantAdminCosmetics(payload: {
+  userId: string;
+  collectionKey: string;
+  source: AdminCosmeticEntitlement["source"];
+  sourceReference?: string;
+  expiresAt?: string;
+}) {
+  const response = await apiClient.post<{ message: string }>(
+    API_ENDPOINTS.admin.cosmeticsGrant,
+    payload,
+  );
+  return response.data;
+}
+
+export async function revokeAdminCosmetic(entitlementId: string) {
+  const response = await apiClient.post<{ message: string }>(
+    API_ENDPOINTS.admin.cosmeticsRevoke,
+    { entitlementId },
   );
   return response.data;
 }

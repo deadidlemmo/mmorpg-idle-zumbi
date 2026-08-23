@@ -13,6 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
+import { getAuthToken } from "../../../services/api/authToken";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import {
   buildMapVisualStyle,
@@ -27,6 +28,7 @@ import type {
 } from "../../dashboard/types/dashboard.types";
 import {
   connectWorldBossSocket,
+  disconnectWorldBossSocket,
   type WorldBossSocket,
 } from "../../../services/websocket/socketClient";
 import {
@@ -659,7 +661,7 @@ export function WorldBossesPage() {
   );
 
   useEffect(() => {
-    if (!realtimeEventIdsKey || !characterId) return;
+    if (!realtimeEventIdsKey || !characterId || !getAuthToken()) return;
     const eventIds = realtimeEventIdsKey.split("|").filter(Boolean);
     if (eventIds.length === 0) return;
 
@@ -707,6 +709,7 @@ export function WorldBossesPage() {
       socket.off("worldBoss:rewarded", update);
       socket.off("worldBoss:left", update);
       socket.off("worldBoss:error", fail);
+      disconnectWorldBossSocket();
     };
   }, [characterId, realtimeEventIdsKey]);
 

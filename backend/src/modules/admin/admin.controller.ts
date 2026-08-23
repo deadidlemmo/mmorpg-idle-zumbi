@@ -27,6 +27,11 @@ export class AdminController {
     return this.adminService.getSummary();
   }
 
+  @Get('operations')
+  getOperations() {
+    return this.adminService.getOperations();
+  }
+
   @Get('users')
   listUsers(@Query() query: ListAdminUsersDto) {
     return this.adminService.listUsers(query);

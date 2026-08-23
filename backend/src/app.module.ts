@@ -26,6 +26,9 @@ import { VendorModule } from './modules/vendor/vendor.module';
 import { WorldBossesModule } from './modules/world-bosses/world-bosses.module';
 import { ProgressionModule } from './modules/progression/progression.module';
 import { SocialModule } from './modules/social/social.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { CosmeticsModule } from './modules/cosmetics/cosmetics.module';
+import { StorefrontModule } from './modules/storefront/storefront.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisCoordinationModule } from './common/redis/redis-coordination.module';
 import { AuditModule } from './common/audit/audit.module';
@@ -64,6 +67,8 @@ import { RedisThrottlerStorage } from './common/redis/redis-throttler.storage';
     AdminModule,
 
     CharactersModule,
+    CosmeticsModule,
+    StorefrontModule,
     CombatModule,
     AutoCombatModule,
 
@@ -79,6 +84,7 @@ import { RedisThrottlerStorage } from './common/redis/redis-throttler.storage';
     WorldBossesModule,
     ProgressionModule,
     SocialModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [

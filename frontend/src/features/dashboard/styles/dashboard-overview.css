@@ -37,6 +37,22 @@
     0 0 34px color-mix(in srgb, var(--hero-accent) 16%, transparent);
 }
 
+.dashboard-hero.has-cosmetic-banner {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(8, 12, 11, 0.36),
+      rgba(7, 12, 10, 0.78) 48%,
+      rgba(4, 8, 7, 0.9)
+    ),
+    var(--hero-banner-image) center / cover no-repeat,
+    #0b100f;
+}
+
+.dashboard-hero.has-cosmetic-banner::before {
+  opacity: 0.28;
+}
+
 .dashboard-hero::before {
   content: '';
   position: absolute;
@@ -136,6 +152,54 @@
   z-index: 1;
   font-family: var(--font-title);
   font-size: 1.8rem;
+}
+
+.dashboard-hero__avatar .character-portrait__frame {
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.dashboard-hero__identity-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.dashboard-hero__identity-kicker > span {
+  color: var(--hero-accent);
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.dashboard-hero__cosmetic-badge {
+  display: inline-grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--hero-accent) 65%, #e9f0df);
+  border-radius: 50%;
+  background: rgba(4, 9, 7, 0.78);
+  color: color-mix(in srgb, var(--hero-accent) 78%, #fff);
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.dashboard-hero__cosmetic-title {
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--hero-accent) 72%, #f1f2e9);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dashboard-hero__content {

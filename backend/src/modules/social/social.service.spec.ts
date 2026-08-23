@@ -3,6 +3,7 @@ import { SocialService } from './social.service';
 
 describe('SocialService', () => {
   const prisma = {
+    character: { findFirst: jest.fn() },
     user: { findUnique: jest.fn() },
     friendship: {
       findUnique: jest.fn(),
@@ -10,10 +11,44 @@ describe('SocialService', () => {
       updateMany: jest.fn(),
     },
   };
-  const service = new SocialService(prisma as never);
+  const cosmeticsService = { getResolvedAppearance: jest.fn() };
+  const service = new SocialService(prisma as never, cosmeticsService as never);
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('retorna perfil público sem expor o usuário proprietário', async () => {
+    prisma.character.findFirst.mockResolvedValue({
+      id: 'character-target',
+      userId: 'user-target',
+      name: 'Sobrevivente',
+      level: 12,
+      status: 'ACTIVE',
+      avatarKey: 'lutador-01',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      class: {
+        id: 'class-1',
+        name: 'Lutador',
+        description: 'Linha de frente.',
+      },
+      map: { id: 'map-1', name: 'Subúrbio Silencioso', tier: 1 },
+      equipment: {},
+    });
+    cosmeticsService.getResolvedAppearance.mockResolvedValue({
+      avatarKey: 'avatar-premium-lutador-vanguarda',
+    });
+
+    const result = await service.getPublicCharacterProfile(
+      'user-viewer',
+      'character-target',
+    );
+
+    expect(result.character).not.toHaveProperty('userId');
+    expect(result.viewer.isOwner).toBe(false);
+    expect(result.appearance).toEqual({
+      avatarKey: 'avatar-premium-lutador-vanguarda',
+    });
   });
 
   it('usa a mesma chave para pedidos nos dois sentidos', async () => {

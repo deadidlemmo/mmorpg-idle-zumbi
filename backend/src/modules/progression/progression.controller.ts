@@ -29,6 +29,14 @@ export class ProgressionController {
     return this.progressionService.getDashboard(request.user.id, characterId);
   }
 
+  @Get(':characterId/tutorial')
+  getTutorial(
+    @Req() request: AuthenticatedRequest,
+    @Param('characterId') characterId: string,
+  ) {
+    return this.progressionService.getTutorial(request.user.id, characterId);
+  }
+
   @Patch(':characterId/tutorial')
   updateTutorial(
     @Req() request: AuthenticatedRequest,

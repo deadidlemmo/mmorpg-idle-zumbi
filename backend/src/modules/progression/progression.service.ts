@@ -14,12 +14,49 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateTutorialDto } from './dto/update-tutorial.dto';
 
 const TUTORIAL_STEPS = [
-  { key: 'shelter', title: 'Conheca o abrigo', href: '' },
-  { key: 'map', title: 'Escolha um mapa', href: 'maps' },
-  { key: 'gathering', title: 'Colete recursos', href: 'gathering' },
-  { key: 'crafting', title: 'Fabrique seu primeiro item', href: 'crafting' },
-  { key: 'equipment', title: 'Equipe o sobrevivente', href: 'equipment' },
+  {
+    key: 'shelter',
+    title: 'Conheça o abrigo',
+    description:
+      'Este é o centro da sua sobrevivência. Acompanhe aqui seus recursos, atividades e progresso.',
+    href: '',
+    actionLabel: 'Entendi',
+  },
+  {
+    key: 'map',
+    title: 'Vá para Mapas',
+    description:
+      'Abra Mapas para conhecer as regiões disponíveis e o nível recomendado de cada área.',
+    href: 'maps',
+    actionLabel: 'Abrir mapas',
+  },
+  {
+    key: 'gathering',
+    title: 'Colete seu primeiro recurso',
+    description:
+      'Escolha uma expedição, inicie uma coleta e aguarde pelo menos uma unidade chegar ao inventário.',
+    href: 'gathering',
+    actionLabel: 'Abrir expedições',
+  },
+  {
+    key: 'crafting',
+    title: 'Fabrique seu primeiro item',
+    description:
+      'Use os materiais coletados em Criação. Esta etapa avança quando a fabricação for concluída.',
+    href: 'crafting',
+    actionLabel: 'Abrir criação',
+  },
+  {
+    key: 'equipment',
+    title: 'Equipe o sobrevivente',
+    description:
+      'Abra Equipamentos e vista pelo menos um item para preparar o personagem para o combate.',
+    href: 'equipment',
+    actionLabel: 'Abrir equipamentos',
+  },
 ];
+
+const LAST_MANUAL_TUTORIAL_STEP = 2;
 
 type MissionAssignmentWithDefinition = Prisma.CharacterMissionGetPayload<{
   include: { mission: true };
@@ -35,11 +72,7 @@ export class ProgressionService {
 
   async getDashboard(userId: string, characterId: string) {
     const character = await this.getCharacterOrThrow(userId, characterId);
-    const tutorial = await this.prisma.characterTutorialProgress.upsert({
-      where: { characterId },
-      update: {},
-      create: { characterId },
-    });
+    const tutorial = await this.getTutorialProgress(characterId);
 
     await this.ensureMissionAssignments(characterId);
     const [missions, achievements] = await Promise.all([
@@ -49,10 +82,15 @@ export class ProgressionService {
 
     return {
       serverNow: new Date().toISOString(),
-      tutorial: { ...tutorial, steps: TUTORIAL_STEPS },
+      tutorial,
       missions,
       achievements,
     };
+  }
+
+  async getTutorial(userId: string, characterId: string) {
+    await this.getCharacterOrThrow(userId, characterId);
+    return this.getTutorialProgress(characterId);
   }
 
   async updateTutorial(
@@ -66,8 +104,9 @@ export class ProgressionService {
       update: {},
       create: { characterId },
     });
-    const step = Math.max(existing.step, dto.step);
-    const completed = Boolean(dto.completed || step >= TUTORIAL_STEPS.length);
+    const requestedStep = Math.min(dto.step, LAST_MANUAL_TUTORIAL_STEP);
+    const step = Math.max(existing.step, requestedStep);
+    const completed = existing.completed || step >= TUTORIAL_STEPS.length;
 
     return this.prisma.characterTutorialProgress.update({
       where: { characterId },
@@ -80,6 +119,101 @@ export class ProgressionService {
           : existing.dismissedAt,
       },
     });
+  }
+
+  private async reconcileTutorialProgress(tutorial: {
+    id: string;
+    characterId: string;
+    step: number;
+    completed: boolean;
+    completedAt: Date | null;
+    dismissedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    if (tutorial.completed || tutorial.dismissedAt || tutorial.step < 2) {
+      return tutorial;
+    }
+
+    let stepCompleted = false;
+
+    if (tutorial.step === 2) {
+      stepCompleted = Boolean(
+        await this.prisma.gatheringSession.findFirst({
+          where: {
+            characterId: tutorial.characterId,
+            collectedQuantity: { gt: 0 },
+            updatedAt: { gte: tutorial.updatedAt },
+          },
+          select: { id: true },
+        }),
+      );
+    } else if (tutorial.step === 3) {
+      stepCompleted = Boolean(
+        await this.prisma.craftingSession.findFirst({
+          where: {
+            characterId: tutorial.characterId,
+            completedAt: { gte: tutorial.updatedAt },
+          },
+          select: { id: true },
+        }),
+      );
+    } else if (tutorial.step === 4) {
+      stepCompleted = Boolean(
+        await this.prisma.equipment.findFirst({
+          where: {
+            characterId: tutorial.characterId,
+            updatedAt: { gte: tutorial.updatedAt },
+            OR: [
+              { mainHandId: { not: null } },
+              { offHandId: { not: null } },
+              { headId: { not: null } },
+              { armorId: { not: null } },
+              { pantsId: { not: null } },
+              { bootsId: { not: null } },
+            ],
+          },
+          select: { id: true },
+        }),
+      );
+    }
+
+    if (!stepCompleted) {
+      return tutorial;
+    }
+
+    const nextStep = tutorial.step + 1;
+    const completed = nextStep >= TUTORIAL_STEPS.length;
+    const now = new Date();
+
+    await this.prisma.characterTutorialProgress.updateMany({
+      where: {
+        id: tutorial.id,
+        step: tutorial.step,
+        completed: false,
+        dismissedAt: null,
+      },
+      data: {
+        step: nextStep,
+        completed,
+        completedAt: completed ? now : null,
+      },
+    });
+
+    return this.prisma.characterTutorialProgress.findUniqueOrThrow({
+      where: { id: tutorial.id },
+    });
+  }
+
+  private async getTutorialProgress(characterId: string) {
+    const storedTutorial = await this.prisma.characterTutorialProgress.upsert({
+      where: { characterId },
+      update: {},
+      create: { characterId },
+    });
+    const tutorial = await this.reconcileTutorialProgress(storedTutorial);
+
+    return { ...tutorial, steps: TUTORIAL_STEPS };
   }
 
   async claimMission(userId: string, characterId: string, missionId: string) {

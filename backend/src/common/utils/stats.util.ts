@@ -31,6 +31,7 @@ type GameClassStats = {
 };
 
 type ItemStatsBonus = {
+  tier?: number | null;
   strengthBonus?: number | null;
   vitalityBonus?: number | null;
   agilityBonus?: number | null;
@@ -45,6 +46,19 @@ type GatheringSkillStatsBonus = {
 };
 
 type PrimaryStatsInput = Partial<PrimaryStats> | null | undefined;
+
+export type EquipmentProgression = {
+  craftedPieces: number;
+  activeMilestone: number;
+  nextMilestone: number | null;
+  bonusPercent: number;
+};
+
+export const EQUIPMENT_PROGRESSION_MILESTONES = [
+  { pieces: 2, bonusPercent: 4 },
+  { pieces: 4, bonusPercent: 8 },
+  { pieces: 6, bonusPercent: 12 },
+] as const;
 
 const GATHERING_STAT_BY_ORIGIN: Record<string, keyof PrimaryStats> = {
   DESMANCHE: 'strength',
@@ -145,6 +159,46 @@ export function getEquipmentPrimaryBonus(
   }, createEmptyPrimaryStats());
 }
 
+export function getEquipmentProgression(
+  equipmentItems: Array<ItemStatsBonus | null | undefined>,
+): EquipmentProgression {
+  const craftedPieces = Math.min(
+    6,
+    equipmentItems.filter((item) => Number(item?.tier ?? 0) >= 1).length,
+  );
+  const activeMilestone = [...EQUIPMENT_PROGRESSION_MILESTONES]
+    .reverse()
+    .find((milestone) => craftedPieces >= milestone.pieces);
+  const nextMilestone = EQUIPMENT_PROGRESSION_MILESTONES.find(
+    (milestone) => craftedPieces < milestone.pieces,
+  );
+
+  return {
+    craftedPieces,
+    activeMilestone: activeMilestone?.pieces ?? 0,
+    nextMilestone: nextMilestone?.pieces ?? null,
+    bonusPercent: activeMilestone?.bonusPercent ?? 0,
+  };
+}
+
+function applyEquipmentProgressionBonus(
+  stats: DerivedCombatStats,
+  progression: EquipmentProgression,
+): DerivedCombatStats {
+  if (progression.bonusPercent <= 0) {
+    return stats;
+  }
+
+  const multiplier = 1 + progression.bonusPercent / 100;
+
+  return {
+    maxHp: Math.round(stats.maxHp * multiplier),
+    attack: Math.round(stats.attack * multiplier),
+    defense: Math.round(stats.defense * multiplier),
+    speed: stats.speed,
+  };
+}
+
 export function sumPrimaryStats(
   baseStats: PrimaryStats,
   bonusStats: PrimaryStats,
@@ -215,7 +269,7 @@ export function calculateDerivedCombatStats(
       break;
 
     case 'medico':
-      attack = stats.technique + stats.precision;
+      attack = stats.technique * 1.5 + stats.precision;
       break;
 
     default:
@@ -250,6 +304,7 @@ export function calculateFullStats(
   const levelBonusStats = getLevelPrimaryBonus(gameClass.name, safeLevel);
 
   const equipmentBonusStats = getEquipmentPrimaryBonus(equipmentItems);
+  const equipmentProgression = getEquipmentProgression(equipmentItems);
   const gatheringBonusStats = normalizePrimaryStats(gatheringBonus);
 
   const totalPrimaryStats = sumManyPrimaryStats([
@@ -259,10 +314,9 @@ export function calculateFullStats(
     gatheringBonusStats,
   ]);
 
-  const derivedCombatStats = calculateDerivedCombatStats(
-    gameClass.name,
-    safeLevel,
-    totalPrimaryStats,
+  const derivedCombatStats = applyEquipmentProgressionBonus(
+    calculateDerivedCombatStats(gameClass.name, safeLevel, totalPrimaryStats),
+    equipmentProgression,
   );
 
   return {
@@ -273,5 +327,6 @@ export function calculateFullStats(
     gatheringBonusStats,
     totalPrimaryStats,
     derivedCombatStats,
+    equipmentProgression,
   };
 }

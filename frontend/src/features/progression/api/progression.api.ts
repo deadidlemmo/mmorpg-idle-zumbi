@@ -1,6 +1,10 @@
 import { apiClient } from "../../../services/api/apiClient";
 import { API_ENDPOINTS } from "../../../services/api/endpoints";
-import type { ProgressionDashboardResponse } from "../types/progression.types";
+import type {
+  ProgressionDashboardResponse,
+  TutorialProgress,
+  TutorialUpdateResponse,
+} from "../types/progression.types";
 
 export async function getProgressionDashboard(characterId: string) {
   const response = await apiClient.get<ProgressionDashboardResponse>(
@@ -13,9 +17,16 @@ export async function updateTutorial(
   characterId: string,
   payload: { step: number; completed?: boolean; dismissed?: boolean },
 ) {
-  const response = await apiClient.patch(
+  const response = await apiClient.patch<TutorialUpdateResponse>(
     API_ENDPOINTS.progression.tutorial(characterId),
     payload,
+  );
+  return response.data;
+}
+
+export async function getTutorialProgress(characterId: string) {
+  const response = await apiClient.get<TutorialProgress>(
+    API_ENDPOINTS.progression.tutorial(characterId),
   );
   return response.data;
 }

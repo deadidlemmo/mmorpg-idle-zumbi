@@ -13,6 +13,9 @@ import {
 } from "../../loot-notifications/lootNotificationContext";
 import type { CharacterOverviewResponse } from "../../dashboard/types/dashboard.types";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
+import { getEquipmentItemImageUrl } from "../../equipment/utils/equipmentItemAssets";
+import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
+import { getBattleTimelineRecoveryDelayMs } from "../utils/battle-timeline";
 import {
   getAutoCombatRecentEvents,
   getAutoCombatStatus,
@@ -38,7 +41,7 @@ import { AutoCombatRealtimeContext } from "./autoCombatRealtime.context";
 import type { AutoCombatRealtimeContextValue } from "./autoCombatRealtime.types";
 import {
   buildMobSpawnedEventFromStatus,
-  getRealtimeEventDelay,
+  getRealtimeEventPlaybackTiming,
   getStatusSession,
   isStatusActive,
   isTerminalSessionStatus,
@@ -63,10 +66,10 @@ type LooseAutoCombatStatus = AutoCombatStatusResponse & {
 const INITIAL_RELOAD_DELAY_MS = 300;
 const AFTER_START_RELOAD_DELAY_MS = 700;
 const AFTER_VISIBILITY_RELOAD_DELAY_MS = 120;
+const STALLED_COMBAT_SNAPSHOT_GRACE_MS = 1_750;
+const STALLED_COMBAT_SNAPSHOT_TIMER_PADDING_MS = 50;
 
-const NEXT_EVENT_PROCESS_DELAY_MS = 120;
-const ACTIVE_EVENT_IMPACT_RATIO = 0.55;
-
+const NEXT_EVENT_PROCESS_DELAY_MS = 40;
 type AutoCombatLootNotificationTracker = {
   sessionId: string | null;
   totalsByItemId: Map<string, number>;
@@ -80,6 +83,9 @@ type AutoCombatLootWithOptionalIcon = AutoCombatRewardLootViewModel & {
     iconUrl?: string | null;
     iconPath?: string | null;
     imageUrl?: string | null;
+    assetKey?: string | null;
+    slug?: string | null;
+    tier?: number | string | null;
   } | null;
   icon?: string | null;
   iconUrl?: string | null;
@@ -111,13 +117,29 @@ function getLootImageUrl(loot: AutoCombatRewardLootViewModel) {
     looseLoot.iconPath ??
     looseLoot.icon;
 
-  if (typeof possibleImage !== "string") {
-    return null;
+  if (typeof possibleImage === "string") {
+    const trimmedImage = possibleImage.trim();
+
+    if (trimmedImage.length > 0) {
+      return trimmedImage;
+    }
   }
 
-  const trimmedImage = possibleImage.trim();
+  const localAssetCandidate = {
+    name: getLootItemName(loot),
+    slug: looseLoot.item?.slug,
+    assetKey: looseLoot.item?.assetKey,
+    tier: looseLoot.item?.tier ?? loot.tier,
+    icon: looseLoot.item?.icon,
+    iconUrl: looseLoot.item?.iconUrl,
+    iconPath: looseLoot.item?.iconPath,
+    imageUrl: looseLoot.item?.imageUrl,
+  };
 
-  return trimmedImage.length > 0 ? trimmedImage : null;
+  return (
+    getGatheringMaterialImageUrl(localAssetCandidate) ??
+    getEquipmentItemImageUrl(localAssetCandidate)
+  );
 }
 
 function buildAutoCombatLootTotals(status: AutoCombatStatusResponse | null) {
@@ -1306,8 +1328,6 @@ export function AutoCombatRealtimeProvider({
     (payload: AutoCombatStatusResponse) => {
       if (!normalizedCharacterId) return;
 
-      flushVisualQueueWithoutAnimation();
-
       lastInactiveStatusSignatureRef.current =
         getStableStatusSignature(payload);
       lootSuppressionRequiresFreshStatusRef.current = false;
@@ -1318,17 +1338,9 @@ export function AutoCombatRealtimeProvider({
         status: payload,
       });
 
-      dispatch({
-        type: "CLEAR_QUEUE",
-      });
-
       clearScheduledReload();
     },
-    [
-      clearScheduledReload,
-      flushVisualQueueWithoutAnimation,
-      normalizedCharacterId,
-    ],
+    [clearScheduledReload, normalizedCharacterId],
   );
 
   const handleStoppedPayload = useCallback(
@@ -1412,12 +1424,6 @@ export function AutoCombatRealtimeProvider({
     onStopped: handleStoppedPayload,
 
     onRealtimeEvent: handleRealtimeEvent,
-    onMobSpawned: handleRealtimeEvent,
-    onHit: handleRealtimeEvent,
-    onDodge: handleRealtimeEvent,
-    onMobDefeated: handleRealtimeEvent,
-    onPlayerDefeated: handleRealtimeEvent,
-    onPotionUsed: handleRealtimeEvent,
 
     onError: (message) => {
       dispatch({
@@ -1508,6 +1514,82 @@ export function AutoCombatRealtimeProvider({
     reload,
     socketState.isConnected,
     socketState.isJoined,
+  ]);
+
+  useEffect(() => {
+    if (!autoLoad || !normalizedCharacterId) return;
+
+    const currentState = stateRef.current;
+    const sessionPhase = String(currentState.session?.phase ?? "")
+      .trim()
+      .toUpperCase();
+    const hasPendingVisualEvent = Boolean(
+      currentState.activeEvent || currentState.eventQueue.length > 0,
+    );
+
+    if (
+      isUiBackgrounded() ||
+      currentState.isSynchronizing ||
+      hasPendingVisualEvent ||
+      !isStatusActive(currentState.status) ||
+      sessionPhase !== "COMBAT_ACTIVE"
+    ) {
+      return;
+    }
+
+    const battleProgress =
+      currentState.mob?.battleProgress ??
+      currentState.session?.battleProgress ??
+      null;
+    const snapshotReceivedAtMs =
+      currentState.mob?.updatedAt ?? currentState.updatedAt;
+    const recoveryDelayMs = getBattleTimelineRecoveryDelayMs({
+      source: battleProgress,
+      snapshotReceivedAtMs,
+      nowMs: Date.now(),
+      graceMs: STALLED_COMBAT_SNAPSHOT_GRACE_MS,
+    });
+
+    if (recoveryDelayMs === null) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const latestState = stateRef.current;
+      const latestSessionPhase = String(latestState.session?.phase ?? "")
+        .trim()
+        .toUpperCase();
+
+      if (
+        isUiBackgrounded() ||
+        latestState.isSynchronizing ||
+        latestState.activeEvent ||
+        latestState.eventQueue.length > 0 ||
+        !isStatusActive(latestState.status) ||
+        latestSessionPhase !== "COMBAT_ACTIVE"
+      ) {
+        return;
+      }
+
+      reconcileAfterReturningToPage("stalled-combat-snapshot");
+    }, recoveryDelayMs + STALLED_COMBAT_SNAPSHOT_TIMER_PADDING_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    autoLoad,
+    normalizedCharacterId,
+    reconcileAfterReturningToPage,
+    state.activeEvent,
+    state.eventQueue.length,
+    state.isSynchronizing,
+    state.mob?.battleProgress,
+    state.mob?.updatedAt,
+    state.session?.battleProgress,
+    state.session?.phase,
+    state.status,
+    state.updatedAt,
   ]);
 
   useEffect(() => {
@@ -1636,14 +1718,13 @@ export function AutoCombatRealtimeProvider({
     }
 
     if (state.activeEvent) {
-      const eventDelay = getRealtimeEventDelay(state.activeEvent);
-      const impactDelay = Math.max(
-        0,
-        Math.floor(eventDelay * ACTIVE_EVENT_IMPACT_RATIO),
-      );
+      const playbackTiming = getRealtimeEventPlaybackTiming({
+        event: state.activeEvent,
+        nextEvent: state.eventQueue[0] ?? null,
+      });
       const clearDelay = state.activeEventImpactApplied
-        ? Math.max(0, eventDelay - impactDelay)
-        : eventDelay;
+        ? playbackTiming.visibleAfterImpactDelay
+        : playbackTiming.totalDelay;
 
       if (!state.activeEventImpactApplied) {
         activeEventImpactTimeoutRef.current = window.setTimeout(() => {
@@ -1652,7 +1733,7 @@ export function AutoCombatRealtimeProvider({
           });
 
           activeEventImpactTimeoutRef.current = null;
-        }, impactDelay);
+        }, playbackTiming.impactDelay);
       }
 
       activeEventTimeoutRef.current = window.setTimeout(() => {
@@ -1691,7 +1772,7 @@ export function AutoCombatRealtimeProvider({
     clearScheduledActiveEvent,
     state.activeEvent,
     state.activeEventImpactApplied,
-    state.eventQueue.length,
+    state.eventQueue,
   ]);
 
   useEffect(() => {

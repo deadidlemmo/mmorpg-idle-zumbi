@@ -9,9 +9,13 @@ export const API_ENDPOINTS = {
 
   admin: {
     summary: "/admin/summary",
+    operations: "/admin/operations",
     users: "/admin/users",
     userSuspension: (userId: string) => `/admin/users/${userId}/suspension`,
     auditLogs: "/admin/audit-logs",
+    cosmeticsGrant: "/admin/cosmetics/grant",
+    cosmeticsRevoke: "/admin/cosmetics/revoke",
+    userCosmetics: (userId: string) => `/admin/cosmetics/users/${userId}`,
   },
 
   progression: {
@@ -28,6 +32,23 @@ export const API_ENDPOINTS = {
     request: "/social/friends/request",
     accept: (friendshipId: string) => `/social/friends/${friendshipId}/accept`,
     remove: (friendshipId: string) => `/social/friends/${friendshipId}`,
+    characterProfile: (characterId: string) =>
+      `/social/characters/${characterId}/profile`,
+  },
+
+  cosmetics: {
+    catalog: (characterId: string) => `/cosmetics/characters/${characterId}`,
+    appearance: (characterId: string) =>
+      `/cosmetics/characters/${characterId}/appearance`,
+  },
+
+  storefront: {
+    catalog: (characterId: string) => `/storefront/characters/${characterId}`,
+    checkout: "/storefront/checkout",
+  },
+
+  chat: {
+    generalMessages: "/chat/general/messages",
   },
 
   characters: {

@@ -1015,7 +1015,20 @@ export function GatheringOriginPage() {
 
       setSelectedMaterialId(material.id);
       setUsageMaterial(null);
-      setFeedback(`Coleta iniciada: ${material.name}.`);
+      const collectedQuantity =
+        response.previousGathering?.collected.quantity ?? 0;
+      const collectedMessage =
+        collectedQuantity > 0
+          ? ` ${collectedQuantity} unidade${collectedQuantity === 1 ? '' : 's'} da coleta anterior foram enviadas ao inventário.`
+          : '';
+
+      setFeedback(
+        response.alreadyActive
+          ? `${material.name} já está sendo coletado.`
+          : response.switched
+            ? `Coleta alterada para ${material.name}.${collectedMessage}`
+            : `Coleta iniciada: ${material.name}.`,
+      );
     } catch (error) {
       setPageErrorMessage(extractGatheringApiError(error));
     } finally {
@@ -1398,6 +1411,7 @@ export function GatheringOriginPage() {
                   }
                   label={originLabel}
                   badge={getSkillLevelLabel(gatheringSkill)}
+                  progressAnimation="value"
                   progressPercent={skillProgressPercent}
                   progressLabel={'Progresso da profici\u00eancia'}
                   pills={[

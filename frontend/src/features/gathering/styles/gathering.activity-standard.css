@@ -1040,6 +1040,23 @@
   box-shadow: 0 0 12px rgba(240, 197, 63, 0.16) !important;
 }
 
+.activity-progress-card--cycle-progress
+  .auto-combat-hunt-skill-card__track
+  i {
+  transition: width 950ms linear !important;
+}
+
+.activity-progress-card--value-progress
+  .auto-combat-hunt-skill-card__track
+  i {
+  transition: width 280ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.auto-combat-hunt-skill-card__track
+  i.activity-progress-card__fill--resetting {
+  transition: none !important;
+}
+
 .gathering-origin-current-card .auto-combat-hunt-skill-card__pills,
 .gathering-origin-skill-card .auto-combat-hunt-skill-card__pills {
   display: flex !important;
@@ -1141,6 +1158,17 @@
   min-width: 0 !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-progress-card--cycle-progress
+    .auto-combat-hunt-skill-card__track
+    i,
+  .activity-progress-card--value-progress
+    .auto-combat-hunt-skill-card__track
+    i {
+    transition: none !important;
+  }
 }
 
 .gathering-origin-current-card .auto-combat-hunt-skill-card__pills span,

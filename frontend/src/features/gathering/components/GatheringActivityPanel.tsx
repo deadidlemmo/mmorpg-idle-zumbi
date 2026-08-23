@@ -486,6 +486,7 @@ export function GatheringActivityPanel({
       }
       label={getActivityTitle(material)}
       badge={skillLevelLabel}
+      progressAnimation="cycle"
       progressPercent={progressPercent}
       progressLabel="Progresso até a próxima unidade coletada"
       progressTitle={`${Math.round(progressPercent)}% até a próxima unidade`}

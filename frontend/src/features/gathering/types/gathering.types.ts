@@ -238,6 +238,9 @@ export interface StartGatheringResponse {
   message: string;
   session: GatheringSessionViewModel;
   gatheringSkill?: GatheringSkillViewModel | null;
+  switched: boolean;
+  alreadyActive: boolean;
+  previousGathering?: GatheringPreviousSessionResult | null;
 }
 
 export interface GatheringProductionPreviewViewModel {
@@ -344,6 +347,14 @@ export interface GatheringProgressViewModel {
   statBonusGained?: GatheringStatBonusGainedViewModel | null;
 
   skill?: GatheringSkillViewModel | null;
+}
+
+export interface GatheringPreviousSessionResult {
+  collected: GatheringCollectedViewModel;
+  production: GatheringProductionResultViewModel;
+  gatheringProgress?: GatheringProgressViewModel | null;
+  session: GatheringSessionViewModel;
+  inventoryItem?: GatheringInventoryItemViewModel | null;
 }
 
 export interface CollectGatheringResponse {

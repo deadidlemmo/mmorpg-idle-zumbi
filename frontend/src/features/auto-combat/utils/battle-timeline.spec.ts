@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   getBattleBatchCountdown,
+  getBattleTimelineRecoveryDelayMs,
   getBattleTimelineProgress,
+  getBattleTopBarProgressPercent,
   getBattleTargetDisplayCounts,
+  getBattleVisualTimelineProgress,
   getCountdownTimeline,
   getCycleProgress,
   getDisplayBattleBatchCountdown,
@@ -15,7 +18,106 @@ import {
   getServerClientOffsetMs,
   getSecondTickCycleProgress,
   getStableBattleTargetDisplayCounts,
+  getVisibleBattleCycleRemainingPercent,
 } from "./battle-timeline.ts";
+
+test("barra superior do combate usa o ciclo visual em vez dos saltos de HP", () => {
+  assert.equal(
+    getBattleTopBarProgressPercent({
+      timelineRemainingPercent: 80,
+      mobHpPercent: 37,
+    }),
+    80,
+  );
+  assert.equal(
+    getBattleTopBarProgressPercent({
+      timelineRemainingPercent: 40,
+      mobHpPercent: 12,
+      isMobSpawnAwaitingImpact: true,
+    }),
+    100,
+  );
+  assert.equal(
+    getBattleTopBarProgressPercent({
+      timelineRemainingPercent: 20,
+      mobHpPercent: 12,
+      isMobDefeated: true,
+    }),
+    0,
+  );
+  assert.equal(getBattleTopBarProgressPercent({ mobHpPercent: 64 }), 64);
+});
+
+test("novo alvo entra com barra cheia sem perder o fim autoritativo do ciclo", () => {
+  const cycleStartedAtMs = Date.parse("2026-08-22T12:00:00.000Z");
+  const cycleDurationMs = 16_000;
+  const serverClientOffsetMs = 2_000;
+  const visualCycleStartedAtServerMs = cycleStartedAtMs + 1_300;
+  const visualCycleStartedAtClientMs =
+    visualCycleStartedAtServerMs - serverClientOffsetMs;
+  const progress = getBattleVisualTimelineProgress({
+    source: { cycleStartedAt: cycleStartedAtMs, cycleDurationMs },
+    nowMs: visualCycleStartedAtServerMs,
+  });
+
+  assert.equal(
+    getVisibleBattleCycleRemainingPercent({
+      progress,
+      visualCycleStartedAtMs: visualCycleStartedAtClientMs,
+      clientNowMs: visualCycleStartedAtClientMs,
+      serverClientOffsetMs,
+    }),
+    100,
+  );
+  assert.equal(
+    getVisibleBattleCycleRemainingPercent({
+      progress,
+      visualCycleStartedAtMs: visualCycleStartedAtClientMs,
+      clientNowMs: visualCycleStartedAtClientMs + 7_350,
+      serverClientOffsetMs,
+    }),
+    50,
+  );
+  assert.equal(
+    getVisibleBattleCycleRemainingPercent({
+      progress,
+      visualCycleStartedAtMs: visualCycleStartedAtClientMs,
+      clientNowMs: visualCycleStartedAtClientMs + 14_700,
+      serverClientOffsetMs,
+    }),
+    0,
+  );
+});
+
+test("agenda reconciliacao depois que o snapshot visual ultrapassa o fim", () => {
+  const snapshotReceivedAtMs = Date.parse("2026-08-21T12:00:04.000Z");
+  const source = {
+    cycleStartedAt: "2026-08-21T12:00:00.000Z",
+    cycleDurationMs: 5_000,
+    progressUpdatedAt: "2026-08-21T12:00:04.000Z",
+    serverNow: "2026-08-21T12:00:04.000Z",
+  };
+
+  assert.equal(
+    getBattleTimelineRecoveryDelayMs({
+      source,
+      snapshotReceivedAtMs,
+      nowMs: snapshotReceivedAtMs,
+      graceMs: 1_750,
+    }),
+    2_750,
+  );
+
+  assert.equal(
+    getBattleTimelineRecoveryDelayMs({
+      source,
+      snapshotReceivedAtMs,
+      nowMs: snapshotReceivedAtMs + 3_000,
+      graceMs: 1_750,
+    }),
+    0,
+  );
+});
 
 test("calcula progresso de ciclo por timestamp absoluto", () => {
   const progress = getCycleProgress({
@@ -106,6 +208,69 @@ test("deriva progresso visual repetido para ciclos de batalha", () => {
   assert.equal(timeline?.elapsedSeconds, 5);
   assert.equal(timeline?.remainingPercent, 50);
   assert.equal(timeline?.animationKey, `${Date.parse(cycleStartedAt)}:10000:2`);
+});
+
+test("mantem o ciclo concluido enquanto o abate visual aguarda impacto", () => {
+  const progress = getBattleVisualTimelineProgress({
+    nowMs: Date.parse("2026-06-05T12:00:07.600Z"),
+    source: {
+      cycleStartedAt: "2026-06-05T12:00:02.000Z",
+      cycleDurationMs: 5_000,
+    },
+  });
+  const tickProgress = getSecondTickCycleProgress(progress);
+
+  assert.equal(progress?.isComplete, true);
+  assert.equal(progress?.completedCycles, 1);
+  assert.equal(tickProgress?.elapsedSeconds, 5);
+  assert.equal(tickProgress?.remainingPercent, 0);
+});
+
+test("nao reinicia o ciclo antigo antes da confirmacao do proximo mob", () => {
+  const progress = getBattleVisualTimelineProgress({
+    nowMs: Date.parse("2026-06-05T12:00:08.200Z"),
+    source: {
+      cycleStartedAt: "2026-06-05T12:00:02.000Z",
+      cycleDurationMs: 5_000,
+    },
+  });
+  const tickProgress = getSecondTickCycleProgress(progress);
+
+  assert.equal(progress?.completedCycles, 1);
+  assert.equal(progress?.isComplete, true);
+  assert.equal(tickProgress?.elapsedSeconds, 5);
+  assert.equal(tickProgress?.remainingPercent, 0);
+});
+
+test("nao antecipa o fim visual quando o abate chega antes do ultimo segundo", () => {
+  const progress = getBattleVisualTimelineProgress({
+    nowMs: Date.parse("2026-06-05T12:00:05.200Z"),
+    source: {
+      cycleStartedAt: "2026-06-05T12:00:02.000Z",
+      cycleDurationMs: 5_000,
+    },
+  });
+  const tickProgress = getSecondTickCycleProgress(progress);
+
+  assert.equal(progress?.isComplete, false);
+  assert.equal(tickProgress?.elapsedSeconds, 3);
+  assert.equal(tickProgress?.remainingPercent, 40);
+});
+
+test("inicia o cronometro quando a nova instancia e liberada", () => {
+  const progress = getBattleVisualTimelineProgress({
+    nowMs: Date.parse("2026-06-05T12:00:08.200Z"),
+    source: {
+      cycleStartedAt: "2026-06-05T12:00:08.000Z",
+      cycleDurationMs: 5_000,
+    },
+  });
+  const tickProgress = getSecondTickCycleProgress(progress);
+
+  assert.equal(progress?.completedCycles, 0);
+  assert.equal(progress?.isComplete, false);
+  assert.equal(tickProgress?.elapsedSeconds, 0);
+  assert.equal(tickProgress?.remainingPercent, 100);
 });
 
 test("deriva contador visual de abates por ciclos completos", () => {

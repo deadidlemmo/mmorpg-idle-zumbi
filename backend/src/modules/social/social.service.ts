@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { FriendshipStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CosmeticsService } from '../cosmetics/cosmetics.service';
 
 const friendInclude = {
   requester: {
@@ -48,7 +49,117 @@ type FriendshipWithUsers = Prisma.FriendshipGetPayload<{
 
 @Injectable()
 export class SocialService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cosmeticsService: CosmeticsService,
+  ) {}
+
+  async getPublicCharacterProfile(viewerUserId: string, characterId: string) {
+    const character = await this.prisma.character.findFirst({
+      where: {
+        id: characterId,
+        deletedAt: null,
+        user: { isSuspended: false },
+      },
+      select: {
+        id: true,
+        userId: true,
+        name: true,
+        level: true,
+        status: true,
+        avatarKey: true,
+        createdAt: true,
+        class: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+          },
+        },
+        map: {
+          select: {
+            id: true,
+            name: true,
+            tier: true,
+          },
+        },
+        equipment: {
+          select: {
+            mainHand: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                rarity: true,
+                slot: true,
+              },
+            },
+            offHand: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                rarity: true,
+                slot: true,
+              },
+            },
+            head: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                rarity: true,
+                slot: true,
+              },
+            },
+            armor: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                rarity: true,
+                slot: true,
+              },
+            },
+            pants: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                rarity: true,
+                slot: true,
+              },
+            },
+            boots: {
+              select: {
+                id: true,
+                name: true,
+                tier: true,
+                rarity: true,
+                slot: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!character) {
+      throw new NotFoundException('Personagem não encontrado.');
+    }
+
+    const { userId, ...publicCharacter } = character;
+
+    return {
+      character: publicCharacter,
+      appearance: await this.cosmeticsService.getResolvedAppearance(
+        character.id,
+      ),
+      viewer: {
+        isOwner: userId === viewerUserId,
+      },
+    };
+  }
 
   async list(userId: string) {
     const friendships = await this.prisma.friendship.findMany({

@@ -38,6 +38,7 @@ const BALANCED_EQUIPMENT_SLOT_POINTS_PER_TIER: Partial<
 };
 
 const BALANCED_STARTER_ITEM_POINTS = 2;
+const BALANCED_TIER_ONE_POINT_MULTIPLIER = 1.25;
 const GLASS_CANNON_DEFENSIVE_PADDING_START_TIER = 6;
 const GLASS_CANNON_DEFENSIVE_PADDING_SLOT_MULTIPLIER = 0.4;
 const GLASS_CANNON_DEFENSIVE_PADDING_CLASSES = new Set([
@@ -145,7 +146,12 @@ function getEquipmentStatBudget(item: EquipmentSeedData): number {
     return BALANCED_STARTER_ITEM_POINTS;
   }
 
-  return item.tier * (BALANCED_EQUIPMENT_SLOT_POINTS_PER_TIER[item.slot] ?? 0);
+  const baseBudget =
+    item.tier * (BALANCED_EQUIPMENT_SLOT_POINTS_PER_TIER[item.slot] ?? 0);
+
+  return item.tier === 1
+    ? Math.round(baseBudget * BALANCED_TIER_ONE_POINT_MULTIPLIER)
+    : baseBudget;
 }
 
 function getGlassCannonDefensivePadding(item: EquipmentSeedData) {

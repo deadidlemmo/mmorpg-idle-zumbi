@@ -41,6 +41,7 @@ import { isPremiumActive } from '../../common/utils/membership.util';
 import { calculateFullStats } from '../../common/utils/stats.util';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CosmeticsService } from '../cosmetics/cosmetics.service';
 import { CreateCharacterDto } from './dto/create-character.dto';
 
 const MAX_CHARACTERS_PER_USER = 2;
@@ -173,6 +174,7 @@ export class CharactersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityGuard: ActivityGuardService,
+    private readonly cosmeticsService: CosmeticsService,
   ) {}
 
   async create(userId: string, createCharacterDto: CreateCharacterDto) {
@@ -898,6 +900,7 @@ export class CharactersService {
       availableSubMapCount,
       hasCraftableRecipes,
       gatheringSkills,
+      appearance,
     ] = await Promise.all([
       this.prisma.autoCombatSession.findFirst({
         where: {
@@ -1213,6 +1216,8 @@ export class CharactersService {
         character.id,
         character.class.name,
       ),
+
+      this.cosmeticsService.getResolvedAppearance(character.id),
     ]);
 
     const stats = calculateFullStats(
@@ -1310,6 +1315,7 @@ export class CharactersService {
         currentHp,
         maxHp: calculatedMaxHp,
         avatarKey: this.getCharacterAvatarKey(character),
+        appearance,
         deletedAt: character.deletedAt,
         class: {
           id: character.class.id,
@@ -1344,6 +1350,7 @@ export class CharactersService {
         defense: stats.derivedCombatStats.defense,
         speed: stats.derivedCombatStats.speed,
         maxHp: stats.derivedCombatStats.maxHp,
+        equipmentProgression: stats.equipmentProgression,
         gatheringBonus: gatheringSkills.totalStatBonus,
         detail: {
           base: stats.basePrimaryStats,
@@ -1352,6 +1359,7 @@ export class CharactersService {
           gatheringBonus: gatheringSkills.totalStatBonus,
           total: stats.totalPrimaryStats,
           derived: stats.derivedCombatStats,
+          equipmentProgression: stats.equipmentProgression,
         },
       },
 
@@ -2449,6 +2457,7 @@ export class CharactersService {
       gatheringBonusStats,
       totalPrimaryStats: stats.totalPrimaryStats,
       derivedCombatStats: stats.derivedCombatStats,
+      equipmentProgression: stats.equipmentProgression,
     };
   }
 

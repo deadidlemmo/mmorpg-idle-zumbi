@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAuthToken, removeAuthToken } from './authToken';
+import { expireAuthSession, getAuthToken } from './authToken';
 
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -27,7 +27,7 @@ apiClient.interceptors.response.use(
     const status = error?.response?.status;
 
     if (status === 401) {
-      removeAuthToken();
+      expireAuthSession();
     }
 
     return Promise.reject(error);

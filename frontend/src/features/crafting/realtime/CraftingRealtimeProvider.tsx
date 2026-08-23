@@ -79,6 +79,33 @@ const CRAFTING_STATUS_EVENTS = [
   "crafting:stopped",
 ] as const;
 
+function exposeCraftingE2EControl(socket: Socket) {
+  if (import.meta.env.VITE_E2E !== "true" || typeof window === "undefined") {
+    return;
+  }
+
+  const testWindow = window as typeof window & {
+    __deadIdleE2E?: Record<string, unknown> & {
+      isCraftingConnected?: () => boolean;
+      getCraftingSocketId?: () => string | null;
+      dropCraftingTransport?: () => void;
+    };
+  };
+
+  testWindow.__deadIdleE2E = {
+    ...testWindow.__deadIdleE2E,
+    isCraftingConnected: () => socket.connected,
+    getCraftingSocketId: () => socket.id ?? null,
+    dropCraftingTransport: () => {
+      if (!socket.connected) {
+        throw new Error("Socket de criação não está conectado.");
+      }
+
+      socket.io.engine.close();
+    },
+  };
+}
+
 export const CraftingRealtimeContext =
   createContext<CraftingRealtimeContextValue | null>(null);
 
@@ -442,11 +469,14 @@ export function CraftingRealtimeProvider({
   }, [autoLoad, characterId]);
 
   useEffect(() => {
-    if (!enabled || !characterId) {
+    const token = getAuthToken();
+
+    if (!enabled || !characterId || !token) {
       socketConnectedRef.current = false;
       const disconnectTimer = window.setTimeout(() => {
         if (isMountedRef.current) {
           setIsSocketConnected(false);
+          setErrorMessage(null);
         }
       }, 0);
 
@@ -457,7 +487,7 @@ export function CraftingRealtimeProvider({
       transports: ["websocket", "polling"],
       withCredentials: true,
       auth: {
-        token: getAuthToken(),
+        token,
         characterId,
       },
       query: {
@@ -470,6 +500,7 @@ export function CraftingRealtimeProvider({
     });
 
     socketRef.current = socket;
+    exposeCraftingE2EControl(socket);
 
     const handleConnect = () => {
       socketConnectedRef.current = true;
@@ -478,7 +509,9 @@ export function CraftingRealtimeProvider({
         setIsSocketConnected(true);
         setErrorMessage(null);
       }
+    };
 
+    const handleAuthenticated = () => {
       socket.emit("crafting:join", { characterId });
       socket.emit("crafting:status:request", { characterId });
       socket.emit("crafting:refresh", { characterId });
@@ -523,6 +556,7 @@ export function CraftingRealtimeProvider({
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
+    socket.on("crafting:connected", handleAuthenticated);
     socket.on("crafting:error", handleErrorEvent);
 
     for (const eventName of CRAFTING_STATUS_EVENTS) {
@@ -535,6 +569,7 @@ export function CraftingRealtimeProvider({
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);
+      socket.off("crafting:connected", handleAuthenticated);
       socket.off("crafting:error", handleErrorEvent);
 
       for (const eventName of CRAFTING_STATUS_EVENTS) {

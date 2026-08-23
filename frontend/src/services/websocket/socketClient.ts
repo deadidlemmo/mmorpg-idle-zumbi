@@ -103,6 +103,31 @@ const worldBossesSocketUrl = `${socketBaseUrl}${WORLD_BOSSES_NAMESPACE}`;
 
 let autoCombatSocket: AutoCombatSocket | null = null;
 
+function exposeAutoCombatE2EControl() {
+  if (import.meta.env.VITE_E2E !== "true" || typeof window === "undefined") {
+    return;
+  }
+
+  const testWindow = window as typeof window & {
+    __deadIdleE2E?: {
+      isAutoCombatConnected: () => boolean;
+      dropAutoCombatTransport: () => void;
+    };
+  };
+
+  testWindow.__deadIdleE2E = {
+    ...testWindow.__deadIdleE2E,
+    isAutoCombatConnected: () => Boolean(autoCombatSocket?.connected),
+    dropAutoCombatTransport: () => {
+      if (!autoCombatSocket?.connected) {
+        throw new Error("Socket de auto-combate nao esta conectado.");
+      }
+
+      autoCombatSocket.io.engine.close();
+    },
+  };
+}
+
 export type WorldBossSocketError = {
   message: string;
   error?: string;
@@ -165,6 +190,7 @@ export function getAutoCombatSocketUrl() {
 
 export function getAutoCombatSocket(): AutoCombatSocket {
   if (autoCombatSocket) {
+    exposeAutoCombatE2EControl();
     return autoCombatSocket;
   }
 
@@ -189,6 +215,7 @@ export function getAutoCombatSocket(): AutoCombatSocket {
     forceNew: false,
     multiplex: true,
   }) as unknown as AutoCombatSocket;
+  exposeAutoCombatE2EControl();
 
   return autoCombatSocket;
 }

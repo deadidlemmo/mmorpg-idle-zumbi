@@ -1273,6 +1273,11 @@ export function getRealtimeCombat(state: AutoCombatRealtimeStateLoose) {
     sessionId: session?.id ?? totals?.sessionId ?? null,
 
     mobId: mob?.id ?? null,
+    enemyInstanceId:
+      mob?.enemyInstanceId ??
+      session?.currentEnemyInstanceId ??
+      session?.enemyInstanceId ??
+      null,
     mobName: mob?.name ?? null,
     mobCurrentHp: mob?.currentHp ?? null,
     mobMaxHp: mob?.maxHp ?? null,

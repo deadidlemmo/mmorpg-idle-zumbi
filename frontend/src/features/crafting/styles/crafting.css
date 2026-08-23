@@ -139,8 +139,8 @@
 
 .crafting-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.62fr) minmax(280px, 0.58fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.22fr) minmax(330px, 0.56fr);
+  gap: 0.95rem;
   align-items: start;
 }
 
@@ -623,6 +623,7 @@
 .crafting-side-card__icon,
 .crafting-ingredient__icon {
   display: inline-flex;
+  overflow: hidden;
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -634,6 +635,15 @@
   );
   color: #fff8df;
   font-weight: 900;
+}
+
+.crafting-recipe-card__icon > img,
+.crafting-side-card__icon > img,
+.crafting-ingredient__icon > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .crafting-recipe-card__icon {
@@ -841,6 +851,153 @@
 
 .crafting-modal-section--stats {
   margin-top: 18px;
+}
+
+.crafting-modal-section--impact {
+  border-color: rgba(128, 184, 92, 0.3);
+}
+
+.crafting-impact-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+  margin-top: 12px;
+}
+
+.crafting-impact-list > span {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  border-bottom: 1px solid rgba(168, 202, 142, 0.12);
+  color: rgba(242, 236, 206, 0.68);
+}
+
+.crafting-impact-list > span em {
+  overflow: hidden;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crafting-impact-list > span strong {
+  color: #d6f5a9;
+  font-size: 0.78rem;
+}
+
+.crafting-impact-list > span.is-negative strong {
+  color: #f09986;
+}
+
+.crafting-kill-speed {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.75fr) minmax(0, 1.25fr);
+  gap: 16px;
+  margin-top: 14px;
+  border-top: 1px solid rgba(218, 195, 95, 0.18);
+  padding-top: 12px;
+}
+
+.crafting-kill-speed > div,
+.crafting-kill-speed dl,
+.crafting-kill-speed dl div {
+  min-width: 0;
+}
+
+.crafting-kill-speed > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.crafting-kill-speed span,
+.crafting-kill-speed dt,
+.crafting-equipment-progression span {
+  color: rgba(242, 236, 206, 0.54);
+  font-size: 0.66rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.crafting-kill-speed > div strong {
+  overflow: hidden;
+  color: #fff8df;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crafting-kill-speed em,
+.crafting-equipment-progression em {
+  color: rgba(242, 236, 206, 0.58);
+  font-size: 0.68rem;
+  font-style: normal;
+}
+
+.crafting-kill-speed dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.crafting-kill-speed dd {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 0;
+  color: rgba(242, 236, 206, 0.58);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.crafting-kill-speed dd strong {
+  color: #d6f5a9;
+}
+
+.crafting-equipment-progression {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.7fr);
+  gap: 16px;
+  align-items: center;
+  margin-top: 12px;
+  border-top: 1px solid rgba(168, 202, 142, 0.14);
+  padding-top: 12px;
+}
+
+.crafting-equipment-progression > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 12px;
+}
+
+.crafting-equipment-progression > div strong {
+  color: #d6f5a9;
+  font-size: 0.76rem;
+}
+
+.crafting-equipment-progression > div em {
+  grid-column: 1 / -1;
+}
+
+.crafting-equipment-progression__track {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(12px, 1fr));
+  gap: 5px;
+}
+
+.crafting-equipment-progression__track i {
+  height: 6px;
+  border-radius: 2px;
+  background: rgba(168, 202, 142, 0.14);
+}
+
+.crafting-equipment-progression__track i.is-active {
+  background: #8fbc58;
+  box-shadow: 0 0 8px rgba(143, 188, 88, 0.26);
 }
 
 .crafting-modal-section--summary {
@@ -1152,11 +1309,6 @@
     0 0 18px rgba(var(--craft-side-green-rgb), 0.04);
 }
 
-.crafting-activity-card.is-empty {
-  gap: 0;
-  padding: 0.64rem;
-}
-
 .crafting-activity-card__header,
 .crafting-skill-card__header {
   display: grid;
@@ -1340,6 +1492,91 @@
   color: #f6ffe6;
 }
 
+.crafting-activity-card.auto-combat-hunt-skill-card,
+.crafting-skill-card.auto-combat-hunt-skill-card {
+  position: relative;
+  border-color: rgba(191, 166, 83, 0.22) !important;
+  background:
+    radial-gradient(circle at 13% 22%, rgba(232, 184, 78, 0.085), transparent 8rem),
+    radial-gradient(circle at 70% 16%, rgba(110, 159, 67, 0.065), transparent 10rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent 58%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.009) 0 1px,
+      transparent 1px 10px
+    ),
+    rgba(5, 9, 8, 0.62) !important;
+}
+
+.crafting-activity-card .auto-combat-hunt-skill-card__icon img {
+  width: 116% !important;
+  height: 116% !important;
+}
+
+.crafting-skill-card .auto-combat-hunt-skill-card__icon img {
+  width: 132% !important;
+  height: 132% !important;
+}
+
+.crafting-card-controls {
+  position: absolute;
+  z-index: 3;
+  top: -1.28rem;
+  right: 0.72rem;
+  display: flex;
+  align-items: center;
+  gap: 0.34rem;
+}
+
+.crafting-card-controls .crafting-icon-button {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  border-color: rgba(231, 227, 216, 0.16);
+  background: rgba(8, 13, 10, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 5px 14px rgba(0, 0, 0, 0.28);
+}
+
+.crafting-skill-card--with-controls {
+  margin-top: 1.04rem !important;
+}
+
+.crafting-activity-card .auto-combat-hunt-skill-card__pills > span:nth-child(2),
+.crafting-skill-card .auto-combat-hunt-skill-card__pills > span:first-child {
+  flex: 1 1 auto;
+}
+
+.crafting-activity-card .auto-combat-hunt-skill-card__pills svg {
+  flex: 0 0 auto;
+  margin-right: 0.28rem;
+}
+
+.crafting-activity-card .auto-combat-hunt-skill-card__heading strong {
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  line-height: 1.08 !important;
+  overflow-wrap: anywhere !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.crafting-activity-card .auto-combat-hunt-skill-card__heading em {
+  display: inline-flex !important;
+  min-width: 2.75rem !important;
+  min-height: 1.55rem !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box;
+  overflow: hidden !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
 .crafting-quantity {
   display: inline-flex;
   align-items: center;
@@ -1491,6 +1728,13 @@
   }
 
   .crafting-craft-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .crafting-impact-list,
+  .crafting-kill-speed,
+  .crafting-kill-speed dl,
+  .crafting-equipment-progression {
     grid-template-columns: 1fr;
   }
 }

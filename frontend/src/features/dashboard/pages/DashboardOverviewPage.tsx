@@ -3,7 +3,6 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { normalizeClassName } from "../../characters/api/characters.api";
 import "../../characters/characters.css";
 import { useGatheringRealtimeState } from "../../gathering/realtime/useGatheringRealtime";
-import { TutorialBanner } from "../../progression/components/TutorialBanner";
 import { getCharacterOverview } from "../api/dashboard.api";
 import { CharacterStatsPanel } from "../components/CharacterStatsPanel";
 import { DashboardCard } from "../components/DashboardCard";
@@ -492,7 +491,6 @@ export function DashboardOverviewPage() {
   const equipment = overview.equipment ?? {};
   return (
     <DashboardLayout character={character}>
-      <TutorialBanner characterId={character.id} />
 
       <div className="dashboard-section-divider">
         <span>Resumo do personagem</span>

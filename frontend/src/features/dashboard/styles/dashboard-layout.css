@@ -412,6 +412,13 @@
     transform var(--transition-fast);
 }
 
+.dashboard-shell--cosmetic-overview {
+  background:
+    linear-gradient(180deg, rgba(5, 10, 9, 0.7), rgba(3, 7, 6, 0.94)),
+    var(--dashboard-overview-image) center top / cover fixed no-repeat,
+    #07100d;
+}
+
 .dashboard-sidebar__link-icon {
   display: grid;
   place-items: center;

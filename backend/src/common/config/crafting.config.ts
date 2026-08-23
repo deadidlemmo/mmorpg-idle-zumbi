@@ -2,11 +2,11 @@ export const CRAFTING_LEVEL_CAP = 100;
 export const CRAFTING_LEVELS_PER_TIER = 10;
 export const CRAFTING_TARGET_CRAFTS_PER_TIER = 45;
 export const CRAFTING_DURATION_SECONDS_BY_TIER: Record<number, number> = {
-  1: 60,
-  2: 90,
-  3: 120,
-  4: 180,
-  5: 300,
+  1: 15,
+  2: 30,
+  3: 60,
+  4: 120,
+  5: 180,
   6: 420,
   7: 600,
   8: 840,

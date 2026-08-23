@@ -130,7 +130,16 @@
   justify-content: center;
   max-width: 100%;
   transform-origin: 50% 82%;
-  will-change: transform, filter;
+  will-change: opacity, transform, filter;
+}
+
+.auto-combat-mob-instance {
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  max-width: 100%;
+  transform-origin: 50% 82%;
+  animation: autoCombatMobSpawned 320ms cubic-bezier(0.16, 0.86, 0.26, 1) both;
 }
 
 .auto-combat-mob-damage-shake.is-impacting {
@@ -141,9 +150,55 @@
   animation: autoCombatMobBodyCriticalShake 440ms cubic-bezier(0.18, 0.86, 0.2, 1) both;
 }
 
+.auto-combat-mob-damage-shake.is-defeated {
+  animation: autoCombatMobDefeated 420ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes autoCombatMobDefeated {
+  0% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  45% {
+    opacity: 0.72;
+    filter: grayscale(0.42) brightness(0.82);
+    transform: translate3d(0, 3px, 0) scale(0.98);
+  }
+
+  100% {
+    opacity: 0.42;
+    filter: grayscale(0.72) brightness(0.66);
+    transform: translate3d(0, 5px, 0) scale(0.965);
+  }
+}
+
+@keyframes autoCombatMobSpawned {
+  0% {
+    opacity: 0;
+    filter: brightness(0.72);
+    transform: translate3d(0, -5px, 0) scale(0.94);
+  }
+
+  60% {
+    opacity: 1;
+    filter: brightness(1.12);
+    transform: translate3d(0, 0, 0) scale(1.015);
+  }
+
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .auto-combat-mob-damage-shake.is-impacting,
-  .auto-combat-mob-damage-shake.is-critical-impact {
+  .auto-combat-mob-damage-shake.is-critical-impact,
+  .auto-combat-mob-damage-shake.is-defeated,
+  .auto-combat-mob-instance {
     animation: none;
   }
 }

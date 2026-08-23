@@ -1,4 +1,5 @@
 type GatheringMaterialAssetLike = {
+  name?: string | null;
   slug?: string | null;
   assetKey?: string | null;
   icon?: string | null;
@@ -110,7 +111,10 @@ export function getGatheringMaterialImageUrl(
 
   if (directImage) return directImage;
 
-  const slug = getCleanImageUrl(material.slug) ?? getCleanImageUrl(material.assetKey);
+  const slug =
+    getCleanImageUrl(material.slug) ??
+    getCleanImageUrl(material.assetKey) ??
+    normalizeImageKey(material.name);
 
   if (!slug) return null;
 

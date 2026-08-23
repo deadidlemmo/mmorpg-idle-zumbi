@@ -4,7 +4,9 @@ export type MissionStatus = "ACTIVE" | "COMPLETED" | "CLAIMED" | "EXPIRED";
 export interface TutorialStep {
   key: string;
   title: string;
+  description: string;
   href: string;
+  actionLabel: string;
 }
 
 export interface TutorialProgress {
@@ -14,8 +16,12 @@ export interface TutorialProgress {
   completed: boolean;
   completedAt?: string | null;
   dismissedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   steps: TutorialStep[];
 }
+
+export type TutorialUpdateResponse = Omit<TutorialProgress, "steps">;
 
 export interface CharacterMission {
   id: string;

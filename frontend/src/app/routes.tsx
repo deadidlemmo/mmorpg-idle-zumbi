@@ -49,6 +49,18 @@ const SocialPage = lazy(() =>
     default: module.SocialPage,
   })),
 );
+const AppearancePage = lazy(() =>
+  import("../features/cosmetics/pages/AppearancePage").then((module) => ({
+    default: module.AppearancePage,
+  })),
+);
+const CharacterInspectionPage = lazy(() =>
+  import("../features/social/pages/CharacterInspectionPage").then(
+    (module) => ({
+      default: module.CharacterInspectionPage,
+    }),
+  ),
+);
 const AdminPage = lazy(() =>
   import("../features/admin/pages/AdminPage").then((module) => ({
     default: module.AdminPage,
@@ -63,6 +75,9 @@ const CharacterSelectPage = lazy(() =>
   import("../features/characters/pages/CharacterSelectPage").then((module) => ({
     default: module.CharacterSelectPage,
   })),
+);
+const CharacterCreatePage = lazy(
+  () => import("../features/characters/pages/CharacterCreatePage"),
 );
 const CraftingPage = lazy(() =>
   import("../features/crafting/pages/CraftingPage").then((module) => ({
@@ -249,6 +264,15 @@ export function AppRoutes() {
           />
 
           <Route
+            path="/characters/new"
+            element={
+              <ProtectedRoute>
+                <CharacterCreatePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/characters"
             element={
               <ProtectedRoute>
@@ -281,6 +305,8 @@ export function AppRoutes() {
 
             <Route path="equipment" element={<EquipmentPage />} />
 
+            <Route path="appearance" element={<AppearancePage />} />
+
             <Route path="consumables" element={<MerchantHubPage />} />
 
             <Route path="consumables/:merchantId" element={<VendorPage />} />
@@ -296,6 +322,11 @@ export function AppRoutes() {
             <Route path="world-bosses" element={<WorldBossesPage />} />
 
             <Route path="allies" element={<SocialPage />} />
+
+            <Route
+              path="inspect/:targetCharacterId"
+              element={<CharacterInspectionPage />}
+            />
 
             <Route path="*" element={<Navigate to="" replace />} />
           </Route>

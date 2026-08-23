@@ -45,6 +45,13 @@ export interface InventoryItemDetails {
   id: string;
   name: string;
   description?: string | null;
+  slug?: string | null;
+  assetKey?: string | null;
+  icon?: string | null;
+  iconUrl?: string | null;
+  iconPath?: string | null;
+  image?: string | null;
+  imageUrl?: string | null;
   tier?: number | null;
   rarity?: InventoryItemRarity | null;
   slot?: InventoryItemSlot | null;

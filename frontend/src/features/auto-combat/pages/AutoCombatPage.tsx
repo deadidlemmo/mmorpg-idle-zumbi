@@ -1,11 +1,5 @@
 import type { CSSProperties } from "react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { RefreshCw, X } from "lucide-react";
@@ -19,10 +13,7 @@ import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import type { DashboardTopBarActivityOverride } from "../../dashboard/components/DashboardTopBar";
 import "../../dashboard/dashboard.css";
 import type { CharacterOverviewResponse } from "../../dashboard/types/dashboard.types";
-import {
-  getAutoCombatMaps,
-  getAutoCombatStatus,
-} from "../api/auto-combat.api";
+import { getAutoCombatMaps, getAutoCombatStatus } from "../api/auto-combat.api";
 import {
   buildMapVisualStyle,
   getMapImageByName,
@@ -30,6 +21,7 @@ import {
 import "../auto-combat-mob-images.css";
 import "../auto-combat.css";
 import { AutoCombatBattleLog } from "../components/AutoCombatBattleLog";
+import { AutoCombatMobTransition } from "../components/AutoCombatMobTransition";
 import { AutoCombatPremiumBenefitsCard } from "../components/AutoCombatPremiumBenefitsCard";
 import { AutoCombatPremiumRewardBreakdown } from "../components/AutoCombatPremiumRewardBreakdown";
 import { AutoCombatSessionSummary } from "../components/AutoCombatSessionSummary";
@@ -118,6 +110,8 @@ import {
   type BattleTargetDisplayCounts,
   getBattleBatchCountdown,
   getBattleTargetDisplayCounts,
+  getBattleTopBarProgressPercent,
+  getBattleVisualTimelineProgress,
   getDisplayBattleBatchCountdown,
   getStableBattleTargetDisplayCounts,
   getHuntDisplayCounts,
@@ -127,6 +121,7 @@ import {
   getRepeatingSecondTickFillPercent,
   getServerClientOffsetMs,
   getSecondTickCycleProgress,
+  getVisibleBattleCycleRemainingPercent,
 } from "../utils/battle-timeline";
 import {
   getMobFullBodyImage,
@@ -136,9 +131,6 @@ import {
 import { selectVisibleCharacterProgress } from "../utils/visible-progress";
 
 const SHOW_AUTO_COMBAT_BATTLE_LOG = false;
-const XP_FEEDBACK_VISIBLE_MS = 4800;
-const MAX_SHOWN_XP_FEEDBACK_KEYS = 80;
-const MAX_SHOWN_BATTLE_TICK_IMPACT_KEYS = 120;
 const EMPTY_REALTIME_EVENTS: AutoCombatRealtimeEvent[] = [];
 
 type AutoCombatHuntProgressStyle = CSSProperties & {
@@ -405,6 +397,7 @@ function pickAutoCombatEffectiveStatus(params: {
 
 type MobFeedbackScope = {
   sessionId: string | null;
+  enemyInstanceId: string | null;
   combatIndex: number | null;
   mobId: string | null;
   mobName: string | null;
@@ -486,6 +479,7 @@ function createMobFeedbackScope(
 ): MobFeedbackScope {
   return {
     sessionId: normalizeMobScopeText(params.sessionId),
+    enemyInstanceId: normalizeMobScopeText(params.enemyInstanceId),
     combatIndex: normalizeMobScopeNumber(params.combatIndex),
     mobId: normalizeMobScopeText(params.mobId),
     mobName: normalizeMobScopeText(params.mobName),
@@ -501,6 +495,7 @@ function getMobFeedbackScopeFromEvent(
 
   return createMobFeedbackScope({
     sessionId: event.sessionId,
+    enemyInstanceId: event.enemyInstanceId,
     combatIndex: event.combatIndex,
     mobId: event.mobId,
     mobName: event.mobName,
@@ -514,6 +509,7 @@ function getMobFeedbackScopeKey(scope?: MobFeedbackScope | null) {
 
   return [
     scope.sessionId ?? "session:any",
+    scope.enemyInstanceId ? `enemy:${scope.enemyInstanceId}` : "enemy:any",
     scope.combatIndex ? `combat:${scope.combatIndex}` : "combat:any",
     scope.mobId ? `mob:${scope.mobId}` : "mob:any",
     scope.mobName ? `name:${scope.mobName}` : "name:any",
@@ -521,7 +517,12 @@ function getMobFeedbackScopeKey(scope?: MobFeedbackScope | null) {
 }
 
 function hasUsefulMobFeedbackScope(scope?: MobFeedbackScope | null) {
-  return Boolean(scope?.combatIndex || scope?.mobId || scope?.mobName);
+  return Boolean(
+    scope?.enemyInstanceId ||
+    scope?.combatIndex ||
+    scope?.mobId ||
+    scope?.mobName,
+  );
 }
 
 function hasMobFeedbackScopeMismatch(
@@ -536,6 +537,14 @@ function hasMobFeedbackScopeMismatch(
     feedbackScope.sessionId &&
     visibleScope.sessionId &&
     feedbackScope.sessionId !== visibleScope.sessionId
+  ) {
+    return true;
+  }
+
+  if (
+    feedbackScope.enemyInstanceId &&
+    visibleScope.enemyInstanceId &&
+    feedbackScope.enemyInstanceId !== visibleScope.enemyInstanceId
   ) {
     return true;
   }
@@ -565,17 +574,6 @@ function hasMobFeedbackScopeMismatch(
   }
 
   return false;
-}
-
-function shouldClearXpFeedbackForEvent(event?: AutoCombatRealtimeEvent | null) {
-  const eventType = normalizeRealtimeEventType(event?.type);
-
-  return (
-    eventType === "PLAYER_DEFEATED" ||
-    eventType === "SESSION_STOPPED" ||
-    eventType === "SESSION_FINISHED" ||
-    eventType === "SESSION_ERROR"
-  );
 }
 
 type AutoCombatLooseRecord = Record<string, unknown>;
@@ -640,13 +638,13 @@ function shouldRedirectAutoCombatToInfirmary(params: {
   const eventType = normalizeRealtimeEventType(event?.type);
   const hasDefeatSignal = Boolean(
     status?.shouldRedirectToInfirmary ||
-      getAutoCombatBooleanField(session, "shouldRedirectToInfirmary") ||
-      event?.shouldRedirectToInfirmary ||
-      status?.sessionSummary?.defeated ||
-      sessionStatus === "DEFEATED" ||
-      eventSessionStatus === "DEFEATED" ||
-      endReason === "PLAYER_DEFEATED" ||
-      eventType === "PLAYER_DEFEATED",
+    getAutoCombatBooleanField(session, "shouldRedirectToInfirmary") ||
+    event?.shouldRedirectToInfirmary ||
+    status?.sessionSummary?.defeated ||
+    sessionStatus === "DEFEATED" ||
+    eventSessionStatus === "DEFEATED" ||
+    endReason === "PLAYER_DEFEATED" ||
+    eventType === "PLAYER_DEFEATED",
   );
 
   if (!hasDefeatSignal) {
@@ -693,38 +691,6 @@ function getXpFeedbackBreakdown(event?: AutoCombatRealtimeEvent | null) {
     premiumTotalXp,
     isPremiumActive: Boolean(event.isPremiumActive || premiumBonusXp > 0),
   };
-}
-
-function getSynchronizedXpFeedbackEvent(
-  events: Array<AutoCombatRealtimeEvent | null | undefined>,
-  visibleScope?: MobFeedbackScope | null,
-) {
-  for (const event of events) {
-    if (!getXpFeedbackBreakdown(event)) {
-      continue;
-    }
-
-    const feedbackScope = getMobFeedbackScopeFromEvent(event);
-
-    if (
-      hasUsefulMobFeedbackScope(feedbackScope) &&
-      hasUsefulMobFeedbackScope(visibleScope) &&
-      hasMobFeedbackScopeMismatch(feedbackScope, visibleScope)
-    ) {
-      continue;
-    }
-
-    if (
-      hasUsefulMobFeedbackScope(visibleScope) &&
-      !hasUsefulMobFeedbackScope(feedbackScope)
-    ) {
-      continue;
-    }
-
-    return event ?? null;
-  }
-
-  return null;
 }
 
 function getXpFeedbackDisplayKey(event?: AutoCombatRealtimeEvent | null) {
@@ -824,6 +790,8 @@ function formatDropQuantity(
 }
 
 export function AutoCombatPage() {
+  "use no memo";
+
   const { characterId } = useParams();
   const [searchParams] = useSearchParams();
   const requestedMapId = searchParams.get("mapId") ?? "";
@@ -871,8 +839,6 @@ export function AutoCombatPage() {
   >([]);
   const [localActiveEvent, setLocalActiveEvent] =
     useState<AutoCombatRealtimeEvent | null>(null);
-  const [xpFeedbackEvent, setXpFeedbackEvent] =
-    useState<AutoCombatRealtimeEvent | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -897,33 +863,6 @@ export function AutoCombatPage() {
     counts: BattleTargetDisplayCounts;
   } | null>(null);
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
-  const xpFeedbackHideTimeoutRef = useRef<number | null>(null);
-  const xpFeedbackEventKeyRef = useRef("");
-  const shownXpFeedbackEventKeysRef = useRef<Set<string>>(new Set());
-  const shownBattleTickImpactKeysRef = useRef<string[]>([]);
-  const suppressedBattleTickImpactKeyRef = useRef("");
-  const approvedBattleTickImpactKeyRef = useRef("");
-  const clearXpFeedbackTimers = useCallback(() => {
-    if (xpFeedbackHideTimeoutRef.current !== null) {
-      window.clearTimeout(xpFeedbackHideTimeoutRef.current);
-      xpFeedbackHideTimeoutRef.current = null;
-    }
-  }, []);
-
-  const queueClearXpFeedback = useCallback(
-    (options?: { resetShownEvents?: boolean }) => {
-      clearXpFeedbackTimers();
-
-      xpFeedbackEventKeyRef.current = "";
-
-      if (options?.resetShownEvents) {
-        shownXpFeedbackEventKeysRef.current.clear();
-      }
-
-      setXpFeedbackEvent(null);
-    },
-    [clearXpFeedbackTimers],
-  );
 
   useEffect(() => {
     autoPotionConfigRef.current = autoPotionConfig;
@@ -946,11 +885,7 @@ export function AutoCombatPage() {
     lastPositiveRemainingSecondsRef.current = null;
     stableBattleBatchCountdownRef.current = null;
     stableBattleTargetCountsRef.current = null;
-    shownBattleTickImpactKeysRef.current = [];
-    suppressedBattleTickImpactKeyRef.current = "";
-    approvedBattleTickImpactKeyRef.current = "";
-    queueClearXpFeedback({ resetShownEvents: true });
-  }, [characterId, queueClearXpFeedback]);
+  }, [characterId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const realtimeStatus = getRealtimeStatus(realtimeState);
@@ -965,6 +900,9 @@ export function AutoCombatPage() {
   const providerSessionTotals = getRealtimeTotals(realtimeState);
   const providerBattleLogEvents = getRealtimeBattleLogEvents(realtimeState);
   const providerActiveEvent = getRealtimeActiveEvent(realtimeState);
+  const providerActiveEventType = normalizeRealtimeEventType(
+    providerActiveEvent?.type,
+  );
   const providerPublicActiveEvent =
     !isRealtimeSynchronizing && realtimeState.activeEventImpactApplied
       ? providerActiveEvent
@@ -1003,12 +941,12 @@ export function AutoCombatPage() {
     preservedTrackedEnemiesCount > 0 &&
     Boolean(
       effectiveStatus?.autoCombatRecovery?.hasPreservedTrackedEnemies ??
-        effectiveStatus?.hasPreservedTrackedEnemies ??
-        effectiveSession?.autoCombatRecovery?.hasPreservedTrackedEnemies ??
-        effectiveSession?.hasPreservedTrackedEnemies ??
-        effectiveStatus?.huntBatch?.autoCombatRecovery
-          ?.hasPreservedTrackedEnemies ??
-        effectiveStatus?.huntBatch?.hasPreservedTrackedEnemies,
+      effectiveStatus?.hasPreservedTrackedEnemies ??
+      effectiveSession?.autoCombatRecovery?.hasPreservedTrackedEnemies ??
+      effectiveSession?.hasPreservedTrackedEnemies ??
+      effectiveStatus?.huntBatch?.autoCombatRecovery
+        ?.hasPreservedTrackedEnemies ??
+      effectiveStatus?.huntBatch?.hasPreservedTrackedEnemies,
     );
 
   const hasActiveSession =
@@ -1079,7 +1017,9 @@ export function AutoCombatPage() {
     !shouldDelayActiveSessionUntilStartSnapshot &&
     (isBackendCombatPhase || hasPendingRealtimeVisual);
   const activeBattleSelection =
-    effectiveStatus?.battleSelection ?? effectiveSession?.battleSelection ?? null;
+    effectiveStatus?.battleSelection ??
+    effectiveSession?.battleSelection ??
+    null;
   const activeBattleTargetMobId =
     effectiveSession?.battleTargetMobId ?? activeBattleSelection?.mobId ?? null;
   const activeBattleTargetEncounterId =
@@ -1102,9 +1042,7 @@ export function AutoCombatPage() {
     activeBattleTargetRemainingSource !== undefined;
   const activeBattleTargetRemaining = Math.max(
     0,
-    Math.floor(
-      toSafeNumber(activeBattleTargetRemainingSource, 0),
-    ),
+    Math.floor(toSafeNumber(activeBattleTargetRemainingSource, 0)),
   );
   const activeBattleTargetDefeated = Math.max(
     0,
@@ -1114,9 +1052,9 @@ export function AutoCombatPage() {
     showActiveSession &&
     Boolean(
       activeBattleTargetMobId ||
-        activeBattleTargetEncounterId ||
-        activeBattleTargetTotal > 0 ||
-        activeBattleSelection?.mob,
+      activeBattleTargetEncounterId ||
+      activeBattleTargetTotal > 0 ||
+      activeBattleSelection?.mob,
     );
   const showArenaActiveSession = showActiveSession && !showInlineHuntBattle;
   const showHuntStage =
@@ -1134,15 +1072,15 @@ export function AutoCombatPage() {
     showTrackedHuntStage && isBackendHuntingPhase && !showInlineHuntBattle;
   const hasCombatSnapshotWhileSynchronizing = Boolean(
     canRenderRestActiveSnapshot ||
-      visualRealtimeCombat?.mobId ||
-      visualRealtimeCombat?.mobName ||
-      visualRealtimeCombat?.mobMaxHp ||
-      visualRealtimeCombat?.battleProgressSeconds ||
-      visualRealtimeCombat?.cycleStartedAt ||
-      effectiveStatus?.currentMob?.id ||
-      effectiveStatus?.currentMob?.name ||
-      effectiveStatus?.battleProgress?.cycleStartedAt ||
-      effectiveSession?.battleProgress?.cycleStartedAt,
+    visualRealtimeCombat?.mobId ||
+    visualRealtimeCombat?.mobName ||
+    visualRealtimeCombat?.mobMaxHp ||
+    visualRealtimeCombat?.battleProgressSeconds ||
+    visualRealtimeCombat?.cycleStartedAt ||
+    effectiveStatus?.currentMob?.id ||
+    effectiveStatus?.currentMob?.name ||
+    effectiveStatus?.battleProgress?.cycleStartedAt ||
+    effectiveSession?.battleProgress?.cycleStartedAt,
   );
   const isCombatViewSynchronizing =
     showActiveSession &&
@@ -1176,7 +1114,8 @@ export function AutoCombatPage() {
       ? stableTimerStatus.status
       : null);
   const serverClockOffsetMs = useMemo(() => {
-    const serverNow = activeTimerStatus?.serverNow ?? effectiveStatus?.serverNow;
+    const serverNow =
+      activeTimerStatus?.serverNow ?? effectiveStatus?.serverNow;
 
     return getAutoCombatTimestampMs(serverNow) === null
       ? 0
@@ -1207,7 +1146,9 @@ export function AutoCombatPage() {
     .map((value) => String(value ?? ""))
     .join("|");
   const battleClockProgressSource =
-    visualRealtimeCombat || effectiveStatus?.battleProgress || effectiveSession?.battleProgress
+    visualRealtimeCombat ||
+    effectiveStatus?.battleProgress ||
+    effectiveSession?.battleProgress
       ? {
           cycleStartedAt:
             visualRealtimeCombat?.cycleStartedAt ??
@@ -1250,7 +1191,8 @@ export function AutoCombatPage() {
   const battleClockTimelineProgress = getRepeatingBattleTimelineProgress({
     source: battleClockProgressSource,
     nowMs: syncedSessionNowMs,
-    fallbackServerNow: activeTimerStatus?.serverNow ?? effectiveStatus?.serverNow,
+    fallbackServerNow:
+      activeTimerStatus?.serverNow ?? effectiveStatus?.serverNow,
     fallbackProgressUpdatedAt:
       activeTimerStatus?.serverNow ?? effectiveStatus?.serverNow,
   });
@@ -1263,7 +1205,7 @@ export function AutoCombatPage() {
 
     const intervalId = window.setInterval(() => {
       setSessionClockNowMs(Date.now());
-    }, 1000);
+    }, showActiveSession && isBackendCombatPhase ? 100 : 1000);
 
     return () => {
       window.clearInterval(intervalId);
@@ -1335,7 +1277,10 @@ export function AutoCombatPage() {
     window.addEventListener("pageshow", snapProgressToCurrentTime);
 
     return () => {
-      document.removeEventListener("visibilitychange", snapProgressToCurrentTime);
+      document.removeEventListener(
+        "visibilitychange",
+        snapProgressToCurrentTime,
+      );
       window.removeEventListener("focus", snapProgressToCurrentTime);
       window.removeEventListener("pageshow", snapProgressToCurrentTime);
 
@@ -1694,36 +1639,25 @@ export function AutoCombatPage() {
 
   const battleLogEvents = useMemo(
     () =>
-      showActiveSession && providerBattleLogEvents.length > 0
+      providerBattleLogEvents.length > 0
         ? providerBattleLogEvents
-        : showActiveSession
-          ? localBattleLogEvents
-          : [],
-    [localBattleLogEvents, providerBattleLogEvents, showActiveSession],
+        : localBattleLogEvents,
+    [localBattleLogEvents, providerBattleLogEvents],
   );
 
   const activeBattleLogEvent = showActiveSession
     ? (providerPublicActiveEvent ?? localActiveEvent)
     : null;
-  const providerQueuedEvents = useMemo(
-    () =>
-      showActiveSession
-        ? isRealtimeSynchronizing
-          ? []
-          : providerQueuedEventsRaw
-        : [],
-    [isRealtimeSynchronizing, providerQueuedEventsRaw, showActiveSession],
-  );
   const shouldDeferInfirmaryRedirect =
     isLoading || isRealtimeSynchronizing || !effectiveStatus;
   const shouldRedirectToInfirmary = Boolean(
     characterId &&
-      !shouldDeferInfirmaryRedirect &&
-      shouldRedirectAutoCombatToInfirmary({
-        status: effectiveStatus,
-        session: effectiveSession,
-        event: activeBattleLogEvent ?? providerActiveEvent,
-      }),
+    !shouldDeferInfirmaryRedirect &&
+    shouldRedirectAutoCombatToInfirmary({
+      status: effectiveStatus,
+      session: effectiveSession,
+      event: activeBattleLogEvent ?? providerActiveEvent,
+    }),
   );
 
   const visibleMobFeedbackScope = useMemo(
@@ -1731,6 +1665,13 @@ export function AutoCombatPage() {
       showActiveSession
         ? createMobFeedbackScope({
             sessionId: visualRealtimeCombat?.sessionId ?? effectiveSession?.id,
+            enemyInstanceId:
+              visualRealtimeCombat?.enemyInstanceId ??
+              realtimeState.mob?.enemyInstanceId ??
+              effectiveStatus?.currentMob?.enemyInstanceId ??
+              effectiveSession?.currentEnemyInstanceId ??
+              effectiveSession?.enemyInstanceId ??
+              null,
             combatIndex:
               visualRealtimeCombat?.combatIndex ??
               effectiveStatus?.session?.currentCombatIndex ??
@@ -1750,197 +1691,25 @@ export function AutoCombatPage() {
         : null,
     [
       effectiveSession?.currentCombatIndex,
+      effectiveSession?.currentEnemyInstanceId,
       effectiveSession?.currentMob?.id,
       effectiveSession?.currentMob?.name,
       effectiveSession?.currentMobId,
+      effectiveSession?.enemyInstanceId,
       effectiveSession?.id,
+      effectiveStatus?.currentMob?.enemyInstanceId,
       effectiveStatus?.currentMob?.id,
       effectiveStatus?.currentMob?.name,
       effectiveStatus?.session?.currentCombatIndex,
       showActiveSession,
+      realtimeState.mob?.enemyInstanceId,
       visualRealtimeCombat?.combatIndex,
+      visualRealtimeCombat?.enemyInstanceId,
       visualRealtimeCombat?.mobId,
       visualRealtimeCombat?.mobName,
       visualRealtimeCombat?.sessionId,
     ],
   );
-  const visibleMobFeedbackScopeKey = getMobFeedbackScopeKey(
-    visibleMobFeedbackScope,
-  );
-  const activeBattleLogEventType = normalizeRealtimeEventType(
-    activeBattleLogEvent?.type,
-  );
-  const activeBattleLogMobHp = getOptionalPositiveInteger(
-    activeBattleLogEvent?.mobCurrentHp,
-  );
-  const visualRealtimeMobHp = getOptionalPositiveInteger(
-    visualRealtimeCombat?.mobCurrentHp,
-  );
-  const canSyncXpFeedbackWithMobDeath =
-    showActiveSession &&
-    (activeBattleLogEventType === "MOB_DEFEATED" ||
-      activeBattleLogMobHp === 0 ||
-      visualRealtimeMobHp === 0);
-  const synchronizedXpFeedbackEvent = useMemo(() => {
-    if (!canSyncXpFeedbackWithMobDeath) {
-      return null;
-    }
-
-    return getSynchronizedXpFeedbackEvent(
-      [activeBattleLogEvent, ...providerQueuedEvents, ...battleLogEvents],
-      visibleMobFeedbackScope,
-    );
-  }, [
-    activeBattleLogEvent,
-    battleLogEvents,
-    canSyncXpFeedbackWithMobDeath,
-    providerQueuedEvents,
-    visibleMobFeedbackScope,
-  ]);
-
-  /* eslint-disable react-hooks/set-state-in-effect -- Feedback follows the authoritative realtime event stream. */
-  useEffect(() => {
-    if (isCombatViewSynchronizing) {
-      queueClearXpFeedback();
-
-      return;
-    }
-
-    if (!showActiveSession) {
-      queueClearXpFeedback();
-
-      return;
-    }
-
-    if (shouldClearXpFeedbackForEvent(activeBattleLogEvent)) {
-      queueClearXpFeedback();
-
-      return;
-    }
-
-    if (xpFeedbackEvent && activeBattleLogEvent) {
-      const activeEventType = normalizeRealtimeEventType(
-        activeBattleLogEvent.type,
-      );
-
-      if (activeEventType !== "MOB_DEFEATED") {
-        const feedbackScope = getMobFeedbackScopeFromEvent(xpFeedbackEvent);
-        const activeEventScope =
-          getMobFeedbackScopeFromEvent(activeBattleLogEvent);
-
-        if (
-          hasUsefulMobFeedbackScope(feedbackScope) &&
-          hasUsefulMobFeedbackScope(activeEventScope) &&
-          hasMobFeedbackScopeMismatch(feedbackScope, activeEventScope)
-        ) {
-          queueClearXpFeedback();
-
-          return;
-        }
-      }
-    }
-
-    const xpFeedback = getXpFeedbackBreakdown(synchronizedXpFeedbackEvent);
-
-    if (!xpFeedback || !synchronizedXpFeedbackEvent) {
-      return;
-    }
-
-    const eventKey = getXpFeedbackDisplayKey(synchronizedXpFeedbackEvent);
-
-    if (
-      !eventKey ||
-      xpFeedbackEventKeyRef.current === eventKey ||
-      shownXpFeedbackEventKeysRef.current.has(eventKey)
-    ) {
-      return;
-    }
-
-    shownXpFeedbackEventKeysRef.current.add(eventKey);
-
-    if (shownXpFeedbackEventKeysRef.current.size > MAX_SHOWN_XP_FEEDBACK_KEYS) {
-      const oldestKey = shownXpFeedbackEventKeysRef.current
-        .values()
-        .next().value;
-
-      if (oldestKey) {
-        shownXpFeedbackEventKeysRef.current.delete(oldestKey);
-      }
-    }
-
-    xpFeedbackEventKeyRef.current = eventKey;
-    if (xpFeedbackHideTimeoutRef.current !== null) {
-      window.clearTimeout(xpFeedbackHideTimeoutRef.current);
-    }
-
-    setXpFeedbackEvent(synchronizedXpFeedbackEvent);
-
-    xpFeedbackHideTimeoutRef.current = window.setTimeout(() => {
-      setXpFeedbackEvent((currentEvent) => {
-        if (
-          !currentEvent ||
-          getXpFeedbackDisplayKey(currentEvent) === eventKey
-        ) {
-          return null;
-        }
-
-        return currentEvent;
-      });
-
-      if (xpFeedbackEventKeyRef.current === eventKey) {
-        xpFeedbackEventKeyRef.current = "";
-      }
-
-      xpFeedbackHideTimeoutRef.current = null;
-    }, XP_FEEDBACK_VISIBLE_MS);
-  }, [
-    activeBattleLogEvent,
-    isCombatViewSynchronizing,
-    queueClearXpFeedback,
-    showActiveSession,
-    synchronizedXpFeedbackEvent,
-    xpFeedbackEvent,
-  ]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  /* eslint-disable react-hooks/set-state-in-effect -- Remove feedback that belongs to a previous mob scope. */
-  useEffect(() => {
-    if (!xpFeedbackEvent) {
-      return;
-    }
-
-    if (!showActiveSession) {
-      queueClearXpFeedback();
-
-      return;
-    }
-
-    const feedbackScope = getMobFeedbackScopeFromEvent(xpFeedbackEvent);
-
-    if (
-      hasUsefulMobFeedbackScope(feedbackScope) &&
-      hasUsefulMobFeedbackScope(visibleMobFeedbackScope) &&
-      hasMobFeedbackScopeMismatch(feedbackScope, visibleMobFeedbackScope)
-    ) {
-      queueClearXpFeedback();
-    }
-  }, [
-    queueClearXpFeedback,
-    showActiveSession,
-    visibleMobFeedbackScope,
-    visibleMobFeedbackScopeKey,
-    xpFeedbackEvent,
-  ]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  useEffect(() => {
-    return () => {
-      if (xpFeedbackHideTimeoutRef.current !== null) {
-        window.clearTimeout(xpFeedbackHideTimeoutRef.current);
-      }
-    };
-  }, []);
-
   useEffect(() => {
     let isMounted = true;
 
@@ -2475,6 +2244,14 @@ export function AutoCombatPage() {
       statusActiveMob?.id ||
       statusActiveMob?.name),
   );
+  const activeMobEnemyInstanceId = showActiveSession
+    ? (visualRealtimeCombat?.enemyInstanceId ??
+      realtimeState.mob?.enemyInstanceId ??
+      statusActiveMob?.enemyInstanceId ??
+      effectiveSession?.currentEnemyInstanceId ??
+      effectiveSession?.enemyInstanceId ??
+      null)
+    : null;
 
   const activeMobName = showActiveSession
     ? isCombatViewSynchronizing
@@ -2541,6 +2318,7 @@ export function AutoCombatPage() {
       : null;
   const activeBattleImpactTargetKey = [
     effectiveSession?.id ?? visualRealtimeCombat?.sessionId ?? "session:any",
+    activeMobEnemyInstanceId ?? "enemy:any",
     visualRealtimeCombat?.combatIndex ??
       effectiveStatus?.session?.currentCombatIndex ??
       effectiveSession?.currentCombatIndex ??
@@ -2569,9 +2347,9 @@ export function AutoCombatPage() {
 
   const rawActiveMobCurrentHp = isCombatViewSynchronizing
     ? 0
-    : showActiveSession && visualRealtimeCombat?.mobCurrentHp !== undefined
+    : showActiveSession && visualRealtimeCombat?.mobCurrentHp != null
       ? visualRealtimeCombat.mobCurrentHp
-      : showActiveSession && statusActiveMob?.currentHp !== undefined
+      : showActiveSession && statusActiveMob?.currentHp != null
         ? statusActiveMob.currentHp
         : showActiveSession && hasConfirmedActiveMob
           ? Math.max(0, activeMobMaxHp)
@@ -2591,6 +2369,8 @@ export function AutoCombatPage() {
   const activeMobHpStyle = {
     width: `${clampPercent(activeMobHpPercent)}%`,
   } as CSSProperties;
+  const hasDefeatedMobSnapshot =
+    showActiveSession && activeMobMaxHp > 0 && activeMobCurrentHp <= 0;
 
   const activeBattleProgressSource =
     statusActiveMob?.battleProgress ??
@@ -2620,12 +2400,28 @@ export function AutoCombatPage() {
     activeTimerStatus?.serverNow ??
     effectiveStatus?.serverNow ??
     null;
-  const activeBattleNowMs = sessionClockNowMs + serverClockOffsetMs;
-  const activeBattleTimelineProgress = getRepeatingBattleTimelineProgress({
+  const hasLocalVisualCycle = Boolean(
+    activeMobEnemyInstanceId &&
+    realtimeState.visualCycleEnemyInstanceId === activeMobEnemyInstanceId &&
+    typeof realtimeState.visualCycleStartedAtMs === "number" &&
+    Number.isFinite(realtimeState.visualCycleStartedAtMs),
+  );
+  const localVisualCycleStartedAtMs = hasLocalVisualCycle
+    ? realtimeState.visualCycleStartedAtMs
+    : null;
+  const authoritativeBattleCycleStartedAt =
+    visualBattleProgress?.cycleStartedAt ??
+    activeBattleProgressSource?.cycleStartedAt ??
+    null;
+  const hasAuthoritativeBattleCycle =
+    getAutoCombatTimestampMs(authoritativeBattleCycleStartedAt) !== null;
+  const activeBattleNowMs = hasAuthoritativeBattleCycle
+    ? syncedSessionNowMs
+    : sessionClockNowMs;
+  const activeBattleTimelineProgress = getBattleVisualTimelineProgress({
     source: {
       cycleStartedAt:
-        visualBattleProgress?.cycleStartedAt ??
-        activeBattleProgressSource?.cycleStartedAt,
+        authoritativeBattleCycleStartedAt ?? localVisualCycleStartedAtMs,
       cycleDurationMs:
         visualBattleProgress?.cycleDurationMs ??
         activeBattleProgressSource?.cycleDurationMs,
@@ -2683,20 +2479,31 @@ export function AutoCombatPage() {
     0,
     activeEstimatedKillTimeSeconds || Number.MAX_SAFE_INTEGER,
   );
-  const activeKillProgressPercent =
-    activeBattleSecondTickProgress
-      ? activeBattleSecondTickProgress.progressPercent
-      : activeEstimatedKillTimeSeconds > 0
-      ? clampPercent(
-          (activeKillProgressSeconds / activeEstimatedKillTimeSeconds) * 100,
-        )
-      : activeMobHpPercent;
   const hasTtkBattleProgress =
     showActiveSession && activeEstimatedKillTimeSeconds > 0;
+  const isBattleCycleVisuallyComplete = Boolean(
+    activeBattleTimelineProgress?.isComplete,
+  );
+  const confirmedMobDefeatedEventScope = getMobFeedbackScopeFromEvent(
+    providerPublicActiveEvent,
+  );
+  const hasConfirmedMobDefeatedEvent =
+    normalizeRealtimeEventType(providerPublicActiveEvent?.type) ===
+      "MOB_DEFEATED" &&
+    (!hasUsefulMobFeedbackScope(confirmedMobDefeatedEventScope) ||
+      !hasUsefulMobFeedbackScope(visibleMobFeedbackScope) ||
+      !hasMobFeedbackScopeMismatch(
+        confirmedMobDefeatedEventScope,
+        visibleMobFeedbackScope,
+      ));
+  const isMobDefeatVisuallyConfirmed =
+    hasDefeatedMobSnapshot || hasConfirmedMobDefeatedEvent;
   const isRawBattleBatchComplete =
     activeBattleTargetTotal > 0 &&
     hasAuthoritativeBattleTargetRemaining &&
     activeBattleTargetRemaining <= 0;
+  const isBattleBatchVisuallyComplete =
+    isRawBattleBatchComplete && isMobDefeatVisuallyConfirmed;
   const activeKillRemainingSeconds = hasTtkBattleProgress
     ? clampNumber(
         activeEstimatedKillTimeSeconds - activeKillProgressSeconds,
@@ -2704,34 +2511,54 @@ export function AutoCombatPage() {
         activeEstimatedKillTimeSeconds,
       )
     : 0;
-  const activeKillRemainingPercent = hasTtkBattleProgress
-    ? clampPercent(100 - activeKillProgressPercent)
-    : clampPercent(activeMobHpPercent);
-  const displayedKillRemainingPercent = isRawBattleBatchComplete
-    ? 0
-    : activeKillRemainingPercent;
-  const displayedKillRemainingSeconds = isRawBattleBatchComplete
-    ? 0
-    : activeKillRemainingSeconds;
+  const isMobSpawnAwaitingImpact =
+    providerActiveEventType === "MOB_SPAWNED" &&
+    !realtimeState.activeEventImpactApplied &&
+    !hasDefeatedMobSnapshot;
+  const shouldHoldCountdownAtLastSecond =
+    hasTtkBattleProgress &&
+    isBattleCycleVisuallyComplete &&
+    !isMobDefeatVisuallyConfirmed;
+  const displayedKillRemainingSeconds = isMobSpawnAwaitingImpact
+    ? activeEstimatedKillTimeSeconds
+    : isMobDefeatVisuallyConfirmed || isBattleBatchVisuallyComplete
+      ? 0
+      : shouldHoldCountdownAtLastSecond
+        ? Math.min(1, activeEstimatedKillTimeSeconds)
+        : activeKillRemainingSeconds;
+  const visibleBattleCycleRemainingPercent =
+    getVisibleBattleCycleRemainingPercent({
+      progress: activeBattleTimelineProgress,
+      visualCycleStartedAtMs: localVisualCycleStartedAtMs,
+      clientNowMs: sessionClockNowMs,
+      serverClientOffsetMs: serverClockOffsetMs,
+    });
+  const activeTopBarBattleProgressPercent = getBattleTopBarProgressPercent({
+    timelineRemainingPercent:
+      visibleBattleCycleRemainingPercent ??
+      (activeBattleTimelineProgress
+        ? 100 - activeBattleTimelineProgress.progressPercent
+        : undefined),
+    mobHpPercent: activeMobHpPercent,
+    isMobSpawnAwaitingImpact,
+    isMobDefeated: isMobDefeatVisuallyConfirmed,
+  });
+  const activeBattleCountdownStyle = {
+    width: `${clampPercent(activeTopBarBattleProgressPercent)}%`,
+  } as CSSProperties;
 
-  const activeBattleProgressFillClassName =
-    hasTtkBattleProgress && displayedKillRemainingPercent >= 99.95
-      ? "auto-combat-progress-fill--snap"
-    : undefined;
-  const activeBattleProgressElementKey = "auto-combat-progress-static";
-  const activeBattleProgressStyle = {
-    width: `${displayedKillRemainingPercent}%`,
-    transitionDuration: suppressProgressTransition ? "0ms" : undefined,
-  } satisfies CSSProperties;
+  const activeBattleProgressElementKey = activeBattleImpactTargetKey;
   const formatTtkSeconds = (value: number) =>
     value <= 0
       ? "0s"
       : value >= 10
         ? `${Math.round(value)}s`
         : `${value.toFixed(1)}s`;
-  const activeKillProgressLabel = hasTtkBattleProgress
-    ? `${formatTtkSeconds(displayedKillRemainingSeconds)} restantes`
-    : "Aguardando";
+  const activeKillProgressLabel = isMobDefeatVisuallyConfirmed
+    ? "Alvo derrotado"
+    : hasTtkBattleProgress
+      ? `${formatTtkSeconds(displayedKillRemainingSeconds)} restantes`
+      : "Aguardando";
   const activeKillsPerMinute = toSafeNumber(
     visualBattleProgress?.killsPerMinute ??
       activeBattleProgressSource?.killsPerMinute,
@@ -2779,81 +2606,6 @@ export function AutoCombatPage() {
   const displayedBattleTargetTotal = displayedBattleTargetCounts.total;
   const displayedBattleTargetRemaining = displayedBattleTargetCounts.remaining;
   const displayedBattleTargetDefeated = displayedBattleTargetCounts.defeated;
-  const shouldShowBattleTickImpact = Boolean(
-    showInlineHuntBattle &&
-      hasTtkBattleProgress &&
-      hasConfirmedActiveMob &&
-      activeMobFullBodyImage &&
-      activeBattleTimelineProgress &&
-      activeBattleSecondTickProgress &&
-      !isCombatViewSynchronizing &&
-      !isRawBattleBatchComplete &&
-      activeBattleSecondTickProgress.elapsedSeconds > 0,
-  );
-  const rawBattleTickImpactKey = shouldShowBattleTickImpact
-    ? [
-        activeBattleImpactTargetKey,
-        `defeated:${displayedBattleTargetDefeated}`,
-        "tick",
-        Math.max(
-          0,
-          Math.floor(activeBattleSecondTickProgress?.elapsedSeconds ?? 0),
-        ),
-      ].join(":")
-    : "";
-  if (!rawBattleTickImpactKey) {
-    suppressedBattleTickImpactKeyRef.current = "";
-    approvedBattleTickImpactKeyRef.current = "";
-  } else {
-    const isDocumentVisible =
-      typeof document === "undefined" ||
-      document.visibilityState === "visible";
-
-    if (!isDocumentVisible || suppressProgressTransition) {
-      suppressedBattleTickImpactKeyRef.current = rawBattleTickImpactKey;
-      approvedBattleTickImpactKeyRef.current = "";
-    } else if (
-      suppressedBattleTickImpactKeyRef.current === rawBattleTickImpactKey
-    ) {
-      approvedBattleTickImpactKeyRef.current = "";
-    } else {
-      const shownBattleTickImpactKeys = shownBattleTickImpactKeysRef.current;
-
-      if (!shownBattleTickImpactKeys.includes(rawBattleTickImpactKey)) {
-        shownBattleTickImpactKeys.push(rawBattleTickImpactKey);
-
-        if (
-          shownBattleTickImpactKeys.length >
-          MAX_SHOWN_BATTLE_TICK_IMPACT_KEYS
-        ) {
-          shownBattleTickImpactKeys.splice(
-            0,
-            shownBattleTickImpactKeys.length -
-              MAX_SHOWN_BATTLE_TICK_IMPACT_KEYS,
-          );
-        }
-
-        approvedBattleTickImpactKeyRef.current = rawBattleTickImpactKey;
-      } else if (
-        approvedBattleTickImpactKeyRef.current !== rawBattleTickImpactKey
-      ) {
-        approvedBattleTickImpactKeyRef.current = "";
-      }
-    }
-  }
-
-  const visibleBattleTickImpactKey =
-    approvedBattleTickImpactKeyRef.current === rawBattleTickImpactKey
-      ? rawBattleTickImpactKey
-      : "";
-  const shouldRenderBattleTickImpact = Boolean(
-    shouldShowBattleTickImpact &&
-      rawBattleTickImpactKey &&
-      visibleBattleTickImpactKey === rawBattleTickImpactKey,
-  );
-  const battleTickImpactKey = shouldRenderBattleTickImpact
-    ? visibleBattleTickImpactKey
-    : "";
   const activeBattleBatchCountdown = getBattleBatchCountdown({
     total: displayedBattleTargetTotal,
     defeated: displayedBattleTargetDefeated,
@@ -2907,23 +2659,6 @@ export function AutoCombatPage() {
     stableBattleBatchCountdownRef.current = null;
   }
 
-  const activeBatchRemainingLabel =
-    displayedBattleBatchCountdown.totalSeconds > 0
-      ? formatSeconds(displayedBattleBatchCountdown.remainingSeconds)
-      : "Calculando";
-  const activeBatchTotalLabel =
-    displayedBattleBatchCountdown.totalSeconds > 0
-      ? formatSeconds(displayedBattleBatchCountdown.totalSeconds)
-      : null;
-  const activeBattleRateLabel =
-    activeKillsPerMinute > 0
-      ? `${activeKillsPerMinute.toFixed(1)} abates/min`
-      : "Calculando ritmo";
-  const activeBattleBatchLabel =
-    displayedBattleTargetTotal > 0
-      ? `${displayedBattleTargetDefeated}/${displayedBattleTargetTotal} abatidos`
-      : "Batalha em andamento";
-
   const activeMobReference = showActiveSession
     ? isCombatViewSynchronizing
       ? "Sincronizando"
@@ -2951,6 +2686,10 @@ export function AutoCombatPage() {
       : mainThreat?.mob
         ? `Nv. ${mainThreat.mob.level}`
         : "—";
+  const activeMobHpDisplayLabel =
+    activeMobMaxHp > 0
+      ? `${Math.round(activeMobCurrentHp)}/${Math.round(activeMobMaxHp)} HP`
+      : activeMobReference;
 
   const sessionStatusText = showActiveSession
     ? (effectiveStatus?.sessionSummary?.statusText ??
@@ -3058,16 +2797,16 @@ export function AutoCombatPage() {
     characterPremiumUntilMs > Date.now();
   const characterPremiumActive = Boolean(
     character.isPremiumActive ||
-      character.membership?.isPremiumActive ||
-      characterPremiumUntilActive,
+    character.membership?.isPremiumActive ||
+    characterPremiumUntilActive,
   );
 
   const rewardPremiumActive = Boolean(
     visibleSessionTotals?.isPremiumActive ??
-      effectiveStatus?.sessionSummary?.progression?.isPremiumActive ??
-      effectiveSession?.isPremiumActive ??
-      visualRealtimeCombat?.isPremiumActive ??
-      false,
+    effectiveStatus?.sessionSummary?.progression?.isPremiumActive ??
+    effectiveSession?.isPremiumActive ??
+    visualRealtimeCombat?.isPremiumActive ??
+    false,
   );
 
   const isPremiumActive = rewardPremiumActive || characterPremiumActive;
@@ -3189,13 +2928,12 @@ export function AutoCombatPage() {
   );
   const shouldUseTrackedThreatCards =
     isBackendEncounterReadyPhase || showInlineHuntBattle;
-  const trackedMonsterSnapshots: AutoCombatTrackedMonsterViewModel[] = (
+  const trackedMonsterSnapshots: AutoCombatTrackedMonsterViewModel[] =
     effectiveStatus?.trackedMonsters ??
     effectiveStatus?.huntBatch?.mobs ??
     effectiveStatus?.rewards?.trackedMonsters ??
     huntingSnapshot?.trackedMonsters ??
-    []
-  );
+    [];
   const hasTrackedMonsterSnapshot = trackedMonsterSnapshots.length > 0;
   const trackedEnemiesRemainingCount = trackedMonsterSnapshots.reduce(
     (total, trackedMonster) => {
@@ -3345,100 +3083,110 @@ export function AutoCombatPage() {
   const displayedThreats = (
     shouldUseTrackedThreatCards
       ? trackedMonstersForSelection.map((trackedMonster) => {
-        const matchingEncounter = selectedMapThreats.find((encounter) => {
-          return (
-            encounter.id === trackedMonster.encounterId ||
-            encounter.mobId === trackedMonster.mobId
-          );
-        });
-        const trackedMob = trackedMonster.mob;
-        const safeMobId =
-          trackedMonster.mobId ?? trackedMob?.id ?? matchingEncounter?.mobId;
-        const safeEncounterId =
-          trackedMonster.encounterId ??
-          matchingEncounter?.id ??
-          safeMobId ??
-          "tracked-threat";
-        const safeRemainingCount = Math.max(
-          0,
-          Math.floor(
-            toSafeNumber(
-              trackedMonster.remainingCount ?? trackedMonster.foundCount,
-              0,
+          const matchingEncounter = selectedMapThreats.find((encounter) => {
+            return (
+              encounter.id === trackedMonster.encounterId ||
+              encounter.mobId === trackedMonster.mobId
+            );
+          });
+          const trackedMob = trackedMonster.mob;
+          const safeMobId =
+            trackedMonster.mobId ?? trackedMob?.id ?? matchingEncounter?.mobId;
+          const safeEncounterId =
+            trackedMonster.encounterId ??
+            matchingEncounter?.id ??
+            safeMobId ??
+            "tracked-threat";
+          const safeRemainingCount = Math.max(
+            0,
+            Math.floor(
+              toSafeNumber(
+                trackedMonster.remainingCount ?? trackedMonster.foundCount,
+                0,
+              ),
             ),
-          ),
-        );
-        const matchingMob = matchingEncounter?.mob ?? null;
-        const matchingDrops = matchingMob?.drops ?? [];
-        const displayMob =
-          matchingMob || trackedMob
-            ? {
-                id: trackedMob?.id ?? matchingMob?.id ?? safeMobId ?? safeEncounterId,
-                name:
-                  trackedMob?.name ??
-                  matchingMob?.name ??
-                  trackedMonster.mobName ??
-                  "Infectado",
-                description:
-                  trackedMob?.description ?? matchingMob?.description ?? null,
-                level:
-                  trackedMob?.level ??
-                  matchingMob?.level ??
-                  trackedMonster.mobLevel ??
-                  1,
-                tier:
-                  trackedMob?.tier ??
-                  matchingMob?.tier ??
-                  trackedMonster.mobTier ??
-                  1,
-                hp: trackedMob?.hp ?? trackedMob?.maxHp ?? matchingMob?.hp ?? 1,
-                attack: trackedMob?.attack ?? matchingMob?.attack ?? 0,
-                defense: trackedMob?.defense ?? matchingMob?.defense ?? 0,
-                speed: trackedMob?.speed ?? matchingMob?.speed ?? 0,
-                xpReward: trackedMob?.xpReward ?? matchingMob?.xpReward ?? 0,
-                currentHp:
-                  trackedMob?.currentHp ??
-                  trackedMob?.hp ??
-                  matchingMob?.currentHp ??
-                  matchingMob?.hp ??
-                  null,
-                maxHp:
-                  trackedMob?.maxHp ??
-                  trackedMob?.hp ??
-                  matchingMob?.maxHp ??
-                  matchingMob?.hp ??
-                  null,
-                hpPercent: trackedMob?.hpPercent ?? matchingMob?.hpPercent ?? null,
-                battleProgress:
-                  trackedMob?.battleProgress ?? matchingMob?.battleProgress ?? null,
-                survivalProjection:
-                  trackedMob?.survivalProjection ??
-                  matchingMob?.survivalProjection ??
-                  null,
-                foundCount: safeRemainingCount,
-                huntFoundCount: safeRemainingCount,
-                iconUrl: trackedMob?.iconUrl ?? matchingMob?.iconUrl ?? null,
-                imageUrl: trackedMob?.imageUrl ?? matchingMob?.imageUrl ?? null,
-                assetKey: trackedMob?.assetKey ?? matchingMob?.assetKey ?? null,
-                drops: matchingDrops,
-              }
-            : null;
+          );
+          const matchingMob = matchingEncounter?.mob ?? null;
+          const matchingDrops = matchingMob?.drops ?? [];
+          const displayMob =
+            matchingMob || trackedMob
+              ? {
+                  id:
+                    trackedMob?.id ??
+                    matchingMob?.id ??
+                    safeMobId ??
+                    safeEncounterId,
+                  name:
+                    trackedMob?.name ??
+                    matchingMob?.name ??
+                    trackedMonster.mobName ??
+                    "Infectado",
+                  description:
+                    trackedMob?.description ?? matchingMob?.description ?? null,
+                  level:
+                    trackedMob?.level ??
+                    matchingMob?.level ??
+                    trackedMonster.mobLevel ??
+                    1,
+                  tier:
+                    trackedMob?.tier ??
+                    matchingMob?.tier ??
+                    trackedMonster.mobTier ??
+                    1,
+                  hp:
+                    trackedMob?.hp ?? trackedMob?.maxHp ?? matchingMob?.hp ?? 1,
+                  attack: trackedMob?.attack ?? matchingMob?.attack ?? 0,
+                  defense: trackedMob?.defense ?? matchingMob?.defense ?? 0,
+                  speed: trackedMob?.speed ?? matchingMob?.speed ?? 0,
+                  xpReward: trackedMob?.xpReward ?? matchingMob?.xpReward ?? 0,
+                  currentHp:
+                    trackedMob?.currentHp ??
+                    trackedMob?.hp ??
+                    matchingMob?.currentHp ??
+                    matchingMob?.hp ??
+                    null,
+                  maxHp:
+                    trackedMob?.maxHp ??
+                    trackedMob?.hp ??
+                    matchingMob?.maxHp ??
+                    matchingMob?.hp ??
+                    null,
+                  hpPercent:
+                    trackedMob?.hpPercent ?? matchingMob?.hpPercent ?? null,
+                  battleProgress:
+                    trackedMob?.battleProgress ??
+                    matchingMob?.battleProgress ??
+                    null,
+                  survivalProjection:
+                    trackedMob?.survivalProjection ??
+                    matchingMob?.survivalProjection ??
+                    null,
+                  foundCount: safeRemainingCount,
+                  huntFoundCount: safeRemainingCount,
+                  iconUrl: trackedMob?.iconUrl ?? matchingMob?.iconUrl ?? null,
+                  imageUrl:
+                    trackedMob?.imageUrl ?? matchingMob?.imageUrl ?? null,
+                  assetKey:
+                    trackedMob?.assetKey ?? matchingMob?.assetKey ?? null,
+                  drops: matchingDrops,
+                }
+              : null;
 
-        return {
-          ...(matchingEncounter ?? {
+          return {
+            ...(matchingEncounter ?? {
+              id: safeEncounterId,
+              subMapId: selectedMap?.subMaps?.[0]?.id ?? "",
+              mobId: safeMobId ?? safeEncounterId,
+              weight: trackedMonster.weightSnapshot ?? 100,
+              isActive: true,
+            }),
             id: safeEncounterId,
-            subMapId: selectedMap?.subMaps?.[0]?.id ?? "",
             mobId: safeMobId ?? safeEncounterId,
-            weight: trackedMonster.weightSnapshot ?? 100,
-            isActive: true,
-          }),
-          id: safeEncounterId,
-          mobId: safeMobId ?? safeEncounterId,
-          foundCount: safeRemainingCount,
-          huntFoundCount: safeRemainingCount,
-          mob: displayMob,
-        } as AutoCombatEncounterViewModel;
-      })
+            foundCount: safeRemainingCount,
+            huntFoundCount: safeRemainingCount,
+            mob: displayMob,
+          } as AutoCombatEncounterViewModel;
+        })
       : selectedMapThreats
   )
     .filter((encounter) => {
@@ -3516,20 +3264,21 @@ export function AutoCombatPage() {
       ) * normalizedSelectedBattleQuantity,
     ),
   );
-  const selectedThreatProjectedSurvivalWithPotions = selectedThreatSurvivalProjection
-    ? estimateAutoCombatPotionUsageForSelection({
-        currentHp: currentCharacterHp,
-        maxHp: currentCharacterMaxHp,
-        expectedDamagePerKill: toSafeNumber(
-          selectedThreatSurvivalProjection.expectedDamagePerKill,
-          0,
-        ),
-        selectedKills: selectedThreatProjectionKillLimit,
-        availablePotions: selectedThreatAvailablePotions,
-        potionHealAmount: selectedThreatPotionHealAmount,
-        potionTriggerPercent: selectedThreatPotionTriggerPercent,
-      })
-    : null;
+  const selectedThreatProjectedSurvivalWithPotions =
+    selectedThreatSurvivalProjection
+      ? estimateAutoCombatPotionUsageForSelection({
+          currentHp: currentCharacterHp,
+          maxHp: currentCharacterMaxHp,
+          expectedDamagePerKill: toSafeNumber(
+            selectedThreatSurvivalProjection.expectedDamagePerKill,
+            0,
+          ),
+          selectedKills: selectedThreatProjectionKillLimit,
+          availablePotions: selectedThreatAvailablePotions,
+          potionHealAmount: selectedThreatPotionHealAmount,
+          potionTriggerPercent: selectedThreatPotionTriggerPercent,
+        })
+      : null;
   const selectedThreatProjectedSurvivalWithoutPotions =
     selectedThreatSurvivalProjection
       ? estimateAutoCombatPotionUsageForSelection({
@@ -3712,7 +3461,9 @@ export function AutoCombatPage() {
     maxTrackedEnemies,
     remainingCapacity: effectiveRemainingHuntCapacity,
     completedCycles:
-      isBackendHuntingPhase && !showInlineHuntBattle && !isBackendEncounterReadyPhase
+      isBackendHuntingPhase &&
+      !showInlineHuntBattle &&
+      !isBackendEncounterReadyPhase
         ? huntTimelineProgress?.completedCycles
         : 0,
     isLimitReached: effectiveIsHuntLimitReached,
@@ -3745,30 +3496,33 @@ export function AutoCombatPage() {
       ? 100
       : huntTimelineProgressPercent !== null
         ? huntTimelineProgressPercent
-      : clampNumber(
-          (huntCycleElapsedSeconds / huntingWindowSeconds) * 100,
-          0,
-          100,
-        );
+        : clampNumber(
+            (huntCycleElapsedSeconds / huntingWindowSeconds) * 100,
+            0,
+            100,
+          );
   const huntRemainingSeconds =
     isBackendEncounterReadyPhase || displayedIsHuntLimitReached
-    ? 0
-    : hasPendingHuntProcessing
       ? 0
-      : huntProgressTimeline
-        ? Math.max(
-            1,
-            Math.ceil(
-              huntTimelineDurationSeconds -
-                (huntTimelineProgress?.cycleElapsedMs ?? 0) / 1000,
-            ),
-          )
-      : hasAuthoritativeHuntWindow
-        ? Math.max(1, Math.ceil((huntNextFindAtMs - syncedSessionNowMs) / 1000))
-        : Math.max(
-            1,
-            Math.ceil(huntingWindowSeconds - huntCycleElapsedSeconds),
-          );
+      : hasPendingHuntProcessing
+        ? 0
+        : huntProgressTimeline
+          ? Math.max(
+              1,
+              Math.ceil(
+                huntTimelineDurationSeconds -
+                  (huntTimelineProgress?.cycleElapsedMs ?? 0) / 1000,
+              ),
+            )
+          : hasAuthoritativeHuntWindow
+            ? Math.max(
+                1,
+                Math.ceil((huntNextFindAtMs - syncedSessionNowMs) / 1000),
+              )
+            : Math.max(
+                1,
+                Math.ceil(huntingWindowSeconds - huntCycleElapsedSeconds),
+              );
   const huntTotalElapsedSeconds = Math.max(
     0,
     Math.floor((syncedSessionNowMs - huntStartedAtMs) / 1000),
@@ -3800,15 +3554,12 @@ export function AutoCombatPage() {
     ),
   );
   const huntingXpPerSecond =
-    huntTotalElapsedSeconds > 0
-      ? huntingXpGained / huntTotalElapsedSeconds
-      : 0;
+    huntTotalElapsedSeconds > 0 ? huntingXpGained / huntTotalElapsedSeconds : 0;
   const huntingXpPerSecondLabel =
     huntingXpPerSecond >= 10
       ? huntingXpPerSecond.toFixed(1)
       : huntingXpPerSecond.toFixed(2);
-  const huntingFoundLabel =
-    displayedFoundEnemiesCount.toLocaleString("pt-BR");
+  const huntingFoundLabel = displayedFoundEnemiesCount.toLocaleString("pt-BR");
   const huntingRemainingLabel =
     displayedRemainingHuntCapacity.toLocaleString("pt-BR");
   const huntProgressStatusText = showInlineHuntBattle
@@ -3820,8 +3571,8 @@ export function AutoCombatPage() {
       : isBackendEncounterReadyPhase
         ? "Ameaça pronta para combate"
         : hasPendingHuntProcessing
-        ? "Confirmando rastreio..."
-        : `Próximo rastreio em ${huntRemainingSeconds}s`;
+          ? "Confirmando rastreio..."
+          : `Próximo rastreio em ${huntRemainingSeconds}s`;
   const huntingActivityNextLabel = showInlineHuntBattle
     ? "Batalha em andamento"
     : displayedIsHuntLimitReached
@@ -3880,8 +3631,7 @@ export function AutoCombatPage() {
     huntingSpeedPercent > 0
       ? `${huntingSpeedPercent}% mais rápida`
       : `${huntingSecondsPerFind}s por rastreio`;
-  const shouldShowHuntTopBarActivity =
-    isBackendHuntingPhase;
+  const shouldShowHuntTopBarActivity = isBackendHuntingPhase;
   const topBarHuntFoundCount = displayedFoundEnemiesCount;
 
   const autoCombatTopBarActivityOverride: DashboardTopBarActivityOverride | null =
@@ -3895,9 +3645,7 @@ export function AutoCombatPage() {
               : sessionStatusText,
           imageUrl: getMobPortraitImage(activeMobName),
           icon: "AC",
-          progressPercent: hasTtkBattleProgress
-            ? displayedKillRemainingPercent
-            : activeMobHpPercent,
+          progressPercent: activeTopBarBattleProgressPercent,
           progressTimeline: null,
           badge:
             displayedBattleTargetTotal > 0
@@ -3909,14 +3657,14 @@ export function AutoCombatPage() {
               : "Combate automatico em andamento.",
           isBattle: true,
         }
-            : shouldShowHuntTopBarActivity
-              ? {
-                  kind: "auto-combat",
-                  title: "Rastreando",
-                  subtitle: "",
-                  icon: "AC",
-                  progressPercent: huntProgressPercent,
-                  progressTimeline: null,
+      : shouldShowHuntTopBarActivity
+        ? {
+            kind: "auto-combat",
+            title: "Rastreando",
+            subtitle: "",
+            icon: "AC",
+            progressPercent: huntProgressPercent,
+            progressTimeline: null,
             badge: topBarHuntFoundCount > 0 ? `${topBarHuntFoundCount}` : null,
             titleText:
               topBarHuntFoundCount > 0
@@ -3964,12 +3712,11 @@ export function AutoCombatPage() {
       activeVisualEventScope,
       visibleMobFeedbackScope,
     );
-
   const isMobDefeatedVisual =
     showActiveSession &&
     ((activeVisualEventType === "MOB_DEFEATED" &&
       activeVisualEventMatchesVisibleMob) ||
-      (activeMobMaxHp > 0 && activeMobCurrentHp <= 0));
+      hasDefeatedMobSnapshot);
 
   const isPlayerDefeatedVisual =
     showActiveSession &&
@@ -3977,8 +3724,9 @@ export function AutoCombatPage() {
       (currentCharacterMaxHp > 0 && currentCharacterHp <= 0));
 
   const realtimeFeedbackEvent = showActiveSession ? activeBattleLogEvent : null;
-  const realtimeFeedbackScope =
-    getMobFeedbackScopeFromEvent(realtimeFeedbackEvent);
+  const realtimeFeedbackScope = getMobFeedbackScopeFromEvent(
+    realtimeFeedbackEvent,
+  );
   const realtimeFeedbackMatchesVisibleMob =
     !hasUsefulMobFeedbackScope(visibleMobFeedbackScope) ||
     (hasUsefulMobFeedbackScope(realtimeFeedbackScope) &&
@@ -4030,48 +3778,67 @@ export function AutoCombatPage() {
   const mobDamageKey = shouldShowMobDamage
     ? `mob-damage-${realtimeFeedbackEventKey}`
     : "";
+  const shouldShowLethalMobImpact = Boolean(
+    hasDefeatedMobSnapshot &&
+    (providerActiveEventType === "PLAYER_HIT" ||
+      providerActiveEventType === "MOB_DEFEATED"),
+  );
+  const lethalMobImpactKey =
+    shouldShowLethalMobImpact && providerActiveEvent
+      ? `mob-lethal-${getRealtimeEventKey(providerActiveEvent)}`
+      : "";
   const shouldShowMobBodyImpact = Boolean(
     activeMobFullBodyImage &&
-      !isCombatViewSynchronizing &&
-      !isMobDefeatedVisual &&
-      (shouldRenderBattleTickImpact || shouldShowMobDamage),
+    !isCombatViewSynchronizing &&
+    (shouldShowMobDamage || shouldShowLethalMobImpact),
   );
   const mobBodyImpactKey = shouldShowMobBodyImpact
     ? [
         "mob-body-impact",
-        shouldRenderBattleTickImpact ? battleTickImpactKey : mobDamageKey,
+        activeBattleImpactTargetKey,
+        mobDamageKey || lethalMobImpactKey,
       ].join(":")
-    : "mob-body-idle";
+    : `mob-body-${activeBattleImpactTargetKey}`;
   const mobBodyImpactClassName = [
     "auto-combat-mob-damage-shake",
     shouldShowMobBodyImpact ? "is-impacting" : "",
     shouldShowMobDamage && isRealtimeFeedbackCritical
       ? "is-critical-impact"
       : "",
+    isMobDefeatedVisual ? "is-defeated" : "",
   ]
     .filter(Boolean)
     .join(" ");
 
+  const xpFeedbackEvent =
+    !isCombatViewSynchronizing &&
+    activeVisualEventType === "MOB_DEFEATED" &&
+    activeVisualEventMatchesVisibleMob
+      ? providerPublicActiveEvent
+      : null;
   const xpFeedbackBreakdown = getXpFeedbackBreakdown(xpFeedbackEvent);
-  const xpFeedbackMobScope = getMobFeedbackScopeFromEvent(xpFeedbackEvent);
-  const xpFeedbackMatchesVisibleMob =
-    !hasUsefulMobFeedbackScope(xpFeedbackMobScope) ||
-    !hasUsefulMobFeedbackScope(visibleMobFeedbackScope) ||
-    !hasMobFeedbackScopeMismatch(xpFeedbackMobScope, visibleMobFeedbackScope);
   const shouldShowXpFeedback =
-    showActiveSession &&
-    xpFeedbackMatchesVisibleMob &&
     Boolean(xpFeedbackBreakdown && xpFeedbackEvent);
   const xpFeedbackKey =
     shouldShowXpFeedback && xpFeedbackEvent
       ? `mob-xp-${getXpFeedbackDisplayKey(xpFeedbackEvent)}`
       : "";
-  const shouldShowMobDeathFeedback = shouldShowXpFeedback;
-  const mobDeathFeedbackKey =
-    shouldShowMobDeathFeedback && xpFeedbackEvent
-      ? `mob-defeated-${getXpFeedbackDisplayKey(xpFeedbackEvent)}`
-      : "";
-
+  const killReceipt =
+    shouldShowXpFeedback && xpFeedbackBreakdown ? (
+      <AutoCombatPremiumRewardBreakdown
+        key={xpFeedbackKey}
+        baseXp={xpFeedbackBreakdown.baseXp}
+        totalXp={xpFeedbackBreakdown.totalXp}
+        premiumBonusXp={xpFeedbackBreakdown.premiumBonusXp}
+        premiumPotentialBonusXp={
+          xpFeedbackBreakdown.premiumPotentialBonusXp
+        }
+        premiumTotalXp={xpFeedbackBreakdown.premiumTotalXp}
+        isPremiumActive={xpFeedbackBreakdown.isPremiumActive}
+        variant="feedback"
+        showCta={false}
+      />
+    ) : null;
   const playerFighterClassName = [
     "auto-combat-fighter-card",
     "auto-combat-fighter-card--player",
@@ -4091,7 +3858,6 @@ export function AutoCombatPage() {
     shouldShowMobDamage ? "is-hit" : "",
     shouldShowMobDamage && isRealtimeFeedbackCritical ? "is-critical-hit" : "",
     shouldShowMobDodge ? "is-dodging" : "",
-    isMobDefeatedVisual ? "is-defeated" : "",
     isCombatViewSynchronizing ? "is-syncing" : "",
   ]
     .filter(Boolean)
@@ -4627,9 +4393,9 @@ export function AutoCombatPage() {
     return (
       <ActivityProgressCard
         className={cardClassName}
-        iconAriaLabel={'Ca\u00e7a'}
+        iconAriaLabel={"Ca\u00e7a"}
         icon={<img src={huntingActivityIcon} alt="" />}
-        label={'Ca\u00e7a'}
+        label={"Ca\u00e7a"}
         badge={`Nv. ${huntingLevel}`}
         progressPercent={huntingXpProgressPercent}
         progressLabel={`Progresso de ca\u00e7a: ${huntingSkillXpLabel}, ${huntingXpProgressPercent}%`}
@@ -4652,38 +4418,37 @@ export function AutoCombatPage() {
         ]}
         controls={
           shouldShowHuntSkillControls ? (
-          <div
-            className="auto-combat-hunt-skill-card__controls"
-            aria-label="Controles da caça"
-          >
-            <strong>{formatClockSeconds(huntSessionRemainingSeconds)}</strong>
-
-            <button
-              type="button"
-              className="auto-combat-hunt-skill-card__control-button"
-              disabled={isActionLoading}
-              aria-label="Atualizar caçada"
-              title="Atualizar caçada"
-              onClick={() => void handleRefreshHuntActivityPanel()}
+            <div
+              className="auto-combat-hunt-skill-card__controls"
+              aria-label="Controles da caça"
             >
-              <RefreshCw size={15} strokeWidth={2.6} />
-            </button>
+              <strong>{formatClockSeconds(huntSessionRemainingSeconds)}</strong>
 
-            <button
-              type="button"
-              className="auto-combat-hunt-skill-card__control-button auto-combat-hunt-skill-card__control-button--danger"
-              disabled={isActionLoading || !shouldShowHuntSkillControls}
-              aria-label="Parar caçada"
-              title="Parar caçada"
-              onClick={handleStopHuntActivityPanel}
-            >
-              <X size={16} strokeWidth={2.8} />
-            </button>
-          </div>
+              <button
+                type="button"
+                className="auto-combat-hunt-skill-card__control-button"
+                disabled={isActionLoading}
+                aria-label="Atualizar caçada"
+                title="Atualizar caçada"
+                onClick={() => void handleRefreshHuntActivityPanel()}
+              >
+                <RefreshCw size={15} strokeWidth={2.6} />
+              </button>
+
+              <button
+                type="button"
+                className="auto-combat-hunt-skill-card__control-button auto-combat-hunt-skill-card__control-button--danger"
+                disabled={isActionLoading || !shouldShowHuntSkillControls}
+                aria-label="Parar caçada"
+                title="Parar caçada"
+                onClick={handleStopHuntActivityPanel}
+              >
+                <X size={16} strokeWidth={2.8} />
+              </button>
+            </div>
           ) : null
         }
       />
-
     );
   }
 
@@ -4715,6 +4480,12 @@ export function AutoCombatPage() {
           </div>
 
           <AutoCombatTabs activeTab={activeTab} onChange={setActiveTab} />
+
+          {!showActiveSession && killReceipt ? (
+            <div className="auto-combat-kill-receipt-slot auto-combat-kill-receipt-slot--standalone">
+              {killReceipt}
+            </div>
+          ) : null}
 
           {activeTab === "battle" ? (
             <div className="auto-combat-tab-panel">
@@ -4880,80 +4651,80 @@ export function AutoCombatPage() {
                         .filter(Boolean)
                         .join(" ")}
                     >
-                    <div className="auto-combat-hunt-tracker__visual">
-                      {trackedThreatMob && trackedThreatImage ? (
-                        <img
-                          src={trackedThreatImage}
-                          alt={trackedThreatMob.name ?? "Ameaça localizada"}
-                          loading="eager"
-                          decoding="async"
-                        />
-                      ) : (
-                        <span>?</span>
-                      )}
+                      <div className="auto-combat-hunt-tracker__visual">
+                        {trackedThreatMob && trackedThreatImage ? (
+                          <img
+                            src={trackedThreatImage}
+                            alt={trackedThreatMob.name ?? "Ameaça localizada"}
+                            loading="eager"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span>?</span>
+                        )}
 
-                      {shouldShowTrackedThreatFoundCount ? (
-                        <div className="auto-combat-hunt-tracker__found-badge">
-                          <strong>{trackedThreatDisplayCount}</strong>
-                          <span>
-                            {trackedThreatDisplayCount === 1
-                              ? "encontrado"
-                              : "encontrados"}
-                          </span>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="auto-combat-hunt-tracker__content">
-                      <div className="auto-combat-hunt-tracker__metrics">
-                        <div>
-                          <span>Tempo</span>
-                          <strong>
-                            {formatClockSeconds(huntSessionRemainingSeconds)}
-                          </strong>
-                        </div>
-
-                        <div>
-                          <span>Encontrados</span>
-                          <strong>{huntingFoundLabel}</strong>
-                        </div>
-
-                        <div>
-                          <span>Restantes</span>
-                          <strong>{huntingRemainingLabel}</strong>
-                        </div>
-
-                        <div>
-                          <span>EXP/s</span>
-                          <strong>{huntingXpPerSecondLabel}</strong>
-                        </div>
+                        {shouldShowTrackedThreatFoundCount ? (
+                          <div className="auto-combat-hunt-tracker__found-badge">
+                            <strong>{trackedThreatDisplayCount}</strong>
+                            <span>
+                              {trackedThreatDisplayCount === 1
+                                ? "encontrado"
+                                : "encontrados"}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
 
-                      <div
-                        className={huntScanClassName}
-                        style={huntProgressStyle}
-                      >
-                        <div className="auto-combat-hunt-scan__track">
-                          <i />
+                      <div className="auto-combat-hunt-tracker__content">
+                        <div className="auto-combat-hunt-tracker__metrics">
+                          <div>
+                            <span>Tempo</span>
+                            <strong>
+                              {formatClockSeconds(huntSessionRemainingSeconds)}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span>Encontrados</span>
+                            <strong>{huntingFoundLabel}</strong>
+                          </div>
+
+                          <div>
+                            <span>Restantes</span>
+                            <strong>{huntingRemainingLabel}</strong>
+                          </div>
+
+                          <div>
+                            <span>EXP/s</span>
+                            <strong>{huntingXpPerSecondLabel}</strong>
+                          </div>
                         </div>
 
-                        <div className="auto-combat-hunt-scan__footer">
-                          <span>{huntProgressStatusText}</span>
-                          <strong>{Math.round(huntProgressPercent)}%</strong>
-                        </div>
-                      </div>
-
-                      <div className="auto-combat-hunt-tracker__actions">
-                        <button
-                          type="button"
-                          className="auto-combat-hunt-tracker__stop"
-                          disabled={isActionLoading}
-                          onClick={() => setIsStopHuntConfirmOpen(true)}
+                        <div
+                          className={huntScanClassName}
+                          style={huntProgressStyle}
                         >
-                          {isActionLoading ? "Processando..." : "Parar Caça"}
-                        </button>
+                          <div className="auto-combat-hunt-scan__track">
+                            <i />
+                          </div>
+
+                          <div className="auto-combat-hunt-scan__footer">
+                            <span>{huntProgressStatusText}</span>
+                            <strong>{Math.round(huntProgressPercent)}%</strong>
+                          </div>
+                        </div>
+
+                        <div className="auto-combat-hunt-tracker__actions">
+                          <button
+                            type="button"
+                            className="auto-combat-hunt-tracker__stop"
+                            disabled={isActionLoading}
+                            onClick={() => setIsStopHuntConfirmOpen(true)}
+                          >
+                            {isActionLoading ? "Processando..." : "Parar Caça"}
+                          </button>
+                        </div>
                       </div>
-                    </div>
                     </div>
                   ) : null}
 
@@ -4961,83 +4732,6 @@ export function AutoCombatPage() {
                     className="auto-combat-hunt-side auto-combat-hunt-side--stacked"
                     aria-label="Resumo da caça"
                   >
-                    {showInlineHuntBattle ? (
-                      <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--battle">
-                        <div className="auto-combat-hunt-side__section-title">
-                          <span>Batalha</span>
-                        </div>
-
-                        <div className="auto-combat-hunt-battle-card">
-                          <div className="auto-combat-hunt-battle-card__top">
-                            <div className="auto-combat-hunt-battle-card__portrait">
-                              {activeMobFullBodyImage ? (
-                                <img
-                                  src={activeMobFullBodyImage}
-                                  alt={activeMobName}
-                                  loading="eager"
-                                  decoding="async"
-                                />
-                              ) : (
-                                <span>AC</span>
-                              )}
-                            </div>
-
-                            <div className="auto-combat-hunt-battle-card__body">
-                              <strong>{activeMobName}</strong>
-                              <span>{activeBattleBatchLabel}</span>
-                            </div>
-
-                            <div className="auto-combat-hunt-battle-card__time">
-                              <strong>{activeBatchRemainingLabel}</strong>
-                              {activeBatchTotalLabel ? (
-                                <span>restantes de {activeBatchTotalLabel}</span>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          <div className="auto-combat-hunt-battle-card__track">
-                            <i>
-                              <b
-                                key={activeBattleProgressElementKey}
-                                className={activeBattleProgressFillClassName}
-                                style={activeBattleProgressStyle}
-                              />
-                            </i>
-                          </div>
-
-                          <div className="auto-combat-hunt-battle-card__meta">
-                            <span>{activeKillProgressLabel}</span>
-                            <strong>{activeBattleRateLabel}</strong>
-                          </div>
-
-                          {activeDifficultyLabel ? (
-                            <div className="auto-combat-hunt-battle-card__difficulty">
-                              {activeDifficultyLabel}
-                            </div>
-                          ) : null}
-
-                          <div className="auto-combat-hunt-battle-card__actions">
-                            <button
-                              type="button"
-                              className="auto-combat-hunt-battle-card__button"
-                              onClick={() => setActiveTab("stats")}
-                            >
-                              Status
-                            </button>
-
-                            <button
-                              type="button"
-                              className="auto-combat-hunt-battle-card__button auto-combat-hunt-battle-card__button--danger"
-                              disabled={isActionLoading || !hasActiveSession}
-                              onClick={handleStopAutoCombat}
-                            >
-                              {isActionLoading ? "..." : "Parar"}
-                            </button>
-                          </div>
-                        </div>
-                      </section>
-                    ) : null}
-
                     <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--progress auto-combat-hunt-side-section--desktop-status-card">
                       <div className="auto-combat-hunt-side__section-title">
                         <span>Sua proficiência</span>
@@ -5076,7 +4770,7 @@ export function AutoCombatPage() {
                         <div className="auto-combat-inline-battle__metrics">
                           {displayedBattleTargetTotal > 0 ? (
                             <>
-                              <em>
+                              <em data-testid="auto-combat-battle-defeated-count">
                                 {displayedBattleTargetDefeated}/
                                 {displayedBattleTargetTotal} abatidos
                               </em>
@@ -5095,31 +4789,11 @@ export function AutoCombatPage() {
                           "auto-combat-inline-battle__mob-card",
                           shouldShowMobDamage ? "is-hit" : "",
                           isRealtimeFeedbackCritical ? "is-critical-hit" : "",
-                          shouldShowMobDeathFeedback ? "is-defeated" : "",
                           isCombatViewSynchronizing ? "is-syncing" : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
                       >
-                        {shouldShowXpFeedback && xpFeedbackBreakdown ? (
-                          <AutoCombatPremiumRewardBreakdown
-                            key={xpFeedbackKey}
-                            className="auto-combat-xp-feedback auto-combat-inline-battle__xp"
-                            baseXp={xpFeedbackBreakdown.baseXp}
-                            totalXp={xpFeedbackBreakdown.totalXp}
-                            premiumBonusXp={xpFeedbackBreakdown.premiumBonusXp}
-                            premiumPotentialBonusXp={
-                              xpFeedbackBreakdown.premiumPotentialBonusXp
-                            }
-                            premiumTotalXp={xpFeedbackBreakdown.premiumTotalXp}
-                            isPremiumActive={
-                              xpFeedbackBreakdown.isPremiumActive
-                            }
-                            variant="feedback"
-                            showCta={false}
-                          />
-                        ) : null}
-
                         {shouldShowMobDamage ? (
                           <span
                             key={mobDamageKey}
@@ -5134,15 +4808,6 @@ export function AutoCombatPage() {
                           </span>
                         ) : null}
 
-                        {shouldShowMobDeathFeedback ? (
-                          <span
-                            key={mobDeathFeedbackKey}
-                            className="auto-combat-defeated-badge"
-                          >
-                            Derrotado
-                          </span>
-                        ) : null}
-
                         {hasConfirmedActiveMob ? (
                           <span className="auto-combat-fighter-card__level-badge auto-combat-fighter-card__level-badge--mob">
                             Nv. {activeMobLevel}
@@ -5151,17 +4816,13 @@ export function AutoCombatPage() {
 
                         <div className="auto-combat-inline-battle__mob-visual">
                           {activeMobFullBodyImage ? (
-                            <div
-                              key={mobBodyImpactKey}
-                              className={mobBodyImpactClassName}
-                            >
-                              <img
-                                src={activeMobFullBodyImage}
-                                alt={activeMobName}
-                                loading="eager"
-                                decoding="async"
-                              />
-                            </div>
+                            <AutoCombatMobTransition
+                              imageUrl={activeMobFullBodyImage}
+                              alt={activeMobName}
+                              instanceKey={activeBattleImpactTargetKey}
+                              impactKey={mobBodyImpactKey}
+                              bodyClassName={mobBodyImpactClassName}
+                            />
                           ) : isCombatViewSynchronizing ? (
                             <span className="auto-combat-fighter-card__sync-placeholder">
                               Sincronizando
@@ -5175,13 +4836,6 @@ export function AutoCombatPage() {
                               ☣
                             </span>
                           )}
-                          {shouldRenderBattleTickImpact ? (
-                            <span
-                              key={battleTickImpactKey}
-                              className="auto-combat-inline-battle__hit-pulse"
-                              aria-hidden="true"
-                            />
-                          ) : null}
                         </div>
 
                         <div className="auto-combat-inline-battle__mob-heading">
@@ -5192,69 +4846,50 @@ export function AutoCombatPage() {
                         {hasTtkBattleProgress ? (
                           <div
                             className="auto-combat-inline-battle__ttk-strip"
-                            aria-label={`Tempo restante do abate: ${activeKillProgressLabel}`}
+                            aria-label={`Progresso do abate: ${activeKillProgressLabel}. Vida do alvo: ${activeMobHpDisplayLabel}`}
                           >
                             <i>
                               <b
                                 key={activeBattleProgressElementKey}
-                                className={activeBattleProgressFillClassName}
-                                style={activeBattleProgressStyle}
+                                style={activeBattleCountdownStyle}
                               />
                             </i>
-                            <span>{activeKillProgressLabel}</span>
+                            <span>
+                              {activeMobHpDisplayLabel} · {activeKillProgressLabel}
+                            </span>
                           </div>
                         ) : null}
 
-                        <div
-                          className={[
-                            "auto-combat-resource",
-                            hasTtkBattleProgress
-                              ? "auto-combat-resource--countdown"
-                              : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                        >
+                        <div className="auto-combat-resource">
                           <div>
-                            <span>
-                              {hasTtkBattleProgress ? "Abate" : "HP"}
-                            </span>
-                            <strong>
-                              {hasTtkBattleProgress
-                                ? activeKillProgressLabel
-                                : activeMobMaxHp > 0
-                                  ? `${activeMobCurrentHp}/${activeMobMaxHp}`
-                                  : activeMobReference}
-                            </strong>
+                            <span>HP</span>
+                            <strong>{activeMobHpDisplayLabel}</strong>
                           </div>
 
                           <i>
                             <b
                               key={activeBattleProgressElementKey}
-                              className={
-                                hasTtkBattleProgress
-                                  ? activeBattleProgressFillClassName
-                                  : undefined
-                              }
-                              style={
-                                hasTtkBattleProgress
-                                  ? activeBattleProgressStyle
-                                  : activeMobHpStyle
-                              }
+                              style={activeMobHpStyle}
                             />
                           </i>
 
                           {hasTtkBattleProgress ? (
                             <small className="auto-combat-resource__hint">
+                              {activeKillProgressLabel}
+                              {activeKillsPerMinute > 0 ? " · " : ""}
                               {activeKillsPerMinute > 0
                                 ? `${activeKillsPerMinute.toFixed(1)} abates/min`
-                                : "Calculando ritmo"}
+                                : ""}
                               {activeDifficultyLabel
                                 ? ` · ${activeDifficultyLabel}`
                                 : ""}
                             </small>
                           ) : null}
                         </div>
+                      </div>
+
+                      <div className="auto-combat-kill-receipt-slot auto-combat-kill-receipt-slot--inline">
+                        {killReceipt}
                       </div>
 
                       <div className="auto-combat-inline-battle__footer">
@@ -5277,203 +4912,205 @@ export function AutoCombatPage() {
                           {isActionLoading ? "Processando..." : "Parar sessão"}
                         </button>
                       </div>
-
                     </section>
                   ) : null}
 
                   <>
-                  <div className="auto-combat-section-title auto-combat-section-title--small">
-                    <span>
-                      {showInlineHuntBattle
-                        ? "Ameaças restantes"
-                        : "Possíveis ameaças da área"}
-                    </span>
-                  </div>
+                    <div className="auto-combat-section-title auto-combat-section-title--small">
+                      <span>
+                        {showInlineHuntBattle
+                          ? "Ameaças restantes"
+                          : "Possíveis ameaças da área"}
+                      </span>
+                    </div>
 
-                  {displayedThreats.length > 0 ? (
-                    <div
-                      className={[
-                        "auto-combat-enemy-grid",
-                        isBackendHuntFlow || showInlineHuntBattle
-                          ? "auto-combat-enemy-grid--compact"
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      {displayedThreats.map((encounter) => {
-                        const mob = encounter.mob;
-                        const mobFullBodyImage =
-                          getMobFullBodyImage(mob?.name) ??
-                          getMobPortraitImage(mob?.name);
-                        const mobId = mob?.id ?? encounter.mobId;
-                        const cardFoundCount =
-                          shouldUseTrackedThreatCards && mobId
-                            ? (huntFoundCountByMobId.get(mobId) ?? 0)
-                            : 0;
-                        const shouldShowCardFoundCount = cardFoundCount > 0;
-                        const cardFoundCountLabel =
-                          cardFoundCount === 1
-                            ? "1 encontrado"
-                            : `${cardFoundCount} encontrados`;
-                        const isTrackedThreatCard =
-                          shouldUseTrackedThreatCards &&
-                          ((Boolean(trackedEncounter) &&
-                            (encounter.id === trackedEncounter?.id ||
-                              mob?.id === trackedThreatMob?.id)) ||
-                            encounter.id === activeBattleTargetEncounterId ||
-                            mobId === activeBattleTargetMobId);
+                    {displayedThreats.length > 0 ? (
+                      <div
+                        className={[
+                          "auto-combat-enemy-grid",
+                          isBackendHuntFlow || showInlineHuntBattle
+                            ? "auto-combat-enemy-grid--compact"
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        {displayedThreats.map((encounter) => {
+                          const mob = encounter.mob;
+                          const mobFullBodyImage =
+                            getMobFullBodyImage(mob?.name) ??
+                            getMobPortraitImage(mob?.name);
+                          const mobId = mob?.id ?? encounter.mobId;
+                          const cardFoundCount =
+                            shouldUseTrackedThreatCards && mobId
+                              ? (huntFoundCountByMobId.get(mobId) ?? 0)
+                              : 0;
+                          const shouldShowCardFoundCount = cardFoundCount > 0;
+                          const cardFoundCountLabel =
+                            cardFoundCount === 1
+                              ? "1 encontrado"
+                              : `${cardFoundCount} encontrados`;
+                          const isTrackedThreatCard =
+                            shouldUseTrackedThreatCards &&
+                            ((Boolean(trackedEncounter) &&
+                              (encounter.id === trackedEncounter?.id ||
+                                mob?.id === trackedThreatMob?.id)) ||
+                              encounter.id === activeBattleTargetEncounterId ||
+                              mobId === activeBattleTargetMobId);
 
-                        return (
-                          <article
-                            key={encounter.id}
-                            className={[
-                              "auto-combat-enemy-card",
-                              isBackendHuntFlow || showInlineHuntBattle
-                                ? "auto-combat-enemy-card--compact"
-                                : "",
-                              shouldShowCardFoundCount
-                                ? "auto-combat-enemy-card--found"
-                                : "",
-                              shouldShowCardFoundCount
-                                ? "auto-combat-enemy-card--with-found-count"
-                                : "auto-combat-enemy-card--without-found-count",
-                              isTrackedThreatCard
-                                ? "auto-combat-enemy-card--tracked-found"
-                                : "",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Ver detalhes de ${mob?.name ?? "Infectado"}`}
-                            onClick={() => {
-                              setSelectedBattleQuantity(1);
-                              setIsThreatPotionPickerOpen(false);
-                              setSelectedThreat(encounter);
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key !== "Enter" && event.key !== " ") {
-                                return;
-                              }
-
-                              event.preventDefault();
-                              setSelectedBattleQuantity(1);
-                              setIsThreatPotionPickerOpen(false);
-                              setSelectedThreat(encounter);
-                            }}
-                          >
-                            {shouldShowCardFoundCount ? (
-                              <div
-                                className={[
-                                  "auto-combat-enemy-card__found-count",
-                                  isTrackedThreatCard
-                                    ? "auto-combat-enemy-card__found-count--tracked"
-                                    : "auto-combat-enemy-card__found-count--secondary",
-                                ]
-                                  .filter(Boolean)
-                                  .join(" ")}
-                                aria-label={`${cardFoundCountLabel} nesta caça`}
-                              >
-                                <strong>{cardFoundCount}</strong>
-                                <span>
-                                  {cardFoundCount === 1
-                                    ? "encontrado"
-                                    : "encontrados"}
-                                </span>
-                              </div>
-                            ) : null}
-
-                            <div
+                          return (
+                            <article
+                              key={encounter.id}
                               className={[
-                                "auto-combat-enemy-card__portrait",
-                                "auto-combat-enemy-card__portrait--fullbody",
-                                mobFullBodyImage
-                                  ? "auto-combat-enemy-card__portrait--loaded"
+                                "auto-combat-enemy-card",
+                                isBackendHuntFlow || showInlineHuntBattle
+                                  ? "auto-combat-enemy-card--compact"
+                                  : "",
+                                shouldShowCardFoundCount
+                                  ? "auto-combat-enemy-card--found"
+                                  : "",
+                                shouldShowCardFoundCount
+                                  ? "auto-combat-enemy-card--with-found-count"
+                                  : "auto-combat-enemy-card--without-found-count",
+                                isTrackedThreatCard
+                                  ? "auto-combat-enemy-card--tracked-found"
                                   : "",
                               ]
                                 .filter(Boolean)
                                 .join(" ")}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`Ver detalhes de ${mob?.name ?? "Infectado"}`}
+                              onClick={() => {
+                                setSelectedBattleQuantity(1);
+                                setIsThreatPotionPickerOpen(false);
+                                setSelectedThreat(encounter);
+                              }}
+                              onKeyDown={(event) => {
+                                if (
+                                  event.key !== "Enter" &&
+                                  event.key !== " "
+                                ) {
+                                  return;
+                                }
+
+                                event.preventDefault();
+                                setSelectedBattleQuantity(1);
+                                setIsThreatPotionPickerOpen(false);
+                                setSelectedThreat(encounter);
+                              }}
                             >
-                              {mobFullBodyImage ? (
-                                <img
-                                  src={mobFullBodyImage}
-                                  alt={mob?.name ?? "Infectado"}
-                                  loading="eager"
-                                  decoding="async"
-                                />
-                              ) : (
-                                <span className="auto-combat-enemy-card__portrait-fallback">
-                                  ☣
-                                </span>
-                              )}
-                            </div>
+                              {shouldShowCardFoundCount ? (
+                                <div
+                                  className={[
+                                    "auto-combat-enemy-card__found-count",
+                                    isTrackedThreatCard
+                                      ? "auto-combat-enemy-card__found-count--tracked"
+                                      : "auto-combat-enemy-card__found-count--secondary",
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ")}
+                                  aria-label={`${cardFoundCountLabel} nesta caça`}
+                                >
+                                  <strong>{cardFoundCount}</strong>
+                                  <span>
+                                    {cardFoundCount === 1
+                                      ? "encontrado"
+                                      : "encontrados"}
+                                  </span>
+                                </div>
+                              ) : null}
 
-                            <div className="auto-combat-enemy-card__content">
-                              <span>Ameaça próxima</span>
+                              <div
+                                className={[
+                                  "auto-combat-enemy-card__portrait",
+                                  "auto-combat-enemy-card__portrait--fullbody",
+                                  mobFullBodyImage
+                                    ? "auto-combat-enemy-card__portrait--loaded"
+                                    : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                              >
+                                {mobFullBodyImage ? (
+                                  <img
+                                    src={mobFullBodyImage}
+                                    alt={mob?.name ?? "Infectado"}
+                                    loading="eager"
+                                    decoding="async"
+                                  />
+                                ) : (
+                                  <span className="auto-combat-enemy-card__portrait-fallback">
+                                    ☣
+                                  </span>
+                                )}
+                              </div>
 
-                              <strong>{mob?.name ?? "Infectado"}</strong>
-                            </div>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="auto-combat-hunt-empty auto-combat-hunt-empty--compact">
-                      <div className="auto-combat-hunt-empty__icon">!</div>
+                              <div className="auto-combat-enemy-card__content">
+                                <span>Ameaça próxima</span>
 
-                      <strong>
-                        {showInlineHuntBattle
-                          ? "Nenhuma outra ameaça rastreada"
-                          : "Nenhum inimigo encontrado"}
-                      </strong>
+                                <strong>{mob?.name ?? "Infectado"}</strong>
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="auto-combat-hunt-empty auto-combat-hunt-empty--compact">
+                        <div className="auto-combat-hunt-empty__icon">!</div>
 
-                      <p>
-                        {showInlineHuntBattle
-                          ? "O alvo selecionado continua em batalha. Outras ameaças aparecerão aqui quando houver rastreios pendentes."
-                          : "Este mapa está cadastrado, mas ainda não possui encontros ativos. Quando os mobs forem vinculados ao seed/backend, ele ficará disponível para combate."}
-                      </p>
-                    </div>
-                  )}
+                        <strong>
+                          {showInlineHuntBattle
+                            ? "Nenhuma outra ameaça rastreada"
+                            : "Nenhum inimigo encontrado"}
+                        </strong>
+
+                        <p>
+                          {showInlineHuntBattle
+                            ? "O alvo selecionado continua em batalha. Outras ameaças aparecerão aqui quando houver rastreios pendentes."
+                            : "Este mapa está cadastrado, mas ainda não possui encontros ativos. Quando os mobs forem vinculados ao seed/backend, ele ficará disponível para combate."}
+                        </p>
+                      </div>
+                    )}
                   </>
 
                   {!showInlineHuntBattle ? (
                     <>
-                  <div className="auto-combat-stage-actions">
-                    {!isBackendHuntingPhase ? (
-                      <>
-                        <button
-                          type="button"
-                          className="auto-combat-primary-button"
-                          disabled={
-                            isBackendEncounterReadyPhase || !canStartCombat
-                          }
-                          onClick={() => handleStartAutoCombat()}
-                        >
-                          {isBackendEncounterReadyPhase
-                            ? "Escolha um mob"
-                            : isActionLoading
-                              ? "Processando..."
-                              : "Iniciar combate"}
-                        </button>
+                      <div className="auto-combat-stage-actions">
+                        {!isBackendHuntingPhase ? (
+                          <>
+                            <button
+                              type="button"
+                              className="auto-combat-primary-button"
+                              disabled={
+                                isBackendEncounterReadyPhase || !canStartCombat
+                              }
+                              onClick={() => handleStartAutoCombat()}
+                            >
+                              {isBackendEncounterReadyPhase
+                                ? "Escolha um mob"
+                                : isActionLoading
+                                  ? "Processando..."
+                                  : "Iniciar combate"}
+                            </button>
 
-                        {isBackendEncounterReadyPhase ? (
-                          <button
-                            type="button"
-                            className="auto-combat-secondary-button"
-                            disabled={!canStartHunt || isActionLoading}
-                            onClick={handleStartHunt}
-                          >
-                            {isActionLoading
-                              ? "Processando..."
-                              : effectiveIsHuntLimitReached
-                                ? "Limite atingido"
-                                : "Continuar caçada"}
-                          </button>
+                            {isBackendEncounterReadyPhase ? (
+                              <button
+                                type="button"
+                                className="auto-combat-secondary-button"
+                                disabled={!canStartHunt || isActionLoading}
+                                onClick={handleStartHunt}
+                              >
+                                {isActionLoading
+                                  ? "Processando..."
+                                  : effectiveIsHuntLimitReached
+                                    ? "Limite atingido"
+                                    : "Continuar caçada"}
+                              </button>
+                            ) : null}
+                          </>
                         ) : null}
-                      </>
-                    ) : null}
-                  </div>
+                      </div>
                     </>
                   ) : null}
                 </article>
@@ -5570,16 +5207,7 @@ export function AutoCombatPage() {
                           </div>
                         </div>
 
-                          <div
-                            className={[
-                              "auto-combat-resource",
-                              hasTtkBattleProgress
-                                ? "auto-combat-resource--countdown"
-                                : "",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                          >
+                        <div className="auto-combat-resource">
                           <div>
                             <span>HP</span>
                             <strong>
@@ -5599,25 +5227,6 @@ export function AutoCombatPage() {
                         className={mobFighterClassName}
                         data-fighter-role="mob"
                       >
-                        {shouldShowXpFeedback && xpFeedbackBreakdown ? (
-                          <AutoCombatPremiumRewardBreakdown
-                            key={xpFeedbackKey}
-                            className="auto-combat-xp-feedback"
-                            baseXp={xpFeedbackBreakdown.baseXp}
-                            totalXp={xpFeedbackBreakdown.totalXp}
-                            premiumBonusXp={xpFeedbackBreakdown.premiumBonusXp}
-                            premiumPotentialBonusXp={
-                              xpFeedbackBreakdown.premiumPotentialBonusXp
-                            }
-                            premiumTotalXp={xpFeedbackBreakdown.premiumTotalXp}
-                            isPremiumActive={
-                              xpFeedbackBreakdown.isPremiumActive
-                            }
-                            variant="feedback"
-                            showCta={false}
-                          />
-                        ) : null}
-
                         {shouldShowMobDamage ? (
                           <span
                             key={mobDamageKey}
@@ -5629,15 +5238,6 @@ export function AutoCombatPage() {
                               .join(" ")}
                           >
                             -{latestDamageAmount} HP
-                          </span>
-                        ) : null}
-
-                        {shouldShowMobDeathFeedback ? (
-                          <span
-                            key={mobDeathFeedbackKey}
-                            className="auto-combat-defeated-badge"
-                          >
-                            Derrotado
                           </span>
                         ) : null}
 
@@ -5659,17 +5259,13 @@ export function AutoCombatPage() {
                               .join(" ")}
                           >
                             {activeMobFullBodyImage ? (
-                              <div
-                                key={mobBodyImpactKey}
-                                className={mobBodyImpactClassName}
-                              >
-                                <img
-                                  src={activeMobFullBodyImage}
-                                  alt={activeMobName}
-                                  loading="eager"
-                                  decoding="async"
-                                />
-                              </div>
+                              <AutoCombatMobTransition
+                                imageUrl={activeMobFullBodyImage}
+                                alt={activeMobName}
+                                instanceKey={activeBattleImpactTargetKey}
+                                impactKey={mobBodyImpactKey}
+                                bodyClassName={mobBodyImpactClassName}
+                              />
                             ) : isCombatViewSynchronizing ? (
                               <span className="auto-combat-fighter-card__sync-placeholder">
                                 Sincronizando
@@ -5691,50 +5287,26 @@ export function AutoCombatPage() {
                           </div>
                         </div>
 
-                        <div
-                          className={[
-                            "auto-combat-resource",
-                            hasTtkBattleProgress
-                              ? "auto-combat-resource--countdown"
-                              : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                        >
+                        <div className="auto-combat-resource">
                           <div>
-                            <span>
-                              {hasTtkBattleProgress ? "Abate" : "HP"}
-                            </span>
-                            <strong>
-                              {hasTtkBattleProgress
-                                ? activeKillProgressLabel
-                                : activeMobMaxHp > 0
-                                  ? `${activeMobCurrentHp}/${activeMobMaxHp}`
-                                  : activeMobReference}
-                            </strong>
+                            <span>HP</span>
+                            <strong>{activeMobHpDisplayLabel}</strong>
                           </div>
 
                           <i>
                             <b
                               key={activeBattleProgressElementKey}
-                              className={
-                                hasTtkBattleProgress
-                                  ? activeBattleProgressFillClassName
-                                  : undefined
-                              }
-                              style={
-                                hasTtkBattleProgress
-                                  ? activeBattleProgressStyle
-                                  : activeMobHpStyle
-                              }
+                              style={activeMobHpStyle}
                             />
                           </i>
 
                           {hasTtkBattleProgress ? (
                             <small className="auto-combat-resource__hint">
+                              {activeKillProgressLabel}
+                              {activeKillsPerMinute > 0 ? " · " : ""}
                               {activeKillsPerMinute > 0
                                 ? `${activeKillsPerMinute.toFixed(1)} abates/min`
-                                : "Calculando ritmo"}
+                                : ""}
                               {activeDifficultyLabel
                                 ? ` · ${activeDifficultyLabel}`
                                 : ""}
@@ -5742,6 +5314,10 @@ export function AutoCombatPage() {
                           ) : null}
                         </div>
                       </div>
+                    </div>
+
+                    <div className="auto-combat-kill-receipt-slot auto-combat-kill-receipt-slot--arena">
+                      {killReceipt}
                     </div>
 
                     <div className="auto-combat-stage-actions auto-combat-stage-actions--session">
@@ -5773,7 +5349,8 @@ export function AutoCombatPage() {
                       </div>
 
                       <small>
-                        Escolha a poção que poderá ser usada durante as batalhas.
+                        Escolha a poção que poderá ser usada durante as
+                        batalhas.
                       </small>
                     </div>
 
@@ -5968,7 +5545,6 @@ export function AutoCombatPage() {
                               </div>
                             )}
                           </section>
-
                         </div>
 
                         {potionConfigMessage ? (
@@ -6100,8 +5676,8 @@ export function AutoCombatPage() {
               <div className="auto-combat-hunt-stop-modal__notice">
                 <span aria-hidden="true">i</span>
                 <p>
-                  Os inimigos que você já rastreou ficarão prontos para
-                  batalha imediatamente.
+                  Os inimigos que você já rastreou ficarão prontos para batalha
+                  imediatamente.
                 </p>
               </div>
 
@@ -6168,332 +5744,336 @@ export function AutoCombatPage() {
 
             <div className="auto-combat-threat-modal__overview">
               <div className="auto-combat-threat-modal__visual">
-              {selectedThreatImage ? (
-                <img
-                  src={selectedThreatImage}
-                  alt={selectedThreatMob.name}
-                  loading="lazy"
-                />
-              ) : (
-                <span className="auto-combat-threat-modal__fallback">☣</span>
-              )}
-            </div>
+                {selectedThreatImage ? (
+                  <img
+                    src={selectedThreatImage}
+                    alt={selectedThreatMob.name}
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className="auto-combat-threat-modal__fallback">☣</span>
+                )}
+              </div>
 
-            <div className="auto-combat-threat-modal__heading">
-              <span>Ameaça próxima</span>
-              <strong id="auto-combat-threat-modal-title">
-                {selectedThreatMob.name}
-              </strong>
-            </div>
+              <div className="auto-combat-threat-modal__heading">
+                <span>Ameaça próxima</span>
+                <strong id="auto-combat-threat-modal-title">
+                  {selectedThreatMob.name}
+                </strong>
+              </div>
 
-            <div className="auto-combat-threat-modal__pills">
-              <span>XP {selectedThreatMob.xpReward ?? "—"}</span>
-              <span>Nível {selectedThreatMob.level ?? "—"}</span>
-              <span>HP {selectedThreatMob.hp ?? "—"}</span>
-              {selectedThreatChance !== null ? (
-                <span>{selectedThreatChance}% encontro</span>
-              ) : null}
-            </div>
-
+              <div className="auto-combat-threat-modal__pills">
+                <span>XP {selectedThreatMob.xpReward ?? "—"}</span>
+                <span>Nível {selectedThreatMob.level ?? "—"}</span>
+                <span>HP {selectedThreatMob.hp ?? "—"}</span>
+                {selectedThreatChance !== null ? (
+                  <span>{selectedThreatChance}% encontro</span>
+                ) : null}
+              </div>
             </div>
 
             <div className="auto-combat-threat-modal__core">
-            <div className="auto-combat-threat-modal__divider auto-combat-threat-modal__divider--compact">
-              <span>Poções</span>
-            </div>
+              <div className="auto-combat-threat-modal__divider auto-combat-threat-modal__divider--compact">
+                <span>Poções</span>
+              </div>
 
-            <div className="auto-combat-threat-modal__potion-loadout">
-              <button
-                type="button"
-                className={[
-                  "auto-combat-threat-modal__potion-current",
-                  configuredPotionItem ? "has-potion" : "is-empty",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                disabled={isPotionConfigLoading}
-                onClick={() =>
-                  setIsThreatPotionPickerOpen((isOpen) => !isOpen)
-                }
-              >
-                <span
-                  className="auto-combat-threat-modal__potion-icon"
-                  aria-hidden="true"
-                >
-                  {configuredPotionItem
-                    ? getLootInitials(configuredPotionItem.name)
-                    : "+"}
-                </span>
-
-                <span className="auto-combat-threat-modal__potion-body">
-                  <strong>
-                    {configuredPotionItem
-                      ? getPotionName(currentPotionConfig)
-                      : "Adicionar poção"}
-                  </strong>
-                  <small>
-                    {configuredPotionItem
-                      ? getPotionHealLabel(configuredPotionItem)
-                      : potionOptions.length > 0
-                        ? "Escolher do inventário"
-                        : "Sem poções no inventário"}
-                  </small>
-                </span>
-
-                <em>
-                  {configuredPotionItem ? `${configuredPotionQuantity}x` : "Adicionar"}
-                </em>
-              </button>
-
-              {configuredPotionItem ? (
+              <div className="auto-combat-threat-modal__potion-loadout">
                 <button
                   type="button"
-                  className="auto-combat-threat-modal__potion-remove"
+                  className={[
+                    "auto-combat-threat-modal__potion-current",
+                    configuredPotionItem ? "has-potion" : "is-empty",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   disabled={isPotionConfigLoading}
-                  onClick={() => {
-                    setIsThreatPotionPickerOpen(false);
-                    void handleClearPotionConfig();
-                  }}
+                  onClick={() =>
+                    setIsThreatPotionPickerOpen((isOpen) => !isOpen)
+                  }
                 >
-                  Remover
-                </button>
-              ) : null}
+                  <span
+                    className="auto-combat-threat-modal__potion-icon"
+                    aria-hidden="true"
+                  >
+                    {configuredPotionItem
+                      ? getLootInitials(configuredPotionItem.name)
+                      : "+"}
+                  </span>
 
-              {isThreatPotionPickerOpen ? (
-                <div className="auto-combat-threat-modal__potion-picker">
-                  {potionOptions.length > 0 ? (
-                    potionOptions.map((potion) => {
-                      const quantity = Math.max(
-                        0,
-                        Math.floor(toSafeNumber(potion.quantity, 0)),
-                      );
-                      const isSelected =
-                        currentPotionConfig?.potionItemId === potion.itemId ||
-                        currentPotionConfig?.potionItemId === potion.id;
-
-                      return (
-                        <button
-                          key={potion.itemId}
-                          type="button"
-                          className={[
-                            "auto-combat-threat-modal__potion-option",
-                            isSelected ? "is-selected" : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          disabled={isPotionConfigLoading || quantity <= 0}
-                          aria-pressed={isSelected}
-                          onClick={() => handleSelectThreatPotion(potion.itemId)}
-                        >
-                          <span
-                            className="auto-combat-threat-modal__potion-icon"
-                            aria-hidden="true"
-                          >
-                            {getLootInitials(potion.name)}
-                          </span>
-
-                          <span className="auto-combat-threat-modal__potion-body">
-                            <strong>{potion.name}</strong>
-                            <small>{getPotionHealLabel(potion)}</small>
-                          </span>
-
-                          <em>{quantity}x</em>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <p>Nenhuma poção de cura disponível.</p>
-                  )}
-                </div>
-              ) : null}
-            </div>
-
-            {selectedThreatSurvivalProjection ? (
-              <div
-                className={[
-                  "auto-combat-threat-modal__survival",
-                  selectedThreatSurvivalRiskClass,
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                <div className="auto-combat-threat-modal__survival-header">
-                  <span>Sobrevivência da seleção</span>
-                  <strong>{selectedThreatSurvivalStatusLabel}</strong>
-                </div>
-
-                <div className="auto-combat-threat-modal__survival-grid">
-                  <div className="auto-combat-threat-modal__survival-metric">
-                    <span>Seleção atual</span>
-                    <strong>{selectedThreatSelectionCountLabel}</strong>
-                    <small>{selectedThreatSelectionStatusLabel}</small>
-                  </div>
-
-                  <div className="auto-combat-threat-modal__survival-metric">
-                    <span>Limite seguro</span>
-                    <strong>{selectedThreatSafeKillsLabel}</strong>
-                    <small>{selectedThreatSafeKillsDetailLabel}</small>
-                  </div>
-
-                  <div className="auto-combat-threat-modal__survival-metric">
-                    <span>Poções na seleção</span>
-                    <strong>{selectedThreatPotionsUsedDisplay}</strong>
-                    <small>{selectedThreatPotionUsageDetailLabel}</small>
-                  </div>
-
-                  <div className="auto-combat-threat-modal__survival-metric">
-                    <span>Dano/ciclo</span>
-                    <strong>{selectedThreatExpectedDamage} HP</strong>
+                  <span className="auto-combat-threat-modal__potion-body">
+                    <strong>
+                      {configuredPotionItem
+                        ? getPotionName(currentPotionConfig)
+                        : "Adicionar poção"}
+                    </strong>
                     <small>
-                      {Math.round(selectedThreatExpectedDodge)}% esquiva ·{" "}
-                      {formatSeconds(selectedThreatEstimatedSeconds)}
+                      {configuredPotionItem
+                        ? getPotionHealLabel(configuredPotionItem)
+                        : potionOptions.length > 0
+                          ? "Escolher do inventário"
+                          : "Sem poções no inventário"}
                     </small>
+                  </span>
+
+                  <em>
+                    {configuredPotionItem
+                      ? `${configuredPotionQuantity}x`
+                      : "Adicionar"}
+                  </em>
+                </button>
+
+                {configuredPotionItem ? (
+                  <button
+                    type="button"
+                    className="auto-combat-threat-modal__potion-remove"
+                    disabled={isPotionConfigLoading}
+                    onClick={() => {
+                      setIsThreatPotionPickerOpen(false);
+                      void handleClearPotionConfig();
+                    }}
+                  >
+                    Remover
+                  </button>
+                ) : null}
+
+                {isThreatPotionPickerOpen ? (
+                  <div className="auto-combat-threat-modal__potion-picker">
+                    {potionOptions.length > 0 ? (
+                      potionOptions.map((potion) => {
+                        const quantity = Math.max(
+                          0,
+                          Math.floor(toSafeNumber(potion.quantity, 0)),
+                        );
+                        const isSelected =
+                          currentPotionConfig?.potionItemId === potion.itemId ||
+                          currentPotionConfig?.potionItemId === potion.id;
+
+                        return (
+                          <button
+                            key={potion.itemId}
+                            type="button"
+                            className={[
+                              "auto-combat-threat-modal__potion-option",
+                              isSelected ? "is-selected" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            disabled={isPotionConfigLoading || quantity <= 0}
+                            aria-pressed={isSelected}
+                            onClick={() =>
+                              handleSelectThreatPotion(potion.itemId)
+                            }
+                          >
+                            <span
+                              className="auto-combat-threat-modal__potion-icon"
+                              aria-hidden="true"
+                            >
+                              {getLootInitials(potion.name)}
+                            </span>
+
+                            <span className="auto-combat-threat-modal__potion-body">
+                              <strong>{potion.name}</strong>
+                              <small>{getPotionHealLabel(potion)}</small>
+                            </span>
+
+                            <em>{quantity}x</em>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <p>Nenhuma poção de cura disponível.</p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+
+              {selectedThreatSurvivalProjection ? (
+                <div
+                  className={[
+                    "auto-combat-threat-modal__survival",
+                    selectedThreatSurvivalRiskClass,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <div className="auto-combat-threat-modal__survival-header">
+                    <span>Sobrevivência da seleção</span>
+                    <strong>{selectedThreatSurvivalStatusLabel}</strong>
+                  </div>
+
+                  <div className="auto-combat-threat-modal__survival-grid">
+                    <div className="auto-combat-threat-modal__survival-metric">
+                      <span>Seleção atual</span>
+                      <strong>{selectedThreatSelectionCountLabel}</strong>
+                      <small>{selectedThreatSelectionStatusLabel}</small>
+                    </div>
+
+                    <div className="auto-combat-threat-modal__survival-metric">
+                      <span>Limite seguro</span>
+                      <strong>{selectedThreatSafeKillsLabel}</strong>
+                      <small>{selectedThreatSafeKillsDetailLabel}</small>
+                    </div>
+
+                    <div className="auto-combat-threat-modal__survival-metric">
+                      <span>Poções na seleção</span>
+                      <strong>{selectedThreatPotionsUsedDisplay}</strong>
+                      <small>{selectedThreatPotionUsageDetailLabel}</small>
+                    </div>
+
+                    <div className="auto-combat-threat-modal__survival-metric">
+                      <span>Dano/ciclo</span>
+                      <strong>{selectedThreatExpectedDamage} HP</strong>
+                      <small>
+                        {Math.round(selectedThreatExpectedDodge)}% esquiva ·{" "}
+                        {formatSeconds(selectedThreatEstimatedSeconds)}
+                      </small>
+                    </div>
+                  </div>
+
+                  <p className="auto-combat-threat-modal__survival-note">
+                    {selectedThreatSurvivalNote}
+                  </p>
+                </div>
+              ) : null}
+
+              {canBattleSelectedThreat ? (
+                <div className="auto-combat-threat-modal__battle-select">
+                  <div className="auto-combat-threat-modal__battle-copy">
+                    <span>Disponíveis</span>
+                    <strong>{selectedThreatRemainingCount}</strong>
+                  </div>
+
+                  <div className="auto-combat-threat-modal__quantity">
+                    <button
+                      type="button"
+                      aria-label="Diminuir quantidade"
+                      onClick={() =>
+                        setSelectedBattleQuantity((currentQuantity) =>
+                          clampNumber(
+                            currentQuantity - 1,
+                            1,
+                            selectedThreatRemainingCount,
+                          ),
+                        )
+                      }
+                    >
+                      -
+                    </button>
+
+                    <input
+                      type="number"
+                      min={1}
+                      max={selectedThreatRemainingCount}
+                      value={normalizedSelectedBattleQuantity}
+                      onChange={(event) => {
+                        setSelectedBattleQuantity(
+                          clampNumber(
+                            Number(event.target.value) || 1,
+                            1,
+                            selectedThreatRemainingCount,
+                          ),
+                        );
+                      }}
+                    />
+
+                    <button
+                      type="button"
+                      aria-label="Aumentar quantidade"
+                      onClick={() =>
+                        setSelectedBattleQuantity((currentQuantity) =>
+                          clampNumber(
+                            currentQuantity + 1,
+                            1,
+                            selectedThreatRemainingCount,
+                          ),
+                        )
+                      }
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div className="auto-combat-threat-modal__battle-actions">
+                    <button
+                      type="button"
+                      className="auto-combat-threat-modal__max-button"
+                      onClick={() =>
+                        setSelectedBattleQuantity(selectedThreatRemainingCount)
+                      }
+                    >
+                      Máx.
+                    </button>
+
+                    <button
+                      type="button"
+                      className="auto-combat-primary-button auto-combat-threat-modal__battle-button"
+                      disabled={isActionLoading}
+                      onClick={() =>
+                        handleStartAutoCombat({
+                          mobId:
+                            selectedThreatMob.id ?? selectedThreatDetails.mobId,
+                          encounterId: selectedThreatDetails.id,
+                          quantity: normalizedSelectedBattleQuantity,
+                        })
+                      }
+                    >
+                      {isActionLoading ? "Processando..." : "Batalhar"}
+                    </button>
                   </div>
                 </div>
-
-                <p className="auto-combat-threat-modal__survival-note">
-                  {selectedThreatSurvivalNote}
-                </p>
-              </div>
-            ) : null}
-
-            {canBattleSelectedThreat ? (
-              <div className="auto-combat-threat-modal__battle-select">
-                <div className="auto-combat-threat-modal__battle-copy">
-                  <span>Disponíveis</span>
-                  <strong>{selectedThreatRemainingCount}</strong>
-                </div>
-
-                <div className="auto-combat-threat-modal__quantity">
-                  <button
-                    type="button"
-                    aria-label="Diminuir quantidade"
-                    onClick={() =>
-                      setSelectedBattleQuantity((currentQuantity) =>
-                        clampNumber(
-                          currentQuantity - 1,
-                          1,
-                          selectedThreatRemainingCount,
-                        ),
-                      )
-                    }
-                  >
-                    -
-                  </button>
-
-                  <input
-                    type="number"
-                    min={1}
-                    max={selectedThreatRemainingCount}
-                    value={normalizedSelectedBattleQuantity}
-                    onChange={(event) => {
-                      setSelectedBattleQuantity(
-                        clampNumber(
-                          Number(event.target.value) || 1,
-                          1,
-                          selectedThreatRemainingCount,
-                        ),
-                      );
-                    }}
-                  />
-
-                  <button
-                    type="button"
-                    aria-label="Aumentar quantidade"
-                    onClick={() =>
-                      setSelectedBattleQuantity((currentQuantity) =>
-                        clampNumber(
-                          currentQuantity + 1,
-                          1,
-                          selectedThreatRemainingCount,
-                        ),
-                      )
-                    }
-                  >
-                    +
-                  </button>
-
-                </div>
-
-                <div className="auto-combat-threat-modal__battle-actions">
-                  <button
-                    type="button"
-                    className="auto-combat-threat-modal__max-button"
-                    onClick={() =>
-                      setSelectedBattleQuantity(selectedThreatRemainingCount)
-                    }
-                  >
-                    Máx.
-                  </button>
-
-                  <button
-                    type="button"
-                    className="auto-combat-primary-button auto-combat-threat-modal__battle-button"
-                    disabled={isActionLoading}
-                    onClick={() =>
-                      handleStartAutoCombat({
-                        mobId:
-                          selectedThreatMob.id ?? selectedThreatDetails.mobId,
-                        encounterId: selectedThreatDetails.id,
-                        quantity: normalizedSelectedBattleQuantity,
-                      })
-                    }
-                  >
-                    {isActionLoading ? "Processando..." : "Batalhar"}
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
+              ) : null}
             </div>
 
             <div className="auto-combat-threat-modal__loot-section">
-            <div className="auto-combat-threat-modal__divider">
-              <span>Loot possível</span>
-            </div>
-
-            {selectedThreatDrops.length > 0 ? (
-              <div className="auto-combat-threat-modal__loot-grid">
-                {selectedThreatDrops.map((drop) => {
-                  const itemName = drop.item?.name ?? "Item desconhecido";
-                  const chanceLabel = formatDropChance(drop.dropChance);
-
-                  return (
-                    <div
-                      key={drop.id}
-                      className={[
-                        "auto-combat-threat-loot-card",
-                        getLootRarityClassName(drop.item?.rarity),
-                      ].join(" ")}
-                      title={itemName}
-                    >
-                      {chanceLabel ? (
-                        <span className="auto-combat-threat-loot-card__chance">
-                          {chanceLabel}
-                        </span>
-                      ) : null}
-
-                      <span
-                        className="auto-combat-threat-loot-card__icon"
-                        aria-hidden="true"
-                      >
-                        {getLootInitials(itemName)}
-                      </span>
-
-                      <strong>{itemName}</strong>
-
-                      <small>
-                        {formatDropQuantity(drop.minQuantity, drop.maxQuantity)}
-                      </small>
-                    </div>
-                  );
-                })}
+              <div className="auto-combat-threat-modal__divider">
+                <span>Loot possível</span>
               </div>
-            ) : (
-              <p className="auto-combat-threat-modal__empty-loot">
-                Nenhum drop cadastrado para este monstro.
-              </p>
-            )}
+
+              {selectedThreatDrops.length > 0 ? (
+                <div className="auto-combat-threat-modal__loot-grid">
+                  {selectedThreatDrops.map((drop) => {
+                    const itemName = drop.item?.name ?? "Item desconhecido";
+                    const chanceLabel = formatDropChance(drop.dropChance);
+
+                    return (
+                      <div
+                        key={drop.id}
+                        className={[
+                          "auto-combat-threat-loot-card",
+                          getLootRarityClassName(drop.item?.rarity),
+                        ].join(" ")}
+                        title={itemName}
+                      >
+                        {chanceLabel ? (
+                          <span className="auto-combat-threat-loot-card__chance">
+                            {chanceLabel}
+                          </span>
+                        ) : null}
+
+                        <span
+                          className="auto-combat-threat-loot-card__icon"
+                          aria-hidden="true"
+                        >
+                          {getLootInitials(itemName)}
+                        </span>
+
+                        <strong>{itemName}</strong>
+
+                        <small>
+                          {formatDropQuantity(
+                            drop.minQuantity,
+                            drop.maxQuantity,
+                          )}
+                        </small>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="auto-combat-threat-modal__empty-loot">
+                  Nenhum drop cadastrado para este monstro.
+                </p>
+              )}
             </div>
           </article>
         </div>

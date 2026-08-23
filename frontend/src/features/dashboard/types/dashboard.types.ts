@@ -1,3 +1,5 @@
+import type { ResolvedCharacterAppearance } from '../../cosmetics/types/cosmetics.types';
+
 export type DashboardItemRarity =
   | 'COMMON'
   | 'UNCOMMON'
@@ -73,12 +75,20 @@ export interface DashboardDerivedStats {
   powerScore?: number | null;
 }
 
+export interface DashboardEquipmentProgression {
+  craftedPieces: number;
+  activeMilestone: number;
+  nextMilestone: number | null;
+  bonusPercent: number;
+}
+
 export interface DashboardStatsDetail {
   base?: DashboardStats | null;
   levelBonus?: DashboardStats | null;
   equipmentBonus?: DashboardStats | null;
   total?: DashboardStats | null;
   derived?: DashboardDerivedStats | null;
+  equipmentProgression?: DashboardEquipmentProgression | null;
 }
 
 export interface DashboardCalculatedStatsResponse {
@@ -96,6 +106,7 @@ export interface DashboardCalculatedStatsResponse {
   defense?: number | null;
   speed?: number | null;
   maxHp?: number | null;
+  equipmentProgression?: DashboardEquipmentProgression | null;
 
   detail?: DashboardStatsDetail | null;
 
@@ -600,6 +611,7 @@ export interface DashboardCharacterViewModel {
 
   avatarKey?: string | null;
   avatarUrl?: string | null;
+  appearance?: ResolvedCharacterAppearance | null;
 
   class?: DashboardGameClassViewModel | null;
   gameClass?: DashboardGameClassViewModel | null;

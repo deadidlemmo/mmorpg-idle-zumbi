@@ -1132,6 +1132,7 @@ export class GatheringService {
     const activityState = await this.activityGuard.ensureCanStartGathering({
       characterId: dto.characterId,
       userId,
+      allowActiveGathering: true,
     });
 
     const character = activityState.character;
@@ -1260,21 +1261,138 @@ export class GatheringService {
       origin: dto.origin,
     });
 
+    const activeSession = activityState.hasActiveGathering
+      ? await this.findActiveGatheringSession(userId, dto.characterId)
+      : null;
+
+    if (
+      activeSession?.mapId === dto.mapId &&
+      activeSession.origin === dto.origin &&
+      activeSession.targetMaterialId === dto.targetMaterialId
+    ) {
+      return {
+        message: `A coleta de ${targetMaterial.name} já está ativa.`,
+        session: this.buildSessionPayload(activeSession),
+        gatheringSkill: buildGatheringSkillViewModel({
+          skill: gatheringSkill,
+          isAffinity: affinity,
+        }),
+        switched: false,
+        alreadyActive: true,
+        previousGathering: null,
+      };
+    }
+
+    const previousGatheringResolution = activeSession
+      ? await this.resolveActiveGathering(userId, dto.characterId, {
+          forcePersist: true,
+          validateCollectionGuard: true,
+          throwIfMissing: false,
+        })
+      : null;
+
     const now = new Date();
 
-    let session;
+    let transactionResult;
 
     try {
-      session = await this.prisma.$transaction(
+      transactionResult = await this.prisma.$transaction(
         async (tx) => {
-          await this.activityGuard.ensureCanStartGathering({
-            characterId: dto.characterId,
-            userId,
-            client: tx,
-            lockCharacter: true,
-          });
+          const currentActivityState =
+            await this.activityGuard.ensureCanStartGathering({
+              characterId: dto.characterId,
+              userId,
+              client: tx,
+              lockCharacter: true,
+              allowActiveGathering: true,
+            });
 
-          return tx.gatheringSession.create({
+          const currentSession = currentActivityState.activeGatheringSession;
+
+          if (
+            currentSession?.map?.id === dto.mapId &&
+            currentSession.origin === dto.origin &&
+            currentSession.targetMaterial?.id === dto.targetMaterialId
+          ) {
+            const reusedSession = await tx.gatheringSession.findUniqueOrThrow({
+              where: { id: currentSession.id },
+              include: {
+                character: {
+                  select: {
+                    id: true,
+                    name: true,
+                    level: true,
+                    status: true,
+                    currentHp: true,
+                    maxHp: true,
+                    user: {
+                      select: {
+                        premiumUntil: true,
+                      },
+                    },
+                    class: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+                map: {
+                  select: {
+                    id: true,
+                    name: true,
+                    tier: true,
+                  },
+                },
+                targetMaterial: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    tier: true,
+                    materialOrigin: true,
+                    materialSlot: true,
+                    isGatheringMaterial: true,
+                    requiredGatheringLevel: true,
+                    gatheringXpPerUnit: true,
+                    baseGatheringRatePerHour: true,
+                  },
+                },
+              },
+            });
+
+            return {
+              session: reusedSession,
+              stoppedSessionId: null,
+              alreadyActive: true,
+            };
+          }
+
+          let stoppedSessionId: string | null = null;
+
+          if (currentSession) {
+            const stopped = await tx.gatheringSession.updateMany({
+              where: {
+                id: currentSession.id,
+                characterId: dto.characterId,
+                status: ActivityStatus.ACTIVE,
+              },
+              data: {
+                status: ActivityStatus.STOPPED,
+              },
+            });
+
+            if (stopped.count !== 1) {
+              throw new ConflictException(
+                'A coleta ativa mudou durante a troca. Tente novamente.',
+              );
+            }
+
+            stoppedSessionId = currentSession.id;
+          }
+
+          const createdSession = await tx.gatheringSession.create({
             data: {
               characterId: dto.characterId,
               mapId: dto.mapId,
@@ -1332,6 +1450,12 @@ export class GatheringService {
               },
             },
           });
+
+          return {
+            session: createdSession,
+            stoppedSessionId,
+            alreadyActive: false,
+          };
         },
         {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -1347,13 +1471,58 @@ export class GatheringService {
       throw error;
     }
 
+    const previousGathering =
+      previousGatheringResolution &&
+      transactionResult.stoppedSessionId ===
+        previousGatheringResolution.session.id
+        ? (() => {
+            const previousSkill =
+              previousGatheringResolution.updatedGatheringSkill ??
+              previousGatheringResolution.gatheringSkill;
+
+            return {
+              collected: previousGatheringResolution.collected,
+              production: this.buildProductionPayload({
+                elapsedSeconds: previousGatheringResolution.elapsedSeconds,
+                reward: previousGatheringResolution.reward,
+                previousProgressRemainder:
+                  previousGatheringResolution.session.progressRemainder,
+              }),
+              gatheringProgress:
+                previousGatheringResolution.gatheringProgress && previousSkill
+                  ? {
+                      ...previousGatheringResolution.gatheringProgress,
+                      skill: buildGatheringSkillViewModel({
+                        skill: previousSkill,
+                        isAffinity: previousGatheringResolution.affinity,
+                      }),
+                    }
+                  : null,
+              session: this.buildSessionPayload({
+                ...previousGatheringResolution.updatedSession,
+                status: ActivityStatus.STOPPED,
+              }),
+              inventoryItem: previousGatheringResolution.inventoryItem,
+            };
+          })()
+        : null;
+
+    const switched = Boolean(transactionResult.stoppedSessionId);
+
     return {
-      message: 'Gathering iniciado com sucesso.',
-      session: this.buildSessionPayload(session),
+      message: transactionResult.alreadyActive
+        ? `A coleta de ${targetMaterial.name} já está ativa.`
+        : switched
+          ? `Coleta alterada para ${targetMaterial.name}.`
+          : 'Gathering iniciado com sucesso.',
+      session: this.buildSessionPayload(transactionResult.session),
       gatheringSkill: buildGatheringSkillViewModel({
         skill: gatheringSkill,
         isAffinity: affinity,
       }),
+      switched,
+      alreadyActive: transactionResult.alreadyActive,
+      previousGathering,
     };
   }
 

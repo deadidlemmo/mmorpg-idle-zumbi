@@ -1,18 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import craftingSkillIcon from "../../../assets/images/crafting/skills/crafting.webp";
 import npcArsenalNogueira from "../../../assets/images/npcs/npc_arsenal_nogueira.webp";
 import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Clock3,
+  Gauge,
   Hammer,
+  HeartPulse,
   Package,
   RefreshCw,
   Search,
   ShieldAlert,
+  ShieldCheck,
+  Swords,
+  TrendingUp,
   X,
 } from "lucide-react";
+import { ActivityProgressCard } from "../../../components/game/ActivityProgressCard";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import {
@@ -21,7 +28,9 @@ import {
 } from "../../dashboard/constants/stats-config";
 import "../../dashboard/dashboard.css";
 import type { DashboardCharacterViewModel } from "../../dashboard/types/dashboard.types";
+import { getEquipmentItemImageUrl } from "../../equipment/utils/equipmentItemAssets";
 import "../../gathering/styles/gathering.css";
+import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
 import { buildGatheringDashboardCharacter } from "../../gathering/utils/gathering-dashboard-character";
 import {
   craftItemRequest,
@@ -36,6 +45,7 @@ import "../styles/crafting.css";
 import type {
   CraftingIngredientViewModel,
   CraftingOrigin,
+  CraftingOutputItemViewModel,
   CraftingRecipeViewModel,
   CraftingRecipesResponse,
   CraftingSessionViewModel,
@@ -126,6 +136,12 @@ function formatNumber(value?: number | null) {
   return safeValue.toLocaleString("pt-BR");
 }
 
+function formatSignedNumber(value?: number | null) {
+  const safeValue = Math.floor(Number(value) || 0);
+
+  return safeValue > 0 ? `+${formatNumber(safeValue)}` : formatNumber(safeValue);
+}
+
 function formatDuration(totalSeconds?: number | null) {
   const safeSeconds = Math.max(0, Math.ceil(Number(totalSeconds) || 0));
   const hours = Math.floor(safeSeconds / 3600);
@@ -214,6 +230,42 @@ function getItemInitials(name: string) {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+}
+
+function CraftingOutputArtwork({
+  item,
+  className,
+}: {
+  item: Pick<CraftingOutputItemViewModel, "name" | "tier">;
+  className: string;
+}) {
+  const imageUrl = getEquipmentItemImageUrl(item);
+
+  return (
+    <span className={className} aria-hidden="true">
+      {imageUrl ? <img src={imageUrl} alt="" /> : getItemInitials(item.name)}
+    </span>
+  );
+}
+
+function CraftingIngredientArtwork({
+  ingredient,
+}: {
+  ingredient: CraftingIngredientViewModel;
+}) {
+  const imageUrl = getGatheringMaterialImageUrl(ingredient);
+
+  return (
+    <span className="crafting-ingredient__icon" aria-hidden="true">
+      {imageUrl ? (
+        <img src={imageUrl} alt="" />
+      ) : ingredient.origin === "DROP_MOBS" ? (
+        "DM"
+      ) : (
+        getItemInitials(ingredient.name)
+      )}
+    </span>
+  );
 }
 
 function getRarityClassName(rarity?: string | null) {
@@ -497,9 +549,10 @@ function RecipeCard({
         onClick={() => onSelect(recipe)}
         aria-pressed={isSelected}
       >
-        <span className="crafting-recipe-card__icon" aria-hidden="true">
-          {getItemInitials(recipe.outputItem.name)}
-        </span>
+        <CraftingOutputArtwork
+          item={recipe.outputItem}
+          className="crafting-recipe-card__icon"
+        />
 
         <span className="crafting-recipe-card__body">
           <span className="crafting-recipe-card__meta">
@@ -586,11 +639,7 @@ function IngredientRow({
         .join(" ")}
     >
       <div className="crafting-ingredient__main">
-        <span className="crafting-ingredient__icon" aria-hidden="true">
-          {ingredient.origin === "DROP_MOBS"
-            ? "DM"
-            : getItemInitials(ingredient.name)}
-        </span>
+        <CraftingIngredientArtwork ingredient={ingredient} />
 
         <div>
           <strong>{ingredient.name}</strong>
@@ -654,6 +703,35 @@ function CraftingDetailsModal({
     safeQuantity,
   );
   const totalCraftingXp = recipe.craftingXpReward * safeQuantity;
+  const upgradePreview = recipe.upgradePreview ?? null;
+  const combatImpactEntries = upgradePreview
+    ? [
+        {
+          key: "attack",
+          label: "Ataque",
+          value: upgradePreview.combatDeltas.attack,
+          Icon: Swords,
+        },
+        {
+          key: "defense",
+          label: "Defesa",
+          value: upgradePreview.combatDeltas.defense,
+          Icon: ShieldCheck,
+        },
+        {
+          key: "maxHp",
+          label: "Vida máxima",
+          value: upgradePreview.combatDeltas.maxHp,
+          Icon: HeartPulse,
+        },
+        {
+          key: "speed",
+          label: "Velocidade",
+          value: upgradePreview.combatDeltas.speed,
+          Icon: Gauge,
+        },
+      ].filter((entry) => entry.value !== 0)
+    : [];
   const xpRewardLabel = craftingSkill?.isAtLevelCap
     ? "Criação no nível máximo"
     : `+${formatNumber(recipe.craftingXpReward)} XP por item`;
@@ -681,9 +759,10 @@ function CraftingDetailsModal({
         </button>
 
         <div className="crafting-side-card__header">
-          <span className="crafting-side-card__icon" aria-hidden="true">
-            {getItemInitials(recipe.outputItem.name)}
-          </span>
+          <CraftingOutputArtwork
+            item={recipe.outputItem}
+            className="crafting-side-card__icon"
+          />
 
           <div>
             <span className="crafting-page__eyebrow">
@@ -724,6 +803,114 @@ function CraftingDetailsModal({
                   </span>
                 </span>
               ))}
+            </div>
+          </section>
+        ) : null}
+
+        {upgradePreview ? (
+          <section className="crafting-modal-section crafting-modal-section--impact">
+            <div className="crafting-modal-section__title">
+              <span>Impacto ao equipar</span>
+              <em>
+                {upgradePreview.currentItem
+                  ? `Substitui ${upgradePreview.currentItem.name}`
+                  : "Preenche um slot vazio"}
+              </em>
+            </div>
+
+            <div className="crafting-impact-list">
+              {combatImpactEntries.map(({ key, label, value, Icon }) => (
+                <span key={key} className={value > 0 ? "is-positive" : "is-negative"}>
+                  <Icon aria-hidden="true" size={16} />
+                  <em>{label}</em>
+                  <strong>{formatSignedNumber(value)}</strong>
+                </span>
+              ))}
+
+              <span
+                className={
+                  upgradePreview.offensivePower.percentDelta >= 0
+                    ? "is-positive"
+                    : "is-negative"
+                }
+              >
+                <TrendingUp aria-hidden="true" size={16} />
+                <em>Poder ofensivo</em>
+                <strong>
+                  {upgradePreview.offensivePower.percentDelta > 0 ? "+" : ""}
+                  {upgradePreview.offensivePower.percentDelta.toLocaleString("pt-BR", {
+                    maximumFractionDigits: 1,
+                  })}
+                  %
+                </strong>
+              </span>
+            </div>
+
+            {upgradePreview.killSpeed ? (
+              <div className="crafting-kill-speed">
+                <div>
+                  <span>Referência de combate</span>
+                  <strong>{upgradePreview.killSpeed.target.name}</strong>
+                  <em>
+                    T{upgradePreview.killSpeed.target.tier} · Nv.{" "}
+                    {upgradePreview.killSpeed.target.level}
+                  </em>
+                </div>
+
+                <dl>
+                  <div>
+                    <dt>Tempo por abate</dt>
+                    <dd>
+                      {upgradePreview.killSpeed.currentTtkSeconds}s
+                      <ChevronRight aria-hidden="true" size={13} />
+                      <strong>{upgradePreview.killSpeed.candidateTtkSeconds}s</strong>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Abates por minuto</dt>
+                    <dd>
+                      {upgradePreview.killSpeed.currentKillsPerMinute.toLocaleString(
+                        "pt-BR",
+                        { maximumFractionDigits: 2 },
+                      )}
+                      <ChevronRight aria-hidden="true" size={13} />
+                      <strong>
+                        {upgradePreview.killSpeed.candidateKillsPerMinute.toLocaleString(
+                          "pt-BR",
+                          { maximumFractionDigits: 2 },
+                        )}
+                      </strong>
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            ) : null}
+
+            <div className="crafting-equipment-progression">
+              <div>
+                <span>Sinergia de equipamento</span>
+                <strong>
+                  {upgradePreview.equipmentProgression.candidate.craftedPieces}/6 peças
+                </strong>
+                <em>
+                  +{upgradePreview.equipmentProgression.candidate.bonusPercent}% em
+                  ataque, defesa e vida
+                </em>
+              </div>
+
+              <span className="crafting-equipment-progression__track" aria-hidden="true">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <i
+                    key={index}
+                    className={
+                      index <
+                      upgradePreview.equipmentProgression.candidate.craftedPieces
+                        ? "is-active"
+                        : ""
+                    }
+                  />
+                ))}
+              </span>
             </div>
           </section>
         ) : null}
@@ -851,84 +1038,85 @@ function CraftingDetailsModal({
 
 function CraftingActivityPanel({
   session,
+  level,
   remainingSeconds,
   progressPercent,
   onRefresh,
   isBusy,
 }: {
-  session?: CraftingSessionViewModel | null;
+  session: CraftingSessionViewModel;
+  level: number;
   remainingSeconds: number;
   progressPercent: number;
   onRefresh: () => void;
   isBusy: boolean;
 }) {
+  const outputImageUrl = getEquipmentItemImageUrl(session.outputItem);
+  const safeProgressPercent = clampPercent(progressPercent);
+
   return (
     <section className="crafting-right-section">
       <div className="crafting-right-section__heading">
         <span className="crafting-page__eyebrow">Atividade atual</span>
       </div>
 
-      <aside
+      <ActivityProgressCard
+        as="aside"
         className={[
+          "gathering-card",
+          "gathering-origin-current-card",
+          "auto-combat-hunt-skill-card--with-controls",
           "crafting-activity-card",
-          session ? "is-active" : "is-empty",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        aria-label="Atividade atual de criação"
-      >
-        <div className="crafting-activity-card__header">
-          <span className="crafting-side-card__icon" aria-hidden="true">
-            {session ? getItemInitials(session.outputItem.name) : "CR"}
-          </span>
-
-          <div>
-            <strong>
-              {session ? session.outputItem.name : "Nenhuma criação ativa"}
-            </strong>
-            <span>
-              {session
-                ? `Produzindo ${formatNumber(session.outputQuantity)} item${
-                    session.outputQuantity > 1 ? "s" : ""
-                  }`
-                : "Escolha uma receita para iniciar uma fabricação."}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            className="crafting-icon-button crafting-right-card__action"
-            onClick={onRefresh}
-            disabled={isBusy}
-            aria-label="Atualizar atividade de criação"
-          >
-            <RefreshCw aria-hidden="true" size={14} />
-          </button>
-        </div>
-
-        {session ? (
-          <>
-            <span
-              className="crafting-skill-progress"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(progressPercent)}
-            >
-              <i style={{ width: `${progressPercent}%` }} />
-            </span>
-
-            <div className="crafting-activity-card__metrics">
-              <span>Qtd. {formatNumber(session.outputQuantity)}</span>
-              <span>
+          "is-active",
+        ].join(" ")}
+        ariaLabel="Atividade atual de criação"
+        icon={
+          <img
+            src={outputImageUrl ?? craftingSkillIcon}
+            alt=""
+            draggable={false}
+          />
+        }
+        label={session.outputItem.name}
+        badge={`Nv. ${formatNumber(level)}`}
+        progressAnimation="cycle"
+        progressPercent={safeProgressPercent}
+        progressLabel="Progresso da fabricação atual"
+        progressTitle={`${Math.round(safeProgressPercent)}% da fabricação concluída`}
+        pills={[
+          {
+            content: `Qtd. ${formatNumber(session.outputQuantity)}`,
+            key: "quantity",
+          },
+          {
+            content: (
+              <>
                 <Clock3 aria-hidden="true" size={13} />
                 Pronto em {formatDuration(remainingSeconds)}
-              </span>
-              <span>{Math.round(progressPercent)}%</span>
-            </div>
-          </>
-        ) : null}
-      </aside>
+              </>
+            ),
+            key: "remaining",
+          },
+          {
+            content: `${Math.round(safeProgressPercent)}%`,
+            key: "progress",
+          },
+        ]}
+        controls={
+          <div className="crafting-card-controls auto-combat-hunt-skill-card__controls">
+            <button
+              type="button"
+              className="crafting-icon-button auto-combat-hunt-skill-card__control-button"
+              onClick={onRefresh}
+              disabled={isBusy}
+              aria-label="Atualizar atividade de criação"
+              title="Atualizar"
+            >
+              <RefreshCw aria-hidden="true" size={14} />
+            </button>
+          </div>
+        }
+      />
     </section>
   );
 }
@@ -939,64 +1127,51 @@ function CraftingSkillPanel({
   xp,
   xpToNext,
   progressPercent,
-  onRefresh,
-  isBusy,
+  tier,
 }: {
   skill?: CraftingSkillViewModel | null;
   level: number;
   xp: number;
   xpToNext: number | null;
   progressPercent: number;
-  onRefresh: () => void;
-  isBusy: boolean;
+  tier: number;
 }) {
+  const safeProgressPercent = clampPercent(progressPercent);
+
   return (
-    <section className="crafting-right-section">
-      <div className="crafting-right-section__heading">
-        <span className="crafting-page__eyebrow">Sua proficiência</span>
+    <section className="gathering-origin-side-section gathering-origin-side-section--progress">
+      <div className="gathering-origin-section-divider">
+        <span>Sua proficiência</span>
       </div>
 
-      <aside className="crafting-skill-card" aria-label="Sua proficiência">
-        <div className="crafting-skill-card__header">
-          <span className="crafting-side-card__icon" aria-hidden="true">
-            CR
-          </span>
-
-          <div>
-            <strong>Criação</strong>
-          </div>
-
-          <button
-            type="button"
-            className="crafting-icon-button crafting-right-card__action"
-            onClick={onRefresh}
-            disabled={isBusy}
-            aria-label="Atualizar criação"
-          >
-            <RefreshCw aria-hidden="true" size={14} />
-          </button>
-        </div>
-
-        <span
-          className="crafting-skill-progress"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(progressPercent)}
-        >
-          <i style={{ width: `${progressPercent}%` }} />
-        </span>
-
-        <div className="crafting-skill-card__metrics">
-          <span>Nv. {formatNumber(level)}</span>
-          <span>
-            {skill?.isAtLevelCap || xpToNext === null
-              ? "Nível máximo"
-              : `${formatNumber(Math.max(0, xpToNext - xp))} XP necessários`}
-          </span>
-          <span>{Math.round(progressPercent)}%</span>
-        </div>
-      </aside>
+      <ActivityProgressCard
+        className="gathering-card gathering-origin-skill-card"
+        ariaLabel="Sua proficiência de criação"
+        icon={<img src={craftingSkillIcon} alt="" draggable={false} />}
+        label="Criação"
+        badge={`Nv. ${formatNumber(level)}`}
+        progressAnimation="value"
+        progressPercent={safeProgressPercent}
+        progressLabel="Progresso da proficiência de criação"
+        progressTitle={`${Math.round(safeProgressPercent)}% para o próximo nível`}
+        pills={[
+          {
+            content:
+              skill?.isAtLevelCap || xpToNext === null
+                ? "Nível máximo"
+                : `${formatNumber(Math.max(0, xpToNext - xp))} XP necessários`,
+            key: "xp-needed",
+          },
+          {
+            content: `${Math.round(safeProgressPercent)}%`,
+            key: "progress",
+          },
+          {
+            content: `T${formatNumber(tier)} liberado`,
+            key: "tier",
+          },
+        ]}
+      />
     </section>
   );
 }
@@ -1576,13 +1751,16 @@ export function CraftingPage() {
           </main>
 
           <aside className="crafting-side-column">
-            <CraftingActivityPanel
-              session={activeCraftingSession}
-              remainingSeconds={activeCraftingRemainingSeconds}
-              progressPercent={activeCraftingProgressPercent}
-              onRefresh={refreshCraftingState}
-              isBusy={isLoading || isCrafting}
-            />
+            {activeCraftingSession ? (
+              <CraftingActivityPanel
+                session={activeCraftingSession}
+                level={currentCraftingLevel}
+                remainingSeconds={activeCraftingRemainingSeconds}
+                progressPercent={activeCraftingProgressPercent}
+                onRefresh={refreshCraftingState}
+                isBusy={isLoading || isCrafting}
+              />
+            ) : null}
 
             <CraftingSkillPanel
               skill={currentCraftingSkill}
@@ -1590,8 +1768,7 @@ export function CraftingPage() {
               xp={currentCraftingXp}
               xpToNext={currentCraftingXpToNext}
               progressPercent={currentCraftingProgressPercent}
-              onRefresh={refreshCraftingState}
-              isBusy={isLoading || isCrafting}
+              tier={currentCraftingTier}
             />
           </aside>
         </section>

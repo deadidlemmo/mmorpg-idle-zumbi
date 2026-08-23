@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ObservabilityService } from '../../common/observability/observability.service';
 import { ListAdminUsersDto } from './dto/list-admin-users.dto';
 import { UpdateUserSuspensionDto } from './dto/update-user-suspension.dto';
 
@@ -13,7 +14,12 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly observabilityService: ObservabilityService,
   ) {}
+
+  getOperations() {
+    return this.observabilityService.getOperationalSnapshot();
+  }
 
   async getSummary() {
     const [
@@ -162,6 +168,12 @@ export class AdminService {
       }),
     ]);
 
-    return { logs, total, page: safePage, pageSize: safePageSize };
+    return {
+      logs,
+      total,
+      page: safePage,
+      pageSize: safePageSize,
+      pageCount: Math.ceil(total / safePageSize),
+    };
   }
 }
