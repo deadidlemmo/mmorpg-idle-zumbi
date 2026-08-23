@@ -202,6 +202,10 @@ Modulos atuais:
 - `incursions`
 - `vendor`
 - `world-bosses`
+- `progression`
+- `social`
+- `chat`
+- `storefront`
 
 ## Regras de frontend
 
@@ -307,9 +311,14 @@ Models atuais de alto impacto:
 - Free idle identificado: 6 horas.
 - Premium idle identificado: 12 horas.
 - Bonus premium de XP identificado: 20%.
-- Tela `/membership` existe, mas compra/pagamento nao foi identificado como funcional.
+- Tela `/membership` funciona como loja, mas a cobranca ainda permanece desativada.
 
 Nao transforme a tela de membership em fonte de verdade. O backend decide se premium esta ativo.
+
+O catalogo comercial fica em `/storefront/characters/:characterId`. O contrato
+`POST /storefront/checkout` permanece desativado ate existirem precos,
+persistencia de pedidos, adaptadores e webhooks validados para Mercado Pago ou
+Stripe. Nunca aceite valor enviado pelo frontend como fonte de verdade.
 
 ## Regras de atividades exclusivas
 
@@ -334,6 +343,7 @@ Namespaces Socket.IO atuais:
 - `/crafting`
 - `/incursions`
 - `/world-bosses`
+- `/chat`
 
 Providers realtime no dashboard:
 
@@ -342,6 +352,11 @@ Providers realtime no dashboard:
 - `GatheringRealtimeProvider`
 - `CraftingRealtimeProvider`
 - `IncursionsRealtimeProvider`
+
+O chat geral usa histórico REST em `/chat/general/messages` e mensagens em
+tempo real no namespace `/chat`. Toda conexão deve autenticar o JWT, validar o
+ownership do personagem selecionado, aplicar rate limit no servidor e
+reconciliar o histórico por ID após F5 ou reconnect.
 
 Regras obrigatorias:
 

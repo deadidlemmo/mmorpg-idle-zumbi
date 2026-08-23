@@ -27,6 +27,26 @@ A verificacao confere o checksum, restaura em um banco isolado, consulta
 canonicos foram restaurados. Ao final, remove o banco temporario. A CI executa
 esse fluxo sobre PostgreSQL descartavel e previamente semeado.
 
+## Restaurar em um destino
+
+O restore exige URL de destino explícita e confirmação. Por padrão, o nome do
+banco deve começar com `dead_idle_restore_`:
+
+```bash
+cd backend
+npm run backup:restore -- --backup=backups/dead-idle.dump --target-url=postgresql://usuario:senha@host:5432/dead_idle_restore_20260821 --confirm=RESTORE
+```
+
+Se o destino já existir, acrescente `--recreate`. O comando recusa o banco de
+`DATABASE_URL`, verifica manifesto, tamanho e SHA-256 antes de criar o destino,
+e valida migrations e itens canônicos depois do `pg_restore`. Um destino com
+outro nome exige também `--allow-non-isolated-target`; use essa opção somente
+no procedimento de recuperação aprovado.
+
+Os comandos gravam `backups/status.json` (ou `BACKUP_STATUS_PATH`). O painel
+administrativo, `/health` e `/metrics` usam esse registro para detectar falha e
+expiração do backup ou do teste de restauração.
+
 ## Operacao
 
 - Produzir backup diario e antes de migrations.

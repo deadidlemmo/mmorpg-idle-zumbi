@@ -2,8 +2,10 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches: ["**"]
   pull_request:
+  schedule:
+    - cron: "17 7 * * *"
 
 permissions:
   contents: read
@@ -18,7 +20,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://zumbi:zumbi@localhost:5432/mmorpg_zumbi?schema=public
       JWT_SECRET: ci-only-secret
-      WORLD_BOSS_TEST_UNLOCK_ENABLED: 'false'
+      WORLD_BOSS_TEST_UNLOCK_ENABLED: "false"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -34,6 +36,8 @@ jobs:
       - run: npm audit --omit=dev --audit-level=high
         working-directory: backend
       - run: npm run prisma:generate
+        working-directory: backend
+      - run: npm run cosmetics:audit:avatars
         working-directory: backend
       - run: npm run lint
         working-directory: backend
@@ -63,6 +67,8 @@ jobs:
       - run: npm test
         working-directory: frontend
       - run: npm run images:audit:equipment
+        working-directory: frontend
+      - run: npm run images:audit:cosmetic-avatars
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
@@ -97,30 +103,35 @@ jobs:
       JWT_SECRET: ci-only-e2e-secret
       REDIS_HOST: localhost
       REDIS_PORT: 6379
-      WORLD_BOSS_TEST_UNLOCK_ENABLED: 'false'
+      WORLD_BOSS_TEST_UNLOCK_ENABLED: "false"
+      BACKUP_STATUS_PATH: tmp/ci-backup-status.json
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-          sparse-checkout: backend
+          sparse-checkout: |
+            backend
+            frontend
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
       - run: npm ci
         working-directory: backend
+      - run: npm ci
+        working-directory: frontend
       - run: npm run prisma:generate
         working-directory: backend
       - run: npx prisma migrate deploy
         working-directory: backend
       - run: npm run prisma:seed
         working-directory: backend
-      - run: npm run prisma:audit:crafting-chain
+      - run: npm run launch:audit:t1-t5
         working-directory: backend
-      - run: npm run prisma:audit:economy-time
-        working-directory: backend
-      - run: npm run items:stats:audit
+      - run: npm run items:stats:audit -- --strict
         working-directory: backend
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -128,5 +139,16 @@ jobs:
         working-directory: backend
       - run: npm run backup:verify -- --backup=tmp/ci-backup.dump
         working-directory: backend
+      - run: npm run backup:restore -- --backup=tmp/ci-backup.dump --target-url=postgresql://zumbi:zumbi@localhost:5432/dead_idle_restore_ci --confirm=RESTORE --recreate
+        working-directory: backend
+      - name: Remove restore drill database
+        run: >-
+          psql postgresql://zumbi:zumbi@localhost:5432/postgres
+          --set=ON_ERROR_STOP=1
+          --command 'DROP DATABASE IF EXISTS "dead_idle_restore_ci" WITH (FORCE)'
       - run: npm run test:e2e -- --runInBand
+        working-directory: backend
+      - run: npx playwright install --with-deps chromium
+        working-directory: backend
+      - run: npm run test:browser:e2e
         working-directory: backend

@@ -31,16 +31,16 @@ O backend deve ser tratado como fonte da verdade para estado de personagem, ativ
 
 ## Stack utilizada
 
-| Camada | Tecnologias identificadas |
-| --- | --- |
-| Frontend | React 19, TypeScript, Vite, React Router, Zustand, Axios, Socket.IO Client, clsx, lucide-react |
-| Backend | NestJS 11, TypeScript, Prisma 6, Passport/JWT, bcrypt, Socket.IO, ioredis, Nodemailer |
-| Banco | PostgreSQL via Prisma ORM |
-| Realtime | Socket.IO no backend e no frontend |
-| Infra local | Docker Compose com PostgreSQL 16 e Redis 7 |
-| Testes | Jest/Supertest no backend e Node Test Runner via `tsx` no frontend |
-| CI | GitHub Actions com lint, testes, builds, migrations, seed, auditorias e restore |
-| Build frontend | `tsc -b` e `vite build` com code splitting por rota |
+| Camada         | Tecnologias identificadas                                                                      |
+| -------------- | ---------------------------------------------------------------------------------------------- |
+| Frontend       | React 19, TypeScript, Vite, React Router, Zustand, Axios, Socket.IO Client, clsx, lucide-react |
+| Backend        | NestJS 11, TypeScript, Prisma 6, Passport/JWT, bcrypt, Socket.IO, ioredis, Nodemailer          |
+| Banco          | PostgreSQL via Prisma ORM                                                                      |
+| Realtime       | Socket.IO no backend e no frontend                                                             |
+| Infra local    | Docker Compose com PostgreSQL 16 e Redis 7                                                     |
+| Testes         | Jest/Supertest no backend, Node Test Runner no frontend e Playwright E2E                       |
+| CI             | GitHub Actions com lint, testes, builds, migrations, seed, auditorias e restore                |
+| Build frontend | `tsc -b` e `vite build` com code splitting por rota                                            |
 
 Nao foi identificado `Dockerfile` de aplicacao. Nao foi identificado arquivo `LICENSE`; o `backend/package.json` declara `UNLICENSED`.
 
@@ -88,6 +88,7 @@ Pastas que exigem cuidado:
 
 - `docs/mob-image-pack/` e `docs/mob-image-pack.zip`: pacote/manifesto de imagens.
 - `docs/economia-crafting-csv/`: dados de economia/crafting.
+- `docs/cosmetics.md`: slots, direitos, expiração e integração comercial dos cosméticos.
 - `frontend/src/assets/images/`: muitos assets do jogo; nao remover sem auditar referencias.
 - `frontend/_backup_gathering/` e `frontend/_backup_gathering_unused/`: backups locais de telas/componentes de gathering.
 - Arquivos auxiliares como `project-tree.md`, `project-files.md`, `local-changes.md` podem estar desatualizados; confirmar antes de confiar.
@@ -291,6 +292,8 @@ npm run test:watch
 npm run test:cov
 npm run test:debug
 npm run test:e2e
+npm run test:browser:e2e
+npm run launch:audit:t1-t5
 ```
 
 ### Frontend
@@ -332,6 +335,10 @@ Modulos atuais em `backend/src/modules/`:
 - `incursions`
 - `vendor`
 - `world-bosses`
+- `progression`
+- `social`
+- `chat`
+- `cosmetics`
 
 Pastas comuns:
 
@@ -359,6 +366,7 @@ Rotas atuais:
 /dashboard/:characterId/crafting
 /dashboard/:characterId/inventory
 /dashboard/:characterId/equipment
+/dashboard/:characterId/appearance
 /dashboard/:characterId/consumables
 /dashboard/:characterId/consumables/:merchantId
 /dashboard/:characterId/infirmary
@@ -366,6 +374,8 @@ Rotas atuais:
 /dashboard/:characterId/maps
 /dashboard/:characterId/incursions
 /dashboard/:characterId/world-bosses
+/dashboard/:characterId/allies
+/dashboard/:characterId/inspect/:targetCharacterId
 ```
 
 Features atuais em `frontend/src/features/`:
@@ -384,6 +394,8 @@ Features atuais em `frontend/src/features/`:
 - `loot-notifications`
 - `maps`
 - `membership`
+- `cosmetics`
+- `social`
 - `overview`
 - `utils`
 - `vendor`
@@ -408,6 +420,7 @@ Chaves de storage identificadas:
 Models principais identificados:
 
 - Usuario e personagem: `User`, `Character`, `GameClass`, `GameMap`, `SubMap`, `SubMapEncounter`
+- Cosméticos: `CosmeticCollection`, `Cosmetic`, `UserCosmeticEntitlement`, `CharacterAppearance`
 - Proficiencias: `CharacterGatheringSkill`, `CharacterCraftingSkill`, `CharacterHuntingSkill`
 - Combate e mobs: `Mob`, `MobDrop`, `Combat`, `CombatLog`
 - Auto-combate: `AutoCombatSession`, `AutoCombatHuntBatch`, `AutoCombatHuntBatchMob`, `AutoCombatHuntBatchEvent`, `AutoCombatSessionLoot`, `AutoCombatSessionMobSummary`, `AutoCombatSessionEvent`
@@ -436,6 +449,9 @@ Enums relevantes:
 - `IncursionSessionStatus`
 - `WorldBossEventStatus`
 - `WorldBossRewardType`
+- `CosmeticType`
+- `CosmeticAccessType`
+- `CosmeticGrantSource`
 
 ## Sistemas principais
 
@@ -466,6 +482,9 @@ Enums relevantes:
 - Limite idle premium: 12 horas.
 - Bonus premium de XP identificado: 20% (`PREMIUM_XP_BONUS_MULTIPLIER = 1.2`).
 - A tela `/membership` existe, mas pagamento/compra nao foi identificado como funcional no repositorio.
+- Aparência por personagem suporta avatar, moldura, banner, fundo da visão geral, efeito, título e distintivo.
+- Itens de assinatura usam `PREMIUM`; pacotes, passes e eventos usam direitos persistidos e auditáveis.
+- A inspeção pública resolve a aparência efetivamente disponível sem expor dados privados da conta.
 
 ### Atividades exclusivas
 
@@ -575,6 +594,7 @@ Namespaces Socket.IO identificados:
 - `/crafting`
 - `/incursions`
 - `/world-bosses`
+- `/chat`
 
 Providers realtime no dashboard:
 
@@ -583,6 +603,11 @@ Providers realtime no dashboard:
 - `GatheringRealtimeProvider`
 - `CraftingRealtimeProvider`
 - `IncursionsRealtimeProvider`
+
+O chat geral persiste mensagens no PostgreSQL, recupera o histórico protegido
+em `GET /chat/general/messages` e publica novas mensagens autenticadas pelo
+namespace Socket.IO `/chat`. O frontend reconcilia mensagens pelo ID após F5 e
+reconexão.
 
 Pontos essenciais:
 

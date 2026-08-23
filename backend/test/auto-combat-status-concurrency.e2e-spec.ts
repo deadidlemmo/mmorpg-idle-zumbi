@@ -139,6 +139,91 @@ describe('AutoCombat status concurrency (e2e)', () => {
     expect(huntBatch.events[0].cycleKey).toBe(`${fixture.session.id}:hunt:1`);
   });
 
+  it('renova o prazo ao iniciar batalha com monstros que aguardaram alem da sessao', async () => {
+    const fixture = await createActiveHuntingSessionFixture();
+    const accessToken = await jwtService.signAsync({
+      sub: fixture.user.id,
+      email: fixture.user.email,
+      role: fixture.user.role,
+      tokenVersion: fixture.user.tokenVersion,
+    });
+    const authorization = `Bearer ${accessToken}`;
+
+    const statusResponse = await request(app.getHttpServer())
+      .get(`/auto-combat/${fixture.character.id}/status`)
+      .set('Authorization', authorization);
+
+    expect(statusResponse.status).toBe(200);
+
+    const stopHuntResponse = await request(app.getHttpServer())
+      .post(`/auto-combat/${fixture.character.id}/hunt/stop`)
+      .set('Authorization', authorization);
+    const stopHuntBody = stopHuntResponse.body as unknown as {
+      session: {
+        phase: AutoCombatSessionPhase;
+      };
+    };
+
+    expect([200, 201]).toContain(stopHuntResponse.status);
+    expect(stopHuntBody.session.phase).toBe(
+      AutoCombatSessionPhase.ENCOUNTER_READY,
+    );
+
+    const expiredAt = new Date(Date.now() - 60_000);
+    await prisma.autoCombatSession.update({
+      where: {
+        id: fixture.session.id,
+      },
+      data: {
+        endsAt: expiredAt,
+      },
+    });
+
+    const battleStartedAt = Date.now();
+    const startBattleResponse = await request(app.getHttpServer())
+      .post(`/auto-combat/${fixture.character.id}/battle/start`)
+      .set('Authorization', authorization)
+      .send({
+        mobId: fixture.mob.id,
+        quantity: 1,
+      });
+    const startBattleBody = startBattleResponse.body as unknown as {
+      active: boolean;
+      session: {
+        status: AutoCombatSessionStatus;
+        phase: AutoCombatSessionPhase;
+      };
+    };
+
+    expect([200, 201]).toContain(startBattleResponse.status);
+    expect(startBattleBody.active).toBe(true);
+    expect(startBattleBody.session.status).toBe(AutoCombatSessionStatus.ACTIVE);
+    expect(startBattleBody.session.phase).toBe(
+      AutoCombatSessionPhase.COMBAT_ACTIVE,
+    );
+
+    const persistedSession = await prisma.autoCombatSession.findUniqueOrThrow({
+      where: {
+        id: fixture.session.id,
+      },
+    });
+    const persistedBatch = await prisma.autoCombatHuntBatch.findUniqueOrThrow({
+      where: {
+        sessionId: fixture.session.id,
+      },
+      include: {
+        mobs: true,
+      },
+    });
+
+    expect(persistedSession.endsAt.getTime()).toBeGreaterThan(
+      battleStartedAt + 5 * 60 * 60 * 1000,
+    );
+    expect(persistedSession.finishedAt).toBeNull();
+    expect(persistedBatch.status).toBe(AutoCombatHuntBatchStatus.CONSUMED);
+    expect(persistedBatch.mobs[0].remainingCount).toBe(1);
+  });
+
   async function createActiveHuntingSessionFixture() {
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const now = new Date();

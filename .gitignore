@@ -38,6 +38,8 @@ Thumbs.db
 .parcel-cache/
 .vite/
 coverage/
+playwright-report/
+test-results/
 
 # Arquivos temporários
 tmp/

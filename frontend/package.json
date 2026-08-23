@@ -11,6 +11,7 @@
     "images:optimize": "node scripts/optimize-images.mjs --format=webp",
     "images:optimize:apply": "node scripts/optimize-images.mjs --format=webp --apply",
     "images:audit:equipment": "node scripts/audit-equipment-images.mjs",
+    "images:audit:cosmetic-avatars": "node scripts/audit-cosmetic-avatars.mjs",
     "test": "tsx --test \"src/**/*.spec.ts\"",
     "preview": "vite preview"
   },

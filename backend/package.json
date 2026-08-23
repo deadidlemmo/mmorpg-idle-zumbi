@@ -19,6 +19,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:browser:e2e": "playwright test --config ./test/browser/playwright.config.ts",
+    "launch:audit:t1-t5": "node scripts/audit-launch-t1-t5.mjs",
+    "cosmetics:audit:avatars": "node node_modules/tsx/dist/cli.mjs scripts/audit-cosmetic-avatar-matrix.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
@@ -44,7 +47,8 @@
     "items:stats:audit": "node node_modules/tsx/dist/cli.mjs scripts/audit-equipment-stats-sync.ts",
     "test:auto-combat:fixture": "node node_modules/tsx/dist/cli.mjs scripts/prepare-auto-combat-fixture.ts",
     "backup:database": "node scripts/backup-database.mjs",
-    "backup:verify": "node scripts/verify-database-backup.mjs"
+    "backup:verify": "node scripts/verify-database-backup.mjs",
+    "backup:restore": "node scripts/restore-database-backup.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -76,6 +80,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@playwright/test": "^1.55.0",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",

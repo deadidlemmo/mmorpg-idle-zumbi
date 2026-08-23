@@ -28,4 +28,13 @@ export default defineConfig([
       'react-refresh/only-export-components': 'warn',
     },
   },
+  {
+    // A timeline visual imperativa opta por "use no memo" ate ser modularizada.
+    files: ['src/features/auto-combat/pages/AutoCombatPage.tsx'],
+    rules: {
+      'react-hooks/preserve-manual-memoization': 'off',
+      'react-hooks/purity': 'off',
+      'react-hooks/refs': 'off',
+    },
+  },
 ])

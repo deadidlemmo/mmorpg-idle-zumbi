@@ -6,6 +6,34 @@ import sharp from 'sharp';
 const imageRoot = path.resolve(
   'src/assets/images/items/equipments',
 );
+const expectedStarterImagePaths = new Set(
+  [
+    'assassino/adagas/t00-faca-de-aprendiz.webp',
+    'assassino/bombas/t00-lamina-reserva-de-aprendiz.webp',
+    'assassino/capuz/t00-capuz-de-aprendiz.webp',
+    'assassino/perneiras/t00-perneiras-de-aprendiz.webp',
+    'assassino/sapatilhas/t00-sapatilhas-de-aprendiz.webp',
+    'assassino/traje/t00-jaqueta-leve-de-aprendiz.webp',
+    'atirador/cargueiras/t00-cargueira-de-aprendiz.webp',
+    'atirador/carregador/t00-carregador-de-aprendiz.webp',
+    'atirador/coturnos/t00-coturnos-de-aprendiz.webp',
+    'atirador/jaqueta/t00-jaqueta-de-patrulha-aprendiz.webp',
+    'atirador/pistola/t00-pistola-de-aprendiz.webp',
+    'atirador/viseira/t00-viseira-de-aprendiz.webp',
+    'lutador/armadura/t00-colete-pesado-de-aprendiz.webp',
+    'lutador/botas/t00-botas-de-aprendiz.webp',
+    'lutador/elmo/t00-capacete-de-aprendiz.webp',
+    'lutador/escudo/t00-tampa-de-aprendiz.webp',
+    'lutador/grevas/t00-calca-reforcada-de-aprendiz.webp',
+    'lutador/maca/t00-porrete-de-aprendiz.webp',
+    'medico/calcas/t00-calcas-clinicas-de-aprendiz.webp',
+    'medico/colete/t00-colete-clinico-de-aprendiz.webp',
+    'medico/injetor/t00-injetor-de-aprendiz.webp',
+    'medico/mascara/t00-mascara-de-aprendiz.webp',
+    'medico/sapatos/t00-sapatos-clinicos-de-aprendiz.webp',
+    'medico/serra/t00-serra-de-aprendiz.webp',
+  ].map((filePath) => path.normalize(filePath)),
+);
 const contactSheetArgument = process.argv
   .slice(2)
   .find((argument) => argument.startsWith('--contact-sheet='));
@@ -61,7 +89,7 @@ async function inspectImage(filePath) {
   assert(metadata.width === 512 && metadata.height === 512, `${filePath}: expected 512x512.`);
   assert(metadata.hasAlpha, `${filePath}: missing alpha channel.`);
   assert(coverage >= 0.025 && coverage <= 0.9, `${filePath}: suspicious visible coverage ${coverage.toFixed(3)}.`);
-  assert(Number.isInteger(tier) && tier >= 1 && tier <= 5, `${filePath}: invalid tier prefix.`);
+  assert(Number.isInteger(tier) && tier >= 0 && tier <= 5, `${filePath}: invalid tier prefix.`);
   assert(
     tier < 3 || saturatedAccentPixels / visiblePixels >= 0.01,
     `${filePath}: tier ${tier} has no meaningful tier-color accent.`,
@@ -107,7 +135,23 @@ async function buildContactSheet(results) {
 }
 
 const files = (await listWebpFiles(imageRoot)).sort();
-assert(files.length === 140, `Expected 140 equipment images, found ${files.length}.`);
+assert(files.length === 164, `Expected 164 equipment images, found ${files.length}.`);
+
+const starterImagePaths = files
+  .filter((filePath) => path.basename(filePath).startsWith('t00-'))
+  .map((filePath) => path.relative(imageRoot, filePath));
+
+assert(
+  starterImagePaths.length === expectedStarterImagePaths.size,
+  `Expected ${expectedStarterImagePaths.size} starter images, found ${starterImagePaths.length}.`,
+);
+
+for (const starterImagePath of expectedStarterImagePaths) {
+  assert(
+    starterImagePaths.includes(starterImagePath),
+    `Missing starter equipment image: ${starterImagePath}.`,
+  );
+}
 
 const familyCounts = new Map();
 
@@ -119,7 +163,15 @@ for (const filePath of files) {
 assert(familyCounts.size === 28, `Expected 28 equipment families, found ${familyCounts.size}.`);
 
 for (const [family, count] of familyCounts) {
-  assert(count === 5, `${family}: expected five tier images, found ${count}.`);
+  const starterImagePath = starterImagePaths.find(
+    (filePath) => path.dirname(path.join(imageRoot, filePath)) === family,
+  );
+  const expectedCount = starterImagePath ? 6 : 5;
+
+  assert(
+    count === expectedCount,
+    `${family}: expected ${expectedCount} tier images, found ${count}.`,
+  );
 }
 
 const results = [];
