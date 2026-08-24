@@ -3998,9 +3998,9 @@ export function AutoCombatPage() {
       setLocalSessionTotals(null);
       setLocalBattleLogEvents([]);
       setLocalActiveEvent(null);
-      if (presentationTimelineEnabled) {
-        setAutoCombatStatus(null);
-      }
+
+      // O provider limpa a apresentacao de combate. Preservar este snapshot
+      // evita trocar ENCOUNTER_READY pelo estado vazio enquanto a caca retoma.
 
       const response = realtimeActions.start
         ? await realtimeActions.start({
