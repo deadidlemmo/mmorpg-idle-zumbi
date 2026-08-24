@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {
+  getHuntEmptyStageCopy,
+  shouldShowAutoCombatSessionStage,
+} from './hunt-stage.helpers';
 import { selectVisibleCharacterProgress } from './visible-progress';
 import type { RealtimeCharacterProgressState } from '../types/auto-combat-page.types';
 
@@ -51,4 +55,55 @@ test('dashboard mostra EXP confirmada após a timeline visual liberar o progress
 
   assert.equal(visible?.xp, 150);
   assert.equal(visible?.currentLevelXp, 150);
+});
+
+test('retomada da caça bloqueia o card antigo mesmo com snapshot de combate pendente', () => {
+  const visible = shouldShowAutoCombatSessionStage({
+    isStartingHunt: true,
+    shouldDelayActiveSessionUntilStartSnapshot: false,
+    isBackendCombatPhase: true,
+    hasPendingRealtimeVisual: true,
+  });
+
+  assert.equal(visible, false);
+});
+
+test('ameaças preservadas não mantêm mensagem de derrota após a cura', () => {
+  const copy = getHuntEmptyStageCopy({
+    isStartingHunt: false,
+    isActionLoading: false,
+    hasPreservedTrackedEnemies: true,
+    preservedTrackedEnemiesCount: 763,
+    characterHasHp: true,
+  });
+
+  assert.equal(copy.title, '763 ameaças aguardando');
+  assert.match(copy.description, /recuperado/i);
+  assert.doesNotMatch(copy.description, /derrotado/i);
+});
+
+test('ameaças preservadas explicam a derrota enquanto o personagem está sem HP', () => {
+  const copy = getHuntEmptyStageCopy({
+    isStartingHunt: false,
+    isActionLoading: false,
+    hasPreservedTrackedEnemies: true,
+    preservedTrackedEnemiesCount: 1,
+    characterHasHp: false,
+  });
+
+  assert.equal(copy.title, '1 ameaça aguardando');
+  assert.match(copy.description, /derrotado/i);
+});
+
+test('transição de retomada não exibe estado vazio de rastreamento', () => {
+  const copy = getHuntEmptyStageCopy({
+    isStartingHunt: true,
+    isActionLoading: true,
+    hasPreservedTrackedEnemies: false,
+    preservedTrackedEnemiesCount: 0,
+    characterHasHp: true,
+  });
+
+  assert.equal(copy.title, 'Retomando caçada');
+  assert.notEqual(copy.title, 'Nenhuma ameaça rastreada');
 });

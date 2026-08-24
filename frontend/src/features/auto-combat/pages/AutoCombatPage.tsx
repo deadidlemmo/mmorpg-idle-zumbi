@@ -107,6 +107,10 @@ import {
   toSafeNumber,
   updateCharacterPotionConfigRaw,
 } from "../utils/auto-combat-page.helpers";
+import {
+  getHuntEmptyStageCopy,
+  shouldShowAutoCombatSessionStage,
+} from "../utils/hunt-stage.helpers";
 import { mergeAutoCombatStatusDetails } from "../utils/auto-combat-status-merge";
 import {
   type BattleBatchCountdown,
@@ -820,6 +824,7 @@ export function AutoCombatPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [isStartingHunt, setIsStartingHunt] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const autoPotionConfigRef = useRef<CharacterPotionConfigWithItem | null>(
@@ -857,6 +862,7 @@ export function AutoCombatPage() {
     setLocalSessionTotals(null);
     setLocalBattleLogEvents([]);
     setLocalActiveEvent(null);
+    setIsStartingHunt(false);
     setIsPotionConfigPanelOpen(false);
     setPotionConfigMessage("");
     processedPotionEventKeysRef.current.clear();
@@ -991,9 +997,12 @@ export function AutoCombatPage() {
     isRealtimeSynchronizing &&
     !canRenderRestActiveSnapshot,
   );
-  const showActiveSession =
-    !shouldDelayActiveSessionUntilStartSnapshot &&
-    (isBackendCombatPhase || hasPendingRealtimeVisual);
+  const showActiveSession = shouldShowAutoCombatSessionStage({
+    isStartingHunt,
+    shouldDelayActiveSessionUntilStartSnapshot,
+    isBackendCombatPhase,
+    hasPendingRealtimeVisual,
+  });
   const activeBattleSelection =
     effectiveStatus?.battleSelection ??
     effectiveSession?.battleSelection ??
@@ -1038,14 +1047,18 @@ export function AutoCombatPage() {
   const showHuntStage =
     (!showActiveSession || showInlineHuntBattle) &&
     (isBackendHuntFlow ||
+      isStartingHunt ||
       hasStartedHunt ||
       hasActiveSession ||
       showInlineHuntBattle ||
       hasPreservedTrackedEnemies);
   const showTravelEmptyStage =
-    showHuntStage && !isBackendHuntFlow && !showInlineHuntBattle;
+    showHuntStage &&
+    (isStartingHunt || (!isBackendHuntFlow && !showInlineHuntBattle));
   const showTrackedHuntStage =
-    showHuntStage && (isBackendHuntFlow || showInlineHuntBattle);
+    !isStartingHunt &&
+    showHuntStage &&
+    (isBackendHuntFlow || showInlineHuntBattle);
   const showHuntTrackerCard =
     showTrackedHuntStage && isBackendHuntingPhase && !showInlineHuntBattle;
   const hasCombatSnapshotWhileSynchronizing = Boolean(
@@ -2047,7 +2060,7 @@ export function AutoCombatPage() {
   const rawCharacterMaxHp =
     showActiveSession && visualRealtimeCombat?.characterMaxHp !== undefined
       ? visualRealtimeCombat.characterMaxHp
-      : hasActiveSession
+      : showActiveSession
         ? (effectiveStatus?.character?.maxHp ??
           effectiveStatus?.sessionSummary?.hp?.max ??
           character.maxHp)
@@ -2061,7 +2074,7 @@ export function AutoCombatPage() {
   const rawCharacterHp =
     showActiveSession && visualRealtimeCombat?.characterCurrentHp !== undefined
       ? visualRealtimeCombat.characterCurrentHp
-      : hasActiveSession
+      : showActiveSession
         ? (effectiveStatus?.character?.currentHp ??
           effectiveStatus?.sessionSummary?.hp?.current ??
           character.currentHp)
@@ -2185,6 +2198,13 @@ export function AutoCombatPage() {
   const selectedMapRarityClassName = getMapRarityClassName(selectedMap?.tier);
 
   const characterHasHp = currentCharacterHp > 0;
+  const huntEmptyStageCopy = getHuntEmptyStageCopy({
+    isStartingHunt,
+    isActionLoading,
+    hasPreservedTrackedEnemies,
+    preservedTrackedEnemiesCount,
+    characterHasHp,
+  });
 
   const characterHpPercent =
     currentCharacterMaxHp > 0
@@ -3990,6 +4010,7 @@ export function AutoCombatPage() {
     }
 
     try {
+      setIsStartingHunt(true);
       setIsActionLoading(true);
       setErrorMessage("");
 
@@ -4046,6 +4067,7 @@ export function AutoCombatPage() {
         ),
       );
     } finally {
+      setIsStartingHunt(false);
       setIsActionLoading(false);
     }
   }
@@ -4598,22 +4620,12 @@ export function AutoCombatPage() {
               {showTravelEmptyStage ? (
                 <article className="auto-combat-stage-card auto-combat-hunt-stage auto-combat-hunt-stage--empty">
                   <span className="auto-combat-hunt-empty__eyebrow">
-                    {hasPreservedTrackedEnemies
-                      ? "Ameaças preservadas"
-                      : "Rastreamento da área"}
+                    {huntEmptyStageCopy.eyebrow}
                   </span>
 
-                  <strong>
-                    {hasPreservedTrackedEnemies
-                      ? `${preservedTrackedEnemiesCount} ameaça${preservedTrackedEnemiesCount === 1 ? "" : "s"} aguardando`
-                      : "Nenhuma ameaça rastreada"}
-                  </strong>
+                  <strong>{huntEmptyStageCopy.title}</strong>
 
-                  <p>
-                    {hasPreservedTrackedEnemies
-                      ? "Você foi derrotado, mas os infectados que ainda não foram abatidos continuam rastreados neste mapa."
-                      : "Rota selecionada. Inicie uma caçada para localizar infectados neste mapa."}
-                  </p>
+                  <p>{huntEmptyStageCopy.description}</p>
 
                   <button
                     type="button"
@@ -4621,13 +4633,7 @@ export function AutoCombatPage() {
                     disabled={!canStartHunt || isActionLoading}
                     onClick={handleStartHunt}
                   >
-                    {isActionLoading
-                      ? hasPreservedTrackedEnemies
-                        ? "Retomando..."
-                        : "Iniciando..."
-                      : hasPreservedTrackedEnemies
-                        ? "Continuar ameaças"
-                        : "Iniciar Caçada"}
+                    {huntEmptyStageCopy.actionLabel}
                   </button>
                 </article>
               ) : null}
