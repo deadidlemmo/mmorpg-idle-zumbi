@@ -38,6 +38,7 @@ import {
   getPotionUsedFingerprint,
   getRealtimeEventKey,
   getStatusSession,
+  isAutoCombatHuntFlowPhase,
   isEventForCharacter,
   isPotionUsedEvent,
   isSameRealtimeEvent,
@@ -320,6 +321,18 @@ function normalizeRealtimeEventType(event?: AutoCombatRealtimeEvent | null) {
   return String(event?.type ?? "")
     .trim()
     .toUpperCase();
+}
+
+function isCombatPresentationEvent(event?: AutoCombatRealtimeEvent | null) {
+  return [
+    "MOB_SPAWNED",
+    "PLAYER_HIT",
+    "MOB_HIT",
+    "DODGE",
+    "POTION_USED",
+    "MOB_DEFEATED",
+    "PLAYER_DEFEATED",
+  ].includes(normalizeRealtimeEventType(event));
 }
 
 function getEventSessionId(event?: AutoCombatRealtimeEvent | null) {
@@ -2041,6 +2054,9 @@ function hydrateFromStatus(
   const rawSession = getStatusSession(status);
   const nextSessionId = rawSession?.id ?? null;
   const currentSessionId = state.session?.id ?? null;
+  const statusIsHuntFlow = isAutoCombatHuntFlowPhase(
+    rawSession?.phase ?? status.phase,
+  );
 
   const statusIsTerminal = isTerminalStatus(rawSession?.status);
   const statusIsActive =
@@ -2110,7 +2126,7 @@ function hydrateFromStatus(
     };
   }
 
-  const baseState = sessionChanged
+  const sessionBaseState = sessionChanged
     ? clearRealtimeRuntimeState(state, {
         clearStatus: false,
         clearSession: false,
@@ -2123,6 +2139,19 @@ function hydrateFromStatus(
         clearBattleLog: true,
       })
     : state;
+  const baseState = statusIsHuntFlow
+    ? clearRealtimeRuntimeState(sessionBaseState, {
+        clearStatus: false,
+        clearSession: false,
+        clearMob: true,
+        clearTotals: false,
+        clearDisplayTotals: false,
+        clearVisual: true,
+        clearPotion: false,
+        clearEventCaches: false,
+        clearBattleLog: true,
+      })
+    : sessionBaseState;
 
   const statusIsAuthoritativeSnapshot = Boolean(
     statusSnapshotSequence !== null &&
@@ -2228,10 +2257,12 @@ function hydrateFromStatus(
         sessionChanged,
       }));
 
-  const nextMob = shouldPreservePreviousMob
-    ? baseState.mob
-    : (mobFromStatus ??
-      (!sessionChanged && !statusIsTerminal ? baseState.mob : null));
+  const nextMob = statusIsHuntFlow
+    ? null
+    : shouldPreservePreviousMob
+      ? baseState.mob
+      : (mobFromStatus ??
+        (!sessionChanged && !statusIsTerminal ? baseState.mob : null));
   const nextEnemyInstanceId = normalizeScopeString(nextMob?.enemyInstanceId);
   const hasMatchingVisualCycle = Boolean(
     nextEnemyInstanceId &&
@@ -2811,6 +2842,13 @@ function enqueueRealtimeEvent(
   }
 
   if (isTerminalStatus(state.session?.status)) {
+    return state;
+  }
+
+  if (
+    isAutoCombatHuntFlowPhase(state.session?.phase) &&
+    isCombatPresentationEvent(event)
+  ) {
     return state;
   }
 

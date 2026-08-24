@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { AutoCombatRealtimeEvent } from '../types/auto-combat.types.ts';
+import type {
+  AutoCombatRealtimeEvent,
+  AutoCombatStatusResponse,
+} from '../types/auto-combat.types.ts';
 import {
   AUTO_COMBAT_REALTIME_DEFEATED_EVENT_DELAY_MS,
+  buildMobSpawnedEventFromStatus,
+  buildMobStateFromStatus,
   buildMobStateFromRealtimeEvent,
   getRealtimeEventDelay,
   getRealtimeEventImpactDelay,
@@ -107,4 +112,39 @@ test('reinicia a linha do tempo no timestamp do novo mob', () => {
 
   assert.equal(mob?.battleProgress?.cycleStartedAt, cycleStartedAt);
   assert.equal(mob?.battleProgress?.progressSeconds, 0);
+});
+
+test('ignora o ultimo mob da batalha em snapshots da fase de caca', () => {
+  const status = {
+    active: true,
+    hasActiveAutoCombat: true,
+    phase: 'HUNTING',
+    character: {
+      id: 'char-1',
+      currentHp: 100,
+      maxHp: 100,
+    },
+    session: {
+      id: 'session-1',
+      characterId: 'char-1',
+      status: 'ACTIVE',
+      phase: 'HUNTING',
+      currentCombatIndex: 3,
+    },
+    currentMob: {
+      id: 'mob-anterior',
+      name: 'Mob anterior',
+      currentHp: 0,
+      maxHp: 100,
+    },
+  } as AutoCombatStatusResponse;
+
+  assert.equal(buildMobStateFromStatus(status), null);
+  assert.equal(
+    buildMobSpawnedEventFromStatus({
+      status,
+      session: status.session,
+    }),
+    null,
+  );
 });

@@ -432,6 +432,71 @@ test("ressincronizacao limpa mob visual antigo sem apagar sessao ativa", () => {
   assert.equal(syncing.eventQueue.length, 0);
 });
 
+test("snapshot de caca limpa atomicamente a apresentacao da batalha anterior", () => {
+  const queuedEvent = makeHit(2, 40);
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    session: {
+      ...makeState().session,
+      phase: "COMBAT_ACTIVE",
+      enemyInstanceId: "enemy-1",
+      currentEnemyInstanceId: "enemy-1",
+    },
+    mob: {
+      ...makeState().mob,
+      enemyInstanceId: "enemy-1",
+    },
+    visual: { lastEventType: "PLAYER_HIT", updatedAt: Date.now() },
+    activeEvent: makeHit(1, 70),
+    activeEventImpactApplied: true,
+    eventQueue: [queuedEvent],
+    queuedEventKeys: ["queued-event"],
+    visualCycleEnemyInstanceId: "enemy-1",
+    visualCycleStartedAtMs: Date.now() - 500,
+  };
+
+  const hunting = autoCombatRealtimeReducer(state, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: {
+      active: true,
+      hasActiveAutoCombat: true,
+      character: { id: "char-1", currentHp: 100, maxHp: 100 },
+      session: {
+        id: "session-1",
+        characterId: "char-1",
+        status: "ACTIVE",
+        phase: "HUNTING",
+      },
+      currentMob: {
+        id: "mob-1",
+        name: "Zumbi da batalha anterior",
+        enemyInstanceId: "enemy-1",
+        currentHp: 0,
+        maxHp: 100,
+      },
+    } as never,
+  });
+
+  assert.equal(hunting.session?.phase, "HUNTING");
+  assert.equal(hunting.mob, null);
+  assert.equal(hunting.visual, null);
+  assert.equal(hunting.activeEvent, null);
+  assert.equal(hunting.visualCycleEnemyInstanceId, null);
+  assert.equal(hunting.visualCycleStartedAtMs, null);
+  assert.deepEqual(hunting.eventQueue, []);
+  assert.deepEqual(hunting.queuedEventKeys, []);
+
+  const afterLateCombatEvent = autoCombatRealtimeReducer(hunting, {
+    type: "ENQUEUE_EVENT",
+    characterId: "char-1",
+    event: makeHit(3, 20),
+  });
+
+  assert.deepEqual(afterLateCombatEvent.eventQueue, []);
+  assert.equal(afterLateCombatEvent.mob, null);
+});
+
 test("ressincronizacao de visibilidade preserva o mob e a ancora do ciclo atual", () => {
   const visualCycleStartedAtMs = Date.now() - 1_250;
   const state: AutoCombatRealtimeState = {

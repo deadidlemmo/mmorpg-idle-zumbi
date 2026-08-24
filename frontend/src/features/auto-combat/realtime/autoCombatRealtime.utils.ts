@@ -231,6 +231,14 @@ export function normalizeSessionStatus(status?: string | null) {
     .toUpperCase();
 }
 
+export function isAutoCombatHuntFlowPhase(phase?: string | null) {
+  const normalizedPhase = normalizeSessionStatus(phase);
+
+  return (
+    normalizedPhase === "HUNTING" || normalizedPhase === "ENCOUNTER_READY"
+  );
+}
+
 export function isActiveSessionStatus(status?: string | null) {
   return normalizeSessionStatus(status) === "ACTIVE";
 }
@@ -1328,10 +1336,8 @@ export function buildMobStateFromStatus(
     .toUpperCase();
 
   if (
-    !currentMob &&
-    (incomingSessionIsTerminal ||
-      incomingPhase === "ENCOUNTER_READY" ||
-      incomingPhase === "HUNTING")
+    isAutoCombatHuntFlowPhase(incomingPhase) ||
+    (!currentMob && incomingSessionIsTerminal)
   ) {
     return null;
   }
@@ -2159,6 +2165,16 @@ export function buildMobSpawnedEventFromStatus(params: {
   fallbackCharacterMaxHp?: number | null;
 }): AutoCombatRealtimeEvent | null {
   const { status, session } = params;
+
+  const statusSession = session ?? getStatusSession(status);
+  const statusPhase = statusSession?.phase ?? status.phase;
+
+  if (
+    isTerminalSessionStatus(statusSession?.status) ||
+    isAutoCombatHuntFlowPhase(statusPhase)
+  ) {
+    return null;
+  }
 
   const currentMob = status.currentMob;
 
