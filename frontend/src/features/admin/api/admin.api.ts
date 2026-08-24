@@ -167,6 +167,11 @@ export interface AdminOperations {
     activeLoops: number;
     realtimeEventsEmitted: number;
     realtimeEventsByType: Record<string, number>;
+    socketPayloadEmissions?: number;
+    socketPayloadBytes?: number;
+    averageSocketPayloadBytes?: number;
+    socketPayloadEmissionsByEvent?: Record<string, number>;
+    socketPayloadBytesByEvent?: Record<string, number>;
     socketConnections: number;
     socketDisconnects: number;
     activeSockets: number;
@@ -215,6 +220,7 @@ export interface AdminOperations {
       ticksPerSecond: number;
       eventsPerSecond: number;
       clientReportsPerSecond: number;
+      socketPayloadBytesPerSecond?: number;
     };
     outOfOrderEvents: number;
     compressedVisualCycles: number;

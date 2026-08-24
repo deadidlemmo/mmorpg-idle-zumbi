@@ -1051,12 +1051,6 @@ export function useAutoCombatSocket(options: UseAutoCombatSocketOptions) {
     currentSocket.on('auto-combat:stopped', handleStopped);
 
     currentSocket.on('auto-combat:event', handleGenericRealtimeEvent);
-    currentSocket.on('auto-combat:mob-spawned', handleMobSpawned);
-    currentSocket.on('auto-combat:hit', handleHit);
-    currentSocket.on('auto-combat:dodge', handleDodge);
-    currentSocket.on('auto-combat:mob-defeated', handleMobDefeated);
-    currentSocket.on('auto-combat:player-defeated', handlePlayerDefeated);
-    currentSocket.on('auto-combat:potion-used', handlePotionUsed);
 
     if (currentSocket.connected) {
       updateConnectionState({

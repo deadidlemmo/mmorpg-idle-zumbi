@@ -50,4 +50,22 @@ describe('Socket.IO security options', () => {
       false,
     );
   });
+
+  it('habilita compressao e preserva configuracoes explicitas', () => {
+    const defaults = applySocketIoSecurityOptions(
+      new ConfigService({ NODE_ENV: 'development' }),
+    );
+    const overridden = applySocketIoSecurityOptions(
+      new ConfigService({ NODE_ENV: 'development' }),
+      {
+        perMessageDeflate: false,
+        httpCompression: false,
+      },
+    );
+
+    expect(defaults.perMessageDeflate).toEqual({ threshold: 1_024 });
+    expect(defaults.httpCompression).toBe(true);
+    expect(overridden.perMessageDeflate).toBe(false);
+    expect(overridden.httpCompression).toBe(false);
+  });
 });

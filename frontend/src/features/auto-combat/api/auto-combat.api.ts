@@ -88,6 +88,17 @@ export async function getAutoCombatStatus(
   return response.data;
 }
 
+export async function getAutoCombatActiveAction(
+  characterId: string,
+): Promise<AutoCombatStatusResponse> {
+  const response = await apiClient.get<AutoCombatStatusResponse>(
+    API_ENDPOINTS.autoCombat.activeAction(characterId),
+    getNoStoreRequestConfig(),
+  );
+
+  return response.data;
+}
+
 export async function getAutoCombatRecentEvents(
   characterId: string,
   options?: {

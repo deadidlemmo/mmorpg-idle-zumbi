@@ -12,6 +12,10 @@ import type { Server, Socket } from 'socket.io';
 import { ObservabilityService } from '../../common/observability/observability.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SocketAuthService } from '../auth/socket-auth.service';
+import {
+  buildAutoCombatRealtimeStatusPayload,
+  getSerializedPayloadBytes,
+} from './auto-combat-realtime-payload';
 
 type AutoCombatJoinPayload = {
   characterId?: string;
@@ -35,14 +39,6 @@ type AuthenticatedSocket = Omit<Socket, 'data'> & {
 
 type RealtimePayloadLike = {
   type?: string | null;
-};
-
-type AutoCombatStatusPayloadLike = {
-  active?: boolean | null;
-  hasActiveAutoCombat?: boolean | null;
-  session?: {
-    status?: string | null;
-  } | null;
 };
 
 type AutoCombatTelemetryPayload = {
@@ -84,17 +80,8 @@ export class AutoCombatGateway
 
   private readonly logger = new Logger(AutoCombatGateway.name);
 
-  /**
-   * Evita spam de auto-combat:status quando não existe combate ativo.
-   *
-   * O gateway não cria intervalo por conta própria, mas alguns fluxos do
-   * provider/service podem pedir status repetidamente. Se o status inativo
-   * for exatamente igual ao último já enviado para o personagem, não reenviamos.
-   */
-  private readonly lastInactiveStatusSignatureByCharacterId = new Map<
-    string,
-    string
-  >();
+  /** Evita enviar duas vezes o mesmo snapshot canônico no mesmo ciclo. */
+  private readonly lastStatusSignatureByCharacterId = new Map<string, string>();
 
   private readonly socketIdsByUserId = new Map<string, Set<string>>();
 
@@ -427,22 +414,27 @@ export class AutoCombatGateway
       return;
     }
 
+    const realtimePayload = buildAutoCombatRealtimeStatusPayload(payload);
+
     if (
-      this.shouldSuppressDuplicateInactiveStatus(normalizedCharacterId, payload)
+      this.shouldSuppressDuplicateStatus(normalizedCharacterId, realtimePayload)
     ) {
       return;
     }
 
-    this.emitToCharacter(normalizedCharacterId, 'auto-combat:status', payload);
+    this.emitToCharacter(
+      normalizedCharacterId,
+      'auto-combat:status',
+      realtimePayload,
+    );
   }
 
   emitSessionUpdated(characterId: string, payload: unknown) {
-    this.clearInactiveStatusCache(characterId);
-    this.emitToCharacter(characterId, 'auto-combat:session-updated', payload);
+    this.emitStatus(characterId, payload);
   }
 
   emitHit(characterId: string, payload: unknown) {
-    this.clearInactiveStatusCache(characterId);
+    this.clearStatusCache(characterId);
 
     const type = this.getPayloadType(payload);
 
@@ -459,7 +451,7 @@ export class AutoCombatGateway
   }
 
   emitMobSpawned(characterId: string, payload: unknown) {
-    this.clearInactiveStatusCache(characterId);
+    this.clearStatusCache(characterId);
 
     this.emitRealtimeEventToCharacter(
       characterId,
@@ -469,7 +461,7 @@ export class AutoCombatGateway
   }
 
   emitMobDefeated(characterId: string, payload: unknown) {
-    this.clearInactiveStatusCache(characterId);
+    this.clearStatusCache(characterId);
 
     this.emitRealtimeEventToCharacter(
       characterId,
@@ -479,7 +471,7 @@ export class AutoCombatGateway
   }
 
   emitPlayerDefeated(characterId: string, payload: unknown) {
-    this.clearInactiveStatusCache(characterId);
+    this.clearStatusCache(characterId);
 
     this.emitRealtimeEventToCharacter(
       characterId,
@@ -489,7 +481,7 @@ export class AutoCombatGateway
   }
 
   emitPotionUsed(characterId: string, payload: unknown) {
-    this.clearInactiveStatusCache(characterId);
+    this.clearStatusCache(characterId);
 
     this.emitRealtimeEventToCharacter(
       characterId,
@@ -499,13 +491,21 @@ export class AutoCombatGateway
   }
 
   emitFinished(characterId: string, payload: unknown) {
-    this.clearInactiveStatusCache(characterId);
-    this.emitToCharacter(characterId, 'auto-combat:finished', payload);
+    this.clearStatusCache(characterId);
+    this.emitToCharacter(
+      characterId,
+      'auto-combat:finished',
+      buildAutoCombatRealtimeStatusPayload(payload),
+    );
   }
 
   emitStopped(characterId: string, payload: unknown) {
-    this.clearInactiveStatusCache(characterId);
-    this.emitToCharacter(characterId, 'auto-combat:stopped', payload);
+    this.clearStatusCache(characterId);
+    this.emitToCharacter(
+      characterId,
+      'auto-combat:stopped',
+      buildAutoCombatRealtimeStatusPayload(payload),
+    );
   }
 
   emitError(characterId: string, message: string) {
@@ -516,10 +516,9 @@ export class AutoCombatGateway
 
   private emitRealtimeEventToCharacter(
     characterId: string,
-    event: string,
+    _event: string,
     payload: unknown,
   ) {
-    this.emitToCharacter(characterId, event, payload);
     this.emitToCharacter(characterId, 'auto-combat:event', payload);
   }
 
@@ -538,70 +537,41 @@ export class AutoCombatGateway
       return;
     }
 
+    this.observability.recordAutoCombatSocketEmission({
+      eventName: event,
+      payloadBytes: getSerializedPayloadBytes(payload),
+    });
+
     this.server
       .to(this.getCharacterRoom(normalizedCharacterId))
       .emit(event, payload);
   }
 
-  private shouldSuppressDuplicateInactiveStatus(
+  private shouldSuppressDuplicateStatus(
     characterId: string,
     payload: unknown,
   ): boolean {
-    if (!this.isInactiveAutoCombatStatusPayload(payload)) {
-      this.clearInactiveStatusCache(characterId);
-      return false;
-    }
-
     const signature = this.getPayloadSignature(payload);
     const previousSignature =
-      this.lastInactiveStatusSignatureByCharacterId.get(characterId);
+      this.lastStatusSignatureByCharacterId.get(characterId);
 
     if (previousSignature === signature) {
       return true;
     }
 
-    this.lastInactiveStatusSignatureByCharacterId.set(characterId, signature);
+    this.lastStatusSignatureByCharacterId.set(characterId, signature);
 
     return false;
   }
 
-  private isInactiveAutoCombatStatusPayload(payload: unknown): boolean {
-    if (!payload || typeof payload !== 'object') {
-      return false;
-    }
-
-    const statusPayload = payload as AutoCombatStatusPayloadLike;
-    const sessionStatus = String(statusPayload.session?.status ?? '')
-      .trim()
-      .toUpperCase();
-
-    if (statusPayload.active === false) {
-      return true;
-    }
-
-    if (statusPayload.hasActiveAutoCombat === false) {
-      return true;
-    }
-
-    return [
-      'STOPPED',
-      'FINISHED',
-      'COMPLETED',
-      'DEFEATED',
-      'EXPIRED',
-      'CANCELLED',
-      'CANCELED',
-    ].includes(sessionStatus);
-  }
-
-  private clearInactiveStatusCache(characterId: string) {
+  private clearStatusCache(characterId: string) {
     const normalizedCharacterId = this.normalizeId(characterId);
 
     if (!normalizedCharacterId) {
       return;
     }
 
-    this.lastInactiveStatusSignatureByCharacterId.delete(normalizedCharacterId);
+    this.lastStatusSignatureByCharacterId.delete(normalizedCharacterId);
   }
 
   private getPayloadSignature(payload: unknown): string {

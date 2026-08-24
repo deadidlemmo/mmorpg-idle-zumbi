@@ -73,6 +73,10 @@ type AutoCombatOperationalMetrics = {
   activeLoops: number;
   realtimeEventsEmitted: number;
   realtimeEventsByType: Map<string, number>;
+  socketPayloadEmissions: number;
+  socketPayloadBytes: number;
+  socketPayloadEmissionsByEvent: Map<string, number>;
+  socketPayloadBytesByEvent: Map<string, number>;
   socketConnections: number;
   socketDisconnects: number;
   activeSockets: number;
@@ -114,6 +118,10 @@ type AutoCombatCounterBaseline = {
   distributedLockMisses: number;
   realtimeEventsEmitted: number;
   realtimeEventsByType: Map<string, number>;
+  socketPayloadEmissions: number;
+  socketPayloadBytes: number;
+  socketPayloadEmissionsByEvent: Map<string, number>;
+  socketPayloadBytesByEvent: Map<string, number>;
   socketConnections: number;
   socketDisconnects: number;
   clientEventReports: number;
@@ -196,6 +204,10 @@ export class ObservabilityService {
     activeLoops: 0,
     realtimeEventsEmitted: 0,
     realtimeEventsByType: new Map<string, number>(),
+    socketPayloadEmissions: 0,
+    socketPayloadBytes: 0,
+    socketPayloadEmissionsByEvent: new Map<string, number>(),
+    socketPayloadBytesByEvent: new Map<string, number>(),
     socketConnections: 0,
     socketDisconnects: 0,
     activeSockets: 0,
@@ -376,6 +388,29 @@ export class ObservabilityService {
         emissionDelayMs,
       );
     }
+  }
+
+  recordAutoCombatSocketEmission(params: {
+    eventName?: string | null;
+    payloadBytes?: number | null;
+  }) {
+    const eventName = String(params.eventName ?? 'unknown').trim() || 'unknown';
+    const payloadBytes = Math.max(
+      0,
+      Math.floor(Number(params.payloadBytes) || 0),
+    );
+
+    this.autoCombatMetrics.socketPayloadEmissions += 1;
+    this.autoCombatMetrics.socketPayloadBytes += payloadBytes;
+    this.incrementMetricCounter(
+      this.autoCombatMetrics.socketPayloadEmissionsByEvent,
+      eventName,
+    );
+    this.incrementMetricCounterBy(
+      this.autoCombatMetrics.socketPayloadBytesByEvent,
+      eventName,
+      payloadBytes,
+    );
   }
 
   recordAutoCombatSocketConnection(connected: boolean) {
@@ -956,6 +991,14 @@ export class ObservabilityService {
       this.autoCombatMetrics.realtimeEventsEmitted,
       baseline?.realtimeEventsEmitted,
     );
+    const socketPayloadEmissions = this.counterDelta(
+      this.autoCombatMetrics.socketPayloadEmissions,
+      baseline?.socketPayloadEmissions,
+    );
+    const socketPayloadBytes = this.counterDelta(
+      this.autoCombatMetrics.socketPayloadBytes,
+      baseline?.socketPayloadBytes,
+    );
     const clientEventReports = this.counterDelta(
       this.autoCombatMetrics.clientEventReports,
       baseline?.clientEventReports,
@@ -989,6 +1032,20 @@ export class ObservabilityService {
       realtimeEventsByType: this.toMetricCounterDeltaRecord(
         this.autoCombatMetrics.realtimeEventsByType,
         baseline?.realtimeEventsByType,
+      ),
+      socketPayloadEmissions,
+      socketPayloadBytes,
+      averageSocketPayloadBytes:
+        socketPayloadEmissions > 0
+          ? this.roundMetric(socketPayloadBytes / socketPayloadEmissions)
+          : 0,
+      socketPayloadEmissionsByEvent: this.toMetricCounterDeltaRecord(
+        this.autoCombatMetrics.socketPayloadEmissionsByEvent,
+        baseline?.socketPayloadEmissionsByEvent,
+      ),
+      socketPayloadBytesByEvent: this.toMetricCounterDeltaRecord(
+        this.autoCombatMetrics.socketPayloadBytesByEvent,
+        baseline?.socketPayloadBytesByEvent,
       ),
       socketConnections: this.counterDelta(
         this.autoCombatMetrics.socketConnections,
@@ -1068,6 +1125,9 @@ export class ObservabilityService {
         ),
         clientReportsPerSecond: this.roundMetric(
           clientEventReports / elapsedSeconds,
+        ),
+        socketPayloadBytesPerSecond: this.roundMetric(
+          socketPayloadBytes / elapsedSeconds,
         ),
       },
       outOfOrderEvents: this.counterDelta(
@@ -1150,6 +1210,10 @@ export class ObservabilityService {
         snapshot.distributedLockMisses,
       dead_idle_auto_combat_realtime_events_emitted_total:
         snapshot.realtimeEventsEmitted,
+      dead_idle_auto_combat_socket_payload_emissions_total:
+        snapshot.socketPayloadEmissions,
+      dead_idle_auto_combat_socket_payload_bytes_total:
+        snapshot.socketPayloadBytes,
       dead_idle_auto_combat_socket_connections_total:
         snapshot.socketConnections,
       dead_idle_auto_combat_socket_disconnects_total:
@@ -1189,6 +1253,17 @@ export class ObservabilityService {
     )) {
       lines.push(
         `dead_idle_auto_combat_realtime_events_by_type_total{event_type="${eventType}"} ${value}`,
+      );
+    }
+
+    lines.push(
+      '# TYPE dead_idle_auto_combat_socket_payload_bytes_by_event_total counter',
+    );
+    for (const [eventName, value] of Object.entries(
+      snapshot.socketPayloadBytesByEvent,
+    )) {
+      lines.push(
+        `dead_idle_auto_combat_socket_payload_bytes_by_event_total{event_name="${eventName}"} ${value}`,
       );
     }
 
@@ -1345,6 +1420,14 @@ export class ObservabilityService {
     counter.set(key, (counter.get(key) ?? 0) + 1);
   }
 
+  private incrementMetricCounterBy(
+    counter: Map<string, number>,
+    key: string,
+    amount: number,
+  ) {
+    counter.set(key, (counter.get(key) ?? 0) + amount);
+  }
+
   private toMetricCounterDeltaRecord(
     counter: Map<string, number>,
     baseline?: Map<string, number>,
@@ -1402,6 +1485,14 @@ export class ObservabilityService {
       realtimeEventsEmitted: this.autoCombatMetrics.realtimeEventsEmitted,
       realtimeEventsByType: new Map(
         this.autoCombatMetrics.realtimeEventsByType,
+      ),
+      socketPayloadEmissions: this.autoCombatMetrics.socketPayloadEmissions,
+      socketPayloadBytes: this.autoCombatMetrics.socketPayloadBytes,
+      socketPayloadEmissionsByEvent: new Map(
+        this.autoCombatMetrics.socketPayloadEmissionsByEvent,
+      ),
+      socketPayloadBytesByEvent: new Map(
+        this.autoCombatMetrics.socketPayloadBytesByEvent,
       ),
       socketConnections: this.autoCombatMetrics.socketConnections,
       socketDisconnects: this.autoCombatMetrics.socketDisconnects,

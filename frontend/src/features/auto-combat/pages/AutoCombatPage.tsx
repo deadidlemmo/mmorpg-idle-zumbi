@@ -107,6 +107,7 @@ import {
   toSafeNumber,
   updateCharacterPotionConfigRaw,
 } from "../utils/auto-combat-page.helpers";
+import { mergeAutoCombatStatusDetails } from "../utils/auto-combat-status-merge";
 import {
   type BattleBatchCountdown,
   type BattleTargetDisplayCounts,
@@ -399,7 +400,7 @@ function pickAutoCombatEffectiveStatus(params: {
     }
   }
 
-  return realtimeStatus;
+  return mergeAutoCombatStatusDetails(restStatus, realtimeStatus);
 }
 
 type MobFeedbackScope = {

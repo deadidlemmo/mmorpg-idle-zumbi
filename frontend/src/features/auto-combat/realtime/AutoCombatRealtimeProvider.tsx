@@ -14,7 +14,6 @@ import {
 } from "../../../components/game/activityTimeline";
 import { useActivityTimelineProviderState } from "../../../components/game/useActivityTimelineProviderState";
 import { useAuthStore } from "../../../store/auth.store";
-import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import {
   useLootNotifications,
   type LootNotificationPayload,
@@ -42,8 +41,8 @@ import {
 } from "../utils/hunting-timeline";
 import { getMobPortraitImage } from "../utils/mobAssets";
 import {
+  getAutoCombatActiveAction,
   getAutoCombatRecentEvents,
-  getAutoCombatStatus,
   startAutoCombat,
   startAutoCombatBattle,
   stopAutoCombat,
@@ -1221,10 +1220,9 @@ export function AutoCombatRealtimeProvider({
         const requestStartedAtMonotonicMs =
           getActivityTimelineMonotonicNowMs();
 
-        const [overviewData, statusData] = await Promise.all([
-          getCharacterOverview(normalizedCharacterId).catch(() => null),
-          getAutoCombatStatus(normalizedCharacterId).catch(() => null),
-        ]);
+        const statusData = await getAutoCombatActiveAction(
+          normalizedCharacterId,
+        ).catch(() => null);
 
         if (reloadRequestRef.current !== requestId) {
           return;
@@ -1242,14 +1240,6 @@ export function AutoCombatRealtimeProvider({
           }
         } else {
           lootSuppressionRequiresFreshStatusRef.current = false;
-        }
-
-        if (overviewData) {
-          dispatch({
-            type: "HYDRATE_OVERVIEW",
-            characterId: normalizedCharacterId,
-            overview: overviewData,
-          });
         }
 
         if (statusData) {

@@ -185,6 +185,14 @@ describe('ObservabilityService', () => {
       eventType: 'MOB_SPAWNED',
       emissionDelayMs: 35,
     });
+    service.recordAutoCombatSocketEmission({
+      eventName: 'auto-combat:status',
+      payloadBytes: 1_200,
+    });
+    service.recordAutoCombatSocketEmission({
+      eventName: 'auto-combat:event',
+      payloadBytes: 300,
+    });
     service.recordAutoCombatSocketConnection(true);
     service.recordAutoCombatClientTelemetry({
       kind: 'EVENT_RECEIVED',
@@ -241,6 +249,17 @@ describe('ObservabilityService', () => {
       activeLoops: 2,
       realtimeEventsEmitted: 1,
       realtimeEventsByType: { MOB_SPAWNED: 1 },
+      socketPayloadEmissions: 2,
+      socketPayloadBytes: 1500,
+      averageSocketPayloadBytes: 750,
+      socketPayloadEmissionsByEvent: {
+        'auto-combat:status': 1,
+        'auto-combat:event': 1,
+      },
+      socketPayloadBytesByEvent: {
+        'auto-combat:status': 1200,
+        'auto-combat:event': 300,
+      },
       socketConnections: 1,
       activeSockets: 1,
       clientEventReports: 1,
@@ -310,6 +329,12 @@ describe('ObservabilityService', () => {
     );
     expect(metrics).toContain(
       'dead_idle_auto_combat_realtime_events_by_type_total{event_type="MOB_SPAWNED"} 1',
+    );
+    expect(metrics).toContain(
+      'dead_idle_auto_combat_socket_payload_bytes_total 1500',
+    );
+    expect(metrics).toContain(
+      'dead_idle_auto_combat_socket_payload_bytes_by_event_total{event_name="auto-combat:status"} 1200',
     );
   });
 

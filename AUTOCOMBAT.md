@@ -101,6 +101,7 @@ Todas as rotas do controller usam `@UseGuards(JwtAuthGuard)`.
 | `POST` | `/auto-combat/:characterId/battle/start`  | Inicia batalha a partir de `ENCOUNTER_READY`.                     |
 | `POST` | `/auto-combat/preview`                    | Calcula preview/projecao.                                         |
 | `GET`  | `/auto-combat/:characterId/status`        | Retorna snapshot sem cache.                                       |
+| `GET`  | `/auto-combat/:characterId/active-action` | Retorna snapshot compacto para provider, F5 e reconexao.          |
 | `GET`  | `/auto-combat/:characterId/recent-events` | Retorna eventos recentes; aceita `afterSequence`.                 |
 | `POST` | `/auto-combat/:characterId/stop`          | Para a sessao de auto-combate.                                    |
 
@@ -328,20 +329,20 @@ auto-combat:joined
 auto-combat:left
 auto-combat:error
 auto-combat:status
-auto-combat:session-updated
 auto-combat:finished
 auto-combat:stopped
 auto-combat:event
-auto-combat:mob-spawned
-auto-combat:hit
-auto-combat:dodge
-auto-combat:mob-defeated
-auto-combat:player-defeated
-auto-combat:potion-used
 auto-combat:auto-rest
 ```
 
-O gateway tambem emite eventos especificos e o evento generico `auto-combat:event` para eventos realtime.
+`auto-combat:status` e o canal canonico de snapshot. Golpes, spawn, derrota e
+pocoes usam apenas `auto-combat:event`, com o tipo no payload. O cliente ainda
+remove listeners dos canais especificos antigos durante a montagem para evitar
+duplicacao em atualizacoes com HMR ou versoes anteriores.
+
+Snapshots WebSocket e o endpoint `active-action` usam a mesma projecao compacta.
+Ela preserva HP, EXP, loot, sequencias e timestamps da timeline, mas nao repete
+inventario, equipamento, drops completos e blobs de mapa em cada ciclo.
 
 ## Reconciliacao frontend
 
@@ -404,7 +405,7 @@ sobrepor processamentos da mesma sessao.
 O atraso do proximo tick e calculado pelo snapshot canonico:
 
 - combate ativo: tempo restante ate `cycleEndsAt`, com limites defensivos;
-- caca: intervalo de fallback configurado;
+- caca: tempo restante ate `hunting.timeline.endsAt`/`nextFindAt`;
 - sessao inativa: loop encerrado.
 
 Eventos persistidos devem ser emitidos antes da montagem de snapshots REST mais
@@ -454,6 +455,7 @@ Endpoints usados pelo frontend:
 GET  /maps
 GET  /maps/:mapId
 GET  /auto-combat/:characterId/status
+GET  /auto-combat/:characterId/active-action
 GET  /auto-combat/:characterId/recent-events
 POST /auto-combat/preview
 POST /auto-combat/hunt/start

@@ -922,6 +922,20 @@ export function AdminPage() {
                 relatórios/s
               </span>
             </div>
+            <div>
+              <dt>Payload lógico WebSocket</dt>
+              <dd>
+                {autoCombatMetrics
+                  ? `${formatBytes(autoCombatMetrics.socketPayloadBytes ?? 0)} / ${(autoCombatMetrics.socketPayloadEmissions ?? 0).toLocaleString("pt-BR")}`
+                  : "Sem dados"}
+              </dd>
+              <span>
+                Média {formatBytes(autoCombatMetrics?.averageSocketPayloadBytes ?? 0)} ·{" "}
+                {formatBytes(
+                  autoCombatRates?.socketPayloadBytesPerSecond ?? 0,
+                )}/s antes da compressão
+              </span>
+            </div>
           </dl>
 
           {autoCombatContexts ? (

@@ -71,6 +71,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { AutoCombatGateway } from './auto-combat.gateway';
 import { buildAutoCombatHuntingTimeline } from './auto-combat-hunting-timeline';
+import { buildAutoCombatRealtimeStatusPayload } from './auto-combat-realtime-payload';
 import {
   assertAutoCombatPhaseTransition,
   buildHuntCycleKey,
@@ -1750,7 +1751,11 @@ export class AutoCombatService implements OnModuleDestroy {
     };
   }
 
-  async getStatus(userId: string, characterId: string) {
+  async getStatus(
+    userId: string,
+    characterId: string,
+    options?: { emitStatus?: boolean },
+  ) {
     const character = await this.prisma.character.findFirst({
       where: {
         id: characterId,
@@ -1809,7 +1814,9 @@ export class AutoCombatService implements OnModuleDestroy {
         processing: this.buildEmptyProcessingSummary(),
       });
 
-      this.autoCombatGateway.emitStatus(character.id, response);
+      if (options?.emitStatus !== false) {
+        this.autoCombatGateway.emitStatus(character.id, response);
+      }
 
       return response;
     }
@@ -1830,9 +1837,19 @@ export class AutoCombatService implements OnModuleDestroy {
       },
     };
 
-    this.autoCombatGateway.emitStatus(character.id, response);
+    if (options?.emitStatus !== false) {
+      this.autoCombatGateway.emitStatus(character.id, response);
+    }
 
     return response;
+  }
+
+  async getActiveAction(userId: string, characterId: string) {
+    const status = await this.getStatus(userId, characterId, {
+      emitStatus: false,
+    });
+
+    return buildAutoCombatRealtimeStatusPayload(status);
   }
 
   async stopHunt(userId: string, characterId: string) {
@@ -2808,7 +2825,7 @@ export class AutoCombatService implements OnModuleDestroy {
       acquired = lockResult.acquired;
 
       if (!lockResult.acquired) {
-        return AUTO_COMBAT_REALTIME_TICK_MS;
+        return Math.max(1_000, AUTO_COMBAT_REALTIME_TICK_MS);
       }
 
       return getAutoCombatNextRealtimeTickDelayMs(

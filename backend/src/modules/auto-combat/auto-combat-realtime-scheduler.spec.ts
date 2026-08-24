@@ -32,7 +32,25 @@ describe('getAutoCombatNextRealtimeTickDelayMs', () => {
     ).toBe(1_750);
   });
 
-  it('mantem o polling curto durante a caca', () => {
+  it('agenda a caca pelo vencimento canonico do proximo ciclo', () => {
+    expect(
+      getAutoCombatNextRealtimeTickDelayMs(
+        {
+          active: true,
+          phase: 'HUNTING',
+          serverNow: '2026-08-23T12:00:00.000Z',
+          hunting: {
+            timeline: {
+              endsAt: '2026-08-23T12:00:09.250Z',
+            },
+          },
+        },
+        250,
+      ),
+    ).toBe(9_250);
+  });
+
+  it('usa o fallback quando a caca ainda nao possui timeline', () => {
     expect(
       getAutoCombatNextRealtimeTickDelayMs(
         {

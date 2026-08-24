@@ -13,6 +13,13 @@ type AutoCombatRealtimeSnapshot = {
     cycleEndsAt?: string | Date | null;
     serverNow?: string | Date | null;
   } | null;
+  hunting?: {
+    nextFindAt?: string | Date | null;
+    timeline?: {
+      endsAt?: string | Date | null;
+      serverNow?: string | Date | null;
+    } | null;
+  } | null;
   session?: {
     phase?: string | null;
     battleProgress?: AutoCombatRealtimeSnapshot['battleProgress'];
@@ -51,6 +58,21 @@ export function getAutoCombatNextRealtimeTickDelayMs(
   const phase = String(snapshot.session?.phase ?? snapshot.phase ?? '')
     .trim()
     .toUpperCase();
+
+  if (phase === AutoCombatSessionPhase.HUNTING) {
+    const huntingEndsAtMs = toTimestamp(
+      snapshot.hunting?.timeline?.endsAt ?? snapshot.hunting?.nextFindAt,
+    );
+    const huntingServerNowMs = toTimestamp(
+      snapshot.hunting?.timeline?.serverNow ?? snapshot.serverNow,
+    );
+
+    if (huntingEndsAtMs !== null && huntingServerNowMs !== null) {
+      return toPositiveDelay(huntingEndsAtMs - huntingServerNowMs);
+    }
+
+    return toPositiveDelay(fallbackDelayMs);
+  }
 
   if (phase !== AutoCombatSessionPhase.COMBAT_ACTIVE) {
     return toPositiveDelay(fallbackDelayMs);

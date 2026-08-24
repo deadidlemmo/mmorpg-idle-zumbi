@@ -85,6 +85,20 @@ export class AutoCombatController {
     return this.autoCombatService.getStatus(request.user.id, characterId);
   }
 
+  @Get(':characterId/active-action')
+  @Header(
+    'Cache-Control',
+    'no-store, no-cache, must-revalidate, proxy-revalidate',
+  )
+  @Header('Pragma', 'no-cache')
+  @Header('Expires', '0')
+  getActiveAction(
+    @Req() request: any,
+    @Param('characterId') characterId: string,
+  ) {
+    return this.autoCombatService.getActiveAction(request.user.id, characterId);
+  }
+
   @Get(':characterId/recent-events')
   @Header(
     'Cache-Control',

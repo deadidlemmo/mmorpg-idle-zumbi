@@ -29,6 +29,10 @@ export function applySocketIoSecurityOptions(
 
   return {
     ...options,
+    perMessageDeflate: options.perMessageDeflate ?? {
+      threshold: 1_024,
+    },
+    httpCompression: options.httpCompression ?? true,
     cors: {
       credentials: true,
       methods: ['GET', 'POST'],
