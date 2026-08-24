@@ -8,6 +8,11 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { X } from 'lucide-react';
+import { ActivityTimelineFill } from '../../../components/game/ActivityTimelineFill';
+import {
+  getActivityTimelineFrame,
+  type ActivityTimeline,
+} from '../../../components/game/activityTimeline';
 import {
   connectWorldBossSocket,
   type WorldBossSocket,
@@ -78,6 +83,7 @@ export interface DashboardTopBarActivityOverride {
     timingFunction?: string;
     iterationCount?: number | 'infinite';
   } | null;
+  timeline?: ActivityTimeline | null;
   badge?: string | null;
   titleText?: string;
   isHunting?: boolean;
@@ -845,10 +851,18 @@ function getAutoCombatHuntingFoundCount(autoCombatState: unknown): number {
 function getAutoCombatHuntingProgress(
   autoCombatState: unknown,
   nowMs: number,
+  timeline?: ActivityTimeline | null,
 ): {
   progressPercent: number | null;
   progressTimeline: DashboardTopBarActivityOverride['progressTimeline'];
 } {
+  if (timeline) {
+    return {
+      progressPercent: getActivityTimelineFrame(timeline).fillPercent,
+      progressTimeline: null,
+    };
+  }
+
   const status = getRecordField(autoCombatState, 'status');
   const session = getAutoCombatSessionRecord(autoCombatState);
   const hunting = getAutoCombatHuntingRecord(autoCombatState);
@@ -965,6 +979,7 @@ function buildAutoCombatActivity(
   nowMs: number,
   presentationTimeline?: AutoCombatPresentationTimeline | null,
   presentationNowMs = getAutoCombatPresentationNowMs(),
+  huntingTimeline?: ActivityTimeline | null,
 ): DashboardTopBarActivityViewModel | null {
   if (!isAutoCombatActive(autoCombatState)) return null;
 
@@ -972,7 +987,11 @@ function buildAutoCombatActivity(
 
   if (isAutoCombatHunting(autoCombatState)) {
     const foundEnemiesCount = getAutoCombatHuntingFoundCount(autoCombatState);
-    const huntingProgress = getAutoCombatHuntingProgress(autoCombatState, nowMs);
+    const huntingProgress = getAutoCombatHuntingProgress(
+      autoCombatState,
+      nowMs,
+      huntingTimeline,
+    );
     const foundLabel =
       foundEnemiesCount === 1
         ? '1 rastreado'
@@ -986,6 +1005,7 @@ function buildAutoCombatActivity(
       icon: 'AC',
       progressPercent: huntingProgress.progressPercent,
       progressTimeline: huntingProgress.progressTimeline,
+      timeline: huntingTimeline,
       badge: formatNumber(foundEnemiesCount),
       titleText: `AutoCombat em caca - ${foundLabel}.`,
       isHunting: true,
@@ -1502,6 +1522,9 @@ export function DashboardTopBar({
             ? autoCombatRealtime.presentationTimeline
             : null,
           getAutoCombatPresentationNowMs(),
+          autoCombatRealtime.huntingTimelineEnabled
+            ? autoCombatRealtime.huntingTimeline
+            : null,
         );
 
     return (
@@ -1517,6 +1540,8 @@ export function DashboardTopBar({
     activityOverride,
     autoCombatRealtime.presentationTimeline,
     autoCombatRealtime.presentationTimelineEnabled,
+    autoCombatRealtime.huntingTimeline,
+    autoCombatRealtime.huntingTimelineEnabled,
     autoCombatState,
     craftingState,
     gatheringState,
@@ -1532,6 +1557,7 @@ export function DashboardTopBar({
 
   const activityProgressPercent = clampPercent(activity.progressPercent);
   const shouldSnapActivityProgress =
+    !activity.timeline &&
     !activity.progressTimeline &&
     ((activity.isHunting && activityProgressPercent <= 0.05) ||
       (activity.isBattle && activityProgressPercent >= 99.95));
@@ -1696,11 +1722,11 @@ export function DashboardTopBar({
       >
         {(activity.progressPercent !== null &&
           activity.progressPercent !== undefined) ||
-        activityAnimationTimeline ? (
+        activity.timeline || activityAnimationTimeline ? (
           <span
             className={[
               'dashboard-topbar__activity-progress',
-              activityAnimationTimeline
+              activity.timeline || activityAnimationTimeline
                 ? 'dashboard-topbar__activity-progress--timeline'
                 : '',
             ]
@@ -1708,7 +1734,14 @@ export function DashboardTopBar({
               .join(' ')}
             aria-hidden="true"
           >
-            <span key={activityProgressElementKey} style={activityProgressStyle} />
+            {activity.timeline ? (
+              <ActivityTimelineFill timeline={activity.timeline} />
+            ) : (
+              <span
+                key={activityProgressElementKey}
+                style={activityProgressStyle}
+              />
+            )}
           </span>
         ) : null}
 

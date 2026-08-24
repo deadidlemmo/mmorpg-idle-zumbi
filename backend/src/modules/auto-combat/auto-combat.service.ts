@@ -70,6 +70,7 @@ import {
 } from '../../common/utils/auto-combat-balance.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AutoCombatGateway } from './auto-combat.gateway';
+import { buildAutoCombatHuntingTimeline } from './auto-combat-hunting-timeline';
 import {
   assertAutoCombatPhaseTransition,
   buildHuntCycleKey,
@@ -6934,6 +6935,17 @@ export class AutoCombatService implements OnModuleDestroy {
     const isHuntLimitReached =
       maxTrackedEnemies > 0 &&
       currentTrackedEnemiesRemaining >= maxTrackedEnemies;
+    const huntingTimeline = buildAutoCombatHuntingTimeline({
+      sessionId: session.id,
+      huntBatchId: huntBatch?.id ?? null,
+      status: session.status,
+      phase: session.phase,
+      isLimitReached: isHuntLimitReached,
+      foundEnemiesCount: currentFoundEnemiesCount,
+      serverNow: now,
+      lastFindAt: huntingTiming.lastFindAt,
+      nextFindAt: huntingTiming.nextFindAt,
+    });
     const huntCapacity = {
       maxTrackedEnemies,
       remainingCapacity: remainingHuntCapacity,
@@ -7270,6 +7282,7 @@ export class AutoCombatService implements OnModuleDestroy {
         : null,
       huntingSkill: huntingSkillViewModel,
       hunting: {
+        timeline: huntingTimeline,
         mapId: session.mapId,
         subMapId: session.subMapId,
         phase: session.phase,

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { ActivityTimeline } from "../../../components/game/activityTimeline";
 import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
@@ -384,6 +385,10 @@ export type AutoCombatRealtimeContextValue = {
   /** Timeline local de apresentacao. Nunca altera HP, recompensas ou abates. */
   presentationTimelineEnabled: boolean;
   presentationTimeline: AutoCombatPresentationTimeline | null;
+
+  /** Timeline canonica da caca, compartilhada entre card local e barra global. */
+  huntingTimelineEnabled: boolean;
+  huntingTimeline: ActivityTimeline | null;
 
   hydrateOverview: (overview: CharacterOverviewResponse | null) => void;
   hydrateStatus: (status: AutoCombatStatusResponse | null) => void;

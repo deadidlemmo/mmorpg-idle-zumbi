@@ -8,6 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation } from "react-router-dom";
+import {
+  createActivityTimelineClockSample,
+  getActivityTimelineMonotonicNowMs,
+} from "../../../components/game/activityTimeline";
+import { useActivityTimelineProviderState } from "../../../components/game/useActivityTimelineProviderState";
+import { useAuthStore } from "../../../store/auth.store";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import {
   useLootNotifications,
@@ -30,6 +36,10 @@ import {
   getAutoCombatPresentationWallClockNowMs,
   isAutoCombatPresentationTimelineEnabled,
 } from "../utils/presentation-timeline";
+import {
+  getAutoCombatHuntingTimelineSnapshot,
+  isAutoCombatHuntingTimelineEnabled,
+} from "../utils/hunting-timeline";
 import { getMobPortraitImage } from "../utils/mobAssets";
 import {
   getAutoCombatRecentEvents,
@@ -78,6 +88,10 @@ interface AutoCombatRealtimeProviderProps {
 
 type ReloadOptions = {
   reason?: string;
+};
+
+type HydrateStatusOptions = {
+  requestStartedAtMonotonicMs?: number | null;
 };
 
 type SnapshotSynchronizationOptions = {
@@ -561,6 +575,12 @@ export function AutoCombatRealtimeProvider({
 }: AutoCombatRealtimeProviderProps) {
   const normalizedCharacterId = characterId ?? null;
   const { pathname } = useLocation();
+  const userRole = useAuthStore((authState) => authState.user?.role ?? null);
+  const {
+    applySnapshot: applyHuntingTimelineSnapshot,
+    clearTimeline: clearHuntingTimeline,
+    timeline: huntingTimeline,
+  } = useActivityTimelineProviderState();
 
   const [state, dispatch] = useReducer(
     autoCombatRealtimeReducer,
@@ -570,6 +590,10 @@ export function AutoCombatRealtimeProvider({
   const [presentationResumeVersion, setPresentationResumeVersion] = useState(0);
   const presentationTimelineEnabled = isAutoCombatPresentationTimelineEnabled({
     flagValue: import.meta.env.VITE_AUTO_COMBAT_PRESENTATION_TIMELINE_V2,
+  });
+  const huntingTimelineEnabled = isAutoCombatHuntingTimelineEnabled({
+    flagValue: import.meta.env.VITE_AUTO_COMBAT_HUNT_TIMELINE_V1,
+    userRole,
   });
   const presentationDurationMs = getAutoCombatPresentationDurationMs(
     state.mob?.battleProgress,
@@ -684,6 +708,25 @@ export function AutoCombatRealtimeProvider({
   }, [state]);
 
   useEffect(() => {
+    if (!huntingTimelineEnabled) {
+      clearHuntingTimeline();
+      return;
+    }
+
+    const currentSnapshot = getAutoCombatHuntingTimelineSnapshot(
+      stateRef.current.status,
+    );
+
+    if (currentSnapshot) {
+      applyHuntingTimelineSnapshot(currentSnapshot);
+    }
+  }, [
+    applyHuntingTimelineSnapshot,
+    clearHuntingTimeline,
+    huntingTimelineEnabled,
+  ]);
+
+  useEffect(() => {
     dispatch({
       type: "SET_CHARACTER_ID",
       characterId: normalizedCharacterId,
@@ -704,7 +747,8 @@ export function AutoCombatRealtimeProvider({
     lastVisibilityReturnAtRef.current = null;
     notifiedDefeatEventKeysRef.current.clear();
     terminalDefeatSessionRef.current = null;
-  }, [normalizedCharacterId]);
+    clearHuntingTimeline();
+  }, [clearHuntingTimeline, normalizedCharacterId]);
 
   const clearScheduledReload = useCallback(() => {
     if (reloadTimeoutRef.current !== null) {
@@ -827,6 +871,7 @@ export function AutoCombatRealtimeProvider({
       isLoadingRef.current = false;
       pendingReloadOptionsRef.current = null;
       lastInactiveStatusSignatureRef.current = null;
+      clearHuntingTimeline();
 
       dispatch({
         type: "TERMINATE_DEFEATED",
@@ -847,6 +892,7 @@ export function AutoCombatRealtimeProvider({
     [
       clearScheduledActiveEvent,
       clearScheduledReload,
+      clearHuntingTimeline,
       normalizedCharacterId,
     ],
   );
@@ -865,8 +911,27 @@ export function AutoCombatRealtimeProvider({
   );
 
   const hydrateStatus = useCallback(
-    (status: AutoCombatStatusResponse | null) => {
+    (
+      status: AutoCombatStatusResponse | null,
+      options?: HydrateStatusOptions,
+    ) => {
       if (!normalizedCharacterId) return;
+
+      const huntingTimelineSnapshot = huntingTimelineEnabled
+        ? getAutoCombatHuntingTimelineSnapshot(status)
+        : null;
+
+      if (huntingTimelineSnapshot) {
+        applyHuntingTimelineSnapshot(
+          huntingTimelineSnapshot,
+          createActivityTimelineClockSample({
+            requestStartedAtMonotonicMs:
+              options?.requestStartedAtMonotonicMs ?? null,
+          }),
+        );
+      } else {
+        clearHuntingTimeline();
+      }
 
       if (isAutoCombatDefeatStatus(status)) {
         terminateDefeatedPresentation({
@@ -898,7 +963,13 @@ export function AutoCombatRealtimeProvider({
         status,
       });
     },
-    [normalizedCharacterId, terminateDefeatedPresentation],
+    [
+      applyHuntingTimelineSnapshot,
+      clearHuntingTimeline,
+      huntingTimelineEnabled,
+      normalizedCharacterId,
+      terminateDefeatedPresentation,
+    ],
   );
 
   const hydrateCharacterHealth = useCallback(
@@ -984,12 +1055,13 @@ export function AutoCombatRealtimeProvider({
 
   const clearSessionVisualState = useCallback(() => {
     clearScheduledActiveEvent();
+    clearHuntingTimeline();
     terminalDefeatSessionRef.current = null;
 
     dispatch({
       type: "CLEAR_SESSION_VISUAL_STATE",
     });
-  }, [clearScheduledActiveEvent]);
+  }, [clearHuntingTimeline, clearScheduledActiveEvent]);
 
   const publishConfirmedLootNotifications = useCallback(
     (
@@ -1146,6 +1218,8 @@ export function AutoCombatRealtimeProvider({
 
       try {
         isLoadingRef.current = true;
+        const requestStartedAtMonotonicMs =
+          getActivityTimelineMonotonicNowMs();
 
         const [overviewData, statusData] = await Promise.all([
           getCharacterOverview(normalizedCharacterId).catch(() => null),
@@ -1179,7 +1253,7 @@ export function AutoCombatRealtimeProvider({
         }
 
         if (statusData) {
-          hydrateStatus(statusData);
+          hydrateStatus(statusData, { requestStartedAtMonotonicMs });
         }
 
         dispatch({
@@ -2275,6 +2349,8 @@ export function AutoCombatRealtimeProvider({
 
       presentationTimelineEnabled,
       presentationTimeline,
+      huntingTimelineEnabled,
+      huntingTimeline,
 
       hydrateOverview,
       hydrateStatus,
@@ -2294,6 +2370,8 @@ export function AutoCombatRealtimeProvider({
     state,
     presentationTimelineEnabled,
     presentationTimeline,
+    huntingTimelineEnabled,
+    huntingTimeline,
     hydrateOverview,
     hydrateStatus,
     hydrateCharacterHealth,

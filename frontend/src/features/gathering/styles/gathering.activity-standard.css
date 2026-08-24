@@ -819,6 +819,16 @@
   box-shadow: 0 0 12px rgba(240, 197, 63, 0.16) !important;
 }
 
+.gathering-origin-current-card
+  .auto-combat-hunt-skill-card__track
+  i.activity-timeline-fill,
+.gathering-origin-skill-card
+  .auto-combat-hunt-skill-card__track
+  i.activity-timeline-fill {
+  width: 100% !important;
+  transition: none !important;
+}
+
 .gathering-origin-current-card .gathering-session__inline-capsule {
   display: contents !important;
 }

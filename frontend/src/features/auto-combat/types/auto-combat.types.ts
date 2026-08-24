@@ -4,6 +4,7 @@ import type {
   DashboardItemRarity,
   DashboardSubMapViewModel,
 } from "../../dashboard/types/dashboard.types";
+import type { ActivityTimelineSnapshot } from "../../../components/game/activityTimeline";
 
 export interface StartAutoCombatPayload {
   characterId: string;
@@ -552,6 +553,7 @@ export interface AutoCombatHuntingSkillViewModel {
 }
 
 export interface AutoCombatHuntingViewModel {
+  timeline?: ActivityTimelineSnapshot | null;
   mapId?: string | null;
   subMapId?: string | null;
   phase?: AutoCombatRealtimePhase | null;

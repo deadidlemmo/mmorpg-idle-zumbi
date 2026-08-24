@@ -8,6 +8,11 @@ import {
   shouldResetCycleProgress,
   type ActivityProgressAnimation,
 } from './activityProgressCard.utils';
+import { ActivityTimelineFill } from './ActivityTimelineFill';
+import {
+  getActivityTimelineFrame,
+  type ActivityTimeline,
+} from './activityTimeline';
 
 export type { ActivityProgressAnimation } from './activityProgressCard.utils';
 
@@ -47,6 +52,7 @@ type ActivityProgressCardProps = {
   progressPercent?: number | null;
   progressTitle?: string;
   style?: CSSProperties;
+  timeline?: ActivityTimeline | null;
 };
 
 function joinClassNames(...classNames: Array<string | false | null | undefined>) {
@@ -81,8 +87,10 @@ export function ActivityProgressCard({
   progressPercent,
   progressTitle,
   style,
+  timeline,
 }: ActivityProgressCardProps) {
-  const progress = clampProgress(progressPercent);
+  const timelineFrame = timeline ? getActivityTimelineFrame(timeline) : null;
+  const progress = timelineFrame?.fillPercent ?? clampProgress(progressPercent);
   const previousProgressRef = useRef(progress);
   const progressFillRef = useRef<HTMLElement | null>(null);
 
@@ -93,6 +101,7 @@ export function ActivityProgressCard({
     previousProgressRef.current = progress;
 
     if (
+      timeline ||
       !progressFill ||
       !shouldResetCycleProgress({
         animation: progressAnimation,
@@ -113,10 +122,10 @@ export function ActivityProgressCard({
       window.cancelAnimationFrame(animationFrame);
       progressFill.classList.remove('activity-progress-card__fill--resetting');
     };
-  }, [progress, progressAnimation]);
+  }, [progress, progressAnimation, timeline]);
 
   const rootStyle =
-    progressPercent === null || progressPercent === undefined
+    !timeline && (progressPercent === null || progressPercent === undefined)
       ? style
       : ({
           ...style,
@@ -131,6 +140,7 @@ export function ActivityProgressCard({
         progressAnimation !== 'none'
           ? `activity-progress-card--${progressAnimation}-progress`
           : '',
+        timeline ? 'activity-progress-card--timeline-progress' : '',
         className,
       )}
       aria-label={ariaLabel}
@@ -188,7 +198,11 @@ export function ActivityProgressCard({
             aria-valuenow={progressLabel ? Math.round(progress) : undefined}
             title={progressTitle}
           >
-            <i ref={progressFillRef} aria-hidden="true" />
+            {timeline ? (
+              <ActivityTimelineFill as="i" timeline={timeline} />
+            ) : (
+              <i ref={progressFillRef} aria-hidden="true" />
+            )}
           </div>
 
           {pills.length > 0 ? (
