@@ -20,6 +20,15 @@ export const API_ENDPOINTS = {
     userCosmetics: (userId: string) => `/admin/cosmetics/users/${userId}`,
   },
 
+  economy: {
+    wallet: (characterId: string) =>
+      `/economy/characters/${characterId}/wallet`,
+    exchangeOffers: (characterId: string) =>
+      `/economy/characters/${characterId}/exchange-offers`,
+    exchanges: (characterId: string) =>
+      `/economy/characters/${characterId}/exchanges`,
+  },
+
   progression: {
     dashboard: (characterId: string) => `/progression/${characterId}`,
     tutorial: (characterId: string) => `/progression/${characterId}/tutorial`,
@@ -106,6 +115,15 @@ export const API_ENDPOINTS = {
     byCharacter: (characterId: string) => `/equipment/${characterId}`,
     equip: "/equipment/equip",
     unequip: "/equipment/unequip",
+    reinforce: "/equipment/reinforce",
+  },
+
+  pets: {
+    byCharacter: (characterId: string) => `/pets/characters/${characterId}`,
+    incubations: (characterId: string) =>
+      `/pets/characters/${characterId}/incubations`,
+    claim: (characterId: string, characterPetId: string) =>
+      `/pets/characters/${characterId}/incubations/${characterPetId}/claim`,
   },
 
   consumables: {

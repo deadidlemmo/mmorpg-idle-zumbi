@@ -3,8 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import {
   AutoCombatSessionStatus,
+  EconomyDirection,
+  EconomyResourceType,
   InventoryItemType,
   Item,
   ItemSlot,
@@ -15,6 +18,8 @@ import {
   calculateGatheringPrimaryBonus,
 } from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
 import { UpdatePotionConfigDto } from './dto/update-potion-config.dto';
 import { UseConsumableDto } from './dto/use-consumable.dto';
 
@@ -23,6 +28,7 @@ export class ConsumablesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async use(userId: string, useConsumableDto: UseConsumableDto) {
+    const operationId = randomUUID();
     const character = await this.prisma.character.findFirst({
       where: {
         id: useConsumableDto.characterId,
@@ -185,6 +191,20 @@ export class ConsumablesService {
           },
         });
       }
+
+      await recordEconomyEntry(tx, {
+        characterId: character.id,
+        direction: EconomyDirection.DEBIT,
+        resourceType: EconomyResourceType.ITEM,
+        itemId: item.id,
+        tier: item.tier,
+        quantity: 1,
+        reason: ECONOMY_REASONS.CONSUMABLE_USED,
+        referenceType: 'ConsumableUse',
+        referenceId: operationId,
+        idempotencyKey: `consumable:${operationId}:item`,
+        metadata: { effectiveHeal },
+      });
     });
 
     return {

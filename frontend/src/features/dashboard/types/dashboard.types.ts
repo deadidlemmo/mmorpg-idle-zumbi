@@ -1,60 +1,45 @@
-import type { ResolvedCharacterAppearance } from '../../cosmetics/types/cosmetics.types';
+import type { ResolvedCharacterAppearance } from "../../cosmetics/types/cosmetics.types";
 
 export type DashboardItemRarity =
-  | 'COMMON'
-  | 'UNCOMMON'
-  | 'RARE'
-  | 'EPIC'
-  | 'LEGENDARY';
+  "COMMON" | "UNCOMMON" | "RARE" | "EPIC" | "LEGENDARY";
 
 export type DashboardEquipmentSlotKey =
-  | 'mainHand'
-  | 'offHand'
-  | 'head'
-  | 'armor'
-  | 'pants'
-  | 'boots';
+  "mainHand" | "offHand" | "head" | "armor" | "pants" | "boots";
 
 export type DashboardItemSlot =
-  | 'MAIN_HAND'
-  | 'OFF_HAND'
-  | 'HEAD'
-  | 'ARMOR'
-  | 'PANTS'
-  | 'BOOTS'
-  | 'CONSUMABLE'
-  | 'MATERIAL';
+  | "MAIN_HAND"
+  | "OFF_HAND"
+  | "HEAD"
+  | "ARMOR"
+  | "PANTS"
+  | "BOOTS"
+  | "CONSUMABLE"
+  | "MATERIAL";
 
 export type DashboardInventoryItemType =
-  | 'EQUIPMENT'
-  | 'CONSUMABLE'
-  | 'MATERIAL';
+  "EQUIPMENT" | "CONSUMABLE" | "MATERIAL";
 
 export type DashboardCharacterStatus =
-  | 'IDLE'
-  | 'ACTIVE'
-  | 'AUTO_COMBAT'
-  | 'DEAD'
-  | 'IN_TOWN'
-  | 'BLOCKED'
-  | 'DELETED'
+  | "IDLE"
+  | "ACTIVE"
+  | "AUTO_COMBAT"
+  | "DEAD"
+  | "IN_TOWN"
+  | "BLOCKED"
+  | "DELETED"
   | string;
 
 export type DashboardAutoCombatSessionStatus =
-  | 'ACTIVE'
-  | 'STOPPED'
-  | 'FINISHED'
-  | 'DEFEATED'
-  | 'FAILED'
-  | 'CANCELLED'
+  | "ACTIVE"
+  | "STOPPED"
+  | "FINISHED"
+  | "DEFEATED"
+  | "FAILED"
+  | "CANCELLED"
   | string;
 
 export type DashboardActivityStatus =
-  | 'ACTIVE'
-  | 'FINISHED'
-  | 'CANCELLED'
-  | 'STOPPED'
-  | string;
+  "ACTIVE" | "FINISHED" | "CANCELLED" | "STOPPED" | string;
 
 export interface DashboardStats {
   strength: number;
@@ -167,6 +152,8 @@ export interface DashboardEquipmentItem {
 
   slot?: DashboardItemSlot | string | null;
   family?: string | null;
+  baseItemId?: string | null;
+  enhancementLevel?: number | null;
 
   iconUrl?: string | null;
   imageUrl?: string | null;
@@ -654,7 +641,6 @@ export interface DashboardCharacterViewModel {
   updatedAt?: string;
 }
 
-
 export interface DashboardIncursionSessionViewModel {
   id: string;
   characterId?: string | null;
@@ -720,11 +706,11 @@ export interface CharacterOverviewResponse {
 export interface DashboardCharacterOverviewResponse {
   character: DashboardCharacterViewModel;
 
-  stats?: CharacterOverviewResponse['stats'];
+  stats?: CharacterOverviewResponse["stats"];
   equipment?: DashboardEquipmentViewModel;
-  activity?: CharacterOverviewResponse['activity'];
-  progression?: CharacterOverviewResponse['progression'];
-  shortcuts?: CharacterOverviewResponse['shortcuts'];
+  activity?: CharacterOverviewResponse["activity"];
+  progression?: CharacterOverviewResponse["progression"];
+  shortcuts?: CharacterOverviewResponse["shortcuts"];
 }
 
 export interface DashboardCharacterStatusResponse {

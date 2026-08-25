@@ -14,6 +14,13 @@ import {
   WorldBossRewardType,
 } from '@prisma/client';
 import { getGatheringXpPerUnitForTier } from '../src/common/config/gathering.config';
+import {
+  buildReinforcedEquipmentStats,
+  EQUIPMENT_REINFORCEMENT_MAX_LEVEL,
+  PET_DEFINITIONS,
+  type EquipmentReinforcementSlot,
+  type EquipmentReinforcementStats,
+} from '../src/common/config/economy.config';
 import { classDefinitions } from './seed-data/classes.seed-data';
 import { consumableDefinitions } from './seed-data/consumables.seed-data';
 import {
@@ -249,7 +256,68 @@ async function upsertEquipmentItem(params: {
     maxTier: null,
 
     isCraftable: data.isCraftable ?? true,
+    baseItemId: null,
+    enhancementLevel: 0,
   });
+}
+
+async function upsertEquipmentReinforcementVariants(baseItem: Item) {
+  if (
+    baseItem.tier < 1 ||
+    baseItem.tier > 5 ||
+    baseItem.slot === ItemSlot.MATERIAL ||
+    baseItem.slot === ItemSlot.CONSUMABLE
+  ) {
+    return;
+  }
+
+  const baseStats: EquipmentReinforcementStats = {
+    strengthBonus: baseItem.strengthBonus,
+    vitalityBonus: baseItem.vitalityBonus,
+    agilityBonus: baseItem.agilityBonus,
+    precisionBonus: baseItem.precisionBonus,
+    techniqueBonus: baseItem.techniqueBonus,
+    willpowerBonus: baseItem.willpowerBonus,
+  };
+
+  for (let level = 1; level <= EQUIPMENT_REINFORCEMENT_MAX_LEVEL; level += 1) {
+    const stats = buildReinforcedEquipmentStats(
+      baseStats,
+      baseItem.tier,
+      baseItem.slot as EquipmentReinforcementSlot,
+      level,
+    );
+
+    await upsertItemByName({
+      name: `${baseItem.name} +${level}`,
+      description: `${baseItem.description ?? baseItem.name} Reforço garantido +${level}, obtido com materiais exclusivos de incursão.`,
+      tier: baseItem.tier,
+      rarity: baseItem.rarity,
+      slot: baseItem.slot,
+      family: baseItem.family,
+      classId: baseItem.classId,
+      mapId: baseItem.mapId,
+      slug: null,
+      materialOrigin: null,
+      materialSlot: null,
+      isGatheringMaterial: false,
+      requiredGatheringLevel: 1,
+      gatheringXpPerUnit: 0,
+      baseGatheringRatePerHour: null,
+      ...stats,
+      healFlat: 0,
+      healPercent: 0,
+      usableInCombat: false,
+      usableOutOfCombat: false,
+      minTier: null,
+      maxTier: null,
+      isSellable: false,
+      isTradable: false,
+      isCraftable: false,
+      baseItemId: baseItem.id,
+      enhancementLevel: level,
+    });
+  }
 }
 
 async function upsertMaterialItem(params: {
@@ -445,6 +513,54 @@ async function upsertSubMapEncounter(params: {
   });
 }
 
+async function ensureIncursionSeedItem(params: {
+  name: string;
+  tier: number;
+  rarity?: Rarity | null;
+  mapId: string;
+}) {
+  return upsertItemByName({
+    name: params.name,
+    slug: params.name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, ''),
+    description:
+      'Liga de reforço recuperada exclusivamente em incursões. É consumida para elevar equipamentos até +3.',
+    tier: params.tier,
+    rarity: params.rarity ?? getRarityByTier(params.tier),
+    slot: ItemSlot.MATERIAL,
+    family: 'Material de Reforço',
+    classId: null,
+    mapId: params.mapId,
+    materialOrigin: null,
+    materialSlot: null,
+    isGatheringMaterial: false,
+    requiredGatheringLevel: 1,
+    gatheringXpPerUnit: 0,
+    baseGatheringRatePerHour: null,
+    strengthBonus: 0,
+    vitalityBonus: 0,
+    agilityBonus: 0,
+    precisionBonus: 0,
+    techniqueBonus: 0,
+    willpowerBonus: 0,
+    healFlat: 0,
+    healPercent: 0,
+    usableInCombat: false,
+    usableOutOfCombat: false,
+    minTier: null,
+    maxTier: null,
+    isSellable: false,
+    isTradable: false,
+    isCraftable: false,
+    baseItemId: null,
+    enhancementLevel: 0,
+  });
+}
+
 async function upsertIncursion(params: {
   data: IncursionSeedData;
   mapId: string;
@@ -499,9 +615,21 @@ async function upsertIncursion(params: {
   });
 
   for (const [index, loot] of data.lootTable.entries()) {
-    const item = loot.itemName
+    let item = loot.itemName
       ? await prisma.item.findUnique({ where: { name: loot.itemName } })
       : null;
+
+    if (
+      loot.itemName?.startsWith('Fragmento de Reforço T') &&
+      !item
+    ) {
+      item = await ensureIncursionSeedItem({
+        name: loot.itemName,
+        tier: data.tier,
+        rarity: loot.rarity,
+        mapId,
+      });
+    }
 
     if (loot.itemName && !item) {
       throw new Error(
@@ -520,6 +648,7 @@ async function upsertIncursion(params: {
         incursionId: incursion.id,
         rewardType: loot.rewardType,
         itemId: item?.id ?? null,
+        currency: loot.currency ?? null,
         chance: Math.max(0, Math.min(100, loot.chance)),
         minQuantity: Math.max(0, loot.minQuantity),
         maxQuantity: Math.max(0, loot.maxQuantity),
@@ -555,7 +684,7 @@ async function ensureWorldBossSeedItem(params: {
       .replace(/^-|-$/g, ''),
     description:
       params.rewardType === WorldBossRewardType.PET_EGG
-        ? 'Casulo biológico raro obtido em Ameaças Globais. Futuramente poderá originar um companheiro infectado controlado.'
+        ? 'Casulo biológico raro obtido em Ameaças Globais. Pode ser incubado para originar um companheiro infectado controlado.'
         : 'Fragmento mutante coletado após conter uma Ameaça Global.',
     tier: params.tier,
     rarity: params.rarity ?? getRarityByTier(params.tier),
@@ -582,7 +711,52 @@ async function ensureWorldBossSeedItem(params: {
     minTier: null,
     maxTier: null,
     isCraftable: false,
+    baseItemId: null,
+    enhancementLevel: 0,
   });
+}
+
+async function upsertPetDefinitions() {
+  for (const [index, definition] of PET_DEFINITIONS.entries()) {
+    const cocoonItem = await prisma.item.findUnique({
+      where: { name: definition.cocoonItemName },
+    });
+
+    if (!cocoonItem) {
+      throw new Error(
+        `Casulo ${definition.cocoonItemName} não encontrado para o pet ${definition.name}.`,
+      );
+    }
+
+    await prisma.petDefinition.upsert({
+      where: { key: definition.key },
+      update: {
+        name: definition.name,
+        description: definition.description,
+        tier: definition.tier,
+        rarity: definition.rarity,
+        cocoonItemId: cocoonItem.id,
+        incubationSeconds: definition.incubationSeconds,
+        fragmentCost: definition.fragmentCost,
+        goldCost: definition.goldCost,
+        isActive: true,
+        sortOrder: index,
+      },
+      create: {
+        key: definition.key,
+        name: definition.name,
+        description: definition.description,
+        tier: definition.tier,
+        rarity: definition.rarity,
+        cocoonItemId: cocoonItem.id,
+        incubationSeconds: definition.incubationSeconds,
+        fragmentCost: definition.fragmentCost,
+        goldCost: definition.goldCost,
+        isActive: true,
+        sortOrder: index,
+      },
+    });
+  }
 }
 
 async function upsertWorldBoss(params: {
@@ -684,6 +858,7 @@ async function upsertWorldBoss(params: {
         worldBossId: worldBoss.id,
         rewardType: reward.rewardType,
         itemId: item?.id ?? null,
+        currency: reward.currency ?? null,
         minQuantity: Math.max(0, reward.minQuantity),
         maxQuantity: Math.max(0, reward.maxQuantity),
         chance: Math.max(0, Math.min(100, reward.chance)),
@@ -1349,6 +1524,10 @@ async function main() {
     });
 
     itemsByName.set(item.name, item);
+
+    if (equipmentDefinition.tier >= 1 && equipmentDefinition.tier <= 5) {
+      await upsertEquipmentReinforcementVariants(item);
+    }
   }
 
   for (const materialDefinition of materialDefinitions) {
@@ -1412,6 +1591,8 @@ async function main() {
       mapId: gameMap.id,
     });
   }
+
+  await upsertPetDefinitions();
 
   console.log('Criando/atualizando incursões e loot tables...');
 

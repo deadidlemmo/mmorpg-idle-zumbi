@@ -20,6 +20,7 @@ import {
 } from "../../auto-combat/assets/auto-combat-map-assets";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
+import { ResourceCenterShortcut } from "../../economy/components/ResourceCenterShortcut";
 import "../../dashboard/dashboard.css";
 import "../../gathering/styles/gathering.css";
 import type {
@@ -155,6 +156,7 @@ function getRewardTypeLabel(rewardType: IncursionLootPreview["rewardType"]) {
   const labels: Record<IncursionLootPreview["rewardType"], string> = {
     XP: "EXP",
     GOLD: "Gold",
+    CURRENCY: "Ficha",
     MATERIAL: "Material",
     CONSUMABLE: "Consumível",
     EQUIPMENT: "Equipamento",
@@ -167,6 +169,11 @@ function getRewardTypeLabel(rewardType: IncursionLootPreview["rewardType"]) {
 function getLootName(loot: IncursionLootPreview) {
   if (loot.rewardType === "XP") return "EXP";
   if (loot.rewardType === "GOLD") return "Gold";
+  if (loot.rewardType === "CURRENCY") {
+    return loot.currency === "WORLD_BOSS_FRAGMENT"
+      ? "Fragmento de Ameaça"
+      : "Ficha de Incursão";
+  }
 
   return loot.item?.name?.trim() || getRewardTypeLabel(loot.rewardType);
 }
@@ -175,7 +182,12 @@ function getLootSubtitle(loot: IncursionLootPreview) {
   const rarity = loot.item?.rarity ?? loot.rarity;
 
   if (rarity) return rarity;
-  if (loot.rewardType === "XP" || loot.rewardType === "GOLD") return null;
+  if (
+    loot.rewardType === "XP" ||
+    loot.rewardType === "GOLD" ||
+    loot.rewardType === "CURRENCY"
+  )
+    return null;
 
   const typeLabel = getRewardTypeLabel(loot.rewardType);
   const name = getLootName(loot);
@@ -191,6 +203,7 @@ function getLootImageUrl(loot: IncursionLootPreview) {
     return EXP_ICON_URL ?? loot.iconUrl ?? loot.imageUrl ?? null;
   }
   if (loot.rewardType === "GOLD") return goldIcon;
+  if (loot.rewardType === "CURRENCY") return null;
 
   return (
     loot.iconUrl ??
@@ -206,6 +219,9 @@ function getLootInitials(loot: IncursionLootPreview) {
 
   if (loot.rewardType === "XP") return "XP";
   if (loot.rewardType === "GOLD") return "G";
+  if (loot.rewardType === "CURRENCY") {
+    return loot.currency === "WORLD_BOSS_FRAGMENT" ? "FA" : "FI";
+  }
 
   return (
     name
@@ -220,6 +236,7 @@ function getLootInitials(loot: IncursionLootPreview) {
 function getLootFallbackGlyph(loot: IncursionLootPreview) {
   if (loot.rewardType === "XP") return "✦";
   if (loot.rewardType === "GOLD") return "";
+  if (loot.rewardType === "CURRENCY") return "◆";
   if (loot.rewardType === "EQUIPMENT") return "◇";
   if (loot.rewardType === "CONSUMABLE") return "+";
   if (loot.rewardType === "MATERIAL") return "▥";
@@ -920,6 +937,10 @@ export function IncursionsPage() {
                 )}
               </div>
             </section>
+            <ResourceCenterShortcut
+              characterId={characterId}
+              source="INCURSION"
+            />
           </aside>
         </section>
 

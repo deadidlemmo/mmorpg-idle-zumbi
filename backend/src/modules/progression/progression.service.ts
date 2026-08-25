@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  EconomyDirection,
+  EconomyResourceType,
   IncursionSessionStatus,
   InventoryItemType,
   ItemSlot,
@@ -18,6 +20,8 @@ import {
   PRODUCT_MILESTONE_KEYS,
 } from '../../common/audit/product-events.constants';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
 import { UpdateTutorialDto } from './dto/update-tutorial.dto';
 
 const TUTORIAL_STEPS = [
@@ -512,6 +516,31 @@ export class ProgressionService {
           },
         });
 
+        if (assignment.mission.rewardXp > 0) {
+          await recordEconomyEntry(tx, {
+            characterId,
+            direction: EconomyDirection.CREDIT,
+            resourceType: EconomyResourceType.XP,
+            quantity: assignment.mission.rewardXp,
+            reason: ECONOMY_REASONS.MISSION_XP_REWARD,
+            referenceType: 'CharacterMission',
+            referenceId: assignment.id,
+            idempotencyKey: `mission:${assignment.id}:reward:xp`,
+          });
+        }
+        if (assignment.mission.rewardGold > 0) {
+          await recordEconomyEntry(tx, {
+            characterId,
+            direction: EconomyDirection.CREDIT,
+            resourceType: EconomyResourceType.GOLD,
+            quantity: assignment.mission.rewardGold,
+            reason: ECONOMY_REASONS.MISSION_GOLD_REWARD,
+            referenceType: 'CharacterMission',
+            referenceId: assignment.id,
+            idempotencyKey: `mission:${assignment.id}:reward:gold`,
+          });
+        }
+
         return {
           message: 'Recompensa da missao resgatada.',
           rewardXp: assignment.mission.rewardXp,
@@ -553,6 +582,19 @@ export class ProgressionService {
         where: { id: characterId },
         data: { cash: { increment: achievement.achievement.rewardCash } },
       });
+
+      if (achievement.achievement.rewardCash > 0) {
+        await recordEconomyEntry(tx, {
+          characterId,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.CASH,
+          quantity: achievement.achievement.rewardCash,
+          reason: ECONOMY_REASONS.ACHIEVEMENT_CASH_REWARD,
+          referenceType: 'CharacterAchievement',
+          referenceId: achievement.id,
+          idempotencyKey: `achievement:${achievement.id}:reward:cash`,
+        });
+      }
 
       return {
         message: 'Recompensa da conquista resgatada.',

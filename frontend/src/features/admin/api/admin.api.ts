@@ -286,11 +286,48 @@ export interface AdminProductMetrics {
       materialStock: number;
       netMaterialFlow: number;
     }>;
+    ledger: {
+      definition: string;
+      trackingStartedAt: string | null;
+      entries: number;
+      gold: AdminEconomyResourceFlow & { sinkRatioPercent: number };
+      cash: AdminEconomyResourceFlow;
+      xp: AdminEconomyResourceFlow;
+      itemTiers: Array<AdminEconomyResourceFlow & { tier: number }>;
+      currencies: Array<{
+        currency: "INCURSION_TOKEN" | "WORLD_BOSS_FRAGMENT";
+        label: string;
+        tier: number;
+        credited: number;
+        debited: number;
+        balance: number;
+      }>;
+      topReasons: Array<{
+        reason: string;
+        label: string;
+        direction: "CREDIT" | "DEBIT";
+        resourceType: "GOLD" | "CASH" | "XP" | "ITEM" | "CURRENCY";
+        quantity: number;
+        entries: number;
+      }>;
+    };
+    progressionOutputs: {
+      reinforcementOperations: number;
+      incubationsStarted: number;
+      activePetIncubations: number;
+      collectedPets: number;
+    };
   };
   coverage: {
     milestoneTrackingStartedAt: string | null;
     usesHistoricalFallback: boolean;
   };
+}
+
+interface AdminEconomyResourceFlow {
+  credited: number;
+  debited: number;
+  net: number;
 }
 
 export async function getAdminSummary() {

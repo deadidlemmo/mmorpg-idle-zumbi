@@ -4,10 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import {
   AutoCombatHuntBatchStatus,
   AutoCombatSessionStatus,
   CharacterStatus,
+  EconomyDirection,
+  EconomyResourceType,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import {
@@ -15,6 +18,8 @@ import {
   calculateGatheringPrimaryBonus,
 } from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
 
 const FREE_TREATMENT_SECONDS = 30 * 60;
 const PRIVATE_DOCTOR_BASE_GOLD = 10;
@@ -151,6 +156,7 @@ export class InfirmaryService {
   }
 
   async instantTreatment(userId: string, characterId: string) {
+    const operationId = randomUUID();
     const character = await this.findResolvedCharacter(userId, characterId);
 
     await this.activityGuard.ensureCanUseInfirmary({
@@ -204,12 +210,29 @@ export class InfirmaryService {
         );
       }
 
-      return tx.character.findFirst({
+      const updatedCharacter = await tx.character.findFirst({
         where: {
           id: character.id,
           userId,
         },
       });
+
+      if (updatedCharacter) {
+        await recordEconomyEntry(tx, {
+          characterId: character.id,
+          direction: EconomyDirection.DEBIT,
+          resourceType: EconomyResourceType.GOLD,
+          quantity: cost,
+          balanceAfter: updatedCharacter.gold,
+          reason: ECONOMY_REASONS.INFIRMARY_INSTANT_TREATMENT,
+          referenceType: 'InfirmaryTreatment',
+          referenceId: operationId,
+          idempotencyKey: `infirmary:${operationId}:gold`,
+          metadata: { missingHp },
+        });
+      }
+
+      return updatedCharacter;
     });
 
     if (!result) {

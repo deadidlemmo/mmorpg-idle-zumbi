@@ -10,19 +10,29 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EquipItemDto } from './dto/equip-item.dto';
 import { UnequipItemDto } from './dto/unequip-item.dto';
+import { ReinforceEquipmentDto } from './dto/reinforce-equipment.dto';
+import { EquipmentReinforcementService } from './equipment-reinforcement.service';
 import { EquipmentService } from './equipment.service';
 
 @Controller('equipment')
 @UseGuards(JwtAuthGuard)
 export class EquipmentController {
-  constructor(private readonly equipmentService: EquipmentService) {}
+  constructor(
+    private readonly equipmentService: EquipmentService,
+    private readonly reinforcementService: EquipmentReinforcementService,
+  ) {}
 
   @Get(':characterId')
-  findByCharacter(
+  async findByCharacter(
     @Req() request: { user: { id: string } },
     @Param('characterId') characterId: string,
   ) {
-    return this.equipmentService.findByCharacter(request.user.id, characterId);
+    const [equipment, reinforcement] = await Promise.all([
+      this.equipmentService.findByCharacter(request.user.id, characterId),
+      this.reinforcementService.getState(request.user.id, characterId),
+    ]);
+
+    return { ...equipment, reinforcement };
   }
 
   @Post('equip')
@@ -39,5 +49,16 @@ export class EquipmentController {
     @Body() unequipItemDto: UnequipItemDto,
   ) {
     return this.equipmentService.unequip(request.user.id, unequipItemDto);
+  }
+
+  @Post('reinforce')
+  reinforce(
+    @Req() request: { user: { id: string } },
+    @Body() reinforceEquipmentDto: ReinforceEquipmentDto,
+  ) {
+    return this.reinforcementService.reinforce(
+      request.user.id,
+      reinforceEquipmentDto,
+    );
   }
 }

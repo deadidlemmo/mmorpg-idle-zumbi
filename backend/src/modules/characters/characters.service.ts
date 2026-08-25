@@ -10,6 +10,8 @@ import {
   AutoCombatSessionPhase,
   AutoCombatSessionStatus,
   CharacterStatus,
+  EconomyDirection,
+  EconomyResourceType,
   IncursionSessionStatus,
   InventoryItemType,
   ItemSlot,
@@ -47,6 +49,8 @@ import {
 } from '../../common/audit/product-events.constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CosmeticsService } from '../cosmetics/cosmetics.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
 import { CreateCharacterDto } from './dto/create-character.dto';
 
 const MAX_CHARACTERS_PER_USER = 2;
@@ -327,7 +331,7 @@ export class CharactersService {
 
       const initialMaxHp = stats.derivedCombatStats.maxHp;
 
-      return tx.character.create({
+      const character = await tx.character.create({
         data: {
           name: characterName,
           userId,
@@ -448,6 +452,49 @@ export class CharactersService {
           },
         },
       });
+
+      await recordEconomyEntry(tx, {
+        characterId: character.id,
+        direction: EconomyDirection.CREDIT,
+        resourceType: EconomyResourceType.GOLD,
+        quantity: INITIAL_CHARACTER_GOLD,
+        balanceAfter: INITIAL_CHARACTER_GOLD,
+        reason: ECONOMY_REASONS.CHARACTER_INITIAL_GOLD,
+        referenceType: 'Character',
+        referenceId: character.id,
+        idempotencyKey: `character:${character.id}:initial:gold`,
+      });
+
+      for (const item of initialEquipmentItems) {
+        await recordEconomyEntry(tx, {
+          characterId: character.id,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.ITEM,
+          itemId: item.id,
+          tier: item.tier,
+          quantity: 1,
+          reason: ECONOMY_REASONS.CHARACTER_STARTER_ITEM,
+          referenceType: 'Character',
+          referenceId: character.id,
+          idempotencyKey: `character:${character.id}:initial:item:${item.id}`,
+          metadata: { starterTier: item.tier },
+        });
+      }
+      await recordEconomyEntry(tx, {
+        characterId: character.id,
+        direction: EconomyDirection.CREDIT,
+        resourceType: EconomyResourceType.ITEM,
+        itemId: starterPotion.id,
+        tier: starterPotion.tier,
+        quantity: STARTER_POTION_KIT_QUANTITY,
+        reason: ECONOMY_REASONS.CHARACTER_STARTER_ITEM,
+        referenceType: 'Character',
+        referenceId: character.id,
+        idempotencyKey: `character:${character.id}:initial:item:${starterPotion.id}`,
+        metadata: { starterTier: starterPotion.tier },
+      });
+
+      return character;
     });
 
     this.auditService.recordMilestoneSafely({
@@ -2527,6 +2574,8 @@ export class CharactersService {
       techniqueBonus: item.techniqueBonus,
       willpowerBonus: item.willpowerBonus,
       isCraftable: item.isCraftable,
+      baseItemId: item.baseItemId,
+      enhancementLevel: item.enhancementLevel,
     };
   }
 
@@ -2612,6 +2661,8 @@ export class CharactersService {
           precisionBonus: inventoryItem.item.precisionBonus,
           techniqueBonus: inventoryItem.item.techniqueBonus,
           willpowerBonus: inventoryItem.item.willpowerBonus,
+          baseItemId: inventoryItem.item.baseItemId,
+          enhancementLevel: inventoryItem.item.enhancementLevel,
         })),
     };
   }

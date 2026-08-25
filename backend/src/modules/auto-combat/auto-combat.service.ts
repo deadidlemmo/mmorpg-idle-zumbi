@@ -11,6 +11,8 @@ import {
   AutoCombatSessionPhase,
   AutoCombatSessionStatus,
   CharacterStatus,
+  EconomyDirection,
+  EconomyResourceType,
   InventoryItemType,
   ItemSlot,
   Prisma,
@@ -69,6 +71,11 @@ import {
   scaleAutoCombatGatheringBonus,
 } from '../../common/utils/auto-combat-balance.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import {
+  accumulateEconomyEntry,
+  getEconomyHourBucket,
+} from '../economy/economy-ledger';
 import { AutoCombatGateway } from './auto-combat.gateway';
 import { buildAutoCombatHuntingTimeline } from './auto-combat-hunting-timeline';
 import { buildAutoCombatRealtimeStatusPayload } from './auto-combat-realtime-payload';
@@ -6369,6 +6376,19 @@ export class AutoCombatService implements OnModuleDestroy {
         },
       });
 
+      if (result.xpGained > 0) {
+        await accumulateEconomyEntry(tx, {
+          characterId: session.characterId,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.XP,
+          quantity: result.xpGained,
+          reason: ECONOMY_REASONS.AUTO_COMBAT_LOOT,
+          referenceType: 'AutoCombatSession',
+          referenceId: session.id,
+          idempotencyKey: `auto-combat:${session.id}:hour:${getEconomyHourBucket(result.newLastProcessedAt)}:xp`,
+        });
+      }
+
       if (result.finalStatus === AutoCombatSessionStatus.DEFEATED) {
         await this.activityGuard.stopActivitiesForDefeatedCharacter({
           characterId: session.characterId,
@@ -6425,6 +6445,19 @@ export class AutoCombatService implements OnModuleDestroy {
             itemId: loot.itemId,
             quantity: loot.quantity,
           },
+        });
+
+        await accumulateEconomyEntry(tx, {
+          characterId: session.characterId,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.ITEM,
+          itemId: loot.itemId,
+          tier: item.tier,
+          quantity: loot.quantity,
+          reason: ECONOMY_REASONS.AUTO_COMBAT_LOOT,
+          referenceType: 'AutoCombatSession',
+          referenceId: session.id,
+          idempotencyKey: `auto-combat:${session.id}:hour:${getEconomyHourBucket(result.newLastProcessedAt)}:loot:${loot.itemId}`,
         });
       }
 
@@ -6526,6 +6559,7 @@ export class AutoCombatService implements OnModuleDestroy {
               itemId: result.potionItemId,
             },
           },
+          include: { item: { select: { tier: true } } },
         });
 
         if (potionInventoryItem) {
@@ -6547,6 +6581,22 @@ export class AutoCombatService implements OnModuleDestroy {
               },
             });
           }
+
+          await accumulateEconomyEntry(tx, {
+            characterId: session.characterId,
+            direction: EconomyDirection.DEBIT,
+            resourceType: EconomyResourceType.ITEM,
+            itemId: result.potionItemId,
+            tier: potionInventoryItem.item.tier,
+            quantity: Math.min(
+              potionInventoryItem.quantity,
+              result.potionsUsed,
+            ),
+            reason: ECONOMY_REASONS.AUTO_COMBAT_POTION_USED,
+            referenceType: 'AutoCombatSession',
+            referenceId: session.id,
+            idempotencyKey: `auto-combat:${session.id}:hour:${getEconomyHourBucket(result.newLastProcessedAt)}:potion:${result.potionItemId}`,
+          });
         }
       }
     });

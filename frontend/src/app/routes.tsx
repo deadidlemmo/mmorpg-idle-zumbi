@@ -142,6 +142,11 @@ const MerchantHubPage = lazy(() =>
     default: module.MerchantHubPage,
   })),
 );
+const ResourceCenterPage = lazy(() =>
+  import("../features/economy/pages/ResourceCenterPage").then((module) => ({
+    default: module.ResourceCenterPage,
+  })),
+);
 const VendorPage = lazy(() =>
   import("../features/vendor/pages/VendorPage").then((module) => ({
     default: module.VendorPage,
@@ -315,6 +320,8 @@ export function AppRoutes() {
             <Route path="appearance" element={<AppearancePage />} />
 
             <Route path="consumables" element={<MerchantHubPage />} />
+
+            <Route path="resources" element={<ResourceCenterPage />} />
 
             <Route path="consumables/:merchantId" element={<VendorPage />} />
 

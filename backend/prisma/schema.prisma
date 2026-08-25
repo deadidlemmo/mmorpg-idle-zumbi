@@ -154,10 +154,29 @@ enum IncursionDifficulty {
 enum IncursionRewardType {
   XP
   GOLD
+  CURRENCY
   MATERIAL
   CONSUMABLE
   EQUIPMENT
   ITEM
+}
+
+enum EconomyDirection {
+  CREDIT
+  DEBIT
+}
+
+enum EconomyResourceType {
+  GOLD
+  CASH
+  XP
+  ITEM
+  CURRENCY
+}
+
+enum EconomyCurrency {
+  INCURSION_TOKEN
+  WORLD_BOSS_FRAGMENT
 }
 
 enum IncursionSessionStatus {
@@ -200,11 +219,17 @@ enum WorldBossEventStatus {
 enum WorldBossRewardType {
   XP
   GOLD
+  CURRENCY
   MATERIAL
   CONSUMABLE
   EQUIPMENT
   ITEM
   PET_EGG
+}
+
+enum CharacterPetStatus {
+  INCUBATING
+  AVAILABLE
 }
 
 model User {
@@ -264,15 +289,15 @@ model PasswordResetToken {
 model AuditLog {
   id String @id @default(uuid())
 
-  actorUserId       String?
-  action            String
-  entityType        String
-  entityId          String?
-  deduplicationKey  String?  @unique
-  metadata          Json?
-  ipAddress         String?
-  userAgent         String?
-  createdAt         DateTime @default(now())
+  actorUserId      String?
+  action           String
+  entityType       String
+  entityId         String?
+  deduplicationKey String?  @unique
+  metadata         Json?
+  ipAddress        String?
+  userAgent        String?
+  createdAt        DateTime @default(now())
 
   actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
@@ -474,6 +499,9 @@ model Character {
   achievements              CharacterAchievement[]
   chatMessages              ChatMessage[]
   appearance                CharacterAppearance?
+  economyBalances           CharacterEconomyBalance[]
+  economyLedgerEntries      EconomyLedgerEntry[]
+  pets                      CharacterPet[]
 
   gatheringSkills CharacterGatheringSkill[]
   craftingSkill   CharacterCraftingSkill?
@@ -529,9 +557,9 @@ model Cosmetic {
   displayText  String? @db.VarChar(80)
   accentColor  String? @db.VarChar(16)
 
-  avatarPresentation  AvatarPresentation?
+  avatarPresentation   AvatarPresentation?
   avatarRepresentation AvatarRepresentation?
-  representationLabel String?              @db.VarChar(40)
+  representationLabel  String?               @db.VarChar(40)
 
   classId      String?
   collectionId String?
@@ -758,11 +786,17 @@ model Item {
 
   isCraftable Boolean @default(false)
 
+  baseItemId       String?
+  enhancementLevel Int     @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   class GameClass? @relation(fields: [classId], references: [id])
   map   GameMap?   @relation(fields: [mapId], references: [id])
+
+  baseItem            Item?  @relation("ItemEnhancementVariants", fields: [baseItemId], references: [id], onDelete: Restrict)
+  enhancementVariants Item[] @relation("ItemEnhancementVariants")
 
   inventoryItems InventoryItem[]
   bankItems      BankItem[]
@@ -780,6 +814,8 @@ model Item {
   incursionSessionRewards IncursionSessionReward[]
   worldBossRewards        WorldBossReward[]
   worldBossGrantedRewards WorldBossGrantedReward[]
+  economyLedgerEntries    EconomyLedgerEntry[]
+  petDefinition           PetDefinition?           @relation("PetCocoonItem")
 
   potionConfigs CharacterPotionConfig[] @relation("PotionConfigItem")
 
@@ -789,6 +825,7 @@ model Item {
 
   gatheringTargetSessions GatheringSession[] @relation("GatheringTargetMaterial")
 
+  @@unique([baseItemId, enhancementLevel])
   @@index([classId])
   @@index([mapId])
   @@index([tier])
@@ -804,6 +841,8 @@ model Item {
   @@index([isSellable])
   @@index([isTradable])
   @@index([isCraftable])
+  @@index([baseItemId])
+  @@index([enhancementLevel])
   @@index([minTier, maxTier])
   @@map("items")
 }
@@ -951,6 +990,58 @@ model InventoryItem {
   @@index([itemId])
   @@index([type])
   @@map("inventory_items")
+}
+
+model CharacterEconomyBalance {
+  id String @id @default(uuid())
+
+  characterId String
+  currency    EconomyCurrency
+  tier        Int
+  balance     Int             @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, currency, tier])
+  @@index([characterId])
+  @@index([currency, tier])
+  @@map("character_economy_balances")
+}
+
+model EconomyLedgerEntry {
+  id String @id @default(uuid())
+
+  characterId String
+  itemId      String?
+
+  direction    EconomyDirection
+  resourceType EconomyResourceType
+  currency     EconomyCurrency?
+  tier         Int?
+  quantity     Int
+  balanceAfter Int?
+
+  reason         String  @db.VarChar(80)
+  referenceType  String? @db.VarChar(80)
+  referenceId    String? @db.VarChar(120)
+  idempotencyKey String  @unique @db.VarChar(220)
+  metadata       Json?
+
+  createdAt DateTime @default(now())
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  item      Item?     @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([characterId, createdAt])
+  @@index([resourceType, direction, createdAt])
+  @@index([currency, tier, createdAt])
+  @@index([itemId, createdAt])
+  @@index([reason, createdAt])
+  @@index([referenceType, referenceId])
+  @@map("economy_ledger_entries")
 }
 
 model BankItem {
@@ -1406,7 +1497,8 @@ model IncursionLootTable {
   incursionId String
   rewardType  IncursionRewardType
 
-  itemId String?
+  itemId   String?
+  currency EconomyCurrency?
 
   chance Int @default(100)
 
@@ -1427,6 +1519,7 @@ model IncursionLootTable {
   @@index([incursionId])
   @@index([rewardType])
   @@index([itemId])
+  @@index([currency])
   @@index([sortOrder])
   @@map("incursion_loot_tables")
 }
@@ -1580,6 +1673,7 @@ model IncursionSessionReward {
 
   rewardType IncursionRewardType
   itemId     String?
+  currency   EconomyCurrency?
 
   quantity Int     @default(0)
   rarity   Rarity?
@@ -1592,6 +1686,7 @@ model IncursionSessionReward {
   @@index([sessionId])
   @@index([rewardType])
   @@index([itemId])
+  @@index([currency])
   @@map("incursion_session_rewards")
 }
 
@@ -1735,7 +1830,8 @@ model WorldBossReward {
   worldBossId String
   rewardType  WorldBossRewardType
 
-  itemId String?
+  itemId   String?
+  currency EconomyCurrency?
 
   minQuantity Int @default(1)
   maxQuantity Int @default(1)
@@ -1759,6 +1855,7 @@ model WorldBossReward {
   @@index([worldBossId])
   @@index([rewardType])
   @@index([itemId])
+  @@index([currency])
   @@index([sortOrder])
   @@map("world_boss_rewards")
 }
@@ -1768,6 +1865,7 @@ model WorldBossGrantedReward {
 
   participantId String
   itemId        String?
+  currency      EconomyCurrency?
 
   rewardType WorldBossRewardType
   quantity   Int                 @default(0)
@@ -1781,5 +1879,60 @@ model WorldBossGrantedReward {
   @@index([participantId])
   @@index([rewardType])
   @@index([itemId])
+  @@index([currency])
   @@map("world_boss_granted_rewards")
+}
+
+model PetDefinition {
+  id          String @id @default(uuid())
+  key         String @unique @db.VarChar(80)
+  name        String @unique @db.VarChar(120)
+  description String
+
+  tier   Int
+  rarity Rarity
+
+  cocoonItemId String @unique
+
+  incubationSeconds Int
+  fragmentCost      Int
+  goldCost          Int
+
+  assetKey  String? @db.VarChar(120)
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cocoonItem    Item           @relation("PetCocoonItem", fields: [cocoonItemId], references: [id], onDelete: Restrict)
+  characterPets CharacterPet[]
+
+  @@index([tier, isActive, sortOrder])
+  @@map("pet_definitions")
+}
+
+model CharacterPet {
+  id String @id @default(uuid())
+
+  characterId     String
+  petDefinitionId String
+
+  status CharacterPetStatus @default(INCUBATING)
+
+  incubationRequestId String    @unique @db.VarChar(120)
+  incubationStartedAt DateTime  @default(now())
+  incubationEndsAt    DateTime
+  hatchedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  character     Character     @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  petDefinition PetDefinition @relation(fields: [petDefinitionId], references: [id], onDelete: Restrict)
+
+  @@unique([characterId, petDefinitionId])
+  @@index([characterId, status])
+  @@index([incubationEndsAt])
+  @@map("character_pets")
 }

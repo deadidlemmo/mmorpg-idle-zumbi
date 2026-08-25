@@ -1,4 +1,13 @@
-import { IncursionDifficulty, IncursionRewardType, Rarity } from '@prisma/client';
+import {
+  EconomyCurrency,
+  IncursionDifficulty,
+  IncursionRewardType,
+  Rarity,
+} from '@prisma/client';
+import {
+  ECONOMY_ACTIVITY_REWARDS,
+  isEconomyLaunchTier,
+} from '../../src/common/config/economy.config';
 import type { IncursionSeedData } from '../seed-types';
 
 const MIN_INCURSION_DURATION_SECONDS = 1800;
@@ -47,7 +56,7 @@ function getDifficulty(tier: number, index: number) {
 
 function buildLoot(tier: number, index: number): IncursionSeedData['lootTable'] {
   const balance = tierBalance[tier];
-  return [
+  const lootTable: IncursionSeedData['lootTable'] = [
     {
       rewardType: IncursionRewardType.XP,
       chance: 100,
@@ -66,6 +75,34 @@ function buildLoot(tier: number, index: number): IncursionSeedData['lootTable'] 
       sortOrder: 2,
     },
   ];
+
+  if (isEconomyLaunchTier(tier)) {
+    const tokenReward = ECONOMY_ACTIVITY_REWARDS.incursionTokens[tier];
+    const reinforcementReward =
+      ECONOMY_ACTIVITY_REWARDS.incursionReinforcementFragments[tier][index];
+    lootTable.push({
+      rewardType: IncursionRewardType.CURRENCY,
+      currency: EconomyCurrency.INCURSION_TOKEN,
+      chance: 100,
+      minQuantity: tokenReward.min,
+      maxQuantity: tokenReward.max,
+      guaranteed: true,
+      rarity: Rarity.UNCOMMON,
+      sortOrder: 3,
+    });
+    lootTable.push({
+      rewardType: IncursionRewardType.MATERIAL,
+      itemName: `Fragmento de Reforço T${tier}`,
+      chance: 100,
+      minQuantity: reinforcementReward.min,
+      maxQuantity: reinforcementReward.max,
+      guaranteed: true,
+      rarity: tier >= 5 ? Rarity.RARE : Rarity.UNCOMMON,
+      sortOrder: 4,
+    });
+  }
+
+  return lootTable;
 }
 
 export const incursionDefinitions: IncursionSeedData[] = mapIncursions.flatMap(

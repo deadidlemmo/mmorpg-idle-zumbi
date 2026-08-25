@@ -522,6 +522,187 @@ export function AdminPage() {
           </div>
         </div>
 
+        {productMetrics ? (
+          <div className="admin-ledger" aria-label="Ledger econômico exato">
+            <header>
+              <div>
+                <strong>Ledger econômico</strong>
+                <span>Movimentos confirmados no período selecionado</span>
+              </div>
+              <time>
+                Cobertura desde{" "}
+                {formatDate(productMetrics.economy.ledger.trackingStartedAt)}
+              </time>
+            </header>
+
+            <div className="admin-ledger-kpis">
+              <div>
+                <span>Movimentos</span>
+                <strong>
+                  {productMetrics.economy.ledger.entries.toLocaleString(
+                    "pt-BR",
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Gold criado</span>
+                <strong>
+                  {productMetrics.economy.ledger.gold.credited.toLocaleString(
+                    "pt-BR",
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Gold destruído</span>
+                <strong>
+                  {productMetrics.economy.ledger.gold.debited.toLocaleString(
+                    "pt-BR",
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Relação de sumidouro</span>
+                <strong>
+                  {productMetrics.economy.ledger.gold.sinkRatioPercent}%
+                </strong>
+              </div>
+            </div>
+
+            <div className="admin-ledger-kpis admin-ledger-kpis--outputs">
+              <div>
+                <span>Reforços concluídos</span>
+                <strong>
+                  {productMetrics.economy.progressionOutputs.reinforcementOperations.toLocaleString(
+                    "pt-BR",
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Incubações iniciadas</span>
+                <strong>
+                  {productMetrics.economy.progressionOutputs.incubationsStarted.toLocaleString(
+                    "pt-BR",
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Na incubadora</span>
+                <strong>
+                  {productMetrics.economy.progressionOutputs.activePetIncubations.toLocaleString(
+                    "pt-BR",
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Pets coletados</span>
+                <strong>
+                  {productMetrics.economy.progressionOutputs.collectedPets.toLocaleString(
+                    "pt-BR",
+                  )}
+                </strong>
+              </div>
+            </div>
+
+            <div className="admin-ledger-columns">
+              <div>
+                <h3>Itens por tier</h3>
+                <div className="admin-table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Tier</th>
+                        <th>Entrada</th>
+                        <th>Saída</th>
+                        <th>Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {productMetrics.economy.ledger.itemTiers.map((tier) => (
+                        <tr key={tier.tier}>
+                          <td>
+                            <strong>T{tier.tier}</strong>
+                          </td>
+                          <td>{tier.credited.toLocaleString("pt-BR")}</td>
+                          <td>{tier.debited.toLocaleString("pt-BR")}</td>
+                          <td
+                            className={
+                              tier.net < 0 ? "is-negative" : "is-positive"
+                            }
+                          >
+                            {tier.net > 0 ? "+" : ""}
+                            {tier.net.toLocaleString("pt-BR")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <h3>Carteiras T1</h3>
+                <div className="admin-table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Moeda</th>
+                        <th>Entrada</th>
+                        <th>Saída</th>
+                        <th>Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {productMetrics.economy.ledger.currencies
+                        .filter((currency) => currency.tier === 1)
+                        .map((currency) => (
+                          <tr key={currency.currency}>
+                            <td>{currency.label}</td>
+                            <td>{currency.credited.toLocaleString("pt-BR")}</td>
+                            <td>{currency.debited.toLocaleString("pt-BR")}</td>
+                            <td>{currency.balance.toLocaleString("pt-BR")}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <h3>Maiores movimentos</h3>
+                <ol className="admin-ledger-reasons">
+                  {productMetrics.economy.ledger.topReasons.length ? (
+                    productMetrics.economy.ledger.topReasons.map((entry) => (
+                      <li
+                        key={[
+                          entry.reason,
+                          entry.direction,
+                          entry.resourceType,
+                        ].join(":")}
+                      >
+                        <span>{entry.label}</span>
+                        <strong
+                          className={
+                            entry.direction === "DEBIT"
+                              ? "is-negative"
+                              : "is-positive"
+                          }
+                        >
+                          {entry.direction === "DEBIT" ? "-" : "+"}
+                          {entry.quantity.toLocaleString("pt-BR")}
+                        </strong>
+                      </li>
+                    ))
+                  ) : (
+                    <li>
+                      <span>Nenhum movimento exato no período.</span>
+                    </li>
+                  )}
+                </ol>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <p className="admin-product-note">
           D1 e D7 consideram login na janela exata de 24 horas. Marcos
           anteriores ao rastreamento dedicado usam o histórico operacional
@@ -930,10 +1111,11 @@ export function AdminPage() {
                   : "Sem dados"}
               </dd>
               <span>
-                Média {formatBytes(autoCombatMetrics?.averageSocketPayloadBytes ?? 0)} ·{" "}
-                {formatBytes(
-                  autoCombatRates?.socketPayloadBytesPerSecond ?? 0,
-                )}/s antes da compressão
+                Média{" "}
+                {formatBytes(autoCombatMetrics?.averageSocketPayloadBytes ?? 0)}{" "}
+                ·{" "}
+                {formatBytes(autoCombatRates?.socketPayloadBytesPerSecond ?? 0)}
+                /s antes da compressão
               </span>
             </div>
           </dl>

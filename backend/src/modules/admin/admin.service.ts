@@ -3,11 +3,22 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ActivityStatus, ItemSlot, Prisma } from '@prisma/client';
+import {
+  ActivityStatus,
+  EconomyCurrency,
+  EconomyDirection,
+  EconomyResourceType,
+  ItemSlot,
+  Prisma,
+} from '@prisma/client';
 import { AuditService } from '../../common/audit/audit.service';
 import { PRODUCT_EVENT_ACTIONS } from '../../common/audit/product-events.constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ObservabilityService } from '../../common/observability/observability.service';
+import {
+  ECONOMY_REASONS,
+  getEconomyReasonLabel,
+} from '../economy/economy.constants';
 import { ListAdminUsersDto } from './dto/list-admin-users.dto';
 import { UpdateUserSuspensionDto } from './dto/update-user-suspension.dto';
 
@@ -185,6 +196,12 @@ export class AdminService {
       inventoryStock,
       bankStock,
       trackingStart,
+      ledgerFlow,
+      ledgerReasons,
+      walletBalances,
+      ledgerTrackingStart,
+      activePetIncubations,
+      collectedPets,
     ] = await Promise.all([
       this.prisma.auditLog.findMany({
         where: {
@@ -290,6 +307,49 @@ export class AdminService {
         },
         orderBy: { createdAt: 'asc' },
         select: { createdAt: true },
+      }),
+      this.prisma.economyLedgerEntry.groupBy({
+        by: ['direction', 'resourceType', 'currency', 'tier'],
+        where: {
+          createdAt: { gte: periodStart, lte: now },
+          character: { user: PRODUCT_USER_WHERE },
+        },
+        _sum: { quantity: true },
+        _count: { _all: true },
+      }),
+      this.prisma.economyLedgerEntry.groupBy({
+        by: ['reason', 'direction', 'resourceType'],
+        where: {
+          createdAt: { gte: periodStart, lte: now },
+          character: { user: PRODUCT_USER_WHERE },
+        },
+        _sum: { quantity: true },
+        _count: { _all: true },
+      }),
+      this.prisma.characterEconomyBalance.groupBy({
+        by: ['currency', 'tier'],
+        where: {
+          tier: { gte: 1, lte: 5 },
+          character: { user: PRODUCT_USER_WHERE },
+        },
+        _sum: { balance: true },
+      }),
+      this.prisma.economyLedgerEntry.findFirst({
+        where: { character: { user: PRODUCT_USER_WHERE } },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true },
+      }),
+      this.prisma.characterPet.count({
+        where: {
+          status: 'INCUBATING',
+          character: { user: PRODUCT_USER_WHERE },
+        },
+      }),
+      this.prisma.characterPet.count({
+        where: {
+          status: 'AVAILABLE',
+          character: { user: PRODUCT_USER_WHERE },
+        },
       }),
     ]);
 
@@ -539,6 +599,109 @@ export class AdminService {
       tier.netMaterialFlow = tier.gatheredUnits - tier.consumedUnits;
     }
 
+    const ledgerQuantity = (
+      resourceType: EconomyResourceType,
+      direction: EconomyDirection,
+      options: { tier?: number; currency?: EconomyCurrency } = {},
+    ) =>
+      ledgerFlow
+        .filter(
+          (entry) =>
+            entry.resourceType === resourceType &&
+            entry.direction === direction &&
+            (options.tier === undefined || entry.tier === options.tier) &&
+            (options.currency === undefined ||
+              entry.currency === options.currency),
+        )
+        .reduce((total, entry) => total + (entry._sum.quantity ?? 0), 0);
+    const buildResourceFlow = (resourceType: EconomyResourceType) => {
+      const credited = ledgerQuantity(resourceType, EconomyDirection.CREDIT);
+      const debited = ledgerQuantity(resourceType, EconomyDirection.DEBIT);
+      return { credited, debited, net: credited - debited };
+    };
+    const goldLedger = buildResourceFlow(EconomyResourceType.GOLD);
+    const walletBalanceByKey = new Map(
+      walletBalances.map((entry) => [
+        `${entry.currency}:${entry.tier}`,
+        entry._sum.balance ?? 0,
+      ]),
+    );
+    const ledgerEntries = ledgerFlow.reduce(
+      (total, entry) => total + entry._count._all,
+      0,
+    );
+    const getReasonEntries = (reason: string) =>
+      ledgerReasons
+        .filter((entry) => entry.reason === reason)
+        .reduce((total, entry) => total + entry._count._all, 0);
+    const currencyLabels: Record<EconomyCurrency, string> = {
+      [EconomyCurrency.INCURSION_TOKEN]: 'Ficha de Incursão',
+      [EconomyCurrency.WORLD_BOSS_FRAGMENT]: 'Fragmento de Ameaça',
+    };
+    const ledger = {
+      definition:
+        'Movimentos exatos registrados após a migration; não inclui backfill estimado.',
+      trackingStartedAt: ledgerTrackingStart?.createdAt ?? null,
+      entries: ledgerEntries,
+      gold: {
+        ...goldLedger,
+        sinkRatioPercent: calculatePercent(
+          goldLedger.debited,
+          goldLedger.credited,
+        ),
+      },
+      cash: buildResourceFlow(EconomyResourceType.CASH),
+      xp: buildResourceFlow(EconomyResourceType.XP),
+      itemTiers: Array.from({ length: 5 }, (_, index) => {
+        const tier = index + 1;
+        const credited = ledgerQuantity(
+          EconomyResourceType.ITEM,
+          EconomyDirection.CREDIT,
+          { tier },
+        );
+        const debited = ledgerQuantity(
+          EconomyResourceType.ITEM,
+          EconomyDirection.DEBIT,
+          { tier },
+        );
+        return { tier, credited, debited, net: credited - debited };
+      }),
+      currencies: Object.values(EconomyCurrency).flatMap((currency) =>
+        Array.from({ length: 5 }, (_, index) => {
+          const tier = index + 1;
+          const credited = ledgerQuantity(
+            EconomyResourceType.CURRENCY,
+            EconomyDirection.CREDIT,
+            { tier, currency },
+          );
+          const debited = ledgerQuantity(
+            EconomyResourceType.CURRENCY,
+            EconomyDirection.DEBIT,
+            { tier, currency },
+          );
+          return {
+            currency,
+            label: currencyLabels[currency],
+            tier,
+            credited,
+            debited,
+            balance: walletBalanceByKey.get(`${currency}:${tier}`) ?? 0,
+          };
+        }),
+      ),
+      topReasons: ledgerReasons
+        .map((entry) => ({
+          reason: entry.reason,
+          label: getEconomyReasonLabel(entry.reason),
+          direction: entry.direction,
+          resourceType: entry.resourceType,
+          quantity: entry._sum.quantity ?? 0,
+          entries: entry._count._all,
+        }))
+        .sort((left, right) => right.quantity - left.quantity)
+        .slice(0, 10),
+    };
+
     return {
       generatedAt: now.toISOString(),
       period: {
@@ -570,6 +733,17 @@ export class AdminService {
         definition:
           'Sessões atualizadas ou concluídas no período; estoque é o saldo atual de materiais na mochila e no banco.',
         tiers: Array.from(economyByTier.values()),
+        ledger,
+        progressionOutputs: {
+          reinforcementOperations: getReasonEntries(
+            ECONOMY_REASONS.EQUIPMENT_REINFORCEMENT_OUTPUT,
+          ),
+          incubationsStarted: getReasonEntries(
+            ECONOMY_REASONS.PET_INCUBATION_COCOON,
+          ),
+          activePetIncubations,
+          collectedPets,
+        },
       },
       coverage: {
         milestoneTrackingStartedAt: trackingStart?.createdAt ?? null,

@@ -8,6 +8,9 @@ import {
 } from '@nestjs/common';
 import {
   CharacterStatus,
+  EconomyCurrency,
+  EconomyDirection,
+  EconomyResourceType,
   IncursionRewardType,
   IncursionSessionStatus,
   InventoryItemType,
@@ -17,6 +20,9 @@ import {
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { calculateLevelProgress } from '../../common/utils/level.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
+import { EconomyService } from '../economy/economy.service';
 import { ClaimIncursionDto } from './dto/claim-incursion.dto';
 import { StartIncursionDto } from './dto/start-incursion.dto';
 import {
@@ -64,6 +70,7 @@ export class IncursionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityGuard: ActivityGuardService,
+    private readonly economyService: EconomyService,
   ) {}
 
   async listAll() {
@@ -226,7 +233,7 @@ export class IncursionsService {
             );
           }
 
-          return tx.characterIncursionSession.create({
+          const createdSession = await tx.characterIncursionSession.create({
             data: {
               characterId: character.id,
               incursionId: incursion.id,
@@ -240,6 +247,26 @@ export class IncursionsService {
             },
             include: this.sessionInclude(),
           });
+
+          if (incursion.goldCost > 0) {
+            await recordEconomyEntry(tx, {
+              characterId: character.id,
+              direction: EconomyDirection.DEBIT,
+              resourceType: EconomyResourceType.GOLD,
+              tier: incursion.tier,
+              quantity: incursion.goldCost,
+              reason: ECONOMY_REASONS.INCURSION_ENTRY,
+              referenceType: 'CharacterIncursionSession',
+              referenceId: createdSession.id,
+              idempotencyKey: `incursion:${createdSession.id}:entry:gold`,
+              metadata: {
+                incursionId: incursion.id,
+                approach: riskProfile.approach,
+              },
+            });
+          }
+
+          return createdSession;
         },
         {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -598,16 +625,58 @@ export class IncursionsService {
         },
       });
 
+      if (xpReward > 0) {
+        await recordEconomyEntry(tx, {
+          characterId,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.XP,
+          tier: session.incursion.tier,
+          quantity: xpReward,
+          reason: ECONOMY_REASONS.INCURSION_XP_REWARD,
+          referenceType: 'CharacterIncursionSession',
+          referenceId: session.id,
+          idempotencyKey: `incursion:${session.id}:reward:xp`,
+        });
+      }
+      if (goldReward > 0) {
+        await recordEconomyEntry(tx, {
+          characterId,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.GOLD,
+          tier: session.incursion.tier,
+          quantity: goldReward,
+          reason: ECONOMY_REASONS.INCURSION_GOLD_REWARD,
+          referenceType: 'CharacterIncursionSession',
+          referenceId: session.id,
+          idempotencyKey: `incursion:${session.id}:reward:gold`,
+        });
+      }
+
       for (const reward of rewards) {
-        await tx.incursionSessionReward.create({
+        const grantedReward = await tx.incursionSessionReward.create({
           data: {
             sessionId: session.id,
             rewardType: reward.rewardType,
             itemId: reward.itemId,
+            currency: reward.currency,
             quantity: reward.quantity,
             rarity: reward.rarity,
           },
         });
+
+        if (reward.currency && reward.quantity > 0) {
+          await this.economyService.creditWalletInTransaction(tx, {
+            characterId,
+            currency: reward.currency,
+            tier: session.incursion.tier,
+            quantity: reward.quantity,
+            reason: ECONOMY_REASONS.INCURSION_TOKEN_REWARD,
+            referenceType: 'IncursionSessionReward',
+            referenceId: grantedReward.id,
+            idempotencyKey: `incursion-reward:${grantedReward.id}:currency`,
+            metadata: { rewardType: reward.rewardType },
+          });
+        }
 
         if (reward.itemId && reward.quantity > 0) {
           await tx.inventoryItem.upsert({
@@ -627,6 +696,20 @@ export class IncursionsService {
               quantity: reward.quantity,
               type: reward.inventoryType,
             },
+          });
+
+          await recordEconomyEntry(tx, {
+            characterId,
+            direction: EconomyDirection.CREDIT,
+            resourceType: EconomyResourceType.ITEM,
+            itemId: reward.itemId,
+            tier: session.incursion.tier,
+            quantity: reward.quantity,
+            reason: ECONOMY_REASONS.INCURSION_ITEM_REWARD,
+            referenceType: 'IncursionSessionReward',
+            referenceId: grantedReward.id,
+            idempotencyKey: `incursion-reward:${grantedReward.id}:item`,
+            metadata: { rewardType: reward.rewardType },
           });
         }
       }
@@ -734,6 +817,7 @@ export class IncursionsService {
     const rewards: Array<{
       rewardType: IncursionRewardType;
       itemId: string | null;
+      currency: EconomyCurrency | null;
       itemName?: string | null;
       quantity: number;
       rarity: any;
@@ -768,6 +852,7 @@ export class IncursionsService {
       rewards.push({
         rewardType: loot.rewardType,
         itemId: loot.itemId ?? null,
+        currency: loot.currency ?? null,
         itemName: loot.item?.name ?? null,
         quantity,
         rarity: loot.rarity ?? loot.item?.rarity ?? null,
@@ -885,6 +970,7 @@ export class IncursionsService {
       id: loot.id,
       rewardType: loot.rewardType,
       itemId: loot.itemId,
+      currency: loot.currency,
       item: loot.item,
       chance: loot.chance,
       minQuantity: loot.minQuantity,
@@ -944,6 +1030,7 @@ export class IncursionsService {
         id: reward.id,
         rewardType: reward.rewardType,
         itemId: reward.itemId,
+        currency: reward.currency,
         item: reward.item,
         quantity: reward.quantity,
         rarity: reward.rarity,
@@ -954,6 +1041,7 @@ export class IncursionsService {
   private formatGeneratedReward(reward: {
     rewardType: IncursionRewardType;
     itemId: string | null;
+    currency: EconomyCurrency | null;
     itemName?: string | null;
     quantity: number;
     rarity: any;
@@ -961,6 +1049,7 @@ export class IncursionsService {
     return {
       rewardType: reward.rewardType,
       itemId: reward.itemId,
+      currency: reward.currency,
       itemName: reward.itemName,
       quantity: reward.quantity,
       rarity: reward.rarity,

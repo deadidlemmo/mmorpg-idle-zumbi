@@ -1,0 +1,365 @@
+.economy-exchange {
+  display: grid;
+  min-width: 0;
+  gap: 22px;
+  padding: 20px;
+  border: 1px solid rgba(132, 165, 104, 0.26);
+  border-radius: 6px;
+  background: rgba(8, 16, 12, 0.84);
+}
+
+.economy-exchange--world_boss_fragment {
+  border-color: rgba(160, 106, 202, 0.3);
+  background: rgba(13, 11, 18, 0.88);
+}
+
+.economy-exchange__header {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(139, 164, 126, 0.16);
+}
+
+.economy-exchange--world_boss_fragment .economy-exchange__header {
+  border-bottom-color: rgba(179, 132, 212, 0.16);
+}
+
+.economy-exchange__currency-icon,
+.economy-exchange__item-image {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(168, 208, 105, 0.34);
+  border-radius: 6px;
+  color: #c9ef8f;
+  background: rgba(37, 58, 31, 0.7);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.economy-exchange--world_boss_fragment .economy-exchange__currency-icon,
+.economy-exchange--world_boss_fragment .economy-exchange__item-image {
+  border-color: rgba(189, 137, 230, 0.38);
+  color: #dfbdff;
+  background: rgba(67, 39, 86, 0.66);
+}
+
+.economy-exchange__header > span:nth-child(2),
+.economy-exchange__balance {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.economy-exchange__header small,
+.economy-exchange__group header small,
+.economy-exchange__offer-copy small,
+.economy-exchange__offer-cost small {
+  color: rgba(207, 221, 210, 0.56);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.economy-exchange__header > span:nth-child(2) > small,
+.economy-exchange__balance small,
+.economy-exchange__offer-copy > small,
+.economy-exchange__offer-cost > small {
+  text-transform: uppercase;
+}
+
+.economy-exchange__header > span:nth-child(2) > strong {
+  overflow: hidden;
+  color: #f3f3df;
+  font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.economy-exchange__balance {
+  min-width: 92px;
+  justify-items: end;
+  padding: 8px 11px;
+  border: 1px solid rgba(168, 208, 105, 0.22);
+  border-radius: 5px;
+  background: rgba(16, 27, 18, 0.7);
+}
+
+.economy-exchange--world_boss_fragment .economy-exchange__balance {
+  border-color: rgba(189, 137, 230, 0.24);
+  background: rgba(32, 20, 42, 0.62);
+}
+
+.economy-exchange__balance strong {
+  color: #d9f7aa;
+  font-size: 18px;
+}
+
+.economy-exchange--world_boss_fragment .economy-exchange__balance strong {
+  color: #e3c8fa;
+}
+
+.economy-exchange__groups,
+.economy-exchange__group,
+.economy-exchange__offers {
+  display: grid;
+  min-width: 0;
+}
+
+.economy-exchange__groups {
+  gap: 24px;
+}
+
+.economy-exchange__group {
+  gap: 10px;
+}
+
+.economy-exchange__group > header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.economy-exchange__group > header > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border: 1px solid rgba(166, 199, 113, 0.22);
+  border-radius: 5px;
+  color: #bce578;
+  background: rgba(25, 39, 22, 0.64);
+}
+
+.economy-exchange--world_boss_fragment
+  .economy-exchange__group
+  > header
+  > span {
+  border-color: rgba(187, 133, 226, 0.24);
+  color: #d9aeff;
+  background: rgba(48, 29, 62, 0.6);
+}
+
+.economy-exchange__group > header > div {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.economy-exchange__group header strong {
+  color: #eef2da;
+  font-size: 13px;
+}
+
+.economy-exchange__offers {
+  gap: 7px;
+}
+
+.economy-exchange__offer {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 52px minmax(180px, 1fr) minmax(110px, 0.42fr) 142px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid rgba(124, 151, 111, 0.17);
+  border-radius: 5px;
+  background: rgba(4, 10, 7, 0.58);
+}
+
+.economy-exchange--world_boss_fragment .economy-exchange__offer {
+  border-color: rgba(173, 126, 207, 0.17);
+  background: rgba(8, 7, 11, 0.58);
+}
+
+.economy-exchange__item-image {
+  width: 52px;
+  height: 52px;
+  background: rgba(18, 31, 20, 0.84);
+}
+
+.economy-exchange__item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.economy-exchange__offer-copy,
+.economy-exchange__offer-cost {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.economy-exchange__offer-copy strong,
+.economy-exchange__offer-cost strong {
+  overflow: hidden;
+  color: #f3f0dc;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.economy-exchange__offer-copy > span,
+.economy-exchange__offer-cost > span {
+  overflow: hidden;
+  color: rgba(207, 219, 208, 0.61);
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.economy-exchange__offer-cost {
+  padding-left: 12px;
+  border-left: 1px solid rgba(132, 155, 121, 0.16);
+}
+
+.economy-exchange--world_boss_fragment .economy-exchange__offer-cost {
+  border-left-color: rgba(177, 135, 207, 0.16);
+}
+
+.economy-exchange__button {
+  display: inline-flex;
+  width: 142px;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid rgba(158, 205, 83, 0.48);
+  border-radius: 5px;
+  color: #eef8d9;
+  background: rgba(57, 89, 37, 0.72);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.economy-exchange--world_boss_fragment .economy-exchange__button {
+  border-color: rgba(176, 114, 224, 0.5);
+  background: rgba(78, 42, 108, 0.76);
+}
+
+.economy-exchange__button:not(:disabled):hover {
+  border-color: rgba(199, 235, 139, 0.72);
+  background: rgba(70, 105, 45, 0.82);
+}
+
+.economy-exchange--world_boss_fragment
+  .economy-exchange__button:not(:disabled):hover {
+  border-color: rgba(213, 164, 247, 0.72);
+  background: rgba(94, 51, 128, 0.84);
+}
+
+.economy-exchange__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.44;
+}
+
+.economy-exchange__status {
+  display: grid;
+  min-height: 72px;
+  margin: 0;
+  place-items: center;
+  color: rgba(215, 224, 210, 0.66);
+  font-size: 11px;
+}
+
+.economy-exchange__feedbacks {
+  display: grid;
+  gap: 6px;
+}
+
+.economy-exchange__feedback {
+  display: flex;
+  margin: 0;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 10px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.economy-exchange__feedback.is-error {
+  color: #ff9d95;
+  background: rgba(83, 22, 22, 0.25);
+}
+
+.economy-exchange__feedback.is-success {
+  color: #bde884;
+  background: rgba(34, 67, 25, 0.25);
+}
+
+@media (max-width: 940px) {
+  .economy-exchange__offer {
+    grid-template-columns: 52px minmax(0, 1fr) 128px;
+  }
+
+  .economy-exchange__offer-cost {
+    grid-column: 2;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .economy-exchange__button {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+}
+
+@media (max-width: 620px) {
+  .economy-exchange {
+    gap: 18px;
+    padding: 14px;
+  }
+
+  .economy-exchange__header {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 9px;
+  }
+
+  .economy-exchange__currency-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .economy-exchange__balance {
+    min-width: 70px;
+    padding: 7px 8px;
+  }
+
+  .economy-exchange__offer {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .economy-exchange__item-image {
+    width: 48px;
+    height: 48px;
+  }
+
+  .economy-exchange__offer-cost {
+    grid-column: 1 / -1;
+    padding: 8px 0 0;
+    border-top: 1px solid rgba(132, 155, 121, 0.16);
+  }
+
+  .economy-exchange--world_boss_fragment .economy-exchange__offer-cost {
+    border-top-color: rgba(177, 135, 207, 0.16);
+  }
+
+  .economy-exchange__button {
+    width: 100%;
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+}

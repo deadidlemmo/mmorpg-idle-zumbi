@@ -3,8 +3,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InventoryItemType, ItemSlot, Prisma, Rarity } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import {
+  EconomyDirection,
+  EconomyResourceType,
+  InventoryItemType,
+  ItemSlot,
+  Prisma,
+  Rarity,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
 import { VendorBuyDto } from './dto/vendor-transaction.dto';
 
 const VENDOR_ITEM_INCLUDE = {
@@ -75,6 +85,7 @@ export class VendorService {
   }
 
   async buy(userId: string, characterId: string, vendorBuyDto: VendorBuyDto) {
+    const operationId = randomUUID();
     const result = await this.prisma.$transaction(async (tx) => {
       const character = await tx.character.findFirst({
         where: {
@@ -166,6 +177,31 @@ export class VendorService {
           gold: true,
           userId: true,
         },
+      });
+
+      await recordEconomyEntry(tx, {
+        characterId: character.id,
+        direction: EconomyDirection.DEBIT,
+        resourceType: EconomyResourceType.GOLD,
+        tier: item.tier,
+        quantity: totalPrice,
+        balanceAfter: updatedCharacter.gold,
+        reason: ECONOMY_REASONS.VENDOR_GOLD_SPENT,
+        referenceType: 'VendorPurchase',
+        referenceId: operationId,
+        idempotencyKey: `vendor:${operationId}:gold`,
+      });
+      await recordEconomyEntry(tx, {
+        characterId: character.id,
+        direction: EconomyDirection.CREDIT,
+        resourceType: EconomyResourceType.ITEM,
+        itemId: item.id,
+        tier: item.tier,
+        quantity,
+        reason: ECONOMY_REASONS.VENDOR_ITEM_PURCHASED,
+        referenceType: 'VendorPurchase',
+        referenceId: operationId,
+        idempotencyKey: `vendor:${operationId}:item`,
       });
 
       return {

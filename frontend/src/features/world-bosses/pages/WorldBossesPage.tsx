@@ -22,6 +22,7 @@ import {
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import type { DashboardTopBarActivityOverride } from "../../dashboard/components/DashboardTopBar";
+import { ResourceCenterShortcut } from "../../economy/components/ResourceCenterShortcut";
 import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
@@ -146,6 +147,7 @@ function getRewardIcon(reward: WorldBossRewardPreview) {
   if (reward.rewardType === "GOLD") return "G";
   if (reward.rewardType === "XP") return "XP";
   if (reward.rewardType === "PET_EGG") return "PET";
+  if (reward.rewardType === "CURRENCY") return "FA";
   if (reward.rewardType === "EQUIPMENT") return "EQ";
   return "IT";
 }
@@ -166,6 +168,19 @@ function getRewardChanceLabel(reward: WorldBossRewardPreview) {
     chance >= 10 ? Math.round(chance) : Math.round(chance * 10) / 10;
 
   return `~${String(roundedChance).replace(".", ",")}%`;
+}
+
+function getRewardName(reward: WorldBossRewardPreview) {
+  if (reward.item?.name) return reward.item.name;
+  if (reward.rewardType === "XP") return "EXP";
+  if (reward.rewardType === "GOLD") return "Gold";
+  if (reward.rewardType === "CURRENCY") {
+    return reward.currency === "INCURSION_TOKEN"
+      ? "Ficha de Incursão"
+      : "Fragmento de Ameaça";
+  }
+  if (reward.rewardType === "PET_EGG") return "Casulo infectado";
+  return reward.rewardType;
 }
 
 function formatMapLevelRange(
@@ -1367,6 +1382,10 @@ export function WorldBossesPage() {
                 )}
               </div>
             </section>
+            <ResourceCenterShortcut
+              characterId={characterId}
+              source="WORLD_BOSS"
+            />
           </aside>
         </section>
 
@@ -1452,7 +1471,7 @@ export function WorldBossesPage() {
                 </div>
                 <div className="world-bosses-modal__rewards">
                   {detailsBoss.rewards.map((reward) => {
-                    const rewardName = reward.item?.name ?? reward.rewardType;
+                    const rewardName = getRewardName(reward);
                     const rewardChance = getRewardChanceLabel(reward);
                     const quantityLabel = getQuantityLabel(reward);
                     const isRewardRevealed = revealedRewardId === reward.id;

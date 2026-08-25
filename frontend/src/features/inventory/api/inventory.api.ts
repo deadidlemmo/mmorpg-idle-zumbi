@@ -1,12 +1,13 @@
-import { API_ENDPOINTS } from '../../../services/api/endpoints';
-import { apiClient } from '../../../services/api/apiClient';
+import { API_ENDPOINTS } from "../../../services/api/endpoints";
+import { apiClient } from "../../../services/api/apiClient";
 import type {
   DashboardEquipmentProgression,
   DashboardDerivedStats,
+  DashboardEquipmentItem,
   DashboardEquipmentViewModel,
   DashboardStats,
-} from '../../dashboard/types/dashboard.types';
-import type { InventoryResponse } from '../types/inventory.types';
+} from "../../dashboard/types/dashboard.types";
+import type { InventoryResponse } from "../types/inventory.types";
 
 interface InventoryItemActionPayload {
   characterId: string;
@@ -17,6 +18,45 @@ interface InventoryItemActionPayload {
 interface InventoryItemUnequipPayload {
   characterId: string;
   slot: string;
+}
+
+interface ReinforceEquipmentPayload {
+  characterId: string;
+  slot: string;
+  requestId: string;
+}
+
+export interface EquipmentReinforcementItem extends DashboardEquipmentItem {
+  baseItemId?: string | null;
+  enhancementLevel: number;
+}
+
+export interface EquipmentReinforcementSlotState {
+  slot: string;
+  item: EquipmentReinforcementItem | null;
+  nextItem: EquipmentReinforcementItem | null;
+  cost: {
+    level: number;
+    fragmentCost: number;
+    goldCost: number;
+    materialName: string;
+    materialBalance: number;
+    goldBalance: number;
+  } | null;
+  canReinforce?: boolean;
+  reason?: string | null;
+}
+
+export interface EquipmentReinforcementState {
+  maxLevel: number;
+  gold: number;
+  materials: Array<{
+    tier: number;
+    itemId: string | null;
+    name: string;
+    quantity: number;
+  }>;
+  slots: EquipmentReinforcementSlotState[];
 }
 
 export interface InventoryItemActionResponse {
@@ -57,6 +97,7 @@ export interface CharacterEquipmentResponse {
     derivedCombatStats?: DashboardDerivedStats;
     equipmentProgression?: DashboardEquipmentProgression;
   };
+  reinforcement?: EquipmentReinforcementState;
   [key: string]: unknown;
 }
 
@@ -156,11 +197,22 @@ export async function unequipInventoryItem(
   return response.data;
 }
 
+export async function reinforceEquippedItem(
+  payload: ReinforceEquipmentPayload,
+): Promise<InventoryItemActionResponse> {
+  const response = await apiClient.post<InventoryItemActionResponse>(
+    API_ENDPOINTS.equipment.reinforce,
+    payload,
+  );
+
+  return response.data;
+}
+
 export function extractInventoryActionApiError(
   error: unknown,
-  fallback = 'N\u00e3o foi poss\u00edvel usar este item. Tente novamente.',
+  fallback = "N\u00e3o foi poss\u00edvel usar este item. Tente novamente.",
 ): string {
-  if (typeof error === 'object' && error !== null && 'response' in error) {
+  if (typeof error === "object" && error !== null && "response" in error) {
     const apiError = error as {
       response?: {
         data?: {
@@ -173,14 +225,14 @@ export function extractInventoryActionApiError(
     const message = apiError.response?.data?.message;
 
     if (Array.isArray(message)) {
-      return message.join(' ');
+      return message.join(" ");
     }
 
-    if (typeof message === 'string') {
+    if (typeof message === "string") {
       return message;
     }
 
-    if (typeof apiError.response?.data?.error === 'string') {
+    if (typeof apiError.response?.data?.error === "string") {
       return apiError.response.data.error;
     }
   }
@@ -189,7 +241,7 @@ export function extractInventoryActionApiError(
 }
 
 export function extractInventoryApiError(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'response' in error) {
+  if (typeof error === "object" && error !== null && "response" in error) {
     const apiError = error as {
       response?: {
         data?: {
@@ -202,17 +254,17 @@ export function extractInventoryApiError(error: unknown): string {
     const message = apiError.response?.data?.message;
 
     if (Array.isArray(message)) {
-      return message.join(' ');
+      return message.join(" ");
     }
 
-    if (typeof message === 'string') {
+    if (typeof message === "string") {
       return message;
     }
 
-    if (typeof apiError.response?.data?.error === 'string') {
+    if (typeof apiError.response?.data?.error === "string") {
       return apiError.response.data.error;
     }
   }
 
-  return 'Não foi possível carregar a mochila. Tente novamente.';
+  return "Não foi possível carregar a mochila. Tente novamente.";
 }

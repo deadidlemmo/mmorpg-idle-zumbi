@@ -12,12 +12,21 @@ import {
 import { ConfigService } from '@nestjs/config';
 import {
   CharacterStatus,
+  EconomyCurrency,
+  EconomyDirection,
+  EconomyResourceType,
   InventoryItemType,
   Prisma,
   WorldBossEventStatus,
   WorldBossRewardType,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
+import {
+  getWorldBossCollectiveRewardMultiplier,
+  getWorldBossRespawnSeconds,
+  WORLD_BOSS_REWARD_CONFIG,
+  WORLD_BOSS_SCHEDULE_CONFIG,
+} from '../../common/config/world-boss.config';
 import { DistributedLockService } from '../../common/redis/distributed-lock.service';
 import { calculateLevelProgress } from '../../common/utils/level.util';
 import {
@@ -25,6 +34,9 @@ import {
   calculateGatheringPrimaryBonus,
 } from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
+import { EconomyService } from '../economy/economy.service';
 import { JoinWorldBossDto } from './dto/join-world-boss.dto';
 import { LeaveWorldBossDto } from './dto/leave-world-boss.dto';
 import { isWorldBossTestUnlockEnabled } from './world-boss-test-unlock.util';
@@ -71,16 +83,12 @@ const eventInclude = {
 
 type Tx = Prisma.TransactionClient;
 
-const WORLD_BOSS_ENTRY_WINDOW_SECONDS = 5 * 60;
 const WORLD_BOSS_PROCESSING_TICK_MS = 1000;
 const WORLD_BOSS_PROCESSING_LOCK_TTL_MS = 60_000;
 const WORLD_BOSS_PROCESSING_LOCK_KEY = 'dead-idle:scheduler:world-bosses';
 const WORLD_BOSS_ALWAYS_OPEN_TEST_TIER = 1;
 const WORLD_BOSS_ALWAYS_OPEN_TEST_SLOT = 0;
 const WORLD_BOSS_ALWAYS_OPEN_TEST_WINDOW_SECONDS = 24 * 60 * 60;
-const WORLD_BOSS_TEST_LOBBY_LEAD_SECONDS = 10 * 60;
-const WORLD_BOSS_SHORT_RESPAWN_SECONDS = 6 * 60 * 60;
-const WORLD_BOSS_LONG_RESPAWN_SECONDS = 12 * 60 * 60;
 const WORLD_BOSS_VISIBLE_STATUSES: WorldBossEventStatus[] = [
   WorldBossEventStatus.SCHEDULED,
   WorldBossEventStatus.LOBBY_OPEN,
@@ -112,6 +120,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly activityGuard: ActivityGuardService,
     private readonly distributedLock: DistributedLockService,
+    private readonly economyService: EconomyService,
     configService: ConfigService,
   ) {
     this.testUnlockEnabled = isWorldBossTestUnlockEnabled(
@@ -696,7 +705,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     boss: any,
     now: Date,
     startsAt = new Date(
-      now.getTime() + WORLD_BOSS_TEST_LOBBY_LEAD_SECONDS * 1000,
+      now.getTime() + WORLD_BOSS_SCHEDULE_CONFIG.initialLobbyLeadSeconds * 1000,
     ),
   ) {
     const status =
@@ -808,9 +817,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
   }
 
   private getBossRespawnIntervalSeconds(boss: any) {
-    return this.getBossSlotIndex(boss) === 0
-      ? WORLD_BOSS_SHORT_RESPAWN_SECONDS
-      : WORLD_BOSS_LONG_RESPAWN_SECONDS;
+    return getWorldBossRespawnSeconds(this.getBossSlotIndex(boss));
   }
 
   private isAlwaysOpenTestBoss(boss: any) {
@@ -832,7 +839,8 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     }
 
     return new Date(
-      event.startsAt.getTime() + WORLD_BOSS_ENTRY_WINDOW_SECONDS * 1000,
+      event.startsAt.getTime() +
+        WORLD_BOSS_SCHEDULE_CONFIG.entryWindowSeconds * 1000,
     );
   }
 
@@ -1181,23 +1189,26 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     characterId: string,
     now: Date,
   ) {
+    const claim = await tx.worldBossParticipant.updateMany({
+      where: {
+        id: participantId,
+        leftAt: null,
+        rewardGranted: false,
+      },
+      data: { rewardGranted: true, rewardGrantedAt: now },
+    });
+    if (claim.count === 0) return [];
+
     const participant = await tx.worldBossParticipant.findUniqueOrThrow({
       where: { id: participantId },
     });
-    if (participant.leftAt) return [];
 
     const progress =
       event.maxHp > 0 ? Math.min(1, event.totalDamage / event.maxHp) : 0;
-    const collectiveMultiplier =
-      event.status === WorldBossEventStatus.DEFEATED
-        ? 1
-        : progress >= 0.75
-          ? 0.75
-          : progress >= 0.5
-            ? 0.5
-            : progress >= 0.25
-              ? 0.3
-              : 0.15;
+    const collectiveMultiplier = getWorldBossCollectiveRewardMultiplier({
+      defeated: event.status === WorldBossEventStatus.DEFEATED,
+      progressRatio: progress,
+    });
     const eligible = participant.eligibleForReward;
     const rewards: any[] = [];
 
@@ -1213,7 +1224,9 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       const chance = reward.guaranteed
         ? 100
         : reward.chance *
-          (event.status === WorldBossEventStatus.DEFEATED ? 1 : 0.55);
+          (event.status === WorldBossEventStatus.DEFEATED
+            ? 1
+            : WORLD_BOSS_REWARD_CONFIG.nonDefeatedChanceMultiplier);
       if (!reward.guaranteed && Math.random() * 100 > chance) continue;
       const quantity = Math.max(
         0,
@@ -1229,6 +1242,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       rewards.push({
         rewardType: reward.rewardType,
         itemId: reward.itemId,
+        currency: reward.currency ?? null,
         quantity,
         rarity: reward.rarity,
         inventoryType: this.getInventoryType(reward.rewardType),
@@ -1259,16 +1273,57 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       },
     });
 
+    if (xpReward > 0) {
+      await recordEconomyEntry(tx, {
+        characterId,
+        direction: EconomyDirection.CREDIT,
+        resourceType: EconomyResourceType.XP,
+        tier: event.tier,
+        quantity: xpReward,
+        reason: ECONOMY_REASONS.WORLD_BOSS_XP_REWARD,
+        referenceType: 'WorldBossParticipant',
+        referenceId: participantId,
+        idempotencyKey: `world-boss:${participantId}:reward:xp`,
+      });
+    }
+    if (goldReward > 0) {
+      await recordEconomyEntry(tx, {
+        characterId,
+        direction: EconomyDirection.CREDIT,
+        resourceType: EconomyResourceType.GOLD,
+        tier: event.tier,
+        quantity: goldReward,
+        reason: ECONOMY_REASONS.WORLD_BOSS_GOLD_REWARD,
+        referenceType: 'WorldBossParticipant',
+        referenceId: participantId,
+        idempotencyKey: `world-boss:${participantId}:reward:gold`,
+      });
+    }
+
     for (const reward of rewards) {
-      await tx.worldBossGrantedReward.create({
+      const grantedReward = await tx.worldBossGrantedReward.create({
         data: {
           participantId,
           rewardType: reward.rewardType,
           itemId: reward.itemId,
+          currency: reward.currency,
           quantity: reward.quantity,
           rarity: reward.rarity,
         },
       });
+      if (reward.currency && reward.quantity > 0) {
+        await this.economyService.creditWalletInTransaction(tx, {
+          characterId,
+          currency: reward.currency as EconomyCurrency,
+          tier: event.tier,
+          quantity: reward.quantity,
+          reason: ECONOMY_REASONS.WORLD_BOSS_FRAGMENT_REWARD,
+          referenceType: 'WorldBossGrantedReward',
+          referenceId: grantedReward.id,
+          idempotencyKey: `world-boss-reward:${grantedReward.id}:currency`,
+          metadata: { rewardType: reward.rewardType },
+        });
+      }
       if (reward.itemId && reward.quantity > 0) {
         await tx.inventoryItem.upsert({
           where: { characterId_itemId: { characterId, itemId: reward.itemId } },
@@ -1283,13 +1338,23 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
             type: reward.inventoryType,
           },
         });
+
+        await recordEconomyEntry(tx, {
+          characterId,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.ITEM,
+          itemId: reward.itemId,
+          tier: event.tier,
+          quantity: reward.quantity,
+          reason: ECONOMY_REASONS.WORLD_BOSS_ITEM_REWARD,
+          referenceType: 'WorldBossGrantedReward',
+          referenceId: grantedReward.id,
+          idempotencyKey: `world-boss-reward:${grantedReward.id}:item`,
+          metadata: { rewardType: reward.rewardType },
+        });
       }
     }
 
-    await tx.worldBossParticipant.update({
-      where: { id: participantId },
-      data: { rewardGranted: true, rewardGrantedAt: now },
-    });
     return rewards;
   }
 
@@ -1620,6 +1685,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         boss.rewards?.map((reward: any) => ({
           id: reward.id,
           rewardType: reward.rewardType,
+          currency: reward.currency,
           item: reward.item,
           minQuantity: reward.minQuantity,
           maxQuantity: reward.maxQuantity,

@@ -1,5 +1,6 @@
 import type {
   CraftIngredientRole,
+  EconomyCurrency,
   IncursionDifficulty,
   IncursionRewardType,
   WorldBossRewardType,
@@ -158,6 +159,7 @@ export type GatheringSeedData = {
 export type IncursionLootSeedData = {
   rewardType: IncursionRewardType;
   itemName?: string;
+  currency?: EconomyCurrency;
   chance: number;
   minQuantity: number;
   maxQuantity: number;
@@ -186,6 +188,7 @@ export type IncursionSeedData = {
 export type WorldBossRewardSeedData = {
   rewardType: WorldBossRewardType;
   itemName?: string;
+  currency?: EconomyCurrency;
   minQuantity: number;
   maxQuantity: number;
   chance: number;

@@ -8,6 +8,8 @@ import {
 import {
   ActivityStatus,
   CharacterStatus,
+  EconomyDirection,
+  EconomyResourceType,
   InventoryItemType,
   ItemSlot,
   MaterialOrigin,
@@ -42,6 +44,8 @@ import {
   calculatePlayerOffensivePower,
 } from '../../common/utils/auto-combat-ttk.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
 import { CraftItemDto } from './dto/craft-item.dto';
 
 type MissingMaterial = {
@@ -1256,6 +1260,25 @@ export class CraftingService {
         },
       });
 
+      for (const ingredient of recipe.ingredients) {
+        await recordEconomyEntry(tx, {
+          characterId: dto.characterId,
+          direction: EconomyDirection.DEBIT,
+          resourceType: EconomyResourceType.ITEM,
+          itemId: ingredient.itemId,
+          tier: ingredient.item.tier,
+          quantity: ingredient.quantity * craftQuantity,
+          reason: ECONOMY_REASONS.CRAFTING_INGREDIENT_CONSUMED,
+          referenceType: 'CraftingSession',
+          referenceId: craftingSession.id,
+          idempotencyKey: `crafting:${craftingSession.id}:ingredient:${ingredient.itemId}`,
+          metadata: {
+            recipeId: recipe.id,
+            role: ingredient.role,
+          },
+        });
+      }
+
       return {
         craftingSkill: activeCraftingSkill,
         craftingSession,
@@ -1464,6 +1487,19 @@ export class CraftingService {
             quantity: session.outputQuantity,
             type: inventoryType,
           },
+        });
+
+        await recordEconomyEntry(tx, {
+          characterId,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.ITEM,
+          itemId: session.outputItemId,
+          tier: session.outputItem.tier,
+          quantity: session.outputQuantity,
+          reason: ECONOMY_REASONS.CRAFTING_OUTPUT_CREATED,
+          referenceType: 'CraftingSession',
+          referenceId: session.id,
+          idempotencyKey: `crafting:${session.id}:output:${session.outputItemId}`,
         });
 
         const activeCraftingSkill = await this.getOrCreateCraftingSkill(

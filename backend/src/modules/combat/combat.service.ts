@@ -6,6 +6,8 @@ import {
 import {
   CombatActor,
   CombatStatus,
+  EconomyDirection,
+  EconomyResourceType,
   InventoryItemType,
   ItemSlot,
 } from '@prisma/client';
@@ -26,6 +28,8 @@ import {
   isPremiumActive,
 } from '../../common/utils/membership.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
 import { StartCombatDto } from './dto/start-combat.dto';
 
 type FighterStats = {
@@ -310,6 +314,20 @@ export class CombatService {
         },
       });
 
+      if (xpGained > 0) {
+        await recordEconomyEntry(tx, {
+          characterId: character.id,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.XP,
+          tier: mob.tier,
+          quantity: xpGained,
+          reason: ECONOMY_REASONS.MANUAL_COMBAT_XP,
+          referenceType: 'Combat',
+          referenceId: combat.id,
+          idempotencyKey: `combat:${combat.id}:xp`,
+        });
+      }
+
       if (playerWon) {
         for (const drop of mob.drops) {
           const roll = Math.floor(Math.random() * 100) + 1;
@@ -340,6 +358,19 @@ export class CombatService {
               },
             });
 
+            await recordEconomyEntry(tx, {
+              characterId: character.id,
+              direction: EconomyDirection.CREDIT,
+              resourceType: EconomyResourceType.ITEM,
+              itemId: drop.itemId,
+              tier: drop.item.tier,
+              quantity,
+              reason: ECONOMY_REASONS.MANUAL_COMBAT_LOOT,
+              referenceType: 'Combat',
+              referenceId: combat.id,
+              idempotencyKey: `combat:${combat.id}:loot:${drop.itemId}`,
+            });
+
             rewards.push({
               itemId: drop.itemId,
               itemName: drop.item.name,
@@ -357,6 +388,7 @@ export class CombatService {
               itemId: simulation.potionItemId,
             },
           },
+          include: { item: { select: { tier: true } } },
         });
 
         if (potionInventoryItem) {
@@ -378,6 +410,22 @@ export class CombatService {
               },
             });
           }
+
+          await recordEconomyEntry(tx, {
+            characterId: character.id,
+            direction: EconomyDirection.DEBIT,
+            resourceType: EconomyResourceType.ITEM,
+            itemId: simulation.potionItemId,
+            tier: potionInventoryItem.item.tier,
+            quantity: Math.min(
+              potionInventoryItem.quantity,
+              simulation.potionsUsed,
+            ),
+            reason: ECONOMY_REASONS.MANUAL_COMBAT_POTION_USED,
+            referenceType: 'Combat',
+            referenceId: combat.id,
+            idempotencyKey: `combat:${combat.id}:potion:${simulation.potionItemId}`,
+          });
         }
       }
 

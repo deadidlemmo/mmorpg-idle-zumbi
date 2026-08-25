@@ -1,22 +1,18 @@
-export type InventoryItemType = 'EQUIPMENT' | 'MATERIAL' | 'CONSUMABLE' | string;
+export type InventoryItemType =
+  "EQUIPMENT" | "MATERIAL" | "CONSUMABLE" | string;
 
 export type InventoryItemRarity =
-  | 'COMMON'
-  | 'UNCOMMON'
-  | 'RARE'
-  | 'EPIC'
-  | 'LEGENDARY'
-  | string;
+  "COMMON" | "UNCOMMON" | "RARE" | "EPIC" | "LEGENDARY" | string;
 
 export type InventoryItemSlot =
-  | 'MAIN_HAND'
-  | 'OFF_HAND'
-  | 'HEAD'
-  | 'ARMOR'
-  | 'PANTS'
-  | 'BOOTS'
-  | 'MATERIAL'
-  | 'CONSUMABLE'
+  | "MAIN_HAND"
+  | "OFF_HAND"
+  | "HEAD"
+  | "ARMOR"
+  | "PANTS"
+  | "BOOTS"
+  | "MATERIAL"
+  | "CONSUMABLE"
   | string;
 
 export interface InventoryCharacterSummary {
@@ -56,6 +52,8 @@ export interface InventoryItemDetails {
   rarity?: InventoryItemRarity | null;
   slot?: InventoryItemSlot | null;
   family?: string | null;
+  baseItemId?: string | null;
+  enhancementLevel?: number | null;
   materialOrigin?: string | null;
   strengthBonus?: number | null;
   vitalityBonus?: number | null;
@@ -93,12 +91,7 @@ export interface InventoryResponse {
 }
 
 export type InventoryFilterKey =
-  | 'ALL'
-  | 'MATERIAL'
-  | 'EQUIPMENT'
-  | 'CONSUMABLE'
-  | 'RESOURCE'
-  | 'OTHER';
+  "ALL" | "MATERIAL" | "EQUIPMENT" | "CONSUMABLE" | "RESOURCE" | "OTHER";
 
 export interface InventoryFilterOption {
   key: InventoryFilterKey;
@@ -107,12 +100,7 @@ export interface InventoryFilterOption {
 }
 
 export type InventoryItemActionKind =
-  | 'equip'
-  | 'consume'
-  | 'unequip'
-  | 'deposit'
-  | 'withdraw'
-  | 'blackMarket';
+  "equip" | "consume" | "unequip" | "deposit" | "withdraw" | "blackMarket";
 
 export interface InventoryItemActionViewModel {
   kind: InventoryItemActionKind;
@@ -121,6 +109,6 @@ export interface InventoryItemActionViewModel {
 }
 
 export interface InventoryItemActionFeedback {
-  tone: 'success' | 'error';
+  tone: "success" | "error";
   message: string;
 }

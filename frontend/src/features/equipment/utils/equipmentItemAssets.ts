@@ -7,32 +7,35 @@ interface EquipmentAssetLike {
 }
 
 const equipmentImageModules = import.meta.glob(
-  '../../../assets/images/items/equipments/**/*.{png,jpg,jpeg,webp,avif}',
+  "../../../assets/images/items/equipments/**/*.{png,jpg,jpeg,webp,avif}",
   {
     eager: true,
-    import: 'default',
-    query: '?url',
+    import: "default",
+    query: "?url",
   },
 ) as Record<string, string>;
 
 const equipmentImageByKey = new Map<string, string>();
 
 function normalizeImageKey(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
+  if (typeof value !== "string") return null;
 
   const normalized = value
     .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
   return normalized || null;
 }
 
 for (const [path, imageUrl] of Object.entries(equipmentImageModules)) {
-  const fileName = path.split('/').pop()?.replace(/\.(png|jpe?g|webp|avif)$/i, '');
+  const fileName = path
+    .split("/")
+    .pop()
+    ?.replace(/\.(png|jpe?g|webp|avif)$/i, "");
   const fileKey = normalizeImageKey(fileName);
 
   if (!fileKey) continue;
@@ -42,12 +45,15 @@ for (const [path, imageUrl] of Object.entries(equipmentImageModules)) {
   const tierMatch = fileKey.match(/^t0?(\d+)-(.+)$/);
 
   if (tierMatch) {
-    equipmentImageByKey.set(`${Number(tierMatch[1])}:${tierMatch[2]}`, imageUrl);
+    equipmentImageByKey.set(
+      `${Number(tierMatch[1])}:${tierMatch[2]}`,
+      imageUrl,
+    );
   }
 }
 
 function getDirectImageUrl(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 export function getEquipmentItemImageUrl(
@@ -66,7 +72,8 @@ export function getEquipmentItemImageUrl(
     return equipmentImageByKey.get(assetKey) ?? null;
   }
 
-  const nameKey = normalizeImageKey(item.name);
+  const baseItemName = item.name?.replace(/\s+\+[1-3]\s*$/i, "");
+  const nameKey = normalizeImageKey(baseItemName);
 
   if (!nameKey) return null;
 

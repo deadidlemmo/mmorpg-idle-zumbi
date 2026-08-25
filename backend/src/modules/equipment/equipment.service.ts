@@ -304,6 +304,8 @@ export class EquipmentService {
         rarity: item.rarity,
         tier: item.tier,
         family: item.family,
+        baseItemId: item.baseItemId,
+        enhancementLevel: item.enhancementLevel,
 
         strengthBonus: item.strengthBonus,
         vitalityBonus: item.vitalityBonus,

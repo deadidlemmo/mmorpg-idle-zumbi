@@ -10,6 +10,7 @@ export type WorldBossEventStatus =
 export type WorldBossRewardType =
   | "XP"
   | "GOLD"
+  | "CURRENCY"
   | "MATERIAL"
   | "CONSUMABLE"
   | "EQUIPMENT"
@@ -19,6 +20,7 @@ export type WorldBossRewardType =
 export interface WorldBossRewardPreview {
   id: string;
   rewardType: WorldBossRewardType;
+  currency?: "INCURSION_TOKEN" | "WORLD_BOSS_FRAGMENT" | null;
   minQuantity: number;
   maxQuantity: number;
   chance: number;
@@ -102,6 +104,7 @@ export interface WorldBossParticipantSummary {
   rewards?: Array<{
     id: string;
     rewardType: WorldBossRewardType;
+    currency?: "INCURSION_TOKEN" | "WORLD_BOSS_FRAGMENT" | null;
     quantity: number;
     rarity?: string | null;
     item?: { id: string; name: string } | null;

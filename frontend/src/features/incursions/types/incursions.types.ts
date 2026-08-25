@@ -1,5 +1,5 @@
 export type IncursionRewardType =
-  "XP" | "GOLD" | "MATERIAL" | "CONSUMABLE" | "EQUIPMENT" | "ITEM";
+  "XP" | "GOLD" | "CURRENCY" | "MATERIAL" | "CONSUMABLE" | "EQUIPMENT" | "ITEM";
 export type IncursionSessionStatus =
   "ACTIVE" | "COMPLETED" | "CLAIMED" | "FAILED" | "CANCELLED";
 export type IncursionDifficulty = "LOW" | "MEDIUM" | "HIGH" | "EXTREME";
@@ -26,6 +26,7 @@ export interface IncursionMapSummary {
 export interface IncursionLootPreview {
   id?: string;
   rewardType: IncursionRewardType;
+  currency?: "INCURSION_TOKEN" | "WORLD_BOSS_FRAGMENT" | null;
   itemId?: string | null;
   item?: {
     id: string;
@@ -99,6 +100,7 @@ export interface IncursionSession {
   rewards?: Array<{
     id?: string;
     rewardType: IncursionRewardType;
+    currency?: "INCURSION_TOKEN" | "WORLD_BOSS_FRAGMENT" | null;
     itemId?: string | null;
     item?: IncursionLootPreview["item"];
     itemName?: string | null;

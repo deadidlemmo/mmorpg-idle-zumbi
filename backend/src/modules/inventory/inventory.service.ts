@@ -3,8 +3,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InventoryItemType, ItemSlot, Prisma, Rarity } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import {
+  EconomyDirection,
+  EconomyResourceType,
+  InventoryItemType,
+  ItemSlot,
+  Prisma,
+  Rarity,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
 import { MoveInventoryItemDto } from './dto/move-inventory-item.dto';
 import { SellInventoryItemDto } from './dto/sell-inventory-item.dto';
 
@@ -248,6 +258,7 @@ export class InventoryService {
   }
 
   async sellToBlackMarket(userId: string, sellItemDto: SellInventoryItemDto) {
+    const operationId = randomUUID();
     const soldItem = await this.prisma.$transaction(async (tx) => {
       const character = await tx.character.findFirst({
         where: {
@@ -318,6 +329,31 @@ export class InventoryService {
         select: {
           gold: true,
         },
+      });
+
+      await recordEconomyEntry(tx, {
+        characterId: character.id,
+        direction: EconomyDirection.DEBIT,
+        resourceType: EconomyResourceType.ITEM,
+        itemId: inventoryItem.item.id,
+        tier: inventoryItem.item.tier,
+        quantity,
+        reason: ECONOMY_REASONS.BLACK_MARKET_ITEM_SOLD,
+        referenceType: 'BlackMarketSale',
+        referenceId: operationId,
+        idempotencyKey: `black-market:${operationId}:item`,
+      });
+      await recordEconomyEntry(tx, {
+        characterId: character.id,
+        direction: EconomyDirection.CREDIT,
+        resourceType: EconomyResourceType.GOLD,
+        tier: inventoryItem.item.tier,
+        quantity: totalValue,
+        balanceAfter: updatedCharacter.gold,
+        reason: ECONOMY_REASONS.BLACK_MARKET_GOLD_RECEIVED,
+        referenceType: 'BlackMarketSale',
+        referenceId: operationId,
+        idempotencyKey: `black-market:${operationId}:gold`,
       });
 
       return {
@@ -577,6 +613,8 @@ export class InventoryService {
         isCraftable: inventoryItem.item.isCraftable,
         isSellable: inventoryItem.item.isSellable,
         isTradable: inventoryItem.item.isTradable,
+        baseItemId: inventoryItem.item.baseItemId,
+        enhancementLevel: inventoryItem.item.enhancementLevel,
 
         class: inventoryItem.item.class
           ? {

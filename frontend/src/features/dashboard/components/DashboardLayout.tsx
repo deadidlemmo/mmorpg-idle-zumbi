@@ -341,6 +341,11 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: "$",
   },
   {
+    label: "Recursos",
+    path: "resources",
+    icon: "⇄",
+  },
+  {
     label: "Objetivos",
     path: "objectives",
     icon: "✓",
@@ -393,6 +398,7 @@ const DASHBOARD_MANAGEMENT_NAV_ITEMS = [
   "appearance",
   "crafting",
   "consumables",
+  "resources",
   "infirmary",
   "membership",
 ]

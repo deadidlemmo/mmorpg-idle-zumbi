@@ -13,6 +13,7 @@ import { CombatModule } from './modules/combat/combat.module';
 import { ConsumablesModule } from './modules/consumables/consumables.module';
 import { CraftingModule } from './modules/crafting/crafting.module';
 import { EquipmentModule } from './modules/equipment/equipment.module';
+import { EconomyModule } from './modules/economy/economy.module';
 import { GameClassesModule } from './modules/game-classes/game-classes.module';
 import { GatheringModule } from './modules/gathering/gathering.module';
 import { InfirmaryModule } from './modules/infirmary/infirmary.module';
@@ -25,6 +26,7 @@ import { UsersModule } from './modules/users/users.module';
 import { VendorModule } from './modules/vendor/vendor.module';
 import { WorldBossesModule } from './modules/world-bosses/world-bosses.module';
 import { ProgressionModule } from './modules/progression/progression.module';
+import { PetsModule } from './modules/pets/pets.module';
 import { SocialModule } from './modules/social/social.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { CosmeticsModule } from './modules/cosmetics/cosmetics.module';
@@ -73,6 +75,7 @@ import { isConfigEnabled } from './common/redis/redis-client.factory';
     UsersModule,
     AuthModule,
     AdminModule,
+    EconomyModule,
 
     CharactersModule,
     CosmeticsModule,
@@ -90,6 +93,7 @@ import { isConfigEnabled } from './common/redis/redis-client.factory';
     IncursionsModule,
     VendorModule,
     WorldBossesModule,
+    PetsModule,
     ProgressionModule,
     SocialModule,
     ChatModule,

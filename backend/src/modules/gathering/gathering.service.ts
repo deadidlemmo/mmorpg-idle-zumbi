@@ -8,6 +8,8 @@ import type { InventoryItem } from '@prisma/client';
 import {
   ActivityStatus,
   CharacterStatus,
+  EconomyDirection,
+  EconomyResourceType,
   InventoryItemType,
   ItemSlot,
   MaterialOrigin,
@@ -37,6 +39,11 @@ import {
   isPremiumActive,
 } from '../../common/utils/membership.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import {
+  accumulateEconomyEntry,
+  getEconomyHourBucket,
+} from '../economy/economy-ledger';
 import { StartGatheringDto } from './dto/start-gathering.dto';
 
 const GATHERING_ORIGINS = [
@@ -862,6 +869,38 @@ export class GatheringService {
             quantity: reward.quantity,
             type: InventoryItemType.MATERIAL,
           },
+        });
+
+        const ledgerHour = getEconomyHourBucket(now);
+        await accumulateEconomyEntry(tx, {
+          characterId,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.ITEM,
+          itemId: session.targetMaterialId,
+          tier: session.targetMaterial.tier,
+          quantity: reward.quantity,
+          reason: ECONOMY_REASONS.GATHERING_COLLECTED,
+          referenceType: 'GatheringSession',
+          referenceId: session.id,
+          idempotencyKey: `gathering:${session.id}:hour:${ledgerHour}:item:${session.targetMaterialId}`,
+          metadata: {
+            origin: session.targetMaterial.materialOrigin ?? 'UNKNOWN',
+          },
+        });
+      }
+
+      if (xpGained > 0) {
+        await accumulateEconomyEntry(tx, {
+          characterId,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.XP,
+          tier: session.targetMaterial.tier,
+          quantity: xpGained,
+          reason: ECONOMY_REASONS.GATHERING_COLLECTED,
+          referenceType: 'GatheringSession',
+          referenceId: session.id,
+          idempotencyKey: `gathering:${session.id}:hour:${getEconomyHourBucket(now)}:xp`,
+          metadata: { xpKind: 'GATHERING_SKILL' },
         });
       }
 

@@ -19,7 +19,7 @@ type NumberSummary = {
   p90: number;
 };
 
-type RecipeTimeAudit = {
+export type RecipeTimeAudit = {
   outputItemName: string;
   className: string;
   slot: string;
@@ -179,7 +179,7 @@ function getDropSources(
     });
 }
 
-function buildRecipeAudits(roundsPerKillOverride: number | null) {
+export function buildRecipeAudits(roundsPerKillOverride: number | null) {
   const equipmentByName = new Map(
     equipmentDefinitions.map((item) => [item.name, item]),
   );
@@ -265,7 +265,7 @@ function buildRecipeAudits(roundsPerKillOverride: number | null) {
   };
 }
 
-function buildGroupedSummaries(recipes: RecipeTimeAudit[]) {
+export function buildGroupedSummaries(recipes: RecipeTimeAudit[]) {
   const byTier: Record<string, RecipeTimeAudit[]> = {};
   const byClass: Record<string, RecipeTimeAudit[]> = {};
   const byClassTier: Record<string, RecipeTimeAudit[]> = {};
@@ -523,4 +523,6 @@ function main() {
   console.log(JSON.stringify(report, null, 2));
 }
 
-main();
+if (require.main === module) {
+  main();
+}

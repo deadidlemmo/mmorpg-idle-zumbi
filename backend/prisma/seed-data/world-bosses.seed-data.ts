@@ -1,13 +1,20 @@
-import { Rarity, WorldBossRewardType } from '@prisma/client';
+import { EconomyCurrency, Rarity, WorldBossRewardType } from '@prisma/client';
+import {
+  ECONOMY_ACTIVITY_REWARDS,
+  isEconomyLaunchTier,
+} from '../../src/common/config/economy.config';
+import { WORLD_BOSS_SCHEDULE_CONFIG } from '../../src/common/config/world-boss.config';
 import type { WorldBossSeedData } from '../seed-types';
 
-const EVENT_DURATION_SECONDS = 3 * 60 * 60;
 const SCALING_WINDOW_SECONDS = 10 * 60;
 
 const bossNamesByTier = [
   ['Subúrbio Silencioso', ['Síndico Devorado', 'Cão Alfa da Rua das Cercas']],
   ['Distrito da Ferrugem', ['Capataz Enferrujado', 'Empilhadeira Carniceira']],
-  ['Hospital Santa Ruína', ['Cirurgião Sem Pulso', 'Paciente Zero da Ala Norte']],
+  [
+    'Hospital Santa Ruína',
+    ['Cirurgião Sem Pulso', 'Paciente Zero da Ala Norte'],
+  ],
   ['Terminal dos Esquecidos', ['Fiscal dos Mortos', 'Condutor Sem Rota']],
   ['Zona de Quarentena 9', ['Comandante Lacrado', 'Besta de Descontaminação']],
   ['Refinaria do Pó Cinzento', ['Forneiro Cinzento', 'Tanque Vivo']],
@@ -31,6 +38,31 @@ function buildLootTable(tier: number) {
   const goldMin = 180 * tier;
   const goldMax = 280 * tier + tier * tier * 20;
 
+  const fragmentReward = isEconomyLaunchTier(tier)
+    ? {
+        rewardType: WorldBossRewardType.CURRENCY,
+        currency: EconomyCurrency.WORLD_BOSS_FRAGMENT,
+        minQuantity: ECONOMY_ACTIVITY_REWARDS.worldBossFragments[tier].min,
+        maxQuantity: ECONOMY_ACTIVITY_REWARDS.worldBossFragments[tier].max,
+        chance: 100,
+        guaranteed: true,
+        requiresMinParticipation: true,
+        rarity: tier >= 4 ? Rarity.RARE : Rarity.UNCOMMON,
+        sortOrder: 2,
+      }
+    : {
+        rewardType: WorldBossRewardType.MATERIAL,
+        itemName: `Fragmento de Ameaça T${tier}`,
+        minQuantity: Math.max(2, tier),
+        maxQuantity: 4 + tier * 2,
+        chance: 75,
+        guaranteed: false,
+        requiresMinParticipation: true,
+        rarity:
+          tier >= 7 ? Rarity.EPIC : tier >= 4 ? Rarity.RARE : Rarity.UNCOMMON,
+        sortOrder: 2,
+      };
+
   return [
     {
       rewardType: WorldBossRewardType.XP,
@@ -50,17 +82,7 @@ function buildLootTable(tier: number) {
       requiresMinParticipation: true,
       sortOrder: 1,
     },
-    {
-      rewardType: WorldBossRewardType.MATERIAL,
-      itemName: `Fragmento de Ameaça T${tier}`,
-      minQuantity: Math.max(2, tier),
-      maxQuantity: 4 + tier * 2,
-      chance: 75,
-      guaranteed: false,
-      requiresMinParticipation: true,
-      rarity: tier >= 7 ? Rarity.EPIC : tier >= 4 ? Rarity.RARE : Rarity.UNCOMMON,
-      sortOrder: 2,
-    },
+    fragmentReward,
     {
       rewardType: WorldBossRewardType.PET_EGG,
       itemName: `Casulo Infectado T${tier}`,
@@ -77,8 +99,8 @@ function buildLootTable(tier: number) {
   ];
 }
 
-export const worldBossDefinitions: WorldBossSeedData[] = bossNamesByTier.flatMap(
-  ([mapName, names], tierIndex) => {
+export const worldBossDefinitions: WorldBossSeedData[] =
+  bossNamesByTier.flatMap(([mapName, names], tierIndex) => {
     const tier = tierIndex + 1;
     const bossLevels = [tier * 10 - 5, tier * 10];
     const baseHp = 120_000 * tier * tier;
@@ -108,7 +130,7 @@ export const worldBossDefinitions: WorldBossSeedData[] = bossNamesByTier.flatMap
         mutationLevel: tier + index,
         damageReduction: Math.min(0.35, 0.04 + tier * 0.018 + index * 0.01),
         enrageMultiplier: 1.1 + tier * 0.025,
-        durationSeconds: EVENT_DURATION_SECONDS,
+        durationSeconds: WORLD_BOSS_SCHEDULE_CONFIG.eventDurationSeconds,
         difficulty: index === 0 ? 'CONTENCAO' : 'EXTERMINIO',
         riskLevel: Math.min(10, tier + index + 1),
         minParticipationSeconds: 5 * 60,
@@ -119,5 +141,4 @@ export const worldBossDefinitions: WorldBossSeedData[] = bossNamesByTier.flatMap
         lootTable: buildLootTable(tier),
       };
     });
-  },
-);
+  });
