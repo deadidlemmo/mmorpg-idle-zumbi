@@ -124,6 +124,16 @@ export const API_ENDPOINTS = {
       `/pets/characters/${characterId}/incubations`,
     claim: (characterId: string, characterPetId: string) =>
       `/pets/characters/${characterId}/incubations/${characterPetId}/claim`,
+    equip: (characterId: string, characterPetId: string) =>
+      `/pets/characters/${characterId}/collection/${characterPetId}/equip`,
+    equipment: (characterId: string) =>
+      `/pets/characters/${characterId}/equipment`,
+    sell: (characterId: string, characterPetId: string) =>
+      `/pets/characters/${characterId}/collection/${characterPetId}/sell`,
+    sellDuplicateCocoons: (characterId: string) =>
+      `/pets/characters/${characterId}/cocoons/duplicates/sell`,
+    convertDuplicateCocoons: (characterId: string) =>
+      `/pets/characters/${characterId}/cocoons/duplicates/convert`,
   },
 
   consumables: {

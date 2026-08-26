@@ -21,7 +21,6 @@ export interface EconomyExchangeOffer {
   source:
     | "INCURSION_REINFORCEMENT"
     | "INCURSION_EMERGENCY_MATERIAL"
-    | "WORLD_BOSS_COCOON"
     | "WORLD_BOSS_EMERGENCY_DROP";
   category: "PRIMARY" | "EMERGENCY";
   purpose: string;

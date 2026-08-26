@@ -488,6 +488,8 @@ export function GatheringActivityPanel({
       badge={skillLevelLabel}
       progressAnimation="cycle"
       progressPercent={progressPercent}
+      timeline={realtimeState.isActive ? realtimeState.timeline : null}
+      timelineRepeats
       progressLabel="Progresso até a próxima unidade coletada"
       progressTitle={`${Math.round(progressPercent)}% até a próxima unidade`}
       pills={[

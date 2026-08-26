@@ -333,11 +333,24 @@ test.describe('resiliencia da sessao e tutorial', () => {
         session: { id: string };
       };
 
+      const persistedFirstSession =
+        await prisma.gatheringSession.findUniqueOrThrow({
+          where: { id: first.session.id },
+          select: { cycleDurationMs: true },
+        });
+      const cycleDurationMs = persistedFirstSession.cycleDurationMs ?? 10_000;
+      const lastResolvedAt = new Date(Date.now() - 60_000);
+      const cycleStartedAt = new Date(
+        lastResolvedAt.getTime() - Math.floor(cycleDurationMs * 0.9999),
+      );
+
       await prisma.gatheringSession.update({
         where: { id: first.session.id },
         data: {
-          lastResolvedAt: new Date(Date.now() - 60_000),
+          lastResolvedAt,
           progressRemainder: 0.9999,
+          cycleStartedAt,
+          cycleEndsAt: new Date(cycleStartedAt.getTime() + cycleDurationMs),
         },
       });
 
@@ -390,6 +403,7 @@ test.describe('resiliencia da sessao e tutorial', () => {
   });
 
   test('avanca e persiste todas as etapas do tutorial', async ({ page }) => {
+    const visualOutputDir = process.env.E2E_VISUAL_OUTPUT_DIR;
     await prisma.gatheringSession.deleteMany({ where: { characterId } });
     await prisma.craftingSession.deleteMany({ where: { characterId } });
     await prisma.characterTutorialProgress.upsert({
@@ -470,6 +484,23 @@ test.describe('resiliencia da sessao e tutorial', () => {
     await expect(
       tutorial.getByText('Fabrique seu primeiro equipamento T1'),
     ).toBeVisible({ timeout: 10_000 });
+    if (visualOutputDir) {
+      await tutorial.screenshot({
+        path: `${visualOutputDir}/tutorial-crafting-desktop.png`,
+      });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= window.innerWidth,
+          ),
+        )
+        .toBe(true);
+      await tutorial.screenshot({
+        path: `${visualOutputDir}/tutorial-crafting-mobile.png`,
+      });
+      await page.setViewportSize({ width: 1280, height: 720 });
+    }
 
     const tutorialAfterGathering =
       await prisma.characterTutorialProgress.findUniqueOrThrow({

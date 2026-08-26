@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { ActivityProgressCard } from "../../../components/game/ActivityProgressCard";
+import type { ActivityTimeline } from "../../../components/game/activityTimeline";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import {
@@ -1041,6 +1042,7 @@ function CraftingActivityPanel({
   level,
   remainingSeconds,
   progressPercent,
+  timeline,
   onRefresh,
   isBusy,
 }: {
@@ -1048,6 +1050,7 @@ function CraftingActivityPanel({
   level: number;
   remainingSeconds: number;
   progressPercent: number;
+  timeline: ActivityTimeline | null;
   onRefresh: () => void;
   isBusy: boolean;
 }) {
@@ -1081,6 +1084,7 @@ function CraftingActivityPanel({
         badge={`Nv. ${formatNumber(level)}`}
         progressAnimation="cycle"
         progressPercent={safeProgressPercent}
+        timeline={timeline}
         progressLabel="Progresso da fabricação atual"
         progressTitle={`${Math.round(safeProgressPercent)}% da fabricação concluída`}
         pills={[
@@ -1757,6 +1761,11 @@ export function CraftingPage() {
                 level={currentCraftingLevel}
                 remainingSeconds={activeCraftingRemainingSeconds}
                 progressPercent={activeCraftingProgressPercent}
+                timeline={
+                  isRealtimeCraftingSession
+                    ? craftingRealtimeState.timeline
+                    : null
+                }
                 onRefresh={refreshCraftingState}
                 isBusy={isLoading || isCrafting}
               />

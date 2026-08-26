@@ -60,8 +60,12 @@ const SESSION_KEYS = [
   'currentMobHp',
   'currentMobMaxHp',
   'killProgressSeconds',
+  'killProgressMs',
   'estimatedKillTimeSeconds',
+  'estimatedKillTimeMs',
+  'unmodifiedKillTimeMs',
   'baseKillTimeSeconds',
+  'appliedTtkPetBonus',
   'playerOffensivePower',
   'monsterRecommendedPower',
   'currentMobIndex',
@@ -151,7 +155,10 @@ const BATTLE_PROGRESS_KEYS = [
   'progressUpdatedAt',
   'serverNow',
   'estimatedKillTimeSeconds',
+  'estimatedKillTimeMs',
+  'unmodifiedKillTimeMs',
   'baseKillTimeSeconds',
+  'appliedPetBonus',
   'playerOffensivePower',
   'monsterRecommendedPower',
   'killsPerMinute',
@@ -169,6 +176,11 @@ const HUNTING_KEYS = [
   'startedAt',
   'stoppedAt',
   'lastProcessedAt',
+  'cycleStartedAt',
+  'cycleEndsAt',
+  'cycleDurationMs',
+  'cycleVersion',
+  'appliedPetBonus',
   'lastFindAt',
   'nextFindAt',
   'foundEnemiesCount',
@@ -179,6 +191,7 @@ const HUNTING_KEYS = [
   'isLimitReached',
   'bonusEnemiesFound',
   'huntingXpGained',
+  'baseSecondsPerEnemy',
   'secondsPerEnemy',
   'secondsPerFind',
   'elapsedSeconds',
@@ -189,6 +202,8 @@ const HUNTING_KEYS = [
   'huntSequence',
   'lastHuntEventSequence',
   'selectedEncounterId',
+  'cycleTargetEncounterId',
+  'cycleTargetMobId',
   'targetEncounterId',
   'targetMobId',
   'targetFoundCount',
@@ -206,6 +221,11 @@ const HUNT_BATCH_KEYS = [
   'consumedAt',
   'cancelledAt',
   'lastProcessedAt',
+  'cycleStartedAt',
+  'cycleEndsAt',
+  'cycleDurationMs',
+  'cycleVersion',
+  'appliedPetBonus',
   'huntingLevelAtStart',
   'huntingXpGained',
   'foundEnemiesCount',
@@ -220,6 +240,8 @@ const HUNT_BATCH_KEYS = [
   'bonusEnemiesFound',
   'selectedEncounterId',
   'selectedEncounterMobId',
+  'cycleTargetEncounterId',
+  'cycleTargetMobId',
   'huntSequence',
 ] as const;
 
@@ -397,7 +419,9 @@ export function buildAutoCombatRealtimeStatusPayload(payload: unknown) {
   const session = pick(sessionSource, SESSION_KEYS);
   const character = pick(asRecord(source.character), CHARACTER_KEYS);
   const currentMob = compactMob(source.currentMob);
-  const battleProgress = compactBattleProgress(source.battleProgress);
+  const battleProgress = compactBattleProgress(
+    source.battleProgress ?? sessionSource?.battleProgress,
+  );
   const battleSelectionSource = asRecord(
     source.battleSelection ?? sessionSource?.battleSelection,
   );
@@ -410,7 +434,8 @@ export function buildAutoCombatRealtimeStatusPayload(payload: unknown) {
   ]);
   const selectedEncounter = compactEncounter(source.selectedEncounter);
   const trackedMonsters = compactTrackedMonsters(source.trackedMonsters);
-  const hunting = pick(asRecord(source.hunting), HUNTING_KEYS);
+  const huntingSource = asRecord(source.hunting);
+  const hunting = pick(huntingSource, HUNTING_KEYS);
   const huntingSkill = asRecord(source.huntingSkill);
   const huntBatch = pick(asRecord(source.huntBatch), HUNT_BATCH_KEYS);
   const subMapSource = asRecord(source.subMap);
@@ -422,6 +447,26 @@ export function buildAutoCombatRealtimeStatusPayload(payload: unknown) {
   if (battleSelectionSource && battleSelection) {
     const battleSelectionMob = compactMob(battleSelectionSource.mob);
     if (battleSelectionMob) battleSelection.mob = battleSelectionMob;
+  }
+
+  if (huntingSource && hunting) {
+    if ('selectedMob' in huntingSource) {
+      hunting.selectedMob = compactMob(huntingSource.selectedMob);
+    }
+    if ('targetMob' in huntingSource) {
+      hunting.targetMob = compactMob(huntingSource.targetMob);
+    }
+    if ('currentTarget' in huntingSource) {
+      hunting.currentTarget = compactEncounter(huntingSource.currentTarget);
+    }
+    if ('targetEncounter' in huntingSource) {
+      hunting.targetEncounter = compactEncounter(huntingSource.targetEncounter);
+    }
+  }
+
+  const huntBatchSource = asRecord(source.huntBatch);
+  if (huntBatchSource && huntBatch && 'currentTarget' in huntBatchSource) {
+    huntBatch.currentTarget = compactEncounter(huntBatchSource.currentTarget);
   }
 
   if (session) {

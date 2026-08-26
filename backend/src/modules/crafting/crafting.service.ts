@@ -35,6 +35,7 @@ import {
   applyPremiumXpBonus,
   isPremiumActive,
 } from '../../common/utils/membership.util';
+import { buildActivityTimelineSnapshot } from '../../common/utils/activity-timeline.util';
 import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
@@ -1571,8 +1572,11 @@ export class CraftingService {
     return completedSessions;
   }
 
-  private buildCraftingSessionViewModel(session: CraftingSessionSnapshot) {
-    const nowMs = Date.now();
+  private buildCraftingSessionViewModel(
+    session: CraftingSessionSnapshot,
+    serverNow = new Date(),
+  ) {
+    const nowMs = serverNow.getTime();
     const startedAtMs = session.startedAt.getTime();
     const completesAtMs = session.completesAt.getTime();
     const totalMs = Math.max(1, completesAtMs - startedAtMs);
@@ -1604,6 +1608,19 @@ export class CraftingService {
       completesAt: session.completesAt,
       completedAt: session.completedAt,
       outputItem: session.outputItem,
+      timeline:
+        session.status === ActivityStatus.ACTIVE
+          ? buildActivityTimelineSnapshot({
+              activityInstanceId: session.id,
+              cycleId: `${session.id}:crafting`,
+              serverNow,
+              startedAt: session.startedAt,
+              endsAt: session.completesAt,
+              durationMs: totalMs,
+              direction: 'fill',
+              version: 1,
+            })
+          : null,
     };
   }
 

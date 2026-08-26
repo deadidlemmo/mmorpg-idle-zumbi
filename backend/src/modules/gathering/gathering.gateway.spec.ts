@@ -1,4 +1,7 @@
-import { GatheringGateway } from './gathering.gateway';
+import {
+  GatheringGateway,
+  getGatheringStatusScheduleDelayMs,
+} from './gathering.gateway';
 
 function createSocket(token?: string) {
   return {
@@ -114,5 +117,61 @@ describe('GatheringGateway', () => {
     });
 
     gateway.handleDisconnect(socket as never);
+  });
+});
+
+describe('getGatheringStatusScheduleDelayMs', () => {
+  const nowMs = Date.parse('2026-08-26T12:00:00.000Z');
+
+  it('agenda a próxima emissão logo depois do fim canônico do ciclo', () => {
+    expect(
+      getGatheringStatusScheduleDelayMs(
+        {
+          active: true,
+          timeline: {
+            endsAt: '2026-08-26T12:00:05.000Z',
+          },
+        },
+        nowMs,
+      ),
+    ).toBe(5_075);
+  });
+
+  it('usa heartbeat sem timeline e não agenda gathering inativo', () => {
+    expect(getGatheringStatusScheduleDelayMs({ active: true }, nowMs)).toBe(
+      30_000,
+    );
+    expect(
+      getGatheringStatusScheduleDelayMs({ active: false }, nowMs),
+    ).toBeNull();
+  });
+
+  it('limita ciclos longos ao heartbeat e ciclos vencidos ao atraso mínimo', () => {
+    expect(
+      getGatheringStatusScheduleDelayMs(
+        {
+          active: true,
+          session: {
+            timeline: {
+              endsAt: '2026-08-26T12:01:00.000Z',
+            },
+          },
+        },
+        nowMs,
+      ),
+    ).toBe(30_000);
+    expect(
+      getGatheringStatusScheduleDelayMs(
+        {
+          active: true,
+          productionPreview: {
+            timeline: {
+              endsAt: '2026-08-26T11:59:59.000Z',
+            },
+          },
+        },
+        nowMs,
+      ),
+    ).toBe(25);
   });
 });

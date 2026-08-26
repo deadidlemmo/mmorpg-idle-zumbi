@@ -104,6 +104,7 @@ function createServiceHarness(updateCount = 1) {
     ),
     autoCombatHuntBatch: {
       findFirst: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue({ count: updateCount }),
     },
   };
   const activityGuard = {
@@ -112,6 +113,7 @@ function createServiceHarness(updateCount = 1) {
   const gateway = {
     emitSessionUpdated: jest.fn(),
     emitStatus: jest.fn(),
+    emitHuntTargetFound: jest.fn(),
     emitFinished: jest.fn(),
     emitStopped: jest.fn(),
   };
@@ -130,12 +132,24 @@ function createServiceHarness(updateCount = 1) {
     recordAutoCombatTickError: jest.fn(),
     recordAutoCombatRealtimeEvent: jest.fn(),
   };
+  const calculateHuntingDuration = jest.fn();
+  calculateHuntingDuration.mockImplementation(
+    (_characterId: string, baseDurationMs: number) =>
+      Promise.resolve({
+        durationMs: baseDurationMs,
+        bonus: null,
+      }),
+  );
+  const petBonuses = {
+    calculateHuntingDuration,
+  };
   const service = new AutoCombatService(
     prisma as never,
     activityGuard as never,
     gateway as never,
     distributedLock as never,
     observability as never,
+    petBonuses as never,
   );
 
   jest.spyOn(service as any, 'getOrCreateHuntingSkill').mockResolvedValue({
@@ -157,6 +171,7 @@ function createServiceHarness(updateCount = 1) {
     activityGuard,
     tx,
     gateway,
+    petBonuses,
   };
 }
 
@@ -210,6 +225,267 @@ describe('AutoCombatService hunting processing', () => {
       );
 
     expect(foundCountIncrements).toBe(expectedFoundEnemies);
+  });
+
+  it('mantem a duracao congelada quando o pet muda durante o rastreio', async () => {
+    const { service, petBonuses, tx } = createServiceHarness();
+    const cycleStartedAt = new Date('2026-06-02T11:59:50.000Z');
+    const cycleTargetEncounter = createEncounter('encounter-1', 'mob-1', 1);
+    const session = createSession({
+      startedAt: cycleStartedAt,
+      huntStartedAt: cycleStartedAt,
+      lastProcessedAt: cycleStartedAt,
+      lastHuntProcessedAt: cycleStartedAt,
+      huntBatch: {
+        id: 'hunt-batch-1',
+        status: AutoCombatHuntBatchStatus.HUNTING,
+        lastProcessedAt: cycleStartedAt,
+        foundEnemiesCount: 0,
+        huntingXpGained: 0,
+        selectedEncounter: null,
+        selectedEncounterId: null,
+        selectedEncounterMobId: null,
+        cycleTargetEncounterId: cycleTargetEncounter.id,
+        cycleTargetEncounter,
+        huntSequence: 0,
+        cycleStartedAt,
+        cycleEndsAt: new Date('2026-06-02T12:00:05.000Z'),
+        cycleDurationMs: 15_000,
+        cycleVersion: 1,
+        appliedPetDefinitionId: null,
+        appliedPetEffectBasisPoints: 0,
+        mobs: [],
+      },
+    });
+
+    petBonuses.calculateHuntingDuration.mockResolvedValue({
+      durationMs: 14_550,
+      bonus: {
+        petDefinitionId: 'pet-hunting-t1',
+        effectBasisPoints: 300,
+      },
+    });
+
+    await (service as any).processHuntingSession(session);
+
+    expect(petBonuses.calculateHuntingDuration).not.toHaveBeenCalled();
+    expect(tx.autoCombatSession.updateMany).not.toHaveBeenCalled();
+    expect(tx.autoCombatHuntBatch.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('aplica o pet ao proximo rastreio com precisao em milissegundos', async () => {
+    const { service, petBonuses, tx } = createServiceHarness();
+    const cycleStartedAt = new Date('2026-06-02T11:59:45.000Z');
+    const cycleTargetEncounter = createEncounter('encounter-1', 'mob-1', 1);
+    const session = createSession({
+      startedAt: cycleStartedAt,
+      huntStartedAt: cycleStartedAt,
+      lastProcessedAt: cycleStartedAt,
+      lastHuntProcessedAt: cycleStartedAt,
+      huntBatch: {
+        id: 'hunt-batch-1',
+        status: AutoCombatHuntBatchStatus.HUNTING,
+        lastProcessedAt: cycleStartedAt,
+        foundEnemiesCount: 0,
+        huntingXpGained: 0,
+        selectedEncounter: null,
+        selectedEncounterId: null,
+        selectedEncounterMobId: null,
+        cycleTargetEncounterId: cycleTargetEncounter.id,
+        cycleTargetEncounter,
+        huntSequence: 0,
+        cycleStartedAt,
+        cycleEndsAt: new Date('2026-06-02T12:00:00.000Z'),
+        cycleDurationMs: 15_000,
+        cycleVersion: 1,
+        appliedPetDefinitionId: null,
+        appliedPetEffectBasisPoints: 0,
+        mobs: [],
+      },
+    });
+
+    petBonuses.calculateHuntingDuration.mockResolvedValue({
+      durationMs: 14_550,
+      bonus: {
+        petDefinitionId: 'pet-hunting-t1',
+        effectBasisPoints: 300,
+      },
+    });
+
+    await (service as any).processHuntingSession(session);
+
+    expect(tx.autoCombatHuntBatch.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          foundEnemiesCount: { increment: 1 },
+          cycleStartedAt: new Date('2026-06-02T12:00:00.000Z'),
+          cycleEndsAt: new Date('2026-06-02T12:00:14.550Z'),
+          cycleDurationMs: 14_550,
+          cycleVersion: 2,
+          cycleTargetEncounterId: expect.any(String),
+          appliedPetDefinitionId: 'pet-hunting-t1',
+          appliedPetEffectBasisPoints: 300,
+        }),
+      }),
+    );
+
+    const createManyPayload =
+      tx.autoCombatSessionEvent.createMany.mock.calls[0][0];
+    expect(createManyPayload.data[0].payloadJson).toMatchObject({
+      targetEncounterId: 'encounter-1',
+      targetMobId: 'mob-1',
+      foundAt: '2026-06-02T12:00:00.000Z',
+      nextFindAt: '2026-06-02T12:00:14.550Z',
+      secondsPerFind: 14.55,
+    });
+    expect(
+      (service as any).autoCombatGateway.emitHuntTargetFound,
+    ).toHaveBeenCalledWith(
+      'character-1',
+      expect.objectContaining({
+        type: 'HUNT_TARGET_FOUND',
+        targetEncounterId: 'encounter-1',
+        targetMobId: 'mob-1',
+      }),
+    );
+  });
+
+  it('entrega o alvo persistido do ciclo e sorteia o proximo apenas depois', async () => {
+    const { service, tx, gateway } = createServiceHarness();
+    const cycleStartedAt = new Date('2026-06-02T11:59:45.000Z');
+    const previousEncounter = createEncounter('encounter-1', 'mob-1', 1);
+    const cycleTargetEncounter = createEncounter('encounter-2', 'mob-2', 3);
+    const session = createSession({
+      startedAt: cycleStartedAt,
+      huntStartedAt: cycleStartedAt,
+      lastProcessedAt: cycleStartedAt,
+      lastHuntProcessedAt: cycleStartedAt,
+      selectedEncounter: previousEncounter,
+      selectedEncounterId: previousEncounter.id,
+      selectedEncounterMobId: previousEncounter.mobId,
+      huntBatch: {
+        id: 'hunt-batch-1',
+        status: AutoCombatHuntBatchStatus.HUNTING,
+        lastProcessedAt: cycleStartedAt,
+        foundEnemiesCount: 0,
+        huntingXpGained: 0,
+        selectedEncounter: previousEncounter,
+        selectedEncounterId: previousEncounter.id,
+        selectedEncounterMobId: previousEncounter.mobId,
+        cycleTargetEncounterId: cycleTargetEncounter.id,
+        cycleTargetEncounter,
+        huntSequence: 0,
+        cycleStartedAt,
+        cycleEndsAt: new Date('2026-06-02T12:00:00.000Z'),
+        cycleDurationMs: 15_000,
+        cycleVersion: 1,
+        appliedPetDefinitionId: null,
+        appliedPetEffectBasisPoints: 0,
+        mobs: [],
+      },
+    });
+
+    jest.mocked(Math.random).mockReturnValue(0);
+
+    await (service as any).processHuntingSession(session);
+
+    expect(tx.autoCombatHuntBatch.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          selectedEncounterId: cycleTargetEncounter.id,
+          selectedEncounterMobId: cycleTargetEncounter.mobId,
+          cycleTargetEncounterId: previousEncounter.id,
+        }),
+      }),
+    );
+    expect(tx.autoCombatHuntBatchMob.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          batchId_mobId: {
+            batchId: 'hunt-batch-1',
+            mobId: cycleTargetEncounter.mobId,
+          },
+        },
+      }),
+    );
+    expect(gateway.emitHuntTargetFound).toHaveBeenCalledWith(
+      'character-1',
+      expect.objectContaining({
+        targetEncounterId: cycleTargetEncounter.id,
+        targetMobId: cycleTargetEncounter.mobId,
+      }),
+    );
+  });
+
+  it('preenche um alvo canonico ausente sem adiantar a recompensa', async () => {
+    const { service, prisma, tx, gateway } = createServiceHarness();
+    const cycleStartedAt = new Date('2026-06-02T11:59:50.000Z');
+    const session = createSession({
+      startedAt: cycleStartedAt,
+      huntStartedAt: cycleStartedAt,
+      lastProcessedAt: cycleStartedAt,
+      lastHuntProcessedAt: cycleStartedAt,
+      huntBatch: {
+        id: 'hunt-batch-1',
+        status: AutoCombatHuntBatchStatus.HUNTING,
+        lastProcessedAt: cycleStartedAt,
+        foundEnemiesCount: 0,
+        huntingXpGained: 0,
+        selectedEncounter: createEncounter('encounter-2', 'mob-2', 3),
+        selectedEncounterId: 'encounter-2',
+        selectedEncounterMobId: 'mob-2',
+        cycleTargetEncounterId: null,
+        cycleTargetEncounter: null,
+        huntSequence: 0,
+        cycleStartedAt,
+        cycleEndsAt: new Date('2026-06-02T12:00:05.000Z'),
+        cycleDurationMs: 15_000,
+        cycleVersion: 1,
+        appliedPetDefinitionId: null,
+        appliedPetEffectBasisPoints: 0,
+        mobs: [],
+      },
+    });
+
+    jest.mocked(Math.random).mockReturnValue(0);
+
+    await (service as any).processHuntingSession(session);
+
+    expect(prisma.autoCombatHuntBatch.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cycleTargetEncounterId: 'encounter-1',
+        }),
+      }),
+    );
+    expect(tx.autoCombatHuntBatchMob.upsert).not.toHaveBeenCalled();
+    expect(gateway.emitHuntTargetFound).not.toHaveBeenCalled();
+  });
+
+  it('reconstroi a mesma janela persistida em F5 e reconexao', () => {
+    const { service } = createServiceHarness();
+    const timing = (service as any).buildHuntingTimingViewModel(
+      {
+        phase: AutoCombatSessionPhase.HUNTING,
+        huntStartedAt: new Date('2026-06-02T11:00:00.000Z'),
+        lastHuntProcessedAt: new Date('2026-06-02T11:59:59.000Z'),
+        foundEnemiesCount: 12,
+        cycleStartedAt: new Date('2026-06-02T11:59:58.450Z'),
+        cycleEndsAt: new Date('2026-06-02T12:00:13.000Z'),
+        cycleDurationMs: 14_550,
+        cycleVersion: 13,
+      },
+      { secondsPerEnemy: 15 },
+      new Date('2026-06-02T12:00:00.000Z'),
+    );
+
+    expect(timing).toMatchObject({
+      lastFindAt: new Date('2026-06-02T11:59:58.450Z'),
+      nextFindAt: new Date('2026-06-02T12:00:13.000Z'),
+      cycleDurationMs: 14_550,
+      cycleVersion: 13,
+      secondsPerFind: 14.55,
+    });
   });
 
   it('aplica bonus premium de 20% no XP da skill de caca', async () => {

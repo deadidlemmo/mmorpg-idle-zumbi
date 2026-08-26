@@ -44,7 +44,19 @@ import {
   accumulateEconomyEntry,
   getEconomyHourBucket,
 } from '../economy/economy-ledger';
+import type { EquippedPetBonus } from '../pets/pet-bonus';
+import { PetBonusesService } from '../pets/pet-bonuses.service';
 import { StartGatheringDto } from './dto/start-gathering.dto';
+import {
+  buildGatheringTimeline,
+  createGatheringCycleFromProgress,
+  getGatheringCycleDurationMs,
+  getGatheringRatePerHour,
+  MIN_GATHERING_CYCLE_DURATION_MS,
+  resolveGatheringCycle,
+  type GatheringCycleResolution,
+  type GatheringCycleState,
+} from './gathering-cycle';
 
 const GATHERING_ORIGINS = [
   MaterialOrigin.DESMANCHE,
@@ -95,7 +107,20 @@ type ProductionResult = {
   skillRateMultiplier: number;
   affinityRateMultiplier: number;
   finalRateMultiplier: number;
+  baseCycleDurationMs: number;
+  cycleDurationMs: number;
+  petDefinitionId: string | null;
+  petEffectBasisPoints: number;
 };
+
+type ProductionRateProfile = Pick<
+  ProductionResult,
+  | 'baseRatePerHour'
+  | 'defaultRatePerHour'
+  | 'skillRateMultiplier'
+  | 'affinityRateMultiplier'
+  | 'baseCycleDurationMs'
+>;
 
 type MaterialRecipeUsageViewModel = {
   recipeId: string;
@@ -118,6 +143,25 @@ type ResolveGatheringOptions = {
   forcePersist?: boolean;
   validateCollectionGuard?: boolean;
   throwIfMissing?: boolean;
+};
+
+type AppliedGatheringPetBonus = Pick<
+  EquippedPetBonus,
+  'petDefinitionId' | 'effectBasisPoints'
+>;
+
+type GatheringCycleSessionLike = {
+  id: string;
+  status: ActivityStatus;
+  lastResolvedAt: Date;
+  progressRemainder: number;
+  collectedQuantity: number;
+  cycleStartedAt: Date | null;
+  cycleEndsAt: Date | null;
+  cycleDurationMs: number | null;
+  cycleVersion: number;
+  appliedPetDefinitionId: string | null;
+  appliedPetEffectBasisPoints: number;
 };
 
 const ORIGIN_STAT_INFO: Record<
@@ -349,20 +393,16 @@ function applyGatheringXp(params: {
   };
 }
 
-function calculateProduction(params: {
-  elapsedSeconds: number;
+function calculateProductionRateProfile(params: {
   tier: number;
-  progressRemainder: number;
   baseGatheringRatePerHour?: number | null;
   skillLevel: number;
   isAffinity: boolean;
-  maxElapsedSeconds?: number;
-}): ProductionResult {
+}): ProductionRateProfile {
   const defaultReward = calculateGatheringReward({
-    elapsedSeconds: params.elapsedSeconds,
+    elapsedSeconds: 0,
     tier: params.tier,
-    progressRemainder: params.progressRemainder,
-    maxElapsedSeconds: params.maxElapsedSeconds,
+    progressRemainder: 0,
   });
 
   const defaultRatePerHour = Math.max(1, defaultReward.ratePerHour);
@@ -376,34 +416,49 @@ function calculateProduction(params: {
     ? GATHERING_AFFINITY_PRODUCTION_MULTIPLIER
     : 1;
 
-  const finalRateMultiplier =
-    (baseRatePerHour / defaultRatePerHour) *
-    skillRateMultiplier *
-    affinityRateMultiplier;
-
-  const reward = calculateGatheringReward({
-    elapsedSeconds: params.elapsedSeconds,
-    tier: params.tier,
-    progressRemainder: params.progressRemainder,
-    rateMultiplier: finalRateMultiplier,
-    maxElapsedSeconds: params.maxElapsedSeconds,
-  });
+  const ratePerHour =
+    baseRatePerHour * skillRateMultiplier * affinityRateMultiplier;
 
   return {
-    quantity: reward.quantity,
-    newProgressRemainder: reward.newProgressRemainder,
-    elapsedHours: reward.elapsedHours,
-    rawAmount: reward.rawAmount,
-    ratePerHour: Number(
-      (baseRatePerHour * skillRateMultiplier * affinityRateMultiplier).toFixed(
-        4,
-      ),
-    ),
     baseRatePerHour,
     defaultRatePerHour,
     skillRateMultiplier: Number(skillRateMultiplier.toFixed(4)),
     affinityRateMultiplier: Number(affinityRateMultiplier.toFixed(4)),
+    baseCycleDurationMs: getGatheringCycleDurationMs(ratePerHour),
+  };
+}
+
+function buildProductionResult(params: {
+  cycleResolution: GatheringCycleResolution;
+  rateProfile: ProductionRateProfile;
+  petBonus: Pick<
+    EquippedPetBonus,
+    'petDefinitionId' | 'effectBasisPoints'
+  > | null;
+}): ProductionResult {
+  const ratePerHour = getGatheringRatePerHour(
+    params.cycleResolution.cycle.durationMs,
+  );
+  const finalRateMultiplier =
+    ratePerHour / params.rateProfile.defaultRatePerHour;
+
+  return {
+    quantity: params.cycleResolution.quantity,
+    newProgressRemainder: params.cycleResolution.progressRemainder,
+    elapsedHours: params.cycleResolution.elapsedMs / 3_600_000,
+    rawAmount:
+      params.cycleResolution.quantity +
+      params.cycleResolution.progressRemainder,
+    ratePerHour,
+    baseRatePerHour: params.rateProfile.baseRatePerHour,
+    defaultRatePerHour: params.rateProfile.defaultRatePerHour,
+    skillRateMultiplier: params.rateProfile.skillRateMultiplier,
+    affinityRateMultiplier: params.rateProfile.affinityRateMultiplier,
     finalRateMultiplier: Number(finalRateMultiplier.toFixed(4)),
+    baseCycleDurationMs: params.rateProfile.baseCycleDurationMs,
+    cycleDurationMs: params.cycleResolution.cycle.durationMs,
+    petDefinitionId: params.petBonus?.petDefinitionId ?? null,
+    petEffectBasisPoints: params.petBonus?.effectBasisPoints ?? 0,
   };
 }
 
@@ -483,12 +538,56 @@ function getRelatedClassesFromRecipes(
   ).sort((a, b) => a.localeCompare(b));
 }
 
+function getPersistedGatheringCycle(
+  session: GatheringCycleSessionLike,
+): GatheringCycleState | null {
+  if (
+    !session.cycleStartedAt ||
+    !session.cycleEndsAt ||
+    !session.cycleDurationMs ||
+    session.cycleDurationMs <= 0
+  ) {
+    return null;
+  }
+
+  if (
+    session.cycleEndsAt.getTime() - session.cycleStartedAt.getTime() !==
+    session.cycleDurationMs
+  ) {
+    return null;
+  }
+
+  return {
+    startedAt: session.cycleStartedAt,
+    endsAt: session.cycleEndsAt,
+    durationMs: session.cycleDurationMs,
+    version: Math.max(1, session.cycleVersion),
+  };
+}
+
+function getAppliedGatheringPetBonus(
+  session: GatheringCycleSessionLike,
+): AppliedGatheringPetBonus | null {
+  if (
+    !session.appliedPetDefinitionId ||
+    session.appliedPetEffectBasisPoints <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    petDefinitionId: session.appliedPetDefinitionId,
+    effectBasisPoints: session.appliedPetEffectBasisPoints,
+  };
+}
+
 @Injectable()
 export class GatheringService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityGuard: ActivityGuardService,
     private readonly auditService: AuditService,
+    private readonly petBonuses: PetBonusesService,
   ) {}
 
   private validateGatheringOrigin(origin: MaterialOrigin) {
@@ -539,6 +638,75 @@ export class GatheringService {
         totalXp: 0,
       },
     });
+  }
+
+  private async resolveGatheringCycle(params: {
+    characterId: string;
+    origin: MaterialOrigin;
+    session: GatheringCycleSessionLike;
+    rateProfile: ProductionRateProfile;
+    serverNow: Date;
+    idleProgressLimitSeconds: number;
+  }) {
+    const persistedCycle = getPersistedGatheringCycle(params.session);
+    let appliedPetBonus = getAppliedGatheringPetBonus(params.session);
+    let currentCycle = persistedCycle;
+    let needsCycleBackfill = false;
+
+    if (!currentCycle) {
+      const initialDuration = await this.petBonuses.calculateGatheringDuration(
+        params.characterId,
+        params.origin,
+        params.rateProfile.baseCycleDurationMs,
+        MIN_GATHERING_CYCLE_DURATION_MS,
+      );
+
+      appliedPetBonus = initialDuration.bonus;
+      currentCycle = createGatheringCycleFromProgress({
+        anchorAt: params.session.lastResolvedAt,
+        durationMs: initialDuration.durationMs,
+        progressRemainder: params.session.progressRemainder,
+        version: Math.max(1, params.session.collectedQuantity + 1),
+      });
+      needsCycleBackfill = true;
+    }
+
+    const processingNowMs = Math.min(
+      params.serverNow.getTime(),
+      params.session.lastResolvedAt.getTime() +
+        params.idleProgressLimitSeconds * 1_000,
+    );
+    const crossesCycleBoundary =
+      processingNowMs >= currentCycle.endsAt.getTime();
+    let nextCycleDurationMs = currentCycle.durationMs;
+    let nextPetBonus = appliedPetBonus;
+
+    if (crossesCycleBoundary) {
+      const nextDuration = await this.petBonuses.calculateGatheringDuration(
+        params.characterId,
+        params.origin,
+        params.rateProfile.baseCycleDurationMs,
+        MIN_GATHERING_CYCLE_DURATION_MS,
+      );
+
+      nextCycleDurationMs = nextDuration.durationMs;
+      nextPetBonus = nextDuration.bonus;
+    }
+
+    const cycleResolution = resolveGatheringCycle({
+      serverNow: params.serverNow,
+      lastResolvedAt: params.session.lastResolvedAt,
+      idleProgressLimitSeconds: params.idleProgressLimitSeconds,
+      currentCycle,
+      nextCycleDurationMs,
+    });
+
+    return {
+      cycleResolution,
+      appliedPetBonus:
+        cycleResolution.quantity > 0 ? nextPetBonus : appliedPetBonus,
+      needsCycleBackfill,
+    };
   }
 
   private async assertCharacterOwnership(userId: string, characterId: string) {
@@ -616,19 +784,38 @@ export class GatheringService {
     });
   }
 
-  private buildSessionPayload(session: {
-    id: string;
-    status: ActivityStatus;
-    origin: MaterialOrigin;
-    startedAt: Date;
-    lastResolvedAt: Date;
-    progressRemainder: number;
-    collectedQuantity: number;
-    collectedXp: number;
-    character?: unknown;
-    map?: unknown;
-    targetMaterial?: unknown;
-  }) {
+  private buildSessionPayload(
+    session: {
+      id: string;
+      status: ActivityStatus;
+      origin: MaterialOrigin;
+      startedAt: Date;
+      lastResolvedAt: Date;
+      progressRemainder: number;
+      collectedQuantity: number;
+      collectedXp: number;
+      cycleStartedAt: Date | null;
+      cycleEndsAt: Date | null;
+      cycleDurationMs: number | null;
+      cycleVersion: number;
+      appliedPetDefinitionId: string | null;
+      appliedPetEffectBasisPoints: number;
+      character?: unknown;
+      map?: unknown;
+      targetMaterial?: unknown;
+    },
+    serverNow = new Date(),
+  ) {
+    const cycle = getPersistedGatheringCycle(session);
+    const timeline = cycle
+      ? buildGatheringTimeline({
+          active: session.status === ActivityStatus.ACTIVE,
+          sessionId: session.id,
+          serverNow,
+          cycle,
+        })
+      : null;
+
     return {
       id: session.id,
       status: session.status,
@@ -638,6 +825,18 @@ export class GatheringService {
       progressRemainder: session.progressRemainder,
       collectedQuantity: session.collectedQuantity,
       collectedXp: session.collectedXp,
+      cycleStartedAt: session.cycleStartedAt,
+      cycleEndsAt: session.cycleEndsAt,
+      cycleDurationMs: session.cycleDurationMs,
+      cycleVersion: session.cycleVersion,
+      appliedPetBonus: {
+        petDefinitionId: session.appliedPetDefinitionId,
+        effectBasisPoints: session.appliedPetEffectBasisPoints,
+        effectPercent: Number(
+          (session.appliedPetEffectBasisPoints / 100).toFixed(2),
+        ),
+      },
+      timeline,
       character: session.character,
       map: session.map,
       targetMaterial: normalizeGatheringTargetMaterial(session.targetMaterial),
@@ -660,6 +859,10 @@ export class GatheringService {
       skillRateMultiplier: reward.skillRateMultiplier,
       affinityRateMultiplier: reward.affinityRateMultiplier,
       finalRateMultiplier: reward.finalRateMultiplier,
+      baseCycleDurationMs: reward.baseCycleDurationMs,
+      cycleDurationMs: reward.cycleDurationMs,
+      petDefinitionId: reward.petDefinitionId,
+      petEffectBasisPoints: reward.petEffectBasisPoints,
       previousProgressRemainder: Number(previousProgressRemainder.toFixed(4)),
       newProgressRemainder: Number(reward.newProgressRemainder.toFixed(4)),
     };
@@ -683,6 +886,10 @@ export class GatheringService {
       skillRateMultiplier: reward.skillRateMultiplier,
       affinityRateMultiplier: reward.affinityRateMultiplier,
       finalRateMultiplier: reward.finalRateMultiplier,
+      baseCycleDurationMs: reward.baseCycleDurationMs,
+      cycleDurationMs: reward.cycleDurationMs,
+      petDefinitionId: reward.petDefinitionId,
+      petEffectBasisPoints: reward.petEffectBasisPoints,
       estimatedQuantityToCollect: 0,
       currentProgressRemainder: wasPersisted
         ? Number(reward.newProgressRemainder.toFixed(4))
@@ -715,6 +922,7 @@ export class GatheringService {
 
     if (session.character.status !== CharacterStatus.ACTIVE || currentHp <= 0) {
       return {
+        serverNow: new Date(),
         session,
         updatedSession: session,
         inventoryItem: null as InventoryItem | null,
@@ -732,6 +940,10 @@ export class GatheringService {
           skillRateMultiplier: 1,
           affinityRateMultiplier: 1,
           finalRateMultiplier: 1,
+          baseCycleDurationMs: 0,
+          cycleDurationMs: 0,
+          petDefinitionId: session.appliedPetDefinitionId,
+          petEffectBasisPoints: session.appliedPetEffectBasisPoints,
         } satisfies ProductionResult,
         elapsedSeconds: 0,
         xpGained: 0,
@@ -765,24 +977,36 @@ export class GatheringService {
     const now = new Date();
     const premiumActive = isPremiumActive(session.character.user, now);
     const idleProgressLimitSeconds = getIdleProgressLimitSeconds(premiumActive);
-    const rawElapsedSeconds = Math.max(
-      0,
-      (now.getTime() - session.lastResolvedAt.getTime()) / 1000,
-    );
-    const elapsedSeconds = Math.min(
-      rawElapsedSeconds,
-      idleProgressLimitSeconds,
-    );
-
-    const reward = calculateProduction({
-      elapsedSeconds,
+    const rateProfile = calculateProductionRateProfile({
       tier: session.map.tier,
-      progressRemainder: session.progressRemainder,
       baseGatheringRatePerHour: session.targetMaterial.baseGatheringRatePerHour,
       skillLevel: gatheringSkill.level,
       isAffinity: affinity,
-      maxElapsedSeconds: idleProgressLimitSeconds,
     });
+    const cycleContext = await this.resolveGatheringCycle({
+      characterId,
+      origin: session.origin,
+      session,
+      rateProfile,
+      serverNow: now,
+      idleProgressLimitSeconds,
+    });
+    const reward = buildProductionResult({
+      cycleResolution: cycleContext.cycleResolution,
+      rateProfile,
+      petBonus: cycleContext.appliedPetBonus,
+    });
+    const elapsedSeconds = cycleContext.cycleResolution.elapsedMs / 1_000;
+    const resolvedCycleData = {
+      cycleStartedAt: cycleContext.cycleResolution.cycle.startedAt,
+      cycleEndsAt: cycleContext.cycleResolution.cycle.endsAt,
+      cycleDurationMs: cycleContext.cycleResolution.cycle.durationMs,
+      cycleVersion: cycleContext.cycleResolution.cycle.version,
+      appliedPetDefinitionId:
+        cycleContext.appliedPetBonus?.petDefinitionId ?? null,
+      appliedPetEffectBasisPoints:
+        cycleContext.appliedPetBonus?.effectBasisPoints ?? 0,
+    };
 
     const gatheringXpPerUnit = getMaterialGatheringXpPerUnit(
       session.targetMaterial,
@@ -801,12 +1025,19 @@ export class GatheringService {
       xpGained,
     });
 
-    const shouldPersist = Boolean(options.forcePersist) || reward.quantity > 0;
+    const shouldPersist =
+      Boolean(options.forcePersist) ||
+      reward.quantity > 0 ||
+      cycleContext.needsCycleBackfill;
 
     if (!shouldPersist) {
       return {
+        serverNow: now,
         session,
-        updatedSession: session,
+        updatedSession: {
+          ...session,
+          ...resolvedCycleData,
+        },
         inventoryItem: null as InventoryItem | null,
         gatheringSkill,
         updatedGatheringSkill: gatheringSkill,
@@ -840,6 +1071,7 @@ export class GatheringService {
           collectedXp: {
             increment: xpGained,
           },
+          ...resolvedCycleData,
         },
       });
 
@@ -969,6 +1201,7 @@ export class GatheringService {
       }
 
       return {
+        serverNow: now,
         session: freshSession,
         updatedSession: freshSession,
         inventoryItem: null as InventoryItem | null,
@@ -979,6 +1212,10 @@ export class GatheringService {
           ...reward,
           quantity: 0,
           newProgressRemainder: freshSession.progressRemainder,
+          cycleDurationMs:
+            freshSession.cycleDurationMs ?? reward.cycleDurationMs,
+          petDefinitionId: freshSession.appliedPetDefinitionId,
+          petEffectBasisPoints: freshSession.appliedPetEffectBasisPoints,
         },
         elapsedSeconds: 0,
         xpGained: 0,
@@ -1013,6 +1250,7 @@ export class GatheringService {
     }
 
     return {
+      serverNow: now,
       session,
       updatedSession: {
         ...transactionResult.updatedSession,
@@ -1354,6 +1592,24 @@ export class GatheringService {
       : null;
 
     const now = new Date();
+    const initialRateProfile = calculateProductionRateProfile({
+      tier: gameMap.tier,
+      baseGatheringRatePerHour: targetMaterial.baseGatheringRatePerHour,
+      skillLevel: gatheringSkill.level,
+      isAffinity: affinity,
+    });
+    const initialPetDuration = await this.petBonuses.calculateGatheringDuration(
+      dto.characterId,
+      dto.origin,
+      initialRateProfile.baseCycleDurationMs,
+      MIN_GATHERING_CYCLE_DURATION_MS,
+    );
+    const initialCycle = createGatheringCycleFromProgress({
+      anchorAt: now,
+      durationMs: initialPetDuration.durationMs,
+      progressRemainder: 0,
+      version: 1,
+    });
 
     let transactionResult;
 
@@ -1466,6 +1722,14 @@ export class GatheringService {
               progressRemainder: 0,
               collectedQuantity: 0,
               collectedXp: 0,
+              cycleStartedAt: initialCycle.startedAt,
+              cycleEndsAt: initialCycle.endsAt,
+              cycleDurationMs: initialCycle.durationMs,
+              cycleVersion: initialCycle.version,
+              appliedPetDefinitionId:
+                initialPetDuration.bonus?.petDefinitionId ?? null,
+              appliedPetEffectBasisPoints:
+                initialPetDuration.bonus?.effectBasisPoints ?? 0,
             },
             include: {
               character: {
@@ -1603,22 +1867,31 @@ export class GatheringService {
     }
 
     const skill = resolved.updatedGatheringSkill ?? resolved.gatheringSkill;
+    const session = this.buildSessionPayload(
+      resolved.updatedSession,
+      resolved.serverNow,
+    );
 
     return {
       active: true,
-      session: this.buildSessionPayload(resolved.updatedSession),
+      serverNow: resolved.serverNow,
+      timeline: session.timeline,
+      session,
       gatheringSkill: skill
         ? buildGatheringSkillViewModel({
             skill,
             isAffinity: resolved.affinity,
           })
         : null,
-      productionPreview: this.buildProductionPreviewPayload({
-        elapsedSeconds: resolved.elapsedSeconds,
-        reward: resolved.reward,
-        currentProgressRemainder: resolved.session.progressRemainder,
-        wasPersisted: resolved.wasPersisted,
-      }),
+      productionPreview: {
+        ...this.buildProductionPreviewPayload({
+          elapsedSeconds: resolved.elapsedSeconds,
+          reward: resolved.reward,
+          currentProgressRemainder: resolved.session.progressRemainder,
+          wasPersisted: resolved.wasPersisted,
+        }),
+        timeline: session.timeline,
+      },
       autoCollected: resolved.collected,
       inventoryItem: resolved.inventoryItem,
     };
@@ -1658,7 +1931,10 @@ export class GatheringService {
               }),
             }
           : null,
-      session: this.buildSessionPayload(resolved.updatedSession),
+      session: this.buildSessionPayload(
+        resolved.updatedSession,
+        resolved.serverNow,
+      ),
       inventoryItem: resolved.inventoryItem,
     };
   }

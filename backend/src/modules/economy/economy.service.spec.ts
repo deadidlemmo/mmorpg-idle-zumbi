@@ -100,6 +100,68 @@ describe('EconomyService', () => {
     expect(findMany).not.toHaveBeenCalled();
   });
 
+  it('oferece somente materiais em troca de fragmentos de ameaca', async () => {
+    const exchangeItem = {
+      id: '11111111-1111-4111-8111-111111111111',
+      name: 'Biomaterial Craniano Comum',
+      slug: 'biomaterial-craniano-comum',
+      description: null,
+      tier: 1,
+      rarity: Rarity.COMMON,
+      materialOrigin: MaterialOrigin.DROP_MOBS,
+    };
+    const findMany = jest.fn().mockResolvedValue([exchangeItem]);
+    const prisma = {
+      character: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'character-1',
+          name: 'Lutador',
+        }),
+      },
+      item: { findMany },
+      characterEconomyBalance: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            currency: EconomyCurrency.WORLD_BOSS_FRAGMENT,
+            balance: 12,
+          },
+        ]),
+      },
+    } as unknown as PrismaService;
+    const service = new EconomyService(prisma);
+
+    const result = await service.getExchangeOffers(
+      'user-1',
+      'character-1',
+      1,
+      EconomyCurrency.WORLD_BOSS_FRAGMENT,
+    );
+
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(result.offers).toHaveLength(1);
+    expect(result.offers[0]).toMatchObject({
+      id: `WBEM:${exchangeItem.id}`,
+      source: 'WORLD_BOSS_EMERGENCY_DROP',
+      category: 'EMERGENCY',
+      item: { id: exchangeItem.id },
+    });
+  });
+
+  it('rejeita identificadores antigos de troca de fragmentos por casulo', async () => {
+    const transaction = jest.fn();
+    const service = new EconomyService({
+      $transaction: transaction,
+    } as unknown as PrismaService);
+
+    await expect(
+      service.exchange('user-1', 'character-1', {
+        offerId: 'WBC:11111111-1111-4111-8111-111111111111',
+        requestId: '22222222-2222-4222-8222-222222222222',
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
   it('debita moeda e credita o material uma unica vez na troca', async () => {
     const exchangeItem = {
       id: '11111111-1111-4111-8111-111111111111',

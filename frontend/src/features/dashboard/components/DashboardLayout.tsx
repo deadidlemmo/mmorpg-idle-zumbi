@@ -1,10 +1,35 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import {
+  ArrowLeftRight,
+  Backpack,
+  Biohazard,
+  Crosshair,
+  Crown,
+  Footprints,
+  Hammer,
+  HeartPulse,
+  LayoutDashboard,
+  Leaf,
+  ListChecks,
+  Map as MapIcon,
+  PawPrint,
+  Pickaxe,
+  ScanLine,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
+  Swords,
+  Trophy,
+  Users,
+  Wrench,
+} from "lucide-react";
 import discordIcon from "../../../assets/images/brand/discord.webp";
 import cashIcon from "../../../assets/images/coins/cash.webp";
 import goldIcon from "../../../assets/images/coins/gold.webp";
-import { PremiumPlaceholderIcon } from "../../../components/PremiumPlaceholderIcon";
 import { removeAuthToken } from "../../../services/api/authToken";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import { getOnlinePlayersStatus } from "../api/dashboard.api";
@@ -51,8 +76,7 @@ interface DashboardLayoutContentProps {
 interface DashboardNavItem {
   label: string;
   path: string;
-  icon: string;
-  isPremium?: boolean;
+  icon: ReactNode;
 }
 
 type DashboardGatheringOrigin =
@@ -67,7 +91,7 @@ interface DashboardGatheringSidebarItem {
   label: string;
   slug: string;
   origin: DashboardGatheringOrigin;
-  icon: string;
+  icon: ReactNode;
 }
 
 type GatheringSkillLoose = {
@@ -303,115 +327,124 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   {
     label: "Visão geral",
     path: "",
-    icon: "⌂",
+    icon: <LayoutDashboard size={17} strokeWidth={1.9} />,
   },
   {
     label: "Combate automático",
     path: "auto-combat",
-    icon: "⚔",
+    icon: <Swords size={17} strokeWidth={1.9} />,
   },
   {
     label: "Expedições",
     path: "gathering",
-    icon: "⛏",
+    icon: <Pickaxe size={17} strokeWidth={1.9} />,
   },
   {
     label: "Criação",
     path: "crafting",
-    icon: "⚒",
+    icon: <Hammer size={17} strokeWidth={1.9} />,
   },
   {
     label: "Mochila",
     path: "inventory",
-    icon: "▦",
+    icon: <Backpack size={17} strokeWidth={1.9} />,
   },
   {
     label: "Equipamentos",
     path: "equipment",
-    icon: "◇",
+    icon: <Shield size={17} strokeWidth={1.9} />,
+  },
+  {
+    label: "Pets",
+    path: "pets",
+    icon: <PawPrint size={16} strokeWidth={2} />,
   },
   {
     label: "Aparência",
     path: "appearance",
-    icon: "◉",
+    icon: <Sparkles size={17} strokeWidth={1.9} />,
   },
   {
     label: "Mercador",
     path: "consumables",
-    icon: "$",
+    icon: <ShoppingBag size={17} strokeWidth={1.9} />,
   },
   {
     label: "Recursos",
     path: "resources",
-    icon: "⇄",
+    icon: <ArrowLeftRight size={17} strokeWidth={1.9} />,
   },
   {
     label: "Objetivos",
     path: "objectives",
-    icon: "✓",
+    icon: <ListChecks size={17} strokeWidth={1.9} />,
   },
   {
     label: "Enfermaria",
     path: "infirmary",
-    icon: "+",
-  },
-  {
-    label: "Premium",
-    path: "membership",
-    icon: "P",
-    isPremium: true,
+    icon: <HeartPulse size={17} strokeWidth={1.9} />,
   },
   {
     label: "Mapas",
     path: "maps",
-    icon: "◇",
+    icon: <MapIcon size={17} strokeWidth={1.9} />,
   },
   {
     label: "Incursões",
     path: "incursions",
-    icon: "⌬",
+    icon: <ShieldAlert size={17} strokeWidth={1.9} />,
   },
   {
     label: "Ameaças Globais",
     path: "world-bosses",
-    icon: "☣",
+    icon: <Biohazard size={17} strokeWidth={1.9} />,
   },
   {
     label: "Ranking",
     path: "rankings",
-    icon: "★",
+    icon: <Trophy size={17} strokeWidth={1.9} />,
   },
   {
     label: "Aliados",
     path: "allies",
-    icon: "◎",
+    icon: <Users size={17} strokeWidth={1.9} />,
   },
 ];
 
-const DASHBOARD_MAIN_NAV_ITEMS = DASHBOARD_NAV_ITEMS.filter((item) =>
-  ["", "objectives", "auto-combat"].includes(item.path),
+const DASHBOARD_OVERVIEW_NAV_ITEM = DASHBOARD_NAV_ITEMS.find(
+  (item) => item.path === "",
 );
 
-const DASHBOARD_MANAGEMENT_NAV_ITEMS = [
-  "inventory",
-  "equipment",
-  "appearance",
+const DASHBOARD_ACTIVITY_NAV_ITEMS = [
+  "auto-combat",
+  "gathering",
   "crafting",
-  "consumables",
-  "resources",
-  "infirmary",
-  "membership",
+  "incursions",
+  "world-bosses",
+  "maps",
 ]
   .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
   .filter((item): item is DashboardNavItem => Boolean(item));
 
-const DASHBOARD_WORLD_NAV_ITEMS = [
-  "maps",
-  "incursions",
-  "world-bosses",
-  "rankings",
-  "allies",
+const DASHBOARD_CHARACTER_NAV_ITEMS = [
+  "objectives",
+  "equipment",
+  "inventory",
+  "pets",
+  "appearance",
 ]
+  .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
+  .filter((item): item is DashboardNavItem => Boolean(item));
+
+const DASHBOARD_SHELTER_NAV_ITEMS = [
+  "infirmary",
+  "consumables",
+  "resources",
+]
+  .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
+  .filter((item): item is DashboardNavItem => Boolean(item));
+
+const DASHBOARD_COMMUNITY_NAV_ITEMS = ["rankings", "allies"]
   .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
   .filter((item): item is DashboardNavItem => Boolean(item));
 
@@ -450,13 +483,9 @@ function DiscordMark() {
   );
 }
 
-function getDashboardNavLinkClassName(
-  item: DashboardNavItem,
-  isActive: boolean,
-) {
+function getDashboardNavLinkClassName(isActive: boolean) {
   return [
     "dashboard-sidebar__link",
-    item.isPremium ? "dashboard-sidebar__link--premium" : "",
     isActive ? "is-active" : "",
   ]
     .filter(Boolean)
@@ -466,11 +495,7 @@ function getDashboardNavLinkClassName(
 function DashboardNavIcon({ item }: { item: DashboardNavItem }) {
   return (
     <span className="dashboard-sidebar__link-icon" aria-hidden="true">
-      {item.isPremium ? (
-        <PremiumPlaceholderIcon className="dashboard-sidebar__premium-icon" />
-      ) : (
-        item.icon
-      )}
+      {item.icon}
     </span>
   );
 }
@@ -480,37 +505,37 @@ const DASHBOARD_GATHERING_ITEMS: DashboardGatheringSidebarItem[] = [
     label: "Desmanche",
     slug: "desmanche",
     origin: "DESMANCHE",
-    icon: "⛏",
+    icon: <Wrench size={15} strokeWidth={1.9} />,
   },
   {
     label: "Coleta",
     slug: "coleta",
     origin: "COLETA",
-    icon: "◇",
+    icon: <Leaf size={15} strokeWidth={1.9} />,
   },
   {
     label: "Patrulha",
     slug: "patrulha",
     origin: "PATRULHA",
-    icon: "⌁",
+    icon: <Footprints size={15} strokeWidth={1.9} />,
   },
   {
     label: "Arsenal",
     slug: "arsenal",
     origin: "ARSENAL",
-    icon: "⌖",
+    icon: <Crosshair size={15} strokeWidth={1.9} />,
   },
   {
     label: "Tecnovarredura",
     slug: "tecnovarredura",
     origin: "TECNOVARREDURA",
-    icon: "◌",
+    icon: <ScanLine size={15} strokeWidth={1.9} />,
   },
   {
     label: "Contenção",
     slug: "contencao",
     origin: "CONTENCAO",
-    icon: "◎",
+    icon: <ShieldCheck size={15} strokeWidth={1.9} />,
   },
 ];
 
@@ -1319,6 +1344,8 @@ function DashboardLayoutContent({
   const dashboardBasePath = `/dashboard/${characterId}`;
   const gatheringBasePath = `${dashboardBasePath}/gathering`;
   const isGatheringRoute = location.pathname.startsWith(gatheringBasePath);
+  const isGatheringSubnavVisible =
+    isGatheringRoute && isGatheringMenuOpen;
   const isOverviewRoute =
     location.pathname.replace(/\/+$/, "") === dashboardBasePath;
 
@@ -1439,6 +1466,27 @@ function DashboardLayoutContent({
     setIsGatheringMenuOpen((currentValue) => !currentValue);
   }
 
+  function renderSidebarNavItem(item: DashboardNavItem) {
+    const to = item.path
+      ? `${dashboardBasePath}/${item.path}`
+      : dashboardBasePath;
+
+    return (
+      <NavLink
+        key={item.path || "overview"}
+        to={to}
+        end={!item.path}
+        onClick={closeSidebar}
+        className={({ isActive }) =>
+          getDashboardNavLinkClassName(isActive)
+        }
+      >
+        <DashboardNavIcon item={item} />
+        <strong>{item.label}</strong>
+      </NavLink>
+    );
+  }
+
   return (
     <div
       className={[
@@ -1503,6 +1551,24 @@ function DashboardLayoutContent({
                 {onlinePlayersLabel.short}
               </span>
             </span>
+
+            <NavLink
+              to={`${dashboardBasePath}/membership`}
+              onClick={closeSidebar}
+              className={({ isActive }) =>
+                [
+                  "dashboard-sidebar__community",
+                  "dashboard-sidebar__membership",
+                  isActive ? "is-active" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")
+              }
+              aria-label="Ver benefícios Premium"
+              title="Premium"
+            >
+              <Crown size={17} strokeWidth={2} aria-hidden="true" />
+            </NavLink>
           </div>
         </section>
 
@@ -1550,164 +1616,129 @@ function DashboardLayoutContent({
         </section>
 
         <nav className="dashboard-sidebar__nav" aria-label="Menu do painel">
-          <section
-            className="dashboard-sidebar__nav-section"
-            aria-label="Navegação principal"
-          >
-            <span className="dashboard-sidebar__section-label">Principal</span>
-
-            {DASHBOARD_MAIN_NAV_ITEMS.map((item) => {
-              const to = item.path
-                ? `${dashboardBasePath}/${item.path}`
-                : dashboardBasePath;
-
-              return (
-                <NavLink
-                  key={item.label}
-                  to={to}
-                  end={!item.path}
-                  onClick={closeSidebar}
-                  className={({ isActive }) =>
-                    getDashboardNavLinkClassName(item, isActive)
-                  }
-                >
-                  <DashboardNavIcon item={item} />
-                  <strong>{item.label}</strong>
-                </NavLink>
-              );
-            })}
-          </section>
-
-          {DASHBOARD_GATHERING_NAV_ITEM ? (
+          {DASHBOARD_OVERVIEW_NAV_ITEM ? (
             <section
-              className="dashboard-sidebar__nav-section"
-              aria-label="Expedições idle"
+              className="dashboard-sidebar__nav-section dashboard-sidebar__nav-section--overview"
+              aria-label="Resumo do personagem"
+              data-nav-section="overview"
             >
-              <span className="dashboard-sidebar__section-label">
-                Expedições
-              </span>
-
-              <div className="dashboard-sidebar__nav-group dashboard-sidebar__nav-group--gathering">
-                <button
-                  type="button"
-                  className={[
-                    "dashboard-sidebar__link",
-                    "dashboard-sidebar__link--toggle",
-                    isGatheringRoute ? "is-active" : "",
-                    isGatheringMenuOpen ? "is-expanded" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={handleToggleGatheringMenu}
-                  aria-expanded={isGatheringMenuOpen}
-                  aria-controls="dashboard-gathering-subnav"
-                >
-                  <span
-                    className="dashboard-sidebar__link-icon"
-                    aria-hidden="true"
-                  >
-                    {DASHBOARD_GATHERING_NAV_ITEM.icon}
-                  </span>
-                  <strong>{DASHBOARD_GATHERING_NAV_ITEM.label}</strong>
-                  <em
-                    className="dashboard-sidebar__link-chevron"
-                    aria-hidden="true"
-                  />
-                </button>
-
-                {isGatheringMenuOpen ? (
-                  <div
-                    id="dashboard-gathering-subnav"
-                    className="dashboard-sidebar__subnav"
-                  >
-                    {DASHBOARD_GATHERING_ITEMS.map((gatheringItem) => {
-                      const gatheringTo = `${gatheringBasePath}/${
-                        gatheringItem.slug
-                      }`;
-
-                      return (
-                        <NavLink
-                          key={gatheringItem.origin}
-                          to={gatheringTo}
-                          onClick={closeSidebar}
-                          className={({ isActive }) =>
-                            `dashboard-sidebar__subitem ${
-                              isActive ? "is-active" : ""
-                            }`
-                          }
-                        >
-                          <span
-                            className="dashboard-sidebar__subitem-icon"
-                            aria-hidden="true"
-                          >
-                            {gatheringItem.icon}
-                          </span>
-
-                          <strong>{gatheringItem.label}</strong>
-
-                          <span className="dashboard-sidebar__subitem-level">
-                            {getGatheringSkillLevelLabel(
-                              heroCharacter,
-                              gatheringItem.origin,
-                            )}
-                          </span>
-                        </NavLink>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
+              {renderSidebarNavItem(DASHBOARD_OVERVIEW_NAV_ITEM)}
             </section>
           ) : null}
 
           <section
             className="dashboard-sidebar__nav-section"
-            aria-label="Gestão do personagem"
+            aria-label="Atividades do jogo"
+            data-nav-section="activities"
           >
-            <span className="dashboard-sidebar__section-label">Gestão</span>
+            <span className="dashboard-sidebar__section-label">Atividades</span>
 
-            {DASHBOARD_MANAGEMENT_NAV_ITEMS.map((item) => {
-              const to = `${dashboardBasePath}/${item.path}`;
+            {DASHBOARD_ACTIVITY_NAV_ITEMS.map((item) => {
+              if (item.path !== "gathering") {
+                return renderSidebarNavItem(item);
+              }
 
-              return (
-                <NavLink
-                  key={item.label}
-                  to={to}
-                  onClick={closeSidebar}
-                  className={({ isActive }) =>
-                    getDashboardNavLinkClassName(item, isActive)
-                  }
+              return DASHBOARD_GATHERING_NAV_ITEM ? (
+                <div
+                  key={item.path}
+                  className="dashboard-sidebar__nav-group dashboard-sidebar__nav-group--gathering"
                 >
-                  <DashboardNavIcon item={item} />
-                  <strong>{item.label}</strong>
-                </NavLink>
-              );
+                  <button
+                    type="button"
+                    className={[
+                      "dashboard-sidebar__link",
+                      "dashboard-sidebar__link--toggle",
+                      isGatheringRoute ? "is-active" : "",
+                      isGatheringSubnavVisible ? "is-expanded" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onClick={handleToggleGatheringMenu}
+                    aria-expanded={isGatheringSubnavVisible}
+                    aria-controls="dashboard-gathering-subnav"
+                  >
+                    <span
+                      className="dashboard-sidebar__link-icon"
+                      aria-hidden="true"
+                    >
+                      {DASHBOARD_GATHERING_NAV_ITEM.icon}
+                    </span>
+                    <strong>{DASHBOARD_GATHERING_NAV_ITEM.label}</strong>
+                    <em
+                      className="dashboard-sidebar__link-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+
+                  {isGatheringSubnavVisible ? (
+                    <div
+                      id="dashboard-gathering-subnav"
+                      className="dashboard-sidebar__subnav"
+                    >
+                      {DASHBOARD_GATHERING_ITEMS.map((gatheringItem) => {
+                        const gatheringTo = `${gatheringBasePath}/${
+                          gatheringItem.slug
+                        }`;
+
+                        return (
+                          <NavLink
+                            key={gatheringItem.origin}
+                            to={gatheringTo}
+                            onClick={closeSidebar}
+                            className={({ isActive }) =>
+                              `dashboard-sidebar__subitem ${
+                                isActive ? "is-active" : ""
+                              }`
+                            }
+                          >
+                            <span
+                              className="dashboard-sidebar__subitem-icon"
+                              aria-hidden="true"
+                            >
+                              {gatheringItem.icon}
+                            </span>
+                            <strong>{gatheringItem.label}</strong>
+                            <span className="dashboard-sidebar__subitem-level">
+                              {getGatheringSkillLevelLabel(
+                                heroCharacter,
+                                gatheringItem.origin,
+                              )}
+                            </span>
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null;
             })}
           </section>
 
           <section
             className="dashboard-sidebar__nav-section"
-            aria-label="Mundo e desafios"
+            aria-label="Perfil e inventário do personagem"
+            data-nav-section="character"
           >
-            <span className="dashboard-sidebar__section-label">Mundo</span>
+            <span className="dashboard-sidebar__section-label">Personagem</span>
+            {DASHBOARD_CHARACTER_NAV_ITEMS.map(renderSidebarNavItem)}
+          </section>
 
-            {DASHBOARD_WORLD_NAV_ITEMS.map((item) => {
-              const to = `${dashboardBasePath}/${item.path}`;
+          <section
+            className="dashboard-sidebar__nav-section"
+            aria-label="Serviços do abrigo"
+            data-nav-section="shelter"
+          >
+            <span className="dashboard-sidebar__section-label">Abrigo</span>
+            {DASHBOARD_SHELTER_NAV_ITEMS.map(renderSidebarNavItem)}
+          </section>
 
-              return (
-                <NavLink
-                  key={item.label}
-                  to={to}
-                  onClick={closeSidebar}
-                  className={({ isActive }) =>
-                    getDashboardNavLinkClassName(item, isActive)
-                  }
-                >
-                  <DashboardNavIcon item={item} />
-                  <strong>{item.label}</strong>
-                </NavLink>
-              );
-            })}
+          <section
+            className="dashboard-sidebar__nav-section"
+            aria-label="Recursos sociais"
+            data-nav-section="community"
+          >
+            <span className="dashboard-sidebar__section-label">Comunidade</span>
+            {DASHBOARD_COMMUNITY_NAV_ITEMS.map(renderSidebarNavItem)}
           </section>
         </nav>
 

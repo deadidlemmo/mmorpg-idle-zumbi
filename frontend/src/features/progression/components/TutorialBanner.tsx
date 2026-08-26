@@ -1,6 +1,7 @@
 import { ArrowRight, Check, RefreshCw, Target, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import craftingSkillIcon from "../../../assets/images/crafting/skills/crafting.webp";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import {
   getTutorialProgress,
@@ -201,7 +202,11 @@ export function TutorialBanner({ characterId }: { characterId: string }) {
           aria-label="Tutorial do sobrevivente"
         >
           <div className="tutorial-banner__mark">
-            <Check size={18} />
+            {currentStep.key === "crafting" ? (
+              <img src={craftingSkillIcon} alt="" />
+            ) : (
+              <Check size={24} />
+            )}
           </div>
           <div className="tutorial-banner__content">
             <span>
@@ -209,9 +214,12 @@ export function TutorialBanner({ characterId }: { characterId: string }) {
             </span>
             <strong>{currentStep.title}</strong>
             <p>{currentStep.description}</p>
-            <i aria-hidden="true">
-              <em style={{ width: `${progress}%` }} />
-            </i>
+            <div className="tutorial-banner__progress">
+              <i aria-hidden="true">
+                <em style={{ width: `${progress}%` }} />
+              </i>
+              <span>{progress}%</span>
+            </div>
             {errorMessage ? (
               <small className="tutorial-banner__error" role="alert">
                 {errorMessage}

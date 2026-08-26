@@ -124,10 +124,7 @@ export type AutoCombatClientTelemetryPayload = {
 };
 
 export type AutoCombatTelemetryContext =
-  | "combat-page"
-  | "other-page"
-  | "tab-hidden"
-  | "reconnected";
+  "combat-page" | "other-page" | "tab-hidden" | "reconnected";
 
 export type AutoCombatTelemetryMetadata = {
   context: AutoCombatTelemetryContext;
@@ -191,7 +188,10 @@ export interface AutoCombatRealtimeEvent {
   remainingMs?: number | null;
   progressUpdatedAt?: string | number | Date | null;
   estimatedKillTimeSeconds?: number | null;
+  estimatedKillTimeMs?: number | null;
+  unmodifiedKillTimeMs?: number | null;
   baseKillTimeSeconds?: number | null;
+  appliedPetBonus?: AutoCombatAppliedPetBonusViewModel | null;
   playerOffensivePower?: number | null;
   monsterRecommendedPower?: number | null;
   killsPerMinute?: number | null;
@@ -362,7 +362,10 @@ export interface AutoCombatBattleProgressViewModel {
   progressUpdatedAt?: string | number | Date | null;
   serverNow?: string | number | Date | null;
   estimatedKillTimeSeconds?: number | null;
+  estimatedKillTimeMs?: number | null;
+  unmodifiedKillTimeMs?: number | null;
   baseKillTimeSeconds?: number | null;
+  appliedPetBonus?: AutoCombatAppliedPetBonusViewModel | null;
   playerOffensivePower?: number | null;
   monsterRecommendedPower?: number | null;
   killsPerMinute?: number | null;
@@ -552,6 +555,12 @@ export interface AutoCombatHuntingSkillViewModel {
   } | null;
 }
 
+export interface AutoCombatAppliedPetBonusViewModel {
+  petDefinitionId?: string | null;
+  effectBasisPoints?: number | null;
+  effectPercent?: number | null;
+}
+
 export interface AutoCombatHuntingViewModel {
   timeline?: ActivityTimelineSnapshot | null;
   mapId?: string | null;
@@ -560,6 +569,11 @@ export interface AutoCombatHuntingViewModel {
   startedAt?: string | null;
   stoppedAt?: string | null;
   lastProcessedAt?: string | null;
+  cycleStartedAt?: string | null;
+  cycleEndsAt?: string | null;
+  cycleDurationMs?: number | null;
+  cycleVersion?: number | null;
+  appliedPetBonus?: AutoCombatAppliedPetBonusViewModel | null;
   lastFindAt?: string | null;
   nextFindAt?: string | null;
   foundEnemiesCount?: number | null;
@@ -570,6 +584,7 @@ export interface AutoCombatHuntingViewModel {
   isLimitReached?: boolean | null;
   bonusEnemiesFound?: number | null;
   huntingXpGained?: number | null;
+  baseSecondsPerEnemy?: number | null;
   secondsPerEnemy?: number | null;
   secondsPerFind?: number | null;
   elapsedSeconds?: number | null;
@@ -580,6 +595,8 @@ export interface AutoCombatHuntingViewModel {
   huntSequence?: number | null;
   lastHuntEventSequence?: number | null;
   selectedEncounterId?: string | null;
+  cycleTargetEncounterId?: string | null;
+  cycleTargetMobId?: string | null;
   targetEncounterId?: string | null;
   targetMobId?: string | null;
   targetFoundCount?: number | null;
@@ -673,8 +690,12 @@ export interface AutoCombatSessionApiViewModel {
   currentMobHp?: number | null;
   currentMobMaxHp?: number | null;
   killProgressSeconds?: number | null;
+  killProgressMs?: number | null;
   estimatedKillTimeSeconds?: number | null;
+  estimatedKillTimeMs?: number | null;
+  unmodifiedKillTimeMs?: number | null;
   baseKillTimeSeconds?: number | null;
+  appliedTtkPetBonus?: AutoCombatAppliedPetBonusViewModel | null;
   playerOffensivePower?: number | null;
   monsterRecommendedPower?: number | null;
   currentMobIndex?: number | null;
@@ -767,6 +788,11 @@ export interface AutoCombatHuntBatchViewModel {
   consumedAt?: string | null;
   cancelledAt?: string | null;
   lastProcessedAt?: string | null;
+  cycleStartedAt?: string | null;
+  cycleEndsAt?: string | null;
+  cycleDurationMs?: number | null;
+  cycleVersion?: number | null;
+  appliedPetBonus?: AutoCombatAppliedPetBonusViewModel | null;
   huntingLevelAtStart?: number | null;
   huntingXpGained?: number | null;
   foundEnemiesCount?: number | null;
@@ -781,6 +807,9 @@ export interface AutoCombatHuntBatchViewModel {
   bonusEnemiesFound?: number | null;
   selectedEncounterId?: string | null;
   selectedEncounterMobId?: string | null;
+  cycleTargetEncounterId?: string | null;
+  cycleTargetMobId?: string | null;
+  currentTarget?: AutoCombatEncounterViewModel | null;
   huntSequence?: number | null;
   mobs?: AutoCombatTrackedMonsterViewModel[];
 }

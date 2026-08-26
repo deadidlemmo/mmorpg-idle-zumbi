@@ -8,6 +8,13 @@ import {
 } from 'react';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
+import {
+  createActivityTimelineClockSample,
+  getActivityTimelineMonotonicNowMs,
+  type ActivityTimeline,
+  type ActivityTimelineClockSample,
+} from '../../../components/game/activityTimeline';
+import { useActivityTimelineProviderState } from '../../../components/game/useActivityTimelineProviderState';
 import { getAuthToken } from '../../../services/api/authToken';
 import { canRunNetworkRefresh } from '../../../utils/networkRefresh';
 import { useLootNotifications } from '../../loot-notifications/lootNotificationContext';
@@ -30,6 +37,12 @@ import type {
   StartGatheringResponse,
 } from '../types/gathering.types';
 import { getGatheringMaterialImageUrl } from '../utils/gatheringMaterialAssets';
+import {
+  getGatheringCycleReconciliationDelayMs,
+  getGatheringTimelinePresentation,
+  getGatheringTimelineSnapshot,
+  isGatheringCycleResolutionDue,
+} from '../utils/gatheringTimeline';
 import { GatheringRealtimeContext } from './gatheringRealtimeContext';
 
 interface GatheringRealtimeProviderProps {
@@ -86,6 +99,7 @@ export interface GatheringRealtimeState {
   nowMs: number;
 
   liveProduction: GatheringRealtimeLiveProduction;
+  timeline: ActivityTimeline | null;
 }
 
 export interface GatheringRealtimeContextValue {
@@ -554,6 +568,7 @@ function buildLiveProduction(params: {
   targetMaterial?: GatheringMaterialViewModel | null;
   nowMs: number;
   lastUpdatedAt?: number | null;
+  timeline: ActivityTimeline | null;
 }): GatheringRealtimeLiveProduction {
   const ratePerHour = getRatePerHour({
     productionPreview: params.productionPreview,
@@ -573,6 +588,18 @@ function buildLiveProduction(params: {
       secondsToNextUnit: null,
       ratePerHour,
       timePerUnitSeconds: null,
+    };
+  }
+
+  if (params.timeline) {
+    const presentation = getGatheringTimelinePresentation(params.timeline);
+
+    return {
+      readyQuantity: baseReadyQuantity,
+      progressPercent: presentation.progressPercent,
+      secondsToNextUnit: presentation.secondsToNextUnit,
+      ratePerHour,
+      timePerUnitSeconds: presentation.timePerUnitSeconds,
     };
   }
 
@@ -626,6 +653,7 @@ function buildState(params: {
   errorMessage: string | null;
   lastUpdatedAt: number | null;
   nowMs: number;
+  timeline: ActivityTimeline | null;
 }): GatheringRealtimeState {
   const session = getActiveSession(params.status);
   const productionPreview = getProductionPreview({
@@ -652,6 +680,7 @@ function buildState(params: {
     targetMaterial,
     nowMs: params.nowMs,
     lastUpdatedAt: params.lastUpdatedAt,
+    timeline: params.timeline,
   });
 
   const collectedQuantity = getSessionCollectedQuantity(session);
@@ -679,6 +708,7 @@ function buildState(params: {
     nowMs: params.nowMs,
 
     liveProduction,
+    timeline: params.timeline,
   };
 }
 
@@ -916,6 +946,11 @@ export function GatheringRealtimeProvider({
   refreshMs = 5000,
   tickMs = 1000,
 }: GatheringRealtimeProviderProps) {
+  const {
+    applySnapshot: applyTimelineSnapshot,
+    clearTimeline,
+    timeline,
+  } = useActivityTimelineProviderState();
   const [status, setStatus] = useState<GatheringStatusResponse | null>(null);
   const [isLoading, setIsLoading] = useState(autoLoad);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -977,7 +1012,10 @@ export function GatheringRealtimeProvider({
     [characterId, enabled, notifyLoot],
   );
 
-  const applyStatus = useCallback((nextStatus: GatheringStatusResponse | null) => {
+  const applyStatus = useCallback((
+    nextStatus: GatheringStatusResponse | null,
+    clock?: ActivityTimelineClockSample,
+  ) => {
     if (!isMountedRef.current) return;
 
     const previousStatus = statusRef.current;
@@ -985,6 +1023,14 @@ export function GatheringRealtimeProvider({
       previous: previousStatus,
       next: nextStatus,
     });
+    const timelineSnapshot = getGatheringTimelineSnapshot(normalizedStatus);
+
+    if (timelineSnapshot) {
+      applyTimelineSnapshot(timelineSnapshot, clock);
+    } else {
+      clearTimeline();
+    }
+
     const nextSignature = safeStatusSignature(normalizedStatus);
 
     if (statusSignatureRef.current === nextSignature) {
@@ -995,20 +1041,22 @@ export function GatheringRealtimeProvider({
     statusSignatureRef.current = nextSignature;
     statusRef.current = normalizedStatus;
 
-    if (previousStatus) {
-      const activeStatus = normalizedStatus as GatheringStatusLoose | null;
-      publishGatheringLootNotification({
-        collected: activeStatus?.autoCollected ?? null,
-        session: getActiveSession(normalizedStatus),
-        targetMaterial: getStatusTargetMaterial(normalizedStatus),
-        inventoryItem: activeStatus?.inventoryItem ?? null,
-      });
-    }
+    const activeStatus = normalizedStatus as GatheringStatusLoose | null;
+    publishGatheringLootNotification({
+      collected: activeStatus?.autoCollected ?? null,
+      session: getActiveSession(normalizedStatus),
+      targetMaterial: getStatusTargetMaterial(normalizedStatus),
+      inventoryItem: activeStatus?.inventoryItem ?? null,
+    });
 
     setStatus(normalizedStatus);
     setLastUpdatedAt(Date.now());
     setErrorMessage(null);
-  }, [publishGatheringLootNotification]);
+  }, [
+    applyTimelineSnapshot,
+    clearTimeline,
+    publishGatheringLootNotification,
+  ]);
 
   const applySocketPayload = useCallback(
     (payload: unknown) => {
@@ -1047,9 +1095,16 @@ export function GatheringRealtimeProvider({
     }
 
     try {
+      const requestStartedAtMonotonicMs =
+        getActivityTimelineMonotonicNowMs();
       const response = await getGatheringStatusRequest(characterId);
 
-      applyStatus(response);
+      applyStatus(
+        response,
+        createActivityTimelineClockSample({
+          requestStartedAtMonotonicMs,
+        }),
+      );
 
       return response;
     } catch (error) {
@@ -1079,6 +1134,21 @@ export function GatheringRealtimeProvider({
     socket.emit('gathering:status:request', { characterId });
     socket.emit('gathering:refresh', { characterId });
   }, [characterId]);
+
+  const reconcileCompletedCycle = useCallback(() => {
+    if (!enabled || !characterId || !canRunNetworkRefresh()) {
+      return;
+    }
+
+    const socket = socketRef.current;
+
+    if (socket?.connected) {
+      socket.emit('gathering:refresh', { characterId });
+      return;
+    }
+
+    void refresh();
+  }, [characterId, enabled, refresh]);
 
   const start = useCallback(
     async (payload: GatheringRealtimeStartPayload) => {
@@ -1225,6 +1295,7 @@ export function GatheringRealtimeProvider({
     statusRef.current = null;
     statusSignatureRef.current = 'null';
     processedLootNotificationKeysRef.current.clear();
+    clearTimeline();
 
     setStatus((previous) => (previous === null ? previous : null));
     setLastUpdatedAt((previous) => (previous === null ? previous : null));
@@ -1232,7 +1303,7 @@ export function GatheringRealtimeProvider({
     setIsLoading((previous) => (previous === autoLoad ? previous : autoLoad));
     setIsRefreshing((previous) => (previous ? false : previous));
     setIsBusy((previous) => (previous ? false : previous));
-  }, [autoLoad, characterId]);
+  }, [autoLoad, characterId, clearTimeline]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   /* eslint-disable react-hooks/set-state-in-effect -- Connection state mirrors the external Socket.IO lifecycle. */
@@ -1396,6 +1467,44 @@ export function GatheringRealtimeProvider({
     };
   }, [characterId, enabled, isSocketConnected, refresh, refreshMs]);
 
+  useEffect(() => {
+    if (!enabled || !characterId || !timeline) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(
+      reconcileCompletedCycle,
+      getGatheringCycleReconciliationDelayMs(timeline),
+    );
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [characterId, enabled, reconcileCompletedCycle, timeline]);
+
+  useEffect(() => {
+    if (!enabled || !characterId || !timeline) {
+      return undefined;
+    }
+
+    const reconcileIfDue = () => {
+      if (
+        canRunNetworkRefresh() &&
+        isGatheringCycleResolutionDue(timeline)
+      ) {
+        reconcileCompletedCycle();
+      }
+    };
+
+    document.addEventListener('visibilitychange', reconcileIfDue);
+    window.addEventListener('online', reconcileIfDue);
+
+    return () => {
+      document.removeEventListener('visibilitychange', reconcileIfDue);
+      window.removeEventListener('online', reconcileIfDue);
+    };
+  }, [characterId, enabled, reconcileCompletedCycle, timeline]);
+
   const state = useMemo(
     () =>
       buildState({
@@ -1407,6 +1516,7 @@ export function GatheringRealtimeProvider({
         errorMessage,
         lastUpdatedAt,
         nowMs,
+        timeline,
       }),
     [
       characterId,
@@ -1417,6 +1527,7 @@ export function GatheringRealtimeProvider({
       lastUpdatedAt,
       nowMs,
       status,
+      timeline,
     ],
   );
 

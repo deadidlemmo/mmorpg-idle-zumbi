@@ -59,6 +59,24 @@ describe('simulateT1Economy', () => {
       0,
     );
     expect(report.overall.averageWorldBossFragments).toBeGreaterThanOrEqual(0);
+    expect(report.overall.averagePetCocoonsDropped).toBeGreaterThanOrEqual(0);
+    expect(report.overall.averagePetsIncubated).toBeGreaterThanOrEqual(0);
+    expect(report.overall.averageUniquePetsOwned).toBeGreaterThanOrEqual(0);
+    expect(report.overall.averageUniquePetsOwned).toBeLessThanOrEqual(8);
+    expect(report.overall.playersWithAnyPetPercent).toBeGreaterThanOrEqual(0);
+    expect(
+      report.overall.playersWithCompletePetSetPercent,
+    ).toBeGreaterThanOrEqual(0);
+    expect(report.overall.playersWithAnyPetPercent).toBeGreaterThanOrEqual(
+      report.overall.playersWithCompletePetSetPercent,
+    );
+    expect(
+      report.overall.averageDuplicateCocoonsConverted,
+    ).toBeGreaterThanOrEqual(0);
+    expect(report.overall.averageCocoonsHeld).toBeGreaterThanOrEqual(0);
+    expect(report.overall.averagePendingPetIncubations).toBeGreaterThanOrEqual(
+      0,
+    );
     expect(report.worldBossCalendar.scheduledEvents).toBeGreaterThan(0);
     expect(report.worldBossCalendar.resolvedEvents).toBeLessThanOrEqual(
       report.worldBossCalendar.scheduledEvents,
@@ -91,6 +109,25 @@ describe('simulateT1Economy', () => {
         0,
       ),
     ).toBe(report.overall.totalGoldSpent);
+  });
+
+  it('simula sorteio, incubacao e colecao T1 quando bosses sao derrotados', () => {
+    const report = simulateT1Economy({
+      players: 1000,
+      days: 7,
+      seed: 20260826,
+    });
+
+    expect(report.worldBossCalendar.defeatedEvents).toBeGreaterThan(0);
+    expect(report.overall.averagePetCocoonsDropped).toBeGreaterThan(0);
+    expect(report.overall.averagePetsIncubated).toBeGreaterThan(0);
+    expect(report.overall.averageUniquePetsOwned).toBe(
+      report.overall.averagePetsIncubated,
+    );
+    expect(report.overall.playersWithAnyPetPercent).toBeGreaterThan(0);
+    expect(report.overall.goldDestroyedBySink.PET_INCUBATION).toBeGreaterThan(
+      0,
+    );
   });
 
   it('usa fichas de incursao como acelerador do reforco, sem gerar saldo negativo', () => {

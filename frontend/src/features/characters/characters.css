@@ -1495,3 +1495,356 @@
     height: 72px;
   }
 }
+
+/* =========================================================
+   18. APARÊNCIA COSMÉTICA NA SELEÇÃO
+   ========================================================= */
+
+.character-page--cosmetic {
+  background:
+    linear-gradient(180deg, rgba(4, 9, 8, 0.7), rgba(3, 7, 6, 0.95)),
+    linear-gradient(90deg, rgba(7, 12, 10, 0.3), rgba(4, 8, 7, 0.76)),
+    var(--character-page-background-image) center top / cover fixed no-repeat,
+    #050807;
+}
+
+.character-select-panel {
+  width: min(100%, 900px);
+}
+
+.survivor-list-card {
+  grid-template-columns: 88px minmax(0, 1fr) 82px;
+  min-height: 158px;
+  overflow: hidden;
+  padding: 1.05rem 1.15rem;
+  background:
+    radial-gradient(
+      circle at 12% 18%,
+      color-mix(in srgb, var(--class-accent) 22%, transparent),
+      transparent 15rem
+    ),
+    linear-gradient(135deg, rgba(40, 46, 43, 0.97), rgba(7, 13, 11, 0.99));
+  border-color: color-mix(
+    in srgb,
+    var(--class-accent) 42%,
+    rgba(255, 255, 255, 0.14)
+  );
+  border-radius: 0.9rem;
+}
+
+.survivor-list-card.has-cosmetic-banner,
+.survivor-list-card.has-cosmetic-banner:hover {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(7, 11, 10, 0.32),
+      rgba(6, 11, 9, 0.78) 54%,
+      rgba(3, 7, 6, 0.92)
+    ),
+    var(--character-card-banner-image) center / cover no-repeat,
+    #09100d;
+}
+
+.survivor-list-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045), transparent 34%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.014) 0 1px,
+      transparent 1px 9px
+    );
+}
+
+.survivor-list-card:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--class-accent) 62%,
+    rgba(255, 255, 255, 0.18)
+  );
+  background:
+    radial-gradient(
+      circle at 12% 18%,
+      color-mix(in srgb, var(--class-accent) 26%, transparent),
+      transparent 15rem
+    ),
+    linear-gradient(135deg, rgba(44, 51, 47, 0.98), rgba(8, 15, 12, 0.99));
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.32),
+    0 0 22px color-mix(in srgb, var(--class-accent) 12%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.survivor-list-card.is-selected {
+  border-color: color-mix(in srgb, var(--class-accent) 82%, #eef2e5);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.36),
+    inset 3px 0 0 color-mix(in srgb, var(--class-accent) 82%, #ffffff),
+    0 0 24px color-mix(in srgb, var(--class-accent) 22%, transparent);
+}
+
+.survivor-list-card__avatar,
+.survivor-list-card__body,
+.survivor-list-card__side {
+  z-index: 3;
+}
+
+.survivor-list-card__avatar {
+  width: 88px;
+  height: 112px;
+  border-color: color-mix(
+    in srgb,
+    var(--class-accent) 58%,
+    rgba(255, 255, 255, 0.18)
+  );
+  border-radius: 0.7rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    radial-gradient(
+      circle at 50% 22%,
+      color-mix(in srgb, var(--class-accent) 20%, transparent),
+      transparent 68%
+    ),
+    rgba(4, 9, 7, 0.8);
+}
+
+.survivor-list-card__avatar::after {
+  inset: auto 0 0;
+  z-index: 2;
+  height: 32%;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(180deg, transparent, rgba(2, 6, 5, 0.5));
+}
+
+.survivor-list-card__avatar > img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.survivor-list-card__avatar > span:not(.character-portrait__frame) {
+  position: relative;
+  z-index: 1;
+  color: var(--text-primary);
+  font-family: var(--font-title);
+  font-size: 1.42rem;
+  font-weight: 700;
+}
+
+.survivor-list-card__avatar .character-portrait__frame {
+  inset: 0 !important;
+}
+
+.survivor-list-card__body {
+  gap: 0.48rem;
+}
+
+.survivor-list-card__identity {
+  display: grid;
+  gap: 0.16rem;
+  padding-right: 1.5rem;
+}
+
+.survivor-list-card__kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-width: 0;
+  color: var(--class-accent);
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.survivor-list-card__kicker strong {
+  display: inline-grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--class-accent) 66%, #edf3e8);
+  border-radius: 50%;
+  background: rgba(3, 8, 6, 0.74);
+  color: color-mix(in srgb, var(--class-accent) 78%, #ffffff);
+  font-size: 0.56rem;
+  line-height: 1;
+}
+
+.survivor-list-card__identity h3 {
+  color: #f5f2e7;
+  font-family: var(--font-title);
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.survivor-list-card__cosmetic-title {
+  max-width: 100%;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--class-accent) 72%, #eef1e9);
+  font-family: var(--font-title);
+  font-size: 0.7rem;
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.survivor-list-card__location {
+  color: #c0c7bb;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+}
+
+.survivor-list-card__hp-label {
+  color: #8f9b90;
+  font-family: var(--font-title);
+  letter-spacing: 0;
+}
+
+.survivor-list-card__hp-label strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.survivor-list-card__hp-bar {
+  height: 6px;
+  background: rgba(2, 6, 5, 0.76);
+}
+
+.survivor-list-card__side {
+  align-content: center;
+  gap: 0.48rem;
+  padding-top: 1rem;
+}
+
+.survivor-list-card__level {
+  display: grid;
+  width: 100%;
+  place-items: center;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--class-accent) 34%, rgba(255, 255, 255, 0.08));
+  color: #aeb7ac;
+  font-family: var(--font-title);
+  line-height: 1;
+}
+
+.survivor-list-card__level span {
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.survivor-list-card__level strong {
+  margin-top: 0.12rem;
+  color: #f3f1e8;
+  font-size: 1.28rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.survivor-list-card__emblem {
+  width: 48px;
+  height: 48px;
+}
+
+@media (max-width: 620px) {
+  .character-page--cosmetic {
+    background-attachment: scroll;
+  }
+
+  .survivor-list-card {
+    grid-template-columns: 72px minmax(0, 1fr) 60px;
+    min-height: 140px;
+    gap: 0.78rem;
+    padding: 0.82rem;
+  }
+
+  .survivor-list-card__avatar {
+    width: 72px;
+    height: 94px;
+  }
+
+  .survivor-list-card__identity h3 {
+    font-size: 1.12rem;
+  }
+
+  .survivor-list-card__kicker {
+    font-size: 0.6rem;
+  }
+
+  .survivor-list-card__cosmetic-title {
+    font-size: 0.64rem;
+  }
+
+  .survivor-list-card__side {
+    gap: 0.36rem;
+    padding-top: 1.1rem;
+  }
+
+  .survivor-list-card__level strong {
+    font-size: 1.08rem;
+  }
+
+  .survivor-list-card__emblem {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+@media (max-width: 420px) {
+  .survivor-list-card {
+    grid-template-columns: 64px minmax(0, 1fr) 50px;
+    min-height: 132px;
+    gap: 0.62rem;
+    padding: 0.72rem;
+  }
+
+  .survivor-list-card__avatar {
+    width: 64px;
+    height: 84px;
+  }
+
+  .survivor-list-card__identity {
+    padding-right: 1.2rem;
+  }
+
+  .survivor-list-card__identity h3 {
+    font-size: 1rem;
+  }
+
+  .survivor-list-card__location {
+    font-size: 0.72rem;
+  }
+
+  .survivor-list-card__hp-label {
+    font-size: 0.68rem;
+  }
+
+  .survivor-list-card__level span {
+    font-size: 0.5rem;
+  }
+
+  .survivor-list-card__level strong {
+    font-size: 1rem;
+  }
+
+  .survivor-list-card__emblem {
+    width: 36px;
+    height: 36px;
+  }
+}

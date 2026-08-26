@@ -42,9 +42,18 @@ import type {
 import { formatInventoryRarity } from "../../inventory/utils/inventory.utils";
 import "../styles/equipment.css";
 import { getEquipmentItemImageUrl } from "../utils/equipmentItemAssets";
+import {
+  getReinforcementStatChanges,
+  type ReinforcementStatChange,
+} from "../utils/reinforcementPresentation";
 
 type EquipmentSlot =
-  "MAIN_HAND" | "OFF_HAND" | "HEAD" | "ARMOR" | "PANTS" | "BOOTS";
+  | "MAIN_HAND"
+  | "OFF_HAND"
+  | "HEAD"
+  | "ARMOR"
+  | "PANTS"
+  | "BOOTS";
 
 type EquipmentViewKey = keyof DashboardEquipmentViewModel;
 
@@ -53,6 +62,14 @@ interface SlotConfig {
   viewKey: EquipmentViewKey;
   label: string;
   Icon: ComponentType<{ size?: number; strokeWidth?: number }>;
+}
+
+interface ReinforcementConfirmation {
+  itemName: string;
+  level: number;
+  statChanges: ReinforcementStatChange[];
+  materialRemaining: number;
+  goldRemaining: number;
 }
 
 type StatKey = keyof DashboardStats;
@@ -143,6 +160,8 @@ export function EquipmentPage() {
     tone: "success" | "error";
     message: string;
   } | null>(null);
+  const [reinforcementConfirmation, setReinforcementConfirmation] =
+    useState<ReinforcementConfirmation | null>(null);
   const reinforcementRequestIds = useRef<Record<string, string>>({});
 
   const loadPageData = useCallback(
@@ -246,9 +265,23 @@ export function EquipmentPage() {
     Number(reinforcementSlot?.item?.enhancementLevel ?? 0),
   );
   const reinforcementActionId = `reinforce:${selectedSlot}`;
+  const reinforcementStatChanges = getReinforcementStatChanges(
+    reinforcementSlot?.item,
+    reinforcementSlot?.nextItem,
+  );
 
   async function reinforceSelectedEquipment() {
-    if (!characterId || !reinforcementSlot?.canReinforce) return;
+    if (
+      !characterId ||
+      !reinforcementSlot?.canReinforce ||
+      !reinforcementSlot.cost ||
+      !reinforcementSlot.nextItem
+    )
+      return;
+
+    const cost = reinforcementSlot.cost;
+    const targetItem = reinforcementSlot.nextItem;
+    const statChanges = reinforcementStatChanges;
 
     const requestId =
       reinforcementRequestIds.current[selectedSlot] ?? crypto.randomUUID();
@@ -261,6 +294,16 @@ export function EquipmentPage() {
         requestId,
       });
       delete reinforcementRequestIds.current[selectedSlot];
+      setReinforcementConfirmation({
+        itemName: response.reinforcedItem?.name ?? targetItem.name,
+        level: response.reinforcedItem?.enhancementLevel ?? cost.level,
+        statChanges,
+        materialRemaining: Math.max(
+          0,
+          cost.materialBalance - cost.fragmentCost,
+        ),
+        goldRemaining: Math.max(0, cost.goldBalance - cost.goldCost),
+      });
       return response;
     });
   }
@@ -392,6 +435,7 @@ export function EquipmentPage() {
                       setSelectedSlot(slotConfig.slot);
                       setSelectedCandidateId(null);
                       setFeedback(null);
+                      setReinforcementConfirmation(null);
                     }}
                     aria-pressed={isActive}
                   >
@@ -505,6 +549,36 @@ export function EquipmentPage() {
             </small>
           </div>
 
+          {reinforcementConfirmation ? (
+            <div
+              className="equipment-reinforcement__confirmation"
+              role="status"
+              data-testid="reinforcement-confirmation"
+            >
+              <Check size={18} />
+              <span>
+                <strong>
+                  {reinforcementConfirmation.itemName} agora está no +
+                  {reinforcementConfirmation.level}
+                </strong>
+                <small>
+                  {reinforcementConfirmation.statChanges
+                    .map(
+                      (stat) =>
+                        `${stat.short} +${stat.delta.toLocaleString("pt-BR")}`,
+                    )
+                    .join(" · ") || "Atributos atualizados"}
+                  {" · "}
+                  Saldo: {reinforcementConfirmation.materialRemaining} frag. e{" "}
+                  {reinforcementConfirmation.goldRemaining.toLocaleString(
+                    "pt-BR",
+                  )}{" "}
+                  Gold
+                </small>
+              </span>
+            </div>
+          ) : null}
+
           {reinforcementSlot?.item ? (
             <div className="equipment-reinforcement__body">
               <div className="equipment-reinforcement__item">
@@ -549,16 +623,33 @@ export function EquipmentPage() {
 
               {reinforcementSlot.nextItem && reinforcementSlot.cost ? (
                 <div className="equipment-reinforcement__upgrade">
-                  <span className="equipment-reinforcement__target">
+                  <div className="equipment-reinforcement__target">
                     <small>Próximo resultado</small>
                     <strong>{reinforcementSlot.nextItem.name}</strong>
-                  </span>
+                    <span className="equipment-reinforcement__stat-deltas">
+                      {reinforcementStatChanges.map((stat) => (
+                        <span key={stat.key} title={stat.label}>
+                          <b>{stat.short}</b>
+                          <em>
+                            {stat.current} → {stat.next}
+                          </em>
+                          <strong>+{stat.delta}</strong>
+                        </span>
+                      ))}
+                    </span>
+                  </div>
                   <span className="equipment-reinforcement__costs">
                     <em>
                       <Hammer size={14} />
-                      {reinforcementSlot.cost.fragmentCost} fragmentos
+                      {reinforcementSlot.cost.fragmentCost}x{" "}
+                      {reinforcementSlot.cost.materialName}
                       <small>
-                        ({reinforcementSlot.cost.materialBalance} disponíveis)
+                        Saldo {reinforcementSlot.cost.materialBalance} →{" "}
+                        {Math.max(
+                          0,
+                          reinforcementSlot.cost.materialBalance -
+                            reinforcementSlot.cost.fragmentCost,
+                        )}
                       </small>
                     </em>
                     <em>
@@ -568,11 +659,16 @@ export function EquipmentPage() {
                       )}{" "}
                       Gold
                       <small>
-                        (
+                        Saldo{" "}
                         {reinforcementSlot.cost.goldBalance.toLocaleString(
                           "pt-BR",
                         )}{" "}
-                        disponíveis)
+                        →{" "}
+                        {Math.max(
+                          0,
+                          reinforcementSlot.cost.goldBalance -
+                            reinforcementSlot.cost.goldCost,
+                        ).toLocaleString("pt-BR")}
                       </small>
                     </em>
                   </span>

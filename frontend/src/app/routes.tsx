@@ -147,6 +147,11 @@ const ResourceCenterPage = lazy(() =>
     default: module.ResourceCenterPage,
   })),
 );
+const PetsPage = lazy(() =>
+  import("../features/pets/pages/PetsPage").then((module) => ({
+    default: module.PetsPage,
+  })),
+);
 const VendorPage = lazy(() =>
   import("../features/vendor/pages/VendorPage").then((module) => ({
     default: module.VendorPage,
@@ -322,6 +327,8 @@ export function AppRoutes() {
             <Route path="consumables" element={<MerchantHubPage />} />
 
             <Route path="resources" element={<ResourceCenterPage />} />
+
+            <Route path="pets" element={<PetsPage />} />
 
             <Route path="consumables/:merchantId" element={<VendorPage />} />
 

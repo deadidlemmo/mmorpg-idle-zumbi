@@ -17,3 +17,14 @@
   transition: none !important;
   will-change: transform;
 }
+
+.activity-state-progress-fill {
+  display: block;
+  width: 100% !important;
+  height: 100%;
+  transform-origin: left center;
+  backface-visibility: hidden;
+  transition-property: transform !important;
+  transition-timing-function: linear !important;
+  will-change: transform;
+}

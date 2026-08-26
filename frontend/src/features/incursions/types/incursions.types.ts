@@ -1,7 +1,19 @@
+import type { ActivityTimelineSnapshot } from "../../../components/game/activityTimeline";
+
 export type IncursionRewardType =
-  "XP" | "GOLD" | "CURRENCY" | "MATERIAL" | "CONSUMABLE" | "EQUIPMENT" | "ITEM";
+  | "XP"
+  | "GOLD"
+  | "CURRENCY"
+  | "MATERIAL"
+  | "CONSUMABLE"
+  | "EQUIPMENT"
+  | "ITEM";
 export type IncursionSessionStatus =
-  "ACTIVE" | "COMPLETED" | "CLAIMED" | "FAILED" | "CANCELLED";
+  | "ACTIVE"
+  | "COMPLETED"
+  | "CLAIMED"
+  | "FAILED"
+  | "CANCELLED";
 export type IncursionDifficulty = "LOW" | "MEDIUM" | "HIGH" | "EXTREME";
 export type IncursionApproach = "CAUTIOUS" | "BALANCED" | "AGGRESSIVE";
 
@@ -28,6 +40,7 @@ export interface IncursionLootPreview {
   rewardType: IncursionRewardType;
   currency?: "INCURSION_TOKEN" | "WORLD_BOSS_FRAGMENT" | null;
   itemId?: string | null;
+  itemName?: string | null;
   item?: {
     id: string;
     name: string;
@@ -95,6 +108,7 @@ export interface IncursionSession {
   success?: boolean | null;
   progressPercent: number;
   remainingSeconds: number;
+  timeline?: ActivityTimelineSnapshot | null;
   canClaim: boolean;
   incursion: Incursion;
   rewards?: Array<{

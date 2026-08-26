@@ -71,53 +71,6 @@
   font-size: 13px;
 }
 
-.resource-center-tabs {
-  display: flex;
-  min-width: 0;
-  gap: 4px;
-  border-bottom: 1px solid rgba(143, 167, 132, 0.17);
-}
-
-.resource-center-tabs button {
-  position: relative;
-  display: inline-flex;
-  min-width: 136px;
-  min-height: 43px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 16px;
-  border: 0;
-  color: rgba(214, 223, 211, 0.58);
-  background: transparent;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 850;
-  cursor: pointer;
-}
-
-.resource-center-tabs button::after {
-  position: absolute;
-  right: 8px;
-  bottom: -1px;
-  left: 8px;
-  height: 2px;
-  content: "";
-  background: transparent;
-}
-
-.resource-center-tabs button:hover {
-  color: #edf3de;
-}
-
-.resource-center-tabs button.is-active {
-  color: #d6f2a8;
-}
-
-.resource-center-tabs button.is-active::after {
-  background: #91c34e;
-}
-
 .resource-center-tierbar {
   display: flex;
   min-width: 0;
@@ -166,6 +119,66 @@
   color: #14200d;
   border-color: #9cd254;
   background: #a8df5f;
+}
+
+.resource-center-workshop-link {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid rgba(205, 165, 82, 0.28);
+  border-radius: 5px;
+  color: #ead7aa;
+  background: rgba(28, 22, 12, 0.52);
+  text-decoration: none;
+}
+
+.resource-center-workshop-link > span:first-child {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgba(226, 185, 104, 0.3);
+  border-radius: 4px;
+  color: #e2b968;
+  background: rgba(67, 48, 20, 0.46);
+}
+
+.resource-center-workshop-link > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.resource-center-workshop-link small {
+  color: rgba(222, 210, 181, 0.52);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.resource-center-workshop-link strong {
+  overflow: hidden;
+  color: #f2e8cf;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resource-center-workshop-link > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(236, 222, 191, 0.68);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.resource-center-workshop-link:hover {
+  border-color: rgba(226, 185, 104, 0.5);
+  background: rgba(43, 32, 16, 0.7);
 }
 
 .resource-center-exchange-layout {
@@ -348,12 +361,6 @@
     display: none;
   }
 
-  .resource-center-tabs button {
-    min-width: 0;
-    flex: 1;
-    padding: 0 8px;
-  }
-
   .resource-center-tierbar {
     align-items: flex-start;
     flex-direction: column;
@@ -371,5 +378,15 @@
 
   .resource-center-currencies {
     grid-template-columns: 1fr;
+  }
+
+  .resource-center-workshop-link > span:last-child {
+    justify-content: flex-end;
+    font-size: 0;
+  }
+
+  .resource-center-workshop-link > span:last-child svg {
+    flex: 0 0 auto;
+    color: rgba(236, 222, 191, 0.68);
   }
 }

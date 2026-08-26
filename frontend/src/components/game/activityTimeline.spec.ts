@@ -4,6 +4,8 @@ import {
   buildActivityTimeline,
   getActivityTimelineCssAnimation,
   getActivityTimelineFrame,
+  getActivityTimelineReconciliationDelayMs,
+  isActivityTimelineReconciliationDue,
   reconcileActivityTimelineProviderState,
   type ActivityTimelineSnapshot,
 } from './activityTimeline.ts';
@@ -64,6 +66,29 @@ test('calcula barras crescentes e decrescentes pela mesma timeline', () => {
   assert.equal(getActivityTimelineFrame(drainTimeline, 10_500).fillPercent, 50);
 });
 
+test('repete atividades ciclicas sem permanecer travado no fim', () => {
+  const timeline = buildActivityTimeline(buildSnapshot(), {
+    monotonicNowMs: 10_000,
+    wallClockNowMs: 500_000,
+  });
+
+  const onceFrame = getActivityTimelineFrame(timeline, 12_750);
+  const repeatingFrame = getActivityTimelineFrame(timeline, 12_750, {
+    repeat: true,
+  });
+  const repeatingAnimation = getActivityTimelineCssAnimation(
+    timeline,
+    12_750,
+    { repeat: true },
+  );
+
+  assert.equal(onceFrame.progressPercent, 100);
+  assert.equal(repeatingFrame.progressPercent, 25);
+  assert.equal(repeatingFrame.remainingMs, 2_250);
+  assert.equal(repeatingFrame.isComplete, false);
+  assert.equal(repeatingAnimation.currentScale, 0.25);
+});
+
 test('gera uma unica animacao CSS ancorada no ciclo', () => {
   const timeline = buildActivityTimeline(buildSnapshot(), {
     monotonicNowMs: 10_000,
@@ -79,6 +104,17 @@ test('gera uma unica animacao CSS ancorada no ciclo', () => {
     toScale: 1,
     currentScale: 0.5,
   });
+});
+
+test('agenda uma única reconciliação após o prazo canônico', () => {
+  const timeline = buildActivityTimeline(buildSnapshot(), {
+    monotonicNowMs: 10_000,
+    wallClockNowMs: 500_000,
+  });
+
+  assert.equal(getActivityTimelineReconciliationDelayMs(timeline, 10_500), 1_900);
+  assert.equal(isActivityTimelineReconciliationDue(timeline, 12_399), false);
+  assert.equal(isActivityTimelineReconciliationDue(timeline, 12_400), true);
 });
 
 test('preserva a mesma timeline para snapshots repetidos e ignora versoes antigas', () => {

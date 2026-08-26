@@ -26,7 +26,6 @@ import { recordEconomyEntry } from './economy-ledger';
 type EconomyExchangeSource =
   | 'INCURSION_REINFORCEMENT'
   | 'INCURSION_EMERGENCY_MATERIAL'
-  | 'WORLD_BOSS_COCOON'
   | 'WORLD_BOSS_EMERGENCY_DROP';
 
 type EconomyExchangeItem = {
@@ -435,33 +434,6 @@ export class EconomyService {
         continue;
       }
 
-      if (source === 'WORLD_BOSS_COCOON') {
-        const item = await this.prisma.item.findFirst({
-          where: {
-            tier,
-            slot: ItemSlot.MATERIAL,
-            family: 'Casulo Infectado',
-            name: `Casulo Infectado T${tier}`,
-          },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            description: true,
-            tier: true,
-            rarity: true,
-            materialOrigin: true,
-          },
-        });
-        if (item) {
-          results.push({
-            source,
-            item: { ...item, rarity: String(item.rarity) },
-          });
-        }
-        continue;
-      }
-
       const isIncursion = source === 'INCURSION_EMERGENCY_MATERIAL';
       const items = await this.prisma.item.findMany({
         where: {
@@ -510,15 +482,14 @@ export class EconomyService {
     itemId: string,
   ): Promise<EconomyExchangeItem> {
     const isReinforcement = source === 'INCURSION_REINFORCEMENT';
-    const isCocoon = source === 'WORLD_BOSS_COCOON';
 
-    if (isReinforcement || isCocoon) {
+    if (isReinforcement) {
       const item = await tx.item.findFirst({
         where: {
           id: itemId,
           tier: { in: Array.from(ECONOMY_LAUNCH_TIERS) },
           slot: ItemSlot.MATERIAL,
-          family: isReinforcement ? 'Material de Reforço' : 'Casulo Infectado',
+          family: 'Material de Reforço',
         },
         select: {
           id: true,
@@ -611,12 +582,6 @@ export class EconomyService {
         purpose: 'Proteção contra falta de material',
         config: ECONOMY_EXCHANGE_CONFIG.incursionEmergencyMaterial,
       },
-      WORLD_BOSS_COCOON: {
-        prefix: 'WBC',
-        category: 'PRIMARY',
-        purpose: 'Garantia de casulo',
-        config: ECONOMY_EXCHANGE_CONFIG.worldBossCocoon,
-      },
       WORLD_BOSS_EMERGENCY_DROP: {
         prefix: 'WBEM',
         category: 'EMERGENCY',
@@ -644,15 +609,12 @@ export class EconomyService {
   }
 
   private parseOfferId(offerId: string) {
-    const match = /^(INCR|INCEM|WBC|WBEM|INC|WB):([0-9a-f-]{36})$/i.exec(
-      offerId,
-    );
+    const match = /^(INCR|INCEM|WBEM|INC|WB):([0-9a-f-]{36})$/i.exec(offerId);
     if (!match) throw new BadRequestException('A oferta de troca e invalida.');
 
     const sourceByPrefix: Record<string, EconomyExchangeSource> = {
       INCR: 'INCURSION_REINFORCEMENT',
       INCEM: 'INCURSION_EMERGENCY_MATERIAL',
-      WBC: 'WORLD_BOSS_COCOON',
       WBEM: 'WORLD_BOSS_EMERGENCY_DROP',
       INC: 'INCURSION_EMERGENCY_MATERIAL',
       WB: 'WORLD_BOSS_EMERGENCY_DROP',
@@ -708,7 +670,7 @@ export class EconomyService {
   ): EconomyExchangeSource[] {
     return currency === EconomyCurrency.INCURSION_TOKEN
       ? ['INCURSION_REINFORCEMENT', 'INCURSION_EMERGENCY_MATERIAL']
-      : ['WORLD_BOSS_COCOON', 'WORLD_BOSS_EMERGENCY_DROP'];
+      : ['WORLD_BOSS_EMERGENCY_DROP'];
   }
 
   private getCurrencyLabel(currency: EconomyCurrency) {

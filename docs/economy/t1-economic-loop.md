@@ -31,8 +31,8 @@ outra.
    `+1` ate `+3`.
 6. Ameacas Globais fornecem Gold, Fragmentos de Ameaca e uma pequena chance de
    Casulo Infectado.
-7. Fragmentos de Ameaca garantem um casulo depois de repetidas participacoes,
-   protegendo o jogador contra azar.
+7. Fragmentos de Ameaca alimentam a incubacao e podem cobrir faltas pontuais de
+   materiais, mas nunca sao trocados por casulos.
 8. A incubadora consome um casulo, Fragmentos de Ameaca e Gold para adicionar
    um pet a colecao.
 9. Pocoes, enfermaria, crafting, incursoes, reforcos e incubacao retiram Gold da
@@ -103,21 +103,53 @@ correspondentes, portanto nao concorre com o reforco desde o inicio do tier.
 
 ## Pets e Ameacas Globais
 
-- Cada tier T1-T5 possui um pet e um Casulo Infectado correspondente.
-- O casulo pode cair diretamente com chance baixa.
-- Trinta Fragmentos de Ameaca garantem um casulo do mesmo tier.
+- Cada tier T1-T5 possui oito especializacoes, totalizando quarenta casulos e
+  quarenta pets com identificadores estaveis.
+- As especializacoes sao Desmanche, Coleta, Patrulha, Arsenal,
+  Tecnovarredura, Contencao, Combate Automatico e Rastreamento.
+- Cada recompensa elegivel faz no maximo uma rolagem de casulo. Quando o drop
+  acontece, o backend exige as oito especializacoes ativas no tier e sorteia
+  uma delas com a mesma probabilidade.
+- A rolagem de Ameaca Global e a unica fonte de novos casulos. Fragmentos nao
+  permitem escolher nem comprar uma especializacao.
 - A incubacao consome um casulo, fragmentos adicionais e Gold.
+- Ao encerrar um evento, o backend liquida todos os participantes elegiveis em
+  lotes idempotentes; a entrega nao depende de a pagina permanecer aberta.
+- O resultado individual fica disponivel por quinze minutos para reconciliacao
+  apos F5, reconexao ou retorno ao jogo.
 - Existe uma unica vaga de incubacao por personagem.
 - O progresso persiste no servidor e pode ser coletado depois do prazo.
-- A primeira versao entrega incubacao e colecao. Bonus de combate de pets sera
-  balanceado e implementado em uma fase posterior.
+- Cada personagem pode equipar exatamente um pet por vez. Equipar outro faz a
+  troca atomica; o pet anterior permanece na colecao.
+- Os bonus de reducao de tempo sao representados em pontos-base: T1 `300`
+  (`3%`), T2 `400` (`4%`), T3 `500` (`5%`), T4 `600` (`6%`) e T5 `750`
+  (`7,5%`).
+- O calculador central valida o pet equipado e devolve o modificador apenas
+  para a especializacao correspondente. Gathering aplica o bonus ao iniciar o
+  proximo ciclo, a caca ao iniciar o proximo rastreio e o auto-combate ao
+  iniciar o proximo monstro. O TTK e persistido em milissegundos, respeita o
+  piso de um segundo e nao muda no meio de um ciclo ja iniciado.
+- Pets disponiveis podem ser vendidos ao comerciante por `40%` do Gold gasto
+  na incubacao. Um pet equipado nao pode ser vendido e a venda nao devolve
+  casulo nem fragmentos.
+- Enquanto uma especializacao ainda nao pertence a colecao, o primeiro casulo
+  dela fica reservado para incubacao. Somente o excedente e considerado
+  repetido.
+- Cada casulo repetido pode ser convertido em `10` Fragmentos de Ameaca do
+  mesmo tier. Esses fragmentos retornam para incubacao ou trocas de materiais.
+- Como alternativa, um casulo repetido pode ser vendido por `50%` do valor de
+  venda ao NPC do pet correspondente. Conversao e venda sao transacionais,
+  idempotentes e registradas no ledger.
 
 ## Trocas de protecao contra azar
 
 - `1` Ficha de Incursao gera `2` Fragmentos de Reforco do mesmo tier.
 - `2` Fichas de Incursao geram `3` materiais comuns escolhidos.
-- `30` Fragmentos de Ameaca geram `1` casulo do mesmo tier.
 - `3` Fragmentos de Ameaca geram `2` drops de mob escolhidos.
+
+Casulos nao fazem parte da Central de trocas: sao exclusivos do drop aleatorio
+de Ameacas Globais. A protecao dos Fragmentos de Ameaca cobre somente materiais
+e custos de incubacao, sem substituir a recompensa rara do chefe.
 
 As telas separam as ofertas principais das emergenciais para deixar claro que
 gathering e auto-combate continuam sendo as fontes eficientes dos materiais
@@ -260,8 +292,10 @@ reforcar um item existente.
 
 1. Medir sete dias reais e ajustar Gold sem alterar custos por intuicao.
 2. Implementar reciclagem de equipamento antigo com retorno parcial.
-3. Definir papeis de pets e simular passivas antes de ativar bonus de combate.
-4. Adicionar evolucao de pets usando duplicatas ou fragmentos, com teto claro.
-5. Testar mercado entre jogadores somente depois de controlar inflacao,
+3. Integrar o calculador central de pets aos seis gatherings, a caca e o
+   auto-combate, preservando snapshots e barras de progresso.
+4. Medir os bonus de pets na simulacao economica e na telemetria real.
+5. Medir conversao e venda de casulos repetidos antes de ajustar os retornos.
+6. Testar mercado entre jogadores somente depois de controlar inflacao,
    estoque e abuso por multiplas contas.
-6. Criar temporadas e recompensas cosmeticas sem vender poder direto.
+7. Criar temporadas e recompensas cosmeticas sem vender poder direto.

@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { X } from 'lucide-react';
+import { ActivityStateProgressFill } from '../../../components/game/ActivityStateProgressFill';
 import { ActivityTimelineFill } from '../../../components/game/ActivityTimelineFill';
 import {
   getActivityTimelineFrame,
@@ -47,6 +48,7 @@ import {
   leaveWorldBoss,
 } from '../../world-bosses/api/world-bosses.api';
 import type { WorldBossStatusResponse } from '../../world-bosses/types/world-bosses.types';
+import { mergeWorldBossStatusSnapshot } from '../../world-bosses/utils/worldBossStatus';
 import '../styles/dashboard-topbar.css';
 
 type DashboardTopBarResourceTone = 'default' | 'gold' | 'cash';
@@ -84,6 +86,8 @@ export interface DashboardTopBarActivityOverride {
     iterationCount?: number | 'infinite';
   } | null;
   timeline?: ActivityTimeline | null;
+  timelineRepeats?: boolean;
+  stateProgress?: boolean;
   badge?: string | null;
   titleText?: string;
   isHunting?: boolean;
@@ -368,6 +372,7 @@ function buildWorldBossActivity(
     subtitle: `Em andamento - ${formatNumber(event.currentHp)} HP`,
     icon: 'WB',
     progressPercent: hpPercent,
+    stateProgress: true,
     badge: `${Math.floor(hpPercent)}%`,
     titleText: `${bossName} - em andamento, ${formatNumber(
       event.currentHp,
@@ -1105,6 +1110,8 @@ function buildGatheringActivity(
     icon: activityIconUrl ? null : getMaterialInitials(materialName),
     imageUrl: activityIconUrl,
     progressPercent,
+    timeline: gatheringState.timeline,
+    timelineRepeats: true,
     badge: badgeValue !== null ? formatNumber(badgeValue) : null,
     titleText: 'Expedição ativa em tempo real',
   };
@@ -1140,6 +1147,7 @@ function buildCraftingActivity(
     subtitle: `${quantityText} · ${timerText}`,
     icon: getMaterialInitials(itemName),
     progressPercent: isComplete ? 100 : progressPercent,
+    timeline: craftingState.timeline,
     badge: `${Math.floor(isComplete ? 100 : progressPercent)}%`,
     titleText: `${itemName} em criação · ${quantityText} · ${timerText}`,
   };
@@ -1174,7 +1182,8 @@ function buildIncursionActivity(
       : `${mapName} · ${formatCompactDuration(remainingSeconds)}`,
     icon: '⌬',
     progressPercent: isCompleted ? 100 : progressPercent,
-    badge: isCompleted ? 'Fim' : `${Math.floor(progressPercent)}%`,
+    timeline: incursionsState.timeline,
+    badge: isCompleted ? 'Fim' : `${Math.round(progressPercent)}%`,
     titleText: isCompleted
       ? 'Incursão concluída, recompensas automáticas em processamento'
       : `Incursão ativa em ${mapName}`,
@@ -1419,14 +1428,14 @@ export function DashboardTopBar({
 
         if (isDisposed) return;
 
-        worldBossStatusCache.set(safeCharacterId, status);
-        setWorldBossStatus(status);
+        setWorldBossStatus((current) => {
+          const merged = mergeWorldBossStatusSnapshot(current, status);
+          worldBossStatusCache.set(safeCharacterId, merged);
+          return merged;
+        });
         setNowMs(Date.now());
       } catch {
         if (isDisposed) return;
-
-        worldBossStatusCache.set(safeCharacterId, null);
-        setWorldBossStatus(null);
       }
     }
 
@@ -1438,11 +1447,19 @@ export function DashboardTopBar({
       },
       WORLD_BOSS_TOPBAR_REFRESH_MS,
     );
+    const refreshOnResume = () => {
+      if (canRunNetworkRefresh()) void loadWorldBossStatus();
+    };
+
+    document.addEventListener('visibilitychange', refreshOnResume);
+    window.addEventListener('online', refreshOnResume);
 
     return () => {
       isDisposed = true;
       window.clearTimeout(cacheTimer);
       window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshOnResume);
+      window.removeEventListener('online', refreshOnResume);
     };
   }, [characterId]);
 
@@ -1466,8 +1483,11 @@ export function DashboardTopBar({
         return;
       }
 
-      worldBossStatusCache.set(characterId, payload);
-      setWorldBossStatus(payload);
+      setWorldBossStatus((current) => {
+        const merged = mergeWorldBossStatusSnapshot(current, payload);
+        worldBossStatusCache.set(characterId, merged);
+        return merged;
+      });
       setNowMs(Date.now());
     };
 
@@ -1735,7 +1755,14 @@ export function DashboardTopBar({
             aria-hidden="true"
           >
             {activity.timeline ? (
-              <ActivityTimelineFill timeline={activity.timeline} />
+              <ActivityTimelineFill
+                timeline={activity.timeline}
+                repeat={activity.timelineRepeats}
+              />
+            ) : activity.stateProgress ? (
+              <ActivityStateProgressFill
+                progressPercent={activityProgressPercent}
+              />
             ) : (
               <span
                 key={activityProgressElementKey}

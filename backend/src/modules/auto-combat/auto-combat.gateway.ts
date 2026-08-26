@@ -460,6 +460,15 @@ export class AutoCombatGateway
     );
   }
 
+  emitHuntTargetFound(characterId: string, payload: unknown) {
+    this.clearStatusCache(characterId);
+    this.emitRealtimeEventToCharacter(
+      characterId,
+      'auto-combat:hunt-target-found',
+      payload,
+    );
+  }
+
   emitMobDefeated(characterId: string, payload: unknown) {
     this.clearStatusCache(characterId);
 

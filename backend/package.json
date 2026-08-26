@@ -50,6 +50,7 @@
     "economy:validate:reinforcement": "node node_modules/tsx/dist/cli.mjs scripts/validate-equipment-reinforcement-balance.ts",
     "items:stats:audit": "node node_modules/tsx/dist/cli.mjs scripts/audit-equipment-stats-sync.ts",
     "test:auto-combat:fixture": "node node_modules/tsx/dist/cli.mjs scripts/prepare-auto-combat-fixture.ts",
+    "test:pets:fixture": "node node_modules/tsx/dist/cli.mjs scripts/prepare-pet-fixture.ts",
     "backup:database": "node scripts/backup-database.mjs",
     "backup:verify": "node scripts/verify-database-backup.mjs",
     "backup:restore": "node scripts/restore-database-backup.mjs"

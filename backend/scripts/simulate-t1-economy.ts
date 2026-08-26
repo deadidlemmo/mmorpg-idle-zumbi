@@ -219,7 +219,14 @@ async function main() {
       'Perdidas escolha/conflito':
         profile.averageWorldBossMissedByChoiceOrConflict,
       'Sem participacao minima': profile.averageWorldBossMissedParticipation,
+      'Casulos sorteados': profile.averagePetCocoonsDropped,
       'Pets incubados': profile.averagePetsIncubated,
+      'Pets unicos': profile.averageUniquePetsOwned,
+      'Jogadores com pet': profile.playersWithAnyPetPercent + '%',
+      'Colecao T1 completa': profile.playersWithCompletePetSetPercent + '%',
+      'Duplicatas convertidas': profile.averageDuplicateCocoonsConverted,
+      'Casulos guardados': profile.averageCocoonsHeld,
+      'Incubacoes pendentes': profile.averagePendingPetIncubations,
     })),
   );
   console.log('Perfil de referencia: ' + report.targetAssessment.profile);

@@ -26,6 +26,8 @@ export interface WorldBossRewardPreview {
   chance: number;
   guaranteed: boolean;
   onlyIfDefeated: boolean;
+  requiresMinParticipation: boolean;
+  randomPetCocoon?: boolean;
   minContributionPercent: number;
   rarity?: string | null;
   item?: {
@@ -35,6 +37,15 @@ export interface WorldBossRewardPreview {
     rarity?: string | null;
     family?: string | null;
   } | null;
+}
+
+export interface WorldBossGrantedReward {
+  id: string;
+  rewardType: WorldBossRewardType;
+  currency?: "INCURSION_TOKEN" | "WORLD_BOSS_FRAGMENT" | null;
+  quantity: number;
+  rarity?: string | null;
+  item?: { id: string; name: string } | null;
 }
 
 export interface WorldBossSummary {
@@ -68,6 +79,7 @@ export interface WorldBossSummary {
 
 export interface WorldBossEventSummary {
   id: string;
+  updatedAt?: string;
   status: WorldBossEventStatus;
   startsAt: string;
   endsAt: string;
@@ -101,25 +113,20 @@ export interface WorldBossParticipantSummary {
   rewardGrantedAt?: string | null;
   rank?: number | null;
   eligibleForReward: boolean;
-  rewards?: Array<{
-    id: string;
-    rewardType: WorldBossRewardType;
-    currency?: "INCURSION_TOKEN" | "WORLD_BOSS_FRAGMENT" | null;
-    quantity: number;
-    rarity?: string | null;
-    item?: { id: string; name: string } | null;
-  }>;
+  rewards?: WorldBossGrantedReward[];
 }
 
 export interface WorldBossStatusResponse {
   message?: string | null;
+  serverNow?: string;
   event: WorldBossEventSummary | null;
   participant: WorldBossParticipantSummary | null;
-  rewardsGranted?: unknown[] | null;
+  rewardsGranted?: WorldBossGrantedReward[] | null;
   eligible?: { canJoin: boolean; reason?: string | null };
 }
 
 export interface WorldBossAvailableResponse {
   message?: string | null;
   events: WorldBossStatusResponse[];
+  recentReward?: WorldBossStatusResponse | null;
 }

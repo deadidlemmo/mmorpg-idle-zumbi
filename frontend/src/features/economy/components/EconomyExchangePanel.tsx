@@ -2,6 +2,7 @@ import { isAxiosError } from "axios";
 import {
   AlertCircle,
   ArrowRightLeft,
+  Biohazard,
   CheckCircle2,
   Coins,
   PackageCheck,
@@ -114,17 +115,17 @@ export function EconomyExchangePanel({
       {
         key: "PRIMARY" as const,
         label: "Uso principal",
-        description:
-          currency === "INCURSION_TOKEN"
-            ? "Componentes dedicados ao reforço de equipamentos."
-            : "Recursos ligados a casulos e companheiros.",
+        description: "Componentes dedicados ao reforço de equipamentos.",
         offers:
           data?.offers.filter((offer) => offer.category === "PRIMARY") ?? [],
       },
       {
         key: "EMERGENCY" as const,
         label: "Proteção contra azar",
-        description: "Alternativa limitada para completar uma receita.",
+        description:
+          currency === "WORLD_BOSS_FRAGMENT"
+            ? "Drops de mob para completar receitas em situações pontuais."
+            : "Materiais comuns para completar uma receita em situações pontuais.",
         offers:
           data?.offers.filter((offer) => offer.category === "EMERGENCY") ?? [],
       },
@@ -150,9 +151,9 @@ export function EconomyExchangePanel({
         request.offerId,
         request.requestId,
       );
-      pendingRequest.current = null;
       setMessage(response.message);
       applyOffers(await load());
+      pendingRequest.current = null;
     } catch (exchangeError) {
       setError(getErrorMessage(exchangeError));
     } finally {
@@ -180,6 +181,14 @@ export function EconomyExchangePanel({
           <strong>{balance.toLocaleString("pt-BR")}</strong>
         </span>
       </header>
+
+      {currency === "WORLD_BOSS_FRAGMENT" ? (
+        <p className="economy-exchange__source-rule">
+          <Biohazard size={16} aria-hidden="true" />
+          Casulos são obtidos exclusivamente como drop de Ameaças Globais.
+          Fragmentos podem ser usados aqui somente para materiais.
+        </p>
+      ) : null}
 
       {isLoading ? (
         <p className="economy-exchange__status">Carregando trocas...</p>

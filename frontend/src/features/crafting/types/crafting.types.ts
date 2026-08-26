@@ -1,3 +1,5 @@
+import type { ActivityTimelineSnapshot } from "../../../components/game/activityTimeline";
+
 export type CraftingRarity =
   | "COMMON"
   | "UNCOMMON"
@@ -192,6 +194,7 @@ export interface CraftingSessionViewModel {
   startedAt: string;
   completesAt: string;
   completedAt?: string | null;
+  timeline?: ActivityTimelineSnapshot | null;
   outputItem: Pick<
     CraftingOutputItemViewModel,
     "id" | "name" | "description" | "tier" | "rarity" | "slot" | "family"

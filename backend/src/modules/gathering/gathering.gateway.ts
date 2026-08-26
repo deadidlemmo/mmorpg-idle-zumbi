@@ -28,7 +28,64 @@ type GatheringSocket = Omit<Socket, 'data'> & {
 };
 
 const GATHERING_NAMESPACE = '/gathering';
-const GATHERING_TICK_MS = 1000;
+const GATHERING_CYCLE_SETTLE_MS = 75;
+const GATHERING_STATUS_HEARTBEAT_MS = 30_000;
+const GATHERING_MIN_SCHEDULE_DELAY_MS = 25;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getGatheringTimelineEndsAt(status: unknown) {
+  if (!isRecord(status) || status.active !== true) {
+    return null;
+  }
+
+  const candidates = [
+    status.timeline,
+    isRecord(status.session) ? status.session.timeline : null,
+    isRecord(status.productionPreview)
+      ? status.productionPreview.timeline
+      : null,
+  ];
+
+  for (const candidate of candidates) {
+    if (!isRecord(candidate) || typeof candidate.endsAt !== 'string') {
+      continue;
+    }
+
+    const endsAtMs = Date.parse(candidate.endsAt);
+
+    if (Number.isFinite(endsAtMs)) {
+      return endsAtMs;
+    }
+  }
+
+  return null;
+}
+
+export function getGatheringStatusScheduleDelayMs(
+  status: unknown,
+  nowMs = Date.now(),
+) {
+  if (!isRecord(status) || status.active !== true) {
+    return null;
+  }
+
+  const endsAtMs = getGatheringTimelineEndsAt(status);
+
+  if (endsAtMs === null) {
+    return GATHERING_STATUS_HEARTBEAT_MS;
+  }
+
+  return Math.max(
+    GATHERING_MIN_SCHEDULE_DELAY_MS,
+    Math.min(
+      GATHERING_STATUS_HEARTBEAT_MS,
+      Math.ceil(endsAtMs - nowMs + GATHERING_CYCLE_SETTLE_MS),
+    ),
+  );
+}
 
 @WebSocketGateway({
   namespace: GATHERING_NAMESPACE,
@@ -42,9 +99,9 @@ export class GatheringGateway
   private readonly logger = new Logger(GatheringGateway.name);
   private readonly clientsByCharacterId = new Map<string, Set<string>>();
   private readonly userIdByCharacterId = new Map<string, string>();
-  private readonly intervalsByCharacterId = new Map<
+  private readonly timersByCharacterId = new Map<
     string,
-    ReturnType<typeof setInterval>
+    ReturnType<typeof setTimeout>
   >();
 
   constructor(
@@ -244,7 +301,7 @@ export class GatheringGateway
     try {
       const result = await this.gatheringService.stop(userId, characterId);
       await this.emitStatusToRoom(characterId, 'gathering:stopped');
-      await this.stopCharacterIntervalIfInactive(userId, characterId);
+      await this.stopCharacterTimerIfInactive(userId, characterId);
 
       return result;
     } catch (error) {
@@ -292,8 +349,6 @@ export class GatheringGateway
       this.addClientToCharacter(client.id, character.id, userId);
     }
 
-    this.ensureCharacterInterval(character.id);
-
     client.emit('gathering:joined', {
       characterId: character.id,
       characterName: character.name,
@@ -338,33 +393,42 @@ export class GatheringGateway
 
     this.clientsByCharacterId.delete(characterId);
     this.userIdByCharacterId.delete(characterId);
-    this.clearCharacterInterval(characterId);
+    this.clearCharacterTimer(characterId);
   }
 
-  private ensureCharacterInterval(characterId: string) {
-    if (this.intervalsByCharacterId.has(characterId)) {
+  private scheduleCharacterTimer(characterId: string, status: unknown) {
+    this.clearCharacterTimer(characterId);
+
+    if (!this.clientsByCharacterId.has(characterId)) {
       return;
     }
 
-    const intervalId = setInterval(() => {
+    const delayMs = getGatheringStatusScheduleDelayMs(status);
+
+    if (delayMs === null) {
+      return;
+    }
+
+    const timerId = setTimeout(() => {
+      this.timersByCharacterId.delete(characterId);
       void this.emitStatusToRoom(characterId, 'gathering:progress');
-    }, GATHERING_TICK_MS);
+    }, delayMs);
 
-    this.intervalsByCharacterId.set(characterId, intervalId);
+    this.timersByCharacterId.set(characterId, timerId);
   }
 
-  private clearCharacterInterval(characterId: string) {
-    const intervalId = this.intervalsByCharacterId.get(characterId);
+  private clearCharacterTimer(characterId: string) {
+    const timerId = this.timersByCharacterId.get(characterId);
 
-    if (!intervalId) {
+    if (!timerId) {
       return;
     }
 
-    clearInterval(intervalId);
-    this.intervalsByCharacterId.delete(characterId);
+    clearTimeout(timerId);
+    this.timersByCharacterId.delete(characterId);
   }
 
-  private async stopCharacterIntervalIfInactive(
+  private async stopCharacterTimerIfInactive(
     userId: string,
     characterId: string,
   ) {
@@ -372,10 +436,12 @@ export class GatheringGateway
       const status = await this.gatheringService.getStatus(userId, characterId);
 
       if (!status.active) {
-        this.clearCharacterInterval(characterId);
+        this.clearCharacterTimer(characterId);
+      } else {
+        this.scheduleCharacterTimer(characterId, status);
       }
     } catch {
-      this.clearCharacterInterval(characterId);
+      this.clearCharacterTimer(characterId);
     }
   }
 
@@ -394,6 +460,7 @@ export class GatheringGateway
     try {
       const status = await this.gatheringService.getStatus(userId, characterId);
       client.emit(eventName, status);
+      this.scheduleCharacterTimer(characterId, status);
       return status;
     } catch (error) {
       this.emitError(client, error);
@@ -413,7 +480,9 @@ export class GatheringGateway
       this.server.to(this.getRoomName(characterId)).emit(eventName, status);
 
       if (!status.active) {
-        this.clearCharacterInterval(characterId);
+        this.clearCharacterTimer(characterId);
+      } else {
+        this.scheduleCharacterTimer(characterId, status);
       }
 
       return status;
@@ -421,7 +490,7 @@ export class GatheringGateway
       this.server.to(this.getRoomName(characterId)).emit('gathering:error', {
         message: this.extractErrorMessage(error),
       });
-      this.clearCharacterInterval(characterId);
+      this.clearCharacterTimer(characterId);
       return null;
     }
   }

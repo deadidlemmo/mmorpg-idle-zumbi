@@ -242,6 +242,8 @@ Rotas atuais:
 /dashboard/:characterId/equipment
 /dashboard/:characterId/consumables
 /dashboard/:characterId/consumables/:merchantId
+/dashboard/:characterId/resources
+/dashboard/:characterId/pets
 /dashboard/:characterId/infirmary
 /dashboard/:characterId/membership
 /dashboard/:characterId/maps

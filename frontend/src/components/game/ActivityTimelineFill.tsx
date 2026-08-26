@@ -1,11 +1,11 @@
-import { useMemo, type CSSProperties } from 'react';
+import { useMemo, type CSSProperties, type ReactNode } from 'react';
 import {
   getActivityTimelineCssAnimation,
   type ActivityTimeline,
 } from './activityTimeline';
 import './activity-timeline.css';
 
-type ActivityTimelineFillElement = 'i' | 'span';
+type ActivityTimelineFillElement = 'em' | 'i' | 'span';
 
 type ActivityTimelineFillStyle = CSSProperties & {
   '--activity-timeline-from-scale': string;
@@ -14,20 +14,24 @@ type ActivityTimelineFillStyle = CSSProperties & {
 
 interface ActivityTimelineFillProps {
   as?: ActivityTimelineFillElement;
+  children?: ReactNode;
   className?: string;
+  repeat?: boolean;
   style?: CSSProperties;
   timeline: ActivityTimeline;
 }
 
 export function ActivityTimelineFill({
   as = 'span',
+  children,
   className,
+  repeat = false,
   style,
   timeline,
 }: ActivityTimelineFillProps) {
   const animation = useMemo(
-    () => getActivityTimelineCssAnimation(timeline),
-    [timeline],
+    () => getActivityTimelineCssAnimation(timeline, undefined, { repeat }),
+    [repeat, timeline],
   );
   const Element = as;
   const animationStyle = {
@@ -37,7 +41,7 @@ export function ActivityTimelineFill({
     animationDelay: `${animation.delayMs}ms`,
     animationDuration: `${animation.durationMs}ms`,
     animationFillMode: 'both',
-    animationIterationCount: 1,
+    animationIterationCount: repeat ? 'infinite' : 1,
     animationName: 'activityTimelineProgress',
     animationTimingFunction: 'linear',
     transform: `scaleX(${animation.currentScale})`,
@@ -45,7 +49,7 @@ export function ActivityTimelineFill({
 
   return (
     <Element
-      key={animation.key}
+      key={`${animation.key}:${repeat ? 'repeat' : 'once'}`}
       className={['activity-timeline-fill', className]
         .filter(Boolean)
         .join(' ')}
@@ -54,7 +58,9 @@ export function ActivityTimelineFill({
       data-timeline-version={timeline.version}
       style={animationStyle}
       aria-hidden="true"
-    />
+    >
+      {children}
+    </Element>
   );
 }
 

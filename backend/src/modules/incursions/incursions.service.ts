@@ -18,6 +18,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
+import { buildActivityTimelineSnapshot } from '../../common/utils/activity-timeline.util';
 import { calculateLevelProgress } from '../../common/utils/level.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
@@ -33,6 +34,7 @@ import {
 } from './incursion-risk.util';
 
 const MIN_INCURSION_DURATION_SECONDS = 1800;
+const RECENT_REWARDED_SESSION_WINDOW_MS = 15 * 60 * 1000;
 
 const incursionInclude = {
   map: {
@@ -424,7 +426,25 @@ export class IncursionsService {
     });
 
     if (!session) {
-      return { activeSession: null, rewardedSession: null };
+      const rewardedSession =
+        await this.prisma.characterIncursionSession.findFirst({
+          where: {
+            characterId,
+            status: {
+              in: [
+                IncursionSessionStatus.CLAIMED,
+                IncursionSessionStatus.FAILED,
+              ],
+            },
+            claimedAt: {
+              gte: new Date(now.getTime() - RECENT_REWARDED_SESSION_WINDOW_MS),
+            },
+          },
+          orderBy: { claimedAt: 'desc' },
+          include: this.sessionInclude(),
+        });
+
+      return { activeSession: null, rewardedSession };
     }
 
     const hasFinished = session.endsAt.getTime() <= now.getTime();
@@ -436,11 +456,35 @@ export class IncursionsService {
       return { activeSession: session, rewardedSession: null };
     }
 
-    const result = await this.rewardSession(session.id, characterId, now, {
-      requireFinished: false,
-    });
+    try {
+      const result = await this.rewardSession(session.id, characterId, now, {
+        requireFinished: false,
+      });
 
-    return { activeSession: null, rewardedSession: result.session };
+      return { activeSession: null, rewardedSession: result.session };
+    } catch (error) {
+      if (!(error instanceof ConflictException)) throw error;
+
+      const resolvedSession =
+        await this.prisma.characterIncursionSession.findFirst({
+          where: {
+            id: session.id,
+            characterId,
+            status: {
+              in: [
+                IncursionSessionStatus.CLAIMED,
+                IncursionSessionStatus.FAILED,
+              ],
+            },
+            claimedAt: { not: null },
+          },
+          include: this.sessionInclude(),
+        });
+
+      if (!resolvedSession) throw error;
+
+      return { activeSession: null, rewardedSession: resolvedSession };
+    }
   }
 
   private async rewardSession(
@@ -1024,6 +1068,19 @@ export class IncursionsService {
         0,
         Math.ceil((session.endsAt.getTime() - now.getTime()) / 1000),
       ),
+      timeline:
+        effectiveStatus === IncursionSessionStatus.ACTIVE
+          ? buildActivityTimelineSnapshot({
+              activityInstanceId: session.id,
+              cycleId: `${session.id}:incursion`,
+              serverNow: now,
+              startedAt: session.startedAt,
+              endsAt: session.endsAt,
+              durationMs: totalMs,
+              direction: 'fill',
+              version: 1,
+            })
+          : null,
       canClaim: false,
       incursion: this.formatIncursion(session.incursion),
       rewards: (session.rewards ?? []).map((reward: any) => ({

@@ -217,6 +217,22 @@ function getDefeatNotificationDescription(event: AutoCombatRealtimeEvent) {
   return details.length > 0 ? details.join(" · ") : "Recompensa confirmada";
 }
 
+function isHuntTargetFoundEvent(event: AutoCombatRealtimeEvent) {
+  return (
+    String(event.type ?? "")
+      .trim()
+      .toUpperCase() === "HUNT_TARGET_FOUND"
+  );
+}
+
+function getHuntTargetFoundDescription(event: AutoCombatRealtimeEvent) {
+  const huntingXp = getConfirmedXpAmount(event.huntingXpGained);
+
+  return huntingXp > 0
+    ? `+${AUTO_COMBAT_XP_FORMATTER.format(huntingXp)} EXP de Caça`
+    : "Adicionado às ameaças rastreadas";
+}
+
 function buildAutoCombatLootTotals(status: AutoCombatStatusResponse | null) {
   const totals = new Map<string, AutoCombatRewardLootViewModel>();
   const processing = status?.processing as
@@ -676,6 +692,7 @@ export function AutoCombatRealtimeProvider({
   const activeEventTimeoutRef = useRef<number | null>(null);
   const activeEventImpactTimeoutRef = useRef<number | null>(null);
   const notifiedDefeatEventKeysRef = useRef<Set<string>>(new Set());
+  const notifiedHuntEventKeysRef = useRef<Set<string>>(new Set());
   const reloadTimeoutRef = useRef<number | null>(null);
   const reloadRequestRef = useRef(0);
   const reloadExecutorRef = useRef<(options?: ReloadOptions) => Promise<void>>(
@@ -745,6 +762,7 @@ export function AutoCombatRealtimeProvider({
     hiddenStartedAtRef.current = null;
     lastVisibilityReturnAtRef.current = null;
     notifiedDefeatEventKeysRef.current.clear();
+    notifiedHuntEventKeysRef.current.clear();
     terminalDefeatSessionRef.current = null;
     clearHuntingTimeline();
   }, [clearHuntingTimeline, normalizedCharacterId]);
@@ -814,6 +832,51 @@ export function AutoCombatRealtimeProvider({
         kind: "combat-result",
         eyebrow: "Alvo eliminado",
         description: getDefeatNotificationDescription(event),
+        displayQuantity: false,
+      });
+    },
+    [normalizedCharacterId, notifyLoot],
+  );
+
+  const publishHuntTargetFoundNotification = useCallback(
+    (event: AutoCombatRealtimeEvent) => {
+      if (!normalizedCharacterId || !isHuntTargetFoundEvent(event)) {
+        return;
+      }
+
+      const eventKey = getRealtimeEventKey(event);
+
+      if (notifiedHuntEventKeysRef.current.has(eventKey)) {
+        return;
+      }
+
+      notifiedHuntEventKeysRef.current.add(eventKey);
+
+      if (notifiedHuntEventKeysRef.current.size > 80) {
+        const oldestEventKey = notifiedHuntEventKeysRef.current
+          .values()
+          .next().value;
+
+        if (oldestEventKey) {
+          notifiedHuntEventKeysRef.current.delete(oldestEventKey);
+        }
+      }
+
+      const mobName = String(event.mobName ?? "").trim() || "Ameaça rastreada";
+
+      notifyLoot({
+        idempotencyKey: [
+          "auto-combat-hunt",
+          normalizedCharacterId,
+          eventKey,
+        ].join("|"),
+        itemName: mobName,
+        quantity: 1,
+        imageUrl: getMobPortraitImage(mobName),
+        source: "auto-combat",
+        kind: "combat-result",
+        eyebrow: "Ameaça rastreada",
+        description: getHuntTargetFoundDescription(event),
         displayQuantity: false,
       });
     },
@@ -1031,6 +1094,11 @@ export function AutoCombatRealtimeProvider({
 
       if (!isUiBackgrounded()) {
         publishDefeatNotification(event);
+        publishHuntTargetFoundNotification(event);
+      }
+
+      if (isHuntTargetFoundEvent(event)) {
+        return;
       }
 
       dispatch({
@@ -1042,6 +1110,7 @@ export function AutoCombatRealtimeProvider({
     [
       normalizedCharacterId,
       publishDefeatNotification,
+      publishHuntTargetFoundNotification,
       terminateDefeatedPresentation,
     ],
   );
@@ -1835,6 +1904,11 @@ export function AutoCombatRealtimeProvider({
 
       lastInactiveStatusSignatureRef.current = null;
       publishDefeatNotification(payload);
+      publishHuntTargetFoundNotification(payload);
+
+      if (isHuntTargetFoundEvent(payload)) {
+        return;
+      }
 
       dispatch({
         type: "ENQUEUE_EVENT",
@@ -1846,6 +1920,7 @@ export function AutoCombatRealtimeProvider({
       enterSnapshotSynchronization,
       normalizedCharacterId,
       publishDefeatNotification,
+      publishHuntTargetFoundNotification,
       scheduleReload,
       terminateDefeatedPresentation,
     ],

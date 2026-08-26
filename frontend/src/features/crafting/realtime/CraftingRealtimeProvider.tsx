@@ -10,6 +10,16 @@ import {
 } from "react";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
+import {
+  createActivityTimelineClockSample,
+  getActivityTimelineFrame,
+  getActivityTimelineMonotonicNowMs,
+  getActivityTimelineReconciliationDelayMs,
+  isActivityTimelineReconciliationDue,
+  type ActivityTimeline,
+  type ActivityTimelineClockSample,
+} from "../../../components/game/activityTimeline";
+import { useActivityTimelineProviderState } from "../../../components/game/useActivityTimelineProviderState";
 import { getAuthToken } from "../../../services/api/authToken";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import { useLootNotifications } from "../../loot-notifications/lootNotificationContext";
@@ -54,6 +64,7 @@ export interface CraftingRealtimeState {
   lastUpdatedAt: number | null;
   nowMs: number;
   liveSession: CraftingRealtimeLiveSession;
+  timeline: ActivityTimeline | null;
 }
 
 export interface CraftingRealtimeContextValue {
@@ -213,12 +224,23 @@ function extractSocketError(payload: unknown) {
 function buildLiveSession(
   session: CraftingSessionViewModel | null,
   nowMs: number,
+  timeline: ActivityTimeline | null,
 ): CraftingRealtimeLiveSession {
   if (!session || session.status !== "ACTIVE") {
     return {
       remainingSeconds: 0,
       progressPercent: session ? 100 : 0,
       isComplete: Boolean(session && session.status === "COMPLETED"),
+    };
+  }
+
+  if (timeline?.activityInstanceId === session.id) {
+    const frame = getActivityTimelineFrame(timeline);
+
+    return {
+      remainingSeconds: Math.max(0, Math.ceil(frame.remainingMs / 1000)),
+      progressPercent: frame.progressPercent,
+      isComplete: frame.isComplete,
     };
   }
 
@@ -265,6 +287,11 @@ export function CraftingRealtimeProvider({
   refreshMs = 5000,
   tickMs = 1000,
 }: CraftingRealtimeProviderProps) {
+  const {
+    applySnapshot: applyTimelineSnapshot,
+    clearTimeline,
+    timeline,
+  } = useActivityTimelineProviderState();
   const [status, setStatus] = useState<CraftingStatusResponse | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isLoading, setIsLoading] = useState(autoLoad);
@@ -330,7 +357,18 @@ export function CraftingRealtimeProvider({
   );
 
   const applyStatus = useCallback(
-    (nextStatus: CraftingStatusResponse) => {
+    (
+      nextStatus: CraftingStatusResponse,
+      clock?: ActivityTimelineClockSample,
+    ) => {
+      const timelineSnapshot = nextStatus.activeSession?.timeline ?? null;
+
+      if (timelineSnapshot) {
+        applyTimelineSnapshot(timelineSnapshot, clock);
+      } else {
+        clearTimeline();
+      }
+
       statusRef.current = nextStatus;
       publishCraftingLootNotifications(nextStatus);
 
@@ -341,7 +379,7 @@ export function CraftingRealtimeProvider({
         setErrorMessage(null);
       }
     },
-    [publishCraftingLootNotifications],
+    [applyTimelineSnapshot, clearTimeline, publishCraftingLootNotifications],
   );
 
   const applySocketPayload = useCallback(
@@ -371,9 +409,16 @@ export function CraftingRealtimeProvider({
     }
 
     try {
+      const requestStartedAtMonotonicMs =
+        getActivityTimelineMonotonicNowMs();
       const response = await getCraftingStatusRequest(characterId);
 
-      applyStatus(response);
+      applyStatus(
+        response,
+        createActivityTimelineClockSample({
+          requestStartedAtMonotonicMs,
+        }),
+      );
 
       return response;
     } catch (error) {
@@ -399,10 +444,19 @@ export function CraftingRealtimeProvider({
       return;
     }
 
-    socket.emit("crafting:join", { characterId });
-    socket.emit("crafting:status:request", { characterId });
     socket.emit("crafting:refresh", { characterId });
   }, [characterId]);
+
+  const reconcileCompletedSession = useCallback(() => {
+    if (!canRunNetworkRefresh()) return;
+
+    if (socketConnectedRef.current) {
+      requestSnapshot();
+      return;
+    }
+
+    void refresh();
+  }, [refresh, requestSnapshot]);
 
   const stop = useCallback(async () => {
     if (!enabled || !characterId) {
@@ -453,6 +507,7 @@ export function CraftingRealtimeProvider({
   useEffect(() => {
     statusRef.current = null;
     processedLootNotificationKeysRef.current.clear();
+    clearTimeline();
 
     const resetTimer = window.setTimeout(() => {
       if (!isMountedRef.current) return;
@@ -466,7 +521,7 @@ export function CraftingRealtimeProvider({
     }, 0);
 
     return () => window.clearTimeout(resetTimer);
-  }, [autoLoad, characterId]);
+  }, [autoLoad, characterId, clearTimeline]);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -513,8 +568,6 @@ export function CraftingRealtimeProvider({
 
     const handleAuthenticated = () => {
       socket.emit("crafting:join", { characterId });
-      socket.emit("crafting:status:request", { characterId });
-      socket.emit("crafting:refresh", { characterId });
     };
 
     const handleDisconnect = () => {
@@ -639,25 +692,41 @@ export function CraftingRealtimeProvider({
   }, [autoLoad, characterId, enabled, refresh, refreshMs]);
 
   useEffect(() => {
-    const session = statusRef.current?.activeSession ?? null;
-    const liveSession = buildLiveSession(session, nowMs);
+    if (!enabled || !characterId || !timeline) return undefined;
 
-    if (!session || !liveSession.isComplete) {
-      return;
-    }
+    const timeoutId = window.setTimeout(
+      reconcileCompletedSession,
+      getActivityTimelineReconciliationDelayMs(timeline),
+    );
 
-    if (socketConnectedRef.current) {
-      requestSnapshot();
-      return;
-    }
+    return () => window.clearTimeout(timeoutId);
+  }, [characterId, enabled, reconcileCompletedSession, timeline]);
 
-    void refresh();
-  }, [nowMs, refresh, requestSnapshot]);
+  useEffect(() => {
+    if (!enabled || !characterId || !timeline) return undefined;
+
+    const reconcileIfDue = () => {
+      if (
+        document.visibilityState !== "hidden" &&
+        isActivityTimelineReconciliationDue(timeline)
+      ) {
+        reconcileCompletedSession();
+      }
+    };
+
+    document.addEventListener("visibilitychange", reconcileIfDue);
+    window.addEventListener("online", reconcileIfDue);
+
+    return () => {
+      document.removeEventListener("visibilitychange", reconcileIfDue);
+      window.removeEventListener("online", reconcileIfDue);
+    };
+  }, [characterId, enabled, reconcileCompletedSession, timeline]);
 
   const session = status?.activeSession ?? null;
   const liveSession = useMemo(
-    () => buildLiveSession(session, nowMs),
-    [nowMs, session],
+    () => buildLiveSession(session, nowMs, timeline),
+    [nowMs, session, timeline],
   );
 
   const state = useMemo<CraftingRealtimeState>(
@@ -677,6 +746,7 @@ export function CraftingRealtimeProvider({
       lastUpdatedAt,
       nowMs,
       liveSession,
+      timeline,
     }),
     [
       characterId,
@@ -690,6 +760,7 @@ export function CraftingRealtimeProvider({
       nowMs,
       session,
       status,
+      timeline,
     ],
   );
 

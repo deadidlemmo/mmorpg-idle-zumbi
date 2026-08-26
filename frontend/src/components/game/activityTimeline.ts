@@ -45,6 +45,10 @@ export interface ActivityTimelineFrame {
   isComplete: boolean;
 }
 
+export interface ActivityTimelineFrameOptions {
+  repeat?: boolean;
+}
+
 export interface ActivityTimelineCssAnimation {
   key: string;
   durationMs: number;
@@ -58,6 +62,8 @@ export interface ActivityTimelineProviderState {
   snapshot: ActivityTimelineSnapshot;
   timeline: ActivityTimeline;
 }
+
+export const ACTIVITY_TIMELINE_RECONCILIATION_GRACE_MS = 400;
 
 function clamp01(value: number) {
   return Math.max(0, Math.min(1, value));
@@ -225,9 +231,14 @@ export function buildActivityTimeline(
 export function getActivityTimelineFrame(
   timeline: ActivityTimeline,
   monotonicNowMs = getActivityTimelineMonotonicNowMs(),
+  options: ActivityTimelineFrameOptions = {},
 ): ActivityTimelineFrame {
   const rawElapsedMs = monotonicNowMs - timeline.startedAtMonotonicMs;
-  const elapsedMs = Math.max(0, Math.min(timeline.durationMs, rawElapsedMs));
+  const elapsedMs = options.repeat
+    ? rawElapsedMs <= 0
+      ? 0
+      : rawElapsedMs % timeline.durationMs
+    : Math.max(0, Math.min(timeline.durationMs, rawElapsedMs));
   const progress = clamp01(elapsedMs / timeline.durationMs);
   const fillScale =
     timeline.direction === 'fill' ? progress : clamp01(1 - progress);
@@ -240,15 +251,16 @@ export function getActivityTimelineFrame(
     fillScale,
     fillPercent: fillScale * 100,
     isPending: rawElapsedMs < 0,
-    isComplete: rawElapsedMs >= timeline.durationMs,
+    isComplete: options.repeat ? false : rawElapsedMs >= timeline.durationMs,
   };
 }
 
 export function getActivityTimelineCssAnimation(
   timeline: ActivityTimeline,
   monotonicNowMs = getActivityTimelineMonotonicNowMs(),
+  options: ActivityTimelineFrameOptions = {},
 ): ActivityTimelineCssAnimation {
-  const frame = getActivityTimelineFrame(timeline, monotonicNowMs);
+  const frame = getActivityTimelineFrame(timeline, monotonicNowMs, options);
 
   return {
     key: timeline.key,
@@ -258,6 +270,25 @@ export function getActivityTimelineCssAnimation(
     toScale: timeline.direction === 'fill' ? 1 : 0,
     currentScale: frame.fillScale,
   };
+}
+
+export function getActivityTimelineReconciliationDelayMs(
+  timeline: ActivityTimeline,
+  monotonicNowMs = getActivityTimelineMonotonicNowMs(),
+  graceMs = ACTIVITY_TIMELINE_RECONCILIATION_GRACE_MS,
+) {
+  return Math.max(
+    0,
+    Math.ceil(timeline.endsAtMonotonicMs - monotonicNowMs + graceMs),
+  );
+}
+
+export function isActivityTimelineReconciliationDue(
+  timeline: ActivityTimeline,
+  monotonicNowMs = getActivityTimelineMonotonicNowMs(),
+  graceMs = ACTIVITY_TIMELINE_RECONCILIATION_GRACE_MS,
+) {
+  return monotonicNowMs >= timeline.endsAtMonotonicMs + graceMs;
 }
 
 export function reconcileActivityTimelineProviderState(

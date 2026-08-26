@@ -188,6 +188,7 @@ export type IncursionSeedData = {
 export type WorldBossRewardSeedData = {
   rewardType: WorldBossRewardType;
   itemName?: string;
+  randomPetCocoon?: boolean;
   currency?: EconomyCurrency;
   minQuantity: number;
   maxQuantity: number;

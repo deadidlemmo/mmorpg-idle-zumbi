@@ -29,7 +29,53 @@ type IncursionRoomPayload = {
 };
 
 const INCURSION_NAMESPACE = '/incursions';
-const INCURSION_TICK_MS = 1000;
+const INCURSION_COMPLETION_SETTLE_MS = 75;
+const INCURSION_STATUS_HEARTBEAT_MS = 30_000;
+const INCURSION_MIN_SCHEDULE_DELAY_MS = 25;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function getIncursionStatusScheduleDelayMs(
+  status: unknown,
+  nowMs = Date.now(),
+) {
+  if (!isRecord(status)) return null;
+
+  const activeSession = isRecord(status.activeSession)
+    ? status.activeSession
+    : isRecord(status.session)
+      ? status.session
+      : null;
+
+  if (!activeSession || activeSession.status !== 'ACTIVE') {
+    return null;
+  }
+
+  const timeline = isRecord(activeSession.timeline)
+    ? activeSession.timeline
+    : null;
+  const endsAt =
+    timeline && typeof timeline.endsAt === 'string'
+      ? timeline.endsAt
+      : typeof activeSession.endsAt === 'string'
+        ? activeSession.endsAt
+        : null;
+  const endsAtMs = endsAt ? Date.parse(endsAt) : Number.NaN;
+
+  if (!Number.isFinite(endsAtMs)) {
+    return INCURSION_STATUS_HEARTBEAT_MS;
+  }
+
+  return Math.max(
+    INCURSION_MIN_SCHEDULE_DELAY_MS,
+    Math.min(
+      INCURSION_STATUS_HEARTBEAT_MS,
+      Math.ceil(endsAtMs - nowMs + INCURSION_COMPLETION_SETTLE_MS),
+    ),
+  );
+}
 
 @WebSocketGateway({
   namespace: INCURSION_NAMESPACE,
@@ -43,9 +89,9 @@ export class IncursionsGateway
   private readonly logger = new Logger(IncursionsGateway.name);
   private readonly clientsByCharacterId = new Map<string, Set<string>>();
   private readonly userIdByCharacterId = new Map<string, string>();
-  private readonly intervalsByCharacterId = new Map<
+  private readonly timersByCharacterId = new Map<
     string,
-    ReturnType<typeof setInterval>
+    ReturnType<typeof setTimeout>
   >();
 
   constructor(
@@ -151,21 +197,23 @@ export class IncursionsGateway
 
   emitStarted(characterId: string, payload: unknown) {
     this.emitToCharacter(characterId, 'incursion:started', payload);
-    this.ensureCharacterInterval(characterId);
+    this.scheduleCharacterTimer(characterId, payload);
   }
 
   emitProgress(characterId: string, payload: unknown) {
     this.emitToCharacter(characterId, 'incursion:progress', payload);
+    this.scheduleCharacterTimer(characterId, payload);
   }
 
   emitCompleted(characterId: string, payload: unknown) {
     this.emitToCharacter(characterId, 'incursion:completed', payload);
+    this.clearCharacterTimer(characterId);
   }
 
   emitRewarded(characterId: string, payload: unknown) {
     this.emitToCharacter(characterId, 'incursion:rewarded', payload);
     this.emitToCharacter(characterId, 'incursion:claimed', payload);
-    this.clearCharacterInterval(characterId);
+    this.clearCharacterTimer(characterId);
   }
 
   emitClaimed(characterId: string, payload: unknown) {
@@ -174,7 +222,7 @@ export class IncursionsGateway
 
   emitCancelled(characterId: string, payload: unknown) {
     this.emitToCharacter(characterId, 'incursion:cancelled', payload);
-    this.clearCharacterInterval(characterId);
+    this.clearCharacterTimer(characterId);
   }
 
   private async joinCharacterRoom(
@@ -220,8 +268,6 @@ export class IncursionsGateway
 
     client.data.incursionCharacterIds.add(character.id);
     this.addClientToCharacter(client.id, character.id, userId);
-    this.ensureCharacterInterval(character.id);
-
     client.emit('incursion:joined', {
       characterId: character.id,
       characterName: character.name,
@@ -262,26 +308,33 @@ export class IncursionsGateway
 
     this.clientsByCharacterId.delete(characterId);
     this.userIdByCharacterId.delete(characterId);
-    this.clearCharacterInterval(characterId);
+    this.clearCharacterTimer(characterId);
   }
 
-  private ensureCharacterInterval(characterId: string) {
-    if (this.intervalsByCharacterId.has(characterId)) return;
+  private scheduleCharacterTimer(characterId: string, status: unknown) {
+    this.clearCharacterTimer(characterId);
 
-    const intervalId = setInterval(() => {
+    if (!this.clientsByCharacterId.has(characterId)) return;
+
+    const delayMs = getIncursionStatusScheduleDelayMs(status);
+
+    if (delayMs === null) return;
+
+    const timerId = setTimeout(() => {
+      this.timersByCharacterId.delete(characterId);
       void this.emitStatusToRoom(characterId, 'incursion:progress');
-    }, INCURSION_TICK_MS);
+    }, delayMs);
 
-    this.intervalsByCharacterId.set(characterId, intervalId);
+    this.timersByCharacterId.set(characterId, timerId);
   }
 
-  private clearCharacterInterval(characterId: string) {
-    const intervalId = this.intervalsByCharacterId.get(characterId);
+  private clearCharacterTimer(characterId: string) {
+    const timerId = this.timersByCharacterId.get(characterId);
 
-    if (!intervalId) return;
+    if (!timerId) return;
 
-    clearInterval(intervalId);
-    this.intervalsByCharacterId.delete(characterId);
+    clearTimeout(timerId);
+    this.timersByCharacterId.delete(characterId);
   }
 
   private async emitStatusToClient(
@@ -301,6 +354,7 @@ export class IncursionsGateway
     if (!status) return null;
 
     client.emit(eventName, status);
+    this.scheduleCharacterTimer(characterId, status);
     return status;
   }
 
@@ -329,9 +383,7 @@ export class IncursionsGateway
       this.emitToCharacter(characterId, 'incursion:completed', status);
     }
 
-    if (!activeSession || activeSession.status !== 'ACTIVE') {
-      this.clearCharacterInterval(characterId);
-    }
+    this.scheduleCharacterTimer(characterId, status);
 
     return status;
   }

@@ -1,0 +1,60 @@
+/* Tipografia de interface compartilhada por todas as paginas do dashboard. */
+.dashboard-shell {
+  font-family: var(--font-body);
+}
+
+.dashboard-sidebar :is(a, button, strong, b, label, summary),
+.dashboard-main :is(
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    a,
+    button,
+    select,
+    strong,
+    b,
+    label,
+    legend,
+    summary,
+    [role='button'],
+    [role='tab']
+  ) {
+  font-family: var(--font-title);
+  letter-spacing: 0;
+}
+
+.dashboard-main :is(input, textarea) {
+  font-family: var(--font-body);
+}
+
+.dashboard-main :is(
+    [class$='__eyebrow'],
+    [class*='__eyebrow '],
+    [class$='__kicker'],
+    [class*='__kicker '],
+    [class$='__label'],
+    [class*='__label ']
+  ) {
+  font-family: var(--font-title);
+  letter-spacing: 0;
+}
+
+.dashboard-main :is(
+    [class$='__amount'],
+    [class*='__amount '],
+    [class$='__metric'],
+    [class*='__metric '],
+    [class$='__percent'],
+    [class*='__percent '],
+    [class$='__timer'],
+    [class*='__timer '],
+    [class$='__value'],
+    [class*='__value ']
+  ) {
+  font-family: var(--font-title);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}

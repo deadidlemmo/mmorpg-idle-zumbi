@@ -58,7 +58,10 @@ import {
   calculateGatheringPrimaryBonus,
   type PrimaryStats,
 } from '../../common/utils/stats.util';
-import { calculateAutoCombatTtk } from '../../common/utils/auto-combat-ttk.util';
+import {
+  calculateAutoCombatTtk,
+  getAutoCombatTtkDifficultyLabel,
+} from '../../common/utils/auto-combat-ttk.util';
 import {
   getAutoCombatHuntingXpForEncounter,
   getAutoCombatHuntingSecondsPerEnemy,
@@ -76,7 +79,18 @@ import {
   accumulateEconomyEntry,
   getEconomyHourBucket,
 } from '../economy/economy-ledger';
+import { PetBonusesService } from '../pets/pet-bonuses.service';
 import { AutoCombatGateway } from './auto-combat.gateway';
+import {
+  createAutoCombatHuntingCycle,
+  MIN_AUTO_COMBAT_HUNTING_CYCLE_DURATION_MS,
+  resolveAutoCombatHuntingCycle,
+  type AutoCombatHuntingCycleState,
+} from './auto-combat-hunting-cycle';
+import {
+  MIN_AUTO_COMBAT_TTK_DURATION_MS,
+  resolveAutoCombatTtkCycle,
+} from './auto-combat-ttk-cycle';
 import { buildAutoCombatHuntingTimeline } from './auto-combat-hunting-timeline';
 import { buildAutoCombatRealtimeStatusPayload } from './auto-combat-realtime-payload';
 import {
@@ -120,6 +134,24 @@ type AutoCombatRealtimeLoop = {
   userId: string;
   timer: ReturnType<typeof setTimeout> | null;
   running: boolean;
+};
+
+type AppliedHuntingPetBonus = {
+  petDefinitionId: string;
+  effectBasisPoints: number;
+};
+
+type AppliedAutoCombatTtkPetBonus = {
+  petDefinitionId: string;
+  effectBasisPoints: number;
+  effectPercent?: number;
+};
+
+type AutoCombatMobTtkTiming = {
+  estimatedKillTimeMs: number;
+  unmodifiedKillTimeMs: number;
+  estimatedKillTimeSeconds: number;
+  appliedPetBonus: AppliedAutoCombatTtkPetBonus | null;
 };
 
 type CombatWinner = 'PLAYER' | 'MOB';
@@ -241,7 +273,10 @@ type AutoCombatRealtimeEvent = {
   remainingMs?: number;
   progressUpdatedAt?: string | null;
   estimatedKillTimeSeconds?: number;
+  estimatedKillTimeMs?: number;
+  unmodifiedKillTimeMs?: number;
   baseKillTimeSeconds?: number;
+  appliedPetBonus?: AppliedAutoCombatTtkPetBonus | null;
   playerOffensivePower?: number;
   monsterRecommendedPower?: number;
   killsPerMinute?: number;
@@ -756,8 +791,13 @@ type RealtimeRoundResult = {
   currentMobHp: number | null;
   currentMobMaxHp: number | null;
   killProgressSeconds?: number;
+  killProgressMs?: number;
   estimatedKillTimeSeconds?: number | null;
+  estimatedKillTimeMs?: number | null;
+  unmodifiedKillTimeMs?: number | null;
   baseKillTimeSeconds?: number | null;
+  appliedTtkPetDefinitionId?: string | null;
+  appliedTtkPetEffectBasisPoints?: number;
   playerOffensivePower?: number | null;
   monsterRecommendedPower?: number | null;
   currentMobIndex?: number | null;
@@ -794,6 +834,7 @@ export class AutoCombatService implements OnModuleDestroy {
     private readonly autoCombatGateway: AutoCombatGateway,
     private readonly distributedLock: DistributedLockService,
     private readonly observability: ObservabilityService,
+    private readonly petBonuses: PetBonusesService,
   ) {}
 
   onModuleDestroy() {
@@ -1112,6 +1153,21 @@ export class AutoCombatService implements OnModuleDestroy {
           isPremiumActive(character.user, now),
         );
         const endsAt = new Date(now.getTime() + sessionDurationSeconds * 1000);
+        const initialHuntingCycle = await this.createHuntingCycleWithPetBonus({
+          characterId: character.id,
+          huntingLevel: huntingSkill.level,
+          startedAt: now,
+          version: Math.max(
+            1,
+            Math.floor(Number(loadedSession.huntBatch?.cycleVersion) || 0) + 1,
+            Math.floor(
+              Number(
+                loadedSession.huntBatch?.foundEnemiesCount ??
+                  loadedSession.foundEnemiesCount,
+              ) || 0,
+            ) + 1,
+          ),
+        });
 
         try {
           await this.prisma.$transaction(
@@ -1136,6 +1192,13 @@ export class AutoCombatService implements OnModuleDestroy {
                   currentMobId: null,
                   currentMobHp: null,
                   currentMobMaxHp: null,
+                  killProgressSeconds: 0,
+                  killProgressMs: 0,
+                  estimatedKillTimeSeconds: null,
+                  estimatedKillTimeMs: null,
+                  unmodifiedKillTimeMs: null,
+                  appliedTtkPetDefinitionId: null,
+                  appliedTtkPetEffectBasisPoints: 0,
                   currentRound: 0,
                 },
               );
@@ -1150,6 +1213,16 @@ export class AutoCombatService implements OnModuleDestroy {
                     lastProcessedAt: now,
                     stoppedAt: null,
                     cancelledAt: null,
+                    cycleStartedAt: initialHuntingCycle.cycle.startedAt,
+                    cycleEndsAt: initialHuntingCycle.cycle.endsAt,
+                    cycleDurationMs: initialHuntingCycle.cycle.durationMs,
+                    cycleVersion: initialHuntingCycle.cycle.version,
+                    appliedPetDefinitionId:
+                      initialHuntingCycle.appliedPetBonus?.petDefinitionId ??
+                      null,
+                    appliedPetEffectBasisPoints:
+                      initialHuntingCycle.appliedPetBonus?.effectBasisPoints ??
+                      0,
                   },
                 );
               }
@@ -1288,7 +1361,13 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const initialTrackedEncounter = this.rollEncounter(huntEncounters, {
       huntingLevel: huntingSkill.level,
-      foundEnemiesCount: 0,
+      foundEnemiesCount: 1,
+    });
+    const initialHuntingCycle = await this.createHuntingCycleWithPetBonus({
+      characterId: character.id,
+      huntingLevel: huntingSkill.level,
+      startedAt: now,
+      version: 1,
     });
 
     /**
@@ -1345,6 +1424,13 @@ export class AutoCombatService implements OnModuleDestroy {
               currentMobId: null,
               currentMobHp: null,
               currentMobMaxHp: null,
+              killProgressSeconds: 0,
+              killProgressMs: 0,
+              estimatedKillTimeSeconds: null,
+              estimatedKillTimeMs: null,
+              unmodifiedKillTimeMs: null,
+              appliedTtkPetDefinitionId: null,
+              appliedTtkPetEffectBasisPoints: 0,
               currentRound: 0,
               currentCombatIndex: 1,
             },
@@ -1365,6 +1451,15 @@ export class AutoCombatService implements OnModuleDestroy {
               selectedEncounterId: initialTrackedEncounter.id,
               selectedEncounterMobId: initialTrackedEncounter.mobId,
               huntSequence: 0,
+              cycleStartedAt: initialHuntingCycle.cycle.startedAt,
+              cycleEndsAt: initialHuntingCycle.cycle.endsAt,
+              cycleDurationMs: initialHuntingCycle.cycle.durationMs,
+              cycleVersion: initialHuntingCycle.cycle.version,
+              cycleTargetEncounterId: initialTrackedEncounter.id,
+              appliedPetDefinitionId:
+                initialHuntingCycle.appliedPetBonus?.petDefinitionId ?? null,
+              appliedPetEffectBasisPoints:
+                initialHuntingCycle.appliedPetBonus?.effectBasisPoints ?? 0,
             },
           });
 
@@ -1550,6 +1645,13 @@ export class AutoCombatService implements OnModuleDestroy {
             currentMobId: null,
             currentMobHp: null,
             currentMobMaxHp: null,
+            killProgressSeconds: 0,
+            killProgressMs: 0,
+            estimatedKillTimeSeconds: null,
+            estimatedKillTimeMs: null,
+            unmodifiedKillTimeMs: null,
+            appliedTtkPetDefinitionId: null,
+            appliedTtkPetEffectBasisPoints: 0,
             currentRound: 0,
             currentCombatIndex: 1,
           },
@@ -1962,6 +2064,13 @@ export class AutoCombatService implements OnModuleDestroy {
             currentMobId: null,
             currentMobHp: null,
             currentMobMaxHp: null,
+            killProgressSeconds: 0,
+            killProgressMs: 0,
+            estimatedKillTimeSeconds: null,
+            estimatedKillTimeMs: null,
+            unmodifiedKillTimeMs: null,
+            appliedTtkPetDefinitionId: null,
+            appliedTtkPetEffectBasisPoints: 0,
             currentRound: 0,
           },
         );
@@ -2090,7 +2199,8 @@ export class AutoCombatService implements OnModuleDestroy {
     const characterStats = this.calculateCharacterFighterStats(
       loadedSession.character,
     );
-    const ttk = calculateAutoCombatTtk({
+    const ttk = await this.calculateAutoCombatMobTtkWithPetBonus({
+      characterId: loadedSession.characterId,
       mob,
       playerStats: characterStats,
     });
@@ -2135,7 +2245,10 @@ export class AutoCombatService implements OnModuleDestroy {
       battleProgressSeconds: 0,
       battleProgressPercent: 0,
       estimatedKillTimeSeconds: ttk.estimatedKillTimeSeconds,
+      estimatedKillTimeMs: ttk.estimatedKillTimeMs,
+      unmodifiedKillTimeMs: ttk.unmodifiedKillTimeMs,
       baseKillTimeSeconds: ttk.baseKillTimeSeconds,
+      appliedPetBonus: ttk.appliedPetBonus,
       playerOffensivePower: ttk.playerOffensivePower,
       monsterRecommendedPower: ttk.monsterRecommendedPower,
       killsPerMinute: ttk.killsPerMinute,
@@ -2201,8 +2314,15 @@ export class AutoCombatService implements OnModuleDestroy {
               currentMobHp: mob.hp,
               currentMobMaxHp: mob.hp,
               killProgressSeconds: 0,
+              killProgressMs: 0,
               estimatedKillTimeSeconds: ttk.estimatedKillTimeSeconds,
+              estimatedKillTimeMs: ttk.estimatedKillTimeMs,
+              unmodifiedKillTimeMs: ttk.unmodifiedKillTimeMs,
               baseKillTimeSeconds: ttk.baseKillTimeSeconds,
+              appliedTtkPetDefinitionId:
+                ttk.appliedPetBonus?.petDefinitionId ?? null,
+              appliedTtkPetEffectBasisPoints:
+                ttk.appliedPetBonus?.effectBasisPoints ?? 0,
               playerOffensivePower: ttk.playerOffensivePower,
               monsterRecommendedPower: ttk.monsterRecommendedPower,
               currentMobIndex: ttk.mobIndex,
@@ -2565,8 +2685,13 @@ export class AutoCombatService implements OnModuleDestroy {
             currentMobHp: null,
             currentMobMaxHp: null,
             killProgressSeconds: 0,
+            killProgressMs: 0,
             estimatedKillTimeSeconds: null,
+            estimatedKillTimeMs: null,
+            unmodifiedKillTimeMs: null,
             baseKillTimeSeconds: null,
+            appliedTtkPetDefinitionId: null,
+            appliedTtkPetEffectBasisPoints: 0,
             playerOffensivePower: null,
             monsterRecommendedPower: null,
             currentMobIndex: null,
@@ -2588,6 +2713,7 @@ export class AutoCombatService implements OnModuleDestroy {
               cancelledAt: null,
               stoppedAt,
               lastProcessedAt: stoppedAt,
+              cycleTargetEncounterId: null,
             },
           );
         }
@@ -2609,6 +2735,14 @@ export class AutoCombatService implements OnModuleDestroy {
           currentMobId: null,
           currentMobHp: null,
           currentMobMaxHp: null,
+          killProgressSeconds: 0,
+          killProgressMs: 0,
+          estimatedKillTimeSeconds: null,
+          estimatedKillTimeMs: null,
+          unmodifiedKillTimeMs: null,
+          baseKillTimeSeconds: null,
+          appliedTtkPetDefinitionId: null,
+          appliedTtkPetEffectBasisPoints: 0,
           currentRound: 0,
           battleTargetTotal: 0,
           battleTargetRemaining: 0,
@@ -2632,6 +2766,7 @@ export class AutoCombatService implements OnModuleDestroy {
           status: AutoCombatHuntBatchStatus.CANCELLED,
           cancelledAt: stoppedAt,
           lastProcessedAt: stoppedAt,
+          cycleTargetEncounterId: null,
         },
       });
 
@@ -2999,6 +3134,19 @@ export class AutoCombatService implements OnModuleDestroy {
                 },
               },
             },
+            cycleTargetEncounter: {
+              include: {
+                mob: {
+                  include: {
+                    drops: {
+                      include: {
+                        item: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
             mobs: {
               include: {
                 mob: true,
@@ -3339,7 +3487,7 @@ export class AutoCombatService implements OnModuleDestroy {
           continue;
         }
 
-        const roundResult = this.resolveTtkRealtimeRound(currentSession);
+        const roundResult = await this.resolveTtkRealtimeRound(currentSession);
 
         await this.persistRealtimeRoundResult(currentSession, roundResult);
 
@@ -3465,20 +3613,6 @@ export class AutoCombatService implements OnModuleDestroy {
       session.characterId,
     );
     const huntBatch = session.huntBatch ?? null;
-    const lastHuntProcessedAt =
-      huntBatch?.lastProcessedAt ??
-      session.lastHuntProcessedAt ??
-      session.huntStartedAt ??
-      session.startedAt ??
-      session.lastProcessedAt;
-    const safeLastHuntProcessedAt = new Date(lastHuntProcessedAt);
-    const elapsedSeconds = Math.max(
-      0,
-      Math.floor(
-        (effectiveNow.getTime() - safeLastHuntProcessedAt.getTime()) / 1000,
-      ),
-    );
-    const secondsPerEnemy = this.getHuntingSecondsPerEnemy(huntingSkill.level);
     const previousFoundEnemiesCount = Math.max(
       0,
       Math.floor(
@@ -3494,15 +3628,73 @@ export class AutoCombatService implements OnModuleDestroy {
       0,
       maxTrackedEnemies - previousTrackedEnemiesRemaining,
     );
-    const rawEnemiesFoundNow = Math.floor(elapsedSeconds / secondsPerEnemy);
-    const enemiesFoundNow = Math.min(rawEnemiesFoundNow, remainingHuntCapacity);
-    const didReachHuntLimit =
-      remainingHuntCapacity <= 0 ||
-      (remainingHuntCapacity > 0 &&
-        rawEnemiesFoundNow >= remainingHuntCapacity);
+    const baseSecondsPerEnemy = this.getHuntingSecondsPerEnemy(
+      huntingSkill.level,
+    );
+    const lastHuntProcessedAt =
+      huntBatch?.lastProcessedAt ??
+      session.lastHuntProcessedAt ??
+      session.huntStartedAt ??
+      session.startedAt ??
+      session.lastProcessedAt;
+    const safeLastHuntProcessedAt = new Date(lastHuntProcessedAt);
+    const huntingCycleContext = huntBatch?.id
+      ? await this.resolveHuntingCycleContext({
+          characterId: session.characterId,
+          huntingLevel: huntingSkill.level,
+          huntBatch,
+          serverNow: now,
+          sessionEndsAt: session.endsAt,
+          maxCompletions: remainingHuntCapacity,
+        })
+      : null;
+    const elapsedSeconds = Math.max(
+      0,
+      Math.floor(
+        (effectiveNow.getTime() - safeLastHuntProcessedAt.getTime()) / 1000,
+      ),
+    );
+    const legacyEnemiesFoundNow = Math.min(
+      Math.floor(elapsedSeconds / baseSecondsPerEnemy),
+      remainingHuntCapacity,
+    );
+    const enemiesFoundNow =
+      huntingCycleContext?.resolution.quantity ?? legacyEnemiesFoundNow;
+    const didReachHuntLimit = huntingCycleContext
+      ? huntingCycleContext.resolution.reachedCapacity
+      : remainingHuntCapacity <= 0 ||
+        legacyEnemiesFoundNow >= remainingHuntCapacity;
+    const huntEncounters = this.getSessionHuntEncounters(session);
+    const persistedCycleTargetEncounter = this.getHuntingCycleTargetEncounter(
+      huntBatch,
+      huntEncounters,
+    );
+    const cycleTargetEncounter =
+      remainingHuntCapacity > 0
+        ? (persistedCycleTargetEncounter ??
+          this.rollEncounter(huntEncounters, {
+            huntingLevel: huntingSkill.level,
+            foundEnemiesCount: previousFoundEnemiesCount + 1,
+          }))
+        : null;
+
+    if (
+      huntingCycleContext &&
+      (huntingCycleContext.needsCycleBackfill ||
+        !persistedCycleTargetEncounter) &&
+      huntingCycleContext.resolution.quantity <= 0
+    ) {
+      await this.persistHuntingCycleBackfill({
+        huntBatch,
+        cycle: huntingCycleContext.currentCycle,
+        appliedPetBonus: huntingCycleContext.appliedPetBonus,
+        cycleTargetEncounterId: cycleTargetEncounter?.id ?? null,
+      });
+    }
 
     if (didReachHuntLimit && enemiesFoundNow <= 0) {
-      const readyAt = safeLastHuntProcessedAt;
+      const readyAt =
+        huntingCycleContext?.resolution.processedAt ?? safeLastHuntProcessedAt;
       const readyResponseSession = await this.markHuntingSessionAsReady(
         session,
         huntBatch,
@@ -3558,13 +3750,14 @@ export class AutoCombatService implements OnModuleDestroy {
       return response;
     }
 
-    const processedAt = this.addSeconds(
-      safeLastHuntProcessedAt,
-      enemiesFoundNow * secondsPerEnemy,
-    );
-    let trackedEncounter =
-      huntBatch?.selectedEncounter ?? session.selectedEncounter ?? null;
-    const huntEncounters = this.getSessionHuntEncounters(session);
+    const processedAt =
+      huntingCycleContext?.resolution.processedAt ??
+      this.addSeconds(
+        safeLastHuntProcessedAt,
+        enemiesFoundNow * baseSecondsPerEnemy,
+      );
+    let currentCycleTargetEncounter = cycleTargetEncounter;
+    let lastTrackedEncounter: any = null;
     const huntEvents: AutoCombatRealtimeEvent[] = [];
     let huntingXpGained = 0;
     const huntFoundCountsByMob = new Map<string, number>();
@@ -3583,16 +3776,26 @@ export class AutoCombatService implements OnModuleDestroy {
     );
     for (let index = 0; index < enemiesFoundNow; index += 1) {
       const findIndex = previousFoundEnemiesCount + index + 1;
-      const foundAt = this.addSeconds(
-        safeLastHuntProcessedAt,
-        (index + 1) * secondsPerEnemy,
-      );
-      const nextFindAt = this.addSeconds(foundAt, secondsPerEnemy);
+      const foundAt = huntingCycleContext
+        ? new Date(
+            huntingCycleContext.currentCycle.endsAt.getTime() +
+              index * huntingCycleContext.nextCycleDurationMs,
+          )
+        : this.addSeconds(
+            safeLastHuntProcessedAt,
+            (index + 1) * baseSecondsPerEnemy,
+          );
+      const nextFindAt = huntingCycleContext
+        ? new Date(foundAt.getTime() + huntingCycleContext.nextCycleDurationMs)
+        : this.addSeconds(foundAt, baseSecondsPerEnemy);
 
-      trackedEncounter = this.rollEncounter(huntEncounters, {
-        huntingLevel: huntingSkill.level,
-        foundEnemiesCount: findIndex,
-      });
+      const trackedEncounter =
+        currentCycleTargetEncounter ??
+        this.rollEncounter(huntEncounters, {
+          huntingLevel: huntingSkill.level,
+          foundEnemiesCount: findIndex,
+        });
+      lastTrackedEncounter = trackedEncounter;
       const huntingXpBreakdown = calculatePremiumXpBreakdown(
         getAutoCombatHuntingXpForEncounter(trackedEncounter),
         isPremiumActive(session.character?.user),
@@ -3616,8 +3819,16 @@ export class AutoCombatService implements OnModuleDestroy {
         firstFoundAt: previousMetadata?.firstFoundAt ?? foundAt,
         lastFoundAt: foundAt,
       });
+      const nextQueuedCycleTargetEncounter =
+        index + 1 < enemiesFoundNow
+          ? this.rollEncounter(huntEncounters, {
+              huntingLevel: huntingSkill.level,
+              foundEnemiesCount: findIndex + 1,
+            })
+          : null;
 
       if (index < huntEventStartOffset) {
+        currentCycleTargetEncounter = nextQueuedCycleTargetEncounter;
         continue;
       }
 
@@ -3638,7 +3849,9 @@ export class AutoCombatService implements OnModuleDestroy {
         huntSequence: findIndex,
         foundAt: foundAt.toISOString(),
         nextFindAt: nextFindAt.toISOString(),
-        secondsPerFind: secondsPerEnemy,
+        secondsPerFind: huntingCycleContext
+          ? huntingCycleContext.nextCycleDurationMs / 1_000
+          : baseSecondsPerEnemy,
         selectedEncounterId: trackedEncounter.id,
         targetEncounterId: trackedEncounter.id,
         targetMobId: trackedEncounter.mobId,
@@ -3648,6 +3861,8 @@ export class AutoCombatService implements OnModuleDestroy {
         foundEnemiesCount: findIndex,
         message: `${trackedEncounter.mob?.name ?? 'Ameaça'} rastreada na caça.`,
       });
+
+      currentCycleTargetEncounter = nextQueuedCycleTargetEncounter;
     }
 
     const huntingProgress = this.calculateHuntingSkillProgress(
@@ -3657,6 +3872,14 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const didReachSessionLimit =
       !didReachHuntLimit && now.getTime() >= session.endsAt.getTime();
+    const shouldContinueHunting =
+      !didReachHuntLimit && !didReachSessionLimit && Boolean(huntBatch?.id);
+    const nextCycleTargetEncounter = shouldContinueHunting
+      ? this.rollEncounter(huntEncounters, {
+          huntingLevel: huntingSkill.level,
+          foundEnemiesCount: previousFoundEnemiesCount + enemiesFoundNow + 1,
+        })
+      : null;
     const sessionUpdateData: Prisma.AutoCombatSessionUncheckedUpdateManyInput =
       {
         lastHuntProcessedAt: processedAt,
@@ -3668,9 +3891,9 @@ export class AutoCombatService implements OnModuleDestroy {
           increment: huntingXpGained,
         },
         selectedEncounterId:
-          trackedEncounter?.id ?? session.selectedEncounterId,
+          lastTrackedEncounter?.id ?? session.selectedEncounterId,
         selectedEncounterMobId:
-          trackedEncounter?.mobId ?? session.selectedEncounterMobId,
+          lastTrackedEncounter?.mobId ?? session.selectedEncounterMobId,
       };
 
     if (didReachHuntLimit || didReachSessionLimit) {
@@ -3695,10 +3918,25 @@ export class AutoCombatService implements OnModuleDestroy {
               increment: huntingXpGained,
             },
             selectedEncounterId:
-              trackedEncounter?.id ?? huntBatch.selectedEncounterId,
+              lastTrackedEncounter?.id ?? huntBatch.selectedEncounterId,
             selectedEncounterMobId:
-              trackedEncounter?.mobId ?? huntBatch.selectedEncounterMobId,
+              lastTrackedEncounter?.mobId ?? huntBatch.selectedEncounterMobId,
+            cycleTargetEncounterId: nextCycleTargetEncounter?.id ?? null,
             huntSequence: previousFoundEnemiesCount + enemiesFoundNow,
+            ...(huntingCycleContext
+              ? {
+                  cycleStartedAt:
+                    huntingCycleContext.resolution.cycle.startedAt,
+                  cycleEndsAt: huntingCycleContext.resolution.cycle.endsAt,
+                  cycleDurationMs:
+                    huntingCycleContext.resolution.cycle.durationMs,
+                  cycleVersion: huntingCycleContext.resolution.cycle.version,
+                  appliedPetDefinitionId:
+                    huntingCycleContext.nextPetBonus?.petDefinitionId ?? null,
+                  appliedPetEffectBasisPoints:
+                    huntingCycleContext.nextPetBonus?.effectBasisPoints ?? 0,
+                }
+              : {}),
             ...(didReachHuntLimit
               ? {
                   status: AutoCombatHuntBatchStatus.READY,
@@ -3787,6 +4025,14 @@ export class AutoCombatService implements OnModuleDestroy {
       processing: this.buildEmptyProcessingSummary(),
     });
 
+    const latestHuntEvent = huntEvents.at(-1);
+
+    if (latestHuntEvent) {
+      this.emitRealtimeEvents(session.characterId, [latestHuntEvent], {
+        persist: false,
+      });
+    }
+
     this.autoCombatGateway.emitSessionUpdated(session.characterId, response);
     this.autoCombatGateway.emitStatus(session.characterId, response);
 
@@ -3824,7 +4070,8 @@ export class AutoCombatService implements OnModuleDestroy {
     const characterStats = this.calculateCharacterFighterStats(
       session.character,
     );
-    const ttk = calculateAutoCombatTtk({
+    const ttk = await this.calculateAutoCombatMobTtkWithPetBonus({
+      characterId: session.characterId,
       mob,
       playerStats: characterStats,
     });
@@ -3877,7 +4124,10 @@ export class AutoCombatService implements OnModuleDestroy {
       battleProgressSeconds: 0,
       battleProgressPercent: 0,
       estimatedKillTimeSeconds: ttk.estimatedKillTimeSeconds,
+      estimatedKillTimeMs: ttk.estimatedKillTimeMs,
+      unmodifiedKillTimeMs: ttk.unmodifiedKillTimeMs,
       baseKillTimeSeconds: ttk.baseKillTimeSeconds,
+      appliedPetBonus: ttk.appliedPetBonus,
       playerOffensivePower: ttk.playerOffensivePower,
       monsterRecommendedPower: ttk.monsterRecommendedPower,
       killsPerMinute: ttk.killsPerMinute,
@@ -3918,8 +4168,14 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMobHp: mob.hp,
         currentMobMaxHp: mob.hp,
         killProgressSeconds: 0,
+        killProgressMs: 0,
         estimatedKillTimeSeconds: ttk.estimatedKillTimeSeconds,
+        estimatedKillTimeMs: ttk.estimatedKillTimeMs,
+        unmodifiedKillTimeMs: ttk.unmodifiedKillTimeMs,
         baseKillTimeSeconds: ttk.baseKillTimeSeconds,
+        appliedTtkPetDefinitionId: ttk.appliedPetBonus?.petDefinitionId ?? null,
+        appliedTtkPetEffectBasisPoints:
+          ttk.appliedPetBonus?.effectBasisPoints ?? 0,
         playerOffensivePower: ttk.playerOffensivePower,
         monsterRecommendedPower: ttk.monsterRecommendedPower,
         currentMobIndex: ttk.mobIndex,
@@ -3938,8 +4194,14 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMobHp: mob.hp,
         currentMobMaxHp: mob.hp,
         killProgressSeconds: 0,
+        killProgressMs: 0,
         estimatedKillTimeSeconds: ttk.estimatedKillTimeSeconds,
+        estimatedKillTimeMs: ttk.estimatedKillTimeMs,
+        unmodifiedKillTimeMs: ttk.unmodifiedKillTimeMs,
         baseKillTimeSeconds: ttk.baseKillTimeSeconds,
+        appliedTtkPetDefinitionId: ttk.appliedPetBonus?.petDefinitionId ?? null,
+        appliedTtkPetEffectBasisPoints:
+          ttk.appliedPetBonus?.effectBasisPoints ?? 0,
         playerOffensivePower: ttk.playerOffensivePower,
         monsterRecommendedPower: ttk.monsterRecommendedPower,
         currentMobIndex: ttk.mobIndex,
@@ -3972,6 +4234,307 @@ export class AutoCombatService implements OnModuleDestroy {
     );
   }
 
+  private getAppliedAutoCombatTtkPetBonus(
+    session: any,
+  ): AppliedAutoCombatTtkPetBonus | null {
+    const petDefinitionId = session?.appliedTtkPetDefinitionId;
+    const effectBasisPoints = Math.max(
+      0,
+      Math.floor(Number(session?.appliedTtkPetEffectBasisPoints) || 0),
+    );
+
+    if (!petDefinitionId || effectBasisPoints <= 0) {
+      return null;
+    }
+
+    return {
+      petDefinitionId,
+      effectBasisPoints,
+    };
+  }
+
+  private getPersistedAutoCombatMobTtkTiming(
+    session: any,
+    fallbackEstimatedKillTimeSeconds: number,
+  ): AutoCombatMobTtkTiming {
+    const fallbackUnmodifiedKillTimeMs = Math.max(
+      MIN_AUTO_COMBAT_TTK_DURATION_MS,
+      Math.round(fallbackEstimatedKillTimeSeconds * 1_000),
+    );
+    const unmodifiedKillTimeMs = Math.max(
+      MIN_AUTO_COMBAT_TTK_DURATION_MS,
+      Math.round(
+        Number(session?.unmodifiedKillTimeMs) ||
+          Number(session?.estimatedKillTimeSeconds) * 1_000 ||
+          fallbackUnmodifiedKillTimeMs,
+      ),
+    );
+    const estimatedKillTimeMs = Math.max(
+      MIN_AUTO_COMBAT_TTK_DURATION_MS,
+      Math.round(
+        Number(session?.estimatedKillTimeMs) ||
+          Number(session?.estimatedKillTimeSeconds) * 1_000 ||
+          unmodifiedKillTimeMs,
+      ),
+    );
+
+    return {
+      estimatedKillTimeMs,
+      unmodifiedKillTimeMs,
+      estimatedKillTimeSeconds: estimatedKillTimeMs / 1_000,
+      appliedPetBonus: this.getAppliedAutoCombatTtkPetBonus(session),
+    };
+  }
+
+  private async calculateAutoCombatMobTtkWithPetBonus(params: {
+    characterId: string;
+    mob: any;
+    playerStats: FighterStats;
+  }) {
+    const calculatedTtk = calculateAutoCombatTtk({
+      mob: params.mob,
+      playerStats: params.playerStats,
+    });
+    const unmodifiedKillTimeMs = Math.max(
+      MIN_AUTO_COMBAT_TTK_DURATION_MS,
+      Math.round(calculatedTtk.estimatedKillTimeSeconds * 1_000),
+    );
+    const duration = await this.petBonuses.calculateAutoCombatTtk(
+      params.characterId,
+      unmodifiedKillTimeMs,
+      MIN_AUTO_COMBAT_TTK_DURATION_MS,
+    );
+    const estimatedKillTimeMs = duration.durationMs;
+    const estimatedKillTimeSeconds = estimatedKillTimeMs / 1_000;
+
+    return {
+      ...calculatedTtk,
+      estimatedKillTimeMs,
+      unmodifiedKillTimeMs,
+      estimatedKillTimeSeconds,
+      killsPerMinute: 60 / estimatedKillTimeSeconds,
+      killsPerHour: 3_600 / estimatedKillTimeSeconds,
+      difficultyLabel: getAutoCombatTtkDifficultyLabel(
+        estimatedKillTimeSeconds,
+      ),
+      appliedPetBonus: duration.bonus
+        ? {
+            petDefinitionId: duration.bonus.petDefinitionId,
+            effectBasisPoints: duration.bonus.effectBasisPoints,
+          }
+        : null,
+    };
+  }
+
+  private getPersistedHuntingCycle(
+    huntBatch: any,
+  ): AutoCombatHuntingCycleState | null {
+    if (
+      !huntBatch?.cycleStartedAt ||
+      !huntBatch?.cycleEndsAt ||
+      !huntBatch?.cycleDurationMs ||
+      huntBatch.cycleDurationMs <= 0
+    ) {
+      return null;
+    }
+
+    const startedAt = new Date(huntBatch.cycleStartedAt);
+    const endsAt = new Date(huntBatch.cycleEndsAt);
+    const durationMs = Math.ceil(Number(huntBatch.cycleDurationMs));
+
+    if (
+      !Number.isFinite(startedAt.getTime()) ||
+      !Number.isFinite(endsAt.getTime()) ||
+      endsAt.getTime() - startedAt.getTime() !== durationMs
+    ) {
+      return null;
+    }
+
+    return {
+      startedAt,
+      endsAt,
+      durationMs,
+      version: Math.max(1, Math.floor(Number(huntBatch.cycleVersion) || 1)),
+    };
+  }
+
+  private getAppliedHuntingPetBonus(
+    huntBatch: any,
+  ): AppliedHuntingPetBonus | null {
+    const petDefinitionId = huntBatch?.appliedPetDefinitionId;
+    const effectBasisPoints = Math.max(
+      0,
+      Math.floor(Number(huntBatch?.appliedPetEffectBasisPoints) || 0),
+    );
+
+    if (!petDefinitionId || effectBasisPoints <= 0) {
+      return null;
+    }
+
+    return {
+      petDefinitionId,
+      effectBasisPoints,
+    };
+  }
+
+  private async createHuntingCycleWithPetBonus(params: {
+    characterId: string;
+    huntingLevel: number;
+    startedAt: Date;
+    version: number;
+  }) {
+    const baseDurationMs =
+      this.getHuntingSecondsPerEnemy(params.huntingLevel) * 1_000;
+    const duration = await this.petBonuses.calculateHuntingDuration(
+      params.characterId,
+      baseDurationMs,
+      MIN_AUTO_COMBAT_HUNTING_CYCLE_DURATION_MS,
+    );
+
+    return {
+      baseDurationMs,
+      cycle: createAutoCombatHuntingCycle({
+        startedAt: params.startedAt,
+        durationMs: duration.durationMs,
+        version: params.version,
+      }),
+      appliedPetBonus: duration.bonus
+        ? {
+            petDefinitionId: duration.bonus.petDefinitionId,
+            effectBasisPoints: duration.bonus.effectBasisPoints,
+          }
+        : null,
+    };
+  }
+
+  private async resolveHuntingCycleContext(params: {
+    characterId: string;
+    huntingLevel: number;
+    huntBatch: any;
+    serverNow: Date;
+    sessionEndsAt: Date;
+    maxCompletions: number;
+  }) {
+    let currentCycle = this.getPersistedHuntingCycle(params.huntBatch);
+    let appliedPetBonus = this.getAppliedHuntingPetBonus(params.huntBatch);
+    let needsCycleBackfill = false;
+
+    if (!currentCycle) {
+      const initialCycle = await this.createHuntingCycleWithPetBonus({
+        characterId: params.characterId,
+        huntingLevel: params.huntingLevel,
+        startedAt: new Date(params.huntBatch.lastProcessedAt),
+        version: Math.max(
+          1,
+          Math.floor(Number(params.huntBatch.cycleVersion) || 0),
+          Math.floor(Number(params.huntBatch.huntSequence) || 0) + 1,
+          Math.floor(Number(params.huntBatch.foundEnemiesCount) || 0) + 1,
+        ),
+      });
+
+      currentCycle = initialCycle.cycle;
+      appliedPetBonus = initialCycle.appliedPetBonus;
+      needsCycleBackfill = true;
+    }
+
+    const processingNowMs = Math.min(
+      params.serverNow.getTime(),
+      params.sessionEndsAt.getTime(),
+    );
+    let nextCycleDurationMs = currentCycle.durationMs;
+    let nextPetBonus = appliedPetBonus;
+
+    if (processingNowMs >= currentCycle.endsAt.getTime()) {
+      const nextCycle = await this.createHuntingCycleWithPetBonus({
+        characterId: params.characterId,
+        huntingLevel: params.huntingLevel,
+        startedAt: currentCycle.endsAt,
+        version: currentCycle.version + 1,
+      });
+
+      nextCycleDurationMs = nextCycle.cycle.durationMs;
+      nextPetBonus = nextCycle.appliedPetBonus;
+    }
+
+    return {
+      currentCycle,
+      appliedPetBonus,
+      nextCycleDurationMs,
+      nextPetBonus,
+      needsCycleBackfill,
+      resolution: resolveAutoCombatHuntingCycle({
+        serverNow: params.serverNow,
+        sessionEndsAt: params.sessionEndsAt,
+        currentCycle,
+        nextCycleDurationMs,
+        maxCompletions: params.maxCompletions,
+      }),
+    };
+  }
+
+  private getHuntingCycleTargetEncounter(huntBatch: any, encounters: any[]) {
+    const targetEncounterId = String(
+      huntBatch?.cycleTargetEncounterId ??
+        huntBatch?.cycleTargetEncounter?.id ??
+        '',
+    ).trim();
+
+    if (!targetEncounterId) {
+      return null;
+    }
+
+    return (
+      encounters.find(
+        (encounter) =>
+          encounter?.isActive !== false && encounter?.id === targetEncounterId,
+      ) ?? null
+    );
+  }
+
+  private async persistHuntingCycleBackfill(params: {
+    huntBatch: any;
+    cycle: AutoCombatHuntingCycleState;
+    appliedPetBonus: AppliedHuntingPetBonus | null;
+    cycleTargetEncounterId: string | null;
+  }) {
+    const updateResult = await this.prisma.autoCombatHuntBatch.updateMany({
+      where: {
+        id: params.huntBatch.id,
+        status: params.huntBatch.status,
+        lastProcessedAt: params.huntBatch.lastProcessedAt,
+        cycleStartedAt: params.huntBatch.cycleStartedAt ?? null,
+        cycleEndsAt: params.huntBatch.cycleEndsAt ?? null,
+        cycleDurationMs: params.huntBatch.cycleDurationMs ?? null,
+        cycleTargetEncounterId: params.huntBatch.cycleTargetEncounterId ?? null,
+      },
+      data: {
+        cycleStartedAt: params.cycle.startedAt,
+        cycleEndsAt: params.cycle.endsAt,
+        cycleDurationMs: params.cycle.durationMs,
+        cycleVersion: params.cycle.version,
+        cycleTargetEncounterId: params.cycleTargetEncounterId,
+        appliedPetDefinitionId: params.appliedPetBonus?.petDefinitionId ?? null,
+        appliedPetEffectBasisPoints:
+          params.appliedPetBonus?.effectBasisPoints ?? 0,
+      },
+    });
+
+    if (updateResult.count === 0) {
+      throw new AutoCombatSessionConcurrencyError();
+    }
+
+    Object.assign(params.huntBatch, {
+      cycleStartedAt: params.cycle.startedAt,
+      cycleEndsAt: params.cycle.endsAt,
+      cycleDurationMs: params.cycle.durationMs,
+      cycleVersion: params.cycle.version,
+      cycleTargetEncounterId: params.cycleTargetEncounterId,
+      appliedPetDefinitionId: params.appliedPetBonus?.petDefinitionId ?? null,
+      appliedPetEffectBasisPoints:
+        params.appliedPetBonus?.effectBasisPoints ?? 0,
+    });
+  }
+
   private addSeconds(date: Date, seconds: number) {
     return new Date(date.getTime() + seconds * 1000);
   }
@@ -3997,6 +4560,14 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMobId: null,
         currentMobHp: null,
         currentMobMaxHp: null,
+        killProgressSeconds: 0,
+        killProgressMs: 0,
+        estimatedKillTimeSeconds: null,
+        estimatedKillTimeMs: null,
+        unmodifiedKillTimeMs: null,
+        baseKillTimeSeconds: null,
+        appliedTtkPetDefinitionId: null,
+        appliedTtkPetEffectBasisPoints: 0,
         currentRound: 0,
       });
 
@@ -4015,6 +4586,7 @@ export class AutoCombatService implements OnModuleDestroy {
             status: AutoCombatHuntBatchStatus.CANCELLED,
             cancelledAt: finishedAt,
             lastProcessedAt: finishedAt,
+            cycleTargetEncounterId: null,
           },
         });
       }
@@ -4027,6 +4599,14 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMobId: null,
         currentMobHp: null,
         currentMobMaxHp: null,
+        killProgressSeconds: 0,
+        killProgressMs: 0,
+        estimatedKillTimeSeconds: null,
+        estimatedKillTimeMs: null,
+        unmodifiedKillTimeMs: null,
+        baseKillTimeSeconds: null,
+        appliedTtkPetDefinitionId: null,
+        appliedTtkPetEffectBasisPoints: 0,
         currentRound: 0,
       };
     });
@@ -4050,6 +4630,14 @@ export class AutoCombatService implements OnModuleDestroy {
           currentMobId: null,
           currentMobHp: null,
           currentMobMaxHp: null,
+          killProgressSeconds: 0,
+          killProgressMs: 0,
+          estimatedKillTimeSeconds: null,
+          estimatedKillTimeMs: null,
+          unmodifiedKillTimeMs: null,
+          baseKillTimeSeconds: null,
+          appliedTtkPetDefinitionId: null,
+          appliedTtkPetEffectBasisPoints: 0,
           currentRound: 0,
         },
       );
@@ -4062,6 +4650,7 @@ export class AutoCombatService implements OnModuleDestroy {
           {
             stoppedAt: readyAt,
             lastProcessedAt: readyAt,
+            cycleTargetEncounterId: null,
           },
         );
       }
@@ -4171,8 +4760,22 @@ export class AutoCombatService implements OnModuleDestroy {
       currentMobHp: session.currentMobHp ?? null,
       currentMobMaxHp: session.currentMobMaxHp ?? null,
       killProgressSeconds: Number(session.killProgressSeconds) || 0,
+      killProgressMs:
+        Number(session.killProgressMs) ||
+        Math.round((Number(session.killProgressSeconds) || 0) * 1_000),
       estimatedKillTimeSeconds: session.estimatedKillTimeSeconds ?? null,
+      estimatedKillTimeMs:
+        session.estimatedKillTimeMs ??
+        (session.estimatedKillTimeSeconds
+          ? Math.round(Number(session.estimatedKillTimeSeconds) * 1_000)
+          : null),
+      unmodifiedKillTimeMs: session.unmodifiedKillTimeMs ?? null,
       baseKillTimeSeconds: session.baseKillTimeSeconds ?? null,
+      appliedTtkPetDefinitionId: session.appliedTtkPetDefinitionId ?? null,
+      appliedTtkPetEffectBasisPoints: Math.max(
+        0,
+        Math.floor(Number(session.appliedTtkPetEffectBasisPoints) || 0),
+      ),
       playerOffensivePower: session.playerOffensivePower ?? null,
       monsterRecommendedPower: session.monsterRecommendedPower ?? null,
       currentMobIndex: session.currentMobIndex ?? null,
@@ -4403,8 +5006,14 @@ export class AutoCombatService implements OnModuleDestroy {
       currentMobHp: result.currentMobHp,
       currentMobMaxHp: result.currentMobMaxHp,
       killProgressSeconds: result.killProgressSeconds ?? 0,
+      killProgressMs: result.killProgressMs ?? 0,
       estimatedKillTimeSeconds: result.estimatedKillTimeSeconds ?? null,
+      estimatedKillTimeMs: result.estimatedKillTimeMs ?? null,
+      unmodifiedKillTimeMs: result.unmodifiedKillTimeMs ?? null,
       baseKillTimeSeconds: result.baseKillTimeSeconds ?? null,
+      appliedTtkPetDefinitionId: result.appliedTtkPetDefinitionId ?? null,
+      appliedTtkPetEffectBasisPoints:
+        result.appliedTtkPetEffectBasisPoints ?? 0,
       playerOffensivePower: result.playerOffensivePower ?? null,
       monsterRecommendedPower: result.monsterRecommendedPower ?? null,
       currentMobIndex: result.currentMobIndex ?? null,
@@ -4434,9 +5043,16 @@ export class AutoCombatService implements OnModuleDestroy {
       currentMobMaxHp:
         spawnResult.session.currentMobMaxHp ?? spawnResult.mob.hp,
       killProgressSeconds: spawnResult.session.killProgressSeconds ?? 0,
+      killProgressMs: spawnResult.session.killProgressMs ?? 0,
       estimatedKillTimeSeconds:
         spawnResult.session.estimatedKillTimeSeconds ?? null,
+      estimatedKillTimeMs: spawnResult.session.estimatedKillTimeMs ?? null,
+      unmodifiedKillTimeMs: spawnResult.session.unmodifiedKillTimeMs ?? null,
       baseKillTimeSeconds: spawnResult.session.baseKillTimeSeconds ?? null,
+      appliedTtkPetDefinitionId:
+        spawnResult.session.appliedTtkPetDefinitionId ?? null,
+      appliedTtkPetEffectBasisPoints:
+        spawnResult.session.appliedTtkPetEffectBasisPoints ?? 0,
       playerOffensivePower: spawnResult.session.playerOffensivePower ?? null,
       monsterRecommendedPower:
         spawnResult.session.monsterRecommendedPower ?? null,
@@ -4461,8 +5077,14 @@ export class AutoCombatService implements OnModuleDestroy {
       currentMobHp: result.currentMobHp,
       currentMobMaxHp: result.currentMobMaxHp,
       killProgressSeconds: result.killProgressSeconds ?? 0,
+      killProgressMs: result.killProgressMs ?? 0,
       estimatedKillTimeSeconds: result.estimatedKillTimeSeconds ?? null,
+      estimatedKillTimeMs: result.estimatedKillTimeMs ?? null,
+      unmodifiedKillTimeMs: result.unmodifiedKillTimeMs ?? null,
       baseKillTimeSeconds: result.baseKillTimeSeconds ?? null,
+      appliedTtkPetDefinitionId: result.appliedTtkPetDefinitionId ?? null,
+      appliedTtkPetEffectBasisPoints:
+        result.appliedTtkPetEffectBasisPoints ?? 0,
       playerOffensivePower: result.playerOffensivePower ?? null,
       monsterRecommendedPower: result.monsterRecommendedPower ?? null,
       currentMobIndex: result.currentMobIndex ?? null,
@@ -4660,7 +5282,9 @@ export class AutoCombatService implements OnModuleDestroy {
     return 'Rodada processada em tempo real.';
   }
 
-  private resolveTtkRealtimeRound(session: any): RealtimeRoundResult {
+  private async resolveTtkRealtimeRound(
+    session: any,
+  ): Promise<RealtimeRoundResult> {
     const loots: LootAccumulator = new Map();
     const mobSummaries: MobSummaryAccumulator = new Map();
     const events: AutoCombatRealtimeEvent[] = [];
@@ -4706,29 +5330,39 @@ export class AutoCombatService implements OnModuleDestroy {
       technique: combatStats.totalPrimaryStats.technique,
       agility: combatStats.totalPrimaryStats.agility,
     };
-    const ttk = calculateAutoCombatTtk({
+    const calculatedTtk = calculateAutoCombatTtk({
       mob: currentMob,
       playerStats,
     });
-    const estimatedKillTimeSeconds = Math.max(
-      0.001,
-      ttk.estimatedKillTimeSeconds,
+    const currentTtkTiming = this.getPersistedAutoCombatMobTtkTiming(
+      session,
+      calculatedTtk.estimatedKillTimeSeconds,
     );
+    const estimatedKillTimeSeconds = currentTtkTiming.estimatedKillTimeSeconds;
+    const ttk = {
+      ...calculatedTtk,
+      ...currentTtkTiming,
+      killsPerMinute: 60 / estimatedKillTimeSeconds,
+      killsPerHour: 3_600 / estimatedKillTimeSeconds,
+      difficultyLabel: getAutoCombatTtkDifficultyLabel(
+        estimatedKillTimeSeconds,
+      ),
+    };
     const effectiveNow = new Date(
       Math.min(Date.now(), session.endsAt.getTime()),
     );
-    const elapsedSeconds = Math.max(
+    const elapsedMs = Math.max(
       0,
-      (effectiveNow.getTime() - session.lastProcessedAt.getTime()) / 1000,
+      effectiveNow.getTime() - session.lastProcessedAt.getTime(),
     );
-    const progressBefore = Math.max(
+    const elapsedSeconds = elapsedMs / 1_000;
+    const progressBeforeMs = Math.max(
       0,
-      Number(session.killProgressSeconds) || 0,
-    );
-    const rawProgressSeconds = progressBefore + elapsedSeconds;
-    const possibleKills = Math.max(
-      0,
-      Math.floor(rawProgressSeconds / estimatedKillTimeSeconds),
+      Math.round(
+        Number(session.killProgressMs) ||
+          Number(session.killProgressSeconds) * 1_000 ||
+          0,
+      ),
     );
     const battleTargetRemaining = Math.max(
       0,
@@ -4746,8 +5380,26 @@ export class AutoCombatService implements OnModuleDestroy {
         : trackedMobRemaining !== null
           ? trackedMobRemaining
           : AUTO_COMBAT_MAX_COMBATS_PER_PROCESS;
+    const canCompleteCurrentMob =
+      progressBeforeMs + elapsedMs >= currentTtkTiming.estimatedKillTimeMs &&
+      killLimit > 0;
+    const nextTtk = canCompleteCurrentMob
+      ? await this.calculateAutoCombatMobTtkWithPetBonus({
+          characterId: session.characterId,
+          mob: currentMob,
+          playerStats,
+        })
+      : ttk;
+    const ttkCycleResolution = resolveAutoCombatTtkCycle({
+      elapsedMs,
+      progressMs: progressBeforeMs,
+      currentDurationMs: currentTtkTiming.estimatedKillTimeMs,
+      nextDurationMs: nextTtk.estimatedKillTimeMs,
+      maxCompletions: Math.min(killLimit, AUTO_COMBAT_MAX_COMBATS_PER_PROCESS),
+    });
+    const possibleKills = ttkCycleResolution.availableCompletions;
     const plannedKills = Math.min(
-      possibleKills,
+      ttkCycleResolution.completions,
       killLimit,
       AUTO_COMBAT_MAX_COMBATS_PER_PROCESS,
     );
@@ -4896,7 +5548,10 @@ export class AutoCombatService implements OnModuleDestroy {
           battleProgressSeconds: 0,
           battleProgressPercent: 0,
           estimatedKillTimeSeconds: ttk.estimatedKillTimeSeconds,
+          estimatedKillTimeMs: ttk.estimatedKillTimeMs,
+          unmodifiedKillTimeMs: ttk.unmodifiedKillTimeMs,
           baseKillTimeSeconds: ttk.baseKillTimeSeconds,
+          appliedPetBonus: ttk.appliedPetBonus,
           playerOffensivePower: ttk.playerOffensivePower,
           monsterRecommendedPower: ttk.monsterRecommendedPower,
           killsPerMinute: ttk.killsPerMinute,
@@ -5086,16 +5741,13 @@ export class AutoCombatService implements OnModuleDestroy {
     const hitKillLimit =
       possibleKills > 0 && killsResolved > 0 && killsResolved >= killLimit;
     const playerDefeated = playerHp <= 0;
-    const remainingProgressSeconds =
-      playerDefeated || hitKillLimit
-        ? 0
-        : Math.max(
-            0,
-            rawProgressSeconds - killsResolved * estimatedKillTimeSeconds,
-          );
+    const activeTtk = killsResolved > 0 ? nextTtk : ttk;
+    const remainingProgressMs =
+      playerDefeated || hitKillLimit ? 0 : ttkCycleResolution.progressMs;
+    const remainingProgressSeconds = remainingProgressMs / 1_000;
     const progressPercent = this.calculatePercent(
-      Math.min(remainingProgressSeconds, estimatedKillTimeSeconds),
-      estimatedKillTimeSeconds,
+      Math.min(remainingProgressMs, activeTtk.estimatedKillTimeMs),
+      activeTtk.estimatedKillTimeMs,
     );
     totalRoundsAfterRound = totalRoundsBeforeRound + killsResolved;
 
@@ -5136,6 +5788,7 @@ export class AutoCombatService implements OnModuleDestroy {
     const nextBattleTargetRemaining =
       battleTargetRemainingAfterKill ?? battleTargetRemaining;
     let nextKillProgressSeconds = remainingProgressSeconds;
+    let nextKillProgressMs = remainingProgressMs;
 
     if (playerDefeated) {
       finalStatus = AutoCombatSessionStatus.DEFEATED;
@@ -5145,6 +5798,7 @@ export class AutoCombatService implements OnModuleDestroy {
       nextCurrentMobMaxHp = null;
       nextCurrentRound = 0;
       nextKillProgressSeconds = 0;
+      nextKillProgressMs = 0;
     } else if (sessionShouldFinish || shouldFinishTrackedQueue) {
       finalStatus = AutoCombatSessionStatus.FINISHED;
       finishedAt = sessionShouldFinish ? session.endsAt : effectiveNow;
@@ -5153,6 +5807,7 @@ export class AutoCombatService implements OnModuleDestroy {
       nextCurrentMobMaxHp = null;
       nextCurrentRound = 0;
       nextKillProgressSeconds = 0;
+      nextKillProgressMs = 0;
     } else if (shouldCompleteBattleSelection) {
       nextPhase = AutoCombatSessionPhase.ENCOUNTER_READY;
       nextCurrentMobId = null;
@@ -5160,6 +5815,7 @@ export class AutoCombatService implements OnModuleDestroy {
       nextCurrentMobMaxHp = null;
       nextCurrentRound = 0;
       nextKillProgressSeconds = 0;
+      nextKillProgressMs = 0;
     }
 
     if (killsResolved > 0) {
@@ -5184,14 +5840,17 @@ export class AutoCombatService implements OnModuleDestroy {
           mobMaxHp: currentMob.hp,
           battleProgressSeconds: nextKillProgressSeconds,
           battleProgressPercent: progressPercent,
-          estimatedKillTimeSeconds: ttk.estimatedKillTimeSeconds,
-          baseKillTimeSeconds: ttk.baseKillTimeSeconds,
-          playerOffensivePower: ttk.playerOffensivePower,
-          monsterRecommendedPower: ttk.monsterRecommendedPower,
-          killsPerMinute: ttk.killsPerMinute,
-          killsPerHour: ttk.killsPerHour,
-          difficultyLabel: ttk.difficultyLabel,
-          mobIndex: ttk.mobIndex,
+          estimatedKillTimeSeconds: activeTtk.estimatedKillTimeSeconds,
+          estimatedKillTimeMs: activeTtk.estimatedKillTimeMs,
+          unmodifiedKillTimeMs: activeTtk.unmodifiedKillTimeMs,
+          baseKillTimeSeconds: activeTtk.baseKillTimeSeconds,
+          appliedPetBonus: activeTtk.appliedPetBonus,
+          playerOffensivePower: activeTtk.playerOffensivePower,
+          monsterRecommendedPower: activeTtk.monsterRecommendedPower,
+          killsPerMinute: activeTtk.killsPerMinute,
+          killsPerHour: activeTtk.killsPerHour,
+          difficultyLabel: activeTtk.difficultyLabel,
+          mobIndex: activeTtk.mobIndex,
           battleTargetMobId: session.battleTargetMobId ?? currentMob.id,
           battleTargetEncounterId: session.battleTargetEncounterId ?? null,
           battleTargetTotal: session.battleTargetTotal ?? null,
@@ -5261,7 +5920,10 @@ export class AutoCombatService implements OnModuleDestroy {
           battleProgressSeconds: 0,
           battleProgressPercent: 0,
           estimatedKillTimeSeconds: ttk.estimatedKillTimeSeconds,
+          estimatedKillTimeMs: ttk.estimatedKillTimeMs,
+          unmodifiedKillTimeMs: ttk.unmodifiedKillTimeMs,
           baseKillTimeSeconds: ttk.baseKillTimeSeconds,
+          appliedPetBonus: ttk.appliedPetBonus,
           playerOffensivePower: ttk.playerOffensivePower,
           monsterRecommendedPower: ttk.monsterRecommendedPower,
           killsPerMinute: ttk.killsPerMinute,
@@ -5378,11 +6040,32 @@ export class AutoCombatService implements OnModuleDestroy {
       currentMobHp: nextCurrentMobHp,
       currentMobMaxHp: nextCurrentMobMaxHp,
       killProgressSeconds: nextKillProgressSeconds,
-      estimatedKillTimeSeconds: ttk.estimatedKillTimeSeconds,
-      baseKillTimeSeconds: ttk.baseKillTimeSeconds,
-      playerOffensivePower: ttk.playerOffensivePower,
-      monsterRecommendedPower: ttk.monsterRecommendedPower,
-      currentMobIndex: ttk.mobIndex,
+      killProgressMs: nextKillProgressMs,
+      estimatedKillTimeSeconds: nextCurrentMobId
+        ? activeTtk.estimatedKillTimeSeconds
+        : null,
+      estimatedKillTimeMs: nextCurrentMobId
+        ? activeTtk.estimatedKillTimeMs
+        : null,
+      unmodifiedKillTimeMs: nextCurrentMobId
+        ? activeTtk.unmodifiedKillTimeMs
+        : null,
+      baseKillTimeSeconds: nextCurrentMobId
+        ? activeTtk.baseKillTimeSeconds
+        : null,
+      appliedTtkPetDefinitionId: nextCurrentMobId
+        ? (activeTtk.appliedPetBonus?.petDefinitionId ?? null)
+        : null,
+      appliedTtkPetEffectBasisPoints: nextCurrentMobId
+        ? (activeTtk.appliedPetBonus?.effectBasisPoints ?? 0)
+        : 0,
+      playerOffensivePower: nextCurrentMobId
+        ? activeTtk.playerOffensivePower
+        : null,
+      monsterRecommendedPower: nextCurrentMobId
+        ? activeTtk.monsterRecommendedPower
+        : null,
+      currentMobIndex: nextCurrentMobId ? activeTtk.mobIndex : null,
       currentRound: nextCurrentRound,
       currentCombatIndex: Math.max(1, nextCombatIndex),
       battleTargetRemaining: nextBattleTargetRemaining,
@@ -5393,7 +6076,8 @@ export class AutoCombatService implements OnModuleDestroy {
       events,
       actionsAvailable: 1,
       actionsProcessed: elapsedSeconds > 0 ? 1 : 0,
-      processingLimited: possibleKills > killsResolved,
+      processingLimited:
+        ttkCycleResolution.processingLimited || possibleKills > killsResolved,
       eventsSuppressed:
         possibleKills > killsResolved ? possibleKills - killsResolved : 0,
     };
@@ -6306,8 +6990,14 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMobHp: result.currentMobHp,
         currentMobMaxHp: result.currentMobMaxHp,
         killProgressSeconds: result.killProgressSeconds ?? 0,
+        killProgressMs: result.killProgressMs ?? 0,
         estimatedKillTimeSeconds: result.estimatedKillTimeSeconds ?? null,
+        estimatedKillTimeMs: result.estimatedKillTimeMs ?? null,
+        unmodifiedKillTimeMs: result.unmodifiedKillTimeMs ?? null,
         baseKillTimeSeconds: result.baseKillTimeSeconds ?? null,
+        appliedTtkPetDefinitionId: result.appliedTtkPetDefinitionId ?? null,
+        appliedTtkPetEffectBasisPoints:
+          result.appliedTtkPetEffectBasisPoints ?? 0,
         playerOffensivePower: result.playerOffensivePower ?? null,
         monsterRecommendedPower: result.monsterRecommendedPower ?? null,
         currentMobIndex: result.currentMobIndex ?? null,
@@ -6922,6 +7612,11 @@ export class AutoCombatService implements OnModuleDestroy {
                 mob: true,
               },
             },
+            cycleTargetEncounter: {
+              include: {
+                mob: true,
+              },
+            },
             mobs: {
               include: {
                 mob: true,
@@ -6966,6 +7661,14 @@ export class AutoCombatService implements OnModuleDestroy {
       huntBatch?.selectedEncounter?.mobId ??
       session.selectedEncounter?.mobId ??
       null;
+    const isHuntingPhase =
+      session.phase === AutoCombatSessionPhase.HUNTING &&
+      huntBatch?.status === AutoCombatHuntBatchStatus.HUNTING;
+    const cycleTargetEncounter = isHuntingPhase
+      ? (huntBatch?.cycleTargetEncounter ?? null)
+      : null;
+    const cycleTargetEncounterId = cycleTargetEncounter?.id ?? null;
+    const cycleTargetEncounterMobId = cycleTargetEncounter?.mobId ?? null;
     const huntingTiming = this.buildHuntingTimingViewModel(
       {
         ...session,
@@ -6974,12 +7677,18 @@ export class AutoCombatService implements OnModuleDestroy {
           huntBatch?.lastProcessedAt ?? session.lastHuntProcessedAt,
         foundEnemiesCount:
           huntBatch?.foundEnemiesCount ?? session.foundEnemiesCount,
-        selectedEncounterId,
-        selectedEncounterMobId,
+        selectedEncounterId: cycleTargetEncounterId ?? selectedEncounterId,
+        selectedEncounterMobId:
+          cycleTargetEncounterMobId ?? selectedEncounterMobId,
+        cycleStartedAt: huntBatch?.cycleStartedAt ?? null,
+        cycleEndsAt: huntBatch?.cycleEndsAt ?? null,
+        cycleDurationMs: huntBatch?.cycleDurationMs ?? null,
+        cycleVersion: huntBatch?.cycleVersion ?? null,
       },
       huntingSkillViewModel,
       now,
     );
+    const huntingAppliedPetBonus = this.getAppliedHuntingPetBonus(huntBatch);
     const currentFoundEnemiesCount = Math.max(
       0,
       Math.floor(
@@ -7012,6 +7721,7 @@ export class AutoCombatService implements OnModuleDestroy {
       serverNow: now,
       lastFindAt: huntingTiming.lastFindAt,
       nextFindAt: huntingTiming.nextFindAt,
+      cycleVersion: huntingTiming.cycleVersion,
     });
     const huntCapacity = {
       maxTrackedEnemies,
@@ -7133,6 +7843,55 @@ export class AutoCombatService implements OnModuleDestroy {
           mob: selectedEncounterMobHuntPayload,
         }
       : null;
+    const cycleTargetSurvivalProjection = this.buildMobSurvivalProjection(
+      session,
+      cycleTargetEncounter?.mob ?? null,
+      1,
+    );
+    const cycleTargetMobPayload = this.buildCurrentMobStatusPayload(
+      cycleTargetEncounter?.mob ?? null,
+      cycleTargetEncounter?.mob?.hp ?? null,
+      cycleTargetEncounter?.mob?.hp ?? null,
+      {
+        sessionId: session.id,
+        combatIndex: session.currentCombatIndex,
+        survivalProjection: cycleTargetSurvivalProjection,
+      },
+    );
+    const cycleTargetMobHuntPayload = cycleTargetMobPayload
+      ? {
+          ...cycleTargetMobPayload,
+          foundCount: 0,
+          huntFoundCount: 0,
+        }
+      : null;
+    const cycleTargetEncounterPayload = cycleTargetEncounter
+      ? {
+          id: cycleTargetEncounter.id,
+          mobId: cycleTargetEncounter.mobId,
+          subMapId: cycleTargetEncounter.subMapId,
+          weight: cycleTargetEncounter.weight,
+          isActive: cycleTargetEncounter.isActive,
+          foundCount: 0,
+          huntFoundCount: 0,
+          mob: cycleTargetMobHuntPayload,
+        }
+      : null;
+    const huntingTargetEncounterPayload = isHuntingPhase
+      ? cycleTargetEncounterPayload
+      : selectedEncounterPayload;
+    const huntingTargetMobPayload = isHuntingPhase
+      ? cycleTargetMobHuntPayload
+      : selectedEncounterMobHuntPayload;
+    const huntingTargetEncounterId = isHuntingPhase
+      ? cycleTargetEncounterId
+      : selectedEncounterId;
+    const huntingTargetMobId = isHuntingPhase
+      ? cycleTargetEncounterMobId
+      : selectedEncounterMobId;
+    const huntingTargetFoundCount = isHuntingPhase
+      ? 0
+      : selectedEncounterFoundCount;
     const trackedMonsters = this.buildTrackedMonstersPayload(session);
     const battleTargetMobId = session.battleTargetMobId ?? null;
     const battleTargetEncounterId = session.battleTargetEncounterId ?? null;
@@ -7268,9 +8027,15 @@ export class AutoCombatService implements OnModuleDestroy {
         currentMobHp,
         currentMobMaxHp,
         killProgressSeconds: battleProgress?.progressSeconds ?? 0,
+        killProgressMs: battleProgress
+          ? Math.round(battleProgress.progressSeconds * 1_000)
+          : 0,
         estimatedKillTimeSeconds:
           battleProgress?.estimatedKillTimeSeconds ?? null,
+        estimatedKillTimeMs: battleProgress?.estimatedKillTimeMs ?? null,
+        unmodifiedKillTimeMs: battleProgress?.unmodifiedKillTimeMs ?? null,
         baseKillTimeSeconds: battleProgress?.baseKillTimeSeconds ?? null,
+        appliedTtkPetBonus: battleProgress?.appliedPetBonus ?? null,
         playerOffensivePower: battleProgress?.playerOffensivePower ?? null,
         monsterRecommendedPower:
           battleProgress?.monsterRecommendedPower ?? null,
@@ -7327,6 +8092,18 @@ export class AutoCombatService implements OnModuleDestroy {
             consumedAt: huntBatch.consumedAt,
             cancelledAt: huntBatch.cancelledAt,
             lastProcessedAt: huntBatch.lastProcessedAt,
+            cycleStartedAt: huntingTiming.lastFindAt,
+            cycleEndsAt: huntingTiming.nextFindAt,
+            cycleDurationMs: huntingTiming.cycleDurationMs,
+            cycleVersion: huntingTiming.cycleVersion,
+            appliedPetBonus: huntingAppliedPetBonus
+              ? {
+                  ...huntingAppliedPetBonus,
+                  effectPercent: Number(
+                    (huntingAppliedPetBonus.effectBasisPoints / 100).toFixed(2),
+                  ),
+                }
+              : null,
             huntingLevelAtStart: huntBatch.huntingLevelAtStart,
             huntingXpGained: huntBatch.huntingXpGained,
             foundEnemiesCount: currentFoundEnemiesCount,
@@ -7343,6 +8120,9 @@ export class AutoCombatService implements OnModuleDestroy {
             bonusEnemiesFound: huntBatch.bonusEnemiesFound,
             selectedEncounterId,
             selectedEncounterMobId,
+            cycleTargetEncounterId,
+            cycleTargetMobId: cycleTargetEncounterMobId,
+            currentTarget: cycleTargetEncounterPayload,
             huntSequence,
             mobs: trackedMonsters,
           }
@@ -7357,6 +8137,18 @@ export class AutoCombatService implements OnModuleDestroy {
         stoppedAt: huntBatch?.stoppedAt ?? session.huntStoppedAt,
         lastProcessedAt:
           huntBatch?.lastProcessedAt ?? session.lastHuntProcessedAt,
+        cycleStartedAt: huntingTiming.lastFindAt,
+        cycleEndsAt: huntingTiming.nextFindAt,
+        cycleDurationMs: huntingTiming.cycleDurationMs,
+        cycleVersion: huntingTiming.cycleVersion,
+        appliedPetBonus: huntingAppliedPetBonus
+          ? {
+              ...huntingAppliedPetBonus,
+              effectPercent: Number(
+                (huntingAppliedPetBonus.effectBasisPoints / 100).toFixed(2),
+              ),
+            }
+          : null,
         lastFindAt: huntingTiming.lastFindAt,
         nextFindAt: huntingTiming.nextFindAt,
         foundEnemiesCount: currentFoundEnemiesCount,
@@ -7368,7 +8160,8 @@ export class AutoCombatService implements OnModuleDestroy {
         bonusEnemiesFound:
           huntBatch?.bonusEnemiesFound ?? session.bonusEnemiesFound,
         huntingXpGained: huntBatch?.huntingXpGained ?? session.huntingXpGained,
-        secondsPerEnemy: huntingSkillViewModel.secondsPerEnemy,
+        baseSecondsPerEnemy: huntingSkillViewModel.secondsPerEnemy,
+        secondsPerEnemy: huntingTiming.secondsPerFind,
         secondsPerFind: huntingTiming.secondsPerFind,
         elapsedSeconds: huntingTiming.elapsedSeconds,
         remainingSeconds: huntingTiming.remainingSeconds,
@@ -7378,14 +8171,16 @@ export class AutoCombatService implements OnModuleDestroy {
         huntSequence,
         lastHuntEventSequence: huntSequence,
         selectedEncounterId,
-        targetEncounterId: selectedEncounterId,
-        targetMobId: selectedEncounterMobId,
-        targetFoundCount: selectedEncounterFoundCount,
-        currentTargetFoundCount: selectedEncounterFoundCount,
+        cycleTargetEncounterId,
+        cycleTargetMobId: cycleTargetEncounterMobId,
+        targetEncounterId: huntingTargetEncounterId,
+        targetMobId: huntingTargetMobId,
+        targetFoundCount: huntingTargetFoundCount,
+        currentTargetFoundCount: huntingTargetFoundCount,
         selectedMob: selectedEncounterMobHuntPayload,
-        targetMob: selectedEncounterMobHuntPayload,
-        currentTarget: selectedEncounterPayload,
-        targetEncounter: selectedEncounterPayload,
+        targetMob: huntingTargetMobPayload,
+        currentTarget: huntingTargetEncounterPayload,
+        targetEncounter: huntingTargetEncounterPayload,
         trackedMonsters,
         skill: huntingSkillViewModel,
       },
@@ -7488,16 +8283,22 @@ export class AutoCombatService implements OnModuleDestroy {
       mob: currentMob,
       playerStats: characterStats,
     });
-    const estimatedKillTimeSeconds = Math.max(
-      1,
-      Math.ceil(
-        Number(session.estimatedKillTimeSeconds) ||
-          calculatedTtk.estimatedKillTimeSeconds,
-      ),
+    const ttkTiming = this.getPersistedAutoCombatMobTtkTiming(
+      session,
+      calculatedTtk.estimatedKillTimeSeconds,
     );
-    const persistedProgressSeconds = Math.min(
-      estimatedKillTimeSeconds,
-      Math.max(0, Number(session.killProgressSeconds) || 0),
+    const estimatedKillTimeMs = ttkTiming.estimatedKillTimeMs;
+    const estimatedKillTimeSeconds = estimatedKillTimeMs / 1_000;
+    const persistedProgressMs = Math.min(
+      estimatedKillTimeMs,
+      Math.max(
+        0,
+        Math.round(
+          Number(session.killProgressMs) ||
+            Number(session.killProgressSeconds) * 1_000 ||
+            0,
+        ),
+      ),
     );
     const progressAnchorAt = session.lastProcessedAt
       ? new Date(session.lastProcessedAt)
@@ -7506,20 +8307,18 @@ export class AutoCombatService implements OnModuleDestroy {
       ? progressAnchorAt
       : now;
     const cycleStartedAt = new Date(
-      safeProgressAnchorAt.getTime() - persistedProgressSeconds * 1000,
+      safeProgressAnchorAt.getTime() - persistedProgressMs,
     );
-    const progressSeconds = Math.min(
-      estimatedKillTimeSeconds,
-      Math.max(0, (now.getTime() - cycleStartedAt.getTime()) / 1000),
+    const progressMs = Math.min(
+      estimatedKillTimeMs,
+      Math.max(0, now.getTime() - cycleStartedAt.getTime()),
     );
+    const progressSeconds = progressMs / 1_000;
     const progressPercent = this.calculatePercent(
-      progressSeconds,
-      estimatedKillTimeSeconds,
+      progressMs,
+      estimatedKillTimeMs,
     );
-    const cycleDurationMs = Math.max(
-      1,
-      Math.round(estimatedKillTimeSeconds * 1000),
-    );
+    const cycleDurationMs = estimatedKillTimeMs;
     const cycleEndsAt = new Date(cycleStartedAt.getTime() + cycleDurationMs);
     const enemyInstanceId = this.buildEnemyInstanceId({
       sessionId: session.id,
@@ -7540,9 +8339,19 @@ export class AutoCombatService implements OnModuleDestroy {
       progressUpdatedAt: now.toISOString(),
       serverNow: now.toISOString(),
       estimatedKillTimeSeconds,
+      estimatedKillTimeMs,
+      unmodifiedKillTimeMs: ttkTiming.unmodifiedKillTimeMs,
       baseKillTimeSeconds:
         Number(session.baseKillTimeSeconds) ||
         calculatedTtk.baseKillTimeSeconds,
+      appliedPetBonus: ttkTiming.appliedPetBonus
+        ? {
+            ...ttkTiming.appliedPetBonus,
+            effectPercent: Number(
+              (ttkTiming.appliedPetBonus.effectBasisPoints / 100).toFixed(2),
+            ),
+          }
+        : null,
       playerOffensivePower:
         Number(session.playerOffensivePower) ||
         calculatedTtk.playerOffensivePower,
@@ -7551,7 +8360,9 @@ export class AutoCombatService implements OnModuleDestroy {
         calculatedTtk.monsterRecommendedPower,
       killsPerMinute: 60 / estimatedKillTimeSeconds,
       killsPerHour: 3600 / estimatedKillTimeSeconds,
-      difficultyLabel: calculatedTtk.difficultyLabel,
+      difficultyLabel: getAutoCombatTtkDifficultyLabel(
+        estimatedKillTimeSeconds,
+      ),
       mobIndex:
         Math.floor(Number(session.currentMobIndex) || 0) ||
         calculatedTtk.mobIndex,
@@ -9385,7 +10196,10 @@ export class AutoCombatService implements OnModuleDestroy {
     remainingMs?: number;
     progressUpdatedAt?: string | Date | null;
     estimatedKillTimeSeconds?: number;
+    estimatedKillTimeMs?: number;
+    unmodifiedKillTimeMs?: number;
     baseKillTimeSeconds?: number;
+    appliedPetBonus?: AppliedAutoCombatTtkPetBonus | null;
     playerOffensivePower?: number;
     monsterRecommendedPower?: number;
     killsPerMinute?: number;
@@ -9440,20 +10254,28 @@ export class AutoCombatService implements OnModuleDestroy {
       0,
       Number(params.battleProgressSeconds) || 0,
     );
-    const estimatedKillTimeSeconds = Math.max(
+    const estimatedKillTimeMs = Math.max(
       0,
-      Math.ceil(Number(params.estimatedKillTimeSeconds) || 0),
+      Math.ceil(
+        Number(params.estimatedKillTimeMs) ||
+          Number(params.estimatedKillTimeSeconds) * 1_000 ||
+          0,
+      ),
     );
+    const estimatedKillTimeSeconds =
+      estimatedKillTimeMs > 0
+        ? estimatedKillTimeMs / 1_000
+        : Math.max(0, Number(params.estimatedKillTimeSeconds) || 0);
     const rawCycleDurationMs =
       Number(params.cycleDurationMs) ||
       (params.cycleDurationSeconds
         ? Number(params.cycleDurationSeconds) * 1000
-        : estimatedKillTimeSeconds > 0
-          ? estimatedKillTimeSeconds * 1000
+        : estimatedKillTimeMs > 0
+          ? estimatedKillTimeMs
           : 0);
     const cycleDurationMs =
       rawCycleDurationMs > 0
-        ? Math.max(1, Math.ceil(rawCycleDurationMs / 1000)) * 1000
+        ? Math.max(1, Math.ceil(rawCycleDurationMs))
         : undefined;
     const cycleStartedAt =
       this.toOptionalIsoString(params.cycleStartedAt) ??
@@ -9516,7 +10338,18 @@ export class AutoCombatService implements OnModuleDestroy {
       progressUpdatedAt,
       estimatedKillTimeSeconds:
         estimatedKillTimeSeconds > 0 ? estimatedKillTimeSeconds : undefined,
+      estimatedKillTimeMs:
+        estimatedKillTimeMs > 0 ? estimatedKillTimeMs : undefined,
+      unmodifiedKillTimeMs: params.unmodifiedKillTimeMs,
       baseKillTimeSeconds: params.baseKillTimeSeconds,
+      appliedPetBonus: params.appliedPetBonus
+        ? {
+            ...params.appliedPetBonus,
+            effectPercent: Number(
+              (params.appliedPetBonus.effectBasisPoints / 100).toFixed(2),
+            ),
+          }
+        : null,
       playerOffensivePower: params.playerOffensivePower,
       monsterRecommendedPower: params.monsterRecommendedPower,
       killsPerMinute: params.killsPerMinute,
@@ -9675,46 +10508,54 @@ export class AutoCombatService implements OnModuleDestroy {
       foundEnemiesCount?: number | null;
       selectedEncounterId?: string | null;
       selectedEncounterMobId?: string | null;
+      cycleStartedAt?: Date | string | null;
+      cycleEndsAt?: Date | string | null;
+      cycleDurationMs?: number | null;
+      cycleVersion?: number | null;
     },
     huntingSkill: {
       secondsPerEnemy?: number | null;
     },
     now: Date,
   ) {
-    const secondsPerFind = Math.max(
+    const persistedCycle = this.getPersistedHuntingCycle(session);
+    const fallbackSecondsPerFind = Math.max(
       1,
-      Math.floor(
-        Number(
-          huntingSkill.secondsPerEnemy ??
-            AUTO_COMBAT_HUNTING_BASE_SECONDS_PER_ENEMY,
-        ) || AUTO_COMBAT_HUNTING_BASE_SECONDS_PER_ENEMY,
-      ),
+      Number(
+        huntingSkill.secondsPerEnemy ??
+          AUTO_COMBAT_HUNTING_BASE_SECONDS_PER_ENEMY,
+      ) || AUTO_COMBAT_HUNTING_BASE_SECONDS_PER_ENEMY,
     );
+    const cycleDurationMs =
+      persistedCycle?.durationMs ?? Math.ceil(fallbackSecondsPerFind * 1_000);
+    const secondsPerFind = cycleDurationMs / 1_000;
     const startedAt = new Date(
       session.huntStartedAt ?? session.startedAt ?? now,
     );
     const safeStartedAt = Number.isFinite(startedAt.getTime())
       ? startedAt
       : now;
-    const lastFindAt = new Date(session.lastHuntProcessedAt ?? safeStartedAt);
+    const lastFindAt = new Date(
+      persistedCycle?.startedAt ?? session.lastHuntProcessedAt ?? safeStartedAt,
+    );
     const safeLastFindAt = Number.isFinite(lastFindAt.getTime())
       ? lastFindAt
       : safeStartedAt;
-    const nextFindAt = this.addSeconds(safeLastFindAt, secondsPerFind);
+    const nextFindAt = persistedCycle?.endsAt
+      ? new Date(persistedCycle.endsAt)
+      : new Date(safeLastFindAt.getTime() + cycleDurationMs);
     const isHunting = session.phase === AutoCombatSessionPhase.HUNTING;
     const isEncounterReady =
       session.phase === AutoCombatSessionPhase.ENCOUNTER_READY;
-    const elapsedSeconds = Math.max(
-      0,
-      Math.floor((now.getTime() - safeLastFindAt.getTime()) / 1000),
-    );
+    const elapsedMs = Math.max(0, now.getTime() - safeLastFindAt.getTime());
+    const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1_000));
     const remainingSeconds = isHunting
       ? Math.max(0, Math.ceil((nextFindAt.getTime() - now.getTime()) / 1000))
       : 0;
     const progressPercent = isEncounterReady
       ? 100
       : this.clampNumber(
-          Math.floor((elapsedSeconds / secondsPerFind) * 100),
+          Math.floor((elapsedMs / cycleDurationMs) * 100),
           0,
           100,
         );
@@ -9727,12 +10568,17 @@ export class AutoCombatService implements OnModuleDestroy {
       startedAt: safeStartedAt,
       lastFindAt: safeLastFindAt,
       nextFindAt,
+      cycleDurationMs,
+      cycleVersion:
+        persistedCycle?.version ?? Math.max(1, foundEnemySequence + 1),
       secondsPerFind,
       elapsedSeconds,
       remainingSeconds,
       progressPercent,
       foundEnemySequence,
-      currentTargetSequence: Math.max(1, foundEnemySequence),
+      currentTargetSequence: isHunting
+        ? foundEnemySequence + 1
+        : Math.max(1, foundEnemySequence),
       targetEncounterId: session.selectedEncounterId ?? null,
       targetMobId: session.selectedEncounterMobId ?? null,
     };
@@ -9980,6 +10826,10 @@ export class AutoCombatService implements OnModuleDestroy {
       });
 
       switch (event.type) {
+        case 'HUNT_TARGET_FOUND':
+          this.autoCombatGateway.emitHuntTargetFound(characterId, event);
+          break;
+
         case 'MOB_SPAWNED':
           this.autoCombatGateway.emitMobSpawned(characterId, event);
           break;

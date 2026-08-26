@@ -23,6 +23,13 @@ export const ECONOMY_ACTIVITY_REWARDS = Object.freeze({
     4: { min: 5, max: 8 },
     5: { min: 6, max: 9 },
   },
+  worldBossCocoonChancePercent: {
+    1: 0.98,
+    2: 1.16,
+    3: 1.34,
+    4: 1.52,
+    5: 1.7,
+  },
   incursionReinforcementFragments: {
     1: [
       { min: 4, max: 5 },
@@ -55,10 +62,6 @@ export const ECONOMY_EXCHANGE_CONFIG = Object.freeze({
   incursionEmergencyMaterial: {
     currencyCost: 2,
     itemQuantity: 3,
-  },
-  worldBossCocoon: {
-    currencyCost: 30,
-    itemQuantity: 1,
   },
   worldBossEmergencyDrop: {
     currencyCost: 3,
@@ -255,64 +258,230 @@ export function buildReinforcedEquipmentStats(
   }, {} as EquipmentReinforcementStats);
 }
 
-export const PET_DEFINITIONS = Object.freeze([
-  {
-    key: 'farejador-suburbio',
-    name: 'Farejador do Subúrbio',
-    description: 'Companheiro recuperado de um casulo do Subúrbio Silencioso.',
-    tier: 1,
+export const PET_TIME_REDUCTION_BASIS_POINTS_BY_TIER = Object.freeze({
+  1: 300,
+  2: 400,
+  3: 500,
+  4: 600,
+  5: 750,
+} as const);
+
+const PET_TIER_CONFIG = Object.freeze({
+  1: {
     rarity: 'UNCOMMON',
-    cocoonItemName: 'Casulo Infectado T1',
     incubationSeconds: 2 * 60 * 60,
     fragmentCost: 10,
     goldCost: 300,
+    npcSaleGold: 120,
   },
-  {
-    key: 'mastim-ferruginoso',
-    name: 'Mastim Ferruginoso',
-    description: 'Companheiro resistente adaptado ao Distrito da Ferrugem.',
-    tier: 2,
+  2: {
     rarity: 'UNCOMMON',
-    cocoonItemName: 'Casulo Infectado T2',
     incubationSeconds: 4 * 60 * 60,
     fragmentCost: 14,
     goldCost: 750,
+    npcSaleGold: 300,
   },
-  {
-    key: 'simbionte-clinico',
-    name: 'Simbionte Clínico',
-    description:
-      'Criatura estabilizada nos laboratórios do Hospital Santa Ruína.',
-    tier: 3,
+  3: {
     rarity: 'RARE',
-    cocoonItemName: 'Casulo Infectado T3',
     incubationSeconds: 6 * 60 * 60,
     fragmentCost: 18,
     goldCost: 1600,
+    npcSaleGold: 640,
   },
-  {
-    key: 'corvo-do-terminal',
-    name: 'Corvo do Terminal',
-    description: 'Batedor mutante incubado a partir de um casulo do Terminal.',
-    tier: 4,
+  4: {
     rarity: 'RARE',
-    cocoonItemName: 'Casulo Infectado T4',
     incubationSeconds: 8 * 60 * 60,
     fragmentCost: 24,
     goldCost: 3000,
+    npcSaleGold: 1200,
   },
-  {
-    key: 'sentinela-da-quarentena',
-    name: 'Sentinela da Quarentena',
-    description: 'Companheiro raro estabilizado na Zona de Quarentena 9.',
-    tier: 5,
+  5: {
     rarity: 'EPIC',
-    cocoonItemName: 'Casulo Infectado T5',
     incubationSeconds: 12 * 60 * 60,
     fragmentCost: 30,
     goldCost: 5000,
+    npcSaleGold: 2000,
+  },
+} as const);
+
+export const PET_DUPLICATE_COCOON_RECOVERY_CONFIG = Object.freeze({
+  fragmentsPerCocoon: 10,
+  npcSaleGoldRatioBasisPoints: 5_000,
+});
+
+export function getPetDuplicateCocoonRecovery(tier: number) {
+  if (!isEconomyLaunchTier(tier)) return null;
+
+  const tierConfig = PET_TIER_CONFIG[tier];
+  return {
+    fragmentsPerCocoon: PET_DUPLICATE_COCOON_RECOVERY_CONFIG.fragmentsPerCocoon,
+    goldPerCocoon: Math.max(
+      1,
+      Math.floor(
+        (tierConfig.npcSaleGold *
+          PET_DUPLICATE_COCOON_RECOVERY_CONFIG.npcSaleGoldRatioBasisPoints) /
+          10_000,
+      ),
+    ),
+  };
+}
+
+const PET_SPECIALIZATION_CONFIG = Object.freeze([
+  {
+    key: 'desmanche',
+    specialization: 'GATHERING_DESMANCHE',
+    effectType: 'GATHERING_TIME_REDUCTION',
+    label: 'Desmanche',
+    activityLabel: 'desmanche',
+    names: {
+      1: 'Sucateiro do Subúrbio',
+      2: 'Sucateiro Ferruginoso',
+      3: 'Sucateiro Clínico',
+      4: 'Sucateiro do Terminal',
+      5: 'Sucateiro da Quarentena',
+    },
+  },
+  {
+    key: 'coleta',
+    specialization: 'GATHERING_COLETA',
+    effectType: 'GATHERING_TIME_REDUCTION',
+    label: 'Coleta',
+    activityLabel: 'coleta',
+    names: {
+      1: 'Catador do Subúrbio',
+      2: 'Catador Ferruginoso',
+      3: 'Catador Clínico',
+      4: 'Catador do Terminal',
+      5: 'Catador da Quarentena',
+    },
+  },
+  {
+    key: 'patrulha',
+    specialization: 'GATHERING_PATRULHA',
+    effectType: 'GATHERING_TIME_REDUCTION',
+    label: 'Patrulha',
+    activityLabel: 'patrulha',
+    names: {
+      1: 'Batedor do Subúrbio',
+      2: 'Batedor Ferruginoso',
+      3: 'Batedor Clínico',
+      4: 'Corvo do Terminal',
+      5: 'Batedor da Quarentena',
+    },
+  },
+  {
+    key: 'arsenal',
+    specialization: 'GATHERING_ARSENAL',
+    effectType: 'GATHERING_TIME_REDUCTION',
+    label: 'Arsenal',
+    activityLabel: 'busca no arsenal',
+    names: {
+      1: 'Carregador do Subúrbio',
+      2: 'Carregador Ferruginoso',
+      3: 'Carregador Clínico',
+      4: 'Carregador do Terminal',
+      5: 'Carregador da Quarentena',
+    },
+  },
+  {
+    key: 'tecnovarredura',
+    specialization: 'GATHERING_TECNOVARREDURA',
+    effectType: 'GATHERING_TIME_REDUCTION',
+    label: 'Tecnovarredura',
+    activityLabel: 'tecnovarredura',
+    names: {
+      1: 'Sonda do Subúrbio',
+      2: 'Sonda Ferruginosa',
+      3: 'Sonda Clínica',
+      4: 'Sonda do Terminal',
+      5: 'Sonda da Quarentena',
+    },
+  },
+  {
+    key: 'contencao',
+    specialization: 'GATHERING_CONTENCAO',
+    effectType: 'GATHERING_TIME_REDUCTION',
+    label: 'Contenção',
+    activityLabel: 'contenção',
+    names: {
+      1: 'Guardião do Subúrbio',
+      2: 'Guardião Ferruginoso',
+      3: 'Simbionte Clínico',
+      4: 'Guardião do Terminal',
+      5: 'Sentinela da Quarentena',
+    },
+  },
+  {
+    key: 'combate',
+    specialization: 'AUTO_COMBAT_TTK',
+    effectType: 'AUTO_COMBAT_TTK_REDUCTION',
+    label: 'Combate automático',
+    activityLabel: 'abate no combate automático',
+    names: {
+      1: 'Predador do Subúrbio',
+      2: 'Mastim Ferruginoso',
+      3: 'Predador Clínico',
+      4: 'Predador do Terminal',
+      5: 'Predador da Quarentena',
+    },
+  },
+  {
+    key: 'rastreamento',
+    specialization: 'AUTO_COMBAT_HUNTING',
+    effectType: 'HUNTING_TIME_REDUCTION',
+    label: 'Rastreamento',
+    activityLabel: 'rastreamento de ameaças',
+    names: {
+      1: 'Farejador do Subúrbio',
+      2: 'Farejador Ferruginoso',
+      3: 'Farejador Clínico',
+      4: 'Farejador do Terminal',
+      5: 'Farejador da Quarentena',
+    },
   },
 ] as const);
+
+const LEGACY_PET_KEYS: Partial<
+  Record<`${string}:t${EconomyLaunchTier}`, string>
+> = {
+  'rastreamento:t1': 'farejador-suburbio',
+  'combate:t2': 'mastim-ferruginoso',
+  'contencao:t3': 'simbionte-clinico',
+  'patrulha:t4': 'corvo-do-terminal',
+  'contencao:t5': 'sentinela-da-quarentena',
+};
+
+export const PET_DEFINITIONS = Object.freeze(
+  ECONOMY_LAUNCH_TIERS.flatMap((tier) => {
+    const tierConfig = PET_TIER_CONFIG[tier];
+    const effectBasisPoints = PET_TIME_REDUCTION_BASIS_POINTS_BY_TIER[tier];
+
+    return PET_SPECIALIZATION_CONFIG.map((specialization, index) => {
+      const bonusPercent = effectBasisPoints / 100;
+      const legacyKey = `${specialization.key}:t${tier}` as const;
+
+      return {
+        key: LEGACY_PET_KEYS[legacyKey] ?? `${specialization.key}-t${tier}`,
+        name: specialization.names[tier],
+        description: `${specialization.names[tier]} reduz em ${bonusPercent.toLocaleString('pt-BR')}% o tempo de ${specialization.activityLabel} enquanto estiver equipado.`,
+        tier,
+        rarity: tierConfig.rarity,
+        specialization: specialization.specialization,
+        specializationLabel: specialization.label,
+        effectType: specialization.effectType,
+        effectBasisPoints,
+        cocoonItemName: `Casulo de ${specialization.label} T${tier}`,
+        cocoonItemSlug: `casulo-de-${specialization.key}-t${tier}`,
+        assetKey: `pet-${specialization.key}-t${tier}`,
+        incubationSeconds: tierConfig.incubationSeconds,
+        fragmentCost: tierConfig.fragmentCost,
+        goldCost: tierConfig.goldCost,
+        npcSaleGold: tierConfig.npcSaleGold,
+        sortOrder: (tier - 1) * PET_SPECIALIZATION_CONFIG.length + index,
+      };
+    });
+  }),
+);
 
 export const T1_ECONOMY_CONFIG = Object.freeze({
   tier: 1,

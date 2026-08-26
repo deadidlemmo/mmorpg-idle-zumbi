@@ -69,4 +69,19 @@ describe('buildAutoCombatHuntingTimeline', () => {
       version: 1,
     });
   });
+
+  it('preserva versao e duracao fracionaria do ciclo persistido apos F5', () => {
+    const timeline = buildAutoCombatHuntingTimeline({
+      ...BASE_PARAMS,
+      cycleVersion: 19,
+      lastFindAt: new Date('2026-08-23T12:00:00.000Z'),
+      nextFindAt: new Date('2026-08-23T12:00:14.550Z'),
+    });
+
+    expect(timeline).toMatchObject({
+      cycleId: 'session-1:hunt:19',
+      durationMs: 14_550,
+      version: 19,
+    });
+  });
 });

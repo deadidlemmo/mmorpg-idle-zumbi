@@ -29,9 +29,17 @@ describe('auto-combat realtime payload', () => {
           enemyInstanceId: 'enemy-13',
           cycleStartedAt: '2026-08-24T11:59:58.000Z',
           cycleEndsAt: '2026-08-24T12:00:01.000Z',
-          cycleDurationMs: 3000,
+          cycleDurationMs: 2775,
           remainingMs: 1000,
           serverNow: '2026-08-24T12:00:00.000Z',
+          estimatedKillTimeSeconds: 2.775,
+          estimatedKillTimeMs: 2775,
+          unmodifiedKillTimeMs: 3000,
+          appliedPetBonus: {
+            petDefinitionId: 'pet-auto-combat-t5',
+            effectBasisPoints: 750,
+            effectPercent: 7.5,
+          },
         },
       },
       currentMob: {
@@ -54,6 +62,48 @@ describe('auto-combat realtime payload', () => {
         },
       ],
       hunting: {
+        cycleStartedAt: '2026-08-24T11:59:55.450Z',
+        cycleEndsAt: '2026-08-24T12:00:10.000Z',
+        cycleDurationMs: 14550,
+        cycleVersion: 13,
+        baseSecondsPerEnemy: 15,
+        secondsPerEnemy: 14.55,
+        appliedPetBonus: {
+          petDefinitionId: 'pet-hunting-t1',
+          effectBasisPoints: 300,
+          effectPercent: 3,
+        },
+        cycleTargetEncounterId: 'encounter-2',
+        cycleTargetMobId: 'mob-2',
+        targetEncounterId: 'encounter-2',
+        targetMobId: 'mob-2',
+        currentTarget: {
+          id: 'encounter-2',
+          mobId: 'mob-2',
+          subMapId: 'sub-map-1',
+          weight: 80,
+          isActive: true,
+          mob: {
+            id: 'mob-2',
+            name: 'Porteiro Infectado',
+            level: 7,
+            tier: 1,
+            hp: 138,
+            drops: Array.from({ length: 20 }, () => ({
+              description: 'nao transportar'.repeat(500),
+            })),
+          },
+        },
+        targetEncounter: {
+          id: 'encounter-2',
+          mobId: 'mob-2',
+          mob: {
+            id: 'mob-2',
+            name: 'Porteiro Infectado',
+            level: 7,
+            tier: 1,
+          },
+        },
         timeline: {
           activityInstanceId: 'hunt-1',
           cycleId: 'hunt-cycle-13',
@@ -95,6 +145,11 @@ describe('auto-combat realtime payload', () => {
     >;
     const compactCharacter = compact.character as Record<string, unknown>;
     const compactHunting = compact.hunting as Record<string, unknown>;
+    const compactSession = compact.session as Record<string, unknown>;
+    const compactBattleProgress = compactSession.battleProgress as Record<
+      string,
+      unknown
+    >;
     const compactTracked = compact.trackedMonsters as Array<
       Record<string, unknown>
     >;
@@ -108,7 +163,42 @@ describe('auto-combat realtime payload', () => {
 
     expect(compactCharacter.inventoryItems).toBeUndefined();
     expect(compactHunting.timeline).toEqual(payload.hunting.timeline);
+    expect(compactHunting).toMatchObject({
+      cycleDurationMs: 14550,
+      cycleVersion: 13,
+      baseSecondsPerEnemy: 15,
+      secondsPerEnemy: 14.55,
+      appliedPetBonus: payload.hunting.appliedPetBonus,
+      cycleTargetEncounterId: 'encounter-2',
+      cycleTargetMobId: 'mob-2',
+      currentTarget: {
+        id: 'encounter-2',
+        mobId: 'mob-2',
+        mob: {
+          id: 'mob-2',
+          name: 'Porteiro Infectado',
+        },
+      },
+    });
+    expect(
+      (compactHunting.currentTarget as Record<string, unknown>).drops,
+    ).toBeUndefined();
+    expect(
+      (
+        (compactHunting.currentTarget as Record<string, unknown>).mob as Record<
+          string,
+          unknown
+        >
+      ).drops,
+    ).toBeUndefined();
     expect(compactHunting.trackedMonsters).toBeUndefined();
+    expect(compactBattleProgress).toMatchObject({
+      cycleDurationMs: 2775,
+      estimatedKillTimeSeconds: 2.775,
+      estimatedKillTimeMs: 2775,
+      unmodifiedKillTimeMs: 3000,
+      appliedPetBonus: payload.session.battleProgress.appliedPetBonus,
+    });
     expect(compactTracked[0].remainingCount).toBe(188);
     expect(compactTracked[0].mob).toBeUndefined();
     expect(compactLootItem.imageUrl).toBe('/assets/residuo-infecto.webp');

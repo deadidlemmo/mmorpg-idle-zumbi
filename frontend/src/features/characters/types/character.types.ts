@@ -2,6 +2,7 @@ import assassinoEmblem from '../../../assets/images/classes/class-assassino.webp
 import atiradorEmblem from '../../../assets/images/classes/class-atirador.webp';
 import lutadorEmblem from '../../../assets/images/classes/class-lutador.webp';
 import medicoEmblem from '../../../assets/images/classes/class-medico.webp';
+import type { ResolvedCharacterAppearance } from '../../cosmetics/types/cosmetics.types';
 
 export type CharacterClassId = 'lutador' | 'atirador' | 'assassino' | 'medico';
 
@@ -40,6 +41,7 @@ export interface CharacterSummary {
    * Por enquanto, o recomendado é usar avatarKey.
    */
   avatarUrl?: string | null;
+  appearance?: ResolvedCharacterAppearance | null;
 }
 
 export interface CreateCharacterPayload {
@@ -68,6 +70,7 @@ export interface RawCharacterResponse {
   avatarKey?: string | null;
 
   avatarUrl?: string | null;
+  appearance?: ResolvedCharacterAppearance | null;
   location?: string;
 
   class?: {

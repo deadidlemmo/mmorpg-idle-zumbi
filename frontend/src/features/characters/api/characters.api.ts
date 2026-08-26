@@ -63,6 +63,7 @@ function normalizeCharacter(character: RawCharacterResponse): CharacterSummary {
     location,
     avatarKey: character.avatarKey ?? null,
     avatarUrl: character.avatarUrl ?? null,
+    appearance: character.appearance ?? null,
   };
 }
 

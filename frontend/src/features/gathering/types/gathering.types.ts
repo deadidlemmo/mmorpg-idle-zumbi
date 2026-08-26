@@ -1,3 +1,5 @@
+import type { ActivityTimelineSnapshot } from '../../../components/game/activityTimeline';
+
 export type GatheringMaterialOrigin =
   | 'DESMANCHE'
   | 'COLETA'
@@ -226,6 +228,19 @@ export interface GatheringSessionViewModel {
   collectedQuantity?: number | null;
   collectedXp?: number | null;
 
+  cycleStartedAt?: string | null;
+  cycleEndsAt?: string | null;
+  cycleDurationMs?: number | null;
+  cycleVersion?: number | null;
+
+  appliedPetBonus?: {
+    petDefinitionId?: string | null;
+    effectBasisPoints: number;
+    effectPercent: number;
+  } | null;
+
+  timeline?: ActivityTimelineSnapshot | null;
+
   character?: GatheringCharacterViewModel | null;
   map?: GatheringMapViewModel | null;
   targetMaterial?: GatheringMaterialViewModel | null;
@@ -254,6 +269,13 @@ export interface GatheringProductionPreviewViewModel {
   skillRateMultiplier?: number | null;
   affinityRateMultiplier?: number | null;
   finalRateMultiplier?: number | null;
+
+  baseCycleDurationMs?: number | null;
+  cycleDurationMs?: number | null;
+  petDefinitionId?: string | null;
+  petEffectBasisPoints?: number | null;
+
+  timeline?: ActivityTimelineSnapshot | null;
 
   estimatedQuantityToCollect: number;
 
@@ -288,6 +310,8 @@ export interface GatheringInventoryItemViewModel {
 
 export interface GatheringStatusActiveResponse {
   active: true;
+  serverNow?: string | null;
+  timeline?: ActivityTimelineSnapshot | null;
   session: GatheringSessionViewModel;
   gatheringSkill?: GatheringSkillViewModel | null;
   productionPreview: GatheringProductionPreviewViewModel;
@@ -316,6 +340,11 @@ export interface GatheringProductionResultViewModel {
   skillRateMultiplier?: number | null;
   affinityRateMultiplier?: number | null;
   finalRateMultiplier?: number | null;
+
+  baseCycleDurationMs?: number | null;
+  cycleDurationMs?: number | null;
+  petDefinitionId?: string | null;
+  petEffectBasisPoints?: number | null;
 
   previousProgressRemainder: number;
   newProgressRemainder: number;

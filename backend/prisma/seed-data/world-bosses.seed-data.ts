@@ -85,10 +85,14 @@ function buildLootTable(tier: number) {
     fragmentReward,
     {
       rewardType: WorldBossRewardType.PET_EGG,
-      itemName: `Casulo Infectado T${tier}`,
+      ...(isEconomyLaunchTier(tier)
+        ? { randomPetCocoon: true }
+        : { itemName: `Casulo Infectado T${tier}` }),
       minQuantity: 1,
       maxQuantity: 1,
-      chance: Math.min(3.5, 0.8 + tier * 0.18),
+      chance: isEconomyLaunchTier(tier)
+        ? ECONOMY_ACTIVITY_REWARDS.worldBossCocoonChancePercent[tier]
+        : Math.min(3.5, 0.8 + tier * 0.18),
       guaranteed: false,
       onlyIfDefeated: true,
       requiresMinParticipation: true,

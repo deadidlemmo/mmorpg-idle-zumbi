@@ -1,6 +1,8 @@
+import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { getCosmeticImage } from '../../cosmetics/constants/cosmetic-assets';
 import { useAuthStore } from '../../../store/auth.store';
 import { deleteCharacter, getMyCharacters } from '../api/characters.api';
 import '../characters.css';
@@ -30,6 +32,14 @@ export function CharacterSelectPage() {
       null,
     [characters, selectedCharacterId],
   );
+  const overviewBackgroundImage = getCosmeticImage(
+    selectedCharacter?.appearance?.overviewBackground?.assetKey,
+  );
+  const pageStyle = overviewBackgroundImage
+    ? ({
+        '--character-page-background-image': `url("${overviewBackgroundImage}")`,
+      } as CSSProperties)
+    : undefined;
 
   const hasReachedLimit = characters.length >= CHARACTER_LIMIT;
 
@@ -127,7 +137,12 @@ export function CharacterSelectPage() {
   }
 
   return (
-    <main className="character-page">
+    <main
+      className={`character-page ${
+        overviewBackgroundImage ? 'character-page--cosmetic' : ''
+      }`}
+      style={pageStyle}
+    >
       <section className="character-select-panel">
         <header className="character-page__header character-page__header--compact">
           <div className="character-page__title-block">

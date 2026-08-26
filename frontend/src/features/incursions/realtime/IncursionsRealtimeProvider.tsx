@@ -3,6 +3,16 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { IncursionsRealtimeContext } from "./incursionsRealtimeContext";
+import {
+  createActivityTimelineClockSample,
+  getActivityTimelineFrame,
+  getActivityTimelineMonotonicNowMs,
+  getActivityTimelineReconciliationDelayMs,
+  isActivityTimelineReconciliationDue,
+  type ActivityTimeline,
+  type ActivityTimelineClockSample,
+} from "../../../components/game/activityTimeline";
+import { useActivityTimelineProviderState } from "../../../components/game/useActivityTimelineProviderState";
 import { getAuthToken } from "../../../services/api/authToken";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import {
@@ -42,6 +52,7 @@ export interface IncursionsRealtimeState {
   errorMessage: string | null;
   lastUpdatedAt: number | null;
   nowMs: number;
+  timeline: ActivityTimeline | null;
 }
 
 export interface IncursionsRealtimeContextValue {
@@ -136,8 +147,27 @@ function buildStatusFromPayload(
   return null;
 }
 
-function getLiveSession(session: IncursionSession | null, nowMs: number) {
+function getLiveSession(
+  session: IncursionSession | null,
+  nowMs: number,
+  timeline: ActivityTimeline | null,
+) {
   if (!session) return null;
+
+  if (
+    session.status === "ACTIVE" &&
+    timeline?.activityInstanceId === session.id
+  ) {
+    const frame = getActivityTimelineFrame(timeline);
+
+    return {
+      ...session,
+      status: frame.isComplete ? "COMPLETED" : session.status,
+      remainingSeconds: Math.max(0, Math.ceil(frame.remainingMs / 1000)),
+      progressPercent: frame.progressPercent,
+      canClaim: false,
+    } satisfies IncursionSession;
+  }
 
   const startedAtMs = Date.parse(session.startedAt);
   const endsAtMs = Date.parse(session.endsAt);
@@ -168,6 +198,11 @@ export function IncursionsRealtimeProvider({
   refreshMs = 15000,
   tickMs = 1000,
 }: IncursionsRealtimeProviderProps) {
+  const {
+    applySnapshot: applyTimelineSnapshot,
+    clearTimeline,
+    timeline,
+  } = useActivityTimelineProviderState();
   const [status, setStatus] = useState<IncursionStatusResponse | null>(null);
   const [isLoading, setIsLoading] = useState(autoLoad);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -178,21 +213,34 @@ export function IncursionsRealtimeProvider({
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   const socketRef = useRef<Socket | null>(null);
+  const isSocketAuthenticatedRef = useRef(false);
   const statusRef = useRef<IncursionStatusResponse | null>(null);
   const isRefreshingRef = useRef(false);
   const mountedRef = useRef(false);
-  const completionRefreshSessionIdRef = useRef<string | null>(null);
+  const applyStatus = useCallback(
+    (
+      nextStatus: IncursionStatusResponse,
+      clock?: ActivityTimelineClockSample,
+    ) => {
+      const timelineSnapshot = nextStatus.activeSession?.timeline ?? null;
 
-  const applyStatus = useCallback((nextStatus: IncursionStatusResponse) => {
-    statusRef.current = nextStatus;
+      if (timelineSnapshot) {
+        applyTimelineSnapshot(timelineSnapshot, clock);
+      } else {
+        clearTimeline();
+      }
 
-    if (!mountedRef.current) return;
+      statusRef.current = nextStatus;
 
-    setStatus(nextStatus);
-    setLastUpdatedAt(Date.now());
-    setIsLoading(false);
-    setErrorMessage(null);
-  }, []);
+      if (!mountedRef.current) return;
+
+      setStatus(nextStatus);
+      setLastUpdatedAt(Date.now());
+      setIsLoading(false);
+      setErrorMessage(null);
+    },
+    [applyTimelineSnapshot, clearTimeline],
+  );
 
   const refresh = useCallback(async () => {
     if (!enabled || !characterId) return null;
@@ -203,8 +251,15 @@ export function IncursionsRealtimeProvider({
     if (mountedRef.current) setIsRefreshing(true);
 
     try {
+      const requestStartedAtMonotonicMs =
+        getActivityTimelineMonotonicNowMs();
       const response = await getIncursionStatus(characterId);
-      applyStatus(response);
+      applyStatus(
+        response,
+        createActivityTimelineClockSample({
+          requestStartedAtMonotonicMs,
+        }),
+      );
       return response;
     } catch (error) {
       if (mountedRef.current) setErrorMessage(extractApiError(error));
@@ -221,11 +276,28 @@ export function IncursionsRealtimeProvider({
   const requestSocketSnapshot = useCallback(() => {
     const socket = socketRef.current;
 
-    if (!socket || !socket.connected || !characterId) return;
+    if (
+      !socket ||
+      !socket.connected ||
+      !isSocketAuthenticatedRef.current ||
+      !characterId
+    ) {
+      return;
+    }
 
-    socket.emit("incursion:join", { characterId });
     socket.emit("incursion:status:request", { characterId });
   }, [characterId]);
+
+  const reconcileCompletedSession = useCallback(() => {
+    if (!canRunNetworkRefresh()) return;
+
+    if (socketRef.current?.connected && isSocketAuthenticatedRef.current) {
+      requestSocketSnapshot();
+      return;
+    }
+
+    void refresh();
+  }, [refresh, requestSocketSnapshot]);
 
   const start = useCallback(
     async (incursionId: string, approach: IncursionApproach) => {
@@ -235,15 +307,27 @@ export function IncursionsRealtimeProvider({
       setErrorMessage(null);
 
       try {
+        const requestStartedAtMonotonicMs =
+          getActivityTimelineMonotonicNowMs();
         const response = await startIncursion(
           characterId,
           incursionId,
           approach,
         );
-        applyStatus({ activeSession: response.session ?? null });
+        applyStatus(
+          { activeSession: response.session ?? null },
+          createActivityTimelineClockSample({
+            requestStartedAtMonotonicMs,
+          }),
+        );
         requestSocketSnapshot();
 
-        if (!socketRef.current?.connected) await refresh();
+        if (
+          !socketRef.current?.connected ||
+          !isSocketAuthenticatedRef.current
+        ) {
+          await refresh();
+        }
 
         return response;
       } catch (error) {
@@ -268,7 +352,12 @@ export function IncursionsRealtimeProvider({
         applyStatus({ activeSession: null });
         requestSocketSnapshot();
 
-        if (!socketRef.current?.connected) await refresh();
+        if (
+          !socketRef.current?.connected ||
+          !isSocketAuthenticatedRef.current
+        ) {
+          await refresh();
+        }
 
         return response;
       } catch (error) {
@@ -292,7 +381,9 @@ export function IncursionsRealtimeProvider({
       applyStatus({ activeSession: null, rewardedSession: null });
       requestSocketSnapshot();
 
-      if (!socketRef.current?.connected) await refresh();
+      if (!socketRef.current?.connected || !isSocketAuthenticatedRef.current) {
+        await refresh();
+      }
 
       return response;
     } catch (error) {
@@ -315,11 +406,12 @@ export function IncursionsRealtimeProvider({
 
   useEffect(() => {
     statusRef.current = null;
+    clearTimeline();
     setStatus(null);
     setIsLoading(autoLoad);
     setErrorMessage(null);
     setLastUpdatedAt(null);
-  }, [autoLoad, characterId]);
+  }, [autoLoad, characterId, clearTimeline]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNowMs(Date.now()), tickMs);
@@ -345,6 +437,7 @@ export function IncursionsRealtimeProvider({
     const token = getAuthToken();
 
     if (!enabled || !characterId || !token) {
+      isSocketAuthenticatedRef.current = false;
       setIsSocketConnected(false);
       setErrorMessage(null);
       return undefined;
@@ -362,21 +455,29 @@ export function IncursionsRealtimeProvider({
       reconnectionAttempts: Infinity,
       reconnectionDelay: 800,
       reconnectionDelayMax: 4500,
+      autoConnect: false,
     });
 
     socketRef.current = socket;
 
     const handleConnect = () => {
+      isSocketAuthenticatedRef.current = false;
+      if (mountedRef.current) setIsSocketConnected(false);
+    };
+
+    const handleAuthenticated = () => {
+      isSocketAuthenticatedRef.current = true;
+
       if (mountedRef.current) {
         setIsSocketConnected(true);
         setErrorMessage(null);
       }
 
       socket.emit("incursion:join", { characterId });
-      socket.emit("incursion:status:request", { characterId });
     };
 
     const handleDisconnect = () => {
+      isSocketAuthenticatedRef.current = false;
       if (mountedRef.current) setIsSocketConnected(false);
     };
 
@@ -393,6 +494,7 @@ export function IncursionsRealtimeProvider({
     };
 
     socket.on("connect", handleConnect);
+    socket.on("incursion:connected", handleAuthenticated);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleErrorEvent);
     socket.on("incursion:error", handleErrorEvent);
@@ -401,9 +503,16 @@ export function IncursionsRealtimeProvider({
       socket.on(eventName, handleStatusEvent);
     }
 
+    socket.connect();
+
     return () => {
-      socket.emit("incursion:leave", { characterId });
+      if (isSocketAuthenticatedRef.current) {
+        socket.emit("incursion:leave", { characterId });
+      }
+
+      isSocketAuthenticatedRef.current = false;
       socket.off("connect", handleConnect);
+      socket.off("incursion:connected", handleAuthenticated);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleErrorEvent);
       socket.off("incursion:error", handleErrorEvent);
@@ -419,27 +528,48 @@ export function IncursionsRealtimeProvider({
   }, [applyStatus, characterId, enabled]);
 
   const liveSession = useMemo(
-    () => getLiveSession(status?.activeSession ?? null, nowMs),
-    [nowMs, status?.activeSession],
+    () => getLiveSession(status?.activeSession ?? null, nowMs, timeline),
+    [nowMs, status?.activeSession, timeline],
   );
 
   useEffect(() => {
-    if (!enabled || !characterId || !liveSession) {
-      completionRefreshSessionIdRef.current = null;
-      return;
-    }
+    if (!enabled || !characterId || !timeline) return undefined;
 
-    if (liveSession.status !== "COMPLETED") return;
-    if (completionRefreshSessionIdRef.current === liveSession.id) return;
+    const timeoutId = window.setTimeout(
+      reconcileCompletedSession,
+      getActivityTimelineReconciliationDelayMs(timeline),
+    );
 
-    completionRefreshSessionIdRef.current = liveSession.id;
-    void refresh();
-  }, [characterId, enabled, liveSession, refresh]);
+    return () => window.clearTimeout(timeoutId);
+  }, [characterId, enabled, reconcileCompletedSession, timeline]);
+
+  useEffect(() => {
+    if (!enabled || !characterId || !timeline) return undefined;
+
+    const reconcileIfDue = () => {
+      if (
+        document.visibilityState !== "hidden" &&
+        isActivityTimelineReconciliationDue(timeline)
+      ) {
+        reconcileCompletedSession();
+      }
+    };
+
+    document.addEventListener("visibilitychange", reconcileIfDue);
+    window.addEventListener("online", reconcileIfDue);
+
+    return () => {
+      document.removeEventListener("visibilitychange", reconcileIfDue);
+      window.removeEventListener("online", reconcileIfDue);
+    };
+  }, [characterId, enabled, reconcileCompletedSession, timeline]);
 
   const state = useMemo<IncursionsRealtimeState>(
     () => ({
       characterId,
-      status: liveSession ? { activeSession: liveSession } : status,
+      status: liveSession
+        ? { ...status, activeSession: liveSession }
+        : status,
       session: liveSession,
       isActive: liveSession?.status === "ACTIVE",
       isCompleted:
@@ -451,6 +581,7 @@ export function IncursionsRealtimeProvider({
       errorMessage,
       lastUpdatedAt,
       nowMs,
+      timeline,
     }),
     [
       characterId,
@@ -463,6 +594,7 @@ export function IncursionsRealtimeProvider({
       liveSession,
       nowMs,
       status,
+      timeline,
     ],
   );
 

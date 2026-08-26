@@ -29,7 +29,49 @@ type CraftingRoomPayload = {
 };
 
 const CRAFTING_NAMESPACE = '/crafting';
-const CRAFTING_TICK_MS = 1000;
+const CRAFTING_COMPLETION_SETTLE_MS = 75;
+const CRAFTING_STATUS_HEARTBEAT_MS = 30_000;
+const CRAFTING_MIN_SCHEDULE_DELAY_MS = 25;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function getCraftingStatusScheduleDelayMs(
+  status: unknown,
+  nowMs = Date.now(),
+) {
+  if (!isRecord(status) || status.active !== true) {
+    return null;
+  }
+
+  const activeSession = isRecord(status.activeSession)
+    ? status.activeSession
+    : null;
+  const timeline =
+    activeSession && isRecord(activeSession.timeline)
+      ? activeSession.timeline
+      : null;
+  const completesAt =
+    timeline && typeof timeline.endsAt === 'string'
+      ? timeline.endsAt
+      : activeSession && typeof activeSession.completesAt === 'string'
+        ? activeSession.completesAt
+        : null;
+  const completesAtMs = completesAt ? Date.parse(completesAt) : Number.NaN;
+
+  if (!Number.isFinite(completesAtMs)) {
+    return CRAFTING_STATUS_HEARTBEAT_MS;
+  }
+
+  return Math.max(
+    CRAFTING_MIN_SCHEDULE_DELAY_MS,
+    Math.min(
+      CRAFTING_STATUS_HEARTBEAT_MS,
+      Math.ceil(completesAtMs - nowMs + CRAFTING_COMPLETION_SETTLE_MS),
+    ),
+  );
+}
 
 @WebSocketGateway({
   namespace: CRAFTING_NAMESPACE,
@@ -43,9 +85,9 @@ export class CraftingGateway
   private readonly logger = new Logger(CraftingGateway.name);
   private readonly clientsByCharacterId = new Map<string, Set<string>>();
   private readonly userIdByCharacterId = new Map<string, string>();
-  private readonly intervalsByCharacterId = new Map<
+  private readonly timersByCharacterId = new Map<
     string,
-    ReturnType<typeof setInterval>
+    ReturnType<typeof setTimeout>
   >();
 
   constructor(
@@ -186,11 +228,7 @@ export class CraftingGateway
 
     this.emitToCharacter(normalizedCharacterId, eventName, status);
 
-    if (status.activeSession?.status === 'ACTIVE') {
-      this.ensureCharacterInterval(normalizedCharacterId);
-    } else {
-      this.clearCharacterInterval(normalizedCharacterId);
-    }
+    this.scheduleCharacterTimer(normalizedCharacterId, status);
 
     return status;
   }
@@ -235,8 +273,6 @@ export class CraftingGateway
 
     client.data.craftingCharacterIds.add(character.id);
     this.addClientToCharacter(client.id, character.id, userId);
-    this.ensureCharacterInterval(character.id);
-
     client.emit('crafting:joined', {
       characterId: character.id,
       characterName: character.name,
@@ -277,26 +313,33 @@ export class CraftingGateway
 
     this.clientsByCharacterId.delete(characterId);
     this.userIdByCharacterId.delete(characterId);
-    this.clearCharacterInterval(characterId);
+    this.clearCharacterTimer(characterId);
   }
 
-  private ensureCharacterInterval(characterId: string) {
-    if (this.intervalsByCharacterId.has(characterId)) return;
+  private scheduleCharacterTimer(characterId: string, status: unknown) {
+    this.clearCharacterTimer(characterId);
 
-    const intervalId = setInterval(() => {
+    if (!this.clientsByCharacterId.has(characterId)) return;
+
+    const delayMs = getCraftingStatusScheduleDelayMs(status);
+
+    if (delayMs === null) return;
+
+    const timerId = setTimeout(() => {
+      this.timersByCharacterId.delete(characterId);
       void this.emitStatusToRoom(characterId, 'crafting:progress');
-    }, CRAFTING_TICK_MS);
+    }, delayMs);
 
-    this.intervalsByCharacterId.set(characterId, intervalId);
+    this.timersByCharacterId.set(characterId, timerId);
   }
 
-  private clearCharacterInterval(characterId: string) {
-    const intervalId = this.intervalsByCharacterId.get(characterId);
+  private clearCharacterTimer(characterId: string) {
+    const timerId = this.timersByCharacterId.get(characterId);
 
-    if (!intervalId) return;
+    if (!timerId) return;
 
-    clearInterval(intervalId);
-    this.intervalsByCharacterId.delete(characterId);
+    clearTimeout(timerId);
+    this.timersByCharacterId.delete(characterId);
   }
 
   private async emitStatusToClient(
@@ -316,6 +359,7 @@ export class CraftingGateway
     if (!status) return null;
 
     client.emit(eventName, status);
+    this.scheduleCharacterTimer(characterId, status);
     return status;
   }
 
@@ -336,9 +380,7 @@ export class CraftingGateway
 
     this.emitToCharacter(characterId, effectiveEventName, status);
 
-    if (!status.activeSession || status.activeSession.status !== 'ACTIVE') {
-      this.clearCharacterInterval(characterId);
-    }
+    this.scheduleCharacterTimer(characterId, status);
 
     return status;
   }

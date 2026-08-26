@@ -19,3 +19,5 @@
 @import './styles/dashboard-gathering.css';
 @import './styles/dashboard-activity-bar.css';
 @import './styles/dashboard-overrides.css';
+@import './styles/dashboard-navigation.css';
+@import './styles/dashboard-typography.css';

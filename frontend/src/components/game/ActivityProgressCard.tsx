@@ -53,6 +53,7 @@ type ActivityProgressCardProps = {
   progressTitle?: string;
   style?: CSSProperties;
   timeline?: ActivityTimeline | null;
+  timelineRepeats?: boolean;
 };
 
 function joinClassNames(...classNames: Array<string | false | null | undefined>) {
@@ -88,8 +89,13 @@ export function ActivityProgressCard({
   progressTitle,
   style,
   timeline,
+  timelineRepeats = false,
 }: ActivityProgressCardProps) {
-  const timelineFrame = timeline ? getActivityTimelineFrame(timeline) : null;
+  const timelineFrame = timeline
+    ? getActivityTimelineFrame(timeline, undefined, {
+        repeat: timelineRepeats,
+      })
+    : null;
   const progress = timelineFrame?.fillPercent ?? clampProgress(progressPercent);
   const previousProgressRef = useRef(progress);
   const progressFillRef = useRef<HTMLElement | null>(null);
@@ -199,7 +205,11 @@ export function ActivityProgressCard({
             title={progressTitle}
           >
             {timeline ? (
-              <ActivityTimelineFill as="i" timeline={timeline} />
+              <ActivityTimelineFill
+                as="i"
+                repeat={timelineRepeats}
+                timeline={timeline}
+              />
             ) : (
               <i ref={progressFillRef} aria-hidden="true" />
             )}

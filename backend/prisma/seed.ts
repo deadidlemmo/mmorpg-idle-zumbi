@@ -619,10 +619,7 @@ async function upsertIncursion(params: {
       ? await prisma.item.findUnique({ where: { name: loot.itemName } })
       : null;
 
-    if (
-      loot.itemName?.startsWith('Fragmento de Reforço T') &&
-      !item
-    ) {
+    if (loot.itemName?.startsWith('Fragmento de Reforço T') && !item) {
       item = await ensureIncursionSeedItem({
         name: loot.itemName,
         tier: data.tier,
@@ -718,15 +715,45 @@ async function ensureWorldBossSeedItem(params: {
 
 async function upsertPetDefinitions() {
   for (const [index, definition] of PET_DEFINITIONS.entries()) {
-    const cocoonItem = await prisma.item.findUnique({
-      where: { name: definition.cocoonItemName },
+    const cocoonItemData = {
+      name: definition.cocoonItemName,
+      slug: definition.cocoonItemSlug,
+      description: `Casulo biológico T${definition.tier} estabilizado para originar um companheiro de ${definition.specializationLabel.toLowerCase()}.`,
+      tier: definition.tier,
+      rarity: definition.rarity,
+      slot: ItemSlot.MATERIAL,
+      family: 'Casulo Infectado',
+      classId: null,
+      mapId: null,
+      materialOrigin: MaterialOrigin.DROP_MOBS,
+      materialSlot: null,
+      isGatheringMaterial: false,
+      requiredGatheringLevel: 1,
+      gatheringXpPerUnit: 0,
+      baseGatheringRatePerHour: null,
+      strengthBonus: 0,
+      vitalityBonus: 0,
+      agilityBonus: 0,
+      precisionBonus: 0,
+      techniqueBonus: 0,
+      willpowerBonus: 0,
+      healFlat: 0,
+      healPercent: 0,
+      usableInCombat: false,
+      usableOutOfCombat: false,
+      minTier: null,
+      maxTier: null,
+      isSellable: true,
+      isTradable: true,
+      isCraftable: false,
+      baseItemId: null,
+      enhancementLevel: 0,
+    } satisfies Prisma.ItemUncheckedCreateInput;
+    const cocoonItem = await prisma.item.upsert({
+      where: { slug: definition.cocoonItemSlug },
+      update: cocoonItemData,
+      create: cocoonItemData,
     });
-
-    if (!cocoonItem) {
-      throw new Error(
-        `Casulo ${definition.cocoonItemName} não encontrado para o pet ${definition.name}.`,
-      );
-    }
 
     await prisma.petDefinition.upsert({
       where: { key: definition.key },
@@ -735,12 +762,17 @@ async function upsertPetDefinitions() {
         description: definition.description,
         tier: definition.tier,
         rarity: definition.rarity,
+        specialization: definition.specialization,
+        effectType: definition.effectType,
+        effectBasisPoints: definition.effectBasisPoints,
+        npcSaleGold: definition.npcSaleGold,
         cocoonItemId: cocoonItem.id,
         incubationSeconds: definition.incubationSeconds,
         fragmentCost: definition.fragmentCost,
         goldCost: definition.goldCost,
+        assetKey: definition.assetKey,
         isActive: true,
-        sortOrder: index,
+        sortOrder: definition.sortOrder ?? index,
       },
       create: {
         key: definition.key,
@@ -748,15 +780,27 @@ async function upsertPetDefinitions() {
         description: definition.description,
         tier: definition.tier,
         rarity: definition.rarity,
+        specialization: definition.specialization,
+        effectType: definition.effectType,
+        effectBasisPoints: definition.effectBasisPoints,
+        npcSaleGold: definition.npcSaleGold,
         cocoonItemId: cocoonItem.id,
         incubationSeconds: definition.incubationSeconds,
         fragmentCost: definition.fragmentCost,
         goldCost: definition.goldCost,
+        assetKey: definition.assetKey,
         isActive: true,
-        sortOrder: index,
+        sortOrder: definition.sortOrder ?? index,
       },
     });
   }
+
+  await prisma.petDefinition.updateMany({
+    where: {
+      key: { notIn: PET_DEFINITIONS.map((definition) => definition.key) },
+    },
+    data: { isActive: false },
+  });
 }
 
 async function upsertWorldBoss(params: {
@@ -865,6 +909,7 @@ async function upsertWorldBoss(params: {
         guaranteed: reward.guaranteed ?? false,
         onlyIfDefeated: reward.onlyIfDefeated ?? false,
         requiresMinParticipation: reward.requiresMinParticipation ?? true,
+        randomPetCocoon: reward.randomPetCocoon ?? false,
         minContributionPercent: reward.minContributionPercent ?? 0,
         minRankPercent: reward.minRankPercent ?? null,
         rarity: reward.rarity ?? null,

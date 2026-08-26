@@ -101,6 +101,14 @@ export interface CharacterEquipmentResponse {
   [key: string]: unknown;
 }
 
+export interface ReinforceEquipmentResponse extends InventoryItemActionResponse {
+  applied: boolean;
+  reinforcedItem: EquipmentReinforcementItem | null;
+  gold?: number;
+  equipment?: DashboardEquipmentViewModel;
+  stats?: CharacterEquipmentResponse["stats"];
+}
+
 export async function getCharacterInventory(
   characterId: string,
 ): Promise<InventoryResponse> {
@@ -199,8 +207,8 @@ export async function unequipInventoryItem(
 
 export async function reinforceEquippedItem(
   payload: ReinforceEquipmentPayload,
-): Promise<InventoryItemActionResponse> {
-  const response = await apiClient.post<InventoryItemActionResponse>(
+): Promise<ReinforceEquipmentResponse> {
+  const response = await apiClient.post<ReinforceEquipmentResponse>(
     API_ENDPOINTS.equipment.reinforce,
     payload,
   );

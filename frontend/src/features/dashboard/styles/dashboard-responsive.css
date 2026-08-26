@@ -1146,7 +1146,7 @@
   }
 
   .dashboard-sidebar__status-row {
-    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-columns: 34px minmax(0, 1fr) 34px;
     gap: 0.46rem;
   }
 
@@ -1207,6 +1207,12 @@
 
   .dashboard-sidebar__link {
     min-height: var(--dashboard-sidebar-link-height);
+  }
+
+  .dashboard-sidebar__membership {
+    width: 34px;
+    min-width: 34px;
+    height: 32px;
   }
 
   .dashboard-sidebar__bottom {

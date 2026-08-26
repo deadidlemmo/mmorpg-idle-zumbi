@@ -1,18 +1,23 @@
 import { isAxiosError } from "axios";
 import {
   ArrowRight,
+  ArrowUpRight,
+  CheckCircle2,
   Clock,
+  Hammer,
   Lock,
   PackageOpen,
   Scale,
   ShieldAlert,
   ShieldCheck,
+  Ticket,
   XCircle,
   Zap,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useParams } from "react-router-dom";
 import goldIcon from "../../../assets/images/coins/gold.webp";
+import { ActivityTimelineFill } from "../../../components/game/ActivityTimelineFill";
 import { normalizeClassName } from "../../characters/api/characters.api";
 import {
   buildMapVisualStyle,
@@ -21,6 +26,15 @@ import {
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import { ResourceCenterShortcut } from "../../economy/components/ResourceCenterShortcut";
+import {
+  getCharacterEquipment,
+  type CharacterEquipmentResponse,
+} from "../../inventory/api/inventory.api";
+import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
+import {
+  getReinforcementProgress,
+  selectReinforcementOpportunity,
+} from "../../equipment/utils/reinforcementPresentation";
 import "../../dashboard/dashboard.css";
 import "../../gathering/styles/gathering.css";
 import type {
@@ -74,6 +88,14 @@ function ApproachIcon({ approach }: { approach: IncursionApproach }) {
 
 function formatMultiplier(multiplier: number) {
   return `${Math.round(multiplier * 100)}%`;
+}
+
+function formatProgressPercent(progressPercent: number) {
+  const safeProgress = Number.isFinite(progressPercent)
+    ? progressPercent
+    : 0;
+
+  return Math.round(Math.min(100, Math.max(0, safeProgress)));
 }
 
 function buildCharacterViewModel(
@@ -175,7 +197,11 @@ function getLootName(loot: IncursionLootPreview) {
       : "Ficha de Incursão";
   }
 
-  return loot.item?.name?.trim() || getRewardTypeLabel(loot.rewardType);
+  return (
+    loot.item?.name?.trim() ||
+    loot.itemName?.trim() ||
+    getRewardTypeLabel(loot.rewardType)
+  );
 }
 
 function getLootSubtitle(loot: IncursionLootPreview) {
@@ -205,6 +231,17 @@ function getLootImageUrl(loot: IncursionLootPreview) {
   if (loot.rewardType === "GOLD") return goldIcon;
   if (loot.rewardType === "CURRENCY") return null;
 
+  if (loot.rewardType === "MATERIAL") {
+    const materialImage = getGatheringMaterialImageUrl({
+      name: loot.item?.name ?? loot.itemName,
+      assetKey: loot.item?.assetKey ?? loot.assetKey,
+      iconUrl: loot.item?.iconUrl ?? loot.iconUrl,
+      imageUrl: loot.item?.imageUrl ?? loot.imageUrl,
+    });
+
+    if (materialImage) return materialImage;
+  }
+
   return (
     loot.iconUrl ??
     loot.imageUrl ??
@@ -212,6 +249,16 @@ function getLootImageUrl(loot: IncursionLootPreview) {
     loot.item?.imageUrl ??
     null
   );
+}
+
+function isReinforcementLoot(loot: IncursionLootPreview) {
+  return /fragmento de reforço/i.test(getLootName(loot));
+}
+
+function LootFallbackIcon({ loot }: { loot: IncursionLootPreview }) {
+  if (isReinforcementLoot(loot)) return <Hammer size={18} />;
+  if (loot.rewardType === "CURRENCY") return <Ticket size={18} />;
+  return <span>{getLootFallbackGlyph(loot)}</span>;
 }
 
 function getLootInitials(loot: IncursionLootPreview) {
@@ -244,10 +291,16 @@ function getLootFallbackGlyph(loot: IncursionLootPreview) {
   return "◈";
 }
 
-function LootRewardCard({ loot }: { loot: IncursionLootPreview }) {
+function LootRewardCard({
+  loot,
+  earned = false,
+}: {
+  loot: IncursionLootPreview;
+  earned?: boolean;
+}) {
   const name = getLootName(loot);
   const quantity = formatLootQuantity(loot);
-  const chance = formatLootChance(loot);
+  const chance = earned ? "Recebido" : formatLootChance(loot);
   const imageUrl = getLootImageUrl(loot);
   const subtitle = getLootSubtitle(loot);
   const rarityClass = normalizeRewardRarityClass(
@@ -262,9 +315,11 @@ function LootRewardCard({ loot }: { loot: IncursionLootPreview }) {
     >
       <div className="incursion-loot-card__icon" aria-hidden="true">
         <span className="incursion-loot-card__fallback-glyph">
-          {getLootFallbackGlyph(loot)}
+          <LootFallbackIcon loot={loot} />
         </span>
-        <strong>{getLootInitials(loot)}</strong>
+        {!isReinforcementLoot(loot) && loot.rewardType !== "CURRENCY" ? (
+          <strong>{getLootInitials(loot)}</strong>
+        ) : null}
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -287,7 +342,7 @@ function LootRewardCard({ loot }: { loot: IncursionLootPreview }) {
           <span className="incursion-loot-card__quantity">{quantity}</span>
           <span
             className={
-              chance === "Garantido"
+              chance === "Garantido" || earned
                 ? "incursion-loot-card__chance incursion-loot-card__chance--guaranteed"
                 : "incursion-loot-card__chance"
             }
@@ -298,6 +353,24 @@ function LootRewardCard({ loot }: { loot: IncursionLootPreview }) {
       </div>
     </article>
   );
+}
+
+function buildEarnedLoot(
+  reward: NonNullable<IncursionSession["rewards"]>[number],
+): IncursionLootPreview {
+  return {
+    id: reward.id,
+    rewardType: reward.rewardType,
+    currency: reward.currency,
+    itemId: reward.itemId,
+    itemName: reward.itemName,
+    item: reward.item,
+    chance: 100,
+    minQuantity: reward.quantity,
+    maxQuantity: reward.quantity,
+    guaranteed: true,
+    rarity: reward.rarity,
+  };
 }
 
 function formatMapLevelRange(
@@ -349,7 +422,8 @@ function getRiskLabel(riskLevel?: number | null) {
 function getErrorMessage(error: unknown) {
   if (isAxiosError(error)) {
     const data = error.response?.data as
-      { message?: string | string[] } | undefined;
+      | { message?: string | string[] }
+      | undefined;
     if (Array.isArray(data?.message)) return data.message.join(" ");
     if (data?.message) return data.message;
   }
@@ -486,6 +560,8 @@ export function IncursionsPage() {
     null,
   );
   const [data, setData] = useState<IncursionsAvailableResponse | null>(null);
+  const [equipmentResponse, setEquipmentResponse] =
+    useState<CharacterEquipmentResponse | null>(null);
   const [modalIncursionId, setModalIncursionId] = useState<string | null>(null);
   const [selectedApproach, setSelectedApproach] =
     useState<IncursionApproach>("BALANCED");
@@ -497,13 +573,16 @@ export function IncursionsPage() {
   const loadData = useCallback(async () => {
     if (!characterId) return;
 
-    const [overviewResponse, incursionsResponse] = await Promise.all([
-      getCharacterOverview(characterId),
-      getAvailableIncursions(characterId),
-    ]);
+    const [overviewResponse, incursionsResponse, equipmentState] =
+      await Promise.all([
+        getCharacterOverview(characterId),
+        getAvailableIncursions(characterId),
+        getCharacterEquipment(characterId),
+      ]);
 
     setOverview(overviewResponse);
     setData(incursionsResponse);
+    setEquipmentResponse(equipmentState);
   }, [characterId]);
 
   useEffect(() => {
@@ -550,7 +629,9 @@ export function IncursionsPage() {
   }, [characterId, data?.activeSession, loadData, realtimeState.session]);
 
   const activeSession = realtimeState.session ?? data?.activeSession ?? null;
-  const rewardedSession = data?.rewardedSession ?? null;
+  const rewardedSession = activeSession
+    ? null
+    : (realtimeState.status?.rewardedSession ?? data?.rewardedSession ?? null);
   const incursions = data?.incursions ?? [];
   const modalIncursion =
     incursions.find((incursion) => incursion.id === modalIncursionId) ?? null;
@@ -572,6 +653,55 @@ export function IncursionsPage() {
       /auto-combate|gathering|atividade|world boss/i.test(reason),
     ),
   );
+  const reinforcementOpportunity = useMemo(
+    () =>
+      selectReinforcementOpportunity(
+        equipmentResponse?.reinforcement,
+        rewardedSession?.incursion.tier,
+      ),
+    [equipmentResponse?.reinforcement, rewardedSession?.incursion.tier],
+  );
+  const reinforcementProgress = getReinforcementProgress(
+    reinforcementOpportunity,
+  );
+  const earnedRewards = useMemo(
+    () => (rewardedSession?.rewards ?? []).map(buildEarnedLoot),
+    [rewardedSession?.rewards],
+  );
+  const earnedReinforcementFragments = earnedRewards
+    .filter(isReinforcementLoot)
+    .reduce((total, reward) => total + Math.max(0, reward.minQuantity), 0);
+  const rewardedTier = rewardedSession?.incursion.tier ?? null;
+  const rewardedTierMaterial =
+    equipmentResponse?.reinforcement?.materials.find(
+      (material) => material.tier === rewardedTier,
+    ) ?? null;
+  const hasRewardedTierEquipment = Boolean(
+    equipmentResponse?.reinforcement?.slots.some(
+      (slot) => slot.item?.tier === rewardedTier,
+    ),
+  );
+
+  useEffect(() => {
+    if (!characterId || !rewardedSession?.id) return;
+
+    let disposed = false;
+
+    void Promise.all([
+      getCharacterOverview(characterId),
+      getCharacterEquipment(characterId),
+    ])
+      .then(([overviewResponse, equipmentState]) => {
+        if (disposed) return;
+        setOverview(overviewResponse);
+        setEquipmentResponse(equipmentState);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      disposed = true;
+    };
+  }, [characterId, rewardedSession?.id]);
 
   if (!characterId) return <Navigate to="/characters" replace />;
 
@@ -720,21 +850,103 @@ export function IncursionsPage() {
             {successMessage}
           </div>
         ) : null}
-        {rewardedSession?.outcomeSummary ? (
-          <div
-            className={`incursions-alert ${
-              rewardedSession.success === false
-                ? "incursions-alert--error"
-                : "incursions-alert--success"
+        {rewardedSession ? (
+          <section
+            className={`incursions-reward-result${
+              rewardedSession.success === false ? " is-failed" : ""
             }`}
+            aria-label="Resultado da última incursão"
           >
-            <strong>
-              {rewardedSession.success === false
-                ? "Operação fracassada. "
-                : "Operação concluída. "}
-            </strong>
-            {rewardedSession.outcomeSummary}
-          </div>
+            <header className="incursions-reward-result__header">
+              <span aria-hidden="true">
+                {rewardedSession.success === false ? (
+                  <ShieldAlert size={20} />
+                ) : (
+                  <CheckCircle2 size={20} />
+                )}
+              </span>
+              <span>
+                <small>Última operação</small>
+                <strong>{rewardedSession.incursion.name}</strong>
+              </span>
+              <strong>
+                {rewardedSession.success === false ? "Falhou" : "Concluída"}
+              </strong>
+            </header>
+
+            {rewardedSession.outcomeSummary ? (
+              <p>{rewardedSession.outcomeSummary}</p>
+            ) : null}
+
+            {rewardedSession.success !== false && earnedRewards.length > 0 ? (
+              <>
+                <div className="incursions-reward-result__title">
+                  <PackageOpen size={15} /> Recompensas recebidas
+                </div>
+                <div className="incursions-modal__loot-grid incursions-reward-result__loot">
+                  {earnedRewards.map((reward, index) => (
+                    <LootRewardCard
+                      key={
+                        reward.id ??
+                        `${reward.rewardType}-${reward.itemId ?? reward.currency ?? index}`
+                      }
+                      loot={reward}
+                      earned
+                    />
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {rewardedSession.success !== false && rewardedTier ? (
+              <div className="incursions-reward-result__reinforcement">
+                <span aria-hidden="true">
+                  <Hammer size={18} />
+                </span>
+                <span>
+                  <small>
+                    {earnedReinforcementFragments > 0
+                      ? `+${earnedReinforcementFragments} fragmentos nesta incursão`
+                      : `Fragmentos de reforço T${rewardedTier}`}
+                  </small>
+                  {reinforcementOpportunity?.item &&
+                  reinforcementOpportunity.cost &&
+                  reinforcementProgress ? (
+                    <>
+                      <strong>
+                        {reinforcementProgress.current}/
+                        {reinforcementProgress.required} para reforçar{" "}
+                        {reinforcementOpportunity.item.name} ao +
+                        {reinforcementOpportunity.cost.level}
+                      </strong>
+                      <i aria-hidden="true">
+                        <em
+                          style={{
+                            transform: `scaleX(${reinforcementProgress.percent / 100})`,
+                          }}
+                        />
+                      </i>
+                      <small>
+                        {reinforcementProgress.remaining > 0
+                          ? `Faltam ${reinforcementProgress.remaining} fragmentos e ${reinforcementOpportunity.cost.goldCost.toLocaleString("pt-BR")} Gold.`
+                          : `Fragmentos completos. Custo: ${reinforcementOpportunity.cost.goldCost.toLocaleString("pt-BR")} Gold.`}
+                      </small>
+                    </>
+                  ) : (
+                    <strong>
+                      {hasRewardedTierEquipment
+                        ? `Peças T${rewardedTier} equipadas já estão no reforço máximo.`
+                        : `${rewardedTierMaterial?.quantity ?? 0} fragmentos guardados. Equipe uma peça T${rewardedTier} para reforçá-la.`}
+                    </strong>
+                  )}
+                </span>
+                <Link to={`/dashboard/${characterId}/equipment`}>
+                  Abrir oficina
+                  <ArrowUpRight size={15} aria-hidden="true" />
+                </Link>
+              </div>
+            ) : null}
+          </section>
         ) : null}
         {hasBlockingActivity && !activeSession ? (
           <div className="incursions-alert incursions-alert--warning">
@@ -777,6 +989,13 @@ export function IncursionsPage() {
                       rewardedSession,
                     });
                     const statusTone = getStatusTone(statusLabel);
+                    const reinforcementPreview =
+                      incursion.rewardsPreview.find(isReinforcementLoot);
+                    const tokenPreview = incursion.rewardsPreview.find(
+                      (reward) =>
+                        reward.rewardType === "CURRENCY" &&
+                        reward.currency === "INCURSION_TOKEN",
+                    );
 
                     return (
                       <button
@@ -826,6 +1045,26 @@ export function IncursionsPage() {
                             </small>
                           ) : null}
 
+                          {reinforcementPreview || tokenPreview ? (
+                            <span className="incursion-card__reward-preview">
+                              {reinforcementPreview ? (
+                                <span>
+                                  <Hammer size={13} />
+                                  {formatLootQuantity(
+                                    reinforcementPreview,
+                                  )}{" "}
+                                  frag.
+                                </span>
+                              ) : null}
+                              {tokenPreview ? (
+                                <span>
+                                  <Ticket size={13} />
+                                  {formatLootQuantity(tokenPreview)} fichas
+                                </span>
+                              ) : null}
+                            </span>
+                          ) : null}
+
                           <span
                             className="incursion-card__action"
                             aria-hidden="true"
@@ -863,7 +1102,7 @@ export function IncursionsPage() {
                       </div>
 
                       <div>
-                        <span>
+                        <span className="incursions-current-card__status">
                           {activeSession.status === "ACTIVE"
                             ? "Incursão ativa"
                             : "Finalizando recompensas"}
@@ -877,22 +1116,28 @@ export function IncursionsPage() {
                       <div>
                         <span>Progresso</span>
                         <strong>
-                          {Math.min(
-                            100,
-                            Math.max(0, activeSession.progressPercent),
-                          )}
-                          %
+                          {formatProgressPercent(
+                            activeSession.progressPercent,
+                          )}%
                         </strong>
                       </div>
                       <i>
-                        <em
-                          style={{
-                            width: `${Math.min(
-                              100,
-                              Math.max(0, activeSession.progressPercent),
-                            )}%`,
-                          }}
-                        />
+                        {realtimeState.timeline?.activityInstanceId ===
+                        activeSession.id ? (
+                          <ActivityTimelineFill
+                            as="em"
+                            timeline={realtimeState.timeline}
+                          />
+                        ) : (
+                          <em
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                Math.max(0, activeSession.progressPercent),
+                              )}%`,
+                            }}
+                          />
+                        )}
                       </i>
                     </div>
 
@@ -903,12 +1148,22 @@ export function IncursionsPage() {
                     </strong>
 
                     <div className="incursions-current-card__risk">
-                      <span>{APPROACH_COPY[activeSession.approach].label}</span>
-                      <strong>{activeSession.successChance}% de sucesso</strong>
-                      <span>
-                        Recompensa{" "}
-                        {formatMultiplier(activeSession.rewardMultiplier)}
-                      </span>
+                      <div>
+                        <span>Abordagem</span>
+                        <strong>
+                          {APPROACH_COPY[activeSession.approach].label}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Sucesso</span>
+                        <strong>{activeSession.successChance}%</strong>
+                      </div>
+                      <div>
+                        <span>Recompensa</span>
+                        <strong>
+                          {formatMultiplier(activeSession.rewardMultiplier)}
+                        </strong>
+                      </div>
                     </div>
 
                     {activeSession.status === "ACTIVE" ? (
@@ -1048,6 +1303,20 @@ export function IncursionsPage() {
                       As recompensas desta operação ainda são desconhecidas.
                     </p>
                   )}
+
+                  {modalIncursion.rewardsPreview.some(isReinforcementLoot) ? (
+                    <div className="incursions-modal__reinforcement-note">
+                      <Hammer size={17} />
+                      <span>
+                        <strong>Progresso de equipamento garantido</strong>
+                        <small>
+                          Os fragmentos recebidos avançam peças T
+                          {modalIncursion.tier} do +1 ao +3 na Oficina de
+                          Reforço.
+                        </small>
+                      </span>
+                    </div>
+                  ) : null}
                 </section>
 
                 {modalIncursion.lockedReasons?.length ? (

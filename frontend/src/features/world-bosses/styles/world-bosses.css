@@ -76,6 +76,155 @@
   --world-boss-tier-glow: var(--rarity-legendary-glow, rgba(199, 67, 60, 0.36));
 }
 
+.world-bosses-reward-receipt {
+  --world-boss-tier-color: var(--rarity-common, #d9d8d1);
+  --world-boss-tier-bg: var(--rarity-common-bg, rgba(217, 216, 209, 0.08));
+  --world-boss-tier-glow: var(--rarity-common-glow, rgba(217, 216, 209, 0.16));
+
+  display: grid;
+  gap: 0.78rem;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--world-boss-tier-color) 36%,
+      rgba(231, 227, 216, 0.1)
+    );
+  border-left-width: 3px;
+  border-radius: 0.45rem;
+  padding: 0.82rem 0.92rem;
+  background:
+    linear-gradient(90deg, var(--world-boss-tier-bg), transparent 42%),
+    rgba(5, 10, 8, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.world-bosses-reward-receipt__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.72rem;
+  min-width: 0;
+}
+
+.world-bosses-reward-receipt__status {
+  display: grid;
+  width: 2.6rem;
+  height: 2.6rem;
+  place-items: center;
+  color: color-mix(in srgb, var(--world-boss-tier-color) 76%, #ffffff);
+  border: 1px solid
+    color-mix(in srgb, var(--world-boss-tier-color) 34%, transparent);
+  border-radius: 0.42rem;
+  background: var(--world-boss-tier-bg);
+}
+
+.world-bosses-reward-receipt__head > div {
+  min-width: 0;
+}
+
+.world-bosses-reward-receipt__head small {
+  display: block;
+  color: var(--world-boss-tier-color);
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.world-bosses-reward-receipt__head h2 {
+  margin: 0.08rem 0 0;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+  line-height: 1.12;
+}
+
+.world-bosses-reward-receipt__head p {
+  margin: 0.16rem 0 0;
+  color: rgba(231, 227, 216, 0.66);
+  font-size: 0.76rem;
+}
+
+.world-bosses-reward-receipt__head button {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid rgba(231, 227, 216, 0.13);
+  border-radius: 0.38rem;
+  padding: 0;
+  color: rgba(231, 227, 216, 0.72);
+  background: rgba(2, 6, 5, 0.46);
+  cursor: pointer;
+}
+
+.world-bosses-reward-receipt__head button:hover,
+.world-bosses-reward-receipt__head button:focus-visible {
+  color: #ffffff;
+  border-color: color-mix(
+    in srgb,
+    var(--world-boss-tier-color) 52%,
+    transparent
+  );
+}
+
+.world-bosses-reward-receipt__items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid rgba(231, 227, 216, 0.08);
+  padding: 0.62rem 0 0;
+  list-style: none;
+}
+
+.world-bosses-reward-receipt__items li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.52rem;
+  padding: 0.3rem 0.58rem 0.3rem 0;
+}
+
+.world-bosses-reward-receipt__items li > span {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--world-boss-tier-color);
+}
+
+.world-bosses-reward-receipt__items li > div {
+  display: grid;
+  min-width: 0;
+  gap: 0.04rem;
+}
+
+.world-bosses-reward-receipt__items strong {
+  overflow: hidden;
+  color: #f4f4ed;
+  font-size: 0.77rem;
+  line-height: 1.14;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.world-bosses-reward-receipt__items small {
+  color: #b9dd91;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.world-bosses-reward-receipt__empty {
+  margin: 0;
+  border-top: 1px solid rgba(231, 227, 216, 0.08);
+  padding-top: 0.62rem;
+  color: rgba(231, 227, 216, 0.66);
+  font-size: 0.78rem;
+}
+
 .world-bosses-boss-card {
   --world-boss-tier-color: var(--rarity-common, #d9d8d1);
   --world-boss-tier-bg: var(--rarity-common-bg, rgba(217, 216, 209, 0.08));
@@ -977,7 +1126,11 @@
   color: #ffe3a3;
   font: inherit;
   background:
-    radial-gradient(circle at 50% 18%, rgba(232, 184, 78, 0.13), transparent 62%),
+    radial-gradient(
+      circle at 50% 18%,
+      rgba(232, 184, 78, 0.13),
+      transparent 62%
+    ),
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
     rgba(4, 8, 7, 0.62);
   box-shadow:
@@ -996,7 +1149,11 @@
 .world-bosses-reward-card--revealed {
   border-color: rgba(232, 184, 78, 0.36);
   background:
-    radial-gradient(circle at 50% 18%, rgba(232, 184, 78, 0.2), transparent 62%),
+    radial-gradient(
+      circle at 50% 18%,
+      rgba(232, 184, 78, 0.2),
+      transparent 62%
+    ),
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
     rgba(10, 14, 10, 0.82);
   box-shadow:
@@ -1066,7 +1223,11 @@
   text-align: left;
   opacity: 0;
   background:
-    radial-gradient(circle at 50% 0%, rgba(232, 184, 78, 0.12), transparent 64%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(232, 184, 78, 0.12),
+      transparent 64%
+    ),
     linear-gradient(145deg, rgba(21, 28, 19, 0.98), rgba(4, 8, 7, 0.98));
   box-shadow:
     0 12px 28px rgba(0, 0, 0, 0.46),
@@ -1097,6 +1258,16 @@
   font-weight: 850;
 }
 
+.world-bosses-reward-card__reveal em {
+  max-width: 15rem;
+  color: rgba(185, 221, 145, 0.78);
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.22;
+  white-space: normal;
+}
+
 .world-bosses-modal__panel > .world-bosses-actions {
   justify-content: flex-end;
   padding: 0 1rem 1rem;
@@ -1107,7 +1278,9 @@
 }
 
 .world-bosses-modal__panel > .world-bosses-actions button,
-.world-bosses-modal__panel > .world-bosses-modal-actions .world-bosses-modal-action {
+.world-bosses-modal__panel
+  > .world-bosses-modal-actions
+  .world-bosses-modal-action {
   flex: 0 1 auto;
   min-width: 6.3rem;
   min-height: 2.42rem;
@@ -1204,6 +1377,39 @@
 }
 
 @media (max-width: 560px) {
+  .world-bosses-reward-receipt {
+    padding: 0.72rem;
+  }
+
+  .world-bosses-reward-receipt__items {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .world-bosses-modal__rewards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .world-bosses-reward-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .world-bosses-reward-card__reveal {
+    right: 0;
+    left: 0;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    transform: translateY(0.28rem);
+  }
+
+  .world-bosses-reward-card:hover .world-bosses-reward-card__reveal,
+  .world-bosses-reward-card:focus-visible .world-bosses-reward-card__reveal,
+  .world-bosses-reward-card--revealed .world-bosses-reward-card__reveal {
+    transform: translateY(0);
+  }
+
   .world-bosses-map-context {
     margin-bottom: 0.08rem;
   }
@@ -1214,6 +1420,10 @@
 }
 
 @media (max-width: 420px) {
+  .world-bosses-reward-receipt__items {
+    grid-template-columns: 1fr;
+  }
+
   .world-bosses-boss-card__actions,
   .world-bosses-boss-card__secondary-action,
   .world-bosses-boss-card__primary-action,

@@ -12,7 +12,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import {
   CharacterStatus,
-  EconomyCurrency,
   EconomyDirection,
   EconomyResourceType,
   InventoryItemType,
@@ -39,6 +38,12 @@ import { recordEconomyEntry } from '../economy/economy-ledger';
 import { EconomyService } from '../economy/economy.service';
 import { JoinWorldBossDto } from './dto/join-world-boss.dto';
 import { LeaveWorldBossDto } from './dto/leave-world-boss.dto';
+import {
+  selectRandomPetCocoonCandidate,
+  selectWorldBossRewards,
+  type SelectedWorldBossReward,
+  wasWorldBossDefeated,
+} from './world-boss-rewards';
 import { isWorldBossTestUnlockEnabled } from './world-boss-test-unlock.util';
 
 const worldBossInclude = {
@@ -86,6 +91,7 @@ type Tx = Prisma.TransactionClient;
 const WORLD_BOSS_PROCESSING_TICK_MS = 1000;
 const WORLD_BOSS_PROCESSING_LOCK_TTL_MS = 60_000;
 const WORLD_BOSS_PROCESSING_LOCK_KEY = 'dead-idle:scheduler:world-bosses';
+const WORLD_BOSS_REWARD_RECEIPT_RETENTION_MS = 15 * 60 * 1000;
 const WORLD_BOSS_ALWAYS_OPEN_TEST_TIER = 1;
 const WORLD_BOSS_ALWAYS_OPEN_TEST_SLOT = 0;
 const WORLD_BOSS_ALWAYS_OPEN_TEST_WINDOW_SECONDS = 24 * 60 * 60;
@@ -227,9 +233,15 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         };
       }),
     );
+    const recentReward = await this.findRecentRewardStatus(
+      characterId,
+      character.mapId,
+      now,
+    );
 
     return {
       events: statuses,
+      recentReward,
       message: statuses.length
         ? null
         : 'Nenhuma ameaça global ativa neste mapa.',
@@ -270,6 +282,17 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
               endsAt: { lte: now },
               currentHp: { gt: 0 },
             },
+            {
+              status: {
+                in: [
+                  WorldBossEventStatus.DEFEATED,
+                  WorldBossEventStatus.EXPIRED,
+                ],
+              },
+              participants: {
+                some: { leftAt: null, rewardGranted: false },
+              },
+            },
           ],
         },
         take: 50,
@@ -277,8 +300,9 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       });
 
       for (const event of events) {
-        const nextEvent = await this.advanceEventState(event);
+        let nextEvent = await this.advanceEventState(event);
         if (WORLD_BOSS_TERMINAL_STATUSES.includes(nextEvent.status)) {
+          nextEvent = await this.settleTerminalEventRewards(nextEvent.id);
           const nextCycleEvent = await this.ensureNextCycleEvent(
             nextEvent,
             nextEvent.worldBoss,
@@ -959,17 +983,23 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
             event.status === WorldBossEventStatus.EXPIRED) &&
           !participant.rewardGranted
         ) {
-          rewards = await this.grantReward(
+          const settledRewards = await this.settlePendingRewardsInTransaction(
             tx,
             event,
-            participant.id,
-            params.characterId,
             now,
+            { characterId: params.characterId },
           );
+          rewards = settledRewards.get(params.characterId) ?? null;
           participant = await tx.worldBossParticipant.findUnique({
-            where: { id: participant.id },
+            where: {
+              eventId_characterId: {
+                eventId: params.eventId,
+                characterId: params.characterId,
+              },
+            },
             include: { rewards: { include: { item: true } } },
           });
+          if (participant?.leftAt) participant = null;
         }
 
         return { event, participant, rewards };
@@ -1182,6 +1212,85 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  private async settleTerminalEventRewards(eventId: string) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        let event = await tx.worldBossEvent.findUniqueOrThrow({
+          where: { id: eventId },
+          include: eventInclude,
+        });
+        if (
+          event.status !== WorldBossEventStatus.DEFEATED &&
+          event.status !== WorldBossEventStatus.EXPIRED
+        ) {
+          return event;
+        }
+
+        await this.refreshContributions(tx, eventId);
+        event = await tx.worldBossEvent.findUniqueOrThrow({
+          where: { id: eventId },
+          include: eventInclude,
+        });
+        await this.settlePendingRewardsInTransaction(tx, event, new Date(), {
+          take: 25,
+        });
+
+        return tx.worldBossEvent.findUniqueOrThrow({
+          where: { id: eventId },
+          include: eventInclude,
+        });
+      },
+      { timeout: 30_000 },
+    );
+  }
+
+  private async settlePendingRewardsInTransaction(
+    tx: Tx,
+    event: any,
+    now: Date,
+    options: { characterId?: string; take?: number } = {},
+  ) {
+    const pendingParticipants = await tx.worldBossParticipant.findMany({
+      where: {
+        eventId: event.id,
+        ...(options.characterId ? { characterId: options.characterId } : {}),
+        leftAt: null,
+        rewardGranted: false,
+      },
+      orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }],
+      ...(options.take ? { take: options.take } : {}),
+      select: { id: true, characterId: true },
+    });
+    const rewardsByCharacter = new Map<string, any[]>();
+
+    for (const participant of pendingParticipants) {
+      const rewards = await this.grantReward(
+        tx,
+        event,
+        participant.id,
+        participant.characterId,
+        now,
+      );
+      rewardsByCharacter.set(participant.characterId, rewards);
+    }
+
+    const remainingClaims = await tx.worldBossParticipant.count({
+      where: {
+        eventId: event.id,
+        leftAt: null,
+        rewardGranted: false,
+      },
+    });
+    if (remainingClaims === 0 && !event.rewardedAt) {
+      await tx.worldBossEvent.update({
+        where: { id: event.id },
+        data: { rewardedAt: now },
+      });
+    }
+
+    return rewardsByCharacter;
+  }
+
   private async grantReward(
     tx: Tx,
     event: any,
@@ -1203,48 +1312,37 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       where: { id: participantId },
     });
 
+    const defeated = wasWorldBossDefeated(event);
     const progress =
       event.maxHp > 0 ? Math.min(1, event.totalDamage / event.maxHp) : 0;
     const collectiveMultiplier = getWorldBossCollectiveRewardMultiplier({
-      defeated: event.status === WorldBossEventStatus.DEFEATED,
+      defeated,
       progressRatio: progress,
     });
-    const eligible = participant.eligibleForReward;
-    const rewards: any[] = [];
-
-    for (const reward of event.worldBoss.rewards) {
-      if (reward.requiresMinParticipation && !eligible) continue;
-      if (
-        reward.onlyIfDefeated &&
-        event.status !== WorldBossEventStatus.DEFEATED
-      )
-        continue;
-      if (participant.contributionPercent < reward.minContributionPercent)
-        continue;
-      const chance = reward.guaranteed
-        ? 100
-        : reward.chance *
-          (event.status === WorldBossEventStatus.DEFEATED
-            ? 1
-            : WORLD_BOSS_REWARD_CONFIG.nonDefeatedChanceMultiplier);
-      if (!reward.guaranteed && Math.random() * 100 > chance) continue;
-      const quantity = Math.max(
-        0,
-        Math.floor(
-          this.randomInt(reward.minQuantity, reward.maxQuantity) *
-            (reward.rewardType === WorldBossRewardType.XP ||
-            reward.rewardType === WorldBossRewardType.GOLD
-              ? collectiveMultiplier
-              : 1),
-        ),
-      );
-      if (quantity <= 0) continue;
+    const selectedRewards = selectWorldBossRewards({
+      event,
+      participant,
+      rewards: event.worldBoss.rewards,
+      collectiveMultiplier,
+      nonDefeatedChanceMultiplier:
+        WORLD_BOSS_REWARD_CONFIG.nonDefeatedChanceMultiplier,
+      randomInt: (min, max) => this.randomInt(min, max),
+    });
+    const rewards: Array<
+      Omit<SelectedWorldBossReward, 'itemId' | 'currency'> & {
+        itemId: string | null | undefined;
+        currency: SelectedWorldBossReward['currency'] | null;
+        inventoryType: InventoryItemType;
+      }
+    > = [];
+    for (const reward of selectedRewards) {
+      const itemId = reward.randomPetCocoon
+        ? await this.selectRandomPetCocoonItemId(tx, event.tier)
+        : reward.itemId;
       rewards.push({
-        rewardType: reward.rewardType,
-        itemId: reward.itemId,
+        ...reward,
+        itemId,
         currency: reward.currency ?? null,
-        quantity,
-        rarity: reward.rarity,
         inventoryType: this.getInventoryType(reward.rewardType),
       });
     }
@@ -1314,7 +1412,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       if (reward.currency && reward.quantity > 0) {
         await this.economyService.creditWalletInTransaction(tx, {
           characterId,
-          currency: reward.currency as EconomyCurrency,
+          currency: reward.currency,
           tier: event.tier,
           quantity: reward.quantity,
           reason: ECONOMY_REASONS.WORLD_BOSS_FRAGMENT_REWARD,
@@ -1358,6 +1456,18 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     return rewards;
   }
 
+  private async selectRandomPetCocoonItemId(tx: Tx, tier: number) {
+    const candidates = await tx.petDefinition.findMany({
+      where: { tier, isActive: true },
+      select: { cocoonItemId: true, specialization: true },
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    });
+
+    return selectRandomPetCocoonCandidate(candidates, (min, max) =>
+      this.randomInt(min, max),
+    ).cocoonItemId;
+  }
+
   private async findActiveEventForCharacter(character: any) {
     if (!character.mapId) return null;
     const now = new Date();
@@ -1388,6 +1498,45 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     );
 
     return events[0] ?? null;
+  }
+
+  private async findRecentRewardStatus(
+    characterId: string,
+    mapId: string,
+    now: Date,
+  ) {
+    const participant = await this.prisma.worldBossParticipant.findFirst({
+      where: {
+        characterId,
+        leftAt: null,
+        rewardGranted: true,
+        rewardGrantedAt: {
+          gte: new Date(now.getTime() - WORLD_BOSS_REWARD_RECEIPT_RETENTION_MS),
+        },
+        event: {
+          mapId,
+          status: {
+            in: [WorldBossEventStatus.DEFEATED, WorldBossEventStatus.EXPIRED],
+          },
+        },
+      },
+      orderBy: { rewardGrantedAt: 'desc' },
+      include: {
+        rewards: { include: { item: true } },
+        event: { include: eventInclude },
+      },
+    });
+    if (!participant) return null;
+
+    return this.formatStatus(
+      participant.event,
+      participant,
+      now,
+      participant.rewards,
+      participant.event.status === WorldBossEventStatus.DEFEATED
+        ? 'A Ameaça Global foi derrotada e suas recompensas foram entregues.'
+        : 'A Ameaça Global terminou e sua participação foi liquidada.',
+    );
   }
 
   private async advanceEventState(event: any) {
@@ -1632,8 +1781,10 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       : respawnIntervalSeconds;
     return {
       message,
+      serverNow: now,
       event: {
         id: event.id,
+        updatedAt: event.updatedAt,
         status: event.status,
         startsAt: event.startsAt,
         endsAt: event.endsAt,
@@ -1692,6 +1843,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
           chance: reward.chance,
           guaranteed: reward.guaranteed,
           onlyIfDefeated: reward.onlyIfDefeated,
+          requiresMinParticipation: reward.requiresMinParticipation,
           minContributionPercent: reward.minContributionPercent,
           rarity: reward.rarity,
         })) ?? [],

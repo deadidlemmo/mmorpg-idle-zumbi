@@ -103,6 +103,26 @@
   color: #e3c8fa;
 }
 
+.economy-exchange__source-rule {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  margin: -4px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(189, 137, 230, 0.2);
+  border-radius: 5px;
+  color: rgba(231, 217, 240, 0.76);
+  background: rgba(45, 27, 57, 0.46);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.economy-exchange__source-rule svg {
+  flex: 0 0 auto;
+  color: #d8acef;
+}
+
 .economy-exchange__groups,
 .economy-exchange__group,
 .economy-exchange__offers {

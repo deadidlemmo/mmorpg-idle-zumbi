@@ -19,6 +19,7 @@ interface BuildAutoCombatHuntingTimelineParams {
   serverNow: Date;
   lastFindAt: Date;
   nextFindAt: Date;
+  cycleVersion?: number | null;
 }
 
 export function buildAutoCombatHuntingTimeline(
@@ -47,7 +48,10 @@ export function buildAutoCombatHuntingTimeline(
 
   const cycleVersion = Math.max(
     1,
-    Math.floor(Number(params.foundEnemiesCount) || 0) + 1,
+    Math.floor(
+      Number(params.cycleVersion) ||
+        Math.floor(Number(params.foundEnemiesCount) || 0) + 1,
+    ),
   );
 
   return buildActivityTimelineSnapshot({

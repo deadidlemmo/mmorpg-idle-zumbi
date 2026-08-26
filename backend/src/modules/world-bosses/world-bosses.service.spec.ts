@@ -55,4 +55,75 @@ describe('WorldBossesService rewards', () => {
     });
     expect(findUniqueOrThrow).not.toHaveBeenCalled();
   });
+
+  it('liquida em lote participantes offline e marca o evento como recompensado', async () => {
+    const now = new Date('2026-08-25T12:00:00.000Z');
+    const findMany = jest.fn().mockResolvedValue([
+      { id: 'participant-1', characterId: 'character-1' },
+      { id: 'participant-2', characterId: 'character-2' },
+    ]);
+    const count = jest.fn().mockResolvedValue(0);
+    const update = jest.fn().mockResolvedValue({});
+    const tx = {
+      worldBossParticipant: { findMany, count },
+      worldBossEvent: { update },
+    } as unknown as Prisma.TransactionClient;
+    const service = new WorldBossesService(
+      {} as PrismaService,
+      {} as ActivityGuardService,
+      {} as DistributedLockService,
+      {} as EconomyService,
+      {
+        get: jest.fn().mockReturnValue(undefined),
+      } as unknown as ConfigService,
+    );
+    const grantReward = jest
+      .fn()
+      .mockResolvedValueOnce([{ rewardType: 'CURRENCY', quantity: 3 }])
+      .mockResolvedValueOnce([]);
+    const serviceWithSettlement = service as unknown as {
+      grantReward: typeof grantReward;
+      settlePendingRewardsInTransaction(
+        transaction: Prisma.TransactionClient,
+        event: { id: string; rewardedAt: Date | null },
+        settledAt: Date,
+        options: { take: number },
+      ): Promise<Map<string, unknown[]>>;
+    };
+    serviceWithSettlement.grantReward = grantReward;
+
+    const settled =
+      await serviceWithSettlement.settlePendingRewardsInTransaction(
+        tx,
+        { id: 'event-1', rewardedAt: null },
+        now,
+        { take: 25 },
+      );
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        eventId: 'event-1',
+        leftAt: null,
+        rewardGranted: false,
+      },
+      orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }],
+      take: 25,
+      select: { id: true, characterId: true },
+    });
+    expect(grantReward).toHaveBeenCalledTimes(2);
+    expect(settled.get('character-1')).toEqual([
+      { rewardType: 'CURRENCY', quantity: 3 },
+    ]);
+    expect(count).toHaveBeenCalledWith({
+      where: {
+        eventId: 'event-1',
+        leftAt: null,
+        rewardGranted: false,
+      },
+    });
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'event-1' },
+      data: { rewardedAt: now },
+    });
+  });
 });

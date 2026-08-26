@@ -593,6 +593,10 @@ export class CharactersService {
       },
     });
 
+    const appearances = await this.cosmeticsService.getResolvedAppearances(
+      characters.map((character) => character.id),
+    );
+
     return Promise.all(
       characters.map(async (character) => {
         const equipmentItems = this.getEquipmentItems(character);
@@ -624,6 +628,7 @@ export class CharactersService {
         return {
           ...character,
           avatarKey: this.getCharacterAvatarKey(character),
+          appearance: appearances[character.id] ?? null,
           currentHp,
           maxHp: calculatedMaxHp,
           ...this.buildCharacterXpPayload(character.level, character.xp),

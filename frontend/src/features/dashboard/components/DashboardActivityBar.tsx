@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router-dom";
 import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.webp";
+import { ActivityTimelineFill } from "../../../components/game/ActivityTimelineFill";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import { useAutoCombatRealtimeState } from "../../auto-combat/realtime/useAutoCombatRealtime";
 import type {
@@ -48,6 +49,8 @@ type ActivityBarItem = {
   description: string;
   progressLabel: string;
   progressPercent: number;
+  timeline?: GatheringRealtimeState["timeline"];
+  timelineRepeats?: boolean;
   progressValueLabel?: string | null;
   progressTone?: "default" | "monster-hp";
   showProgressTrack?: boolean;
@@ -1995,6 +1998,8 @@ function buildGatheringItemFromRealtime(params: {
       `${originLabel} em ${mapName}. Produzindo ${materialName}.`,
     progressLabel: "Próxima unidade",
     progressPercent,
+    timeline: gatheringState.timeline,
+    timelineRepeats: true,
     progressValueLabel: `${progressPercentLabel}%`,
     primaryMetric: `${progressPercentLabel}%`,
     secondaryMetric: formatGatheringSecondaryMetric({
@@ -2879,9 +2884,19 @@ export function DashboardActivityBar({
                     </div>
 
                     <div className={progressTrackClassName}>
-                      <i style={progressStyle}>
-                        <em aria-hidden="true" />
-                      </i>
+                      {item.timeline ? (
+                        <ActivityTimelineFill
+                          as="i"
+                          repeat={item.timelineRepeats}
+                          timeline={item.timeline}
+                        >
+                          <em aria-hidden="true" />
+                        </ActivityTimelineFill>
+                      ) : (
+                        <i style={progressStyle}>
+                          <em aria-hidden="true" />
+                        </i>
+                      )}
                     </div>
                   </div>
                 ) : null}
@@ -2960,7 +2975,15 @@ export function DashboardActivityBar({
                     </div>
 
                     <div className={compactProgressTrackClassName}>
-                      <i style={progressStyle} />
+                      {item.timeline ? (
+                        <ActivityTimelineFill
+                          as="i"
+                          repeat={item.timelineRepeats}
+                          timeline={item.timeline}
+                        />
+                      ) : (
+                        <i style={progressStyle} />
+                      )}
                     </div>
                   </div>
                 ) : null}

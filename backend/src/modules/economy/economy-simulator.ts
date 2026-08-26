@@ -1,4 +1,8 @@
-import { T1_ECONOMY_CONFIG } from '../../common/config/economy.config';
+import {
+  getPetDuplicateCocoonRecovery,
+  PET_DEFINITIONS,
+  T1_ECONOMY_CONFIG,
+} from '../../common/config/economy.config';
 import { getWorldBossCollectiveRewardMultiplier } from '../../common/config/world-boss.config';
 import {
   createFallbackWorldBossSimulationCalibration,
@@ -8,6 +12,17 @@ import {
 type SimulationProfile = (typeof T1_ECONOMY_CONFIG.simulation.profiles)[number];
 type WorldBossSimulationSlot =
   (typeof T1_ECONOMY_CONFIG.simulation.worldBossCalendar.slots)[number];
+type PetSpecialization = (typeof PET_DEFINITIONS)[number]['specialization'];
+
+const T1_PET_DEFINITIONS = PET_DEFINITIONS.filter(
+  (definition) => definition.tier === T1_ECONOMY_CONFIG.tier,
+);
+const T1_PET_SPECIALIZATIONS = Object.freeze(
+  T1_PET_DEFINITIONS.map((definition) => definition.specialization),
+);
+const T1_PET_DUPLICATE_RECOVERY = getPetDuplicateCocoonRecovery(
+  T1_ECONOMY_CONFIG.tier,
+)!;
 
 export type ReinforcementSimulationStrategy = 'BALANCED' | 'FOCUSED';
 
@@ -73,7 +88,14 @@ export interface T1EconomySimulationProfileResult {
   averageWorldBossMissedByChoiceOrConflict: number;
   averageWorldBossMissedParticipation: number;
   averageWorldBossParticipationMinutes: number;
+  averagePetCocoonsDropped: number;
   averagePetsIncubated: number;
+  averageUniquePetsOwned: number;
+  playersWithAnyPetPercent: number;
+  playersWithCompletePetSetPercent: number;
+  averageDuplicateCocoonsConverted: number;
+  averageCocoonsHeld: number;
+  averagePendingPetIncubations: number;
 }
 
 export interface SimulatedWorldBossEvent {
@@ -159,7 +181,12 @@ interface PlayerResult {
   worldBossMissedByChoiceOrConflict: number;
   worldBossMissedParticipation: number;
   worldBossParticipationMinutes: number;
+  petCocoonsDropped: number;
   petsIncubated: number;
+  uniquePetsOwned: number;
+  duplicateCocoonsConverted: number;
+  cocoonsHeld: number;
+  pendingPetIncubations: number;
 }
 
 interface PlayerState {
@@ -174,8 +201,13 @@ interface PlayerState {
   incursionTokensSpent: number;
   reinforcementFragments: number;
   worldBossFragments: number;
-  cocoons: number;
+  cocoonsBySpecialization: Record<PetSpecialization, number>;
+  ownedPetSpecializations: Set<PetSpecialization>;
+  pendingPetSpecialization: PetSpecialization | null;
+  petIncubationEndsAtMinute: number | null;
+  petCocoonsDropped: number;
   petsIncubated: number;
+  duplicateCocoonsConverted: number;
   equipmentCrafted: number;
   upgradeLevels: number[];
   activeMinutes: number;
@@ -191,6 +223,7 @@ interface PlayerOnlineWindow {
 
 interface PlayerWorldBossReward {
   dayIndex: number;
+  claimedAtMinute: number;
   defeated: boolean;
   rewardMultiplier: number;
 }
@@ -509,6 +542,7 @@ function buildPlayerWorldBossPlan(
     );
     plan.rewards.push({
       dayIndex: rewardDay,
+      claimedAtMinute: event.closesAtMinute,
       defeated: event.defeated,
       rewardMultiplier: event.rewardMultiplier,
     });
@@ -654,18 +688,97 @@ function progressEquipment(
   }
 }
 
-function incubatePets(state: PlayerState) {
-  const config = T1_ECONOMY_CONFIG.petIncubation;
-  while (
-    state.cocoons > 0 &&
-    state.worldBossFragments >= config.fragmentCost &&
-    state.gold >= config.goldCost
-  ) {
-    state.cocoons -= 1;
-    state.worldBossFragments -= config.fragmentCost;
-    spendGold(state, config.goldCost, 'PET_INCUBATION');
-    state.petsIncubated += 1;
+function createPetCocoonInventory() {
+  return Object.fromEntries(
+    T1_PET_SPECIALIZATIONS.map((specialization) => [specialization, 0]),
+  ) as Record<PetSpecialization, number>;
+}
+
+function getMissingPetSpecializations(state: PlayerState) {
+  return T1_PET_SPECIALIZATIONS.filter(
+    (specialization) =>
+      !state.ownedPetSpecializations.has(specialization) &&
+      state.pendingPetSpecialization !== specialization,
+  );
+}
+
+function recoverDuplicateCocoons(state: PlayerState) {
+  for (const specialization of T1_PET_SPECIALIZATIONS) {
+    const quantity = state.cocoonsBySpecialization[specialization];
+    const reservedQuantity =
+      state.ownedPetSpecializations.has(specialization) ||
+      state.pendingPetSpecialization === specialization
+        ? 0
+        : 1;
+    const duplicateQuantity = Math.max(0, quantity - reservedQuantity);
+    if (duplicateQuantity === 0) continue;
+
+    state.cocoonsBySpecialization[specialization] -= duplicateQuantity;
+    state.worldBossFragments +=
+      duplicateQuantity * T1_PET_DUPLICATE_RECOVERY.fragmentsPerCocoon;
+    state.duplicateCocoonsConverted += duplicateQuantity;
   }
+}
+
+function findAvailablePetCocoon(state: PlayerState) {
+  return (
+    getMissingPetSpecializations(state).find(
+      (specialization) => state.cocoonsBySpecialization[specialization] > 0,
+    ) ?? null
+  );
+}
+
+function startPetIncubation(state: PlayerState, startsAtMinute: number) {
+  if (state.pendingPetSpecialization) return false;
+
+  recoverDuplicateCocoons(state);
+  const config = T1_ECONOMY_CONFIG.petIncubation;
+  const specialization = findAvailablePetCocoon(state);
+  if (
+    !specialization ||
+    state.worldBossFragments < config.fragmentCost ||
+    state.gold < config.goldCost
+  ) {
+    return false;
+  }
+
+  state.cocoonsBySpecialization[specialization] -= 1;
+  state.worldBossFragments -= config.fragmentCost;
+  spendGold(state, config.goldCost, 'PET_INCUBATION');
+  state.pendingPetSpecialization = specialization;
+  state.petIncubationEndsAtMinute = startsAtMinute + config.durationHours * 60;
+  return true;
+}
+
+function advancePetCollection(state: PlayerState, targetMinute: number) {
+  while (
+    state.pendingPetSpecialization &&
+    state.petIncubationEndsAtMinute !== null &&
+    state.petIncubationEndsAtMinute <= targetMinute
+  ) {
+    const completedAtMinute = state.petIncubationEndsAtMinute;
+    state.ownedPetSpecializations.add(state.pendingPetSpecialization);
+    state.petsIncubated += 1;
+    state.pendingPetSpecialization = null;
+    state.petIncubationEndsAtMinute = null;
+    recoverDuplicateCocoons(state);
+    startPetIncubation(state, completedAtMinute);
+  }
+
+  startPetIncubation(state, targetMinute);
+}
+
+function receiveRandomPetCocoon(state: PlayerState, random: () => number) {
+  const specialization =
+    T1_PET_SPECIALIZATIONS[
+      randomInteger(random, {
+        min: 0,
+        max: T1_PET_SPECIALIZATIONS.length - 1,
+      })
+    ];
+  state.cocoonsBySpecialization[specialization] += 1;
+  state.petCocoonsDropped += 1;
+  recoverDuplicateCocoons(state);
 }
 
 function simulatePlayer(
@@ -679,6 +792,7 @@ function simulatePlayer(
   const incursionRandom = createRandom((playerSeed ^ 0x696e6375) >>> 0);
   const worldBossPlanRandom = createRandom((playerSeed ^ 0x7762706c) >>> 0);
   const worldBossRewardRandom = createRandom((playerSeed ^ 0x77627277) >>> 0);
+  const petCocoonRandom = createRandom((playerSeed ^ 0x70657473) >>> 0);
   const worldBossPlan = buildPlayerWorldBossPlan(
     profile,
     days,
@@ -708,8 +822,13 @@ function simulatePlayer(
     incursionTokensSpent: 0,
     reinforcementFragments: 0,
     worldBossFragments: 0,
-    cocoons: 0,
+    cocoonsBySpecialization: createPetCocoonInventory(),
+    ownedPetSpecializations: new Set<PetSpecialization>(),
+    pendingPetSpecialization: null,
+    petIncubationEndsAtMinute: null,
+    petCocoonsDropped: 0,
     petsIncubated: 0,
+    duplicateCocoonsConverted: 0,
     equipmentCrafted: 0,
     upgradeLevels: [],
     activeMinutes: 0,
@@ -718,6 +837,12 @@ function simulatePlayer(
   };
 
   for (let day = 0; day < days; day += 1) {
+    const dayStartsAtMinute =
+      day * config.simulation.worldBossCalendar.minutesPerDay;
+    const dayEndsAtMinute =
+      (day + 1) * config.simulation.worldBossCalendar.minutesPerDay;
+    advancePetCollection(state, dayStartsAtMinute);
+
     earnGold(state, profile.missionGoldPerDay, 'MISSIONS');
     spendGold(
       state,
@@ -747,10 +872,11 @@ function simulatePlayer(
       earnGold(state, config.incursion.successGoldRefund, 'INCURSION_REFUNDS');
     }
 
-    const worldBossRewards = worldBossPlan.rewards.filter(
-      (reward) => reward.dayIndex === day,
-    );
+    const worldBossRewards = worldBossPlan.rewards
+      .filter((reward) => reward.dayIndex === day)
+      .sort((left, right) => left.claimedAtMinute - right.claimedAtMinute);
     for (const reward of worldBossRewards) {
+      advancePetCollection(state, reward.claimedAtMinute);
       const goldReward = Math.floor(
         randomInteger(worldBossRewardRandom, config.worldBoss.goldReward) *
           reward.rewardMultiplier,
@@ -764,8 +890,9 @@ function simulatePlayer(
         reward.defeated &&
         worldBossRewardRandom() * 100 < config.worldBoss.cocoonChancePercent
       ) {
-        state.cocoons += 1;
+        receiveRandomPetCocoon(state, petCocoonRandom);
       }
+      advancePetCollection(state, reward.claimedAtMinute);
     }
 
     const worldBossActivityBlockedMinutes = Math.min(
@@ -800,8 +927,8 @@ function simulatePlayer(
       }
       state.activeMinutes += config.simulation.stepMinutes;
       progressEquipment(state, reinforcementStrategy);
-      incubatePets(state);
     }
+    advancePetCollection(state, dayEndsAtMinute);
   }
 
   return {
@@ -839,7 +966,15 @@ function simulatePlayer(
     worldBossMissedByChoiceOrConflict: worldBossPlan.missedByChoiceOrConflict,
     worldBossMissedParticipation: worldBossPlan.missedParticipation,
     worldBossParticipationMinutes: worldBossPlan.participationMinutes,
+    petCocoonsDropped: state.petCocoonsDropped,
     petsIncubated: state.petsIncubated,
+    uniquePetsOwned: state.ownedPetSpecializations.size,
+    duplicateCocoonsConverted: state.duplicateCocoonsConverted,
+    cocoonsHeld: Object.values(state.cocoonsBySpecialization).reduce(
+      (total, quantity) => total + quantity,
+      0,
+    ),
+    pendingPetIncubations: state.pendingPetSpecialization ? 1 : 0,
   };
 }
 
@@ -991,8 +1126,31 @@ function summarize(
     averageWorldBossParticipationMinutes: average(
       players.map((player) => player.worldBossParticipationMinutes),
     ),
+    averagePetCocoonsDropped: average(
+      players.map((player) => player.petCocoonsDropped),
+    ),
     averagePetsIncubated: average(
       players.map((player) => player.petsIncubated),
+    ),
+    averageUniquePetsOwned: average(
+      players.map((player) => player.uniquePetsOwned),
+    ),
+    playersWithAnyPetPercent: percent(
+      players.filter((player) => player.uniquePetsOwned > 0).length,
+      players.length,
+    ),
+    playersWithCompletePetSetPercent: percent(
+      players.filter(
+        (player) => player.uniquePetsOwned === T1_PET_SPECIALIZATIONS.length,
+      ).length,
+      players.length,
+    ),
+    averageDuplicateCocoonsConverted: average(
+      players.map((player) => player.duplicateCocoonsConverted),
+    ),
+    averageCocoonsHeld: average(players.map((player) => player.cocoonsHeld)),
+    averagePendingPetIncubations: average(
+      players.map((player) => player.pendingPetIncubations),
     ),
   };
 }
