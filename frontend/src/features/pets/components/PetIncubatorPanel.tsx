@@ -36,6 +36,7 @@ import type {
   PetSpecialization,
   PetsStateResponse,
 } from "../types/pets.types";
+import { getPetAssetImageUrl } from "../utils/petAssets";
 import "../styles/pets.css";
 
 interface PetIncubatorPanelProps {
@@ -124,13 +125,23 @@ function PetVisual({
 }) {
   const specializationAsset = SPECIALIZATION_ASSETS[definition.specialization];
   const isCocoon = kind === "COCOON" || kind === "INCUBATION";
+  const itemAsset = getPetAssetImageUrl(
+    definition,
+    isCocoon ? "COCOON" : "PET",
+  );
 
   return (
     <span
       className={`pet-visual pet-visual--${size} pet-visual--tier-${definition.tier} pet-visual--${kind.toLowerCase()}`}
       aria-hidden="true"
     >
-      {specializationAsset ? <img src={specializationAsset} alt="" /> : <Dna />}
+      {itemAsset ? (
+        <img src={itemAsset} alt="" />
+      ) : specializationAsset ? (
+        <img src={specializationAsset} alt="" />
+      ) : (
+        <Dna />
+      )}
       <span className="pet-visual__type">
         {isCocoon ? <FlaskConical /> : <PawPrint />}
       </span>

@@ -45,3 +45,6 @@ test-results/
 tmp/
 temp/
 backups/
+
+# Fontes brutas de geracao dos pets; o jogo usa os WebP finais otimizados.
+frontend/src/assets/images/pets/**/*-conceito-v*.png
