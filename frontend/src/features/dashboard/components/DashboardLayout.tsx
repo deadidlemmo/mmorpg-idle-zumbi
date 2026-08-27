@@ -28,6 +28,7 @@ import {
   Wrench,
 } from "lucide-react";
 import discordIcon from "../../../assets/images/brand/discord.webp";
+import { DISCORD_INVITE_URL } from "../../../config/externalLinks";
 import cashIcon from "../../../assets/images/coins/cash.webp";
 import goldIcon from "../../../assets/images/coins/gold.webp";
 import { removeAuthToken } from "../../../services/api/authToken";
@@ -457,8 +458,6 @@ const DASHBOARD_COMMUNITY_NAV_ITEMS = ["rankings", "allies"]
 const DASHBOARD_GATHERING_NAV_ITEM = DASHBOARD_NAV_ITEMS.find(
   (item) => item.path === "gathering",
 );
-
-const DASHBOARD_DISCORD_URL = "https://discord.gg/dXSZCj3sA";
 
 const ONLINE_PLAYERS_REFRESH_MS = 30_000;
 
@@ -1710,7 +1709,7 @@ function DashboardLayoutContent({
             {DASHBOARD_COMMUNITY_NAV_ITEMS.map(renderSidebarNavItem)}
             <a
               className="dashboard-sidebar__link"
-              href={DASHBOARD_DISCORD_URL}
+              href={DISCORD_INVITE_URL}
               target="_blank"
               rel="noreferrer"
               aria-label="Entrar no Discord"

@@ -1,11 +1,10 @@
 import ncSoftLogo from "../../assets/images/company/nc-soft-logo-horizontal.webp";
+import { DISCORD_INVITE_URL } from "../../config/externalLinks";
 import { Link } from "react-router-dom";
 
 const currentYear = new Date().getFullYear();
 
 export function CompanyFooter() {
-  const supportUrl = import.meta.env.VITE_DISCORD_URL?.trim();
-
   return (
     <footer className="company-footer">
       <div className="company-footer__brand">
@@ -21,16 +20,14 @@ export function CompanyFooter() {
       </div>
 
       <nav className="company-footer__links" aria-label="Links institucionais">
-        {supportUrl ? (
-          <a
-            href={supportUrl}
-            className="company-footer__link"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Suporte
-          </a>
-        ) : null}
+        <a
+          href={DISCORD_INVITE_URL}
+          className="company-footer__link"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Suporte
+        </a>
 
         <Link to="/privacy" className="company-footer__link">
           Privacidade
