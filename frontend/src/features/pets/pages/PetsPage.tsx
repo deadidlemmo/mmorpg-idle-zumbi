@@ -91,17 +91,13 @@ export function PetsPage() {
           <div>
             <small>Vínculos do sobrevivente</small>
             <h1>Companheiros</h1>
-            <p>Coleção, equipamento e incubação.</p>
+            <p>Vínculos encontrados além dos muros do abrigo.</p>
           </div>
-          <span className="pets-page__header-context">
-            <small>{character.currentMap?.name ?? "Abrigo"}</small>
-            <strong>Tier {selectedTier}</strong>
-          </span>
         </header>
 
         <div className="pets-page__toolbar">
           <div className="pets-page__tierbar">
-            <span>Tier</span>
+            <span>Arquivo por tier</span>
             <div className="pets-page__tier-options" role="group">
               {TIERS.map((tier) => (
                 <button
@@ -123,10 +119,10 @@ export function PetsPage() {
           >
             <Biohazard size={18} aria-hidden="true" />
             <span>
-              <small>Origem dos casulos</small>
+              <small>Casulos encontrados em</small>
               <strong>Ameaças Globais</strong>
             </span>
-            <p>Drop de Ameaça Global</p>
+            <p>Recompensas exclusivas dos chefes.</p>
           </aside>
         </div>
 

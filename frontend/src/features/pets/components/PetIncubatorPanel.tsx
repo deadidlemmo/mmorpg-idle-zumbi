@@ -409,16 +409,16 @@ export function PetIncubatorPanel({
     >
       <header className="pets-incubator__header">
         <div>
-          <small>Arquivo de campo</small>
+          <small>Arquivo de companheiros</small>
           <strong>Coleção de companheiros</strong>
         </div>
         <span className="pets-incubator__collection">
           <PawPrint size={15} aria-hidden="true" />
           <span>
-            <small>Descobertos</small>
             <strong>
               {data?.collection.owned ?? 0}/{data?.collection.total ?? 0}
             </strong>
+            <small>descobertos</small>
           </span>
         </span>
       </header>
@@ -460,6 +460,16 @@ export function PetIncubatorPanel({
                     definition.characterPet?.id === activeIncubation?.id &&
                     activeTiming.isReady;
                   const isSelected = selection?.definitionId === definition.id;
+                  const displayName =
+                    kind === "COCOON"
+                      ? definition.cocoonItem.name
+                      : definition.name;
+                  const displayDetail =
+                    kind === "MISSING"
+                      ? definition.specializationLabel
+                      : kind === "COCOON"
+                        ? `Casulo de ${definition.specializationLabel}`
+                        : formatEffect(definition);
 
                   return (
                     <li key={`${filter}:${definition.id}`}>
@@ -486,7 +496,13 @@ export function PetIncubatorPanel({
                             <strong>Ativo</strong>
                           ) : null}
                         </span>
-                        <PetVisual definition={definition} kind={kind} />
+                        <span className="pets-collection-card__art">
+                          <PetVisual definition={definition} kind={kind} />
+                        </span>
+                        <span className="pets-collection-card__identity">
+                          <strong>{displayName}</strong>
+                          <small>{displayDetail}</small>
+                        </span>
                       </button>
                     </li>
                   );
@@ -506,11 +522,15 @@ export function PetIncubatorPanel({
           </main>
 
           <aside className="pets-collection__status" aria-label="Estado dos pets">
+            <header className="pets-collection__status-heading">
+              <small>Estação de vínculo</small>
+              <strong>Companheiro e incubação</strong>
+            </header>
             <section className="pets-incubator__equipped">
               <header>
                 <span>
                   <ShieldCheck size={15} aria-hidden="true" />
-                  Pet equipado
+                  Vínculo ativo
                 </span>
                 <small>{data?.equippedPet ? "Ativo" : "Vazio"}</small>
               </header>
@@ -527,7 +547,9 @@ export function PetIncubatorPanel({
                 </button>
               ) : (
                 <div className="pets-collection__vacant">
-                  <PawPrint size={22} aria-hidden="true" />
+                  <span className="pets-collection__vacant-icon" aria-hidden="true">
+                    <PawPrint size={28} />
+                  </span>
                   <span>
                     <strong>Nenhum companheiro</strong>
                     <small>Equipe um pet da coleção.</small>
@@ -540,7 +562,7 @@ export function PetIncubatorPanel({
               <header>
                 <span>
                   <FlaskConical size={15} aria-hidden="true" />
-                  Incubadora
+                  Câmara de incubação
                 </span>
                 <small>
                   {activeIncubation
@@ -578,7 +600,9 @@ export function PetIncubatorPanel({
                 </button>
               ) : (
                 <div className="pets-collection__vacant">
-                  <FlaskConical size={22} aria-hidden="true" />
+                  <span className="pets-collection__vacant-icon" aria-hidden="true">
+                    <FlaskConical size={28} />
+                  </span>
                   <span>
                     <strong>Câmara disponível</strong>
                     <small>Selecione um casulo para incubar.</small>
