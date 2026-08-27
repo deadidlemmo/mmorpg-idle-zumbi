@@ -8,7 +8,10 @@ import {
   updateTutorial,
 } from "../api/progression.api";
 import type { TutorialProgress, TutorialStep } from "../types/progression.types";
-import { mergeTutorialUpdate } from "../utils/tutorialProgress";
+import {
+  getTutorialGuidanceVisibility,
+  mergeTutorialUpdate,
+} from "../utils/tutorialProgress";
 import "../styles/progression.css";
 
 const TUTORIAL_REFRESH_MS = 4_000;
@@ -136,8 +139,8 @@ export function TutorialBanner({ characterId }: { characterId: string }) {
     characterId,
     currentStep,
   );
-  const showTutorial = !tutorial.completed && !tutorial.dismissedAt;
-  const showObjective = !tutorial.objective.completed;
+  const { showTutorial, showObjective } =
+    getTutorialGuidanceVisibility(tutorial);
 
   if (!showTutorial && !showObjective) return null;
 

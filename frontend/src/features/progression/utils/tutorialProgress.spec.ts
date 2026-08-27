@@ -4,7 +4,10 @@ import type {
   TutorialProgress,
   TutorialUpdateResponse,
 } from "../types/progression.types";
-import { mergeTutorialUpdate } from "./tutorialProgress";
+import {
+  getTutorialGuidanceVisibility,
+  mergeTutorialUpdate,
+} from "./tutorialProgress";
 
 describe("mergeTutorialUpdate", () => {
   it("updates the persisted state and preserves the tutorial steps", () => {
@@ -60,5 +63,64 @@ describe("mergeTutorialUpdate", () => {
     assert.equal(merged.step, 1);
     assert.equal(merged.completed, false);
     assert.deepEqual(merged.steps, current.steps);
+  });
+});
+
+describe("getTutorialGuidanceVisibility", () => {
+  const objective = {
+    key: "craft-first-t1",
+    title: "Fabrique seu primeiro equipamento T1",
+    description: "Use os materiais da expedição.",
+    href: "crafting",
+    actionLabel: "Abrir criação",
+    completed: false,
+    equippedT1Slots: 0,
+    targetT1Slots: 6,
+    progressPercent: 25,
+    checklist: [],
+  };
+
+  it("prioritizes the active tutorial over the initial objective", () => {
+    assert.deepEqual(
+      getTutorialGuidanceVisibility({
+        completed: false,
+        dismissedAt: null,
+        objective,
+      }),
+      { showTutorial: true, showObjective: false },
+    );
+  });
+
+  it("reveals the objective after the tutorial is dismissed", () => {
+    assert.deepEqual(
+      getTutorialGuidanceVisibility({
+        completed: false,
+        dismissedAt: "2026-08-27T12:00:00.000Z",
+        objective,
+      }),
+      { showTutorial: false, showObjective: true },
+    );
+  });
+
+  it("reveals the objective after the tutorial is completed", () => {
+    assert.deepEqual(
+      getTutorialGuidanceVisibility({
+        completed: true,
+        dismissedAt: null,
+        objective,
+      }),
+      { showTutorial: false, showObjective: true },
+    );
+  });
+
+  it("hides all guidance when both journeys are complete", () => {
+    assert.deepEqual(
+      getTutorialGuidanceVisibility({
+        completed: true,
+        dismissedAt: null,
+        objective: { ...objective, completed: true },
+      }),
+      { showTutorial: false, showObjective: false },
+    );
   });
 });
