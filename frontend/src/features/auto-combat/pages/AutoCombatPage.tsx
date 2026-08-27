@@ -3609,15 +3609,13 @@ export function AutoCombatPage() {
         : hasPendingHuntProcessing
           ? "Confirmando rastreio..."
           : `Próximo rastreio em ${huntRemainingSeconds}s`;
-  const huntingActivityNextLabel = showInlineHuntBattle
-    ? "Batalha em andamento"
-    : displayedIsHuntLimitReached
-      ? "Limite atingido"
-      : isBackendEncounterReadyPhase
-        ? "Ameaça pronta"
-        : hasPendingHuntProcessing
-          ? "Sincronizando"
-          : `Próximo em ${formatShortClockSeconds(huntRemainingSeconds)}`;
+  const huntingActivityNextLabel = displayedIsHuntLimitReached
+    ? "Limite atingido"
+    : isBackendEncounterReadyPhase
+      ? "Ameaça pronta"
+      : hasPendingHuntProcessing
+        ? "Sincronizando"
+        : `Próximo em ${formatShortClockSeconds(huntRemainingSeconds)}`;
   const huntProgressStyle: AutoCombatHuntProgressStyle = {
     "--hunt-progress": `${huntProgressPercent}%`,
   };
@@ -4442,11 +4440,15 @@ export function AutoCombatPage() {
             key: "capacity",
             title: `${huntingCapacityLabel} rastreados`,
           },
-          {
-            content: huntingActivityNextLabel,
-            key: "next",
-            title: huntingSpeedLabel,
-          },
+          ...(!showInlineHuntBattle
+            ? [
+                {
+                  content: huntingActivityNextLabel,
+                  key: "next",
+                  title: huntingSpeedLabel,
+                },
+              ]
+            : []),
           {
             content: `${huntingXpPerSecondLabel} EXP/s`,
             key: "xp",
