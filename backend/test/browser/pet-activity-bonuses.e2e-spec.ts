@@ -805,6 +805,12 @@ test.describe('pets aplicados às atividades', () => {
     });
     expect(session.appliedTtkPetDefinitionId).toBe(tierOne.petDefinitionId);
     expect(session.appliedTtkPetEffectBasisPoints).toBe(300);
+    expect(session.estimatedKillTimeMs).toBe(
+      Math.max(
+        1_000,
+        Math.ceil((session.unmodifiedKillTimeMs! * (10_000 - 300)) / 10_000),
+      ),
+    );
     const firstDurationMs = session.estimatedKillTimeMs!;
 
     await equipPet(tierFive);
@@ -839,6 +845,12 @@ test.describe('pets aplicados às atividades', () => {
     expect(session.totalCombatsResolved).toBeGreaterThanOrEqual(1);
     expect(session.appliedTtkPetDefinitionId).toBe(tierFive.petDefinitionId);
     expect(session.appliedTtkPetEffectBasisPoints).toBe(750);
+    expect(session.estimatedKillTimeMs).toBe(
+      Math.max(
+        1_000,
+        Math.ceil((session.unmodifiedKillTimeMs! * (10_000 - 750)) / 10_000),
+      ),
+    );
     expect(session.estimatedKillTimeMs!).toBeLessThanOrEqual(firstDurationMs);
     if (firstDurationMs > 1_000) {
       expect(session.estimatedKillTimeMs!).toBeLessThan(firstDurationMs);

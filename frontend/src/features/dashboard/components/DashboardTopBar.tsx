@@ -25,7 +25,6 @@ import {
   getRepeatingCycleProgress,
   getRepeatingSecondTickFillPercent,
   getServerClientOffsetMs,
-  getSecondTickCycleProgress,
   getTimestampMs,
   type BattleTimelineSource,
 } from '../../auto-combat/utils/battle-timeline';
@@ -681,9 +680,6 @@ function getAutoCombatBattleProgress(
     fallbackServerNow: serverNow,
     fallbackProgressUpdatedAt: serverNow,
   });
-  const battleSecondTickProgress = getSecondTickCycleProgress(
-    battleTimelineProgress,
-  );
   const displayedEnemyInstanceId =
     getStringField(displayedMob, 'enemyInstanceId') ??
     getStringField(session, 'currentEnemyInstanceId') ??
@@ -750,8 +746,8 @@ function getAutoCombatBattleProgress(
     ? 0
     : presentationProgress
       ? presentationProgress.progressPercent
-      : battleSecondTickProgress
-        ? battleSecondTickProgress.progressPercent
+      : battleTimelineProgress
+        ? battleTimelineProgress.progressPercent
         : progressRecord &&
             getNumberField(progressRecord, 'progressPercent') !== null
           ? clampPercent(getNumberField(progressRecord, 'progressPercent'))

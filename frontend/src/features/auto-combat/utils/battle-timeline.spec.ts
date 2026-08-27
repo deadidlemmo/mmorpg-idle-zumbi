@@ -10,6 +10,7 @@ import {
   getCountdownTimeline,
   getCycleProgress,
   getDisplayBattleBatchCountdown,
+  formatAutoCombatTtkSeconds,
   getHuntDisplayCounts,
   getNextSecondTickDelayMs,
   getRepeatingBattleTimelineProgress,
@@ -634,7 +635,7 @@ test("arredonda duracao visual fracionada para o proximo segundo inteiro", () =>
   assert.equal(tickProgress?.remainingPercent, 20);
 });
 
-test("ciclos repetidos de batalha usam duracao arredondada em segundos", () => {
+test("ciclos repetidos de batalha preservam duracao fracionada em milissegundos", () => {
   const progress = getRepeatingBattleTimelineProgress({
     nowMs: Date.parse("2026-06-05T12:00:07.000Z"),
     source: {
@@ -643,9 +644,25 @@ test("ciclos repetidos de batalha usam duracao arredondada em segundos", () => {
     },
   });
 
-  assert.equal(progress?.cycleDurationMs, 5_000);
+  assert.equal(progress?.cycleDurationMs, 4_700);
   assert.equal(progress?.completedCycles, 1);
-  assert.equal(progress?.cycleElapsedMs, 0);
+  assert.equal(progress?.cycleElapsedMs, 300);
+});
+
+test("TTK fracionado nao e arredondado para o proximo segundo inteiro", () => {
+  const progress = getBattleTimelineProgress({
+    nowMs: Date.parse("2026-06-05T12:00:06.750Z"),
+    source: {
+      cycleStartedAt: "2026-06-05T12:00:00.000Z",
+      cycleDurationMs: 13_500,
+    },
+  });
+
+  assert.equal(progress?.cycleDurationMs, 13_500);
+  assert.equal(progress?.cycleElapsedMs, 6_750);
+  assert.equal(progress?.progressPercent, 50);
+  assert.equal(formatAutoCombatTtkSeconds(13.5), "13,5s");
+  assert.equal(formatAutoCombatTtkSeconds(13.875), "13,875s");
 });
 
 test("timeline de contagem regressiva fica no fim sem voltar para zero", () => {

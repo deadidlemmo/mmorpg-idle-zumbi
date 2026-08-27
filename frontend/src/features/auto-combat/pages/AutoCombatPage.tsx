@@ -120,6 +120,7 @@ import { mergeAutoCombatStatusDetails } from "../utils/auto-combat-status-merge"
 import {
   type BattleBatchCountdown,
   type BattleTargetDisplayCounts,
+  formatAutoCombatTtkSeconds,
   getBattleBatchCountdown,
   getBattleTargetDisplayCounts,
   getBattleTopBarProgressPercent,
@@ -132,7 +133,6 @@ import {
   getRepeatingCycleProgress,
   getRepeatingSecondTickFillPercent,
   getServerClientOffsetMs,
-  getSecondTickCycleProgress,
   getVisibleBattleCycleRemainingPercent,
 } from "../utils/battle-timeline";
 import {
@@ -2446,9 +2446,6 @@ export function AutoCombatPage() {
       : null;
   const activeDisplayBattleTimelineProgress =
     activePresentationTimelineProgress ?? activeBattleTimelineProgress;
-  const activeBattleSecondTickProgress = getSecondTickCycleProgress(
-    activeDisplayBattleTimelineProgress,
-  );
   const fallbackEstimatedKillTimeSeconds = Math.max(
     0,
     toSafeNumber(
@@ -2459,8 +2456,8 @@ export function AutoCombatPage() {
   );
   const activeEstimatedKillTimeSeconds = Math.max(
     0,
-    activeBattleSecondTickProgress
-      ? activeBattleSecondTickProgress.durationSeconds
+    activeDisplayBattleTimelineProgress
+      ? activeDisplayBattleTimelineProgress.cycleDurationMs / 1000
       : fallbackEstimatedKillTimeSeconds,
   );
   const activeKillProgressSnapshotSeconds = clampNumber(
@@ -2473,8 +2470,8 @@ export function AutoCombatPage() {
     activeEstimatedKillTimeSeconds || Number.MAX_SAFE_INTEGER,
   );
   const activeKillProgressTickSeconds = activeDisplayBattleTimelineProgress
-    ? (activeBattleSecondTickProgress?.elapsedSeconds ?? 0)
-    : Math.floor(activeKillProgressSnapshotSeconds);
+    ? activeDisplayBattleTimelineProgress.cycleElapsedMs / 1000
+    : activeKillProgressSnapshotSeconds;
   const activeKillProgressSeconds = clampNumber(
     activeKillProgressTickSeconds,
     0,
@@ -2567,16 +2564,10 @@ export function AutoCombatPage() {
 
   const activeBattleProgressElementKey =
     activePresentationTimelineProgress?.key ?? activeBattleImpactTargetKey;
-  const formatTtkSeconds = (value: number) =>
-    value <= 0
-      ? "0s"
-      : value >= 10
-        ? `${Math.round(value)}s`
-        : `${value.toFixed(1)}s`;
   const activeKillProgressLabel = isMobDefeatVisuallyConfirmed
     ? "Alvo derrotado"
     : hasTtkBattleProgress
-      ? `${formatTtkSeconds(displayedKillRemainingSeconds)} restantes`
+      ? `${formatAutoCombatTtkSeconds(displayedKillRemainingSeconds)} restantes`
       : "Aguardando";
   const activeKillsPerMinute = toSafeNumber(
     visualBattleProgress?.killsPerMinute ??

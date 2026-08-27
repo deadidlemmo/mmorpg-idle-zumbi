@@ -74,6 +74,25 @@ function clamp01(value: number) {
   return Math.max(0, Math.min(1, value));
 }
 
+export function formatAutoCombatTtkSeconds(value: number) {
+  const milliseconds = Math.max(
+    0,
+    Math.round((toFiniteNumber(value) ?? 0) * 1000),
+  );
+  const wholeSeconds = Math.floor(milliseconds / 1000);
+  const remainingMilliseconds = milliseconds % 1000;
+
+  if (remainingMilliseconds === 0) {
+    return `${wholeSeconds}s`;
+  }
+
+  const fractionalSeconds = String(remainingMilliseconds)
+    .padStart(3, "0")
+    .replace(/0+$/, "");
+
+  return `${wholeSeconds},${fractionalSeconds}s`;
+}
+
 export function getTimestampMs(value: TimelineTimestamp) {
   if (value instanceof Date) {
     const timestamp = value.getTime();
@@ -197,7 +216,7 @@ function getBattleTimelineBasis(params: {
     return null;
   }
 
-  const durationMs = Math.max(1, Math.ceil(rawDurationMs / 1000)) * 1000;
+  const durationMs = Math.max(1, Math.round(rawDurationMs));
 
   const progressUpdatedAtMs =
     getTimestampMs(source.progressUpdatedAt) ??
