@@ -67,6 +67,10 @@
   min-width: 0;
 }
 
+.dashboard-topbar--hunting-queue-open {
+  z-index: 90;
+}
+
 /* =========================================================
    VARIAÇÕES
    ========================================================= */
@@ -182,6 +186,8 @@
 .dashboard-topbar__activity
   > :not(.dashboard-topbar__activity-progress):not(
     .dashboard-topbar__activity-stop
+  ):not(
+    .dashboard-topbar__hunting-queue
   ) {
   position: relative;
   z-index: 2;
@@ -706,6 +712,206 @@
     0 0 10px rgba(var(--dashboard-topbar-border-rgb), 0.16);
 }
 
+.dashboard-topbar__hunting-queue-toggle {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.16rem;
+  min-width: 38px;
+  padding-inline: 0.42rem 0.28rem;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.dashboard-topbar__hunting-queue-toggle:hover,
+.dashboard-topbar__hunting-queue-toggle:focus-visible,
+.dashboard-topbar__hunting-queue-toggle[aria-expanded='true'] {
+  border-color: rgba(187, 235, 125, 0.86);
+  background:
+    linear-gradient(180deg, rgba(118, 194, 75, 0.38), rgba(8, 18, 12, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.48),
+    0 5px 12px rgba(0, 0, 0, 0.5),
+    0 0 0 2px rgba(7, 11, 10, 0.72),
+    0 0 18px rgba(143, 214, 93, 0.34);
+  outline: none;
+}
+
+.dashboard-topbar__hunting-queue-toggle svg {
+  flex: 0 0 auto;
+  transition: transform 150ms ease;
+}
+
+.dashboard-topbar__hunting-queue-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.dashboard-topbar__hunting-queue {
+  position: absolute;
+  top: calc(100% + 0.58rem);
+  right: -0.5rem;
+  z-index: 60;
+
+  width: min(340px, calc(100vw - 2rem));
+  overflow: hidden;
+
+  color: rgba(240, 237, 224, 0.94);
+  border: 1px solid rgba(143, 214, 93, 0.34);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(33, 54, 39, 0.96), rgba(10, 17, 14, 0.99) 4.2rem),
+    rgb(9, 15, 12);
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 18px rgba(91, 171, 78, 0.1);
+  animation: dashboardTopbarHuntingQueueEnter 150ms ease-out both;
+}
+
+.dashboard-topbar__hunting-queue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.72rem 0.78rem 0.64rem;
+  border-bottom: 1px solid rgba(143, 214, 93, 0.16);
+}
+
+.dashboard-topbar__hunting-queue-header > div {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.dashboard-topbar__hunting-queue-header strong {
+  color: #f8f2df;
+  font-family: var(--font-title);
+  font-size: 0.75rem;
+  font-weight: 950;
+  line-height: 1.08;
+}
+
+.dashboard-topbar__hunting-queue-header span {
+  color: rgba(202, 207, 190, 0.7);
+  font-family: var(--font-body);
+  font-size: 0.61rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.dashboard-topbar__hunting-queue-header > b {
+  flex: 0 0 auto;
+  color: rgba(180, 232, 111, 0.96);
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.dashboard-topbar__hunting-queue-list {
+  max-height: min(300px, 48vh);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(143, 214, 93, 0.28) transparent;
+}
+
+.dashboard-topbar__hunting-queue-list li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.62rem;
+  min-height: 54px;
+  padding: 0.46rem 0.76rem;
+  border-bottom: 1px solid rgba(231, 227, 216, 0.075);
+}
+
+.dashboard-topbar__hunting-queue-list li:last-child {
+  border-bottom: 0;
+}
+
+.dashboard-topbar__hunting-queue-list img,
+.dashboard-topbar__hunting-queue-placeholder {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border: 1px solid rgba(143, 214, 93, 0.18);
+  border-radius: 4px;
+  background: rgba(3, 8, 6, 0.56);
+  filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.42));
+}
+
+.dashboard-topbar__hunting-queue-placeholder {
+  color: rgba(215, 226, 196, 0.68);
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.dashboard-topbar__hunting-queue-list li > span:not(
+    .dashboard-topbar__hunting-queue-placeholder
+  ) {
+  display: grid;
+  min-width: 0;
+  gap: 0.08rem;
+}
+
+.dashboard-topbar__hunting-queue-list li > span strong {
+  overflow: hidden;
+  color: #f4efde;
+  font-family: var(--font-title);
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-topbar__hunting-queue-list small {
+  color: rgba(192, 200, 181, 0.64);
+  font-family: var(--font-body);
+  font-size: 0.59rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.dashboard-topbar__hunting-queue-list li > b {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.12rem;
+  color: rgba(187, 235, 125, 0.98);
+  font-family: var(--font-title);
+  font-size: 0.74rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.dashboard-topbar__hunting-queue-list li > b span {
+  color: rgba(187, 235, 125, 0.58);
+  font-size: 0.62rem;
+}
+
+@keyframes dashboardTopbarHuntingQueueEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .dashboard-topbar--gathering .dashboard-topbar__activity-status-core {
   background:
     radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.1), transparent 42%),
@@ -1189,6 +1395,12 @@
   .dashboard-topbar__activity-stop:focus-visible:not(:disabled) {
     transform: translate(14%, 8%) scale(1.06);
   }
+
+  .dashboard-topbar__hunting-queue {
+    right: auto;
+    left: 0;
+    width: min(340px, calc(100vw - 1.5rem));
+  }
 }
 
 @media (max-width: 430px) {
@@ -1255,12 +1467,30 @@
     min-width: 20px;
     height: 20px;
   }
+
+  .dashboard-topbar__hunting-queue {
+    width: min(320px, calc(100vw - 1rem));
+  }
+
+  .dashboard-topbar__hunting-queue-list li {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    min-height: 50px;
+    padding-inline: 0.66rem;
+  }
+
+  .dashboard-topbar__hunting-queue-list img,
+  .dashboard-topbar__hunting-queue-placeholder {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dashboard-topbar__activity-progress span,
   .dashboard-topbar__activity-status-ring,
-  .dashboard-topbar__refresh {
+  .dashboard-topbar__refresh,
+  .dashboard-topbar__hunting-queue,
+  .dashboard-topbar__hunting-queue-toggle svg {
     transition: none !important;
     animation: none !important;
   }

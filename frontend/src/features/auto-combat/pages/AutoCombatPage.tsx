@@ -15,6 +15,11 @@ import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import type { DashboardTopBarActivityOverride } from "../../dashboard/components/DashboardTopBar";
 import "../../dashboard/dashboard.css";
 import type { CharacterOverviewResponse } from "../../dashboard/types/dashboard.types";
+import {
+  buildHuntingActivityQueue,
+  countHuntingActivityQueue,
+  type HuntingActivityTrackedSource,
+} from "../../dashboard/utils/huntingActivityPresentation";
 import { getAutoCombatMaps, getAutoCombatStatus } from "../api/auto-combat.api";
 import {
   buildMapVisualStyle,
@@ -3674,7 +3679,15 @@ export function AutoCombatPage() {
       ? `${huntingSpeedPercent}% mais rápida`
       : `${huntingSecondsPerFind}s por rastreio`;
   const shouldShowHuntTopBarActivity = isBackendHuntingPhase;
-  const topBarHuntFoundCount = displayedFoundEnemiesCount;
+  const topBarHuntingQueue = buildHuntingActivityQueue([
+    trackedMonsterSnapshots as HuntingActivityTrackedSource[],
+  ]);
+  const topBarHuntFoundCount = topBarHuntingQueue.length
+    ? countHuntingActivityQueue(topBarHuntingQueue)
+    : displayedFoundEnemiesCount;
+  const topBarHuntFoundLabel = `${topBarHuntFoundCount.toLocaleString("pt-BR")} rastreado${topBarHuntFoundCount === 1 ? "" : "s"}`;
+  const topBarHuntingQueueKey =
+    effectiveStatus?.huntBatch?.id ?? effectiveSession?.id ?? "active-hunt";
 
   const autoCombatTopBarActivityOverride: DashboardTopBarActivityOverride | null =
     showInlineHuntBattle
@@ -3702,18 +3715,27 @@ export function AutoCombatPage() {
       : shouldShowHuntTopBarActivity
         ? {
             kind: "auto-combat",
-            title: "Rastreando",
-            subtitle: "",
+            title: trackedThreatMob?.name ?? "Rastreando",
+            subtitle:
+              topBarHuntFoundCount > 0
+                ? `Rastreando · ${topBarHuntFoundLabel}`
+                : "Buscando a primeira ameaça",
             icon: "AC",
+            imageUrl:
+              getMobPortraitImage(trackedThreatMob?.name) ??
+              trackedThreatImage ??
+              null,
             progressPercent: huntProgressPercent,
             progressTimeline: null,
             timeline: huntingTimeline,
             badge: topBarHuntFoundCount > 0 ? `${topBarHuntFoundCount}` : null,
             titleText:
               topBarHuntFoundCount > 0
-                ? `AutoCombat em caca - ${topBarHuntFoundCount} rastreado${topBarHuntFoundCount === 1 ? "" : "s"}.`
+                ? `AutoCombat em caca - ${topBarHuntFoundLabel}.`
                 : "AutoCombat em caca - rastreando rota.",
             isHunting: isBackendHuntingPhase,
+            huntingQueue: topBarHuntingQueue,
+            huntingQueueKey: topBarHuntingQueueKey,
           }
         : null;
 

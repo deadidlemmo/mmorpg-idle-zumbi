@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { flushSync } from 'react-dom';
-import { X } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 import { ActivityStateProgressFill } from '../../../components/game/ActivityStateProgressFill';
 import { ActivityTimelineFill } from '../../../components/game/ActivityTimelineFill';
 import {
@@ -37,6 +37,14 @@ import {
   getAutoCombatPresentationProgress,
   type AutoCombatPresentationTimeline,
 } from '../../auto-combat/utils/presentation-timeline';
+import {
+  buildHuntingActivityQueue,
+  countHuntingActivityQueue,
+  resolveHuntingActivityTarget,
+  type HuntingActivityQueueEntry,
+  type HuntingActivityTargetSource,
+  type HuntingActivityTrackedSource,
+} from '../utils/huntingActivityPresentation';
 import { useCraftingRealtime } from '../../crafting/realtime/useCraftingRealtime';
 import { getGatheringOriginIcon } from '../../gathering/constants/gathering-origin-icons';
 import { useGatheringRealtime } from '../../gathering/realtime/useGatheringRealtime';
@@ -92,6 +100,8 @@ export interface DashboardTopBarActivityOverride {
   titleText?: string;
   isHunting?: boolean;
   isBattle?: boolean;
+  huntingQueue?: HuntingActivityQueueEntry[];
+  huntingQueueKey?: string | null;
 }
 
 interface DashboardTopBarProps {
@@ -853,6 +863,44 @@ function getAutoCombatHuntingFoundCount(autoCombatState: unknown): number {
   return Math.max(0, Math.floor(foundCount));
 }
 
+function getAutoCombatHuntingPresentation(autoCombatState: unknown) {
+  const status = getRecordField(autoCombatState, 'status');
+  const session = getAutoCombatSessionRecord(autoCombatState);
+  const hunting = getAutoCombatHuntingRecord(autoCombatState);
+  const huntBatch =
+    getRecordField(autoCombatState, 'huntBatch') ??
+    getRecordField(status, 'huntBatch');
+  const rewards =
+    getRecordField(autoCombatState, 'rewards') ??
+    getRecordField(status, 'rewards');
+  const queue = buildHuntingActivityQueue([
+    getRecordArrayField(autoCombatState, 'trackedMonsters') as HuntingActivityTrackedSource[],
+    getRecordArrayField(status, 'trackedMonsters') as HuntingActivityTrackedSource[],
+    getRecordArrayField(hunting, 'trackedMonsters') as HuntingActivityTrackedSource[],
+    getRecordArrayField(huntBatch, 'mobs') as HuntingActivityTrackedSource[],
+    getRecordArrayField(rewards, 'trackedMonsters') as HuntingActivityTrackedSource[],
+  ]);
+  const currentTarget = resolveHuntingActivityTarget([
+    getRecordField(hunting, 'currentTarget') as HuntingActivityTargetSource | null,
+    getRecordField(hunting, 'targetEncounter') as HuntingActivityTargetSource | null,
+    getRecordField(hunting, 'targetMob') as HuntingActivityTargetSource | null,
+    getRecordField(hunting, 'selectedMob') as HuntingActivityTargetSource | null,
+    getRecordField(huntBatch, 'currentTarget') as HuntingActivityTargetSource | null,
+    getRecordField(status, 'selectedEncounter') as HuntingActivityTargetSource | null,
+  ]);
+  const queueKey =
+    getStringField(huntBatch, 'id') ??
+    getStringField(hunting, 'activityInstanceId') ??
+    getStringField(session, 'id') ??
+    'active-hunt';
+
+  return {
+    currentTarget,
+    queue,
+    queueKey,
+  };
+}
+
 function getAutoCombatHuntingProgress(
   autoCombatState: unknown,
   nowMs: number,
@@ -991,7 +1039,14 @@ function buildAutoCombatActivity(
   if (isAutoCombatEncounterReady(autoCombatState)) return null;
 
   if (isAutoCombatHunting(autoCombatState)) {
-    const foundEnemiesCount = getAutoCombatHuntingFoundCount(autoCombatState);
+    const huntingPresentation =
+      getAutoCombatHuntingPresentation(autoCombatState);
+    const queueEnemiesCount = countHuntingActivityQueue(
+      huntingPresentation.queue,
+    );
+    const foundEnemiesCount = huntingPresentation.queue.length
+      ? queueEnemiesCount
+      : getAutoCombatHuntingFoundCount(autoCombatState);
     const huntingProgress = getAutoCombatHuntingProgress(
       autoCombatState,
       nowMs,
@@ -1004,16 +1059,24 @@ function buildAutoCombatActivity(
 
     return {
       kind: 'auto-combat',
-      title: 'Rastreando',
+      title: huntingPresentation.currentTarget?.name ?? 'Rastreando',
       subtitle:
-        foundEnemiesCount > 0 ? foundLabel : 'Nenhuma ameaca rastreada',
+        foundEnemiesCount > 0
+          ? `Rastreando · ${foundLabel}`
+          : 'Buscando a primeira ameaça',
       icon: 'AC',
+      imageUrl:
+        getMobPortraitImage(huntingPresentation.currentTarget?.name) ??
+        huntingPresentation.currentTarget?.imageUrl ??
+        null,
       progressPercent: huntingProgress.progressPercent,
       progressTimeline: huntingProgress.progressTimeline,
       timeline: huntingTimeline,
       badge: formatNumber(foundEnemiesCount),
       titleText: `AutoCombat em caca - ${foundLabel}.`,
       isHunting: true,
+      huntingQueue: huntingPresentation.queue,
+      huntingQueueKey: huntingPresentation.queueKey,
     };
   }
 
@@ -1299,10 +1362,14 @@ export function DashboardTopBar({
   const incursionsState = incursionsRealtime.state;
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isStoppingActivity, setIsStoppingActivity] = useState(false);
+  const [expandedHuntingQueueKey, setExpandedHuntingQueueKey] = useState<
+    string | null
+  >(null);
   const [suppressProgressTransition, setSuppressProgressTransition] =
     useState(false);
   const [progressSnapVersion, setProgressSnapVersion] = useState(0);
   const suppressProgressTransitionTimeoutRef = useRef<number | null>(null);
+  const huntingQueueContainerRef = useRef<HTMLElement | null>(null);
   const [worldBossStatus, setWorldBossStatus] =
     useState<WorldBossStatusResponse | null>(() =>
       characterId ? (worldBossStatusCache.get(characterId) ?? null) : null,
@@ -1317,6 +1384,33 @@ export function DashboardTopBar({
       window.clearInterval(intervalId);
     };
   }, []);
+
+  useEffect(() => {
+    if (!expandedHuntingQueueKey) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        event.target instanceof Node &&
+        !huntingQueueContainerRef.current?.contains(event.target)
+      ) {
+        setExpandedHuntingQueueKey(null);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setExpandedHuntingQueueKey(null);
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [expandedHuntingQueueKey]);
 
   const autoCombatClockSyncKey = useMemo(() => {
     const status = getRecordField(autoCombatState, 'status');
@@ -1575,6 +1669,12 @@ export function DashboardTopBar({
     return buildVisibleResources(resources);
   }, [resources]);
 
+  const huntingQueue = activity.isHunting ? (activity.huntingQueue ?? []) : [];
+  const huntingQueueKey = activity.huntingQueueKey ?? 'active-hunt';
+  const hasHuntingQueue = huntingQueue.length > 0;
+  const isHuntingQueueExpanded =
+    hasHuntingQueue && expandedHuntingQueueKey === huntingQueueKey;
+  const huntingQueuePanelId = `dashboard-topbar-hunting-queue-${characterId ?? 'active'}`;
   const activityProgressPercent = clampPercent(activity.progressPercent);
   const shouldSnapActivityProgress =
     !activity.timeline &&
@@ -1587,6 +1687,7 @@ export function DashboardTopBar({
     `dashboard-topbar--${activity.kind}`,
     activity.isHunting ? 'dashboard-topbar--auto-hunting' : '',
     activity.isBattle ? 'dashboard-topbar--auto-battle' : '',
+    isHuntingQueueExpanded ? 'dashboard-topbar--hunting-queue-open' : '',
     shouldSnapActivityProgress ? 'dashboard-topbar--activity-progress-snap' : '',
     suppressProgressTransition ? 'dashboard-topbar--snap-progress' : '',
     isSidebarCollapsed ? 'dashboard-topbar--sidebar-collapsed' : '',
@@ -1694,6 +1795,7 @@ export function DashboardTopBar({
 
     if (!canStopActivity || !characterId) return;
 
+    setExpandedHuntingQueueKey(null);
     setIsStoppingActivity(true);
 
     try {
@@ -1731,9 +1833,13 @@ export function DashboardTopBar({
       aria-label="Barra superior do dashboard"
     >
       <section
+        ref={huntingQueueContainerRef}
         className={[
           'dashboard-topbar__activity',
           activityCanBeStopped ? 'dashboard-topbar__activity--stoppable' : '',
+          isHuntingQueueExpanded
+            ? 'dashboard-topbar__activity--hunting-queue-open'
+            : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -1785,19 +1891,47 @@ export function DashboardTopBar({
           )}
         </span>
 
-              <span className="dashboard-topbar__activity-copy">
-                <strong title={activity.title}>{activity.title}</strong>
-                {activity.subtitle ? <small>{activity.subtitle}</small> : null}
-              </span>
+        <span className="dashboard-topbar__activity-copy">
+          <strong title={activity.title}>{activity.title}</strong>
+          {activity.subtitle ? <small>{activity.subtitle}</small> : null}
+        </span>
 
-        <span className="dashboard-topbar__activity-status" aria-hidden="true">
-          <span className="dashboard-topbar__activity-status-ring" />
-          <span className="dashboard-topbar__activity-status-core" />
+        <span className="dashboard-topbar__activity-status">
+          <span
+            className="dashboard-topbar__activity-status-ring"
+            aria-hidden="true"
+          />
+          <span
+            className="dashboard-topbar__activity-status-core"
+            aria-hidden="true"
+          />
 
           {activity.badge ? (
-            <span className="dashboard-topbar__activity-status-bubble">
-              {activity.badge}
-            </span>
+            hasHuntingQueue ? (
+              <button
+                type="button"
+                className="dashboard-topbar__activity-status-bubble dashboard-topbar__hunting-queue-toggle"
+                aria-controls={huntingQueuePanelId}
+                aria-expanded={isHuntingQueueExpanded}
+                aria-label={`${isHuntingQueueExpanded ? 'Ocultar' : 'Ver'} ameaças rastreadas`}
+                title={`${isHuntingQueueExpanded ? 'Ocultar' : 'Ver'} ameaças rastreadas`}
+                onClick={() => {
+                  setExpandedHuntingQueueKey((current) =>
+                    current === huntingQueueKey ? null : huntingQueueKey,
+                  );
+                }}
+              >
+                <span>{activity.badge}</span>
+                <ChevronDown aria-hidden="true" size={11} strokeWidth={2.4} />
+              </button>
+            ) : (
+              <span
+                className="dashboard-topbar__activity-status-bubble"
+                aria-hidden="true"
+              >
+                {activity.badge}
+              </span>
+            )
           ) : null}
         </span>
 
@@ -1812,6 +1946,60 @@ export function DashboardTopBar({
           >
             <X size={13} strokeWidth={3} aria-hidden="true" />
           </button>
+        ) : null}
+
+        {isHuntingQueueExpanded ? (
+          <aside
+            id={huntingQueuePanelId}
+            className="dashboard-topbar__hunting-queue"
+            aria-label="Ameaças rastreadas"
+          >
+            <header className="dashboard-topbar__hunting-queue-header">
+              <div>
+                <strong>Ameaças rastreadas</strong>
+                <span>Disponíveis para o próximo combate</span>
+              </div>
+              <b>{formatNumber(countHuntingActivityQueue(huntingQueue))}</b>
+            </header>
+
+            <ul className="dashboard-topbar__hunting-queue-list">
+              {huntingQueue.map((trackedMonster) => {
+                const portraitUrl =
+                  getMobPortraitImage(trackedMonster.name) ??
+                  trackedMonster.imageUrl ??
+                  activity.imageUrl;
+                const details = [
+                  trackedMonster.tier ? `T${trackedMonster.tier}` : null,
+                  trackedMonster.level ? `Nv. ${trackedMonster.level}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ');
+
+                return (
+                  <li key={trackedMonster.key}>
+                    {portraitUrl ? (
+                      <img src={portraitUrl} alt="" loading="lazy" />
+                    ) : (
+                      <span
+                        className="dashboard-topbar__hunting-queue-placeholder"
+                        aria-hidden="true"
+                      >
+                        AC
+                      </span>
+                    )}
+                    <span>
+                      <strong>{trackedMonster.name}</strong>
+                      {details ? <small>{details}</small> : null}
+                    </span>
+                    <b>
+                      <span aria-hidden="true">×</span>
+                      {formatNumber(trackedMonster.count)}
+                    </b>
+                  </li>
+                );
+              })}
+            </ul>
+          </aside>
         ) : null}
       </section>
 
