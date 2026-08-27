@@ -7,12 +7,12 @@ import {
   PawPrint,
   Recycle,
   ShieldCheck,
-  Swords,
   Tag,
   Timer,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import autoCombatActivityIcon from "../../../assets/images/auto-combat/auto-combat-activity-icon.webp";
 import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.webp";
 import gatheringArsenalIcon from "../../../assets/images/gathering/skills/gathering-arsenal.webp";
 import gatheringColetaIcon from "../../../assets/images/gathering/skills/gathering-coleta.webp";
@@ -59,6 +59,7 @@ const SPECIALIZATION_ASSETS: Partial<Record<PetSpecialization, string>> = {
   GATHERING_ARSENAL: gatheringArsenalIcon,
   GATHERING_TECNOVARREDURA: gatheringTecnovarreduraIcon,
   GATHERING_CONTENCAO: gatheringContencaoIcon,
+  AUTO_COMBAT_TTK: autoCombatActivityIcon,
   AUTO_COMBAT_HUNTING: huntingActivityIcon,
 };
 
@@ -106,8 +107,6 @@ function PetSpecializationIcon({
     <span className="pet-specialization-icon" aria-hidden="true">
       {specializationAsset ? (
         <img src={specializationAsset} alt="" />
-      ) : definition.specialization === "AUTO_COMBAT_TTK" ? (
-        <Swords />
       ) : (
         <Dna />
       )}

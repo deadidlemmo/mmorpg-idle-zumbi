@@ -217,9 +217,9 @@
 .pets-collection-card__detail {
   display: grid;
   min-width: 0;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: 34px minmax(0, 1fr);
   align-items: center;
-  gap: 7px;
+  gap: 9px;
 }
 
 .pets-collection-card__detail > span:last-child {
@@ -358,14 +358,14 @@
 }
 
 .pets-collection-card__detail .pet-specialization-icon {
-  width: 24px;
-  height: 24px;
+  width: 34px;
+  height: 34px;
 }
 
 .pets-collection-card__detail .pet-specialization-icon img,
 .pets-collection-card__detail .pet-specialization-icon svg {
-  width: 18px;
-  height: 18px;
+  width: 30px;
+  height: 30px;
 }
 
 .pets-collection__empty,

@@ -7,6 +7,7 @@ import {
 } from "react";
 import { ChevronDown } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import autoCombatActivityIcon from "../../../assets/images/auto-combat/auto-combat-activity-icon.webp";
 import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.webp";
 import { ActivityTimelineFill } from "../../../components/game/ActivityTimelineFill";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
@@ -1737,7 +1738,7 @@ function buildAutoCombatItemFromRealtime(params: {
     indicatorLabel: `Monstros mortos na sessão: ${formatSessionCountIndicator(totalKills)}`,
     href: `/dashboard/${characterId}/auto-combat`,
 
-    imageUrl: getActivityMobPortraitUrl(mobName),
+    imageUrl: getActivityMobPortraitUrl(mobName) ?? autoCombatActivityIcon,
     imageAlt: mobName,
 
     characterName: playerSnapshot.name,
@@ -1888,7 +1889,8 @@ function buildAutoCombatItemFromOverview(params: {
     indicatorLabel: `Monstros mortos na sessão: ${formatSessionCountIndicator(totalKills)}`,
     href: `/dashboard/${characterId}/auto-combat`,
 
-    imageUrl: getActivityMobPortraitUrl(currentMob?.name),
+    imageUrl:
+      getActivityMobPortraitUrl(currentMob?.name) ?? autoCombatActivityIcon,
     imageAlt: currentMob?.name ?? "Combate automático",
 
     characterName: playerSnapshot.name,

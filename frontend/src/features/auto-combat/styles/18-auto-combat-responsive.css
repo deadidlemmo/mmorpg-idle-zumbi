@@ -273,6 +273,12 @@
     font-size: 0.82rem;
   }
 
+  .auto-combat-section-title__icon {
+    width: 2.3rem;
+    height: 2.3rem;
+    flex-basis: 2.3rem;
+  }
+
   .auto-combat-tabs {
     width: min(292px, 100%);
     min-height: 54px;

@@ -47,6 +47,14 @@
   white-space: nowrap;
 }
 
+.auto-combat-section-title__icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 2.75rem;
+  object-fit: contain;
+  filter: drop-shadow(0 0 0.5rem rgba(181, 40, 35, 0.28));
+}
+
 .auto-combat-section-title--small {
   margin: 0 0 0.9rem;
 }

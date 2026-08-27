@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { RefreshCw, X } from "lucide-react";
+import autoCombatActivityIcon from "../../../assets/images/auto-combat/auto-combat-activity-icon.webp";
 import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.webp";
 import { ActivityProgressCard } from "../../../components/game/ActivityProgressCard";
 import { ActivityTimelineFill } from "../../../components/game/ActivityTimelineFill";
@@ -4525,6 +4526,12 @@ export function AutoCombatPage() {
 
         <section className="auto-combat-app-shell">
           <div className="auto-combat-section-title">
+            <img
+              className="auto-combat-section-title__icon"
+              src={autoCombatActivityIcon}
+              alt=""
+              aria-hidden="true"
+            />
             <span>Combate Automático</span>
           </div>
 

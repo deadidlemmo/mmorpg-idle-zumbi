@@ -8,6 +8,8 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { ChevronDown, X } from 'lucide-react';
+import autoCombatActivityIcon from '../../../assets/images/auto-combat/auto-combat-activity-icon.webp';
+import huntingActivityIcon from '../../../assets/images/auto-combat/hunting-activity-icon.webp';
 import { ActivityStateProgressFill } from '../../../components/game/ActivityStateProgressFill';
 import { ActivityTimelineFill } from '../../../components/game/ActivityTimelineFill';
 import {
@@ -1064,7 +1066,7 @@ function buildAutoCombatActivity(
       imageUrl:
         getMobPortraitImage(huntingPresentation.currentTarget?.name) ??
         huntingPresentation.currentTarget?.imageUrl ??
-        null,
+        huntingActivityIcon,
       progressPercent: huntingProgress.progressPercent,
       progressTimeline: huntingProgress.progressTimeline,
       timeline: huntingTimeline,
@@ -1096,7 +1098,7 @@ function buildAutoCombatActivity(
       subtitle: `${battleProgress.mobName} - ${formatNumber(
         battleProgress.defeated,
       )}/${formatNumber(battleProgress.total)} abatidos`,
-      imageUrl: mobPortraitUrl,
+      imageUrl: mobPortraitUrl ?? autoCombatActivityIcon,
       icon: 'AC',
       progressPercent,
       progressTimeline: battleProgress.progressTimeline,
@@ -1121,7 +1123,7 @@ function buildAutoCombatActivity(
     kind: 'auto-combat',
     title: 'Em combate',
     subtitle: `${mobName} - ${formatNumber(kills)} monstros mortos`,
-    imageUrl: mobPortraitUrl,
+    imageUrl: mobPortraitUrl ?? autoCombatActivityIcon,
     icon: '☠',
     progressPercent: monsterHpPercent,
     badge: formatNumber(kills),
