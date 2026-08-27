@@ -22,6 +22,14 @@ import cocoonDesmancheT3 from "../../../assets/images/pets/cocoons/tier-03/casul
 import cocoonPatrulhaT3 from "../../../assets/images/pets/cocoons/tier-03/casulo-de-patrulha-t3.webp";
 import cocoonRastreamentoT3 from "../../../assets/images/pets/cocoons/tier-03/casulo-de-rastreamento-t3.webp";
 import cocoonTecnovarreduraT3 from "../../../assets/images/pets/cocoons/tier-03/casulo-de-tecnovarredura-t3.webp";
+import cocoonArsenalT4 from "../../../assets/images/pets/cocoons/tier-04/casulo-de-arsenal-t4.webp";
+import cocoonColetaT4 from "../../../assets/images/pets/cocoons/tier-04/casulo-de-coleta-t4.webp";
+import cocoonCombateT4 from "../../../assets/images/pets/cocoons/tier-04/casulo-de-combate-t4.webp";
+import cocoonContencaoT4 from "../../../assets/images/pets/cocoons/tier-04/casulo-de-contencao-t4.webp";
+import cocoonDesmancheT4 from "../../../assets/images/pets/cocoons/tier-04/casulo-de-desmanche-t4.webp";
+import cocoonPatrulhaT4 from "../../../assets/images/pets/cocoons/tier-04/casulo-de-patrulha-t4.webp";
+import cocoonRastreamentoT4 from "../../../assets/images/pets/cocoons/tier-04/casulo-de-rastreamento-t4.webp";
+import cocoonTecnovarreduraT4 from "../../../assets/images/pets/cocoons/tier-04/casulo-de-tecnovarredura-t4.webp";
 import petArsenalT1 from "../../../assets/images/pets/companions/tier-01/carregador-do-suburbio-t1.webp";
 import petColetaT1 from "../../../assets/images/pets/companions/tier-01/catador-do-suburbio-t1.webp";
 import petCombateT1 from "../../../assets/images/pets/companions/tier-01/predador-do-suburbio-t1.webp";
@@ -46,6 +54,14 @@ import petDesmancheT3 from "../../../assets/images/pets/companions/tier-03/sucat
 import petPatrulhaT3 from "../../../assets/images/pets/companions/tier-03/batedor-clinico-t3.webp";
 import petRastreamentoT3 from "../../../assets/images/pets/companions/tier-03/farejador-clinico-t3.webp";
 import petTecnovarreduraT3 from "../../../assets/images/pets/companions/tier-03/sonda-clinica-t3.webp";
+import petArsenalT4 from "../../../assets/images/pets/companions/tier-04/carregador-do-terminal-t4.webp";
+import petColetaT4 from "../../../assets/images/pets/companions/tier-04/catador-do-terminal-t4.webp";
+import petCombateT4 from "../../../assets/images/pets/companions/tier-04/predador-do-terminal-t4.webp";
+import petContencaoT4 from "../../../assets/images/pets/companions/tier-04/guardiao-do-terminal-t4.webp";
+import petDesmancheT4 from "../../../assets/images/pets/companions/tier-04/sucateiro-do-terminal-t4.webp";
+import petPatrulhaT4 from "../../../assets/images/pets/companions/tier-04/corvo-do-terminal-t4.webp";
+import petRastreamentoT4 from "../../../assets/images/pets/companions/tier-04/farejador-do-terminal-t4.webp";
+import petTecnovarreduraT4 from "../../../assets/images/pets/companions/tier-04/sonda-do-terminal-t4.webp";
 import type { PetSpecialization } from "../types/pets.types";
 
 export type PetAssetKind = "COCOON" | "PET";
@@ -114,6 +130,20 @@ const PET_ASSETS: Record<string, PetAssetPair> = {
   "pet-rastreamento-t3": {
     cocoon: cocoonRastreamentoT3,
     pet: petRastreamentoT3,
+  },
+  "pet-desmanche-t4": { cocoon: cocoonDesmancheT4, pet: petDesmancheT4 },
+  "pet-coleta-t4": { cocoon: cocoonColetaT4, pet: petColetaT4 },
+  "pet-patrulha-t4": { cocoon: cocoonPatrulhaT4, pet: petPatrulhaT4 },
+  "pet-arsenal-t4": { cocoon: cocoonArsenalT4, pet: petArsenalT4 },
+  "pet-tecnovarredura-t4": {
+    cocoon: cocoonTecnovarreduraT4,
+    pet: petTecnovarreduraT4,
+  },
+  "pet-contencao-t4": { cocoon: cocoonContencaoT4, pet: petContencaoT4 },
+  "pet-combate-t4": { cocoon: cocoonCombateT4, pet: petCombateT4 },
+  "pet-rastreamento-t4": {
+    cocoon: cocoonRastreamentoT4,
+    pet: petRastreamentoT4,
   },
 };
 
