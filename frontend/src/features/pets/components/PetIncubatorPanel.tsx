@@ -1,6 +1,5 @@
 import { isAxiosError } from "axios";
 import {
-  BadgePercent,
   Check,
   Coins,
   Dna,
@@ -8,6 +7,7 @@ import {
   PawPrint,
   Recycle,
   ShieldCheck,
+  Swords,
   Tag,
   Timer,
   X,
@@ -95,6 +95,26 @@ function formatEffect(definition: PetDefinitionState) {
   return `-${definition.effectPercent.toLocaleString("pt-BR")}% no tempo de ${definition.specializationLabel.toLocaleLowerCase("pt-BR")}`;
 }
 
+function PetSpecializationIcon({
+  definition,
+}: {
+  definition: PetDefinitionState;
+}) {
+  const specializationAsset = SPECIALIZATION_ASSETS[definition.specialization];
+
+  return (
+    <span className="pet-specialization-icon" aria-hidden="true">
+      {specializationAsset ? (
+        <img src={specializationAsset} alt="" />
+      ) : definition.specialization === "AUTO_COMBAT_TTK" ? (
+        <Swords />
+      ) : (
+        <Dna />
+      )}
+    </span>
+  );
+}
+
 function getCollectionKind(definition: PetDefinitionState): CollectionItemKind {
   if (
     definition.characterPet?.status === "INCUBATING" ||
@@ -142,9 +162,11 @@ function PetVisual({
       ) : (
         <Dna />
       )}
-      <span className="pet-visual__type">
-        {isCocoon ? <FlaskConical /> : <PawPrint />}
-      </span>
+      {isCocoon ? (
+        <span className="pet-visual__type">
+          <FlaskConical />
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -501,7 +523,10 @@ export function PetIncubatorPanel({
                         </span>
                         <span className="pets-collection-card__identity">
                           <strong>{displayName}</strong>
-                          <small>{displayDetail}</small>
+                          <span className="pets-collection-card__detail">
+                            <PetSpecializationIcon definition={definition} />
+                            <span>{displayDetail}</span>
+                          </span>
                         </span>
                       </button>
                     </li>
@@ -542,7 +567,10 @@ export function PetIncubatorPanel({
                   <PetVisual definition={equippedDefinition} kind="PET" size="panel" />
                   <span>
                     <strong>{data.equippedPet.pet.name}</strong>
-                    <small>{formatEffect(equippedDefinition)}</small>
+                    <span className="pets-incubator__effect">
+                      <PetSpecializationIcon definition={equippedDefinition} />
+                      <span>{formatEffect(equippedDefinition)}</span>
+                    </span>
                   </span>
                 </button>
               ) : (
@@ -637,7 +665,7 @@ export function PetIncubatorPanel({
           >
             <header className="pet-detail-modal__header">
               <span>
-                {selectedKind === "PET" ? <PawPrint /> : <FlaskConical />}
+                <PetSpecializationIcon definition={selectedDefinition} />
                 {getKindLabel(selectedKind, selectedTiming.isReady)}
               </span>
               <button
@@ -671,10 +699,13 @@ export function PetIncubatorPanel({
                     ? selectedDefinition.cocoonItem.description
                     : selectedDefinition.description}
                 </p>
-                <strong>
-                  <BadgePercent size={15} aria-hidden="true" />
-                  {formatEffect(selectedDefinition)}
-                </strong>
+                <div className="pet-detail-modal__effect">
+                  <PetSpecializationIcon definition={selectedDefinition} />
+                  <span>
+                    <small>Efeito do vínculo</small>
+                    <strong>{formatEffect(selectedDefinition)}</strong>
+                  </span>
+                </div>
               </div>
             </div>
 
