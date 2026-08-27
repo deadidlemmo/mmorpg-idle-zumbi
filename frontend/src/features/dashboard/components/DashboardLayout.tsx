@@ -375,6 +375,11 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: <ArrowLeftRight size={17} strokeWidth={1.9} />,
   },
   {
+    label: "Premium",
+    path: "membership",
+    icon: <Crown size={17} strokeWidth={1.9} />,
+  },
+  {
     label: "Objetivos",
     path: "objectives",
     icon: <ListChecks size={17} strokeWidth={1.9} />,
@@ -436,7 +441,12 @@ const DASHBOARD_CHARACTER_NAV_ITEMS = [
   .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
   .filter((item): item is DashboardNavItem => Boolean(item));
 
-const DASHBOARD_SHELTER_NAV_ITEMS = ["infirmary", "consumables", "resources"]
+const DASHBOARD_SHELTER_NAV_ITEMS = [
+  "infirmary",
+  "consumables",
+  "resources",
+  "membership",
+]
   .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
   .filter((item): item is DashboardNavItem => Boolean(item));
 
@@ -1507,17 +1517,6 @@ function DashboardLayoutContent({
           aria-label="Comunidade e status do abrigo"
         >
           <div className="dashboard-sidebar__status-row">
-            <a
-              className="dashboard-sidebar__community dashboard-sidebar__discord"
-              href={DASHBOARD_DISCORD_URL}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Entrar no Discord"
-              title="Entrar no Discord"
-            >
-              <DiscordMark />
-            </a>
-
             <span
               className="dashboard-sidebar__community dashboard-sidebar__online"
               title={activeCharactersTitle}
@@ -1539,24 +1538,6 @@ function DashboardLayoutContent({
                 {activeCharactersLabel.short}
               </span>
             </span>
-
-            <NavLink
-              to={`${dashboardBasePath}/membership`}
-              onClick={closeSidebar}
-              className={({ isActive }) =>
-                [
-                  "dashboard-sidebar__community",
-                  "dashboard-sidebar__membership",
-                  isActive ? "is-active" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")
-              }
-              aria-label="Ver benefícios Premium"
-              title="Premium"
-            >
-              <Crown size={17} strokeWidth={2} aria-hidden="true" />
-            </NavLink>
           </div>
         </section>
 
@@ -1727,6 +1708,21 @@ function DashboardLayoutContent({
           >
             <span className="dashboard-sidebar__section-label">Comunidade</span>
             {DASHBOARD_COMMUNITY_NAV_ITEMS.map(renderSidebarNavItem)}
+            <a
+              className="dashboard-sidebar__link"
+              href={DASHBOARD_DISCORD_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Entrar no Discord"
+            >
+              <span
+                className="dashboard-sidebar__link-icon"
+                aria-hidden="true"
+              >
+                <DiscordMark />
+              </span>
+              <strong>Discord</strong>
+            </a>
           </section>
         </nav>
 

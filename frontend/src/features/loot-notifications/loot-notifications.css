@@ -264,6 +264,22 @@
   }
 }
 
+@media (min-width: 761px) {
+  .is-general-chat-open .loot-notification-stack {
+    right: calc(25rem + 2rem);
+  }
+}
+
+@media (max-width: 760px) {
+  .is-general-chat-open .loot-notification-stack {
+    top: auto;
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: calc(min(38rem, 82dvh) + 0.75rem);
+    width: min(19.5rem, calc(100vw - 1.5rem));
+    max-width: calc(100vw - 1.5rem);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .loot-notification-card {
     animation: none;

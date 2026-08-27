@@ -12,6 +12,7 @@ import {
   type LootNotificationContextValue,
   type LootNotificationPayload,
 } from './lootNotificationContext';
+import { selectLatestNotification } from './lootNotificationQueue';
 import './loot-notifications.css';
 
 interface LootNotificationToast extends LootNotificationPayload {
@@ -24,7 +25,6 @@ interface LootNotificationProviderProps {
 }
 
 
-const MAX_VISIBLE_LOOT_NOTIFICATIONS = 5;
 const MAX_PROCESSED_KEYS = 240;
 const LOOT_NOTIFICATION_TTL_MS = 4200;
 
@@ -143,18 +143,24 @@ export function LootNotificationProvider({
       }
 
       processedKeysRef.current = trimProcessedKeys(processedKeysRef.current);
+      const latestToast = selectLatestNotification(nextToasts);
 
-      setNotifications((current) =>
-        [...nextToasts, ...current].slice(0, MAX_VISIBLE_LOOT_NOTIFICATIONS),
-      );
-
-      for (const toast of nextToasts) {
-        const timeoutId = window.setTimeout(() => {
-          removeNotification(toast.id);
-        }, LOOT_NOTIFICATION_TTL_MS);
-
-        timersRef.current.set(toast.id, timeoutId);
+      if (!latestToast) {
+        return;
       }
+
+      for (const timeoutId of timersRef.current.values()) {
+        window.clearTimeout(timeoutId);
+      }
+
+      timersRef.current.clear();
+      setNotifications([latestToast]);
+
+      const timeoutId = window.setTimeout(() => {
+        removeNotification(latestToast.id);
+      }, LOOT_NOTIFICATION_TTL_MS);
+
+      timersRef.current.set(latestToast.id, timeoutId);
     },
     [removeNotification],
   );
@@ -190,7 +196,7 @@ export function LootNotificationProvider({
       <div
         className="loot-notification-stack"
         aria-live="polite"
-        aria-atomic="false"
+        aria-atomic="true"
         aria-relevant="additions text"
       >
         {notifications.map((notification) => (

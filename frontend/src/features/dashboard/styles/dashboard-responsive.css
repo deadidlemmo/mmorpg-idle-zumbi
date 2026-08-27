@@ -138,7 +138,7 @@
   }
 
   .dashboard-sidebar__status-row {
-    grid-template-columns: 42px minmax(max-content, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dashboard-sidebar__character {
@@ -1146,23 +1146,11 @@
   }
 
   .dashboard-sidebar__status-row {
-    grid-template-columns: 34px minmax(0, 1fr) 34px;
-    gap: 0.46rem;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dashboard-sidebar__community {
     min-height: 32px;
-  }
-
-  .dashboard-sidebar__discord {
-    width: 34px;
-    min-width: 34px;
-    height: 32px;
-  }
-
-  .dashboard-sidebar__discord-icon {
-    width: 22px;
-    height: 22px;
   }
 
   .dashboard-sidebar__online {
@@ -1207,12 +1195,6 @@
 
   .dashboard-sidebar__link {
     min-height: var(--dashboard-sidebar-link-height);
-  }
-
-  .dashboard-sidebar__membership {
-    width: 34px;
-    min-width: 34px;
-    height: 32px;
   }
 
   .dashboard-sidebar__bottom {

@@ -135,6 +135,14 @@ export function GeneralChatDock({ characterId }: { characterId: string }) {
     return () => window.cancelAnimationFrame(frameId);
   }, [isOpen, messages]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("is-general-chat-open", isOpen);
+
+    return () => {
+      document.documentElement.classList.remove("is-general-chat-open");
+    };
+  }, [isOpen]);
+
   async function loadOlderMessages() {
     if (!nextCursor || isLoadingOlder || !listRef.current) return;
 
