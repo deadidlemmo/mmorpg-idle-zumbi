@@ -102,11 +102,6 @@ const EquipmentPage = lazy(() =>
     default: module.EquipmentPage,
   })),
 );
-const GatheringHubPage = lazy(() =>
-  import("../features/gathering/pages/GatheringHubPage").then((module) => ({
-    default: module.GatheringHubPage,
-  })),
-);
 const GatheringOriginPage = lazy(() =>
   import("../features/gathering/pages/GatheringOriginPage").then((module) => ({
     default: module.GatheringOriginPage,
@@ -312,7 +307,10 @@ export function AppRoutes() {
 
             <Route path="auto-combat" element={<AutoCombatPage />} />
 
-            <Route path="gathering" element={<GatheringHubPage />} />
+            <Route
+              path="gathering"
+              element={<Navigate to="desmanche" relative="path" replace />}
+            />
 
             <Route path="gathering/:origin" element={<GatheringOriginPage />} />
 

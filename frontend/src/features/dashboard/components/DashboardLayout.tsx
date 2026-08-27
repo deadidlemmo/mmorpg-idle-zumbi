@@ -552,7 +552,7 @@ function getInitialGatheringSubnavState() {
     );
 
     if (storedValue === null) {
-      return true;
+      return false;
     }
 
     return storedValue === "true";
@@ -1346,7 +1346,7 @@ function DashboardLayoutContent({
   const dashboardBasePath = `/dashboard/${characterId}`;
   const gatheringBasePath = `${dashboardBasePath}/gathering`;
   const isGatheringRoute = location.pathname.startsWith(gatheringBasePath);
-  const isGatheringSubnavVisible = isGatheringRoute && isGatheringMenuOpen;
+  const isGatheringSubnavVisible = isGatheringMenuOpen;
   const isOverviewRoute =
     location.pathname.replace(/\/+$/, "") === dashboardBasePath;
 
@@ -1456,12 +1456,6 @@ function DashboardLayoutContent({
   }
 
   function handleToggleGatheringMenu() {
-    if (!isGatheringRoute) {
-      setIsGatheringMenuOpen(true);
-      navigate(gatheringBasePath);
-      return;
-    }
-
     setIsGatheringMenuOpen((currentValue) => !currentValue);
   }
 

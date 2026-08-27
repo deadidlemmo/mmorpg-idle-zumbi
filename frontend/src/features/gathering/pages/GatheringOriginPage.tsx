@@ -1123,7 +1123,7 @@ export function GatheringOriginPage() {
   }
 
   if (!originKey) {
-    return <Navigate to={`/dashboard/${safeCharacterId}/gathering`} replace />;
+    return <Navigate to={`/dashboard/${safeCharacterId}`} replace />;
   }
 
   if (isLoading && !character) {
@@ -1161,10 +1161,10 @@ export function GatheringOriginPage() {
 
             <div className="gathering-origin-topbar__actions">
               <Link
-                to={`/dashboard/${safeCharacterId}/gathering`}
+                to={`/dashboard/${safeCharacterId}`}
                 className="gathering-button gathering-button--secondary"
               >
-                Voltar
+                Visão geral
               </Link>
 
               <button
