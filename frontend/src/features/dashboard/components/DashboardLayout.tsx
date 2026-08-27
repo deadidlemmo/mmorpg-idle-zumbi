@@ -32,7 +32,7 @@ import cashIcon from "../../../assets/images/coins/cash.webp";
 import goldIcon from "../../../assets/images/coins/gold.webp";
 import { removeAuthToken } from "../../../services/api/authToken";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
-import { getOnlinePlayersStatus } from "../api/dashboard.api";
+import { getActiveCharactersStatus } from "../api/dashboard.api";
 import { useAutoCombatRealtimeState } from "../../auto-combat/realtime/useAutoCombatRealtime";
 import { normalizeClassName } from "../../characters/api/characters.api";
 import {
@@ -436,11 +436,7 @@ const DASHBOARD_CHARACTER_NAV_ITEMS = [
   .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
   .filter((item): item is DashboardNavItem => Boolean(item));
 
-const DASHBOARD_SHELTER_NAV_ITEMS = [
-  "infirmary",
-  "consumables",
-  "resources",
-]
+const DASHBOARD_SHELTER_NAV_ITEMS = ["infirmary", "consumables", "resources"]
   .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
   .filter((item): item is DashboardNavItem => Boolean(item));
 
@@ -456,19 +452,19 @@ const DASHBOARD_DISCORD_URL = "https://discord.gg/dXSZCj3sA";
 
 const ONLINE_PLAYERS_REFRESH_MS = 30_000;
 
-function formatOnlinePlayersLabel(onlinePlayers: number | null) {
-  if (onlinePlayers === null) {
+function formatActiveCharactersLabel(activeCharacters: number | null) {
+  if (activeCharacters === null) {
     return {
-      full: "Online agora",
-      short: "Online",
+      full: "Ativos agora",
+      short: "Ativos",
     };
   }
 
   return {
-    full: `${onlinePlayers} ${
-      onlinePlayers === 1 ? "sobrevivente" : "sobreviventes"
+    full: `${activeCharacters} ${
+      activeCharacters === 1 ? "sobrevivente ativo" : "sobreviventes ativos"
     }`,
-    short: `${onlinePlayers} online`,
+    short: `${activeCharacters} ativos`,
   };
 }
 
@@ -484,10 +480,7 @@ function DiscordMark() {
 }
 
 function getDashboardNavLinkClassName(isActive: boolean) {
-  return [
-    "dashboard-sidebar__link",
-    isActive ? "is-active" : "",
-  ]
+  return ["dashboard-sidebar__link", isActive ? "is-active" : ""]
     .filter(Boolean)
     .join(" ");
 }
@@ -1277,41 +1270,41 @@ function DashboardLayoutContent({
   const [isGatheringMenuOpen, setIsGatheringMenuOpen] = useState(
     getInitialGatheringSubnavState,
   );
-  const [onlinePlayers, setOnlinePlayers] = useState<number | null>(null);
-  const [onlinePlayersUpdatedAt, setOnlinePlayersUpdatedAt] = useState<
+  const [activeCharacters, setActiveCharacters] = useState<number | null>(null);
+  const [activeCharactersUpdatedAt, setActiveCharactersUpdatedAt] = useState<
     string | null
   >(null);
-  const [onlinePlayersError, setOnlinePlayersError] = useState(false);
+  const [activeCharactersError, setActiveCharactersError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadOnlinePlayers() {
+    async function loadActiveCharacters() {
       try {
-        const status = await getOnlinePlayersStatus();
+        const status = await getActiveCharactersStatus();
 
         if (!isMounted) {
           return;
         }
 
-        setOnlinePlayers(status.onlinePlayers);
-        setOnlinePlayersUpdatedAt(status.updatedAt ?? null);
-        setOnlinePlayersError(false);
+        setActiveCharacters(status.activeCharacters ?? status.onlinePlayers);
+        setActiveCharactersUpdatedAt(status.updatedAt ?? null);
+        setActiveCharactersError(false);
       } catch {
         if (!isMounted) {
           return;
         }
 
-        setOnlinePlayers(null);
-        setOnlinePlayersUpdatedAt(null);
-        setOnlinePlayersError(true);
+        setActiveCharacters(null);
+        setActiveCharactersUpdatedAt(null);
+        setActiveCharactersError(true);
       }
     }
 
-    void loadOnlinePlayers();
+    void loadActiveCharacters();
 
     const refreshId = window.setInterval(() => {
-      if (canRunNetworkRefresh()) void loadOnlinePlayers();
+      if (canRunNetworkRefresh()) void loadActiveCharacters();
     }, ONLINE_PLAYERS_REFRESH_MS);
 
     return () => {
@@ -1344,8 +1337,7 @@ function DashboardLayoutContent({
   const dashboardBasePath = `/dashboard/${characterId}`;
   const gatheringBasePath = `${dashboardBasePath}/gathering`;
   const isGatheringRoute = location.pathname.startsWith(gatheringBasePath);
-  const isGatheringSubnavVisible =
-    isGatheringRoute && isGatheringMenuOpen;
+  const isGatheringSubnavVisible = isGatheringRoute && isGatheringMenuOpen;
   const isOverviewRoute =
     location.pathname.replace(/\/+$/, "") === dashboardBasePath;
 
@@ -1372,9 +1364,7 @@ function DashboardLayoutContent({
 
   const classStyle = {
     "--class-accent": appearance?.accentColor ?? classData.accentColor,
-    ...(bannerImage
-      ? { "--hero-banner-image": `url("${bannerImage}")` }
-      : {}),
+    ...(bannerImage ? { "--hero-banner-image": `url("${bannerImage}")` } : {}),
   } as CSSProperties;
 
   const shellStyle =
@@ -1396,12 +1386,12 @@ function DashboardLayoutContent({
     return buildWalletDisplay(heroCharacter);
   }, [heroCharacter]);
 
-  const onlinePlayersLabel = formatOnlinePlayersLabel(onlinePlayers);
-  const onlinePlayersTitle = onlinePlayersError
-    ? "Não foi possível atualizar a presença agora."
-    : onlinePlayersUpdatedAt
-      ? `Presença baseada em usuários conectados via WebSocket. Atualizado em ${new Date(onlinePlayersUpdatedAt).toLocaleTimeString("pt-BR")}.`
-      : "Presença baseada em usuários conectados via WebSocket.";
+  const activeCharactersLabel = formatActiveCharactersLabel(activeCharacters);
+  const activeCharactersTitle = activeCharactersError
+    ? "Não foi possível atualizar os sobreviventes ativos agora."
+    : activeCharactersUpdatedAt
+      ? `Personagens conectados ou realizando atividades offline. Atualizado em ${new Date(activeCharactersUpdatedAt).toLocaleTimeString("pt-BR")}.`
+      : "Personagens conectados ou realizando atividades offline.";
 
   const topBarResources = useMemo<DashboardTopBarResource[]>(
     () => [
@@ -1477,9 +1467,7 @@ function DashboardLayoutContent({
         to={to}
         end={!item.path}
         onClick={closeSidebar}
-        className={({ isActive }) =>
-          getDashboardNavLinkClassName(isActive)
-        }
+        className={({ isActive }) => getDashboardNavLinkClassName(isActive)}
       >
         <DashboardNavIcon item={item} />
         <strong>{item.label}</strong>
@@ -1532,7 +1520,7 @@ function DashboardLayoutContent({
 
             <span
               className="dashboard-sidebar__community dashboard-sidebar__online"
-              title={onlinePlayersTitle}
+              title={activeCharactersTitle}
             >
               <span
                 className="dashboard-sidebar__online-dot"
@@ -1540,15 +1528,15 @@ function DashboardLayoutContent({
               />
               <span
                 className="dashboard-sidebar__online-count dashboard-sidebar__online-count--full"
-                aria-label={onlinePlayersLabel.full}
+                aria-label={activeCharactersLabel.full}
               >
-                {onlinePlayersLabel.full}
+                {activeCharactersLabel.full}
               </span>
               <span
                 className="dashboard-sidebar__online-count dashboard-sidebar__online-count--short"
                 aria-hidden="true"
               >
-                {onlinePlayersLabel.short}
+                {activeCharactersLabel.short}
               </span>
             </span>
 

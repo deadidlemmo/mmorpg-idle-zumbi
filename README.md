@@ -29,6 +29,15 @@ Fluxo principal atual:
 
 O backend deve ser tratado como fonte da verdade para estado de personagem, atividades, sessoes, timers, recompensas, eventos e progresso. O frontend renderiza e reconcilia esse estado.
 
+O indicador `sobreviventes ativos` usa `GET /auto-combat/online-count` e conta
+personagens, nao contas. O total e a uniao dos personagens conectados ao
+dashboard por WebSocket com personagens que ainda possuem auto-combate, caca,
+gathering, criacao, incursao, Ameaça Global ou tratamento de enfermaria ativos.
+O mesmo personagem e deduplicado entre abas, dispositivos e atividade offline.
+O endpoint preserva `onlinePlayers` por compatibilidade e tambem retorna
+`activeCharacters`, `onlineCharacters`, `activityCharacters` e
+`offlineActivityCharacters`.
+
 ## Stack utilizada
 
 | Camada         | Tecnologias identificadas                                                                      |

@@ -1,10 +1,10 @@
-import { API_ENDPOINTS } from '../../../services/api/endpoints';
-import { apiClient } from '../../../services/api/apiClient';
-import type { CharacterOverviewResponse } from '../types/dashboard.types';
+import { API_ENDPOINTS } from "../../../services/api/endpoints";
+import { apiClient } from "../../../services/api/apiClient";
+import type { CharacterOverviewResponse } from "../types/dashboard.types";
 
 export type CharacterActivitySummaryResponse = Pick<
   CharacterOverviewResponse,
-  'character' | 'activity'
+  "character" | "activity"
 > & {
   serverNow: string;
 };
@@ -41,13 +41,17 @@ export async function updateCharacterCurrentMap(
   return response.data;
 }
 
-export interface OnlinePlayersStatusResponse {
+export interface ActiveCharactersStatusResponse {
+  activeCharacters: number;
+  onlineCharacters: number;
+  activityCharacters: number;
+  offlineActivityCharacters: number;
   onlinePlayers: number;
   updatedAt: string;
 }
 
-export async function getOnlinePlayersStatus(): Promise<OnlinePlayersStatusResponse> {
-  const response = await apiClient.get<OnlinePlayersStatusResponse>(
+export async function getActiveCharactersStatus(): Promise<ActiveCharactersStatusResponse> {
+  const response = await apiClient.get<ActiveCharactersStatusResponse>(
     API_ENDPOINTS.autoCombat.onlineCount,
   );
 

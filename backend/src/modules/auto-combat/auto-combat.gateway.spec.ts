@@ -55,6 +55,55 @@ describe('AutoCombatGateway realtime transport', () => {
     );
   });
 
+  it('deduplica a presença do personagem entre sockets e limpa ao sair', async () => {
+    const prisma = {
+      character: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'character-1',
+          name: 'Sobrevivente',
+        }),
+      },
+    };
+    const observability = {
+      recordAutoCombatSocketConnection: jest.fn(),
+    };
+    const gateway = new AutoCombatGateway(
+      {} as never,
+      prisma as never,
+      observability as never,
+    );
+    const createSocket = (id: string) => ({
+      id,
+      data: {
+        userId: 'user-1',
+        joinedCharacterRooms: new Set<string>(),
+        joinedCharacterIds: new Set<string>(),
+      },
+      join: jest.fn().mockResolvedValue(undefined),
+      leave: jest.fn().mockResolvedValue(undefined),
+      emit: jest.fn(),
+    });
+    const firstSocket = createSocket('socket-1');
+    const secondSocket = createSocket('socket-2');
+
+    await gateway.handleJoinAutoCombatRoom(firstSocket as never, {
+      characterId: 'character-1',
+    });
+    await gateway.handleJoinAutoCombatRoom(secondSocket as never, {
+      characterId: 'character-1',
+    });
+
+    expect([...gateway.getOnlineCharacterIds()]).toEqual(['character-1']);
+
+    await gateway.handleLeaveAutoCombatRoom(firstSocket as never, {
+      characterId: 'character-1',
+    });
+    expect([...gateway.getOnlineCharacterIds()]).toEqual(['character-1']);
+
+    gateway.handleDisconnect(secondSocket as never);
+    expect(gateway.getOnlineCharacterIds().size).toBe(0);
+  });
+
   it('publica cada evento apenas no canal canonico', () => {
     const { gateway, emit } = createGateway();
     const event = {

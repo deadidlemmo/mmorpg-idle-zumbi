@@ -29,6 +29,7 @@ type AutoCombatSocketData = {
   userId?: string;
   email?: string | null;
   joinedCharacterRooms?: Set<string>;
+  joinedCharacterIds?: Set<string>;
   telemetryWindowStartedAt?: number;
   telemetryReportsInWindow?: number;
 };
@@ -85,6 +86,8 @@ export class AutoCombatGateway
 
   private readonly socketIdsByUserId = new Map<string, Set<string>>();
 
+  private readonly socketIdsByCharacterId = new Map<string, Set<string>>();
+
   constructor(
     private readonly socketAuth: SocketAuthService,
     private readonly prisma: PrismaService,
@@ -109,6 +112,7 @@ export class AutoCombatGateway
       client.data.userId = user.id;
       client.data.email = user.email;
       client.data.joinedCharacterRooms = new Set<string>();
+      client.data.joinedCharacterIds = new Set<string>();
       client.data.telemetryWindowStartedAt = Date.now();
       client.data.telemetryReportsInWindow = 0;
 
@@ -138,13 +142,22 @@ export class AutoCombatGateway
       this.observability.recordAutoCombatSocketConnection(false);
     }
 
+    for (const characterId of client.data.joinedCharacterIds ?? []) {
+      this.unregisterCharacterPresence(characterId, client.id);
+    }
+
     client.data.joinedCharacterRooms?.clear();
+    client.data.joinedCharacterIds?.clear();
 
     this.logger.log(`Socket desconectado: ${client.id}`);
   }
 
   getOnlinePlayersCount() {
     return this.socketIdsByUserId.size;
+  }
+
+  getOnlineCharacterIds() {
+    return new Set(this.socketIdsByCharacterId.keys());
   }
 
   private registerPresence(userId: string, socketId: string) {
@@ -169,6 +182,30 @@ export class AutoCombatGateway
     }
 
     this.socketIdsByUserId.delete(userId);
+  }
+
+  private registerCharacterPresence(characterId: string, socketId: string) {
+    const socketIds =
+      this.socketIdsByCharacterId.get(characterId) ?? new Set<string>();
+
+    socketIds.add(socketId);
+    this.socketIdsByCharacterId.set(characterId, socketIds);
+  }
+
+  private unregisterCharacterPresence(characterId: string, socketId: string) {
+    const socketIds = this.socketIdsByCharacterId.get(characterId);
+
+    if (!socketIds) {
+      return;
+    }
+
+    socketIds.delete(socketId);
+
+    if (socketIds.size > 0) {
+      return;
+    }
+
+    this.socketIdsByCharacterId.delete(characterId);
   }
 
   @SubscribeMessage('auto-combat:join')
@@ -230,9 +267,15 @@ export class AutoCombatGateway
       client.data.joinedCharacterRooms = new Set<string>();
     }
 
+    if (!client.data.joinedCharacterIds) {
+      client.data.joinedCharacterIds = new Set<string>();
+    }
+
     if (!client.data.joinedCharacterRooms.has(room)) {
       await client.join(room);
       client.data.joinedCharacterRooms.add(room);
+      client.data.joinedCharacterIds.add(character.id);
+      this.registerCharacterPresence(character.id, client.id);
     }
 
     client.emit('auto-combat:joined', {
@@ -281,9 +324,16 @@ export class AutoCombatGateway
 
     const room = this.getCharacterRoom(characterId);
 
+    const wasJoined = client.data.joinedCharacterRooms?.has(room) === true;
+
     await client.leave(room);
 
     client.data.joinedCharacterRooms?.delete(room);
+    client.data.joinedCharacterIds?.delete(characterId);
+
+    if (wasJoined) {
+      this.unregisterCharacterPresence(characterId, client.id);
+    }
 
     client.emit('auto-combat:left', {
       characterId,

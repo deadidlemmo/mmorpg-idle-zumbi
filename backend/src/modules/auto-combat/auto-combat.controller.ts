@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ActiveCharacterPresenceService } from './active-character-presence.service';
 import { AutoCombatGateway } from './auto-combat.gateway';
 import { AutoCombatService } from './auto-combat.service';
 import { PreviewAutoCombatDto } from './dto/preview-auto-combat.dto';
@@ -22,14 +23,14 @@ export class AutoCombatController {
   constructor(
     private readonly autoCombatService: AutoCombatService,
     private readonly autoCombatGateway: AutoCombatGateway,
+    private readonly activeCharacterPresence: ActiveCharacterPresenceService,
   ) {}
 
   @Get('online-count')
   getOnlineCount() {
-    return {
-      onlinePlayers: this.autoCombatGateway.getOnlinePlayersCount(),
-      updatedAt: new Date().toISOString(),
-    };
+    return this.activeCharacterPresence.getStatus(
+      this.autoCombatGateway.getOnlineCharacterIds(),
+    );
   }
 
   @Post('start')
