@@ -285,6 +285,22 @@
     0 0 12px rgba(110, 159, 67, 0.18);
 }
 
+.gathering-origin-npc__role,
+.gathering-origin-lore-card__role {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  color: rgba(255, 226, 151, 0.78);
+  font-family: var(--font-title);
+  font-size: clamp(0.62rem, 0.8vw, 0.72rem);
+  font-weight: 850;
+  line-height: 1.05;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.68);
+}
+
 .gathering-origin-lore-card h2 {
   display: block;
   margin: 0;
