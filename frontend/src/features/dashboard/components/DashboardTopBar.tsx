@@ -46,6 +46,7 @@ import {
   type HuntingActivityTargetSource,
   type HuntingActivityTrackedSource,
 } from '../utils/huntingActivityPresentation';
+import { isAutoCombatActivityActive } from '../utils/autoCombatActivityState';
 import { useCraftingRealtime } from '../../crafting/realtime/useCraftingRealtime';
 import { getGatheringOriginIcon } from '../../gathering/constants/gathering-origin-icons';
 import { useGatheringRealtime } from '../../gathering/realtime/useGatheringRealtime';
@@ -185,31 +186,6 @@ function getNumberField(record: unknown, key: string): number | null {
 
 function normalizeStatus(value: unknown): string {
   return String(value ?? '').trim().toUpperCase();
-}
-
-function isTerminalStatus(value: unknown): boolean {
-  const status = normalizeStatus(value);
-
-  return [
-    'STOPPED',
-    'FINISHED',
-    'COMPLETED',
-    'DEFEATED',
-    'EXPIRED',
-    'CLAIMED',
-    'CANCELLED',
-    'CANCELED',
-  ].includes(status);
-}
-
-function isRunningAutoCombatPhase(value: unknown): boolean {
-  const phase = normalizeStatus(value);
-
-  return (
-    phase === 'HUNTING' ||
-    phase === 'COMBAT_ACTIVE' ||
-    phase === 'HUNT_TARGET_FOUND'
-  );
 }
 
 function clampPercent(value: unknown): number {
@@ -995,8 +971,6 @@ function isAutoCombatActive(autoCombatState: unknown): boolean {
       getStringField(latestEvent, 'phase') ??
       getStringField(latestEvent, 'type'),
   );
-  const hasActivePhase =
-    isRunningAutoCombatPhase(sessionPhase);
   const isEncounterReady = sessionPhase === 'ENCOUNTER_READY';
   const hasCombatTarget =
     !isEncounterReady &&
@@ -1006,23 +980,20 @@ function isAutoCombatActive(autoCombatState: unknown): boolean {
         null,
     );
 
-  if (hasActiveAutoCombat === true || hasActivePhase || hasCombatTarget) {
-    return true;
-  }
-
-  if (
-    statusActive === false ||
-    hasActiveAutoCombat === false ||
-    isEncounterReady
-  ) {
-    return false;
-  }
-
-  if (statusActive === true && session && !isTerminalStatus(sessionStatus)) {
-    return true;
-  }
-
-  return false;
+  return isAutoCombatActivityActive({
+    statusActive:
+      statusActive === true ? true : statusActive === false ? false : null,
+    hasActiveAutoCombat:
+      hasActiveAutoCombat === true
+        ? true
+        : hasActiveAutoCombat === false
+          ? false
+          : null,
+    sessionStatus,
+    sessionPhase,
+    hasCombatTarget,
+    hasSession: Boolean(session),
+  });
 }
 
 function buildAutoCombatActivity(
