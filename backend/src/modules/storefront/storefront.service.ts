@@ -9,6 +9,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateStorefrontCheckoutDto } from './dto/create-storefront-checkout.dto';
 import { STOREFRONT_OFFERS, STOREFRONT_PROVIDERS } from './storefront.config';
 
+function formatBrl(amountCents: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(amountCents / 100);
+}
+
 @Injectable()
 export class StorefrontService {
   constructor(private readonly prisma: PrismaService) {}
@@ -28,8 +35,8 @@ export class StorefrontService {
       throw new NotFoundException('Personagem não encontrado.');
     }
 
-    const collectionKeys = STOREFRONT_OFFERS.map(
-      (offer) => offer.collectionKey,
+    const collectionKeys = STOREFRONT_OFFERS.flatMap((offer) =>
+      offer.collectionKey ? [offer.collectionKey] : [],
     );
     const collections = await this.prisma.cosmeticCollection.findMany({
       where: { key: { in: collectionKeys }, isActive: true },
@@ -40,7 +47,20 @@ export class StorefrontService {
         coverAssetKey: true,
         cosmetics: {
           where: { isActive: true },
-          select: { id: true },
+          orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+          select: {
+            id: true,
+            key: true,
+            name: true,
+            description: true,
+            type: true,
+            rarity: true,
+            assetKey: true,
+            effectPreset: true,
+            displayText: true,
+            accentColor: true,
+            class: { select: { id: true, name: true } },
+          },
         },
       },
     });
@@ -49,11 +69,12 @@ export class StorefrontService {
     );
     const permanentCosmeticIds = STOREFRONT_OFFERS.filter(
       (offer) => offer.kind === 'PERMANENT_PACKAGE',
-    ).flatMap(
-      (offer) =>
-        collectionsByKey
-          .get(offer.collectionKey)
-          ?.cosmetics.map((cosmetic) => cosmetic.id) ?? [],
+    ).flatMap((offer) =>
+      offer.collectionKey
+        ? (collectionsByKey
+            .get(offer.collectionKey)
+            ?.cosmetics.map((cosmetic) => cosmetic.id) ?? [])
+        : [],
     );
     const entitlements = permanentCosmeticIds.length
       ? await this.prisma.userCosmeticEntitlement.findMany({
@@ -83,8 +104,10 @@ export class StorefrontService {
         isPremiumActive: premiumActive,
         premiumUntil: character.user.premiumUntil,
       },
-      offers: STOREFRONT_OFFERS.map((offer) => {
-        const collection = collectionsByKey.get(offer.collectionKey);
+      offers: STOREFRONT_OFFERS.map(({ priceCents, ...offer }) => {
+        const collection = offer.collectionKey
+          ? collectionsByKey.get(offer.collectionKey)
+          : undefined;
         const itemIds =
           collection?.cosmetics.map((cosmetic) => cosmetic.id) ?? [];
         const ownedItemCount =
@@ -96,15 +119,17 @@ export class StorefrontService {
         const isOwned =
           offer.kind === 'SUBSCRIPTION'
             ? premiumActive
-            : itemIds.length > 0 && ownedItemCount === itemIds.length;
+            : offer.kind === 'PERMANENT_PACKAGE'
+              ? itemIds.length > 0 && ownedItemCount === itemIds.length
+              : false;
 
         return {
           ...offer,
           benefits: [...offer.benefits],
           price: {
-            amountCents: null,
+            amountCents: priceCents,
             currency: 'BRL' as const,
-            formatted: 'Preço a definir',
+            formatted: formatBrl(priceCents),
           },
           collection: collection
             ? {
@@ -112,6 +137,19 @@ export class StorefrontService {
                 name: collection.name,
                 description: collection.description,
                 coverAssetKey: collection.coverAssetKey,
+                items: collection.cosmetics.map((cosmetic) => ({
+                  id: cosmetic.id,
+                  key: cosmetic.key,
+                  name: cosmetic.name,
+                  description: cosmetic.description,
+                  type: cosmetic.type,
+                  rarity: cosmetic.rarity,
+                  assetKey: cosmetic.assetKey,
+                  effectPreset: cosmetic.effectPreset,
+                  displayText: cosmetic.displayText,
+                  accentColor: cosmetic.accentColor,
+                  class: cosmetic.class,
+                })),
               }
             : null,
           ownership: {

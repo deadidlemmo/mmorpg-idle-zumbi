@@ -1,9 +1,37 @@
 export type StorefrontProviderKey = "MERCADO_PAGO" | "STRIPE";
-export type StorefrontOfferKind = "SUBSCRIPTION" | "PERMANENT_PACKAGE";
+export type StorefrontOfferKind =
+  "SUBSCRIPTION" | "PREMIUM_ITEM" | "CASH_PACKAGE" | "PERMANENT_PACKAGE";
 export type StorefrontOfferKey =
   | "premium-abrigo-monthly"
+  | "premium-abrigo-30d-item"
+  | "cash-100"
+  | "cash-200"
+  | "cash-500"
   | "pacote-nucleo-helix"
   | "pacote-protocolo-carmesim";
+
+export type StorefrontCosmeticType =
+  | "AVATAR"
+  | "AVATAR_FRAME"
+  | "PROFILE_BANNER"
+  | "OVERVIEW_BACKGROUND"
+  | "PROFILE_EFFECT"
+  | "TITLE"
+  | "BADGE";
+
+export interface StorefrontCosmeticItem {
+  id: string;
+  key: string;
+  name: string;
+  description?: string | null;
+  type: StorefrontCosmeticType;
+  rarity: "COMMON" | "UNCOMMON" | "RARE" | "EPIC" | "LEGENDARY";
+  assetKey?: string | null;
+  effectPreset?: string | null;
+  displayText?: string | null;
+  accentColor?: string | null;
+  class?: { id: string; name: string } | null;
+}
 
 export interface StorefrontOffer {
   key: StorefrontOfferKey;
@@ -15,8 +43,11 @@ export interface StorefrontOffer {
   billingLabel: string;
   accentColor: string;
   benefits: string[];
+  cashAmount?: number;
+  premiumDays?: number;
+  tradeable?: boolean;
   price: {
-    amountCents: number | null;
+    amountCents: number;
     currency: "BRL";
     formatted: string;
   };
@@ -25,6 +56,7 @@ export interface StorefrontOffer {
     name: string;
     description?: string | null;
     coverAssetKey?: string | null;
+    items: StorefrontCosmeticItem[];
   } | null;
   ownership: {
     isOwned: boolean;

@@ -2,6 +2,22 @@ import { ConflictException, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorefrontService } from './storefront.service';
 
+function cosmetic(id: string, type = 'AVATAR') {
+  return {
+    id,
+    key: id,
+    name: id,
+    description: null,
+    type,
+    rarity: 'LEGENDARY',
+    assetKey: id,
+    effectPreset: null,
+    displayText: null,
+    accentColor: '#65d8e8',
+    class: null,
+  };
+}
+
 describe('StorefrontService', () => {
   const prisma = {
     character: { findFirst: jest.fn() },
@@ -23,21 +39,21 @@ describe('StorefrontService', () => {
         name: 'Último Abrigo',
         description: 'Premium',
         coverAssetKey: 'banner-premium-ultimo-abrigo',
-        cosmetics: [{ id: 'premium-1' }, { id: 'premium-2' }],
+        cosmetics: [cosmetic('premium-1'), cosmetic('premium-2')],
       },
       {
         key: 'premium-nucleo-helix',
         name: 'Núcleo Helix',
         description: 'Helix',
         coverAssetKey: 'banner-helix-nucleo-vivo',
-        cosmetics: [{ id: 'helix-1' }, { id: 'helix-2' }],
+        cosmetics: [cosmetic('helix-1'), cosmetic('helix-2')],
       },
       {
         key: 'premium-protocolo-carmesim',
         name: 'Protocolo Carmesim',
         description: 'Carmesim',
         coverAssetKey: 'banner-carmesim-sala-de-guerra',
-        cosmetics: [{ id: 'carmesim-1' }],
+        cosmetics: [cosmetic('carmesim-1')],
       },
     ]);
     prisma.userCosmeticEntitlement.findMany.mockResolvedValue([
@@ -52,16 +68,36 @@ describe('StorefrontService', () => {
     expect(catalog.checkout.enabled).toBe(false);
     expect(catalog.offers.map((offer) => offer.key)).toEqual([
       'premium-abrigo-monthly',
+      'premium-abrigo-30d-item',
+      'cash-100',
+      'cash-200',
+      'cash-500',
       'pacote-nucleo-helix',
       'pacote-protocolo-carmesim',
     ]);
-    expect(catalog.offers[0].ownership.isOwned).toBe(true);
-    expect(catalog.offers[1].ownership).toMatchObject({
+    const premium = catalog.offers.find(
+      (offer) => offer.key === 'premium-abrigo-monthly',
+    );
+    const cash = catalog.offers.find((offer) => offer.key === 'cash-100');
+    const helix = catalog.offers.find(
+      (offer) => offer.key === 'pacote-nucleo-helix',
+    );
+    const carmesim = catalog.offers.find(
+      (offer) => offer.key === 'pacote-protocolo-carmesim',
+    );
+
+    expect(premium?.ownership.isOwned).toBe(true);
+    expect(premium?.price.amountCents).toBe(1990);
+    expect(premium?.price.formatted).toContain('19,90');
+    expect(cash).toMatchObject({ cashAmount: 100 });
+    expect(cash?.price.amountCents).toBe(990);
+    expect(helix?.ownership).toMatchObject({
       isOwned: false,
       ownedItemCount: 1,
       totalItemCount: 2,
     });
-    expect(catalog.offers[2].ownership.isOwned).toBe(true);
+    expect(helix?.collection?.items).toHaveLength(2);
+    expect(carmesim?.ownership.isOwned).toBe(true);
   });
 
   it('não cria cobrança enquanto os provedores não estão integrados', async () => {

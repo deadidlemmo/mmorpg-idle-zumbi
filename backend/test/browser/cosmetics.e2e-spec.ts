@@ -350,24 +350,53 @@ test.describe('cosméticos e inspeção pública', () => {
     await page.goto(`/dashboard/${owner.characterId}/membership`);
 
     await expect(
-      page.getByRole('heading', { name: 'Premium e Cash', exact: true }),
+      page.getByRole('heading', {
+        name: 'Premium, Cash e pacotes',
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(page.getByRole('tab')).toHaveCount(3);
+    await expect(
+      page.getByRole('heading', {
+        name: 'Escolha a forma de ativação',
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(
       page.getByRole('heading', { name: 'Premium do Abrigo', exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: 'Passe Premium', exact: true }),
+      page.getByRole('heading', {
+        name: 'Passe Premium de 30 dias',
+        exact: true,
+      }),
     ).toBeVisible();
+    await expect(page.getByText('R$ 19,90', { exact: true })).toBeVisible();
+    await expect(page.getByText('R$ 24,90', { exact: true })).toBeVisible();
+    await expect(page.getByText('+20%', { exact: true })).toBeVisible();
+    await expect(page.getByText('12 horas', { exact: true })).toBeVisible();
+    await expect(page.getByText('38', { exact: true })).toBeVisible();
+    await expect(page.getByText('Pausadas durante os testes')).toHaveCount(0);
+    await page.screenshot({
+      path: testInfo.outputPath('storefront-premium-desktop.png'),
+      fullPage: true,
+    });
 
     await page.getByRole('tab', { name: /^Cash/ }).click();
     await expect(
-      page.getByRole('heading', { name: 'Cash avulso', exact: true }),
+      page.getByRole('heading', { name: 'Escolha sua recarga', exact: true }),
     ).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: 'Pacotes de Cash', exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText('Cash pertence à conta')).toBeVisible();
+    await expect(page.locator('.membership-cash-card')).toHaveCount(3);
+    for (const [amount, price] of [
+      ['100', 'R$ 9,90'],
+      ['200', 'R$ 17,90'],
+      ['500', 'R$ 39,90'],
+    ] as const) {
+      const card = page.locator(`.membership-cash-card--cash-${amount}`);
+      await expect(card).toHaveCount(1);
+      await expect(card.getByText(amount, { exact: true })).toBeVisible();
+      await expect(card.getByText(price, { exact: true })).toBeVisible();
+    }
 
     await page.getByRole('tab', { name: /^Passes e pacotes/ }).click();
     await expect(page.locator('.membership-package-card')).toHaveCount(2);
@@ -377,14 +406,29 @@ test.describe('cosméticos e inspeção pública', () => {
     await expect(
       page.getByRole('heading', { name: 'Protocolo Carmesim', exact: true }),
     ).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: 'Aceleradores', exact: true }),
-    ).toBeVisible();
-    const paymentState = page.getByRole('region', {
-      name: 'Estado dos pagamentos',
+    await expect(page.getByText('Market e trade entre jogadores')).toHaveCount(
+      0,
+    );
+    await expect(page.getByText('Mercado Pago')).toHaveCount(0);
+    await expect(page.getByText('Stripe')).toHaveCount(0);
+
+    const helixCard = page.locator('.membership-package-card').filter({
+      has: page.getByRole('heading', { name: 'Núcleo Helix', exact: true }),
     });
-    await expect(paymentState.getByText('Mercado Pago')).toBeVisible();
-    await expect(paymentState.getByText('Stripe')).toBeVisible();
+    await helixCard.getByRole('button', { name: 'Ver conteúdo' }).click();
+    const helixDialog = page.getByRole('dialog', { name: 'Núcleo Helix' });
+    await expect(helixDialog).toBeVisible();
+    await expect(helixDialog.getByText('38 itens permanentes')).toBeVisible();
+    await expect(helixDialog.locator('.membership-cosmetic-item')).toHaveCount(
+      38,
+    );
+    const avatarGroup = helixDialog
+      .locator('.membership-cosmetic-group')
+      .filter({ hasText: 'Avatares' });
+    await expect(avatarGroup.getByText('32', { exact: true })).toBeVisible();
+    await helixDialog.getByRole('button', { name: 'Fechar conteúdo' }).click();
+    await expect(helixDialog).toHaveCount(0);
+
     await page.screenshot({
       path: testInfo.outputPath('storefront-desktop.png'),
       fullPage: true,
@@ -393,11 +437,14 @@ test.describe('cosméticos e inspeção pública', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload();
     await expect(
-      page.getByRole('heading', { name: 'Premium e Cash', exact: true }),
+      page.getByRole('heading', {
+        name: 'Premium, Cash e pacotes',
+        exact: true,
+      }),
     ).toBeVisible();
     await page.getByRole('tab', { name: /^Cash/ }).click();
     await expect(
-      page.getByRole('heading', { name: 'Cash avulso', exact: true }),
+      page.getByRole('heading', { name: 'Escolha sua recarga', exact: true }),
     ).toBeVisible();
     expect(
       await page.evaluate(
@@ -409,6 +456,46 @@ test.describe('cosméticos e inspeção pública', () => {
     await page.screenshot({
       path: testInfo.outputPath('storefront-mobile.png'),
       fullPage: true,
+    });
+
+    await page.getByRole('tab', { name: /^Passes e pacotes/ }).click();
+    const mobileHelixCard = page.locator('.membership-package-card').filter({
+      has: page.getByRole('heading', { name: 'Núcleo Helix', exact: true }),
+    });
+    await mobileHelixCard.getByRole('button', { name: 'Ver conteúdo' }).click();
+    const mobileDialog = page.getByRole('dialog', { name: 'Núcleo Helix' });
+    await expect(mobileDialog).toBeVisible();
+    await expect(
+      mobileDialog.getByRole('heading', { name: 'Núcleo Helix', exact: true }),
+    ).toBeInViewport();
+    await expect(
+      mobileDialog.getByRole('button', { name: 'Fechar conteúdo' }),
+    ).toBeInViewport();
+    const dialogBox = await mobileDialog.boundingBox();
+    expect(dialogBox).not.toBeNull();
+    expect(dialogBox!.x).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(390);
+    expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(844);
+    const modalContent = mobileDialog.locator(
+      '.membership-package-modal__content',
+    );
+    const modalScroll = await modalContent.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollTop: element.scrollTop,
+      scrollHeight: element.scrollHeight,
+    }));
+    expect(modalScroll.scrollHeight).toBeGreaterThan(modalScroll.clientHeight);
+    expect(modalScroll.scrollTop).toBe(0);
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(false);
+    await mobileDialog.screenshot({
+      path: testInfo.outputPath('storefront-package-modal-mobile.png'),
     });
   });
 

@@ -5,8 +5,8 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import {
-  ArrowRightLeft,
   BadgeCheck,
   Check,
   Clock3,
@@ -16,14 +16,13 @@ import {
   Frame,
   Gauge,
   Image as ImageIcon,
-  LockKeyhole,
   PackageOpen,
-  Palette,
+  PanelsTopLeft,
   ShieldCheck,
-  ShoppingBag,
-  Store,
+  Sparkles,
   Ticket,
   UserRound,
+  X,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -42,6 +41,8 @@ import {
 import { MEMBERSHIP_BENEFIT_LABELS } from "../constants/membership-benefits";
 import type {
   StorefrontCatalogResponse,
+  StorefrontCosmeticItem,
+  StorefrontCosmeticType,
   StorefrontOffer,
   StorefrontProviderKey,
 } from "../types/storefront.types";
@@ -56,25 +57,41 @@ interface MembershipTabDefinition {
   icon: LucideIcon;
 }
 
+interface CosmeticGroupDefinition {
+  type: StorefrontCosmeticType;
+  label: string;
+  icon: LucideIcon;
+}
+
 const MEMBERSHIP_TABS: MembershipTabDefinition[] = [
   {
     key: "premium",
     label: "Premium",
-    description: "Assinatura e passe",
+    description: "Plano e passe",
     icon: Crown,
   },
   {
     key: "cash",
     label: "Cash",
-    description: "Saldo da conta",
+    description: "Recargas",
     icon: Coins,
   },
   {
     key: "packages",
     label: "Passes e pacotes",
-    description: "Cosméticos e itens",
+    description: "Coleções",
     icon: PackageOpen,
   },
+];
+
+const COSMETIC_GROUPS: CosmeticGroupDefinition[] = [
+  { type: "AVATAR", label: "Avatares", icon: UserRound },
+  { type: "AVATAR_FRAME", label: "Moldura", icon: Frame },
+  { type: "PROFILE_BANNER", label: "Cartão de perfil", icon: PanelsTopLeft },
+  { type: "OVERVIEW_BACKGROUND", label: "Background", icon: ImageIcon },
+  { type: "PROFILE_EFFECT", label: "Efeito", icon: Sparkles },
+  { type: "TITLE", label: "Título", icon: BadgeCheck },
+  { type: "BADGE", label: "Distintivo", icon: ShieldCheck },
 ];
 
 function getMembershipPageError(error: unknown) {
@@ -89,60 +106,17 @@ function formatPremiumUntil(value?: string | null) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(date);
 }
 
-function formatStoreNumber(value?: number | null) {
-  const parsed = Number(value ?? 0);
-  return new Intl.NumberFormat("pt-BR").format(
-    Number.isFinite(parsed) ? Math.max(0, parsed) : 0,
-  );
-}
-
 function getOfferTone(offer: StorefrontOffer) {
   if (offer.key === "pacote-nucleo-helix") return "helix";
   if (offer.key === "pacote-protocolo-carmesim") return "carmesim";
   return "premium";
 }
 
-function MembershipStatusItem({
-  icon: Icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  detail?: string | null;
-}) {
-  return (
-    <div className="membership-account-strip__item">
-      <Icon size={19} aria-hidden="true" />
-      <span>
-        <small>{label}</small>
-        <strong>{value}</strong>
-        {detail ? <em>{detail}</em> : null}
-      </span>
-    </div>
-  );
-}
-
-function MembershipFeature({
-  icon: Icon,
-  title,
-  children,
-}: {
-  icon: LucideIcon;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <article className="membership-feature">
-      <Icon size={20} aria-hidden="true" />
-      <div>
-        <strong>{title}</strong>
-        <span>{children}</span>
-      </div>
-    </article>
-  );
+function getItemsByType(
+  items: StorefrontCosmeticItem[],
+  type: StorefrontCosmeticType,
+) {
+  return items.filter((item) => item.type === type);
 }
 
 function MembershipPurchaseButton({
@@ -150,19 +124,16 @@ function MembershipPurchaseButton({
   checkoutEnabled,
   isCheckingOut,
   onCheckout,
+  activeLabel,
 }: {
   offer: StorefrontOffer;
   checkoutEnabled: boolean;
   isCheckingOut: boolean;
   onCheckout: (offer: StorefrontOffer) => void;
+  activeLabel: string;
 }) {
-  const actionLabel = offer.ownership.isOwned
-    ? offer.kind === "SUBSCRIPTION"
-      ? "Premium ativo"
-      : "Pacote adquirido"
-    : checkoutEnabled
-      ? `Comprar por ${offer.price.formatted}`
-      : "Indisponível nos testes";
+  const ownedLabel =
+    offer.kind === "SUBSCRIPTION" ? "Premium ativo" : "Adquirido";
 
   return (
     <button
@@ -170,64 +141,67 @@ function MembershipPurchaseButton({
       className="membership-purchase-button"
       disabled={offer.ownership.isOwned || !checkoutEnabled || isCheckingOut}
       onClick={() => onCheckout(offer)}
+      title={!checkoutEnabled ? "Disponível em breve" : undefined}
     >
       {offer.ownership.isOwned ? (
         <BadgeCheck size={17} aria-hidden="true" />
       ) : (
-        <ShoppingBag size={17} aria-hidden="true" />
+        <CreditCard size={17} aria-hidden="true" />
       )}
-      {isCheckingOut ? "Abrindo checkout" : actionLabel}
+      {isCheckingOut
+        ? "Abrindo checkout"
+        : offer.ownership.isOwned
+          ? ownedLabel
+          : checkoutEnabled
+            ? activeLabel
+            : "Disponível em breve"}
     </button>
   );
 }
 
-function PremiumPlanPanel({
+function PremiumOptionCard({
   offer,
+  coverImage,
   checkoutEnabled,
   isCheckingOut,
   onCheckout,
-  appearanceHref,
 }: {
   offer: StorefrontOffer;
+  coverImage: string | null;
   checkoutEnabled: boolean;
   isCheckingOut: boolean;
   onCheckout: (offer: StorefrontOffer) => void;
-  appearanceHref: string;
 }) {
-  const coverImage = getCosmeticImage(offer.collection?.coverAssetKey);
+  const isMonthlyPlan = offer.kind === "SUBSCRIPTION";
   const activeUntil = formatPremiumUntil(offer.ownership.activeUntil);
 
   return (
     <article
-      className="membership-premium-plan"
+      className={`membership-premium-option${isMonthlyPlan ? " is-primary" : ""}`}
       style={{ "--offer-accent": offer.accentColor } as CSSProperties}
     >
       <div
-        className="membership-premium-plan__cover"
+        className="membership-premium-option__visual"
         style={
           coverImage ? { backgroundImage: `url("${coverImage}")` } : undefined
         }
       >
-        <span>Assinatura da conta</span>
-        <strong>{offer.name}</strong>
-        <small>{offer.billingLabel}</small>
+        <span>{isMonthlyPlan ? "Plano mensal" : "Item de 30 dias"}</span>
+        {isMonthlyPlan ? (
+          <Crown size={31} aria-hidden="true" />
+        ) : (
+          <Ticket size={31} aria-hidden="true" />
+        )}
       </div>
 
-      <div className="membership-premium-plan__details">
+      <div className="membership-premium-option__body">
         <header>
           <div>
-            <span className="membership-product-kicker">Plano atual</span>
-            <h2>{offer.name}</h2>
+            <h3>{offer.name}</h3>
+            <span>{offer.billingLabel}</span>
           </div>
-          <strong className="membership-product-state">
-            {offer.ownership.isOwned ? "Ativo" : "Disponível em breve"}
-          </strong>
-        </header>
-
-        <div className="membership-premium-plan__price">
           <strong>{offer.price.formatted}</strong>
-          <span>{offer.billingLabel}</span>
-        </div>
+        </header>
 
         <p>{offer.description}</p>
 
@@ -240,29 +214,119 @@ function PremiumPlanPanel({
           ))}
         </ul>
 
-        <footer>
-          <span className="membership-product-meta">
-            <UserRound size={15} aria-hidden="true" />
-            Vinculado à conta e não negociável
-          </span>
-          {activeUntil ? <small>Ativo até {activeUntil}</small> : null}
-          <div className="membership-product-actions">
-            <MembershipPurchaseButton
-              offer={offer}
-              checkoutEnabled={checkoutEnabled}
-              isCheckingOut={isCheckingOut}
-              onCheckout={onCheckout}
-            />
-            {offer.ownership.isOwned ? (
-              <Link to={appearanceHref}>
-                <Palette size={16} aria-hidden="true" />
-                Aparência
-              </Link>
-            ) : null}
-          </div>
-        </footer>
+        {activeUntil ? <small>Ativo até {activeUntil}</small> : null}
+
+        <MembershipPurchaseButton
+          offer={offer}
+          checkoutEnabled={checkoutEnabled}
+          isCheckingOut={isCheckingOut}
+          onCheckout={onCheckout}
+          activeLabel={isMonthlyPlan ? "Assinar plano" : "Comprar passe"}
+        />
       </div>
     </article>
+  );
+}
+
+function MembershipAdvantage({
+  icon: Icon,
+  value,
+  label,
+  children,
+}: {
+  icon: LucideIcon;
+  value: string;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <article className="membership-advantage">
+      <Icon size={20} aria-hidden="true" />
+      <div>
+        <strong>{value}</strong>
+        <span>{label}</span>
+        <small>{children}</small>
+      </div>
+    </article>
+  );
+}
+
+function CashOfferCard({
+  offer,
+  checkoutEnabled,
+  isCheckingOut,
+  onCheckout,
+}: {
+  offer: StorefrontOffer;
+  checkoutEnabled: boolean;
+  isCheckingOut: boolean;
+  onCheckout: (offer: StorefrontOffer) => void;
+}) {
+  return (
+    <article
+      className={`membership-cash-card membership-cash-card--${offer.key}`}
+      style={{ "--offer-accent": offer.accentColor } as CSSProperties}
+    >
+      <span className="membership-cash-card__eyebrow">{offer.eyebrow}</span>
+      <div className="membership-cash-card__amount">
+        <img src={cashIcon} alt="" aria-hidden="true" />
+        <strong>{offer.cashAmount}</strong>
+        <span>Cash</span>
+      </div>
+      <div className="membership-cash-card__price">
+        <strong>{offer.price.formatted}</strong>
+        <span>{offer.billingLabel}</span>
+      </div>
+      <p>{offer.description}</p>
+      <MembershipPurchaseButton
+        offer={offer}
+        checkoutEnabled={checkoutEnabled}
+        isCheckingOut={isCheckingOut}
+        onCheckout={onCheckout}
+        activeLabel={`Comprar ${offer.cashAmount} Cash`}
+      />
+    </article>
+  );
+}
+
+function CashUse({
+  icon: Icon,
+  title,
+  detail,
+}: {
+  icon: LucideIcon;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <div className="membership-cash-use">
+      <Icon size={19} aria-hidden="true" />
+      <span>
+        <strong>{title}</strong>
+        <small>{detail}</small>
+      </span>
+    </div>
+  );
+}
+
+function PackagePreviewStrip({ items }: { items: StorefrontCosmeticItem[] }) {
+  const avatars = getItemsByType(items, "AVATAR");
+  const visibleAvatars = avatars.slice(0, 4);
+
+  return (
+    <div className="membership-package-preview" aria-label="Prévia de avatares">
+      {visibleAvatars.map((avatar) => {
+        const image = getCosmeticImage(avatar.assetKey);
+        return (
+          <span key={avatar.id}>
+            {image ? <img src={image} alt="" /> : <UserRound size={20} />}
+          </span>
+        );
+      })}
+      {avatars.length > visibleAvatars.length ? (
+        <em>+{avatars.length - visibleAvatars.length}</em>
+      ) : null}
+    </div>
   );
 }
 
@@ -271,17 +335,18 @@ function StorefrontPackageCard({
   checkoutEnabled,
   isCheckingOut,
   onCheckout,
-  appearanceHref,
+  onOpenContents,
 }: {
   offer: StorefrontOffer;
   checkoutEnabled: boolean;
   isCheckingOut: boolean;
   onCheckout: (offer: StorefrontOffer) => void;
-  appearanceHref: string;
+  onOpenContents: (offer: StorefrontOffer) => void;
 }) {
   const coverImage = getCosmeticImage(offer.collection?.coverAssetKey);
-  const isPartialPackage =
-    offer.ownership.ownedItemCount > 0 && !offer.ownership.isOwned;
+  const items = offer.collection?.items ?? [];
+  const avatarCount = getItemsByType(items, "AVATAR").length;
+  const profileItemCount = Math.max(0, items.length - avatarCount);
 
   return (
     <article
@@ -306,44 +371,161 @@ function StorefrontPackageCard({
       <div className="membership-package-card__body">
         <header>
           <div>
-            <h2>{offer.name}</h2>
-            <span>{offer.billingLabel}</span>
+            <h3>{offer.name}</h3>
+            <span>Desbloqueio permanente</span>
           </div>
           <strong>{offer.price.formatted}</strong>
         </header>
 
         <p>{offer.description}</p>
 
-        <ul>
-          {offer.benefits.map((benefit) => (
-            <li key={benefit}>
-              <Check size={14} aria-hidden="true" />
-              <span>{benefit}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="membership-package-card__summary">
+          <span>
+            <UserRound size={15} aria-hidden="true" />
+            {avatarCount} avatares
+          </span>
+          <span>
+            <Sparkles size={15} aria-hidden="true" />
+            {profileItemCount} itens de perfil
+          </span>
+          <span>
+            <PackageOpen size={15} aria-hidden="true" />
+            {items.length} itens
+          </span>
+        </div>
+
+        <PackagePreviewStrip items={items} />
 
         <footer>
-          <small>
-            {isPartialPackage
-              ? `${offer.ownership.ownedItemCount} de ${offer.ownership.totalItemCount} itens liberados`
-              : `${offer.ownership.totalItemCount} cosméticos na coleção`}
-          </small>
+          <button
+            type="button"
+            className="membership-package-card__details-button"
+            onClick={() => onOpenContents(offer)}
+          >
+            <PackageOpen size={16} aria-hidden="true" />
+            Ver conteúdo
+          </button>
           <MembershipPurchaseButton
             offer={offer}
             checkoutEnabled={checkoutEnabled}
             isCheckingOut={isCheckingOut}
             onCheckout={onCheckout}
+            activeLabel="Comprar pacote"
           />
-          {offer.ownership.isOwned ? (
-            <Link to={appearanceHref}>
-              <Palette size={15} aria-hidden="true" />
-              Usar coleção
-            </Link>
-          ) : null}
         </footer>
       </div>
     </article>
+  );
+}
+
+function CosmeticItemPreview({ item }: { item: StorefrontCosmeticItem }) {
+  const image = getCosmeticImage(item.assetKey);
+  const group = COSMETIC_GROUPS.find(
+    (candidate) => candidate.type === item.type,
+  );
+  const Icon = group?.icon ?? Sparkles;
+
+  return (
+    <article
+      className={`membership-cosmetic-item membership-cosmetic-item--${item.type.toLowerCase()}`}
+      style={{ "--cosmetic-accent": item.accentColor } as CSSProperties}
+    >
+      <div className="membership-cosmetic-item__visual" aria-hidden="true">
+        {image ? <img src={image} alt="" /> : <Icon size={25} />}
+      </div>
+      <div>
+        <strong>{item.displayText ?? item.name}</strong>
+        <span>{item.class?.name ?? group?.label}</span>
+      </div>
+    </article>
+  );
+}
+
+function PackageContentsModal({
+  offer,
+  onClose,
+}: {
+  offer: StorefrontOffer;
+  onClose: () => void;
+}) {
+  const collection = offer.collection;
+  const coverImage = getCosmeticImage(collection?.coverAssetKey);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  if (!collection) return null;
+
+  return createPortal(
+    <div
+      className="membership-package-modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
+      <section
+        className="membership-package-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="membership-package-modal-title"
+      >
+        <header className="membership-package-modal__header">
+          <div
+            className="membership-package-modal__cover"
+            style={
+              coverImage
+                ? { backgroundImage: `url("${coverImage}")` }
+                : undefined
+            }
+            aria-hidden="true"
+          />
+          <div>
+            <span>{collection.items.length} itens permanentes</span>
+            <h2 id="membership-package-modal-title">{offer.name}</h2>
+            <p>{collection.description}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Fechar conteúdo">
+            <X size={20} aria-hidden="true" />
+          </button>
+        </header>
+
+        <div className="membership-package-modal__content">
+          {COSMETIC_GROUPS.map((group) => {
+            const items = getItemsByType(collection.items, group.type);
+            if (items.length === 0) return null;
+            const Icon = group.icon;
+
+            return (
+              <section key={group.type} className="membership-cosmetic-group">
+                <header>
+                  <Icon size={17} aria-hidden="true" />
+                  <h3>{group.label}</h3>
+                  <span>{items.length}</span>
+                </header>
+                <div>
+                  {items.map((item) => (
+                    <CosmeticItemPreview key={item.id} item={item} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      </section>
+    </div>,
+    document.body,
   );
 }
 
@@ -354,8 +536,9 @@ export function MembershipPage() {
     useState<DashboardCharacterViewModel | null>(null);
   const [storefront, setStorefront] =
     useState<StorefrontCatalogResponse | null>(null);
-  const [activeTab, setActiveTab] =
-    useState<MembershipStoreTab>("premium");
+  const [activeTab, setActiveTab] = useState<MembershipStoreTab>("premium");
+  const [selectedPackage, setSelectedPackage] =
+    useState<StorefrontOffer | null>(null);
   const [checkingOutOfferKey, setCheckingOutOfferKey] = useState<string | null>(
     null,
   );
@@ -392,8 +575,20 @@ export function MembershipPage() {
     };
   }, [safeCharacterId]);
 
-  const premiumOffer = useMemo(
-    () => storefront?.offers.find((offer) => offer.kind === "SUBSCRIPTION"),
+  const premiumOffers = useMemo(
+    () =>
+      storefront?.offers.filter(
+        (offer) =>
+          offer.kind === "SUBSCRIPTION" || offer.kind === "PREMIUM_ITEM",
+      ) ?? [],
+    [storefront],
+  );
+  const premiumPlan = premiumOffers.find(
+    (offer) => offer.kind === "SUBSCRIPTION",
+  );
+  const cashOffers = useMemo(
+    () =>
+      storefront?.offers.filter((offer) => offer.kind === "CASH_PACKAGE") ?? [],
     [storefront],
   );
   const packageOffers = useMemo(
@@ -403,22 +598,16 @@ export function MembershipPage() {
       ) ?? [],
     [storefront],
   );
-  const ownedPermanentPackages = packageOffers.filter(
-    (offer) => offer.ownership.isOwned,
-  ).length;
-  const appearanceHref = `/dashboard/${safeCharacterId}/appearance`;
   const checkoutProvider = storefront?.checkout.providers.find(
     (provider) => provider.state === "AVAILABLE",
   );
   const checkoutEnabled = Boolean(
     storefront?.checkout.enabled && checkoutProvider,
   );
-  const premiumActiveUntil = formatPremiumUntil(
-    storefront?.membership.premiumUntil,
+  const premiumCoverImage = getCosmeticImage(
+    premiumPlan?.collection?.coverAssetKey,
   );
-  const cashBalance = formatStoreNumber(
-    character?.cash ?? character?.wallet?.cash ?? character?.currencies?.cash,
-  );
+  const premiumCosmeticCount = premiumPlan?.collection?.items.length ?? 0;
 
   async function handleCheckout(offer: StorefrontOffer) {
     if (!checkoutEnabled || !checkoutProvider) return;
@@ -465,65 +654,10 @@ export function MembershipPage() {
     <DashboardLayout character={character} hideHero>
       <main className="membership-page" aria-label="Loja Premium do Abrigo">
         <header className="membership-store-header">
-          <div className="membership-store-header__title">
-            <span className="membership-store-header__icon" aria-hidden="true">
-              <Store size={24} />
-            </span>
-            <div>
-              <span className="membership-eyebrow">Suprimentos da conta</span>
-              <h1>Premium e Cash</h1>
-              <p>Benefícios, moeda da conta e itens especiais do abrigo.</p>
-            </div>
-          </div>
-
-          <div
-            className={`membership-checkout-state${storefront.checkout.enabled ? " is-available" : ""}`}
-          >
-            {storefront.checkout.enabled ? (
-              <CreditCard size={18} aria-hidden="true" />
-            ) : (
-              <LockKeyhole size={18} aria-hidden="true" />
-            )}
-            <span>
-              <small>Compras</small>
-              <strong>
-                {storefront.checkout.enabled
-                  ? "Disponíveis"
-                  : "Pausadas durante os testes"}
-              </strong>
-            </span>
-          </div>
+          <span className="membership-eyebrow">Loja do Abrigo</span>
+          <h1>Premium, Cash e pacotes</h1>
+          <p>Escolha uma categoria e veja exatamente o que recebe.</p>
         </header>
-
-        <section
-          className="membership-account-strip"
-          aria-label="Resumo da conta"
-        >
-          <MembershipStatusItem
-            icon={Crown}
-            label="Premium"
-            value={
-              storefront.membership.isPremiumActive ? "Ativo" : "Conta gratuita"
-            }
-            detail={premiumActiveUntil ? `Até ${premiumActiveUntil}` : null}
-          />
-          <MembershipStatusItem
-            icon={Coins}
-            label="Saldo"
-            value={`${cashBalance} Cash`}
-            detail="Vinculado à conta"
-          />
-          <MembershipStatusItem
-            icon={PackageOpen}
-            label="Coleções"
-            value={`${ownedPermanentPackages} de ${packageOffers.length}`}
-            detail="Pacotes permanentes"
-          />
-          <Link to={appearanceHref} className="membership-account-strip__link">
-            <Palette size={16} aria-hidden="true" />
-            Aparência
-          </Link>
-        </section>
 
         <nav
           className="membership-tabs"
@@ -563,63 +697,68 @@ export function MembershipPage() {
           >
             <header className="membership-section-heading">
               <div>
-                <span className="membership-eyebrow">Conta Premium</span>
-                <h2>Escolha como ativar</h2>
+                <span className="membership-eyebrow">Comprar Premium</span>
+                <h2>Escolha a forma de ativação</h2>
               </div>
-              <p>Assinatura direta ou item negociável.</p>
+              <p>Plano mensal ou passe de 30 dias.</p>
             </header>
 
-            {premiumOffer ? (
-              <PremiumPlanPanel
-                offer={premiumOffer}
-                checkoutEnabled={checkoutEnabled}
-                isCheckingOut={checkingOutOfferKey === premiumOffer.key}
-                onCheckout={(offer) => void handleCheckout(offer)}
-                appearanceHref={appearanceHref}
-              />
-            ) : (
-              <p className="membership-empty-state">
-                A assinatura Premium não está disponível no catálogo atual.
-              </p>
-            )}
-
-            <article className="membership-planned-item">
-              <div className="membership-planned-item__icon">
-                <Ticket size={24} aria-hidden="true" />
-              </div>
-              <div className="membership-planned-item__copy">
-                <span className="membership-product-kicker">Item negociável</span>
-                <h3>Passe Premium</h3>
-                <p>
-                  Item de inventário para ativar Premium ou negociar com outro
-                  jogador.
-                </p>
-              </div>
-              <div className="membership-planned-item__rules">
-                <span>
-                  <Store size={15} aria-hidden="true" /> Market
-                </span>
-                <span>
-                  <ArrowRightLeft size={15} aria-hidden="true" /> Trade
-                </span>
-              </div>
-              <button type="button" disabled>
-                Em desenvolvimento
-              </button>
-            </article>
-
-            <div className="membership-premium-facts">
-              <MembershipFeature icon={Clock3} title="Limite idle">
-                {MEMBERSHIP_BENEFIT_LABELS.premiumIdleLimit}, contra{" "}
-                {MEMBERSHIP_BENEFIT_LABELS.freeIdleLimit} na conta gratuita.
-              </MembershipFeature>
-              <MembershipFeature icon={Zap} title="Bônus de EXP">
-                {MEMBERSHIP_BENEFIT_LABELS.xpBonus} em gathering, batalha e caça.
-              </MembershipFeature>
-              <MembershipFeature icon={ShieldCheck} title="Toda a conta">
-                Benefícios ativos em todos os personagens do jogador.
-              </MembershipFeature>
+            <div className="membership-premium-options">
+              {premiumOffers.map((offer) => (
+                <PremiumOptionCard
+                  key={offer.key}
+                  offer={offer}
+                  coverImage={premiumCoverImage}
+                  checkoutEnabled={checkoutEnabled}
+                  isCheckingOut={checkingOutOfferKey === offer.key}
+                  onCheckout={(selectedOffer) =>
+                    void handleCheckout(selectedOffer)
+                  }
+                />
+              ))}
             </div>
+
+            <section
+              className="membership-premium-benefits"
+              aria-labelledby="membership-premium-benefits-title"
+            >
+              <header>
+                <span className="membership-eyebrow">Vantagens</span>
+                <h2 id="membership-premium-benefits-title">
+                  O que o Premium libera
+                </h2>
+              </header>
+              <div>
+                <MembershipAdvantage
+                  icon={Zap}
+                  value={MEMBERSHIP_BENEFIT_LABELS.xpBonus}
+                  label="de EXP"
+                >
+                  Batalha, caça e expedições
+                </MembershipAdvantage>
+                <MembershipAdvantage
+                  icon={Clock3}
+                  value={MEMBERSHIP_BENEFIT_LABELS.premiumIdleLimit}
+                  label="de progresso idle"
+                >
+                  Conta gratuita: {MEMBERSHIP_BENEFIT_LABELS.freeIdleLimit}
+                </MembershipAdvantage>
+                <MembershipAdvantage
+                  icon={Sparkles}
+                  value={String(premiumCosmeticCount)}
+                  label="cosméticos"
+                >
+                  Coleção Último Abrigo enquanto ativo
+                </MembershipAdvantage>
+                <MembershipAdvantage
+                  icon={ShieldCheck}
+                  value="Toda a conta"
+                  label="benefício compartilhado"
+                >
+                  Válido para todos os personagens
+                </MembershipAdvantage>
+              </div>
+            </section>
           </section>
         ) : null}
 
@@ -632,68 +771,54 @@ export function MembershipPage() {
           >
             <header className="membership-section-heading">
               <div>
-                <span className="membership-eyebrow">Moeda da conta</span>
-                <h2>Cash avulso</h2>
+                <span className="membership-eyebrow">Comprar Cash</span>
+                <h2>Escolha sua recarga</h2>
               </div>
-              <p>Recargas serão pagas em reais e creditadas na conta.</p>
+              <p>Crédito aplicado diretamente à conta.</p>
             </header>
 
-            <div className="membership-cash-overview">
-              <section className="membership-cash-balance">
-                <img src={cashIcon} alt="" aria-hidden="true" />
-                <span>
-                  <small>Saldo disponível</small>
-                  <strong>{cashBalance}</strong>
-                  <em>Cash</em>
-                </span>
-              </section>
-
-              <section className="membership-cash-purchase">
-                <div>
-                  <span className="membership-product-kicker">
-                    Compra direta
-                  </span>
-                  <h3>Pacotes de Cash</h3>
-                  <p>
-                    Quantidades e preços serão exibidos aqui quando o catálogo
-                    financeiro estiver definido no servidor.
-                  </p>
-                </div>
-                <button type="button" disabled>
-                  <CreditCard size={17} aria-hidden="true" />
-                  Aguardando valores
-                </button>
-              </section>
+            <div className="membership-cash-grid">
+              {cashOffers.map((offer) => (
+                <CashOfferCard
+                  key={offer.key}
+                  offer={offer}
+                  checkoutEnabled={checkoutEnabled}
+                  isCheckingOut={checkingOutOfferKey === offer.key}
+                  onCheckout={(selectedOffer) =>
+                    void handleCheckout(selectedOffer)
+                  }
+                />
+              ))}
             </div>
 
             <section className="membership-cash-uses" aria-label="Uso do Cash">
               <header>
-                <span className="membership-eyebrow">Catálogo de Cash</span>
-                <h3>Onde o saldo será usado</h3>
+                <span className="membership-eyebrow">Uso do saldo</span>
+                <h2>O que pode ser comprado com Cash</h2>
               </header>
               <div>
-                <MembershipFeature icon={UserRound} title="Avatares">
-                  Retratos permanentes para os personagens.
-                </MembershipFeature>
-                <MembershipFeature icon={ImageIcon} title="Backgrounds">
-                  Cenários de perfil e visão geral.
-                </MembershipFeature>
-                <MembershipFeature icon={Frame} title="Molduras e efeitos">
-                  Acabamentos visuais sem atributos de combate.
-                </MembershipFeature>
-                <MembershipFeature icon={Gauge} title="Aceleradores">
-                  Consumíveis entregues como itens de inventário.
-                </MembershipFeature>
+                <CashUse
+                  icon={UserRound}
+                  title="Avatares"
+                  detail="Retratos permanentes"
+                />
+                <CashUse
+                  icon={ImageIcon}
+                  title="Backgrounds"
+                  detail="Perfil e visão geral"
+                />
+                <CashUse
+                  icon={Frame}
+                  title="Molduras e efeitos"
+                  detail="Personalização visual"
+                />
+                <CashUse
+                  icon={Gauge}
+                  title="Aceleradores"
+                  detail="Itens temporários"
+                />
               </div>
             </section>
-
-            <div className="membership-account-rule">
-              <ShieldCheck size={19} aria-hidden="true" />
-              <span>
-                <strong>Cash pertence à conta</strong>
-                <small>Não pode ser listado no Market nem enviado por trade.</small>
-              </span>
-            </div>
           </section>
         ) : null}
 
@@ -706,10 +831,10 @@ export function MembershipPage() {
           >
             <header className="membership-section-heading">
               <div>
-                <span className="membership-eyebrow">Itens especiais</span>
-                <h2>Passes e pacotes</h2>
+                <span className="membership-eyebrow">Passes e pacotes</span>
+                <h2>Pacotes permanentes</h2>
               </div>
-              <p>Itens de pacote poderão circular entre jogadores.</p>
+              <p>Abra o conteúdo para conferir todos os itens.</p>
             </header>
 
             <div className="membership-packages-grid">
@@ -722,70 +847,12 @@ export function MembershipPage() {
                   onCheckout={(selectedOffer) =>
                     void handleCheckout(selectedOffer)
                   }
-                  appearanceHref={appearanceHref}
+                  onOpenContents={setSelectedPackage}
                 />
               ))}
             </div>
-
-            <article className="membership-planned-item">
-              <div className="membership-planned-item__icon">
-                <Gauge size={24} aria-hidden="true" />
-              </div>
-              <div className="membership-planned-item__copy">
-                <span className="membership-product-kicker">Consumíveis</span>
-                <h3>Aceleradores</h3>
-                <p>
-                  Itens temporários comprados com Cash, armazenados no inventário
-                  e elegíveis para negociação.
-                </p>
-              </div>
-              <div className="membership-planned-item__rules">
-                <span>
-                  <Store size={15} aria-hidden="true" /> Market
-                </span>
-                <span>
-                  <ArrowRightLeft size={15} aria-hidden="true" /> Trade
-                </span>
-              </div>
-              <button type="button" disabled>
-                Catálogo em definição
-              </button>
-            </article>
-
-            <div className="membership-market-rule">
-              <ArrowRightLeft size={20} aria-hidden="true" />
-              <div>
-                <strong>Market e trade entre jogadores</strong>
-                <span>
-                  O dono define o preço no Market; no trade, ambos confirmam os
-                  itens antes da troca.
-                </span>
-              </div>
-              <em>Próxima etapa</em>
-            </div>
           </section>
         ) : null}
-
-        <section
-          className="membership-checkout-notice"
-          aria-label="Estado dos pagamentos"
-        >
-          <LockKeyhole size={20} aria-hidden="true" />
-          <div>
-            <strong>Checkout ainda não habilitado</strong>
-            <span>{storefront.checkout.message}</span>
-          </div>
-          <div className="membership-provider-list" aria-label="Provedores">
-            {storefront.checkout.providers.map((provider) => (
-              <span key={provider.key}>
-                {provider.name}
-                <small>
-                  {provider.state === "AVAILABLE" ? "Ativo" : "Planejado"}
-                </small>
-              </span>
-            ))}
-          </div>
-        </section>
 
         {errorMessage ? (
           <p className="membership-error" role="alert">
@@ -793,6 +860,13 @@ export function MembershipPage() {
           </p>
         ) : null}
       </main>
+
+      {selectedPackage ? (
+        <PackageContentsModal
+          offer={selectedPackage}
+          onClose={() => setSelectedPackage(null)}
+        />
+      ) : null}
     </DashboardLayout>
   );
 }

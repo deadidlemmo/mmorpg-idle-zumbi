@@ -4,12 +4,20 @@ export type StorefrontProviderKey = (typeof STOREFRONT_PROVIDER_KEYS)[number];
 
 export const STOREFRONT_OFFER_KEYS = [
   'premium-abrigo-monthly',
+  'premium-abrigo-30d-item',
+  'cash-100',
+  'cash-200',
+  'cash-500',
   'pacote-nucleo-helix',
   'pacote-protocolo-carmesim',
 ] as const;
 
 export type StorefrontOfferKey = (typeof STOREFRONT_OFFER_KEYS)[number];
-export type StorefrontOfferKind = 'SUBSCRIPTION' | 'PERMANENT_PACKAGE';
+export type StorefrontOfferKind =
+  | 'SUBSCRIPTION'
+  | 'PREMIUM_ITEM'
+  | 'CASH_PACKAGE'
+  | 'PERMANENT_PACKAGE';
 
 export interface StorefrontOfferDefinition {
   key: StorefrontOfferKey;
@@ -17,10 +25,14 @@ export interface StorefrontOfferDefinition {
   name: string;
   eyebrow: string;
   description: string;
-  collectionKey: string;
+  collectionKey?: string;
   billingLabel: string;
   accentColor: string;
   benefits: readonly string[];
+  priceCents: number;
+  cashAmount?: number;
+  premiumDays?: number;
+  tradeable?: boolean;
 }
 
 export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
@@ -29,17 +41,71 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
     kind: 'SUBSCRIPTION',
     name: 'Premium do Abrigo',
     eyebrow: 'Assinatura',
-    description:
-      'Benefícios de progressão e a coleção Último Abrigo enquanto a assinatura estiver ativa.',
+    description: 'Premium ativo em toda a conta com renovação mensal.',
     collectionKey: 'premium-ultimo-abrigo',
-    billingLabel: 'Renovação mensal',
+    billingLabel: 'por mês',
     accentColor: '#8bd35c',
+    priceCents: 1990,
+    tradeable: false,
     benefits: [
       '+20% de EXP em gathering, batalha e caça',
       'Até 12 horas de progresso idle',
       'Coleção completa Último Abrigo',
       'Benefícios válidos para toda a conta',
     ],
+  },
+  {
+    key: 'premium-abrigo-30d-item',
+    kind: 'PREMIUM_ITEM',
+    name: 'Passe Premium de 30 dias',
+    eyebrow: 'Item de ativação',
+    description: 'Item que concede 30 dias de Premium quando utilizado.',
+    billingLabel: 'pagamento único',
+    accentColor: '#e1bd55',
+    priceCents: 2490,
+    premiumDays: 30,
+    tradeable: true,
+    benefits: [
+      '30 dias de Premium ao utilizar',
+      'Entregue como item no inventário',
+      'Sem renovação automática',
+    ],
+  },
+  {
+    key: 'cash-100',
+    kind: 'CASH_PACKAGE',
+    name: '100 Cash',
+    eyebrow: 'Recarga essencial',
+    description: 'Para uma compra pontual no catálogo.',
+    billingLabel: 'pagamento único',
+    accentColor: '#78a9dc',
+    priceCents: 990,
+    cashAmount: 100,
+    benefits: [],
+  },
+  {
+    key: 'cash-200',
+    kind: 'CASH_PACKAGE',
+    name: '200 Cash',
+    eyebrow: 'Mais escolhido',
+    description: 'Economia de R$ 1,90 em relação ao pacote de 100.',
+    billingLabel: 'pagamento único',
+    accentColor: '#88d0d8',
+    priceCents: 1790,
+    cashAmount: 200,
+    benefits: [],
+  },
+  {
+    key: 'cash-500',
+    kind: 'CASH_PACKAGE',
+    name: '500 Cash',
+    eyebrow: 'Melhor valor',
+    description: 'Economia de R$ 9,60 em relação ao pacote de 100.',
+    billingLabel: 'pagamento único',
+    accentColor: '#e1bd55',
+    priceCents: 3990,
+    cashAmount: 500,
+    benefits: [],
   },
   {
     key: 'pacote-nucleo-helix',
@@ -51,6 +117,8 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
     collectionKey: 'premium-nucleo-helix',
     billingLabel: 'Pagamento único',
     accentColor: '#65d8e8',
+    priceCents: 3990,
+    tradeable: true,
     benefits: [
       '8 avatares para cada classe',
       'Moldura, cartão e fundo de visão geral',
@@ -68,6 +136,8 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
     collectionKey: 'premium-protocolo-carmesim',
     billingLabel: 'Pagamento único',
     accentColor: '#ef5a56',
+    priceCents: 3990,
+    tradeable: true,
     benefits: [
       '8 avatares para cada classe',
       'Moldura, cartão e fundo de visão geral',
