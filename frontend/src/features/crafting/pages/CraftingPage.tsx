@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import craftingSkillIcon from "../../../assets/images/crafting/skills/crafting.webp";
-import npcArsenalNogueira from "../../../assets/images/npcs/npc_arsenal_nogueira.webp";
+import npcCriacaoDalva from "../../../assets/images/npcs/npc_criacao_dalva.webp";
 import {
   CheckCircle2,
   ChevronDown,
@@ -106,7 +106,7 @@ const TIER_FILTERS: CraftingTierFilter[] = [
 const EMPTY_RECIPES: CraftingRecipeViewModel[] = [];
 
 const CRAFTING_NPC = {
-  name: "Nogueira, mestre de bancada",
+  name: "Dalva, mestra de bancada",
   role: "Serviço de criação",
   title: "Toda peça tem um segundo destino",
   quote:
@@ -1594,7 +1594,7 @@ export function CraftingPage() {
           >
             <div className="gathering-origin-npc__stage" aria-hidden="true">
               <div className="gathering-origin-npc__portrait">
-                <img src={npcArsenalNogueira} alt="" />
+                <img src={npcCriacaoDalva} alt="" />
               </div>
             </div>
 
