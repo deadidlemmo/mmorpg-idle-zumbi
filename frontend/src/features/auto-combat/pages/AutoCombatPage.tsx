@@ -8,6 +8,7 @@ import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-acti
 import { ActivityProgressCard } from "../../../components/game/ActivityProgressCard";
 import { ActivityTimelineFill } from "../../../components/game/ActivityTimelineFill";
 import { getActivityTimelineFrame } from "../../../components/game/activityTimeline";
+import { getConsumableItemImageUrl } from "../../consumables/utils/consumableItemAssets";
 import {
   getCharacterOverview,
   updateCharacterCurrentMap,
@@ -21,6 +22,7 @@ import {
   countHuntingActivityQueue,
   type HuntingActivityTrackedSource,
 } from "../../dashboard/utils/huntingActivityPresentation";
+import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
 import { getAutoCombatMaps, getAutoCombatStatus } from "../api/auto-combat.api";
 import {
   buildMapVisualStyle,
@@ -1868,6 +1870,9 @@ export function AutoCombatPage() {
   useEffect(() => {
     if (!selectedThreat) return;
 
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     function handleThreatModalKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsThreatPotionPickerOpen(false);
@@ -1878,6 +1883,7 @@ export function AutoCombatPage() {
     window.addEventListener("keydown", handleThreatModalKeyDown);
 
     return () => {
+      document.body.style.overflow = previousBodyOverflow;
       window.removeEventListener("keydown", handleThreatModalKeyDown);
     };
   }, [selectedThreat]);
@@ -1984,6 +1990,9 @@ export function AutoCombatPage() {
   const currentPotionConfig = autoPotionConfig ?? fallbackPotionConfig;
 
   const configuredPotionItem = getPotionItem(currentPotionConfig);
+  const configuredPotionImage = getConsumableItemImageUrl(
+    configuredPotionItem,
+  );
 
   const potionOptions = (() => {
     const byId = new Map<string, PotionInventoryOption>();
@@ -5778,7 +5787,7 @@ export function AutoCombatPage() {
                 setSelectedThreat(null);
               }}
             >
-              ×
+              <X size={17} strokeWidth={2.4} aria-hidden="true" />
             </button>
 
             <div className="auto-combat-threat-modal__overview">
@@ -5787,7 +5796,7 @@ export function AutoCombatPage() {
                   <img
                     src={selectedThreatImage}
                     alt={selectedThreatMob.name}
-                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <span className="auto-combat-threat-modal__fallback">☣</span>
@@ -5834,9 +5843,15 @@ export function AutoCombatPage() {
                     className="auto-combat-threat-modal__potion-icon"
                     aria-hidden="true"
                   >
-                    {configuredPotionItem
-                      ? getLootInitials(configuredPotionItem.name)
-                      : "+"}
+                    {configuredPotionImage ? (
+                      <img src={configuredPotionImage} alt="" />
+                    ) : (
+                      <span>
+                        {configuredPotionItem
+                          ? getLootInitials(configuredPotionItem.name)
+                          : "+"}
+                      </span>
+                    )}
                   </span>
 
                   <span className="auto-combat-threat-modal__potion-body">
@@ -5883,6 +5898,7 @@ export function AutoCombatPage() {
                           0,
                           Math.floor(toSafeNumber(potion.quantity, 0)),
                         );
+                        const potionImage = getConsumableItemImageUrl(potion);
                         const isSelected =
                           currentPotionConfig?.potionItemId === potion.itemId ||
                           currentPotionConfig?.potionItemId === potion.id;
@@ -5907,7 +5923,11 @@ export function AutoCombatPage() {
                               className="auto-combat-threat-modal__potion-icon"
                               aria-hidden="true"
                             >
-                              {getLootInitials(potion.name)}
+                              {potionImage ? (
+                                <img src={potionImage} alt="" />
+                              ) : (
+                                <span>{getLootInitials(potion.name)}</span>
+                              )}
                             </span>
 
                             <span className="auto-combat-threat-modal__potion-body">
@@ -6073,6 +6093,7 @@ export function AutoCombatPage() {
                   {selectedThreatDrops.map((drop) => {
                     const itemName = drop.item?.name ?? "Item desconhecido";
                     const chanceLabel = formatDropChance(drop.dropChance);
+                    const itemImage = getGatheringMaterialImageUrl(drop.item);
 
                     return (
                       <div
@@ -6093,7 +6114,11 @@ export function AutoCombatPage() {
                           className="auto-combat-threat-loot-card__icon"
                           aria-hidden="true"
                         >
-                          {getLootInitials(itemName)}
+                          {itemImage ? (
+                            <img src={itemImage} alt="" />
+                          ) : (
+                            <span>{getLootInitials(itemName)}</span>
+                          )}
                         </span>
 
                         <strong>{itemName}</strong>
