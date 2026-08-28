@@ -1,4 +1,6 @@
 import type { DashboardEquipmentItem } from '../types/dashboard.types';
+import type { CharacterPet } from '../../pets/types/pets.types';
+import { DashboardEquippedPetSlot } from './DashboardEquippedPetSlot';
 import { DashboardEquipmentSlot } from './DashboardEquipmentSlot';
 
 interface DashboardEquipmentBodyProps {
@@ -10,6 +12,8 @@ interface DashboardEquipmentBodyProps {
     pants?: DashboardEquipmentItem | null;
     boots?: DashboardEquipmentItem | null;
   };
+  equippedPet?: CharacterPet | null;
+  petHref?: string;
   selectedItemId?: string | null;
   onSelectSlot?: (slot: {
     slotKey: EquipmentSlotKey;
@@ -34,6 +38,8 @@ type EquipmentSlotConfig = {
 
 export function DashboardEquipmentBody({
   equipment,
+  equippedPet,
+  petHref,
   selectedItemId = null,
   onSelectSlot,
 }: DashboardEquipmentBodyProps) {
@@ -98,6 +104,10 @@ export function DashboardEquipmentBody({
             }
           />
         ))}
+
+        {petHref ? (
+          <DashboardEquippedPetSlot pet={equippedPet ?? null} to={petHref} />
+        ) : null}
       </div>
     </section>
   );

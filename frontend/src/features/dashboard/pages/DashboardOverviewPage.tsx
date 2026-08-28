@@ -3,6 +3,8 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { normalizeClassName } from "../../characters/api/characters.api";
 import "../../characters/characters.css";
 import { useGatheringRealtimeState } from "../../gathering/realtime/useGatheringRealtime";
+import { getPetsState } from "../../pets/api/pets.api";
+import type { CharacterPet } from "../../pets/types/pets.types";
 import { getCharacterOverview } from "../api/dashboard.api";
 import { CharacterStatsPanel } from "../components/CharacterStatsPanel";
 import { DashboardCard } from "../components/DashboardCard";
@@ -408,6 +410,7 @@ export function DashboardOverviewPage() {
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
+  const [equippedPet, setEquippedPet] = useState<CharacterPet | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -421,10 +424,14 @@ export function DashboardOverviewPage() {
         setIsLoading(true);
         setErrorMessage("");
 
-        const data = await getCharacterOverview(characterId);
+        const [data, petsState] = await Promise.all([
+          getCharacterOverview(characterId),
+          getPetsState(characterId).catch(() => null),
+        ]);
 
         if (isMounted) {
           setOverview(data);
+          setEquippedPet(petsState?.equippedPet ?? null);
         }
       } catch {
         if (isMounted) {
@@ -507,7 +514,11 @@ export function DashboardOverviewPage() {
             </Link>
           }
         >
-          <DashboardEquipmentBody equipment={equipment} />
+          <DashboardEquipmentBody
+            equipment={equipment}
+            equippedPet={equippedPet}
+            petHref={`/dashboard/${character.id}/pets`}
+          />
         </DashboardCard>
 
         <DashboardCard
