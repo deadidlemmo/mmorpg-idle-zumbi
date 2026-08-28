@@ -77,7 +77,7 @@ test.describe('hub de mercadores', () => {
     await prisma.$disconnect();
   });
 
-  test('exibe a Mara em um banner responsivo e abre o estoque', async ({
+  test('exibe a Mara em uma linha ampliada e abre o estoque', async ({
     page,
   }, testInfo) => {
     await page.addInitScript(
@@ -97,6 +97,26 @@ test.describe('hub de mercadores', () => {
     await expect(
       page.getByRole('heading', { name: 'Mercadores do Abrigo' }),
     ).toBeVisible();
+    const merchantList = page.getByLabel('Lista de mercadores');
+    await expect(
+      merchantList.getByText('Mercador', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      merchantList.getByText('Vende', { exact: true }),
+    ).toBeVisible();
+
+    const heroArtwork = page.locator('.merchant-hub-hero__portrait img');
+    await expect(heroArtwork).toBeVisible();
+    await expect
+      .poll(() =>
+        heroArtwork.evaluate(
+          (image) =>
+            image instanceof HTMLImageElement &&
+            image.complete &&
+            image.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
 
     const merchantCard = page.getByRole('link', {
       name: 'Abrir Balcão da Mara',
@@ -112,7 +132,7 @@ test.describe('hub de mercadores', () => {
     await expect
       .poll(() =>
         merchantCard
-          .locator('.merchant-card__portrait img')
+          .locator('.merchant-card__avatar img')
           .evaluate(
             (image) =>
               image instanceof HTMLImageElement &&
@@ -124,7 +144,8 @@ test.describe('hub de mercadores', () => {
 
     const desktopBox = await merchantCard.boundingBox();
     expect(desktopBox).not.toBeNull();
-    expect(desktopBox!.height).toBeGreaterThanOrEqual(200);
+    expect(desktopBox!.height).toBeGreaterThanOrEqual(80);
+    expect(desktopBox!.height).toBeLessThan(110);
     await page.screenshot({
       path: testInfo.outputPath('merchant-hub-desktop.png'),
       fullPage: true,
@@ -133,7 +154,8 @@ test.describe('hub de mercadores', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileBox = await merchantCard.boundingBox();
     expect(mobileBox).not.toBeNull();
-    expect(mobileBox!.height).toBeGreaterThanOrEqual(145);
+    expect(mobileBox!.height).toBeGreaterThanOrEqual(88);
+    expect(mobileBox!.height).toBeLessThan(120);
     await expect
       .poll(() =>
         page.evaluate(
