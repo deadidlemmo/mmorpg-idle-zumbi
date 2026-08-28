@@ -84,6 +84,7 @@ function createServiceHarness(updateCount = 1) {
     autoCombatHuntBatch: {
       updateMany: jest.fn().mockResolvedValue({ count: updateCount }),
       update: jest.fn().mockResolvedValue({}),
+      create: jest.fn().mockResolvedValue({ id: 'hunt-batch-created' }),
     },
     autoCombatHuntBatchMob: {
       upsert: jest.fn().mockResolvedValue({}),
@@ -102,6 +103,15 @@ function createServiceHarness(updateCount = 1) {
     $transaction: jest.fn((callback: (transaction: typeof tx) => unknown) =>
       callback(tx),
     ),
+    character: {
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
+    autoCombatSession: {
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
+    subMap: {
+      findUnique: jest.fn().mockResolvedValue(null),
+    },
     autoCombatHuntBatch: {
       findFirst: jest.fn().mockResolvedValue(null),
       updateMany: jest.fn().mockResolvedValue({ count: updateCount }),
@@ -959,9 +969,26 @@ describe('AutoCombatService hunting processing', () => {
       subMapName: 'Bloco A',
       defeatedAt: finishedAt.toISOString(),
     });
+
+    expect(
+      (service as any).buildPreservedTrackedEnemiesViewModel({
+        ...session,
+        status: AutoCombatSessionStatus.STOPPED,
+      }),
+    ).toEqual({
+      hasPreservedTrackedEnemies: true,
+      preservedTrackedEnemiesCount: 4,
+      huntBatchId: 'hunt-batch-1',
+      sessionId: 'session-1',
+      mapId: 'map-1',
+      subMapId: 'submap-1',
+      mapName: 'Subúrbio Silencioso',
+      subMapName: 'Bloco A',
+      defeatedAt: null,
+    });
   });
 
-  it('reativa lote preservado em nova sessao pronta para batalha apos cura', async () => {
+  it('reativa lote preservado do mesmo mapa em nova sessao pronta para batalha', async () => {
     const { service, prisma, tx, activityGuard, gateway } =
       createServiceHarness();
     const now = new Date('2026-06-02T12:10:00.000Z');
@@ -1004,21 +1031,23 @@ describe('AutoCombatService hunting processing', () => {
     });
     tx.autoCombatSession.create.mockResolvedValue({ id: 'session-resumed' });
 
-    const response = await (service as any).resumeDefeatedHuntBatchIfAvailable({
-      userId: 'user-1',
-      character: {
-        id: 'character-1',
+    const response = await (service as any).resumePreservedHuntBatchIfAvailable(
+      {
+        userId: 'user-1',
+        character: {
+          id: 'character-1',
+        },
+        mapId: 'map-1',
+        characterStats: {
+          hp: 100,
+          maxHp: 100,
+        },
+        huntingLevel: 2,
+        now,
+        endsAt,
+        sessionDurationSeconds: 21600,
       },
-      mapId: 'map-1',
-      characterStats: {
-        hp: 100,
-        maxHp: 100,
-      },
-      huntingLevel: 2,
-      now,
-      endsAt,
-      sessionDurationSeconds: 21600,
-    });
+    );
 
     expect(response).toEqual({
       active: true,
@@ -1026,6 +1055,25 @@ describe('AutoCombatService hunting processing', () => {
         id: 'session-1',
       },
     });
+    expect(prisma.autoCombatHuntBatch.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          characterId: 'character-1',
+          mapId: 'map-1',
+          status: AutoCombatHuntBatchStatus.READY,
+          session: {
+            is: {
+              status: {
+                in: [
+                  AutoCombatSessionStatus.DEFEATED,
+                  AutoCombatSessionStatus.STOPPED,
+                ],
+              },
+            },
+          },
+        }),
+      }),
+    );
     expect(activityGuard.ensureCanStartAutoCombat).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user-1',
@@ -1058,6 +1106,222 @@ describe('AutoCombatService hunting processing', () => {
       }),
     );
     expect(gateway.emitStatus).toHaveBeenCalled();
+  });
+
+  it('estaciona a sessao pronta sem consumir os mobs rastreados', async () => {
+    const { service, tx, activityGuard } = createServiceHarness();
+
+    const wasParked = await (
+      service as any
+    ).parkEncounterReadySessionForMapChange({
+      userId: 'user-1',
+      characterId: 'character-1',
+      sessionId: 'session-map-1',
+    });
+
+    expect(wasParked).toBe(true);
+    expect(activityGuard.ensureCanStartAutoCombat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        characterId: 'character-1',
+        client: tx,
+        lockCharacter: true,
+      }),
+    );
+    expect(tx.autoCombatSession.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'session-map-1',
+          status: AutoCombatSessionStatus.ACTIVE,
+          phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+        }),
+        data: expect.objectContaining({
+          status: AutoCombatSessionStatus.STOPPED,
+        }),
+      }),
+    );
+    expect(tx.autoCombatHuntBatch.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          sessionId: 'session-map-1',
+          status: AutoCombatHuntBatchStatus.READY,
+        },
+        data: expect.objectContaining({
+          consumedAt: null,
+          cancelledAt: null,
+        }),
+      }),
+    );
+  });
+
+  it('inicia a caca do mapa novo e mantem estacionado o lote pronto do mapa anterior', async () => {
+    const { service, prisma, tx } = createServiceHarness();
+    const mapTwoEncounter = createEncounter('encounter-map-2', 'mob-map-2');
+
+    prisma.character.findFirst.mockResolvedValue({
+      id: 'character-1',
+      level: 12,
+      user: {
+        premiumUntil: null,
+      },
+    });
+    prisma.autoCombatSession.findFirst
+      .mockResolvedValueOnce({
+        id: 'session-map-1',
+        mapId: 'map-1',
+        phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+        endsAt: new Date('2026-06-02T18:00:00.000Z'),
+      })
+      .mockResolvedValueOnce(null);
+    prisma.subMap.findUnique.mockResolvedValue({ id: 'submap-map-2' });
+    jest
+      .spyOn(service as any, 'resolveAutoCombatHuntTarget')
+      .mockResolvedValue({
+        map: {
+          id: 'map-2',
+          minLevel: 1,
+        },
+        subMap: {
+          id: 'submap-map-2',
+        },
+        encounters: [mapTwoEncounter],
+      });
+    jest
+      .spyOn(service as any, 'calculateCharacterFighterStats')
+      .mockReturnValue({ hp: 100, maxHp: 100 });
+    jest
+      .spyOn(service as any, 'createHuntingCycleWithPetBonus')
+      .mockResolvedValue({
+        cycle: {
+          startedAt: new Date('2026-06-02T12:00:00.000Z'),
+          endsAt: new Date('2026-06-02T12:00:15.000Z'),
+          durationMs: 15_000,
+          version: 1,
+        },
+        appliedPetBonus: null,
+      });
+    jest
+      .spyOn(service as any, 'startRealtimeProcessingLoop')
+      .mockImplementation(() => undefined);
+    jest
+      .spyOn(service as any, 'scheduleImmediateSessionProcessing')
+      .mockImplementation(() => undefined);
+
+    await service.start('user-1', {
+      characterId: 'character-1',
+      mapId: 'map-2',
+    });
+
+    expect(tx.autoCombatSession.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'session-map-1',
+          phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+        }),
+        data: expect.objectContaining({
+          status: AutoCombatSessionStatus.STOPPED,
+        }),
+      }),
+    );
+    expect(tx.autoCombatSession.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          characterId: 'character-1',
+          mapId: 'map-2',
+          subMapId: 'submap-map-2',
+          phase: AutoCombatSessionPhase.HUNTING,
+        }),
+      }),
+    );
+    expect(tx.autoCombatHuntBatch.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          characterId: 'character-1',
+          mapId: 'map-2',
+          status: AutoCombatHuntBatchStatus.HUNTING,
+        }),
+      }),
+    );
+  });
+
+  it('exibe somente a sessao inativa do mapa atual e reencontra o lote ao retornar', async () => {
+    const { service, prisma } = createServiceHarness();
+    const character = {
+      id: 'character-1',
+      userId: 'user-1',
+      name: 'Sobrevivente',
+      level: 12,
+      xp: 250,
+      currentHp: 100,
+      maxHp: 100,
+    };
+
+    prisma.character.findFirst
+      .mockResolvedValueOnce({ ...character, mapId: 'map-2' })
+      .mockResolvedValueOnce({ ...character, mapId: 'map-1' });
+    prisma.autoCombatSession.findFirst.mockImplementation(
+      (query: { where?: { status?: string; mapId?: string } }) => {
+        if (query.where?.status === AutoCombatSessionStatus.ACTIVE) {
+          return Promise.resolve(null);
+        }
+
+        return Promise.resolve(
+          query.where?.mapId === 'map-1'
+            ? { id: 'preserved-session-map-1' }
+            : null,
+        );
+      },
+    );
+
+    const statusOnMapTwo = await service.getStatus('user-1', 'character-1');
+
+    expect(statusOnMapTwo).toEqual(
+      expect.objectContaining({
+        active: false,
+        hasActiveAutoCombat: false,
+      }),
+    );
+    expect((service as any).buildSessionResponse).not.toHaveBeenCalled();
+    expect(prisma.autoCombatSession.findFirst).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          characterId: 'character-1',
+          status: AutoCombatSessionStatus.ACTIVE,
+          OR: expect.arrayContaining([
+            {
+              mapId: 'map-2',
+              phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+            },
+          ]),
+        }),
+      }),
+    );
+    expect(prisma.autoCombatSession.findFirst).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: {
+          characterId: 'character-1',
+          mapId: 'map-2',
+        },
+      }),
+    );
+
+    await service.getStatus('user-1', 'character-1');
+
+    expect(prisma.autoCombatSession.findFirst).toHaveBeenNthCalledWith(
+      4,
+      expect.objectContaining({
+        where: {
+          characterId: 'character-1',
+          mapId: 'map-1',
+        },
+      }),
+    );
+    expect((service as any).buildSessionResponse).toHaveBeenCalledWith(
+      'preserved-session-map-1',
+      expect.any(Object),
+    );
   });
 
   it('cancela batalha preservando os mobs rastreados restantes', async () => {

@@ -146,6 +146,11 @@ import {
   resolveAutoCombatHuntingCycleDurationMs,
 } from "../utils/hunting-timeline";
 import {
+  resolveAutoCombatSelectedMapId,
+  scopeInactiveAutoCombatSessionToMap,
+  scopeInactiveAutoCombatStatusToMap,
+} from "../utils/auto-combat-map-scope";
+import {
   getMobFullBodyImage,
   getMobPortraitImage,
   getMobProgressionSortRank,
@@ -426,8 +431,16 @@ function getHuntFoundCount(status: AutoCombatStatusResponse | null) {
 function pickAutoCombatEffectiveStatus(params: {
   realtimeStatus: AutoCombatStatusResponse | null;
   restStatus: AutoCombatStatusResponse | null;
+  mapId?: string | null;
 }) {
-  const { realtimeStatus, restStatus } = params;
+  const realtimeStatus = scopeInactiveAutoCombatStatusToMap(
+    params.realtimeStatus,
+    params.mapId,
+  );
+  const restStatus = scopeInactiveAutoCombatStatusToMap(
+    params.restStatus,
+    params.mapId,
+  );
 
   if (!realtimeStatus) return restStatus;
   if (!restStatus) return realtimeStatus;
@@ -919,11 +932,22 @@ export function AutoCombatPage() {
 
   const realtimeStatus = getRealtimeStatus(realtimeState);
   const isRealtimeSynchronizing = Boolean(realtimeState.isSynchronizing);
+  const currentCharacterMapId =
+    overview?.character.currentMap?.id ??
+    overview?.character.map?.id ??
+    overview?.progression?.currentMap?.id ??
+    null;
+  const statusScopeMapId =
+    selectedMapId || requestedMapId || currentCharacterMapId;
   const effectiveStatus = pickAutoCombatEffectiveStatus({
     realtimeStatus,
     restStatus: autoCombatStatus,
+    mapId: statusScopeMapId,
   });
-  const effectiveSession = getRealtimeSession(realtimeState, effectiveStatus);
+  const effectiveSession = scopeInactiveAutoCombatSessionToMap(
+    getRealtimeSession(realtimeState, effectiveStatus),
+    statusScopeMapId,
+  );
   const providerRealtimeCombat = getRealtimeCombat(realtimeState);
   const providerProgress = getRealtimeProgress(realtimeState);
   const providerSessionTotals = getRealtimeTotals(realtimeState);
@@ -980,9 +1004,10 @@ export function AutoCombatPage() {
 
   const hasActiveSession =
     !effectiveSessionIsTerminal &&
-    (Boolean(realtimeState.isActive) ||
-      Boolean(realtimeState.hasActiveSession) ||
-      Boolean(realtimeState.hasActiveAutoCombat) ||
+    ((Boolean(effectiveSession) &&
+      (Boolean(realtimeState.isActive) ||
+        Boolean(realtimeState.hasActiveSession) ||
+        Boolean(realtimeState.hasActiveAutoCombat))) ||
       isSessionActive(effectiveStatus, effectiveSession));
   const activeSessionSubMapId = hasActiveSession
     ? (effectiveSession?.subMapId ??
@@ -1559,35 +1584,20 @@ export function AutoCombatPage() {
               statusData.subMap?.map?.id ??
               null)
             : null;
+        const overviewCurrentMapId =
+          overviewData.character.currentMap?.id ??
+          overviewData.character.map?.id ??
+          overviewData.progression?.currentMap?.id ??
+          null;
 
-        if (
-          activeStatusMapId &&
-          mapsData.some((gameMap) => gameMap.id === activeStatusMapId)
-        ) {
-          return activeStatusMapId;
-        }
-
-        if (
-          currentValue &&
-          mapsData.some((gameMap) => gameMap.id === currentValue)
-        ) {
-          return currentValue;
-        }
-
-        const requestedMap = requestedMapId
-          ? (mapsData.find((gameMap) => gameMap.id === requestedMapId) ?? null)
-          : null;
-        const requestedSubMapParent = requestedSubMapId
-          ? (mapsData.find((gameMap) => {
-              return gameMap.subMaps?.some(
-                (subMap) => subMap.id === requestedSubMapId,
-              );
-            }) ?? null)
-          : null;
-
-        return (
-          requestedMap?.id ?? requestedSubMapParent?.id ?? mapsData[0]?.id ?? ""
-        );
+        return resolveAutoCombatSelectedMapId({
+          maps: getVisibleCombatMaps(mapsData),
+          activeSessionMapId: activeStatusMapId,
+          currentSelectionMapId: currentValue,
+          requestedMapId,
+          requestedSubMapId,
+          characterMapId: overviewCurrentMapId,
+        });
       });
     } catch (error) {
       if (requestId !== loadAutoCombatDataRequestRef.current) {
@@ -1945,51 +1955,26 @@ export function AutoCombatPage() {
   useEffect(() => {
     if (maps.length <= 0) return;
 
-    if (isMapSelectionLocked) {
-      if (
-        resolvedActiveSessionMapId &&
-        selectedMapId !== resolvedActiveSessionMapId
-      ) {
-        setSelectedMapId(resolvedActiveSessionMapId);
-      }
+    const nextMapId = resolveAutoCombatSelectedMapId({
+      maps: availableMaps,
+      activeSessionMapId: isMapSelectionLocked
+        ? resolvedActiveSessionMapId
+        : null,
+      currentSelectionMapId: selectedMapId,
+      requestedMapId,
+      requestedSubMapId,
+      characterMapId: currentCharacterMapId,
+    });
 
-      return;
-    }
-
-    const requestedMap = requestedMapId
-      ? (maps.find((gameMap) => gameMap.id === requestedMapId) ?? null)
-      : null;
-    const requestedSubMapParent = requestedSubMapId
-      ? (maps.find((gameMap) => {
-          return gameMap.subMaps?.some(
-            (subMap) => subMap.id === requestedSubMapId,
-          );
-        }) ?? null)
-      : null;
-    const nextMap =
-      selectedMap ??
-      requestedMap ??
-      requestedSubMapParent ??
-      availableMaps[0] ??
-      null;
-
-    if (!nextMap) {
-      if (selectedMapId) {
-        setSelectedMapId("");
-      }
-
-      return;
-    }
-
-    if (selectedMapId !== nextMap.id) {
-      setSelectedMapId(nextMap.id);
+    if (selectedMapId !== nextMapId) {
+      setSelectedMapId(nextMapId);
     }
   }, [
     maps,
     availableMaps,
+    currentCharacterMapId,
     isMapSelectionLocked,
     resolvedActiveSessionMapId,
-    selectedMap,
     selectedMapId,
     requestedMapId,
     requestedSubMapId,

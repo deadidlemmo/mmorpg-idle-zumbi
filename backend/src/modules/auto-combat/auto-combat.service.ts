@@ -1098,6 +1098,27 @@ export class AutoCombatService implements OnModuleDestroy {
       }
     }
 
+    if (
+      activeSession?.phase === AutoCombatSessionPhase.ENCOUNTER_READY &&
+      activeSession.mapId !== huntTarget.map.id
+    ) {
+      await this.parkEncounterReadySessionForMapChange({
+        userId,
+        characterId: character.id,
+        sessionId: activeSession.id,
+      });
+
+      activeSession = await this.prisma.autoCombatSession.findFirst({
+        where: {
+          characterId: character.id,
+          status: AutoCombatSessionStatus.ACTIVE,
+        },
+        orderBy: {
+          startedAt: 'desc',
+        },
+      });
+    }
+
     if (activeSession) {
       if (activeSession.mapId !== huntTarget.map.id) {
         throw new ConflictException(
@@ -1344,7 +1365,7 @@ export class AutoCombatService implements OnModuleDestroy {
     );
     const endsAt = new Date(now.getTime() + sessionDurationSeconds * 1000);
     const resumedTrackedBatchResponse =
-      await this.resumeDefeatedHuntBatchIfAvailable({
+      await this.resumePreservedHuntBatchIfAvailable({
         userId,
         character,
         mapId: huntTarget.map.id,
@@ -1538,7 +1559,68 @@ export class AutoCombatService implements OnModuleDestroy {
     return response;
   }
 
-  private async resumeDefeatedHuntBatchIfAvailable(params: {
+  private async parkEncounterReadySessionForMapChange(params: {
+    userId: string;
+    characterId: string;
+    sessionId: string;
+  }) {
+    const parkedAt = new Date();
+    const wasParked = await this.prisma.$transaction(
+      async (tx) => {
+        await this.activityGuard.ensureCanStartAutoCombat({
+          userId: params.userId,
+          characterId: params.characterId,
+          client: tx,
+          lockCharacter: true,
+        });
+
+        const updateResult = await tx.autoCombatSession.updateMany({
+          where: {
+            id: params.sessionId,
+            characterId: params.characterId,
+            status: AutoCombatSessionStatus.ACTIVE,
+            phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+          },
+          data: {
+            status: AutoCombatSessionStatus.STOPPED,
+            finishedAt: parkedAt,
+            lastProcessedAt: parkedAt,
+            huntStoppedAt: parkedAt,
+          },
+        });
+
+        if (updateResult.count === 0) {
+          return false;
+        }
+
+        await tx.autoCombatHuntBatch.updateMany({
+          where: {
+            sessionId: params.sessionId,
+            status: AutoCombatHuntBatchStatus.READY,
+          },
+          data: {
+            stoppedAt: parkedAt,
+            lastProcessedAt: parkedAt,
+            consumedAt: null,
+            cancelledAt: null,
+          },
+        });
+
+        return true;
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+
+    if (wasParked) {
+      this.stopRealtimeProcessingLoop(params.characterId);
+    }
+
+    return wasParked;
+  }
+
+  private async resumePreservedHuntBatchIfAvailable(params: {
     userId: string;
     character: any;
     mapId: string;
@@ -1565,7 +1647,12 @@ export class AutoCombatService implements OnModuleDestroy {
         },
         session: {
           is: {
-            status: AutoCombatSessionStatus.DEFEATED,
+            status: {
+              in: [
+                AutoCombatSessionStatus.DEFEATED,
+                AutoCombatSessionStatus.STOPPED,
+              ],
+            },
           },
         },
       },
@@ -1591,7 +1678,7 @@ export class AutoCombatService implements OnModuleDestroy {
       return null;
     }
 
-    const defeatedSession = huntBatch.session;
+    const preservedSession = huntBatch.session;
     const pendingSelection = this.getHuntBatchPendingMobSelection(huntBatch);
 
     if (!pendingSelection) {
@@ -1622,7 +1709,7 @@ export class AutoCombatService implements OnModuleDestroy {
           data: {
             characterId: params.character.id,
             mapId: params.mapId,
-            subMapId: defeatedSession.subMapId,
+            subMapId: preservedSession.subMapId,
             status: AutoCombatSessionStatus.ACTIVE,
             phase: AutoCombatSessionPhase.ENCOUNTER_READY,
             startedAt: params.now,
@@ -1880,6 +1967,24 @@ export class AutoCombatService implements OnModuleDestroy {
       where: {
         characterId: character.id,
         status: AutoCombatSessionStatus.ACTIVE,
+        ...(character.mapId
+          ? {
+              OR: [
+                {
+                  phase: {
+                    in: [
+                      AutoCombatSessionPhase.HUNTING,
+                      AutoCombatSessionPhase.COMBAT_ACTIVE,
+                    ],
+                  },
+                },
+                {
+                  mapId: character.mapId,
+                  phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+                },
+              ],
+            }
+          : {}),
       },
       orderBy: {
         startedAt: 'desc',
@@ -1911,6 +2016,11 @@ export class AutoCombatService implements OnModuleDestroy {
     const latestSession = await this.prisma.autoCombatSession.findFirst({
       where: {
         characterId: character.id,
+        ...(character.mapId
+          ? {
+              mapId: character.mapId,
+            }
+          : {}),
       },
       orderBy: {
         startedAt: 'desc',
@@ -8241,8 +8351,11 @@ export class AutoCombatService implements OnModuleDestroy {
 
   private buildPreservedTrackedEnemiesViewModel(session: any) {
     const huntBatch = session.huntBatch ?? null;
+    const hasResumableSessionStatus =
+      session.status === AutoCombatSessionStatus.DEFEATED ||
+      session.status === AutoCombatSessionStatus.STOPPED;
     const preservedTrackedEnemiesCount =
-      session.status === AutoCombatSessionStatus.DEFEATED &&
+      hasResumableSessionStatus &&
       huntBatch?.status === AutoCombatHuntBatchStatus.READY
         ? (this.getTrackedEnemiesRemaining(session) ?? 0)
         : 0;
@@ -8261,9 +8374,11 @@ export class AutoCombatService implements OnModuleDestroy {
       subMapName: hasPreservedTrackedEnemies
         ? (session.subMap?.name ?? null)
         : null,
-      defeatedAt: hasPreservedTrackedEnemies
-        ? (session.finishedAt?.toISOString?.() ?? session.finishedAt ?? null)
-        : null,
+      defeatedAt:
+        hasPreservedTrackedEnemies &&
+        session.status === AutoCombatSessionStatus.DEFEATED
+          ? (session.finishedAt?.toISOString?.() ?? session.finishedAt ?? null)
+          : null,
     };
   }
 
