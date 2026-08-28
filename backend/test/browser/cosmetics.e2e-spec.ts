@@ -343,31 +343,48 @@ test.describe('cosméticos e inspeção pública', () => {
     }
   });
 
-  test('exibe somente as três ofertas da loja em desktop e mobile', async ({
+  test('organiza Premium, Cash e pacotes em desktop e mobile', async ({
     page,
   }, testInfo) => {
     await authenticatePage(page, owner);
     await page.goto(`/dashboard/${owner.characterId}/membership`);
 
     await expect(
-      page.getByRole('heading', { name: 'Loja do Abrigo', exact: true }),
+      page.getByRole('heading', { name: 'Premium e Cash', exact: true }),
     ).toBeVisible();
-    await expect(page.locator('.membership-offer')).toHaveCount(3);
+    await expect(page.getByRole('tab')).toHaveCount(3);
     await expect(
       page.getByRole('heading', { name: 'Premium do Abrigo', exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Passe Premium', exact: true }),
+    ).toBeVisible();
+
+    await page.getByRole('tab', { name: /^Cash/ }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Cash avulso', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Pacotes de Cash', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Cash pertence à conta')).toBeVisible();
+
+    await page.getByRole('tab', { name: /^Passes e pacotes/ }).click();
+    await expect(page.locator('.membership-package-card')).toHaveCount(2);
     await expect(
       page.getByRole('heading', { name: 'Núcleo Helix', exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole('heading', { name: 'Protocolo Carmesim', exact: true }),
     ).toBeVisible();
-    await expect(page.getByText('Fundadores Alpha')).toHaveCount(0);
-    await expect(page.getByText('Temporada 01')).toHaveCount(0);
     await expect(
-      page.getByRole('button', { name: /Mercado Pago/ }),
+      page.getByRole('heading', { name: 'Aceleradores', exact: true }),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: /Stripe/ })).toBeVisible();
+    const paymentState = page.getByRole('region', {
+      name: 'Estado dos pagamentos',
+    });
+    await expect(paymentState.getByText('Mercado Pago')).toBeVisible();
+    await expect(paymentState.getByText('Stripe')).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath('storefront-desktop.png'),
       fullPage: true,
@@ -376,7 +393,11 @@ test.describe('cosméticos e inspeção pública', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload();
     await expect(
-      page.getByRole('heading', { name: 'Loja do Abrigo', exact: true }),
+      page.getByRole('heading', { name: 'Premium e Cash', exact: true }),
+    ).toBeVisible();
+    await page.getByRole('tab', { name: /^Cash/ }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Cash avulso', exact: true }),
     ).toBeVisible();
     expect(
       await page.evaluate(
