@@ -18,36 +18,51 @@ function MerchantCard({
   to: string;
 }) {
   return (
-    <Link className="merchant-card" to={to} aria-label={`Abrir ${merchant.marketName}`}>
-      <div className="merchant-card__identity">
-        <div className="merchant-card__avatar" aria-hidden="true">
+    <Link
+      className="merchant-card gathering-origin-lore-card gathering-origin-lore-card--npc gathering-origin-npc"
+      to={to}
+      aria-label={`Abrir ${merchant.marketName}`}
+    >
+      <div className="gathering-origin-npc__stage merchant-card__stage" aria-hidden="true">
+        <div className="gathering-origin-npc__portrait merchant-card__portrait">
           {merchant.portraitUrl ? (
             <img src={merchant.portraitUrl} alt="" />
           ) : (
             <span>{merchant.initials}</span>
           )}
         </div>
+      </div>
 
-        <div className="merchant-card__body">
-          <h3>{merchant.marketName}</h3>
-          <span>{merchant.npcName}</span>
+      <div className="gathering-origin-npc__content merchant-card__content">
+        <div className="gathering-origin-npc__meta">
+          <strong className="gathering-origin-npc__name">
+            {merchant.npcName}
+          </strong>
+          <span className="gathering-origin-npc__role">{merchant.role}</span>
+        </div>
+
+        <h2>{merchant.marketName}</h2>
+        <blockquote>{merchant.quote}</blockquote>
+        <p>{merchant.description}</p>
+
+        <div className="merchant-card__footer">
+          <div className="merchant-card__tags" aria-label="Categorias vendidas">
+            {merchant.tags.map((tag) => (
+              <span
+                key={tag.label}
+                className={`merchant-card__tag merchant-card__tag--${tag.tone ?? 'green'}`}
+              >
+                {tag.label}
+              </span>
+            ))}
+          </div>
+
+          <span className="merchant-card__action" aria-hidden="true">
+            Ver estoque
+            <ArrowRight size={16} />
+          </span>
         </div>
       </div>
-
-      <div className="merchant-card__tags" aria-label="Categorias vendidas">
-        {merchant.tags.map((tag) => (
-          <span
-            key={tag.label}
-            className={`merchant-card__tag merchant-card__tag--${tag.tone ?? 'green'}`}
-          >
-            {tag.label}
-          </span>
-        ))}
-      </div>
-
-      <span className="merchant-card__action" aria-hidden="true">
-        <ArrowRight size={15} />
-      </span>
     </Link>
   );
 }
@@ -136,22 +151,17 @@ export function MerchantHubPage() {
                 Mercadores
               </strong>
               <span className="gathering-origin-npc__role">
-                Comercio do abrigo
+                Comércio do abrigo
               </span>
             </div>
 
             <h2>Mercadores do Abrigo</h2>
-            <blockquote>Toda sobrevivencia precisa de troca.</blockquote>
-            <p>Compre suprimentos e consumiveis com os comerciantes do abrigo.</p>
+            <blockquote>Toda sobrevivência precisa de troca.</blockquote>
+            <p>Compre suprimentos e consumíveis com os comerciantes do abrigo.</p>
           </div>
         </article>
 
         <section className="merchant-list-panel" aria-label="Lista de mercadores">
-          <div className="merchant-list-panel__table-head" aria-hidden="true">
-            <span>Mercador</span>
-            <span>Vende</span>
-          </div>
-
           <div className="merchant-list">
             {MERCHANTS.map((merchant) => (
               <MerchantCard

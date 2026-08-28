@@ -27,22 +27,18 @@ export const MERCHANTS: MerchantDefinition[] = [
   {
     id: 'mara',
     routeSegment: 'mara',
-    marketName: 'Balcao da Mara',
+    marketName: 'Balcão da Mara',
     npcName: 'Mara',
     role: 'Mercadora geral',
     title: 'Mara, a Mercadora',
     quote: 'Suprimentos, remédios e recursos para quem ainda sobrevive.',
     description:
-      'Banca de suprimentos para compras rapidas dentro do abrigo.',
+      'Banca de suprimentos para compras rápidas dentro do abrigo.',
     shopDescription:
-      'Compre consumiveis e suprimentos com Gold para sustentar suas cacadas e expedicoes.',
+      'Compre consumíveis e suprimentos com Gold para sustentar suas caçadas e expedições.',
     portraitUrl: maraPortrait,
     initials: 'MA',
-    tags: [
-      { label: 'Suprimentos', tone: 'gold' },
-      { label: 'Consumiveis', tone: 'muted' },
-      { label: 'Itens', tone: 'green' },
-    ],
+    tags: [{ label: 'Poções', tone: 'gold' }],
     available: true,
   },
 ];
