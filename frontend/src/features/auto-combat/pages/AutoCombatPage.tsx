@@ -7,7 +7,10 @@ import autoCombatActivityIcon from "../../../assets/images/auto-combat/auto-comb
 import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.webp";
 import { ActivityProgressCard } from "../../../components/game/ActivityProgressCard";
 import { ActivityTimelineFill } from "../../../components/game/ActivityTimelineFill";
-import { getActivityTimelineFrame } from "../../../components/game/activityTimeline";
+import {
+  getActivityTimelineFrame,
+  type ActivityTimeline,
+} from "../../../components/game/activityTimeline";
 import { getConsumableItemImageUrl } from "../../consumables/utils/consumableItemAssets";
 import {
   getCharacterOverview,
@@ -134,10 +137,14 @@ import {
   getNextSecondTickDelayMs,
   getRepeatingBattleTimelineProgress,
   getRepeatingCycleProgress,
-  getRepeatingSecondTickFillPercent,
   getServerClientOffsetMs,
   getVisibleBattleCycleRemainingPercent,
 } from "../utils/battle-timeline";
+import {
+  formatAutoCombatHuntingCountdown,
+  formatAutoCombatHuntingCountdownClock,
+  resolveAutoCombatHuntingCycleDurationMs,
+} from "../utils/hunting-timeline";
 import {
   getMobFullBodyImage,
   getMobPortraitImage,
@@ -168,19 +175,49 @@ function preloadAutoCombatImage(imageUrl?: string | null) {
   image.src = imageUrl;
 }
 
-function formatShortClockSeconds(seconds?: number | null) {
-  if (seconds === null || seconds === undefined) return "--:--";
+function AutoCombatHuntingCountdown({
+  cycleEndsAtMs,
+  forceComplete = false,
+  serverClockOffsetMs,
+  timeline,
+  variant,
+}: {
+  cycleEndsAtMs: number;
+  forceComplete?: boolean;
+  serverClockOffsetMs: number;
+  timeline?: ActivityTimeline | null;
+  variant: "clock" | "status";
+}) {
+  const [clockNowMs, setClockNowMs] = useState(() => Date.now());
+  const shouldTick = !forceComplete && (Boolean(timeline) || cycleEndsAtMs > 0);
 
-  const safeSeconds = Math.max(0, Math.floor(seconds));
+  useEffect(() => {
+    if (!shouldTick) return undefined;
 
-  if (safeSeconds >= 3600) {
-    return formatClockSeconds(safeSeconds);
-  }
+    const intervalId = window.setInterval(() => {
+      setClockNowMs(Date.now());
+    }, 100);
 
-  const minutes = Math.floor(safeSeconds / 60);
-  const remainingSeconds = safeSeconds % 60;
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [shouldTick]);
 
-  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+  const remainingMs = forceComplete
+    ? 0
+    : timeline
+      ? getActivityTimelineFrame(timeline).remainingMs
+      : Math.max(0, cycleEndsAtMs - (clockNowMs + serverClockOffsetMs));
+  const isComplete = remainingMs <= 0;
+  const content = isComplete
+    ? variant === "status"
+      ? "Confirmando rastreio..."
+      : "Sincronizando"
+    : variant === "status"
+      ? `Próximo rastreio em ${formatAutoCombatHuntingCountdown(remainingMs)}`
+      : `Próximo em ${formatAutoCombatHuntingCountdownClock(remainingMs)}`;
+
+  return <span className="auto-combat-hunt-countdown">{content}</span>;
 }
 
 function formatAutoCombatCount(
@@ -3397,15 +3434,13 @@ export function AutoCombatPage() {
       : "0";
   const canBattleSelectedThreat =
     isBackendEncounterReadyPhase && selectedThreatRemainingCount > 0;
-  const huntingSecondsPerFind = Math.max(
+  const reportedHuntingSecondsPerFind = Math.max(
     1,
-    Math.floor(
-      toSafeNumber(
-        huntingSnapshot?.secondsPerFind ??
-          huntingSnapshot?.secondsPerEnemy ??
-          huntingSkill?.secondsPerEnemy,
-        12,
-      ),
+    toSafeNumber(
+      huntingSnapshot?.secondsPerFind ??
+        huntingSnapshot?.secondsPerEnemy ??
+        huntingSkill?.secondsPerEnemy,
+      12,
     ),
   );
   const huntStartedAtMs =
@@ -3427,19 +3462,20 @@ export function AutoCombatPage() {
     huntNextFindAtMs !== null &&
     huntNextFindAtMs > huntLastFindAtMs &&
     huntLastFindAtMs > 0;
-  const huntingWindowSeconds = hasAuthoritativeHuntWindow
-    ? Math.max(1, Math.round((huntNextFindAtMs - huntLastFindAtMs) / 1000))
-    : huntingSecondsPerFind;
+  const huntingWindowMs = resolveAutoCombatHuntingCycleDurationMs({
+    lastFindAtMs: hasAuthoritativeHuntWindow ? huntLastFindAtMs : null,
+    nextFindAtMs: hasAuthoritativeHuntWindow ? huntNextFindAtMs : null,
+    secondsPerFind: huntingTimeline
+      ? huntingTimeline.durationMs / 1_000
+      : reportedHuntingSecondsPerFind,
+  });
+  const huntingWindowSeconds = huntingWindowMs / 1_000;
+  const huntCycleEndsAtMs = hasAuthoritativeHuntWindow
+    ? huntNextFindAtMs
+    : huntLastFindAtMs + huntingWindowMs;
   const huntElapsedSinceLastSeconds = Math.max(
     0,
-    hasAuthoritativeHuntWindow
-      ? Math.floor((syncedSessionNowMs - huntLastFindAtMs) / 1000)
-      : Math.floor(
-          toSafeNumber(
-            huntingSnapshot?.elapsedSeconds,
-            (syncedSessionNowMs - huntLastFindAtMs) / 1000,
-          ),
-        ),
+    (syncedSessionNowMs - huntLastFindAtMs) / 1_000,
   );
   const canonicalHuntTimelineFrame = huntingTimeline
     ? getActivityTimelineFrame(huntingTimeline)
@@ -3451,47 +3487,30 @@ export function AutoCombatPage() {
       ? getRepeatingCycleProgress({
           nowMs: syncedSessionNowMs,
           cycleStartedAtMs: huntLastFindAtMs,
-          cycleDurationMs: huntingWindowSeconds * 1000,
+          cycleDurationMs: huntingWindowMs,
         })
       : null;
-  const huntTimelineDurationSeconds = Math.max(1, huntingWindowSeconds);
   const huntTimelineElapsedSeconds = canonicalHuntTimelineFrame
     ? Math.max(
         0,
         Math.min(
-          Math.floor(canonicalHuntTimelineFrame.elapsedMs / 1000),
-          huntTimelineDurationSeconds,
+          canonicalHuntTimelineFrame.elapsedMs / 1_000,
+          huntingWindowSeconds,
         ),
       )
     : huntTimelineProgress
       ? Math.max(
           0,
           Math.min(
-            Math.floor(huntTimelineProgress.cycleElapsedMs / 1000),
-            huntTimelineDurationSeconds,
+            huntTimelineProgress.cycleElapsedMs / 1_000,
+            huntingWindowSeconds,
           ),
         )
       : null;
   const huntTimelineProgressPercent = canonicalHuntTimelineFrame
     ? canonicalHuntTimelineFrame.fillPercent
     : huntTimelineProgress
-      ? getRepeatingSecondTickFillPercent({
-          cycleElapsedMs: huntTimelineProgress.cycleElapsedMs,
-          cycleDurationMs: huntingWindowSeconds * 1000,
-          completedCycles: huntTimelineProgress.completedCycles,
-        })
-      : null;
-  const huntProgressTimeline =
-    !huntingTimeline &&
-    huntTimelineProgress &&
-    huntTimelineElapsedSeconds !== null
-      ? {
-          key: `${huntLastFindAtMs}:${huntingWindowSeconds}:hunt`,
-          durationSeconds: huntTimelineDurationSeconds,
-          elapsedSeconds: huntTimelineElapsedSeconds,
-          direction: "fill" as const,
-          timingFunction: "linear",
-        }
+      ? huntTimelineProgress.progressPercent
       : null;
   const projectedHuntCounts = getHuntDisplayCounts({
     found: availableEnemiesCount,
@@ -3541,33 +3560,6 @@ export function AutoCombatPage() {
             0,
             100,
           );
-  const huntRemainingSeconds =
-    isBackendEncounterReadyPhase || displayedIsHuntLimitReached
-      ? 0
-      : hasPendingHuntProcessing
-        ? 0
-        : canonicalHuntTimelineFrame
-          ? Math.max(
-              1,
-              Math.ceil(canonicalHuntTimelineFrame.remainingMs / 1000),
-            )
-          : huntProgressTimeline
-            ? Math.max(
-                1,
-                Math.ceil(
-                  huntTimelineDurationSeconds -
-                    (huntTimelineProgress?.cycleElapsedMs ?? 0) / 1000,
-                ),
-              )
-            : hasAuthoritativeHuntWindow
-              ? Math.max(
-                  1,
-                  Math.ceil((huntNextFindAtMs - syncedSessionNowMs) / 1000),
-                )
-              : Math.max(
-                  1,
-                  Math.ceil(huntingWindowSeconds - huntCycleElapsedSeconds),
-                );
   const huntTotalElapsedSeconds = Math.max(
     0,
     Math.floor((syncedSessionNowMs - huntStartedAtMs) / 1000),
@@ -3607,7 +3599,7 @@ export function AutoCombatPage() {
   const huntingFoundLabel = displayedFoundEnemiesCount.toLocaleString("pt-BR");
   const huntingRemainingLabel =
     displayedRemainingHuntCapacity.toLocaleString("pt-BR");
-  const huntProgressStatusText = showInlineHuntBattle
+  const huntProgressStatusContent = showInlineHuntBattle
     ? displayedBattleTargetTotal > 0
       ? `${displayedBattleTargetDefeated}/${displayedBattleTargetTotal} abatidos`
       : "Batalha em andamento"
@@ -3615,16 +3607,28 @@ export function AutoCombatPage() {
       ? "Limite do mapa atingido"
       : isBackendEncounterReadyPhase
         ? "Ameaça pronta para combate"
-        : hasPendingHuntProcessing
-          ? "Confirmando rastreio..."
-          : `Próximo rastreio em ${huntRemainingSeconds}s`;
-  const huntingActivityNextLabel = displayedIsHuntLimitReached
+        : (
+            <AutoCombatHuntingCountdown
+              cycleEndsAtMs={huntCycleEndsAtMs}
+              forceComplete={hasPendingHuntProcessing}
+              serverClockOffsetMs={serverClockOffsetMs}
+              timeline={huntingTimeline}
+              variant="status"
+            />
+          );
+  const huntingActivityNextContent = displayedIsHuntLimitReached
     ? "Limite atingido"
     : isBackendEncounterReadyPhase
       ? "Ameaça pronta"
-      : hasPendingHuntProcessing
-        ? "Sincronizando"
-        : `Próximo em ${formatShortClockSeconds(huntRemainingSeconds)}`;
+      : (
+          <AutoCombatHuntingCountdown
+            cycleEndsAtMs={huntCycleEndsAtMs}
+            forceComplete={hasPendingHuntProcessing}
+            serverClockOffsetMs={serverClockOffsetMs}
+            timeline={huntingTimeline}
+            variant="clock"
+          />
+        );
   const huntProgressStyle: AutoCombatHuntProgressStyle = {
     "--hunt-progress": `${huntProgressPercent}%`,
   };
@@ -3675,8 +3679,8 @@ export function AutoCombatPage() {
   );
   const huntingSpeedLabel =
     huntingSpeedPercent > 0
-      ? `${huntingSpeedPercent}% mais rápida`
-      : `${huntingSecondsPerFind}s por rastreio`;
+      ? `${huntingSpeedPercent}% mais rápida · ${formatAutoCombatHuntingCountdown(huntingWindowMs)} por rastreio`
+      : `${formatAutoCombatHuntingCountdown(huntingWindowMs)} por rastreio`;
   const shouldShowHuntTopBarActivity = isBackendHuntingPhase;
   const topBarHuntingQueue = buildHuntingActivityQueue([
     trackedMonsterSnapshots as HuntingActivityTrackedSource[],
@@ -4452,7 +4456,7 @@ export function AutoCombatPage() {
           ...(!showInlineHuntBattle
             ? [
                 {
-                  content: huntingActivityNextLabel,
+                  content: huntingActivityNextContent,
                   key: "next",
                   title: huntingSpeedLabel,
                 },
@@ -4761,7 +4765,7 @@ export function AutoCombatPage() {
                           </div>
 
                           <div className="auto-combat-hunt-scan__footer">
-                            <span>{huntProgressStatusText}</span>
+                            <span>{huntProgressStatusContent}</span>
                             <strong>{Math.round(huntProgressPercent)}%</strong>
                           </div>
                         </div>

@@ -2,10 +2,43 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  formatAutoCombatHuntingCountdown,
+  formatAutoCombatHuntingCountdownClock,
   getAutoCombatHuntingTimelineSnapshot,
   isAutoCombatHuntingTimelineEnabled,
+  resolveAutoCombatHuntingCycleDurationMs,
   resolveAutoCombatHuntingTimelineRollout,
 } from './hunting-timeline';
+
+test('preserva a duracao fracionada do rastreio aplicado pelo pet', () => {
+  assert.equal(
+    resolveAutoCombatHuntingCycleDurationMs({
+      lastFindAtMs: Date.parse('2026-08-28T12:00:00.000Z'),
+      nextFindAtMs: Date.parse('2026-08-28T12:00:14.550Z'),
+      secondsPerFind: 15,
+    }),
+    14_550,
+  );
+  assert.equal(
+    resolveAutoCombatHuntingCycleDurationMs({ secondsPerFind: 13.875 }),
+    13_875,
+  );
+  assert.equal(
+    resolveAutoCombatHuntingCycleDurationMs({
+      lastFindAtMs: null,
+      nextFindAtMs: Date.parse('2026-08-28T12:00:14.550Z'),
+      secondsPerFind: 14.55,
+    }),
+    14_550,
+  );
+});
+
+test('exibe a contagem da caca com precisao de milissegundos', () => {
+  assert.equal(formatAutoCombatHuntingCountdown(13_875), '13,875s');
+  assert.equal(formatAutoCombatHuntingCountdownClock(13_875), '0:13,875');
+  assert.equal(formatAutoCombatHuntingCountdownClock(61_005), '1:01,005');
+  assert.equal(formatAutoCombatHuntingCountdown(null), '--');
+});
 
 test('mantem o rollout da timeline de caca restrito ao admin por padrao', () => {
   assert.equal(resolveAutoCombatHuntingTimelineRollout(undefined), 'admin');

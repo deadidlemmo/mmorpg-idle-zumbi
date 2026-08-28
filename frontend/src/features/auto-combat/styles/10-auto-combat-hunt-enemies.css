@@ -389,6 +389,10 @@
   font-weight: 950;
 }
 
+.auto-combat-hunt-countdown {
+  font-variant-numeric: tabular-nums;
+}
+
 .auto-combat-hunt-tracker__status {
   display: grid;
   min-width: 116px;
