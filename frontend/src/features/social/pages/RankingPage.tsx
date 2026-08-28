@@ -1,17 +1,20 @@
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Clock3,
-  Crosshair,
+  Check,
+  ChevronDown,
+  ChevronRight,
   Crown,
   Eye,
-  Hammer,
   Medal,
   Pickaxe,
   Trophy,
   UserRoundCheck,
 } from "lucide-react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import autoCombatActivityIcon from "../../../assets/images/auto-combat/auto-combat-activity-icon.webp";
+import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.webp";
+import craftingActivityIcon from "../../../assets/images/crafting/skills/crafting.webp";
 import { normalizeClassName } from "../../characters/api/characters.api";
 import { CharacterPortrait } from "../../cosmetics/components/CharacterPortrait";
 import {
@@ -24,6 +27,7 @@ import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
 } from "../../dashboard/types/dashboard.types";
+import { GATHERING_ORIGIN_ICON_BY_ORIGIN } from "../../gathering/constants/gathering-origin-icons";
 import { getSocialRanking } from "../api/social.api";
 import "../styles/ranking.css";
 import type {
@@ -35,23 +39,48 @@ import type {
 const PRIMARY_CATEGORIES: ReadonlyArray<{
   key: SocialRankingCategory;
   label: string;
-  icon: typeof Trophy;
+  icon: string;
 }> = [
-  { key: "LEVEL", label: "Nível", icon: Trophy },
-  { key: "HUNTING", label: "Caça", icon: Crosshair },
-  { key: "CRAFTING", label: "Criação", icon: Hammer },
+  { key: "LEVEL", label: "Nível", icon: autoCombatActivityIcon },
+  { key: "HUNTING", label: "Caça", icon: huntingActivityIcon },
+  { key: "CRAFTING", label: "Criação", icon: craftingActivityIcon },
 ];
 
 const EXPEDITION_CATEGORIES: ReadonlyArray<{
   key: SocialRankingCategory;
   label: string;
+  icon: string;
 }> = [
-  { key: "DESMANCHE", label: "Desmanche" },
-  { key: "COLETA", label: "Coleta" },
-  { key: "CONTENCAO", label: "Contenção" },
-  { key: "ARSENAL", label: "Arsenal" },
-  { key: "PATRULHA", label: "Patrulha" },
-  { key: "TECNOVARREDURA", label: "Tecnovarredura" },
+  {
+    key: "DESMANCHE",
+    label: "Desmanche",
+    icon: GATHERING_ORIGIN_ICON_BY_ORIGIN.DESMANCHE,
+  },
+  {
+    key: "COLETA",
+    label: "Coleta",
+    icon: GATHERING_ORIGIN_ICON_BY_ORIGIN.COLETA,
+  },
+  {
+    key: "CONTENCAO",
+    label: "Contenção",
+    icon: GATHERING_ORIGIN_ICON_BY_ORIGIN.CONTENCAO,
+  },
+  {
+    key: "ARSENAL",
+    label: "Arsenal",
+    icon: GATHERING_ORIGIN_ICON_BY_ORIGIN.ARSENAL,
+  },
+  {
+    key: "PATRULHA",
+    label: "Patrulha",
+    icon: GATHERING_ORIGIN_ICON_BY_ORIGIN.PATRULHA,
+  },
+  {
+    key: "TECNOVARREDURA",
+    label: "Tecnovarredura",
+    icon: GATHERING_ORIGIN_ICON_BY_ORIGIN.TECNOVARREDURA,
+  },
 ];
 
 const numberFormatter = new Intl.NumberFormat("pt-BR");
@@ -72,6 +101,98 @@ function getPodiumLabel(rank: number) {
   if (rank === 1) return "Líder";
   if (rank === 2) return "Segundo lugar";
   return "Terceiro lugar";
+}
+
+function ExpeditionRankingPicker({
+  value,
+  onChange,
+}: {
+  value: SocialRankingCategory | "";
+  onChange: (category: SocialRankingCategory) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOption = EXPEDITION_CATEGORIES.find(
+    (option) => option.key === value,
+  );
+
+  return (
+    <div
+      className={`ranking-expedition-picker${selectedOption ? " is-active" : ""}`}
+      onBlur={(event) => {
+        const nextFocus = event.relatedTarget;
+
+        if (
+          nextFocus instanceof Node &&
+          event.currentTarget.contains(nextFocus)
+        ) {
+          return;
+        }
+
+        setIsOpen(false);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          setIsOpen(false);
+          event.currentTarget
+            .querySelector<HTMLButtonElement>("button")
+            ?.focus();
+        }
+      }}
+    >
+      <button
+        type="button"
+        className="ranking-expedition-picker__trigger"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span className="ranking-expedition-picker__icon" aria-hidden="true">
+          {selectedOption ? (
+            <img src={selectedOption.icon} alt="" draggable={false} />
+          ) : (
+            <Pickaxe size={20} />
+          )}
+        </span>
+        <span className="ranking-expedition-picker__copy">
+          <small>Expedições</small>
+          <strong>{selectedOption?.label ?? "Escolher atividade"}</strong>
+        </span>
+        <ChevronDown size={17} aria-hidden="true" />
+      </button>
+
+      {isOpen ? (
+        <div
+          className="ranking-expedition-picker__menu"
+          role="listbox"
+          aria-label="Ranking de expedições"
+        >
+          {EXPEDITION_CATEGORIES.map((option) => {
+            const isSelected = option.key === value;
+
+            return (
+              <button
+                key={option.key}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                className={isSelected ? "is-selected" : ""}
+                onClick={() => {
+                  onChange(option.key);
+                  setIsOpen(false);
+                }}
+              >
+                <span aria-hidden="true">
+                  <img src={option.icon} alt="" draggable={false} />
+                </span>
+                <strong>{option.label}</strong>
+                {isSelected ? <Check size={15} aria-hidden="true" /> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function buildCharacter(
@@ -128,12 +249,12 @@ function RankingRow({
   entry,
   category,
   isCurrentCharacter,
-  onInspect,
+  inspectHref,
 }: {
   entry: SocialRankingEntry;
   category: SocialRankingCategory;
   isCurrentCharacter: boolean;
-  onInspect: () => void;
+  inspectHref: string;
 }) {
   const appearance = entry.appearance ?? entry.character.appearance;
   const bannerImage = getCosmeticImage(
@@ -152,7 +273,8 @@ function RankingRow({
   const metricLabel = getMetricLabel(category);
 
   return (
-    <article
+    <Link
+      to={inspectHref}
       className={[
         "ranking-row",
         entry.rank <= 3 ? "is-podium" : "",
@@ -164,6 +286,7 @@ function RankingRow({
         .filter(Boolean)
         .join(" ")}
       style={style}
+      aria-label={`Abrir perfil de ${entry.character.name}`}
     >
       <span className="cosmetic-effect-layer" aria-hidden="true" />
       <RankingPosition rank={entry.rank} />
@@ -195,15 +318,10 @@ function RankingRow({
         <strong>Nv. {entry.score.level}</strong>
         <small>{numberFormatter.format(entry.score.totalXp)} XP total</small>
       </div>
-      <button
-        type="button"
-        title="Inspecionar personagem"
-        aria-label={`Inspecionar ${entry.character.name}`}
-        onClick={onInspect}
-      >
-        <Eye size={17} />
-      </button>
-    </article>
+      <span className="ranking-row__action" aria-hidden="true">
+        <ChevronRight size={18} />
+      </span>
+    </Link>
   );
 }
 
@@ -361,13 +479,6 @@ export function RankingPage() {
   const currentEntry = rankingEntries.find(
     (entry) => entry.character.id === characterId,
   );
-  const updatedAt = ranking
-    ? new Intl.DateTimeFormat("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(new Date(ranking.generatedAt))
-    : null;
-
   if (!characterId) return <Navigate to="/characters" replace />;
   if (isLoadingCharacter && !character) {
     return <main className="dashboard-loading">Carregando ranking...</main>;
@@ -387,17 +498,13 @@ export function RankingPage() {
           <div>
             <span>Classificação do abrigo</span>
             <h1>Ranking</h1>
-            <p>Sobreviventes em destaque.</p>
-          </div>
-          <div className="ranking-header__mark" aria-hidden="true">
-            <Trophy size={22} />
+            <p>Classificação geral e por atividade.</p>
           </div>
         </header>
 
         <section className="ranking-controls" aria-label="Categoria do ranking">
           <div className="ranking-primary-tabs" role="tablist">
             {PRIMARY_CATEGORIES.map((item) => {
-              const Icon = item.icon;
               return (
                 <button
                   key={item.key}
@@ -407,33 +514,22 @@ export function RankingPage() {
                   className={category === item.key ? "is-active" : ""}
                   onClick={() => setCategory(item.key)}
                 >
-                  <Icon size={15} />
-                  {item.label}
+                  <span
+                    className="ranking-primary-tabs__icon"
+                    aria-hidden="true"
+                  >
+                    <img src={item.icon} alt="" draggable={false} />
+                  </span>
+                  <span>{item.label}</span>
                 </button>
               );
             })}
           </div>
 
-          <label className={expeditionCategory ? "is-active" : ""}>
-            <Pickaxe size={15} aria-hidden="true" />
-            <span>Expedições</span>
-            <select
-              value={expeditionCategory}
-              aria-label="Ranking de expedições"
-              onChange={(event) =>
-                setCategory(event.target.value as SocialRankingCategory)
-              }
-            >
-              <option value="" disabled>
-                Escolher
-              </option>
-              {EXPEDITION_CATEGORIES.map((item) => (
-                <option key={item.key} value={item.key}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ExpeditionRankingPicker
+            value={expeditionCategory}
+            onChange={setCategory}
+          />
         </section>
 
         {error ? (
@@ -454,21 +550,12 @@ export function RankingPage() {
                 {ranking?.label ?? requestedCategoryLabel}
               </h2>
             </div>
-            <div className="ranking-board__updated">
-              {isRefreshingRanking ? (
-                <span className="is-loading" role="status">
-                  <span className="loading-spinner" aria-hidden="true" />
-                  Atualizando {requestedCategoryLabel}
-                </span>
-              ) : updatedAt ? (
-                <span>
-                  <Clock3 size={13} aria-hidden="true" /> {updatedAt}
-                </span>
-              ) : null}
-              <strong>
-                {ranking ? `Top ${rankingEntries.length}` : "Top --"}
-              </strong>
-            </div>
+            {isRefreshingRanking ? (
+              <span className="ranking-board__refresh" role="status">
+                <span className="loading-spinner" aria-hidden="true" />
+                Atualizando {requestedCategoryLabel}
+              </span>
+            ) : null}
           </div>
 
           {rankingEntries.length ? (
@@ -508,7 +595,6 @@ export function RankingPage() {
                   <span>Destaques do abrigo</span>
                   <h3>Pódio</h3>
                 </div>
-                <Trophy size={17} aria-hidden="true" />
               </div>
               <div className="ranking-podium" aria-label="Pódio do ranking">
                 {podiumEntries.map((entry) => (
@@ -542,11 +628,7 @@ export function RankingPage() {
                         entry={entry}
                         category={displayedCategory}
                         isCurrentCharacter={entry.character.id === characterId}
-                        onInspect={() =>
-                          navigate(
-                            `/dashboard/${characterId}/inspect/${entry.character.id}`,
-                          )
-                        }
+                        inspectHref={`/dashboard/${characterId}/inspect/${entry.character.id}`}
                       />
                     ))}
                   </div>

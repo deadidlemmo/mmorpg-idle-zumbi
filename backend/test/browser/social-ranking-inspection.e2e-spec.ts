@@ -115,6 +115,7 @@ test.describe('aliados, ranking e inspeção', () => {
 
   let requester: SocialPlayer;
   let target: SocialPlayer;
+  let rowTarget: SocialPlayer;
   let qaFixture: SocialPlayer;
   const extraContexts: BrowserContext[] = [];
 
@@ -124,6 +125,8 @@ test.describe('aliados, ranking e inspeção', () => {
     });
     requester = await createPlayer({ label: 'Vigia', level: 48 });
     target = await createPlayer({ label: 'Sentinela', level: 49 });
+    await createPlayer({ label: 'Batedor', level: 47 });
+    rowTarget = await createPlayer({ label: 'Mateiro', level: 46 });
     qaFixture = await createPlayer({
       label: 'Fixture QA',
       emailSuffix: '@dead-idle.test',
@@ -193,6 +196,23 @@ test.describe('aliados, ranking e inspeção', () => {
     await expect(
       page.getByText(qaFixture.characterName, { exact: true }),
     ).toHaveCount(0);
+    await expect(page.locator('.ranking-header__mark')).toHaveCount(0);
+    await expect(page.locator('.ranking-board__updated')).toHaveCount(0);
+
+    const categoryIcons = page.locator('.ranking-primary-tabs__icon img');
+    await expect(categoryIcons).toHaveCount(3);
+    await expect
+      .poll(async () =>
+        categoryIcons.evaluateAll((images) =>
+          images.every(
+            (image) =>
+              image instanceof HTMLImageElement &&
+              image.complete &&
+              image.naturalWidth > 0,
+          ),
+        ),
+      )
+      .toBe(true);
 
     const podium = page.locator('.ranking-podium');
     const podiumCards = podium.locator('.ranking-podium-card');
@@ -226,6 +246,46 @@ test.describe('aliados, ranking e inspeção', () => {
     await podium.screenshot({
       path: testInfo.outputPath('ranking-podium-desktop.png'),
     });
+    await page.screenshot({
+      path: testInfo.outputPath('ranking-page-desktop.png'),
+      fullPage: true,
+    });
+
+    const expeditionPicker = page.locator(
+      '.ranking-expedition-picker__trigger',
+    );
+    await expeditionPicker.click();
+    const expeditionMenu = page.getByRole('listbox', {
+      name: 'Ranking de expedições',
+    });
+    await expect(expeditionMenu).toBeVisible();
+    await expect(expeditionMenu.getByRole('option')).toHaveCount(6);
+    const expeditionIcons = expeditionMenu.locator('img');
+    await expect(expeditionIcons).toHaveCount(6);
+    await expect
+      .poll(async () =>
+        expeditionIcons.evaluateAll((images) =>
+          images.every(
+            (image) =>
+              image instanceof HTMLImageElement &&
+              image.complete &&
+              image.naturalWidth > 0,
+          ),
+        ),
+      )
+      .toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath('ranking-expedition-menu.png'),
+      fullPage: true,
+    });
+    await expeditionMenu.getByRole('option', { name: 'Desmanche' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Desmanche', exact: true }),
+    ).toBeVisible();
+    await page.getByRole('tab', { name: 'Nível', exact: true }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Nível geral', exact: true }),
+    ).toBeVisible();
 
     let releaseHuntingRequest: (() => void) | undefined;
     await page.route('**/social/rankings**', async (route) => {
@@ -267,13 +327,17 @@ test.describe('aliados, ranking e inspeção', () => {
     ).toBeVisible();
 
     const rankedTarget = page
-      .locator('.ranking-podium-card, .ranking-row')
-      .filter({ hasText: target.characterName })
-      .first();
-    await rankedTarget.getByRole('button', { name: 'Inspecionar' }).click();
+      .locator('.ranking-row')
+      .filter({ hasText: rowTarget.characterName });
+    await expect(rankedTarget).toHaveCount(1);
+    await expect(rankedTarget).toHaveAttribute(
+      'href',
+      `/dashboard/${requester.characterId}/inspect/${rowTarget.characterId}`,
+    );
+    await rankedTarget.click();
 
     await expect(
-      page.getByRole('heading', { name: target.characterName, exact: true }),
+      page.getByRole('heading', { name: rowTarget.characterName, exact: true }),
     ).toBeVisible();
     await expect(page.getByText('Ativo', { exact: true })).toBeVisible();
     await expect(page.getByText('ACTIVE', { exact: true })).toHaveCount(0);
@@ -322,6 +386,10 @@ test.describe('aliados, ranking e inspeção', () => {
     ).toBe(false);
     await page.locator('.ranking-podium').screenshot({
       path: testInfo.outputPath('ranking-podium-mobile.png'),
+    });
+    await page.screenshot({
+      path: testInfo.outputPath('ranking-page-mobile.png'),
+      fullPage: true,
     });
 
     await page.goto(
