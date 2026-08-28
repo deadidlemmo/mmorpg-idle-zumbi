@@ -314,13 +314,6 @@
     letter-spacing: 0.1em !important;
   }
 
-  .gathering-origin-npc__role,
-  .gathering-origin-lore-card__role {
-    min-height: 16px !important;
-    padding: 0.08rem 0.3rem !important;
-    font-size: 0.42rem !important;
-  }
-
   .gathering-origin-lore-card h2 {
     font-size: 0.96rem !important;
   }
@@ -441,11 +434,6 @@
   .gathering-origin-npc__content,
   .gathering-origin-lore-card__content {
     padding: 0.62rem 0.52rem 0.62rem 0;
-  }
-
-  .gathering-origin-npc__role,
-  .gathering-origin-lore-card__role {
-    display: none !important;
   }
 
   .gathering-origin-lore-card h2 {

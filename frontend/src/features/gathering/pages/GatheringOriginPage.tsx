@@ -1218,10 +1218,6 @@ export function GatheringOriginPage() {
                   <strong className="gathering-origin-npc__name">
                     {originLore?.npcName ?? 'Especialista do abrigo'}
                   </strong>
-
-                  <span className="gathering-origin-npc__role">
-                    Serviço de {originLabel}
-                  </span>
                 </div>
 
                 <h2>{originLore?.title ?? originLabel}</h2>

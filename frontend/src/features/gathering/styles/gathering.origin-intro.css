@@ -285,26 +285,6 @@
     0 0 12px rgba(110, 159, 67, 0.18);
 }
 
-.gathering-origin-npc__role,
-.gathering-origin-lore-card__role {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  padding: 0.18rem 0.5rem;
-  color: #f6d98d;
-  font-family: var(--font-title);
-  font-size: 0.56rem;
-  font-weight: 950;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  border: 1px solid rgba(230, 190, 90, 0.26);
-  border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
-    rgba(230, 190, 90, 0.14);
-}
-
 .gathering-origin-lore-card h2 {
   display: block;
   margin: 0;
