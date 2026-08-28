@@ -266,37 +266,53 @@ export const PET_TIME_REDUCTION_BASIS_POINTS_BY_TIER = Object.freeze({
   5: 750,
 } as const);
 
+export type PetCatalogRarity =
+  | 'COMMON'
+  | 'UNCOMMON'
+  | 'RARE'
+  | 'EPIC'
+  | 'LEGENDARY';
+
+export function getPetRarityByTier(tier: number): PetCatalogRarity {
+  if (tier >= 9) return 'LEGENDARY';
+  if (tier >= 7) return 'EPIC';
+  if (tier >= 5) return 'RARE';
+  if (tier >= 3) return 'UNCOMMON';
+
+  return 'COMMON';
+}
+
 const PET_TIER_CONFIG = Object.freeze({
   1: {
-    rarity: 'UNCOMMON',
+    rarity: getPetRarityByTier(1),
     incubationSeconds: 2 * 60 * 60,
     fragmentCost: 10,
     goldCost: 300,
     npcSaleGold: 120,
   },
   2: {
-    rarity: 'UNCOMMON',
+    rarity: getPetRarityByTier(2),
     incubationSeconds: 4 * 60 * 60,
     fragmentCost: 14,
     goldCost: 750,
     npcSaleGold: 300,
   },
   3: {
-    rarity: 'RARE',
+    rarity: getPetRarityByTier(3),
     incubationSeconds: 6 * 60 * 60,
     fragmentCost: 18,
     goldCost: 1600,
     npcSaleGold: 640,
   },
   4: {
-    rarity: 'RARE',
+    rarity: getPetRarityByTier(4),
     incubationSeconds: 8 * 60 * 60,
     fragmentCost: 24,
     goldCost: 3000,
     npcSaleGold: 1200,
   },
   5: {
-    rarity: 'EPIC',
+    rarity: getPetRarityByTier(5),
     incubationSeconds: 12 * 60 * 60,
     fragmentCost: 30,
     goldCost: 5000,

@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import type { InventoryEntry } from '../types/inventory.types';
 import {
   formatInventoryType,
   getInventoryItemIcon,
   getInventoryItemImageUrl,
   getInventoryItemInitials,
+  getInventoryItemRarityCssVariables,
+  getInventoryItemVisualRarity,
 } from '../utils/inventory.utils';
 
 interface InventoryItemCardProps {
@@ -19,12 +21,6 @@ type InventoryItemWithOptionalLevel = InventoryEntry['item'] & {
 };
 
 type TooltipPlacement = 'center' | 'start' | 'end';
-
-function normalizeRarityClass(rarity?: string | null) {
-  return String(rarity ?? 'COMMON')
-    .trim()
-    .toLowerCase();
-}
 
 function formatQuantity(quantity?: number | null) {
   const safeQuantity = Math.max(0, Math.floor(Number(quantity) || 0));
@@ -88,8 +84,10 @@ export function InventoryItemCard({ entry, onSelect }: InventoryItemCardProps) {
   const item = entry.item as InventoryItemWithOptionalLevel;
 
   const itemName = item.name?.trim() || 'Item desconhecido';
-  const rarity = item.rarity ?? 'COMMON';
-  const rarityClass = normalizeRarityClass(rarity);
+  const rarity = getInventoryItemVisualRarity(entry);
+  const rarityStyle = getInventoryItemRarityCssVariables(
+    entry,
+  ) as CSSProperties | undefined;
 
   const itemTypeLabel = formatInventoryType(entry);
   const compactTypeLabel = getCompactTypeLabel(itemTypeLabel);
@@ -126,8 +124,9 @@ export function InventoryItemCard({ entry, onSelect }: InventoryItemCardProps) {
   return (
     <article
       ref={cardRef}
-      className={`inventory-item-card rarity-${rarityClass}`}
-      data-rarity={rarityClass}
+      className={`inventory-item-card rarity-${rarity.key}`}
+      style={rarityStyle}
+      data-rarity={rarity.key}
       data-type={itemTypeLabel}
     >
       <button

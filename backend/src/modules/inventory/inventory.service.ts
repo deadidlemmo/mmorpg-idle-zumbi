@@ -12,6 +12,7 @@ import {
   Prisma,
   Rarity,
 } from '@prisma/client';
+import { getPetRarityByTier } from '../../common/config/economy.config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
@@ -484,7 +485,7 @@ export class InventoryService {
     const typeMultiplier =
       BLACK_MARKET_TYPE_MULTIPLIER[inventoryItem.type] ?? 1;
     const rarityMultiplier = this.getBlackMarketRarityMultiplier(
-      inventoryItem.item.rarity,
+      this.getCanonicalItemRarity(inventoryItem.item),
     );
 
     return Math.max(
@@ -507,6 +508,15 @@ export class InventoryService {
       default:
         return 1;
     }
+  }
+
+  private getCanonicalItemRarity(item: InventoryEntryRecord['item']): Rarity {
+    const isPetCocoon =
+      item.family === 'Casulo Infectado' && item.slug?.startsWith('casulo-de-');
+
+    if (!isPetCocoon) return item.rarity;
+
+    return Rarity[getPetRarityByTier(item.tier)];
   }
 
   private async decrementInventoryItem(
@@ -577,6 +587,8 @@ export class InventoryService {
   private mapInventoryEntry(
     inventoryItem: InventoryEntryRecord | BankEntryRecord,
   ) {
+    const rarity = this.getCanonicalItemRarity(inventoryItem.item);
+
     return {
       inventoryItemId: inventoryItem.id,
       quantity: inventoryItem.quantity,
@@ -587,9 +599,10 @@ export class InventoryService {
         id: inventoryItem.item.id,
         name: inventoryItem.item.name,
         description: inventoryItem.item.description,
+        slug: inventoryItem.item.slug,
 
         tier: inventoryItem.item.tier,
-        rarity: inventoryItem.item.rarity,
+        rarity,
         slot: inventoryItem.item.slot,
         family: inventoryItem.item.family,
 

@@ -12,7 +12,10 @@ import {
   PetSpecialization,
   Prisma,
 } from '@prisma/client';
-import { getPetDuplicateCocoonRecovery } from '../../common/config/economy.config';
+import {
+  getPetDuplicateCocoonRecovery,
+  getPetRarityByTier,
+} from '../../common/config/economy.config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
@@ -155,6 +158,7 @@ export class PetsService {
           fragmentCost: definition.fragmentCost,
           goldCost: definition.goldCost,
         });
+        const rarity = getPetRarityByTier(definition.tier);
 
         return {
           id: definition.id,
@@ -162,7 +166,7 @@ export class PetsService {
           name: definition.name,
           description: definition.description,
           tier: definition.tier,
-          rarity: definition.rarity,
+          rarity,
           assetKey: definition.assetKey,
           specialization: definition.specialization,
           specializationLabel:
@@ -191,7 +195,7 @@ export class PetsService {
             : null,
           cocoonItem: {
             ...definition.cocoonItem,
-            rarity: String(definition.cocoonItem.rarity),
+            rarity,
           },
           characterPet: characterPet
             ? this.formatCharacterPet(
@@ -972,7 +976,7 @@ export class PetsService {
         name: characterPet.petDefinition.name,
         description: characterPet.petDefinition.description,
         tier: characterPet.petDefinition.tier,
-        rarity: characterPet.petDefinition.rarity,
+        rarity: getPetRarityByTier(characterPet.petDefinition.tier),
         assetKey: characterPet.petDefinition.assetKey,
         specialization: characterPet.petDefinition.specialization,
         specializationLabel:

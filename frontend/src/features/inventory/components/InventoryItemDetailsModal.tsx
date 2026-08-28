@@ -1,17 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import type {
   InventoryEntry,
   InventoryItemActionFeedback,
   InventoryItemActionViewModel,
 } from '../types/inventory.types';
 import {
-  formatInventoryRarity,
   formatInventoryType,
   formatMaterialOrigin,
   getInventoryBonusList,
   getInventoryItemIcon,
   getInventoryItemImageUrl,
   getInventoryItemInitials,
+  getInventoryItemRarityCssVariables,
+  getInventoryItemVisualRarity,
   getInventoryPrimaryDetail,
 } from '../utils/inventory.utils';
 
@@ -33,12 +34,6 @@ type InventoryItemWithVisualMetadata = InventoryEntry['item'] & {
   minLevel?: number | null;
   className?: string | null;
 };
-
-function normalizeRarityClass(rarity?: string | null) {
-  return String(rarity ?? 'COMMON')
-    .trim()
-    .toLowerCase();
-}
 
 function hasPositiveNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -68,6 +63,7 @@ function buildDetails(entry: InventoryEntry): Array<[string, string]> {
   const item = entry.item as InventoryItemWithVisualMetadata;
   const level = getItemLevel(item);
   const value = formatValue(item.value ?? item.goldValue);
+  const rarity = getInventoryItemVisualRarity(entry);
 
   const details: Array<[string, string | null]> = [
     ['Quantidade', formatQuantity(entry.quantity)],
@@ -75,7 +71,7 @@ function buildDetails(entry: InventoryEntry): Array<[string, string]> {
     ['Qualidade', item.quality ?? null],
     ['Valor', value],
     ['Origem', formatMaterialOrigin(item.materialOrigin)],
-    ['Raridade', formatInventoryRarity(item.rarity)],
+    ['Raridade', rarity.label],
     ['Tier', typeof item.tier === 'number' ? String(item.tier) : null],
     ['Nível', typeof level === 'number' ? String(level) : null],
     ['Classe', item.class?.name ?? item.className ?? null],
@@ -131,8 +127,10 @@ export function InventoryItemDetailsModal({
   const imageUrl = getInventoryItemImageUrl(entry);
 
   const bonuses = getInventoryBonusList(item);
-  const rarity = item.rarity ?? 'COMMON';
-  const rarityClass = normalizeRarityClass(rarity);
+  const rarity = getInventoryItemVisualRarity(entry);
+  const rarityStyle = getInventoryItemRarityCssVariables(
+    entry,
+  ) as CSSProperties | undefined;
   const typeLabel = formatInventoryType(entry);
   const primaryDetail = getInventoryPrimaryDetail(entry);
   const sourceLabel = primaryDetail ?? typeLabel;
@@ -158,7 +156,10 @@ export function InventoryItemDetailsModal({
         aria-label="Fechar detalhes do item"
       />
 
-      <section className={`inventory-modal__panel rarity-${rarityClass}`}>
+      <section
+        className={`inventory-modal__panel rarity-${rarity.key}`}
+        style={rarityStyle}
+      >
         <button
           type="button"
           className="inventory-modal__close"

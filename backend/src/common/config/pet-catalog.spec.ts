@@ -1,5 +1,6 @@
 import {
   getPetDuplicateCocoonRecovery,
+  getPetRarityByTier,
   PET_DEFINITIONS,
   PET_TIME_REDUCTION_BASIS_POINTS_BY_TIER,
 } from './economy.config';
@@ -23,6 +24,26 @@ describe('pet catalog contract', () => {
     expect(new Set(PET_DEFINITIONS.map((pet) => pet.cocoonItemSlug)).size).toBe(
       40,
     );
+  });
+
+  it('alinha a raridade de pets e casulos à faixa visual do tier', () => {
+    const expectedRarityByTier = {
+      1: 'COMMON',
+      2: 'COMMON',
+      3: 'UNCOMMON',
+      4: 'UNCOMMON',
+      5: 'RARE',
+    } as const;
+
+    for (const [rawTier, rarity] of Object.entries(expectedRarityByTier)) {
+      const tier = Number(rawTier);
+      const definitions = PET_DEFINITIONS.filter((pet) => pet.tier === tier);
+
+      expect(getPetRarityByTier(tier)).toBe(rarity);
+      expect(new Set(definitions.map((pet) => pet.rarity))).toEqual(
+        new Set([rarity]),
+      );
+    }
   });
 
   it('usa o bônus em pontos-base e recompra por quarenta por cento do custo', () => {

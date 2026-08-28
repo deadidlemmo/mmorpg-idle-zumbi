@@ -88,6 +88,13 @@ type PetAssetDefinition = {
   tier: number;
 };
 
+type PetCocoonAssetSource = {
+  assetKey?: string | null;
+  slug?: string | null;
+  name?: string | null;
+  tier?: number | null;
+};
+
 type PetAssetPair = {
   cocoon: string;
   pet: string;
@@ -102,6 +109,28 @@ const SPECIALIZATION_KEY: Record<PetSpecialization, string> = {
   GATHERING_CONTENCAO: "contencao",
   AUTO_COMBAT_TTK: "combate",
   AUTO_COMBAT_HUNTING: "rastreamento",
+};
+
+const COCOON_SPECIALIZATION_KEYS = new Set([
+  "desmanche",
+  "coleta",
+  "patrulha",
+  "arsenal",
+  "tecnovarredura",
+  "contencao",
+  "combate",
+  "rastreamento",
+]);
+
+const COCOON_NAME_SPECIALIZATION_KEY: Record<string, string> = {
+  desmanche: "desmanche",
+  coleta: "coleta",
+  patrulha: "patrulha",
+  arsenal: "arsenal",
+  tecnovarredura: "tecnovarredura",
+  contencao: "contencao",
+  "combate automatico": "combate",
+  rastreamento: "rastreamento",
 };
 
 const PET_ASSETS: Record<string, PetAssetPair> = {
@@ -184,6 +213,41 @@ function getCanonicalAssetKey(definition: PetAssetDefinition) {
   return `pet-${SPECIALIZATION_KEY[definition.specialization]}-t${definition.tier}`;
 }
 
+function normalizeAssetText(value?: string | null) {
+  return value
+    ?.trim()
+    .toLocaleLowerCase("pt-BR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function getCocoonAssetKey(source: PetCocoonAssetSource) {
+  const configuredKey = source.assetKey?.trim();
+  if (configuredKey && PET_ASSETS[configuredKey]) return configuredKey;
+
+  const slug = normalizeAssetText(source.slug);
+  const slugMatch = slug?.match(/^casulo-de-([a-z-]+)-t(\d+)$/);
+
+  if (slugMatch) {
+    const specializationKey = slugMatch[1];
+    const tier = Number(slugMatch[2]);
+
+    if (COCOON_SPECIALIZATION_KEYS.has(specializationKey)) {
+      return `pet-${specializationKey}-t${tier}`;
+    }
+  }
+
+  const name = normalizeAssetText(source.name);
+  const nameMatch = name?.match(/^casulo de (.+) t(\d+)$/);
+
+  if (!nameMatch) return null;
+
+  const specializationKey = COCOON_NAME_SPECIALIZATION_KEY[nameMatch[1]];
+  const tier = Number(nameMatch[2] ?? source.tier);
+
+  return specializationKey ? `pet-${specializationKey}-t${tier}` : null;
+}
+
 export function getPetAssetImageUrl(
   definition: PetAssetDefinition,
   kind: PetAssetKind,
@@ -192,4 +256,13 @@ export function getPetAssetImageUrl(
   if (!assets) return null;
 
   return kind === "COCOON" ? assets.cocoon : assets.pet;
+}
+
+export function getPetCocoonAssetImageUrl(
+  source: PetCocoonAssetSource,
+): string | null {
+  const assetKey = getCocoonAssetKey(source);
+  if (!assetKey) return null;
+
+  return PET_ASSETS[assetKey]?.cocoon ?? null;
 }

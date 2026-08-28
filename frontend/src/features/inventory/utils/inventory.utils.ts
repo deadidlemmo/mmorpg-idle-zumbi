@@ -5,8 +5,10 @@ import type {
   InventoryItemDetails,
 } from '../types/inventory.types';
 import { getConsumableItemImageUrl } from '../../consumables/utils/consumableItemAssets';
+import { getEquipmentRarityFromItem } from '../../dashboard/constants/equipment-rarity';
 import { getEquipmentItemImageUrl } from '../../equipment/utils/equipmentItemAssets';
 import { getGatheringMaterialImageUrl } from '../../gathering/utils/gatheringMaterialAssets';
+import { getPetCocoonAssetImageUrl } from '../../pets/utils/petAssets';
 
 const FILTER_ORDER: Array<Omit<InventoryFilterOption, 'count'>> = [
   { key: 'ALL', label: 'Todos' },
@@ -46,6 +48,57 @@ const RARITY_LABELS: Record<string, string> = {
   EPIC: 'Épico',
   LEGENDARY: 'Lendário',
 };
+
+export interface InventoryVisualRarity {
+  key: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  label: string;
+  color: string | null;
+}
+
+export function isPetCocoonItem(item?: InventoryItemDetails | null) {
+  const family = item?.family?.trim().toLocaleLowerCase('pt-BR');
+  const slug = item?.slug?.trim().toLocaleLowerCase('pt-BR');
+
+  return family === 'casulo infectado' || Boolean(slug?.startsWith('casulo-de-'));
+}
+
+export function getInventoryItemVisualRarity(
+  entry: InventoryEntry,
+): InventoryVisualRarity {
+  if (isPetCocoonItem(entry.item)) {
+    const rarity = getEquipmentRarityFromItem(entry.item);
+
+    return {
+      key: rarity.key,
+      label: rarity.label,
+      color: rarity.hex,
+    };
+  }
+
+  const rarity = String(entry.item.rarity ?? 'COMMON').trim().toUpperCase();
+  const key = rarity.toLowerCase();
+  const normalizedKey =
+    key === 'uncommon' ||
+    key === 'rare' ||
+    key === 'epic' ||
+    key === 'legendary'
+      ? key
+      : 'common';
+
+  return {
+    key: normalizedKey,
+    label: formatInventoryRarity(rarity),
+    color: null,
+  };
+}
+
+export function getInventoryItemRarityCssVariables(entry: InventoryEntry) {
+  const rarity = getInventoryItemVisualRarity(entry);
+
+  return rarity.color
+    ? { '--inventory-rarity-color': rarity.color }
+    : undefined;
+}
 
 export function getInventoryItemCategory(entry: InventoryEntry): InventoryFilterKey {
   const type = entry.type?.toUpperCase?.() ?? '';
@@ -102,7 +155,9 @@ export function formatInventoryType(entry: InventoryEntry) {
 export function formatInventoryRarity(rarity?: string | null) {
   if (!rarity) return 'Sem raridade';
 
-  return RARITY_LABELS[rarity] ?? rarity;
+  const normalizedRarity = rarity.trim().toUpperCase();
+
+  return RARITY_LABELS[normalizedRarity] ?? rarity;
 }
 
 export function formatInventorySlot(slot?: string | null) {
@@ -141,6 +196,10 @@ export function getInventoryItemIcon(entry: InventoryEntry) {
 }
 
 export function getInventoryItemImageUrl(entry: InventoryEntry) {
+  const cocoonImageUrl = getPetCocoonAssetImageUrl(entry.item);
+
+  if (cocoonImageUrl) return cocoonImageUrl;
+
   const category = getInventoryItemCategory(entry);
 
   if (category === 'EQUIPMENT') {

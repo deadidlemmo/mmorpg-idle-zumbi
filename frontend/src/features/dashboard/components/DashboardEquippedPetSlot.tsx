@@ -1,25 +1,12 @@
+import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import type { CharacterPet } from '../../pets/types/pets.types';
 import { getPetAssetImageUrl } from '../../pets/utils/petAssets';
+import { getEquipmentRarityFromItem } from '../constants/equipment-rarity';
 
 interface DashboardEquippedPetSlotProps {
   pet: CharacterPet | null;
   to: string;
-}
-
-function normalizePetRarity(rarity?: string | null) {
-  const normalized = rarity?.trim().toLowerCase();
-
-  if (
-    normalized === 'uncommon' ||
-    normalized === 'rare' ||
-    normalized === 'epic' ||
-    normalized === 'legendary'
-  ) {
-    return normalized;
-  }
-
-  return 'common';
 }
 
 function formatPetEffect(pet: CharacterPet) {
@@ -34,14 +21,22 @@ export function DashboardEquippedPetSlot({
   to,
 }: DashboardEquippedPetSlotProps) {
   const imageUrl = pet ? getPetAssetImageUrl(pet.pet, 'PET') : null;
-  const rarity = normalizePetRarity(pet?.pet.rarity);
+  const rarity = getEquipmentRarityFromItem(pet?.pet);
   const name = pet?.pet.name ?? 'Nenhum pet equipado';
-  const meta = pet ? formatPetEffect(pet) : 'Slot disponível';
+  const meta = pet ? `T${pet.pet.tier} · ${rarity.label}` : 'Slot disponível';
+  const effect = pet ? formatPetEffect(pet) : null;
+  const accessibleLabel = effect
+    ? `Pet equipado: ${name}. ${effect}`
+    : `Pet equipado: ${name}`;
+  const style = {
+    '--equipment-rgb': rarity.rgb,
+  } as CSSProperties;
 
   const className = [
     'equipment-summary-slot',
     'equipment-summary-slot--pet',
-    `equipment-summary-slot--rarity-${rarity}`,
+    `equipment-summary-slot--rarity-${rarity.key}`,
+    rarity.cssClass,
     pet ? 'has-item' : 'is-empty',
     imageUrl
       ? 'equipment-summary-slot--with-image'
@@ -52,9 +47,10 @@ export function DashboardEquippedPetSlot({
   return (
     <Link
       className={className}
+      style={style}
       to={to}
-      title={`Pet equipado: ${name}`}
-      aria-label={`Pet equipado: ${name}`}
+      title={accessibleLabel}
+      aria-label={accessibleLabel}
     >
       <div className="equipment-summary-slot__slot" aria-hidden="true">
         <div className="equipment-summary-slot__icon">

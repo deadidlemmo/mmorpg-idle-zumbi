@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+} from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import goldIcon from '../../../assets/images/coins/gold.webp';
 import { normalizeClassName } from '../../characters/api/characters.api';
@@ -38,13 +44,14 @@ import type {
 import {
   buildInventoryFilters,
   filterInventoryItems,
-  formatInventoryRarity,
   formatInventoryType,
   formatMaterialOrigin,
   getInventoryBonusList,
   getInventoryItemIcon,
   getInventoryItemImageUrl,
   getInventoryItemInitials,
+  getInventoryItemRarityCssVariables,
+  getInventoryItemVisualRarity,
   getInventoryPrimaryDetail,
 } from '../utils/inventory.utils';
 
@@ -434,12 +441,6 @@ function getInventoryEntryId(entry?: InventoryEntry | null) {
   );
 }
 
-function normalizeRarityClass(rarity?: string | null) {
-  return String(rarity ?? 'COMMON')
-    .trim()
-    .toLowerCase();
-}
-
 function hasPositiveNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
@@ -452,11 +453,12 @@ function formatQuantity(quantity?: number | null) {
 
 function buildDetails(entry: InventoryEntry): Array<[string, string]> {
   const item = entry.item;
+  const rarity = getInventoryItemVisualRarity(entry);
 
   const details: Array<[string, string | null]> = [
     ['Quantidade', formatQuantity(entry.quantity)],
     ['Tipo', formatInventoryType(entry)],
-    ['Raridade', formatInventoryRarity(item.rarity)],
+    ['Raridade', rarity.label],
     ['Tier', typeof item.tier === 'number' ? String(item.tier) : null],
     ['Origem', formatMaterialOrigin(item.materialOrigin)],
     ['Classe', item.class?.name ?? null],
@@ -512,8 +514,10 @@ function InventoryDesktopDetailsPanel({
   const description = item.description?.trim();
 
   const bonuses = getInventoryBonusList(item);
-  const rarity = item.rarity ?? 'COMMON';
-  const rarityLabel = formatInventoryRarity(item.rarity);
+  const rarity = getInventoryItemVisualRarity(entry);
+  const rarityStyle = getInventoryItemRarityCssVariables(
+    entry,
+  ) as CSSProperties | undefined;
   const typeLabel = formatInventoryType(entry);
   const primaryDetail = getInventoryPrimaryDetail(entry);
   const details = buildDetails(entry);
@@ -526,7 +530,8 @@ function InventoryDesktopDetailsPanel({
 
   return (
     <aside
-      className={`inventory-details-panel rarity-${normalizeRarityClass(rarity)}`}
+      className={`inventory-details-panel rarity-${rarity.key}`}
+      style={rarityStyle}
       aria-label={`Detalhes de ${itemName}`}
     >
       <button
@@ -568,7 +573,7 @@ function InventoryDesktopDetailsPanel({
         <h2>{itemName}</h2>
 
         <div className="inventory-details-panel__badges">
-          <span>{rarityLabel}</span>
+          <span>{rarity.label}</span>
           <span>{typeLabel}</span>
           <span>x{formatQuantity(entry.quantity)}</span>
 
@@ -700,6 +705,10 @@ function InventoryBlackMarketSaleModal({
   const totalValue = unitValue * effectiveQuantity;
   const canSell = maxQuantity > 0 && !isBusy;
   const imageUrl = getInventoryItemImageUrl(entry);
+  const rarity = getInventoryItemVisualRarity(entry);
+  const rarityStyle = getInventoryItemRarityCssVariables(
+    entry,
+  ) as CSSProperties | undefined;
   const quickQuantities = [1, 5, 10].filter(
     (quickQuantity) => quickQuantity <= Math.max(1, maxQuantity),
   );
@@ -719,9 +728,8 @@ function InventoryBlackMarketSaleModal({
       />
 
       <section
-        className={`inventory-black-market-modal__panel rarity-${normalizeRarityClass(
-          item.rarity,
-        )}`}
+        className={`inventory-black-market-modal__panel rarity-${rarity.key}`}
+        style={rarityStyle}
       >
         <button
           type="button"
