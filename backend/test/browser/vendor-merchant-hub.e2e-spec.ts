@@ -118,6 +118,20 @@ test.describe('hub de mercadores', () => {
       )
       .toBe(true);
 
+    const heroImageBox = await heroArtwork.boundingBox();
+    const heroContentBox = await page
+      .locator('.merchant-hub-hero .gathering-origin-npc__content')
+      .boundingBox();
+    expect(heroImageBox).not.toBeNull();
+    expect(heroContentBox).not.toBeNull();
+    expect(
+      Math.abs(
+        heroImageBox!.y +
+          heroImageBox!.height / 2 -
+          (heroContentBox!.y + heroContentBox!.height / 2),
+      ),
+    ).toBeLessThanOrEqual(4);
+
     const merchantCard = page.getByRole('link', {
       name: 'Abrir Balcão da Mara',
     });
@@ -142,6 +156,36 @@ test.describe('hub de mercadores', () => {
       )
       .toBe(true);
 
+    const avatarBox = await merchantCard
+      .locator('.merchant-card__avatar')
+      .boundingBox();
+    const avatarImageBox = await merchantCard
+      .locator('.merchant-card__avatar img')
+      .boundingBox();
+    expect(avatarBox).not.toBeNull();
+    expect(avatarImageBox).not.toBeNull();
+    expect(avatarBox!.width).toBeGreaterThanOrEqual(72);
+    expect(avatarImageBox!.width).toBeGreaterThanOrEqual(avatarBox!.width * 2);
+
+    const typography = await page.evaluate(() => ({
+      heroTitle: getComputedStyle(
+        document.querySelector('.merchant-hub-hero h2')!,
+      ).fontFamily,
+      heroBody: getComputedStyle(
+        document.querySelector('.merchant-hub-hero p')!,
+      ).fontFamily,
+      merchantTitle: getComputedStyle(
+        document.querySelector('.merchant-card h3')!,
+      ).fontFamily,
+      merchantBody: getComputedStyle(
+        document.querySelector('.merchant-card__body > span')!,
+      ).fontFamily,
+    }));
+    expect(typography.heroTitle).toContain('Rajdhani');
+    expect(typography.heroBody).toContain('Inter');
+    expect(typography.merchantTitle).toContain('Rajdhani');
+    expect(typography.merchantBody).toContain('Inter');
+
     const desktopBox = await merchantCard.boundingBox();
     expect(desktopBox).not.toBeNull();
     expect(desktopBox!.height).toBeGreaterThanOrEqual(80);
@@ -156,6 +200,11 @@ test.describe('hub de mercadores', () => {
     expect(mobileBox).not.toBeNull();
     expect(mobileBox!.height).toBeGreaterThanOrEqual(88);
     expect(mobileBox!.height).toBeLessThan(120);
+    const mobileAvatarBox = await merchantCard
+      .locator('.merchant-card__avatar')
+      .boundingBox();
+    expect(mobileAvatarBox).not.toBeNull();
+    expect(mobileAvatarBox!.width).toBeGreaterThanOrEqual(60);
     await expect
       .poll(() =>
         page.evaluate(
