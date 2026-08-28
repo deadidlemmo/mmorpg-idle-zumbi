@@ -60,6 +60,20 @@ function getMetricLabel(category: SocialRankingCategory) {
   return category === "LEVEL" ? "Nível geral" : "Proficiência";
 }
 
+function getCategoryLabel(category: SocialRankingCategory) {
+  return (
+    PRIMARY_CATEGORIES.find((item) => item.key === category)?.label ??
+    EXPEDITION_CATEGORIES.find((item) => item.key === category)?.label ??
+    "Ranking"
+  );
+}
+
+function getPodiumLabel(rank: number) {
+  if (rank === 1) return "Líder";
+  if (rank === 2) return "Segundo lugar";
+  return "Terceiro lugar";
+}
+
 function buildCharacter(
   overview: CharacterOverviewResponse,
 ): DashboardCharacterViewModel {
@@ -231,38 +245,50 @@ function RankingPodiumCard({
         .filter(Boolean)
         .join(" ")}
       style={style}
+      aria-label={`${entry.rank}º lugar: ${entry.character.name}`}
     >
-      <span className="cosmetic-effect-layer" aria-hidden="true" />
-      <RankingPosition rank={entry.rank} />
-      <CharacterPortrait
-        className="ranking-podium-card__avatar"
-        name={entry.character.name}
-        avatarKey={entry.character.avatarKey}
-        appearance={appearance}
-        decorative
-      />
-      <div className="ranking-podium-card__identity">
-        <div>
-          <strong>{entry.character.name}</strong>
-          {isCurrentCharacter ? <em>Você</em> : null}
-          {appearance?.badge?.displayText ? (
-            <b title={appearance.badge.name}>{appearance.badge.displayText}</b>
+      <div className="ranking-podium-card__profile">
+        <span className="cosmetic-effect-layer" aria-hidden="true" />
+        <CharacterPortrait
+          className="ranking-podium-card__avatar"
+          name={entry.character.name}
+          avatarKey={entry.character.avatarKey}
+          appearance={appearance}
+          decorative
+        />
+        <div className="ranking-podium-card__identity">
+          <div>
+            <strong>{entry.character.name}</strong>
+            {isCurrentCharacter ? <em>Você</em> : null}
+            {appearance?.badge?.displayText ? (
+              <b title={appearance.badge.name}>
+                {appearance.badge.displayText}
+              </b>
+            ) : null}
+          </div>
+          <span>{entry.character.class?.name ?? "Sobrevivente"}</span>
+          {appearance?.title?.displayText ? (
+            <small>{appearance.title.displayText}</small>
           ) : null}
         </div>
-        <span>{entry.character.class?.name ?? "Sobrevivente"}</span>
-        {appearance?.title?.displayText ? (
-          <small>{appearance.title.displayText}</small>
-        ) : null}
+        <div className="ranking-podium-card__score">
+          <span>{getMetricLabel(category)}</span>
+          <strong>Nv. {entry.score.level}</strong>
+          <small>{numberFormatter.format(entry.score.totalXp)} XP total</small>
+        </div>
+        <button
+          type="button"
+          aria-label={`Inspecionar ${entry.character.name}`}
+          onClick={onInspect}
+        >
+          <Eye size={15} aria-hidden="true" />
+          <span>Inspecionar</span>
+        </button>
       </div>
-      <div className="ranking-podium-card__score">
-        <span>{getMetricLabel(category)}</span>
-        <strong>Nv. {entry.score.level}</strong>
-        <small>{numberFormatter.format(entry.score.totalXp)} XP total</small>
+      <div className="ranking-podium-card__step" aria-hidden="true">
+        <strong>{entry.rank}</strong>
+        <span>{getPodiumLabel(entry.rank)}</span>
       </div>
-      <button type="button" onClick={onInspect}>
-        <Eye size={15} aria-hidden="true" />
-        <span>Inspecionar</span>
-      </button>
     </article>
   );
 }
@@ -273,8 +299,7 @@ export function RankingPage() {
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
-  const [category, setCategory] =
-    useState<SocialRankingCategory>("LEVEL");
+  const [category, setCategory] = useState<SocialRankingCategory>("LEVEL");
   const [ranking, setRanking] = useState<SocialRankingResponse | null>(null);
   const [isLoadingCharacter, setIsLoadingCharacter] = useState(true);
   const [isLoadingRanking, setIsLoadingRanking] = useState(true);
@@ -328,6 +353,9 @@ export function RankingPage() {
     ? category
     : "";
   const rankingEntries = ranking?.entries ?? [];
+  const displayedCategory = ranking?.category ?? category;
+  const requestedCategoryLabel = getCategoryLabel(category);
+  const isRefreshingRanking = isLoadingRanking && ranking !== null;
   const podiumEntries = rankingEntries.slice(0, 3);
   const remainingEntries = rankingEntries.slice(3);
   const currentEntry = rankingEntries.find(
@@ -414,29 +442,39 @@ export function RankingPage() {
           </div>
         ) : null}
 
-        <section className="ranking-board" aria-labelledby="ranking-title">
+        <section
+          className={`ranking-board${isRefreshingRanking ? " is-refreshing" : ""}`}
+          aria-labelledby="ranking-title"
+          aria-busy={isLoadingRanking}
+        >
           <div className="ranking-board__heading">
             <div>
               <span>Classificação atual</span>
-              <h2 id="ranking-title">{ranking?.label ?? "Ranking"}</h2>
+              <h2 id="ranking-title">
+                {ranking?.label ?? requestedCategoryLabel}
+              </h2>
             </div>
             <div className="ranking-board__updated">
-              {updatedAt ? (
+              {isRefreshingRanking ? (
+                <span className="is-loading" role="status">
+                  <span className="loading-spinner" aria-hidden="true" />
+                  Atualizando {requestedCategoryLabel}
+                </span>
+              ) : updatedAt ? (
                 <span>
                   <Clock3 size={13} aria-hidden="true" /> {updatedAt}
                 </span>
               ) : null}
-              <strong>Top {rankingEntries.length}</strong>
+              <strong>
+                {ranking ? `Top ${rankingEntries.length}` : "Top --"}
+              </strong>
             </div>
           </div>
 
-          {isLoadingRanking ? (
-            <div className="ranking-state">
-              <span className="loading-spinner" />
-              Atualizando classificação
-            </div>
-          ) : rankingEntries.length ? (
-            <div className="ranking-results">
+          {rankingEntries.length ? (
+            <div
+              className={`ranking-results${isRefreshingRanking ? " is-refreshing" : ""}`}
+            >
               <div
                 className={`ranking-current ${currentEntry ? "is-ranked" : "is-unranked"}`}
               >
@@ -451,27 +489,33 @@ export function RankingPage() {
                 </div>
                 {currentEntry ? (
                   <div>
-                    <span>{getMetricLabel(category)}</span>
+                    <span>{getMetricLabel(displayedCategory)}</span>
                     <strong>
-                      Nv. {currentEntry.score.level} · {numberFormatter.format(currentEntry.score.totalXp)} XP
+                      Nv. {currentEntry.score.level} ·{" "}
+                      {numberFormatter.format(currentEntry.score.totalXp)} XP
                     </strong>
                   </div>
-                ) : null}
+                ) : (
+                  <div>
+                    <span>{getMetricLabel(displayedCategory)}</span>
+                    <strong>Sem pontuação registrada</strong>
+                  </div>
+                )}
               </div>
 
               <div className="ranking-section-heading">
                 <div>
                   <span>Destaques do abrigo</span>
-                  <h3>Top 3</h3>
+                  <h3>Pódio</h3>
                 </div>
                 <Trophy size={17} aria-hidden="true" />
               </div>
-              <div className="ranking-podium">
+              <div className="ranking-podium" aria-label="Pódio do ranking">
                 {podiumEntries.map((entry) => (
                   <RankingPodiumCard
                     key={entry.character.id}
                     entry={entry}
-                    category={category}
+                    category={displayedCategory}
                     isCurrentCharacter={entry.character.id === characterId}
                     onInspect={() =>
                       navigate(
@@ -496,7 +540,7 @@ export function RankingPage() {
                       <RankingRow
                         key={entry.character.id}
                         entry={entry}
-                        category={category}
+                        category={displayedCategory}
                         isCurrentCharacter={entry.character.id === characterId}
                         onInspect={() =>
                           navigate(
@@ -508,6 +552,11 @@ export function RankingPage() {
                   </div>
                 </>
               ) : null}
+            </div>
+          ) : isLoadingRanking ? (
+            <div className="ranking-state">
+              <span className="loading-spinner" aria-hidden="true" />
+              Carregando classificação
             </div>
           ) : (
             <div className="ranking-state">

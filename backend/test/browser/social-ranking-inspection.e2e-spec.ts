@@ -180,7 +180,7 @@ test.describe('aliados, ranking e inspeção', () => {
 
   test('remove fixtures do ranking e abre inspeção com imagens reais', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await authenticatePage(page, requester);
     await page.goto(`/dashboard/${requester.characterId}/rankings`);
 
@@ -193,6 +193,70 @@ test.describe('aliados, ranking e inspeção', () => {
     await expect(
       page.getByText(qaFixture.characterName, { exact: true }),
     ).toHaveCount(0);
+
+    const podium = page.locator('.ranking-podium');
+    await expect(podium.locator('.ranking-podium-card')).toHaveCount(3);
+    const firstPlaceBox = await podium
+      .locator('.ranking-podium-card.is-rank-1')
+      .boundingBox();
+    const secondPlaceBox = await podium
+      .locator('.ranking-podium-card.is-rank-2')
+      .boundingBox();
+    const thirdPlaceBox = await podium
+      .locator('.ranking-podium-card.is-rank-3')
+      .boundingBox();
+    expect(firstPlaceBox).not.toBeNull();
+    expect(secondPlaceBox).not.toBeNull();
+    expect(thirdPlaceBox).not.toBeNull();
+    expect(firstPlaceBox!.y + 16).toBeLessThan(secondPlaceBox!.y);
+    expect(firstPlaceBox!.y + 16).toBeLessThan(thirdPlaceBox!.y);
+    expect(
+      Math.abs(
+        firstPlaceBox!.y +
+          firstPlaceBox!.height -
+          (secondPlaceBox!.y + secondPlaceBox!.height),
+      ),
+    ).toBeLessThan(2);
+    await podium.screenshot({
+      path: testInfo.outputPath('ranking-podium-desktop.png'),
+    });
+
+    let releaseHuntingRequest: (() => void) | undefined;
+    await page.route('**/social/rankings**', async (route) => {
+      const requestCategory = new URL(route.request().url()).searchParams.get(
+        'category',
+      );
+      if (requestCategory === 'HUNTING') {
+        await new Promise<void>((resolve) => {
+          releaseHuntingRequest = resolve;
+        });
+      }
+      await route.continue();
+    });
+
+    const results = page.locator('.ranking-results');
+    const resultsHeightBefore = await results.evaluate(
+      (element) => element.getBoundingClientRect().height,
+    );
+    await page.getByRole('tab', { name: 'Caça', exact: true }).click();
+    await expect(results).toHaveClass(/is-refreshing/);
+    const resultsHeightDuringRefresh = await results.evaluate(
+      (element) => element.getBoundingClientRect().height,
+    );
+    expect(
+      Math.abs(resultsHeightBefore - resultsHeightDuringRefresh),
+    ).toBeLessThan(2);
+    expect(releaseHuntingRequest).toBeDefined();
+    releaseHuntingRequest?.();
+    await expect(
+      page.getByRole('heading', { name: 'Caça', exact: true }),
+    ).toBeVisible();
+    await expect(results).not.toHaveClass(/is-refreshing/);
+    await page.unroute('**/social/rankings**');
+    await page.getByRole('tab', { name: 'Nível', exact: true }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Nível geral', exact: true }),
+    ).toBeVisible();
 
     const rankedTarget = page
       .locator('.ranking-podium-card, .ranking-row')
@@ -226,9 +290,28 @@ test.describe('aliados, ranking e inspeção', () => {
       .toBe(true);
   });
 
-  test('mantém ranking e inspeção utilizáveis no celular', async ({ page }) => {
+  test('mantém ranking e inspeção utilizáveis no celular', async ({
+    page,
+  }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await authenticatePage(page, requester);
+    await page.goto(`/dashboard/${requester.characterId}/rankings`);
+
+    await expect(
+      page.getByRole('heading', { name: 'Ranking', level: 1 }),
+    ).toBeVisible();
+    await expect(page.locator('.ranking-podium-card')).toHaveCount(3);
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(false);
+    await page.locator('.ranking-podium').screenshot({
+      path: testInfo.outputPath('ranking-podium-mobile.png'),
+    });
+
     await page.goto(
       `/dashboard/${requester.characterId}/inspect/${target.characterId}`,
     );
