@@ -257,7 +257,9 @@ test.describe('aliados, ranking e inspeção', () => {
     await expect(
       page.getByRole('heading', { name: 'Caça', exact: true }),
     ).toBeVisible();
-    await expect(results).not.toHaveClass(/is-refreshing/);
+    await expect(page.locator('.ranking-board')).not.toHaveClass(
+      /is-refreshing/,
+    );
     await page.unroute('**/social/rankings**');
     await page.getByRole('tab', { name: 'Nível', exact: true }).click();
     await expect(
