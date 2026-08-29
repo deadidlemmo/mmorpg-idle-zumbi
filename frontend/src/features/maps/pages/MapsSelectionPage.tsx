@@ -22,7 +22,7 @@ import {
   getVisibleCombatMaps,
 } from '../../auto-combat/utils/auto-combat-page.helpers';
 import { normalizeClassName } from '../../characters/api/characters.api';
-import { CharacterPortrait } from '../../cosmetics/components/CharacterPortrait';
+import { resolveCharacterPortraitImage } from '../../cosmetics/constants/cosmetic-assets';
 import {
   getCharacterOverview,
   updateCharacterCurrentMap,
@@ -221,6 +221,13 @@ export function MapsSelectionPage() {
     character?.map?.id ??
     overview?.progression?.currentMap?.id ??
     null;
+  const avatarImage = character
+    ? resolveCharacterPortraitImage({
+        avatarKey: character.avatarKey,
+        avatarUrl: character.avatarUrl,
+        appearance: character.appearance,
+      })
+    : null;
 
   async function handleEnterMap(map: AutoCombatMapViewModel) {
     if (!characterId || updatingMapId) return;
@@ -324,14 +331,13 @@ export function MapsSelectionPage() {
                         className="maps-selection-card__current-marker"
                         aria-label={`${character.name} está neste mapa`}
                       >
-                        <CharacterPortrait
-                          className="maps-selection-card__current-avatar"
-                          name={character.name}
-                          avatarKey={character.avatarKey}
-                          avatarUrl={character.avatarUrl}
-                          appearance={character.appearance}
-                          decorative
-                        />
+                        <span className="maps-selection-card__current-avatar" aria-hidden="true">
+                          {avatarImage ? (
+                            <img src={avatarImage} alt="" />
+                          ) : (
+                            <span>{character.name.slice(0, 1)}</span>
+                          )}
+                        </span>
                         <span className="maps-selection-card__current-pin" aria-hidden="true">
                           <MapPin size={16} />
                         </span>
