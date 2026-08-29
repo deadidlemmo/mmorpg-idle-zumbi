@@ -1,10 +1,8 @@
 import maraPortrait from '../../../assets/images/npcs/npc_mercadora_mara.webp';
 
-export type MerchantTagTone = 'gold' | 'green' | 'muted';
-
-export interface MerchantTag {
+export interface MerchantOffer {
   label: string;
-  tone?: MerchantTagTone;
+  description: string;
 }
 
 export interface MerchantDefinition {
@@ -19,7 +17,7 @@ export interface MerchantDefinition {
   shopDescription: string;
   portraitUrl: string;
   initials: string;
-  tags: MerchantTag[];
+  offers: MerchantOffer[];
   available: boolean;
 }
 
@@ -38,7 +36,12 @@ export const MERCHANTS: MerchantDefinition[] = [
       'Compre consumíveis e suprimentos com Gold para sustentar suas caçadas e expedições.',
     portraitUrl: maraPortrait,
     initials: 'MA',
-    tags: [{ label: 'Poções', tone: 'gold' }],
+    offers: [
+      {
+        label: 'Poções',
+        description: 'Cura e recuperação',
+      },
+    ],
     available: true,
   },
 ];

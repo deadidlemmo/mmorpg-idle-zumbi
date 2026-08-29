@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, FlaskConical } from 'lucide-react';
 import merchantHubArtwork from '../../../assets/images/ui/mercadores-abrigo.webp';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
@@ -35,22 +35,29 @@ function MerchantCard({
 
         <div className="merchant-card__body">
           <h3>{merchant.marketName}</h3>
-          <span>{merchant.npcName}</span>
+          <div className="merchant-card__npc">
+            <strong>{merchant.npcName}</strong>
+            <span>{merchant.role}</span>
+          </div>
         </div>
       </div>
 
-      <div className="merchant-card__tags" aria-label="Categorias vendidas">
-        {merchant.tags.map((tag) => (
-          <span
-            key={tag.label}
-            className={`merchant-card__tag merchant-card__tag--${tag.tone ?? 'green'}`}
-          >
-            {tag.label}
-          </span>
+      <div className="merchant-card__offers" aria-label="Itens vendidos">
+        {merchant.offers.map((offer) => (
+          <div className="merchant-card__offer" key={offer.label}>
+            <span className="merchant-card__offer-icon" aria-hidden="true">
+              <FlaskConical size={20} strokeWidth={1.8} />
+            </span>
+            <span className="merchant-card__offer-copy">
+              <strong>{offer.label}</strong>
+              <small>{offer.description}</small>
+            </span>
+          </div>
         ))}
       </div>
 
       <span className="merchant-card__action" aria-hidden="true">
+        <span>Abrir loja</span>
         <ArrowRight size={16} />
       </span>
     </Link>
@@ -154,7 +161,7 @@ export function MerchantHubPage() {
         <section className="merchant-list-panel" aria-label="Lista de mercadores">
           <div className="merchant-list-panel__table-head" aria-hidden="true">
             <span>Mercador</span>
-            <span>Vende</span>
+            <span>Especialidade</span>
           </div>
 
           <div className="merchant-list">
