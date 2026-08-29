@@ -25,7 +25,7 @@ import {
   countHuntingActivityQueue,
   type HuntingActivityTrackedSource,
 } from "../../dashboard/utils/huntingActivityPresentation";
-import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
+import { getGameItemImageUrl } from "../../inventory/utils/itemImageAssets";
 import { getAutoCombatMaps, getAutoCombatStatus } from "../api/auto-combat.api";
 import {
   buildMapVisualStyle,
@@ -6082,7 +6082,7 @@ export function AutoCombatPage() {
                   {selectedThreatDrops.map((drop) => {
                     const itemName = drop.item?.name ?? "Item desconhecido";
                     const chanceLabel = formatDropChance(drop.dropChance);
-                    const itemImage = getGatheringMaterialImageUrl(drop.item);
+                    const itemImage = getGameItemImageUrl(drop.item);
 
                     return (
                       <div

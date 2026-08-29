@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { ActivityProgressCard } from '../../../components/game/ActivityProgressCard';
 import npcArsenalNogueira from '../../../assets/images/npcs/npc_arsenal_nogueira.webp';
 import npcColetaDonaCelia from '../../../assets/images/npcs/npc_coleta_dona_celia.webp';
@@ -428,9 +428,18 @@ function getActiveOrigin(
 
 function getInitialSelectedMaterialId(params: {
   materials: GatheringMaterialViewModel[];
+  requestedMaterialId?: string | null;
   previousSelectedMaterialId?: string | null;
   activeMaterialId?: string | null;
 }): string | null {
+  const requestedStillExists = params.materials.some(
+    (material) => material.id === params.requestedMaterialId,
+  );
+
+  if (requestedStillExists && params.requestedMaterialId) {
+    return params.requestedMaterialId;
+  }
+
   const previousStillExists = params.materials.some(
     (material) => material.id === params.previousSelectedMaterialId,
   );
@@ -723,8 +732,11 @@ function GatheringClassDropdown({
 
 export function GatheringOriginPage() {
   const { characterId, origin } = useParams();
+  const [searchParams] = useSearchParams();
 
   const safeCharacterId = characterId ?? '';
+  const requestedMaterialId = searchParams.get('materialId')?.trim() || null;
+  const requestedMapId = searchParams.get('mapId')?.trim() || null;
   const originKey = isGatheringOriginSlug(origin)
     ? GATHERING_ORIGIN_BY_SLUG[origin]
     : null;
@@ -901,10 +913,16 @@ export function GatheringOriginPage() {
         refreshGathering(),
       ]);
 
-      const mapId = getStatusMapId({
-        status: statusResponse,
-        overview: overviewResponse,
-      });
+      const mapId = statusResponse?.active
+        ? getStatusMapId({
+            status: statusResponse,
+            overview: overviewResponse,
+          })
+        : (requestedMapId ??
+          getStatusMapId({
+            status: statusResponse,
+            overview: overviewResponse,
+          }));
 
       const availableMaterialsResponse = await listGatheringMaterialsRequest({
         mapId,
@@ -942,6 +960,7 @@ export function GatheringOriginPage() {
       setSelectedMaterialId((previousSelectedMaterialId) =>
         getInitialSelectedMaterialId({
           materials: availableMaterialsResponse.materials,
+          requestedMaterialId,
           previousSelectedMaterialId,
           activeMaterialId: getActiveMaterialId(statusResponse),
         }),
@@ -951,7 +970,13 @@ export function GatheringOriginPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [originKey, refreshGathering, safeCharacterId]);
+  }, [
+    originKey,
+    refreshGathering,
+    requestedMapId,
+    requestedMaterialId,
+    safeCharacterId,
+  ]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -966,6 +991,24 @@ export function GatheringOriginPage() {
       isCancelled = true;
     };
   }, [loadGatheringData]);
+
+  useEffect(() => {
+    if (isLoading || !requestedMaterialId) return;
+
+    const requestedMaterialExists = materials.some(
+      (material) => material.id === requestedMaterialId,
+    );
+
+    if (!requestedMaterialExists) return;
+
+    const scrollTimer = window.setTimeout(() => {
+      document
+        .getElementById(`gathering-material-${requestedMaterialId}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+
+    return () => window.clearTimeout(scrollTimer);
+  }, [isLoading, materials, requestedMaterialId]);
 
   const handleRefreshActivity = useCallback(async () => {
     await refreshGathering();

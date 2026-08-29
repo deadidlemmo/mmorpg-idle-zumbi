@@ -4,11 +4,8 @@ import type {
   InventoryFilterOption,
   InventoryItemDetails,
 } from '../types/inventory.types';
-import { getConsumableItemImageUrl } from '../../consumables/utils/consumableItemAssets';
 import { getEquipmentRarityFromItem } from '../../dashboard/constants/equipment-rarity';
-import { getEquipmentItemImageUrl } from '../../equipment/utils/equipmentItemAssets';
-import { getGatheringMaterialImageUrl } from '../../gathering/utils/gatheringMaterialAssets';
-import { getPetCocoonAssetImageUrl } from '../../pets/utils/petAssets';
+import { getGameItemImageUrl } from './itemImageAssets';
 
 const FILTER_ORDER: Array<Omit<InventoryFilterOption, 'count'>> = [
   { key: 'ALL', label: 'Todos' },
@@ -196,32 +193,7 @@ export function getInventoryItemIcon(entry: InventoryEntry) {
 }
 
 export function getInventoryItemImageUrl(entry: InventoryEntry) {
-  const cocoonImageUrl = getPetCocoonAssetImageUrl(entry.item);
-
-  if (cocoonImageUrl) return cocoonImageUrl;
-
-  const category = getInventoryItemCategory(entry);
-
-  if (category === 'EQUIPMENT') {
-    return getEquipmentItemImageUrl(entry.item);
-  }
-
-  if (category === 'CONSUMABLE') {
-    return getConsumableItemImageUrl(entry.item);
-  }
-
-  if (category === 'MATERIAL') {
-    return getGatheringMaterialImageUrl(entry.item);
-  }
-
-  return (
-    entry.item.imageUrl ??
-    entry.item.iconUrl ??
-    entry.item.image ??
-    entry.item.iconPath ??
-    entry.item.icon ??
-    null
-  );
+  return getGameItemImageUrl(entry.item);
 }
 
 export function getInventoryPrimaryDetail(entry: InventoryEntry) {

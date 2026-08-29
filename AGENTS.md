@@ -201,6 +201,7 @@ Modulos atuais:
 - `infirmary`
 - `incursions`
 - `vendor`
+- `marketplace`
 - `world-bosses`
 - `progression`
 - `social`
@@ -242,6 +243,7 @@ Rotas atuais:
 /dashboard/:characterId/equipment
 /dashboard/:characterId/consumables
 /dashboard/:characterId/consumables/:merchantId
+/dashboard/:characterId/market
 /dashboard/:characterId/resources
 /dashboard/:characterId/pets
 /dashboard/:characterId/infirmary
@@ -277,6 +279,7 @@ Models atuais de alto impacto:
 - `User`, `Character`, `GameClass`, `GameMap`, `SubMap`, `SubMapEncounter`
 - `CharacterGatheringSkill`, `CharacterCraftingSkill`, `CharacterHuntingSkill`
 - `Mob`, `MobDrop`, `Item`, `InventoryItem`, `BankItem`, `Equipment`, `CharacterPotionConfig`
+- `MarketListing`, `MarketPurchase`
 - `Combat`, `CombatLog`
 - `AutoCombatSession`, `AutoCombatHuntBatch`, `AutoCombatHuntBatchMob`, `AutoCombatHuntBatchEvent`, `AutoCombatSessionEvent`
 - `GatheringSession`, `CraftingRecipe`, `CraftingSession`, `CraftingIngredient`
@@ -472,6 +475,16 @@ Parametros de hunt identificados no codigo:
 - Hub de mercadores no frontend usa `/dashboard/:characterId/consumables`.
 - Compra usa `/vendor/:characterId/buy`.
 - Validar gold, estoque/regra do item, ownership e inventario.
+
+## Regras do Mercado do Abrigo
+
+- REST protegido em `/market`.
+- O frontend usa `/dashboard/:characterId/market` para compra, venda e acompanhamento dos anuncios.
+- Ao anunciar, o item sai da mochila e fica reservado em `MarketListing`; cancelar devolve apenas o saldo restante.
+- Compras usam `requestId` idempotente e transacao `Serializable`; estoque, Gold, inventario, compra e ledger devem confirmar ou reverter juntos.
+- Nunca permita comprar anuncio de outro personagem da mesma conta.
+- Preco e quantidade sao validados no backend, com limites tambem protegidos por constraints no PostgreSQL.
+- `MarketPurchase` registra o preco unitario e total efetivamente cobrados; o frontend nunca e fonte de verdade para valores.
 
 ## Variaveis de ambiente
 

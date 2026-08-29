@@ -289,13 +289,18 @@ function getMobImage(
     return null;
   }
 
-  const assetMap = type === 'full-body' ? fullBodyAssetMap : portraitAssetMap;
+  const assetMaps =
+    type === 'full-body'
+      ? [fullBodyAssetMap, portraitAssetMap]
+      : [portraitAssetMap, fullBodyAssetMap];
 
-  for (const key of lookupKeys) {
-    const imageUrl = assetMap.get(key);
+  for (const assetMap of assetMaps) {
+    for (const key of lookupKeys) {
+      const imageUrl = assetMap.get(key);
 
-    if (imageUrl) {
-      return imageUrl;
+      if (imageUrl) {
+        return imageUrl;
+      }
     }
   }
 

@@ -154,6 +154,18 @@ export const API_ENDPOINTS = {
     buy: (characterId: string) => `/vendor/${characterId}/buy`,
   },
 
+  market: {
+    listings: (characterId: string) =>
+      `/market/characters/${characterId}/listings`,
+    sellableItems: (characterId: string) =>
+      `/market/characters/${characterId}/sellable-items`,
+    myListings: (characterId: string) =>
+      `/market/characters/${characterId}/my-listings`,
+    createListing: "/market/listings",
+    buy: (listingId: string) => `/market/listings/${listingId}/buy`,
+    cancel: (listingId: string) => `/market/listings/${listingId}/cancel`,
+  },
+
   crafting: {
     recipes: (characterId: string) =>
       `/crafting/character/${characterId}/recipes`,

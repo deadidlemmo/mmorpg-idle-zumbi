@@ -31,6 +31,7 @@ import { SocialModule } from './modules/social/social.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { CosmeticsModule } from './modules/cosmetics/cosmetics.module';
 import { StorefrontModule } from './modules/storefront/storefront.module';
+import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisCoordinationModule } from './common/redis/redis-coordination.module';
 import { AuditModule } from './common/audit/audit.module';
@@ -80,6 +81,7 @@ import { isConfigEnabled } from './common/redis/redis-client.factory';
     CharactersModule,
     CosmeticsModule,
     StorefrontModule,
+    MarketplaceModule,
     CombatModule,
     AutoCombatModule,
 

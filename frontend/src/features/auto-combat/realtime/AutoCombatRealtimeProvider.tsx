@@ -20,8 +20,7 @@ import {
 } from "../../loot-notifications/lootNotificationContext";
 import type { CharacterOverviewResponse } from "../../dashboard/types/dashboard.types";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
-import { getEquipmentItemImageUrl } from "../../equipment/utils/equipmentItemAssets";
-import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
+import { getGameItemImageUrl } from "../../inventory/utils/itemImageAssets";
 import { getBattleTimelineRecoveryDelayMs } from "../utils/battle-timeline";
 import {
   resolveAutoCombatTelemetryContext,
@@ -127,6 +126,9 @@ type AutoCombatLootWithOptionalIcon = AutoCombatRewardLootViewModel & {
     assetKey?: string | null;
     slug?: string | null;
     tier?: number | string | null;
+    slot?: string | null;
+    family?: string | null;
+    materialOrigin?: string | null;
   } | null;
   icon?: string | null;
   iconUrl?: string | null;
@@ -177,10 +179,12 @@ function getLootImageUrl(loot: AutoCombatRewardLootViewModel) {
     imageUrl: looseLoot.item?.imageUrl,
   };
 
-  return (
-    getGatheringMaterialImageUrl(localAssetCandidate) ??
-    getEquipmentItemImageUrl(localAssetCandidate)
-  );
+  return getGameItemImageUrl({
+    ...localAssetCandidate,
+    slot: looseLoot.item?.slot ?? loot.slot,
+    family: looseLoot.item?.family,
+    materialOrigin: looseLoot.item?.materialOrigin,
+  });
 }
 
 function getConfirmedXpAmount(value: unknown) {

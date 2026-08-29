@@ -180,6 +180,12 @@ enum EconomyCurrency {
   WORLD_BOSS_FRAGMENT
 }
 
+enum MarketListingStatus {
+  ACTIVE
+  SOLD_OUT
+  CANCELLED
+}
+
 enum IncursionSessionStatus {
   ACTIVE
   COMPLETED
@@ -458,10 +464,10 @@ model SubMapEncounter {
   subMap SubMap @relation(fields: [subMapId], references: [id], onDelete: Cascade)
   mob    Mob    @relation(fields: [mobId], references: [id], onDelete: Cascade)
 
-  selectedAutoCombatSessions    AutoCombatSession[]      @relation("AutoCombatSelectedEncounter")
-  selectedAutoCombatHuntBatches AutoCombatHuntBatch[]    @relation("AutoCombatHuntBatchSelectedEncounter")
-  cycleTargetAutoCombatHuntBatches AutoCombatHuntBatch[] @relation("AutoCombatHuntBatchCycleTargetEncounter")
-  autoCombatHuntBatchMobs       AutoCombatHuntBatchMob[]
+  selectedAutoCombatSessions       AutoCombatSession[]      @relation("AutoCombatSelectedEncounter")
+  selectedAutoCombatHuntBatches    AutoCombatHuntBatch[]    @relation("AutoCombatHuntBatchSelectedEncounter")
+  cycleTargetAutoCombatHuntBatches AutoCombatHuntBatch[]    @relation("AutoCombatHuntBatchCycleTargetEncounter")
+  autoCombatHuntBatchMobs          AutoCombatHuntBatchMob[]
 
   @@unique([subMapId, mobId])
   @@index([subMapId])
@@ -524,6 +530,9 @@ model Character {
   economyBalances           CharacterEconomyBalance[]
   economyLedgerEntries      EconomyLedgerEntry[]
   pets                      CharacterPet[]              @relation("CharacterOwnedPets")
+  marketListings            MarketListing[]             @relation("MarketListingSeller")
+  marketPurchases           MarketPurchase[]            @relation("MarketPurchaseBuyer")
+  marketSales               MarketPurchase[]            @relation("MarketPurchaseSeller")
 
   gatheringSkills CharacterGatheringSkill[]
   craftingSkill   CharacterCraftingSkill?
@@ -838,6 +847,8 @@ model Item {
   worldBossGrantedRewards WorldBossGrantedReward[]
   economyLedgerEntries    EconomyLedgerEntry[]
   petDefinition           PetDefinition?           @relation("PetCocoonItem")
+  marketListings          MarketListing[]
+  marketPurchases         MarketPurchase[]
 
   potionConfigs CharacterPotionConfig[] @relation("PotionConfigItem")
 
@@ -1074,6 +1085,62 @@ model EconomyLedgerEntry {
   @@index([reason, createdAt])
   @@index([referenceType, referenceId])
   @@map("economy_ledger_entries")
+}
+
+model MarketListing {
+  id String @id @default(uuid())
+
+  sellerCharacterId String
+  itemId            String
+
+  type              InventoryItemType
+  quantityInitial   Int
+  quantityRemaining Int
+  quantityCancelled Int                 @default(0)
+  unitPrice         Int
+  status            MarketListingStatus @default(ACTIVE)
+  requestId         String              @unique @db.VarChar(64)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  closedAt  DateTime?
+
+  seller    Character        @relation("MarketListingSeller", fields: [sellerCharacterId], references: [id], onDelete: Cascade)
+  item      Item             @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  purchases MarketPurchase[]
+
+  @@index([status, createdAt])
+  @@index([itemId, status, unitPrice])
+  @@index([sellerCharacterId, status, createdAt])
+  @@index([unitPrice])
+  @@map("market_listings")
+}
+
+model MarketPurchase {
+  id String @id @default(uuid())
+
+  listingId         String
+  buyerCharacterId  String
+  sellerCharacterId String
+  itemId            String
+
+  quantity   Int
+  unitPrice  Int
+  totalPrice Int
+  requestId  String @unique @db.VarChar(64)
+
+  createdAt DateTime @default(now())
+
+  listing MarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer   Character     @relation("MarketPurchaseBuyer", fields: [buyerCharacterId], references: [id], onDelete: Cascade)
+  seller  Character     @relation("MarketPurchaseSeller", fields: [sellerCharacterId], references: [id], onDelete: Cascade)
+  item    Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@index([listingId, createdAt])
+  @@index([buyerCharacterId, createdAt])
+  @@index([sellerCharacterId, createdAt])
+  @@index([itemId, createdAt])
+  @@map("market_purchases")
 }
 
 model BankItem {
@@ -1358,11 +1425,11 @@ model AutoCombatHuntBatch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  character         Character          @relation(fields: [characterId], references: [id], onDelete: Cascade)
-  map               GameMap            @relation(fields: [mapId], references: [id], onDelete: Cascade)
-  session           AutoCombatSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  selectedEncounter SubMapEncounter?   @relation("AutoCombatHuntBatchSelectedEncounter", fields: [selectedEncounterId], references: [id], onDelete: SetNull)
-  cycleTargetEncounter SubMapEncounter? @relation("AutoCombatHuntBatchCycleTargetEncounter", fields: [cycleTargetEncounterId], references: [id], onDelete: SetNull)
+  character            Character          @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  map                  GameMap            @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  session              AutoCombatSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  selectedEncounter    SubMapEncounter?   @relation("AutoCombatHuntBatchSelectedEncounter", fields: [selectedEncounterId], references: [id], onDelete: SetNull)
+  cycleTargetEncounter SubMapEncounter?   @relation("AutoCombatHuntBatchCycleTargetEncounter", fields: [cycleTargetEncounterId], references: [id], onDelete: SetNull)
 
   mobs   AutoCombatHuntBatchMob[]
   events AutoCombatHuntBatchEvent[]

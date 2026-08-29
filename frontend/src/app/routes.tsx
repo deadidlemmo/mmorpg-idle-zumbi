@@ -61,11 +61,9 @@ const AppearancePage = lazy(() =>
   })),
 );
 const CharacterInspectionPage = lazy(() =>
-  import("../features/social/pages/CharacterInspectionPage").then(
-    (module) => ({
-      default: module.CharacterInspectionPage,
-    }),
-  ),
+  import("../features/social/pages/CharacterInspectionPage").then((module) => ({
+    default: module.CharacterInspectionPage,
+  })),
 );
 const AdminPage = lazy(() =>
   import("../features/admin/pages/AdminPage").then((module) => ({
@@ -135,6 +133,11 @@ const MembershipPage = lazy(() =>
 const MerchantHubPage = lazy(() =>
   import("../features/vendor/pages/MerchantHubPage").then((module) => ({
     default: module.MerchantHubPage,
+  })),
+);
+const MarketplacePage = lazy(() =>
+  import("../features/marketplace/pages/MarketplacePage").then((module) => ({
+    default: module.MarketplacePage,
   })),
 );
 const ResourceCenterPage = lazy(() =>
@@ -323,6 +326,8 @@ export function AppRoutes() {
             <Route path="appearance" element={<AppearancePage />} />
 
             <Route path="consumables" element={<MerchantHubPage />} />
+
+            <Route path="market" element={<MarketplacePage />} />
 
             <Route path="resources" element={<ResourceCenterPage />} />
 

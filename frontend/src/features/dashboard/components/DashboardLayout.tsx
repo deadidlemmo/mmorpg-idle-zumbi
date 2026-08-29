@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Sparkles,
+  Store,
   Swords,
   Trophy,
   Users,
@@ -371,6 +372,11 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: <ShoppingBag size={17} strokeWidth={1.9} />,
   },
   {
+    label: "Mercado do Abrigo",
+    path: "market",
+    icon: <Store size={17} strokeWidth={1.9} />,
+  },
+  {
     label: "Recursos",
     path: "resources",
     icon: <ArrowLeftRight size={17} strokeWidth={1.9} />,
@@ -445,6 +451,7 @@ const DASHBOARD_CHARACTER_NAV_ITEMS = [
 const DASHBOARD_SHELTER_NAV_ITEMS = [
   "infirmary",
   "consumables",
+  "market",
   "resources",
   "membership",
 ]
@@ -1708,10 +1715,7 @@ function DashboardLayoutContent({
               rel="noreferrer"
               aria-label="Entrar no Discord"
             >
-              <span
-                className="dashboard-sidebar__link-icon"
-                aria-hidden="true"
-              >
+              <span className="dashboard-sidebar__link-icon" aria-hidden="true">
                 <DiscordMark />
               </span>
               <strong>Discord</strong>

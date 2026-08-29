@@ -8325,6 +8325,16 @@ export class AutoCombatService implements OnModuleDestroy {
           rarity: loot.item.rarity,
           slot: loot.item.slot,
           tier: loot.item.tier,
+          item: {
+            id: loot.item.id,
+            name: loot.item.name,
+            slug: loot.item.slug,
+            tier: loot.item.tier,
+            rarity: loot.item.rarity,
+            slot: loot.item.slot,
+            family: loot.item.family,
+            materialOrigin: loot.item.materialOrigin,
+          },
         })),
 
         mobs: session.mobSummaries
@@ -9086,6 +9096,16 @@ export class AutoCombatService implements OnModuleDestroy {
           rarity: String(loot.item.rarity),
           slot: String(loot.item.slot),
           tier: loot.item.tier,
+          item: {
+            id: loot.item.id,
+            name: loot.item.name,
+            slug: loot.item.slug,
+            tier: loot.item.tier,
+            rarity: String(loot.item.rarity),
+            slot: String(loot.item.slot),
+            family: loot.item.family,
+            materialOrigin: loot.item.materialOrigin,
+          },
         })),
       },
 

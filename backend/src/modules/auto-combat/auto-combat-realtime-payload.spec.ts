@@ -127,6 +127,12 @@ describe('auto-combat realtime payload', () => {
             rarity: 'COMMON',
             item: {
               id: 'item-1',
+              slug: 'residuo-infecto-palido',
+              tier: 1,
+              rarity: 'COMMON',
+              slot: 'MATERIAL',
+              family: 'Biomaterial',
+              materialOrigin: 'DROP_MOBS',
               imageUrl: '/assets/residuo-infecto.webp',
               description: 'detalhe que nao deve trafegar',
             },
@@ -201,7 +207,15 @@ describe('auto-combat realtime payload', () => {
     });
     expect(compactTracked[0].remainingCount).toBe(188);
     expect(compactTracked[0].mob).toBeUndefined();
-    expect(compactLootItem.imageUrl).toBe('/assets/residuo-infecto.webp');
+    expect(compactLootItem).toMatchObject({
+      slug: 'residuo-infecto-palido',
+      tier: 1,
+      rarity: 'COMMON',
+      slot: 'MATERIAL',
+      family: 'Biomaterial',
+      materialOrigin: 'DROP_MOBS',
+      imageUrl: '/assets/residuo-infecto.webp',
+    });
     expect(compactLootItem.description).toBeUndefined();
     expect(getSerializedPayloadBytes(compact)).toBeLessThan(
       getSerializedPayloadBytes(payload) * 0.1,

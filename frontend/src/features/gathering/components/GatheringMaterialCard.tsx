@@ -463,7 +463,11 @@ export function GatheringMaterialCard({
   }
 
   return (
-    <article className={cardClassName} style={style}>
+    <article
+      id={`gathering-material-${material.id}`}
+      className={cardClassName}
+      style={style}
+    >
       <button
         type="button"
         className="gathering-material-card__select"

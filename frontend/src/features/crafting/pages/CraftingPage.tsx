@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock3,
+  ExternalLink,
   Gauge,
   Hammer,
   HeartPulse,
@@ -622,13 +623,25 @@ function RecipeCard({
 
 function IngredientRow({
   ingredient,
+  characterId,
 }: {
   ingredient: CraftingIngredientViewModel;
+  characterId: string;
 }) {
   const percent =
     ingredient.required <= 0
       ? 0
       : clampPercent((ingredient.available / ingredient.required) * 100);
+  const gatheringSlug = ORIGIN_TO_GATHERING_SLUG[ingredient.origin];
+  const isMobDrop = ingredient.origin === "DROP_MOBS";
+  const sourceMapQuery = ingredient.mapId
+    ? `&mapId=${encodeURIComponent(ingredient.mapId)}`
+    : "";
+  const sourcePath = isMobDrop
+    ? `/dashboard/${characterId}/auto-combat?dropItemId=${encodeURIComponent(ingredient.itemId)}${sourceMapQuery}`
+    : gatheringSlug
+      ? `/dashboard/${characterId}/gathering/${gatheringSlug}?materialId=${encodeURIComponent(ingredient.itemId)}${sourceMapQuery}`
+      : null;
 
   return (
     <li
@@ -660,6 +673,13 @@ function IngredientRow({
         ) : (
           <span>Completo</span>
         )}
+
+        {sourcePath ? (
+          <Link className="crafting-ingredient__source" to={sourcePath}>
+            {isMobDrop ? "Caçar" : "Coletar"}
+            <ExternalLink aria-hidden="true" size={13} />
+          </Link>
+        ) : null}
       </div>
 
       <span className="crafting-ingredient__bar" aria-hidden="true">
@@ -927,7 +947,11 @@ function CraftingDetailsModal({
 
           <ul className="crafting-ingredients-list">
             {recipe.ingredients.map((ingredient) => (
-              <IngredientRow key={ingredient.id} ingredient={ingredient} />
+              <IngredientRow
+                key={ingredient.id}
+                ingredient={ingredient}
+                characterId={characterId}
+              />
             ))}
           </ul>
         </section>
