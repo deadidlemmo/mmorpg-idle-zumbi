@@ -22,7 +22,7 @@ import {
   getVisibleCombatMaps,
 } from '../../auto-combat/utils/auto-combat-page.helpers';
 import { normalizeClassName } from '../../characters/api/characters.api';
-import { getAvatarImage } from '../../characters/constants/avatar-options';
+import { CharacterPortrait } from '../../cosmetics/components/CharacterPortrait';
 import {
   getCharacterOverview,
   updateCharacterCurrentMap,
@@ -100,6 +100,7 @@ function buildCharacterViewModel(
     maxHp: character.maxHp ?? 1,
     avatarKey: character.avatarKey ?? null,
     avatarUrl: character.avatarUrl ?? null,
+    appearance: character.appearance ?? null,
     currentMapName,
     class: character.class ?? null,
     gameClass: character.gameClass ?? null,
@@ -220,8 +221,6 @@ export function MapsSelectionPage() {
     character?.map?.id ??
     overview?.progression?.currentMap?.id ??
     null;
-  const avatarImage =
-    character?.avatarUrl ?? (character?.avatarKey ? getAvatarImage(character.avatarKey) : null);
 
   async function handleEnterMap(map: AutoCombatMapViewModel) {
     if (!characterId || updatingMapId) return;
@@ -325,13 +324,14 @@ export function MapsSelectionPage() {
                         className="maps-selection-card__current-marker"
                         aria-label={`${character.name} está neste mapa`}
                       >
-                        <span className="maps-selection-card__current-avatar">
-                          {avatarImage ? (
-                            <img src={avatarImage} alt="" />
-                          ) : (
-                            <span aria-hidden="true">{character.name.slice(0, 1)}</span>
-                          )}
-                        </span>
+                        <CharacterPortrait
+                          className="maps-selection-card__current-avatar"
+                          name={character.name}
+                          avatarKey={character.avatarKey}
+                          avatarUrl={character.avatarUrl}
+                          appearance={character.appearance}
+                          decorative
+                        />
                         <span className="maps-selection-card__current-pin" aria-hidden="true">
                           <MapPin size={16} />
                         </span>
