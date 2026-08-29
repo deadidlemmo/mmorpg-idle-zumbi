@@ -8,6 +8,7 @@ import {
   PackageOpen,
   Search,
   ShoppingCart,
+  SlidersHorizontal,
   Store,
   Tag,
   Trash2,
@@ -158,6 +159,7 @@ export function MarketplacePage() {
   const [tierFilter, setTierFilter] = useState("");
   const [rarityFilter, setRarityFilter] = useState("");
   const [sort, setSort] = useState<MarketListingSort>("NEWEST");
+  const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [catalog, setCatalog] = useState<MarketListingsResponse>({
     character: { id: "", name: "", gold: 0 },
     listings: [],
@@ -539,50 +541,80 @@ export function MarketplacePage() {
                   aria-label="Buscar item ou vendedor"
                 />
               </label>
-              <div className="market-filters">
-                <select
-                  value={typeFilter}
-                  onChange={(event) => {
-                    setTypeFilter(event.target.value);
-                    setCatalogPage(1);
-                  }}
-                  aria-label="Filtrar por tipo"
+              <div className="market-toolbar__controls">
+                <button
+                  type="button"
+                  className={`market-filter-toggle${areFiltersOpen ? " is-open" : ""}`}
+                  aria-expanded={areFiltersOpen}
+                  aria-controls="market-filter-options"
+                  onClick={() => setAreFiltersOpen((isOpen) => !isOpen)}
                 >
-                  <option value="">Todos os tipos</option>
-                  <option value="MATERIAL">Materiais</option>
-                  <option value="EQUIPMENT">Equipamentos</option>
-                  <option value="CONSUMABLE">Consumíveis</option>
-                </select>
-                <select
-                  value={tierFilter}
-                  onChange={(event) => {
-                    setTierFilter(event.target.value);
-                    setCatalogPage(1);
-                  }}
-                  aria-label="Filtrar por tier"
+                  <SlidersHorizontal size={16} aria-hidden="true" />
+                  <span>Filtros</span>
+                  {filterCount > 0 ? <strong>{filterCount}</strong> : null}
+                </button>
+                <div
+                  id="market-filter-options"
+                  className={`market-filters${areFiltersOpen ? " is-open" : ""}`}
                 >
-                  <option value="">Todos os tiers</option>
-                  {Array.from({ length: 11 }, (_, tier) => (
-                    <option key={tier} value={tier}>
-                      T{tier}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={rarityFilter}
-                  onChange={(event) => {
-                    setRarityFilter(event.target.value);
-                    setCatalogPage(1);
-                  }}
-                  aria-label="Filtrar por raridade"
-                >
-                  <option value="">Todas as raridades</option>
-                  <option value="COMMON">Comum</option>
-                  <option value="UNCOMMON">Incomum</option>
-                  <option value="RARE">Raro</option>
-                  <option value="EPIC">Épico</option>
-                  <option value="LEGENDARY">Lendário</option>
-                </select>
+                  <select
+                    value={typeFilter}
+                    onChange={(event) => {
+                      setTypeFilter(event.target.value);
+                      setCatalogPage(1);
+                    }}
+                    aria-label="Filtrar por tipo"
+                  >
+                    <option value="">Todos os tipos</option>
+                    <option value="MATERIAL">Materiais</option>
+                    <option value="EQUIPMENT">Equipamentos</option>
+                    <option value="CONSUMABLE">Consumíveis</option>
+                  </select>
+                  <select
+                    value={tierFilter}
+                    onChange={(event) => {
+                      setTierFilter(event.target.value);
+                      setCatalogPage(1);
+                    }}
+                    aria-label="Filtrar por tier"
+                  >
+                    <option value="">Todos os tiers</option>
+                    {Array.from({ length: 11 }, (_, tier) => (
+                      <option key={tier} value={tier}>
+                        T{tier}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={rarityFilter}
+                    onChange={(event) => {
+                      setRarityFilter(event.target.value);
+                      setCatalogPage(1);
+                    }}
+                    aria-label="Filtrar por raridade"
+                  >
+                    <option value="">Todas as raridades</option>
+                    <option value="COMMON">Comum</option>
+                    <option value="UNCOMMON">Incomum</option>
+                    <option value="RARE">Raro</option>
+                    <option value="EPIC">Épico</option>
+                    <option value="LEGENDARY">Lendário</option>
+                  </select>
+                  {filterCount > 0 ? (
+                    <button
+                      type="button"
+                      className="market-clear-filters"
+                      onClick={() => {
+                        setTypeFilter("");
+                        setTierFilter("");
+                        setRarityFilter("");
+                        setCatalogPage(1);
+                      }}
+                    >
+                      Limpar {filterCount}
+                    </button>
+                  ) : null}
+                </div>
                 <label className="market-sort">
                   <ArrowDownUp size={16} aria-hidden="true" />
                   <select
@@ -599,20 +631,6 @@ export function MarketplacePage() {
                   </select>
                 </label>
               </div>
-              {filterCount > 0 ? (
-                <button
-                  type="button"
-                  className="market-clear-filters"
-                  onClick={() => {
-                    setTypeFilter("");
-                    setTierFilter("");
-                    setRarityFilter("");
-                    setCatalogPage(1);
-                  }}
-                >
-                  Limpar {filterCount}
-                </button>
-              ) : null}
             </div>
 
             <div className="market-list-heading market-list-heading--catalog">
