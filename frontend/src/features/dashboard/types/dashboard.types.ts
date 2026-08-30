@@ -62,6 +62,11 @@ export interface DashboardDerivedStats {
 
 export interface DashboardEquipmentProgression {
   craftedPieces: number;
+  coherentPieces?: number;
+  coherentTier?: number;
+  averageTier?: number;
+  effectiveTier?: number;
+  averageEnhancementLevel?: number;
   activeMilestone: number;
   nextMilestone: number | null;
   bonusPercent: number;

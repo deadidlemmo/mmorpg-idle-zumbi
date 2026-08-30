@@ -11,10 +11,15 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  ActivityStatus,
+  AutoCombatHuntBatchStatus,
+  AutoCombatSessionPhase,
+  AutoCombatSessionStatus,
   CharacterStatus,
   EconomyDirection,
   EconomyResourceType,
   InventoryItemType,
+  IncursionSessionStatus,
   Prisma,
   WorldBossEventStatus,
   WorldBossRewardType,
@@ -33,9 +38,13 @@ import {
   calculateGatheringPrimaryBonus,
 } from '../../common/utils/stats.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AutoCombatService } from '../auto-combat/auto-combat.service';
+import { CraftingService } from '../crafting/crafting.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
 import { EconomyService } from '../economy/economy.service';
+import { GatheringService } from '../gathering/gathering.service';
+import { IncursionsService } from '../incursions/incursions.service';
 import { JoinWorldBossDto } from './dto/join-world-boss.dto';
 import { LeaveWorldBossDto } from './dto/leave-world-boss.dto';
 import {
@@ -45,6 +54,13 @@ import {
   wasWorldBossDefeated,
 } from './world-boss-rewards';
 import { isWorldBossTestUnlockEnabled } from './world-boss-test-unlock.util';
+import {
+  calculateWorldBossDamageTick,
+  calculateWorldBossHpFromTtk,
+  createWorldBossParticipantSnapshot,
+  getWorldBossTargetTtkSeconds,
+  WORLD_BOSS_TTK_BALANCE_VERSION,
+} from './world-boss-ttk.util';
 
 const worldBossInclude = {
   map: {
@@ -89,6 +105,7 @@ const eventInclude = {
 type Tx = Prisma.TransactionClient;
 
 const WORLD_BOSS_PROCESSING_TICK_MS = 1000;
+const WORLD_BOSS_DAMAGE_PERSIST_INTERVAL_MS = 5_000;
 const WORLD_BOSS_PROCESSING_LOCK_TTL_MS = 60_000;
 const WORLD_BOSS_PROCESSING_LOCK_KEY = 'dead-idle:scheduler:world-bosses';
 const WORLD_BOSS_REWARD_RECEIPT_RETENTION_MS = 15 * 60 * 1000;
@@ -127,6 +144,10 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     private readonly activityGuard: ActivityGuardService,
     private readonly distributedLock: DistributedLockService,
     private readonly economyService: EconomyService,
+    private readonly autoCombatService: AutoCombatService,
+    private readonly gatheringService: GatheringService,
+    private readonly craftingService: CraftingService,
+    private readonly incursionsService: IncursionsService,
     configService: ConfigService,
   ) {
     this.testUnlockEnabled = isWorldBossTestUnlockEnabled(
@@ -248,6 +269,65 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  async getRegistrations(userId: string, characterId: string) {
+    const character = await this.getCharacterOrThrow(userId, characterId);
+    const registrations = await this.prisma.worldBossParticipant.findMany({
+      where: {
+        characterId,
+        leftAt: null,
+        event: {
+          status: {
+            in: [
+              WorldBossEventStatus.SCHEDULED,
+              WorldBossEventStatus.LOBBY_OPEN,
+            ],
+          },
+        },
+      },
+      orderBy: { joinedAt: 'asc' },
+      include: {
+        rewards: { include: { item: true } },
+        event: { include: eventInclude },
+      },
+    });
+    const activityState = await this.activityGuard.getCharacterActivityState({
+      characterId,
+      userId,
+    });
+    const events: any[] = [];
+
+    for (const registration of registrations) {
+      const event = await this.advanceEventState(registration.event);
+      const currentParticipant =
+        await this.prisma.worldBossParticipant.findUnique({
+          where: {
+            eventId_characterId: {
+              eventId: event.id,
+              characterId,
+            },
+          },
+          include: { rewards: { include: { item: true } } },
+        });
+      if (!currentParticipant || currentParticipant.leftAt) continue;
+
+      events.push({
+        ...this.formatStatus(
+          event,
+          currentParticipant,
+          new Date(),
+          currentParticipant.rewards,
+        ),
+        eligible: this.getEligibility(
+          character,
+          event,
+          activityState.activeWorldBossParticipation,
+        ),
+      });
+    }
+
+    return { events };
+  }
+
   private async processOpenEvents() {
     if (this.isProcessingEvents) return;
 
@@ -279,8 +359,6 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
             },
             {
               status: WorldBossEventStatus.ACTIVE,
-              endsAt: { lte: now },
-              currentHp: { gt: 0 },
             },
             {
               status: {
@@ -290,7 +368,11 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
                 ],
               },
               participants: {
-                some: { leftAt: null, rewardGranted: false },
+                some: {
+                  leftAt: null,
+                  confirmedAt: { not: null },
+                  rewardGranted: false,
+                },
               },
             },
           ],
@@ -300,7 +382,10 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       });
 
       for (const event of events) {
-        let nextEvent = await this.advanceEventState(event);
+        let nextEvent =
+          event.status === WorldBossEventStatus.ACTIVE
+            ? await this.processActiveEvent(event.id, now)
+            : await this.advanceEventState(event);
         if (WORLD_BOSS_TERMINAL_STATUSES.includes(nextEvent.status)) {
           nextEvent = await this.settleTerminalEventRewards(nextEvent.id);
           const nextCycleEvent = await this.ensureNextCycleEvent(
@@ -359,40 +444,18 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
 
     if (!event) throw new NotFoundException('Ameaça Global não encontrada.');
     const availableEvent = await this.advanceEventState(event);
-    this.ensureEventJoinable(availableEvent);
-    this.ensureEligible(character, availableEvent.worldBoss);
 
-    await this.activityGuard.ensureCanStartWorldBoss({
-      characterId: dto.characterId,
-      userId,
-      worldBossEventId: dto.eventId,
-    });
-
-    if (availableEvent.status !== WorldBossEventStatus.SCHEDULED) {
-      const activityState = await this.activityGuard.getCharacterActivityState({
-        characterId: dto.characterId,
-        userId,
-      });
-      if (
-        activityState.hasActiveAutoCombat ||
-        activityState.hasActiveGathering ||
-        activityState.hasActiveIncursion
-      ) {
-        throw new BadRequestException(
-          'Ameaça Global é uma atividade principal. Encerre auto-combate, gathering ou incursão antes de participar.',
-        );
-      }
-    }
+    this.ensureEventRegistrable(availableEvent);
+    this.ensureRegistrationEligible(character, availableEvent.worldBoss);
 
     const now = new Date();
     const result = await this.prisma.$transaction(async (tx) => {
-      await this.activityGuard.ensureCanStartWorldBoss({
-        characterId: dto.characterId,
-        userId,
-        worldBossEventId: dto.eventId,
-        client: tx,
-        lockCharacter: true,
+      await this.lockWorldBossEvent(tx, dto.eventId);
+      const lockedEvent = await tx.worldBossEvent.findUniqueOrThrow({
+        where: { id: dto.eventId },
+        include: eventInclude,
       });
+      this.ensureEventRegistrable(lockedEvent);
 
       const existingParticipant = await tx.worldBossParticipant.findUnique({
         where: {
@@ -404,15 +467,33 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       });
 
       if (existingParticipant && !existingParticipant.leftAt) {
-        throw new ConflictException(
-          'Personagem já está no lobby desta Ameaça Global.',
-        );
+        const updatedEvent = await tx.worldBossEvent.findUniqueOrThrow({
+          where: { id: dto.eventId },
+          include: eventInclude,
+        });
+        return {
+          event: updatedEvent,
+          participant: existingParticipant,
+          alreadyRegistered: true,
+        };
       }
 
       const participant = existingParticipant
         ? await tx.worldBossParticipant.update({
             where: { id: existingParticipant.id },
-            data: { leftAt: null, lastContributionAt: now },
+            data: {
+              joinedAt: now,
+              confirmedAt: null,
+              leftAt: null,
+              lastContributionAt: now,
+              damageDealt: 0,
+              contributionPercent: 0,
+              activeSeconds: 0,
+              rewardGranted: false,
+              rewardGrantedAt: null,
+              eligibleForReward: false,
+              rank: null,
+            },
           })
         : await tx.worldBossParticipant.create({
             data: {
@@ -423,27 +504,31 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
             },
           });
 
-      await this.recalculateScaling(tx, dto.eventId, now);
       await this.recalculateParticipantCount(tx, dto.eventId);
 
       const updatedEvent = await tx.worldBossEvent.findUniqueOrThrow({
         where: { id: dto.eventId },
         include: eventInclude,
       });
-      return { event: updatedEvent, participant };
+      return { event: updatedEvent, participant, alreadyRegistered: false };
     });
-    const updatedEvent = await this.advanceEventState(result.event);
 
     return {
       ...this.formatStatus(
-        updatedEvent,
+        result.event,
         result.participant,
         now,
         null,
-        'Você entrou na Ameaça Global.',
+        result.alreadyRegistered
+          ? 'Sua inscrição já estava ativa. A atividade atual só será encerrada quando a batalha começar. Criações e incursões interrompidas não recuperam materiais ou custos.'
+          : 'Inscrição confirmada. Sua atividade continuará normalmente, será encerrada quando a batalha começar e precisará ser reiniciada depois do boss. Criações e incursões interrompidas não recuperam materiais ou custos.',
       ),
-      eligible: this.getEligibility(character, updatedEvent),
+      eligible: this.getEligibility(character, result.event),
     };
+  }
+
+  async confirm(userId: string, dto: JoinWorldBossDto) {
+    return this.join(userId, dto);
   }
 
   async leave(userId: string, dto: LeaveWorldBossDto) {
@@ -455,26 +540,41 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
 
     if (!event) throw new NotFoundException('Ameaça Global não encontrada.');
 
-    await this.advanceEventState(event);
-
-    const participant = await this.prisma.worldBossParticipant.findUnique({
-      where: {
-        eventId_characterId: {
-          eventId: dto.eventId,
-          characterId: dto.characterId,
-        },
-      },
-    });
-
-    if (!participant || participant.leftAt)
-      throw new NotFoundException('Participação não encontrada.');
+    const advancedEvent = await this.advanceEventState(event);
+    if (advancedEvent.status === WorldBossEventStatus.ACTIVE) {
+      await this.processActiveEvent(dto.eventId, new Date(), true);
+    }
 
     const now = new Date();
     const result = await this.prisma.$transaction(async (tx) => {
+      await this.lockWorldBossEvent(tx, dto.eventId);
       const event = await tx.worldBossEvent.findUniqueOrThrow({
         where: { id: dto.eventId },
         include: eventInclude,
       });
+      const participant = await tx.worldBossParticipant.findUnique({
+        where: {
+          eventId_characterId: {
+            eventId: dto.eventId,
+            characterId: dto.characterId,
+          },
+        },
+      });
+
+      if (!participant || participant.leftAt) {
+        if (
+          event.status === WorldBossEventStatus.SCHEDULED ||
+          event.status === WorldBossEventStatus.LOBBY_OPEN
+        ) {
+          return {
+            event,
+            leftDuringBattle: false,
+            wasConfirmed: false,
+            alreadyLeft: true,
+          };
+        }
+        throw new NotFoundException('Participação não encontrada.');
+      }
 
       if (
         event.status === WorldBossEventStatus.SCHEDULED ||
@@ -488,7 +588,12 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
           where: { id: dto.eventId },
           include: eventInclude,
         });
-        return { event: updatedEvent, leftDuringBattle: false };
+        return {
+          event: updatedEvent,
+          leftDuringBattle: false,
+          wasConfirmed: Boolean(participant.confirmedAt),
+          alreadyLeft: false,
+        };
       } else if (event.status === WorldBossEventStatus.ACTIVE) {
         await tx.worldBossParticipant.update({
           where: { id: participant.id },
@@ -502,7 +607,11 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         await this.recalculateParticipantCount(tx, dto.eventId);
 
         const remainingParticipants = await tx.worldBossParticipant.count({
-          where: { eventId: dto.eventId, leftAt: null },
+          where: {
+            eventId: dto.eventId,
+            leftAt: null,
+            confirmedAt: { not: null },
+          },
         });
 
         if (
@@ -533,14 +642,24 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
             include: eventInclude,
           });
 
-          return { event: nextEvent, leftDuringBattle: true };
+          return {
+            event: nextEvent,
+            leftDuringBattle: true,
+            wasConfirmed: true,
+            alreadyLeft: false,
+          };
         }
 
         const updatedEvent = await tx.worldBossEvent.findUniqueOrThrow({
           where: { id: dto.eventId },
           include: eventInclude,
         });
-        return { event: updatedEvent, leftDuringBattle: true };
+        return {
+          event: updatedEvent,
+          leftDuringBattle: true,
+          wasConfirmed: true,
+          alreadyLeft: false,
+        };
       } else {
         throw new ConflictException(
           'Não é possível sair desta Ameaça Global neste estado.',
@@ -556,7 +675,9 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         null,
         result.leftDuringBattle
           ? 'Você abandonou a batalha. Esta participação não receberá recompensas.'
-          : 'Você saiu do lobby da Ameaça Global.',
+          : result.alreadyLeft
+            ? 'A inscrição já estava cancelada.'
+            : 'Inscrição cancelada.',
       ),
       eligible: this.getEligibility(character, result.event),
     };
@@ -565,7 +686,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
   async getRanking(userId: string, eventId: string) {
     await this.ensureUserCanSeeEvent(userId, eventId);
     const participants = await this.prisma.worldBossParticipant.findMany({
-      where: { eventId },
+      where: { eventId, confirmedAt: { not: null } },
       orderBy: [{ damageDealt: 'desc' }, { joinedAt: 'asc' }],
       take: 50,
       include: { character: { select: { id: true, name: true, level: true } } },
@@ -743,7 +864,12 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         tier: boss.tier,
         status,
         startsAt,
-        endsAt: new Date(startsAt.getTime() + boss.durationSeconds * 1000),
+        endsAt: new Date(
+          startsAt.getTime() +
+            (WORLD_BOSS_SCHEDULE_CONFIG.entryWindowSeconds +
+              boss.durationSeconds) *
+              1000,
+        ),
         maxHp: boss.baseHp,
         currentHp: boss.baseHp,
       },
@@ -805,6 +931,12 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         currentHp: event.worldBoss.baseHp,
         totalDamage: 0,
         participantCount: 0,
+        registrationCount: 0,
+        targetTtkSeconds: null,
+        aggregateDamagePerSecond: 0,
+        aggregateScalingDamagePerSecond: 0,
+        damageProcessedAt: null,
+        scalingVersion: 1,
         hpLockedAt: null,
         defeatedAt: null,
         rewardedAt: null,
@@ -868,9 +1000,12 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private countActiveParticipants(eventId: string) {
+  private countRegisteredParticipants(eventId: string) {
     return this.prisma.worldBossParticipant.count({
-      where: { eventId, leftAt: null },
+      where: {
+        eventId,
+        leftAt: null,
+      },
     });
   }
 
@@ -889,79 +1024,12 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         });
         let rewards: any[] | null = null;
 
-        if (event.status === WorldBossEventStatus.ACTIVE) {
-          const participant = await tx.worldBossParticipant.findUnique({
-            where: {
-              eventId_characterId: {
-                eventId: params.eventId,
-                characterId: params.characterId,
-              },
-            },
-          });
-
-          if (
-            participant &&
-            !participant.leftAt &&
-            event.currentHp > 0 &&
-            event.endsAt.getTime() > now.getTime()
-          ) {
-            const contributionFrom = new Date(
-              Math.max(
-                participant.lastContributionAt.getTime(),
-                event.startsAt.getTime(),
-              ),
-            );
-            const damage = await this.calculateElapsedDamage(
-              tx,
-              params.characterId,
-              event.worldBoss,
-              contributionFrom,
-              now,
-            );
-            if (damage > 0) {
-              const nextHp = Math.max(0, event.currentHp - damage);
-              await tx.worldBossParticipant.update({
-                where: { id: participant.id },
-                data: {
-                  damageDealt: { increment: damage },
-                  activeSeconds: {
-                    increment: Math.max(
-                      0,
-                      Math.floor(
-                        (now.getTime() - contributionFrom.getTime()) / 1000,
-                      ),
-                    ),
-                  },
-                  lastContributionAt: now,
-                },
-              });
-              await tx.worldBossEvent.update({
-                where: { id: event.id },
-                data: {
-                  currentHp: nextHp,
-                  totalDamage: { increment: damage },
-                  ...(nextHp <= 0
-                    ? { status: WorldBossEventStatus.DEFEATED, defeatedAt: now }
-                    : {}),
-                },
-              });
-            } else {
-              await tx.worldBossParticipant.update({
-                where: { id: participant.id },
-                data: { lastContributionAt: now },
-              });
-            }
-          }
-
-          if (event.endsAt.getTime() <= now.getTime() && event.currentHp > 0) {
-            await tx.worldBossEvent.update({
-              where: { id: event.id },
-              data: { status: WorldBossEventStatus.EXPIRED },
-            });
-          }
+        if (
+          event.status === WorldBossEventStatus.DEFEATED ||
+          event.status === WorldBossEventStatus.EXPIRED
+        ) {
+          await this.refreshContributions(tx, params.eventId);
         }
-
-        await this.refreshContributions(tx, params.eventId);
         event = await tx.worldBossEvent.findUniqueOrThrow({
           where: { id: params.eventId },
           include: eventInclude,
@@ -1008,176 +1076,777 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private async calculateElapsedDamage(
-    tx: Tx,
-    characterId: string,
-    boss: any,
-    from: Date,
-    to: Date,
-  ) {
-    const elapsedSeconds = Math.min(
-      300,
-      Math.max(0, Math.floor((to.getTime() - from.getTime()) / 1000)),
+  private async lockWorldBossEvent(tx: Tx, eventId: string) {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "world_boss_events" WHERE "id" = ${eventId} FOR UPDATE`,
     );
-    if (elapsedSeconds <= 0) return 0;
-
-    const character = await tx.character.findUniqueOrThrow({
-      where: { id: characterId },
-      include: {
-        class: true,
-        equipment: {
-          include: {
-            mainHand: true,
-            offHand: true,
-            head: true,
-            armor: true,
-            pants: true,
-            boots: true,
-          },
-        },
-        gatheringSkills: true,
-      },
-    });
-    const items = character.equipment
-      ? [
-          character.equipment.mainHand,
-          character.equipment.offHand,
-          character.equipment.head,
-          character.equipment.armor,
-          character.equipment.pants,
-          character.equipment.boots,
-        ]
-      : [];
-    const gatheringBonus = calculateGatheringPrimaryBonus(
-      character.gatheringSkills,
-    );
-    const stats = calculateFullStats(
-      character.class,
-      items,
-      character.level,
-      gatheringBonus,
-    );
-    const primary = stats.totalPrimaryStats;
-    const derived = stats.derivedCombatStats;
-    const powerScore =
-      character.level * 12 +
-      derived.attack * 2 +
-      derived.speed +
-      derived.defense +
-      primary.technique +
-      primary.willpower;
-    const mitigation = Math.min(
-      0.82,
-      Math.max(
-        0,
-        boss.damageReduction +
-          boss.defense / (boss.defense + powerScore * 8) +
-          boss.resistance / 1000,
-      ),
-    );
-    const damagePerMinute = Math.max(8, powerScore * 3.2 * (1 - mitigation));
-    return Math.max(1, Math.floor((damagePerMinute / 60) * elapsedSeconds));
   }
 
-  private async recalculateScaling(tx: Tx, eventId: string, now: Date) {
-    const event = await tx.worldBossEvent.findUniqueOrThrow({
-      where: { id: eventId },
+  private async snapshotActiveParticipants(
+    tx: Tx,
+    event: any,
+    snapshotAt: Date,
+  ) {
+    const participants = await tx.worldBossParticipant.findMany({
+      where: {
+        eventId: event.id,
+        leftAt: null,
+        confirmedAt: { not: null },
+      },
+      orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }],
       include: {
-        worldBoss: true,
-        participants: {
-          where: { leftAt: null },
+        character: {
+          include: {
+            class: true,
+            equipment: {
+              include: {
+                mainHand: true,
+                offHand: true,
+                head: true,
+                armor: true,
+                pants: true,
+                boots: true,
+              },
+            },
+            gatheringSkills: true,
+          },
+        },
+      },
+    });
+    const snapshots: Array<{
+      id: string;
+      damagePerSecond: number;
+      scalingDamagePerSecond: number;
+    }> = [];
+
+    for (const participant of participants) {
+      const equipment = participant.character.equipment;
+      const items = equipment
+        ? [
+            equipment.mainHand,
+            equipment.offHand,
+            equipment.head,
+            equipment.armor,
+            equipment.pants,
+            equipment.boots,
+          ]
+        : [];
+      const gatheringBonus = calculateGatheringPrimaryBonus(
+        participant.character.gatheringSkills,
+      );
+      const stats = calculateFullStats(
+        participant.character.class,
+        items,
+        participant.character.level,
+        gatheringBonus,
+      );
+      const snapshot = createWorldBossParticipantSnapshot({
+        bossTier: event.worldBoss.tier,
+        bossLevel: this.getBossLevel(event.worldBoss),
+        characterLevel: participant.character.level,
+        equipmentProgression: stats.equipmentProgression,
+        equippedPieceCount: items.filter(Boolean).length,
+        primaryStats: stats.totalPrimaryStats,
+        derivedStats: stats.derivedCombatStats,
+        boss: event.worldBoss,
+      });
+
+      await tx.worldBossParticipant.update({
+        where: { id: participant.id },
+        data: {
+          powerScoreSnapshot: snapshot.powerScore,
+          damagePerSecondSnapshot: snapshot.damagePerSecond,
+          scalingDamagePerSecondSnapshot: snapshot.scalingDamagePerSecond,
+          readinessSnapshot: snapshot.readinessRatio,
+          equipmentTierSnapshot: snapshot.equipmentTier,
+          equippedPieceCountSnapshot: snapshot.equippedPieceCount,
+          damageRemainder: 0,
+          combatSnapshotAt: snapshotAt,
+          lastContributionAt: snapshotAt,
+        },
+      });
+      snapshots.push({
+        id: participant.id,
+        damagePerSecond: snapshot.damagePerSecond,
+        scalingDamagePerSecond: snapshot.scalingDamagePerSecond,
+      });
+    }
+
+    return snapshots;
+  }
+
+  private async activateEventWithSnapshot(eventId: string, now: Date) {
+    await this.flushRegisteredParticipantsForBattle(eventId);
+
+    const transitions: Array<{
+      characterId: string;
+      userId: string;
+      stoppedActivities: string[];
+    }> = [];
+    const activatedEvent = await this.prisma.$transaction(
+      async (tx) => {
+        await this.lockWorldBossEvent(tx, eventId);
+        const event = await tx.worldBossEvent.findUniqueOrThrow({
+          where: { id: eventId },
+          include: { worldBoss: true },
+        });
+
+        if (
+          event.status === WorldBossEventStatus.ACTIVE &&
+          event.scalingVersion >= WORLD_BOSS_TTK_BALANCE_VERSION &&
+          event.damageProcessedAt
+        ) {
+          return tx.worldBossEvent.findUniqueOrThrow({
+            where: { id: eventId },
+            include: eventInclude,
+          });
+        }
+        if (WORLD_BOSS_TERMINAL_STATUSES.includes(event.status)) {
+          return tx.worldBossEvent.findUniqueOrThrow({
+            where: { id: eventId },
+            include: eventInclude,
+          });
+        }
+
+        const registeredParticipants = await tx.worldBossParticipant.findMany({
+          where: {
+            eventId,
+            leftAt: null,
+          },
+          orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }],
           include: {
             character: {
-              include: {
-                class: true,
-                equipment: {
-                  include: {
-                    mainHand: true,
-                    offHand: true,
-                    head: true,
-                    armor: true,
-                    pants: true,
-                    boots: true,
+              select: {
+                id: true,
+                userId: true,
+                status: true,
+                level: true,
+                currentHp: true,
+                maxHp: true,
+                mapId: true,
+                deletedAt: true,
+              },
+            },
+          },
+        });
+
+        const characterIds = registeredParticipants
+          .map((participant) => participant.characterId)
+          .sort();
+        if (characterIds.length > 0) {
+          await tx.$queryRaw(
+            Prisma.sql`SELECT "id" FROM "characters" WHERE "id" IN (${Prisma.join(
+              characterIds,
+            )}) ORDER BY "id" FOR UPDATE`,
+          );
+        }
+
+        for (const participant of registeredParticipants) {
+          const character = participant.character;
+          const currentHp = character.currentHp ?? character.maxHp ?? 0;
+          const isEligible = Boolean(
+            !character.deletedAt &&
+            character.status === CharacterStatus.ACTIVE &&
+            currentHp > 0 &&
+            character.mapId === event.mapId &&
+            (this.testUnlockEnabled ||
+              character.level >= event.worldBoss.minLevel),
+          );
+          const otherActiveParticipation = isEligible
+            ? await tx.worldBossParticipant.findFirst({
+                where: {
+                  characterId: character.id,
+                  eventId: { not: eventId },
+                  leftAt: null,
+                  confirmedAt: { not: null },
+                  event: {
+                    status: WorldBossEventStatus.ACTIVE,
+                    endsAt: { gt: now },
                   },
                 },
-                gatheringSkills: true,
+                select: { id: true },
+              })
+            : null;
+
+          if (!isEligible || otherActiveParticipation) {
+            await tx.worldBossParticipant.update({
+              where: { id: participant.id },
+              data: { leftAt: now, lastContributionAt: now },
+            });
+            continue;
+          }
+
+          const stoppedActivities =
+            await this.stopActivitiesForWorldBossInTransaction(
+              tx,
+              character.id,
+              now,
+            );
+          await tx.worldBossParticipant.update({
+            where: { id: participant.id },
+            data: {
+              confirmedAt: participant.confirmedAt ?? now,
+              lastContributionAt: now,
+            },
+          });
+          transitions.push({
+            characterId: character.id,
+            userId: character.userId,
+            stoppedActivities,
+          });
+        }
+
+        const snapshots = await this.snapshotActiveParticipants(tx, event, now);
+        if (snapshots.length <= 0) {
+          return tx.worldBossEvent.update({
+            where: { id: eventId },
+            data: {
+              status: WorldBossEventStatus.EXPIRED,
+              endsAt: now,
+              participantCount: 0,
+              registrationCount: 0,
+            },
+            include: eventInclude,
+          });
+        }
+
+        const targetTtkSeconds = getWorldBossTargetTtkSeconds(
+          event.worldBoss.difficulty,
+          snapshots.length,
+        );
+        const maxHp = calculateWorldBossHpFromTtk({
+          targetTtkSeconds,
+          scalingDamagePerSecond: snapshots.map(
+            (snapshot) => snapshot.scalingDamagePerSecond,
+          ),
+        });
+        const aggregateDamagePerSecond = snapshots.reduce(
+          (total, snapshot) => total + snapshot.damagePerSecond,
+          0,
+        );
+        const aggregateScalingDamagePerSecond = snapshots.reduce(
+          (total, snapshot) => total + snapshot.scalingDamagePerSecond,
+          0,
+        );
+
+        return tx.worldBossEvent.update({
+          where: { id: eventId },
+          data: {
+            status: WorldBossEventStatus.ACTIVE,
+            endsAt: new Date(
+              now.getTime() + event.worldBoss.durationSeconds * 1000,
+            ),
+            maxHp,
+            currentHp: maxHp,
+            totalDamage: 0,
+            participantCount: snapshots.length,
+            registrationCount: snapshots.length,
+            targetTtkSeconds,
+            aggregateDamagePerSecond,
+            aggregateScalingDamagePerSecond,
+            damageProcessedAt: now,
+            scalingVersion: WORLD_BOSS_TTK_BALANCE_VERSION,
+            hpLockedAt: now,
+            defeatedAt: null,
+            rewardedAt: null,
+          },
+          include: eventInclude,
+        });
+      },
+      { timeout: 15_000 },
+    );
+
+    await Promise.allSettled(
+      transitions
+        .filter((transition) =>
+          transition.stoppedActivities.includes('AUTO_COMBAT'),
+        )
+        .map(async (transition) => {
+          try {
+            await this.autoCombatService.syncAfterWorldBossTransition(
+              transition.userId,
+              transition.characterId,
+            );
+          } catch (error) {
+            this.logger.warn(
+              `Falha ao sincronizar auto-combate após início do World Boss para ${transition.characterId}: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+          }
+        }),
+    );
+
+    return activatedEvent;
+  }
+
+  private async upgradeActiveEventSnapshot(tx: Tx, event: any, now: Date) {
+    const snapshots = await this.snapshotActiveParticipants(tx, event, now);
+    const targetTtkSeconds = getWorldBossTargetTtkSeconds(
+      event.worldBoss.difficulty,
+      snapshots.length,
+    );
+    const remainingHp = calculateWorldBossHpFromTtk({
+      targetTtkSeconds,
+      scalingDamagePerSecond: snapshots.map(
+        (snapshot) => snapshot.scalingDamagePerSecond,
+      ),
+    });
+    const recordedDamage = Math.max(0, event.totalDamage);
+    const aggregateDamagePerSecond = snapshots.reduce(
+      (total, snapshot) => total + snapshot.damagePerSecond,
+      0,
+    );
+    const aggregateScalingDamagePerSecond = snapshots.reduce(
+      (total, snapshot) => total + snapshot.scalingDamagePerSecond,
+      0,
+    );
+
+    await tx.worldBossEvent.update({
+      where: { id: event.id },
+      data: {
+        maxHp: recordedDamage + remainingHp,
+        currentHp: remainingHp,
+        participantCount: snapshots.length,
+        registrationCount: snapshots.length,
+        targetTtkSeconds,
+        aggregateDamagePerSecond,
+        aggregateScalingDamagePerSecond,
+        damageProcessedAt: now,
+        scalingVersion: WORLD_BOSS_TTK_BALANCE_VERSION,
+        hpLockedAt: now,
+        endsAt: new Date(
+          Math.max(
+            event.endsAt.getTime(),
+            now.getTime() + targetTtkSeconds * 1000,
+          ),
+        ),
+      },
+    });
+  }
+
+  private async processActiveEvent(eventId: string, now: Date, force = false) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        await this.lockWorldBossEvent(tx, eventId);
+        let event = await tx.worldBossEvent.findUniqueOrThrow({
+          where: { id: eventId },
+          include: {
+            ...eventInclude,
+            participants: {
+              where: { leftAt: null, confirmedAt: { not: null } },
+              orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }],
+            },
+          },
+        });
+
+        if (event.status !== WorldBossEventStatus.ACTIVE) return event;
+        if (event.currentHp <= 0) {
+          return tx.worldBossEvent.update({
+            where: { id: eventId },
+            data: {
+              status: WorldBossEventStatus.DEFEATED,
+              defeatedAt: event.defeatedAt ?? now,
+              damageProcessedAt: now,
+            },
+            include: eventInclude,
+          });
+        }
+
+        const missingSnapshot = event.participants.some(
+          (participant) =>
+            participant.damagePerSecondSnapshot === null ||
+            participant.scalingDamagePerSecondSnapshot === null,
+        );
+        if (
+          event.scalingVersion < WORLD_BOSS_TTK_BALANCE_VERSION ||
+          !event.damageProcessedAt ||
+          missingSnapshot
+        ) {
+          await this.upgradeActiveEventSnapshot(tx, event, now);
+          event = await tx.worldBossEvent.findUniqueOrThrow({
+            where: { id: eventId },
+            include: {
+              ...eventInclude,
+              participants: {
+                where: { leftAt: null, confirmedAt: { not: null } },
+                orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }],
               },
+            },
+          });
+        }
+
+        const processedFrom = event.damageProcessedAt ?? event.startsAt;
+        const processedUntil = new Date(
+          Math.min(now.getTime(), event.endsAt.getTime()),
+        );
+        const elapsedMs = Math.max(
+          0,
+          processedUntil.getTime() - processedFrom.getTime(),
+        );
+        const reachedDeadline = now.getTime() >= event.endsAt.getTime();
+
+        if (
+          elapsedMs < WORLD_BOSS_DAMAGE_PERSIST_INTERVAL_MS &&
+          !reachedDeadline &&
+          !force
+        ) {
+          return event;
+        }
+
+        const elapsedSeconds = elapsedMs / 1000;
+        const allocations = calculateWorldBossDamageTick({
+          participants: event.participants.map((participant) => ({
+            id: participant.id,
+            damagePerSecond: participant.damagePerSecondSnapshot ?? 0,
+            damageRemainder: participant.damageRemainder,
+          })),
+          elapsedSeconds,
+          currentHp: event.currentHp,
+        });
+        const damage = allocations.reduce(
+          (total, allocation) => total + allocation.damage,
+          0,
+        );
+        const totalDamage = event.totalDamage + damage;
+        const allocationsById = new Map(
+          allocations.map((allocation) => [allocation.id, allocation]),
+        );
+        const ranksByParticipantId = new Map(
+          event.participants
+            .map((participant) => ({
+              id: participant.id,
+              damageDealt:
+                participant.damageDealt +
+                (allocationsById.get(participant.id)?.damage ?? 0),
+              joinedAt: participant.joinedAt,
+            }))
+            .sort(
+              (left, right) =>
+                right.damageDealt - left.damageDealt ||
+                left.joinedAt.getTime() - right.joinedAt.getTime(),
+            )
+            .map((participant, index) => [participant.id, index + 1]),
+        );
+
+        for (const allocation of allocations) {
+          const participant = event.participants.find(
+            (candidate) => candidate.id === allocation.id,
+          );
+          const activeFrom =
+            participant?.combatSnapshotAt ?? event.startsAt ?? processedFrom;
+          const activeSeconds = Math.max(
+            participant?.activeSeconds ?? 0,
+            Math.floor(
+              (processedUntil.getTime() - activeFrom.getTime()) / 1000,
+            ),
+          );
+          const damageDealt =
+            (participant?.damageDealt ?? 0) + allocation.damage;
+          await tx.worldBossParticipant.update({
+            where: { id: allocation.id },
+            data: {
+              damageDealt: { increment: allocation.damage },
+              activeSeconds,
+              lastContributionAt: processedUntil,
+              damageRemainder: allocation.damageRemainder,
+              contributionPercent:
+                totalDamage > 0 ? (damageDealt / totalDamage) * 100 : 0,
+              rank: ranksByParticipantId.get(allocation.id),
+              eligibleForReward:
+                activeSeconds >= event.worldBoss.minParticipationSeconds ||
+                damageDealt >= event.worldBoss.minParticipationDamage,
+            },
+          });
+        }
+
+        const currentHp = Math.max(0, event.currentHp - damage);
+        const aggregateDamagePerSecond = event.participants.reduce(
+          (total, participant) =>
+            total + (participant.damagePerSecondSnapshot ?? 0),
+          0,
+        );
+        const status =
+          currentHp <= 0
+            ? WorldBossEventStatus.DEFEATED
+            : reachedDeadline
+              ? WorldBossEventStatus.EXPIRED
+              : WorldBossEventStatus.ACTIVE;
+
+        return tx.worldBossEvent.update({
+          where: { id: eventId },
+          data: {
+            currentHp,
+            totalDamage: { increment: damage },
+            participantCount: event.participants.length,
+            registrationCount: event.participants.length,
+            aggregateDamagePerSecond,
+            damageProcessedAt: processedUntil,
+            status,
+            ...(status === WorldBossEventStatus.DEFEATED
+              ? { defeatedAt: processedUntil }
+              : {}),
+          },
+          include: eventInclude,
+        });
+      },
+      { timeout: 15_000 },
+    );
+  }
+
+  private async flushRegisteredParticipantsForBattle(eventId: string) {
+    const participants = await this.prisma.worldBossParticipant.findMany({
+      where: { eventId, leftAt: null },
+      select: {
+        characterId: true,
+        character: { select: { userId: true } },
+      },
+    });
+
+    await Promise.allSettled(
+      participants.map(async ({ characterId, character }) => {
+        try {
+          const activityState =
+            await this.activityGuard.getCharacterActivityState({
+              characterId,
+              userId: character.userId,
+            });
+
+          if (activityState.hasActiveAutoCombat) {
+            await this.autoCombatService.flushForWorldBossTransition(
+              character.userId,
+              characterId,
+            );
+          }
+          if (activityState.hasActiveGathering) {
+            await this.gatheringService.flushForWorldBossTransition(
+              character.userId,
+              characterId,
+            );
+          }
+          if (activityState.hasActiveCrafting) {
+            await this.craftingService.getCharacterCraftingStatus(
+              character.userId,
+              characterId,
+            );
+          }
+          if (activityState.hasActiveIncursion) {
+            await this.incursionsService.getStatus(
+              character.userId,
+              characterId,
+            );
+          }
+        } catch (error) {
+          this.logger.warn(
+            `Falha ao consolidar atividade antes do World Boss para ${characterId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+      }),
+    );
+  }
+
+  private async stopActivitiesForWorldBossInTransaction(
+    tx: Tx,
+    characterId: string,
+    stoppedAt: Date,
+  ) {
+    const stoppedActivities: string[] = [];
+    const gatheringStop = await tx.gatheringSession.updateMany({
+      where: { characterId, status: ActivityStatus.ACTIVE },
+      data: { status: ActivityStatus.STOPPED },
+    });
+    if (gatheringStop.count > 0) stoppedActivities.push('GATHERING');
+
+    const craftingStop = await tx.craftingSession.updateMany({
+      where: {
+        characterId,
+        status: ActivityStatus.ACTIVE,
+        completesAt: { gt: stoppedAt },
+      },
+      data: { status: ActivityStatus.STOPPED, completedAt: stoppedAt },
+    });
+    if (craftingStop.count > 0) stoppedActivities.push('CRAFTING');
+
+    const incursionStop = await tx.characterIncursionSession.updateMany({
+      where: {
+        characterId,
+        status: IncursionSessionStatus.ACTIVE,
+        endsAt: { gt: stoppedAt },
+      },
+      data: {
+        status: IncursionSessionStatus.CANCELLED,
+        completedAt: null,
+      },
+    });
+    if (incursionStop.count > 0) stoppedActivities.push('INCURSION');
+
+    const autoCombatSession = await tx.autoCombatSession.findFirst({
+      where: {
+        characterId,
+        status: AutoCombatSessionStatus.ACTIVE,
+        phase: {
+          in: [
+            AutoCombatSessionPhase.HUNTING,
+            AutoCombatSessionPhase.COMBAT_ACTIVE,
+          ],
+        },
+      },
+      orderBy: { startedAt: 'desc' },
+      include: {
+        huntBatch: {
+          include: {
+            mobs: {
+              where: { remainingCount: { gt: 0 } },
+              orderBy: [{ firstFoundAt: 'asc' }, { id: 'asc' }],
             },
           },
         },
       },
     });
-    if (
-      event.hpLockedAt ||
-      event.startsAt.getTime() + event.worldBoss.scalingWindowSeconds * 1000 <
-        now.getTime()
-    ) {
-      if (!event.hpLockedAt)
-        await tx.worldBossEvent.update({
-          where: { id: eventId },
-          data: { hpLockedAt: now },
+
+    if (!autoCombatSession) return stoppedActivities;
+
+    const trackedMob = autoCombatSession.huntBatch?.mobs[0] ?? null;
+    const selectedEncounterId =
+      autoCombatSession.selectedEncounterId ??
+      autoCombatSession.battleTargetEncounterId ??
+      autoCombatSession.huntBatch?.selectedEncounterId ??
+      trackedMob?.encounterId ??
+      null;
+    const selectedMobId =
+      autoCombatSession.selectedEncounterMobId ??
+      autoCombatSession.battleTargetMobId ??
+      autoCombatSession.huntBatch?.selectedEncounterMobId ??
+      trackedMob?.mobId ??
+      null;
+    const trackedEnemies = Math.max(
+      autoCombatSession.battleTargetRemaining,
+      autoCombatSession.foundEnemiesCount,
+      autoCombatSession.huntBatch?.mobs.reduce(
+        (total, mob) => total + mob.remainingCount,
+        0,
+      ) ?? 0,
+    );
+    const shouldPreserveTrackedEnemies = Boolean(
+      trackedEnemies > 0 && selectedEncounterId && selectedMobId,
+    );
+
+    if (shouldPreserveTrackedEnemies) {
+      await tx.autoCombatSession.update({
+        where: { id: autoCombatSession.id },
+        data: {
+          phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+          huntStoppedAt: stoppedAt,
+          lastHuntProcessedAt: stoppedAt,
+          lastProcessedAt: stoppedAt,
+          foundEnemiesCount: trackedEnemies,
+          selectedEncounterId,
+          selectedEncounterMobId: selectedMobId,
+          currentMobId: null,
+          currentMobHp: null,
+          currentMobMaxHp: null,
+          killProgressSeconds: 0,
+          killProgressMs: 0,
+          estimatedKillTimeSeconds: null,
+          estimatedKillTimeMs: null,
+          unmodifiedKillTimeMs: null,
+          baseKillTimeSeconds: null,
+          appliedTtkPetDefinitionId: null,
+          appliedTtkPetEffectBasisPoints: 0,
+          playerOffensivePower: null,
+          monsterRecommendedPower: null,
+          currentMobIndex: null,
+          currentRound: 0,
+          battleTargetTotal: 0,
+          battleTargetRemaining: 0,
+          battleTargetMobId: null,
+          battleTargetEncounterId: null,
+        },
+      });
+
+      if (autoCombatSession.huntBatch) {
+        await tx.autoCombatHuntBatch.update({
+          where: { id: autoCombatSession.huntBatch.id },
+          data: {
+            status: AutoCombatHuntBatchStatus.READY,
+            stoppedAt,
+            consumedAt: null,
+            cancelledAt: null,
+            lastProcessedAt: stoppedAt,
+            foundEnemiesCount: trackedEnemies,
+            selectedEncounterId,
+            selectedEncounterMobId: selectedMobId,
+            cycleTargetEncounterId: null,
+          },
         });
-      return;
-    }
-    const participantCount = Math.max(
-      event.worldBoss.minParticipantsExpected,
-      event.participants.length,
-    );
-    const powers = event.participants.map((p) => {
-      const e = p.character.equipment;
-      const items = e
-        ? [e.mainHand, e.offHand, e.head, e.armor, e.pants, e.boots]
-        : [];
-      const gatheringBonus = calculateGatheringPrimaryBonus(
-        p.character.gatheringSkills,
-      );
-      const stats = calculateFullStats(
-        p.character.class,
-        items,
-        p.character.level,
-        gatheringBonus,
-      );
-      return (
-        p.character.level * 12 +
-        stats.derivedCombatStats.attack * 2 +
-        stats.derivedCombatStats.defense +
-        stats.derivedCombatStats.speed
-      );
-    });
-    const avgPower = powers.length
-      ? powers.reduce((a, b) => a + b, 0) / powers.length
-      : event.worldBoss.tier * 100;
-    const participantHp =
-      event.worldBoss.hpPerParticipant * Math.pow(participantCount, 0.72);
-    const powerHp =
-      avgPower *
-      event.worldBoss.powerScalingFactor *
-      Math.pow(participantCount, 0.55);
-    const cap =
-      event.worldBoss.maxHp ??
-      Math.floor(event.worldBoss.baseHp * event.worldBoss.maxScalingCap);
-    const scaled = Math.min(
-      cap,
-      Math.floor(
-        (event.worldBoss.baseHp + participantHp + powerHp) *
-          event.worldBoss.scalingFactor,
-      ),
-    );
-    if (scaled > event.maxHp) {
-      await tx.worldBossEvent.update({
-        where: { id: eventId },
-        data: { maxHp: scaled, currentHp: { increment: scaled - event.maxHp } },
+      }
+    } else {
+      await tx.autoCombatSession.update({
+        where: { id: autoCombatSession.id },
+        data: {
+          status: AutoCombatSessionStatus.STOPPED,
+          finishedAt: stoppedAt,
+          huntStoppedAt: stoppedAt,
+          lastHuntProcessedAt: stoppedAt,
+          lastProcessedAt: stoppedAt,
+          currentMobId: null,
+          currentMobHp: null,
+          currentMobMaxHp: null,
+          killProgressSeconds: 0,
+          killProgressMs: 0,
+          estimatedKillTimeSeconds: null,
+          estimatedKillTimeMs: null,
+          unmodifiedKillTimeMs: null,
+          baseKillTimeSeconds: null,
+          appliedTtkPetDefinitionId: null,
+          appliedTtkPetEffectBasisPoints: 0,
+          currentRound: 0,
+          battleTargetTotal: 0,
+          battleTargetRemaining: 0,
+          battleTargetMobId: null,
+          battleTargetEncounterId: null,
+        },
+      });
+      await tx.autoCombatHuntBatch.updateMany({
+        where: {
+          sessionId: autoCombatSession.id,
+          status: {
+            in: [
+              AutoCombatHuntBatchStatus.HUNTING,
+              AutoCombatHuntBatchStatus.READY,
+              AutoCombatHuntBatchStatus.CONSUMED,
+            ],
+          },
+        },
+        data: {
+          status: AutoCombatHuntBatchStatus.CANCELLED,
+          cancelledAt: stoppedAt,
+          lastProcessedAt: stoppedAt,
+          cycleTargetEncounterId: null,
+        },
       });
     }
+
+    stoppedActivities.push('AUTO_COMBAT');
+    return stoppedActivities;
   }
 
   private async recalculateParticipantCount(tx: Tx, eventId: string) {
-    const count = await tx.worldBossParticipant.count({
+    const registrationCount = await tx.worldBossParticipant.count({
       where: { eventId, leftAt: null },
+    });
+    const participantCount = await tx.worldBossParticipant.count({
+      where: {
+        eventId,
+        leftAt: null,
+        confirmedAt: { not: null },
+      },
     });
     await tx.worldBossEvent.update({
       where: { id: eventId },
-      data: { participantCount: count },
+      data: { registrationCount, participantCount },
     });
   }
 
@@ -1187,7 +1856,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       include: { worldBoss: true },
     });
     const participants = await tx.worldBossParticipant.findMany({
-      where: { eventId },
+      where: { eventId, confirmedAt: { not: null } },
       orderBy: [{ damageDealt: 'desc' }, { joinedAt: 'asc' }],
     });
     const activeParticipantCount = participants.filter((p) => !p.leftAt).length;
@@ -1208,7 +1877,11 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     }
     await tx.worldBossEvent.update({
       where: { id: eventId },
-      data: { totalDamage, participantCount: activeParticipantCount },
+      data: {
+        totalDamage,
+        participantCount: activeParticipantCount,
+        registrationCount: activeParticipantCount,
+      },
     });
   }
 
@@ -1255,6 +1928,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         eventId: event.id,
         ...(options.characterId ? { characterId: options.characterId } : {}),
         leftAt: null,
+        confirmedAt: { not: null },
         rewardGranted: false,
       },
       orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }],
@@ -1278,6 +1952,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       where: {
         eventId: event.id,
         leftAt: null,
+        confirmedAt: { not: null },
         rewardGranted: false,
       },
     });
@@ -1302,6 +1977,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       where: {
         id: participantId,
         leftAt: null,
+        confirmedAt: { not: null },
         rewardGranted: false,
       },
       data: { rewardGranted: true, rewardGrantedAt: now },
@@ -1471,10 +2147,11 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
   private async findActiveEventForCharacter(character: any) {
     if (!character.mapId) return null;
     const now = new Date();
-    const joinedEvent = await this.prisma.worldBossParticipant.findFirst({
+    const confirmedEvent = await this.prisma.worldBossParticipant.findFirst({
       where: {
         characterId: character.id,
         leftAt: null,
+        confirmedAt: { not: null },
         event: {
           mapId: character.mapId,
           status: { in: WORLD_BOSS_OPEN_STATUSES },
@@ -1484,9 +2161,30 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       select: { eventId: true },
     });
 
-    if (joinedEvent) {
+    if (confirmedEvent) {
       const event = await this.prisma.worldBossEvent.findUnique({
-        where: { id: joinedEvent.eventId },
+        where: { id: confirmedEvent.eventId },
+        include: eventInclude,
+      });
+      if (event) return this.advanceEventState(event);
+    }
+
+    const registeredEvent = await this.prisma.worldBossParticipant.findFirst({
+      where: {
+        characterId: character.id,
+        leftAt: null,
+        event: {
+          mapId: character.mapId,
+          status: WorldBossEventStatus.SCHEDULED,
+        },
+      },
+      orderBy: { joinedAt: 'desc' },
+      select: { eventId: true },
+    });
+
+    if (registeredEvent) {
+      const event = await this.prisma.worldBossEvent.findUnique({
+        where: { id: registeredEvent.eventId },
         include: eventInclude,
       });
       if (event) return this.advanceEventState(event);
@@ -1509,6 +2207,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       where: {
         characterId,
         leftAt: null,
+        confirmedAt: { not: null },
         rewardGranted: true,
         rewardGrantedAt: {
           gte: new Date(now.getTime() - WORLD_BOSS_REWARD_RECEIPT_RETENTION_MS),
@@ -1541,8 +2240,9 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
 
   private async advanceEventState(event: any) {
     const now = new Date();
+    if (event.status === WorldBossEventStatus.ACTIVE) return event;
+
     let nextStatus = event.status as WorldBossEventStatus;
-    const data: Prisma.WorldBossEventUpdateInput = { status: nextStatus };
     const startsAtMs = event.startsAt.getTime();
     const entryWindowEndsAt = this.getEntryWindowEndsAt(event);
 
@@ -1557,60 +2257,67 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       event.status === WorldBossEventStatus.SCHEDULED &&
       startsAtMs <= now.getTime()
     ) {
-      const participantCount = await this.countActiveParticipants(event.id);
-      nextStatus =
-        participantCount > 0
-          ? WorldBossEventStatus.ACTIVE
-          : WorldBossEventStatus.LOBBY_OPEN;
+      nextStatus = WorldBossEventStatus.LOBBY_OPEN;
     }
 
     if (
       nextStatus === WorldBossEventStatus.LOBBY_OPEN &&
-      startsAtMs <= now.getTime()
+      entryWindowEndsAt.getTime() <= now.getTime()
     ) {
-      const participantCount = await this.countActiveParticipants(event.id);
-
-      if (participantCount > 0) {
-        nextStatus = WorldBossEventStatus.ACTIVE;
-        data.startsAt = now;
-        data.endsAt = new Date(
-          now.getTime() + event.worldBoss.durationSeconds * 1000,
-        );
-      } else if (entryWindowEndsAt.getTime() <= now.getTime()) {
-        nextStatus = WorldBossEventStatus.EXPIRED;
-        data.endsAt = entryWindowEndsAt;
+      const registrationCount = await this.countRegisteredParticipants(
+        event.id,
+      );
+      if (registrationCount > 0) {
+        return this.activateEventWithSnapshot(event.id, entryWindowEndsAt);
       }
+
+      return this.expireEmptyLobby(event.id, entryWindowEndsAt);
     }
 
-    if (
-      event.status === WorldBossEventStatus.ACTIVE &&
-      event.endsAt.getTime() <= now.getTime() &&
-      event.currentHp > 0
-    ) {
-      nextStatus = WorldBossEventStatus.EXPIRED;
-    }
-
-    data.status = nextStatus;
-    if (
-      nextStatus === WorldBossEventStatus.ACTIVE &&
-      event.status !== WorldBossEventStatus.ACTIVE &&
-      !event.hpLockedAt
-    ) {
-      data.hpLockedAt = now;
-    }
-
-    if (
-      nextStatus === event.status &&
-      data.startsAt === undefined &&
-      data.endsAt === undefined &&
-      data.hpLockedAt === undefined
-    )
-      return event;
+    if (nextStatus === event.status) return event;
 
     return this.prisma.worldBossEvent.update({
       where: { id: event.id },
-      data,
+      data: {
+        status: nextStatus,
+      },
       include: eventInclude,
+    });
+  }
+
+  private async expireEmptyLobby(eventId: string, closedAt: Date) {
+    return this.prisma.$transaction(async (tx) => {
+      await this.lockWorldBossEvent(tx, eventId);
+      const event = await tx.worldBossEvent.findUniqueOrThrow({
+        where: { id: eventId },
+        include: eventInclude,
+      });
+      if (event.status !== WorldBossEventStatus.LOBBY_OPEN) return event;
+
+      const confirmedCount = await tx.worldBossParticipant.count({
+        where: {
+          eventId,
+          leftAt: null,
+          confirmedAt: { not: null },
+        },
+      });
+      if (confirmedCount > 0) return event;
+
+      await tx.worldBossParticipant.updateMany({
+        where: { eventId, leftAt: null },
+        data: { leftAt: closedAt, lastContributionAt: closedAt },
+      });
+
+      return tx.worldBossEvent.update({
+        where: { id: eventId },
+        data: {
+          status: WorldBossEventStatus.EXPIRED,
+          endsAt: closedAt,
+          participantCount: 0,
+          registrationCount: 0,
+        },
+        include: eventInclude,
+      });
     });
   }
 
@@ -1627,34 +2334,38 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     return character;
   }
 
-  private ensureEventJoinable(event: any) {
+  private ensureEventRegistrable(event: any) {
     const now = new Date();
 
-    if (event.status === WorldBossEventStatus.SCHEDULED) return;
+    if (
+      event.status === WorldBossEventStatus.SCHEDULED &&
+      event.startsAt.getTime() > now.getTime()
+    ) {
+      return;
+    }
 
-    if (event.status === WorldBossEventStatus.LOBBY_OPEN) {
-      if (this.getEntryWindowEndsAt(event).getTime() > now.getTime()) return;
-
-      throw new ConflictException(
-        'A janela de entrada desta Ameaça Global foi encerrada.',
-      );
+    if (
+      event.status === WorldBossEventStatus.LOBBY_OPEN &&
+      this.getEntryWindowEndsAt(event).getTime() > now.getTime()
+    ) {
+      return;
     }
 
     throw new ConflictException(
-      event.status === WorldBossEventStatus.ACTIVE
-        ? 'A batalha já começou. A entrada desta Ameaça Global foi encerrada.'
-        : 'Esta Ameaça Global está encerrada. Aguarde a próxima aparição.',
+      event.status === WorldBossEventStatus.LOBBY_OPEN
+        ? 'A preparação foi encerrada. Aguarde a próxima aparição.'
+        : event.status === WorldBossEventStatus.ACTIVE
+          ? 'A batalha já começou. Aguarde a próxima aparição.'
+          : 'As inscrições desta Ameaça Global estão encerradas.',
     );
   }
 
-  private ensureEligible(character: any, boss: any) {
+  private ensureRegistrationEligible(character: any, boss: any) {
     if (!character.mapId || character.mapId !== boss.mapId)
       throw new ForbiddenException(
         'Personagem precisa estar no mapa da Ameaça Global.',
       );
-    if (this.testUnlockEnabled) return;
-
-    if (character.level < boss.minLevel)
+    if (!this.testUnlockEnabled && character.level < boss.minLevel)
       throw new ForbiddenException(
         `Nível mínimo ${boss.minLevel} necessário para participar desta Ameaça Global.`,
       );
@@ -1672,7 +2383,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       return {
         canJoin: false,
         reason:
-          'Você já está aguardando outro World Boss. Saia do lobby atual antes de entrar em outro.',
+          'Você já está participando de outra Ameaça Global em andamento.',
       };
     }
     const boss = event.worldBoss;
@@ -1720,7 +2431,10 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         reason: 'Personagem não está no mapa desta ameaça.',
       };
     if (character.level < boss.minLevel)
-      return { canJoin: false, reason: `Nível mínimo ${boss.minLevel}.` };
+      return {
+        canJoin: false,
+        reason: `Bloqueado: alcance o nível ${boss.minLevel}.`,
+      };
     return { canJoin: true, reason: null };
   }
 
@@ -1793,6 +2507,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         remainingSecondsToEnd: remainingSeconds,
         remainingSecondsToEntryClose,
         entryWindowEndsAt,
+        combatStartsAt: entryWindowEndsAt,
         nextRespawnSeconds,
         respawnIntervalSeconds,
         currentHp: event.currentHp,
@@ -1802,6 +2517,10 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         totalDamage: event.totalDamage,
         participantCount: event.participantCount,
         lobbyCount: event.participantCount,
+        registrationCount: event.registrationCount,
+        targetTtkSeconds: event.targetTtkSeconds,
+        aggregateDamagePerSecond: event.aggregateDamagePerSecond,
+        scalingVersion: event.scalingVersion,
         defeatedAt: event.defeatedAt,
         rewardedAt: event.rewardedAt,
         worldBoss: this.formatBoss(event.worldBoss),
@@ -1844,6 +2563,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
           guaranteed: reward.guaranteed,
           onlyIfDefeated: reward.onlyIfDefeated,
           requiresMinParticipation: reward.requiresMinParticipation,
+          randomPetCocoon: reward.randomPetCocoon,
           minContributionPercent: reward.minContributionPercent,
           rarity: reward.rarity,
         })) ?? [],
@@ -1856,8 +2576,14 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       damageDealt: participant.damageDealt,
       contributionPercent: participant.contributionPercent,
       joinedAt: participant.joinedAt,
+      confirmedAt: participant.confirmedAt,
+      registrationStatus: participant.confirmedAt ? 'CONFIRMED' : 'REGISTERED',
       lastContributionAt: participant.lastContributionAt,
       activeSeconds: participant.activeSeconds,
+      powerScoreSnapshot: participant.powerScoreSnapshot,
+      damagePerSecondSnapshot: participant.damagePerSecondSnapshot,
+      readinessSnapshot: participant.readinessSnapshot,
+      equipmentTierSnapshot: participant.equipmentTierSnapshot,
       rewardGranted: participant.rewardGranted,
       rewardGrantedAt: participant.rewardGrantedAt,
       rank: participant.rank,

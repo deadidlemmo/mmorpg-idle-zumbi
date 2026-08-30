@@ -33,6 +33,7 @@ import {
 } from "../../../services/websocket/socketClient";
 import { getWorldBossStatus } from "../../world-bosses/api/world-bosses.api";
 import type { WorldBossStatusResponse } from "../../world-bosses/types/world-bosses.types";
+import { mergeWorldBossStatusSnapshot } from "../../world-bosses/utils/worldBossStatus";
 import {
   getCharacterActivitySummary,
   type CharacterActivitySummaryResponse,
@@ -2246,15 +2247,6 @@ function formatRemainingTime(seconds: unknown) {
   return `${secs}s`;
 }
 
-function getRemainingSecondsUntil(
-  value: string | null | undefined,
-  nowMs: number,
-) {
-  const targetMs = getParsedDateMs(value);
-  if (!targetMs) return 0;
-  return Math.max(0, Math.ceil((targetMs - nowMs) / 1000));
-}
-
 function buildIncursionItemFromOverview(params: {
   characterId: string;
   session: DashboardIncursionSessionViewModel;
@@ -2481,31 +2473,10 @@ function buildActivityItems(params: {
   if (
     worldBossStatus?.event &&
     worldBossStatus.participant &&
-    ["SCHEDULED", "LOBBY_OPEN", "ACTIVE"].includes(worldBossStatus.event.status)
+    worldBossStatus.event.status === "ACTIVE"
   ) {
     const event = worldBossStatus.event;
     const participant = worldBossStatus.participant;
-    const isWorldBossInCombat = event.status === "ACTIVE";
-    const timerSeconds =
-      event.status === "SCHEDULED"
-        ? getRemainingSecondsUntil(event.startsAt, nowMs)
-        : event.status === "LOBBY_OPEN"
-          ? Math.max(
-              0,
-              Math.ceil(
-                toSafeNumber(
-                  event.remainingSecondsToStart ??
-                    event.remainingSecondsToEntryClose ??
-                    event.remainingSeconds,
-                  0,
-                ),
-              ),
-            )
-          : Math.max(0, Math.ceil(toSafeNumber(event.remainingSeconds, 0)));
-    const timerLabel =
-      event.status === "SCHEDULED" ? "Aparece em" : "Começa em";
-    const timerText = formatRemainingTime(timerSeconds);
-    const participantCount = event.lobbyCount ?? event.participantCount ?? 0;
     const hpLabel = `${formatCompactNumber(event.currentHp)}/${formatCompactNumber(event.maxHp)} HP`;
 
     items.push({
@@ -2513,39 +2484,25 @@ function buildActivityItems(params: {
       type: "world-boss",
       icon: "☣",
       title: event.worldBoss.name,
-      description: isWorldBossInCombat
-        ? `${event.worldBoss.map.name} • Em andamento • ${hpLabel} • resta ${formatRemainingTime(event.remainingSeconds)}`
-        : `${event.worldBoss.map.name} • No lobby • ${timerLabel.toLowerCase()} ${timerText}`,
-      progressLabel: isWorldBossInCombat ? "HP restante" : timerLabel,
-      progressPercent: isWorldBossInCombat ? event.hpPercent : 0,
-      progressValueLabel: isWorldBossInCombat
-        ? `${Math.floor(event.hpPercent)}%`
-        : timerText,
-      progressTone: isWorldBossInCombat ? "monster-hp" : "default",
-      showProgressTrack: isWorldBossInCombat,
-      primaryMetric: isWorldBossInCombat ? hpLabel : timerText,
-      primaryMetricLabel: isWorldBossInCombat ? "HP global" : timerLabel,
-      secondaryMetric: isWorldBossInCombat
-        ? `${formatCompactNumber(participant.damageDealt)} dano`
-        : `${participantCount} participantes`,
-      secondaryMetricLabel: isWorldBossInCombat ? "Seu dano" : "Lobby",
-      indicatorMetric: isWorldBossInCombat
-        ? `${Math.floor(event.hpPercent)}%`
-        : "Lobby",
-      indicatorLabel: isWorldBossInCombat
-        ? "HP restante do World Boss"
-        : "Você está no lobby do World Boss",
+      description: `${event.worldBoss.map.name} • Em andamento • ${hpLabel} • resta ${formatRemainingTime(event.remainingSeconds)}`,
+      progressLabel: "HP restante",
+      progressPercent: event.hpPercent,
+      progressValueLabel: `${Math.floor(event.hpPercent)}%`,
+      progressTone: "monster-hp",
+      showProgressTrack: true,
+      primaryMetric: hpLabel,
+      primaryMetricLabel: "HP global",
+      secondaryMetric: `${formatCompactNumber(participant.damageDealt)} dano`,
+      secondaryMetricLabel: "Seu dano",
+      indicatorMetric: `${Math.floor(event.hpPercent)}%`,
+      indicatorLabel: "HP restante do World Boss",
       href: `/dashboard/${characterId}/world-bosses`,
       monsterMetaLabel: `${event.worldBoss.map.name} • Tier ${event.worldBoss.tier}`,
-      combatMetric: isWorldBossInCombat
-        ? participant.eligibleForReward
-          ? "Elegível"
-          : "Em andamento"
-        : "No lobby",
+      combatMetric: participant.eligibleForReward
+        ? "Elegível"
+        : "Em andamento",
       killsMetric: `${(participant.contributionPercent ?? 0).toFixed(1)}%`,
-      xpMetric: isWorldBossInCombat
-        ? `${Math.floor(event.hpPercent)}% HP`
-        : timerText,
+      xpMetric: `${Math.floor(event.hpPercent)}% HP`,
     });
   }
 
@@ -2672,7 +2629,9 @@ export function DashboardActivityBar({
     const socket: WorldBossSocket = connectWorldBossSocket();
     const update = (payload: WorldBossStatusResponse) => {
       if (payload.event?.id !== eventId) return;
-      setWorldBossStatus(payload);
+      setWorldBossStatus((current) =>
+        mergeWorldBossStatusSnapshot(current, payload),
+      );
       setNowMs(Date.now());
     };
 

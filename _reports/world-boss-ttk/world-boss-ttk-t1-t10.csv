@@ -1,0 +1,801 @@
+balanceVersion,tier,bossName,difficulty,bossLevel,className,gear,projectedEquipment,participantCount,targetTtkSeconds,expectedTtkSeconds,expectedTtkMinutes,readinessRatio,damagePerSecondPerPlayer,scalingDamagePerSecondPerPlayer,maxHp
+2,1,"Síndico Devorado","CONTENCAO",5,"Lutador","PREVIOUS",false,1,2700,3375.03,56.25,0.8,8.282,10.3525,27952
+2,1,"Síndico Devorado","CONTENCAO",5,"Lutador","PREVIOUS",false,2,2100,2625.03,43.75,0.8,8.282,10.3525,43481
+2,1,"Síndico Devorado","CONTENCAO",5,"Lutador","PREVIOUS",false,3,1800,2250.02,37.5,0.8,8.282,10.3525,55904
+2,1,"Síndico Devorado","CONTENCAO",5,"Lutador","PREVIOUS",false,5,1800,2250.01,37.5,0.8,8.282,10.3525,93173
+2,1,"Síndico Devorado","CONTENCAO",5,"Lutador","PREVIOUS",false,10,1500,1875.01,31.25,0.8,8.282,10.3525,155288
+2,1,"Síndico Devorado","CONTENCAO",5,"Lutador","CURRENT",false,1,2700,2699.98,45,1,13.1527,13.1527,35512
+2,1,"Síndico Devorado","CONTENCAO",5,"Lutador","CURRENT",false,2,2100,2099.99,35,1,13.1527,13.1527,55241
+2,1,"Síndico Devorado","CONTENCAO",5,"Lutador","CURRENT",false,3,1800,1799.99,30,1,13.1527,13.1527,71024
+2,1,"Síndico Devorado","CONTENCAO",5,"Lutador","CURRENT",false,5,1800,1800,30,1,13.1527,13.1527,118374
+2,1,"Síndico Devorado","CONTENCAO",5,"Lutador","CURRENT",false,10,1500,1500,25,1,13.1527,13.1527,197290
+2,1,"Síndico Devorado","CONTENCAO",5,"Assassino","PREVIOUS",false,1,2700,3375.05,56.25,0.8,7.5863,9.4828,25604
+2,1,"Síndico Devorado","CONTENCAO",5,"Assassino","PREVIOUS",false,2,2100,2625.01,43.75,0.8,7.5863,9.4828,39828
+2,1,"Síndico Devorado","CONTENCAO",5,"Assassino","PREVIOUS",false,3,1800,2249.99,37.5,0.8,7.5863,9.4828,51207
+2,1,"Síndico Devorado","CONTENCAO",5,"Assassino","PREVIOUS",false,5,1800,2249.99,37.5,0.8,7.5863,9.4828,85345
+2,1,"Síndico Devorado","CONTENCAO",5,"Assassino","PREVIOUS",false,10,1500,1875,31.25,0.8,7.5863,9.4828,142242
+2,1,"Síndico Devorado","CONTENCAO",5,"Assassino","CURRENT",false,1,2700,2700.04,45,1,11.7113,11.7113,31621
+2,1,"Síndico Devorado","CONTENCAO",5,"Assassino","CURRENT",false,2,2100,2100.02,35,1,11.7113,11.7113,49188
+2,1,"Síndico Devorado","CONTENCAO",5,"Assassino","CURRENT",false,3,1800,1800,30,1,11.7113,11.7113,63241
+2,1,"Síndico Devorado","CONTENCAO",5,"Assassino","CURRENT",false,5,1800,1800,30,1,11.7113,11.7113,105402
+2,1,"Síndico Devorado","CONTENCAO",5,"Assassino","CURRENT",false,10,1500,1500,25,1,11.7113,11.7113,175670
+2,1,"Síndico Devorado","CONTENCAO",5,"Atirador","PREVIOUS",false,1,2700,3375.05,56.25,0.8,7.5863,9.4828,25604
+2,1,"Síndico Devorado","CONTENCAO",5,"Atirador","PREVIOUS",false,2,2100,2625.01,43.75,0.8,7.5863,9.4828,39828
+2,1,"Síndico Devorado","CONTENCAO",5,"Atirador","PREVIOUS",false,3,1800,2249.99,37.5,0.8,7.5863,9.4828,51207
+2,1,"Síndico Devorado","CONTENCAO",5,"Atirador","PREVIOUS",false,5,1800,2249.99,37.5,0.8,7.5863,9.4828,85345
+2,1,"Síndico Devorado","CONTENCAO",5,"Atirador","PREVIOUS",false,10,1500,1875,31.25,0.8,7.5863,9.4828,142242
+2,1,"Síndico Devorado","CONTENCAO",5,"Atirador","CURRENT",false,1,2700,2700.02,45,1,11.761,11.761,31755
+2,1,"Síndico Devorado","CONTENCAO",5,"Atirador","CURRENT",false,2,2100,2099.99,35,1,11.761,11.761,49396
+2,1,"Síndico Devorado","CONTENCAO",5,"Atirador","CURRENT",false,3,1800,1799.99,30,1,11.761,11.761,63509
+2,1,"Síndico Devorado","CONTENCAO",5,"Atirador","CURRENT",false,5,1800,1800,30,1,11.761,11.761,105849
+2,1,"Síndico Devorado","CONTENCAO",5,"Atirador","CURRENT",false,10,1500,1500,25,1,11.761,11.761,176415
+2,1,"Síndico Devorado","CONTENCAO",5,"Médico","PREVIOUS",false,1,2700,3374.95,56.25,0.8,9.0772,11.3465,30635
+2,1,"Síndico Devorado","CONTENCAO",5,"Médico","PREVIOUS",false,2,2100,2624.99,43.75,0.8,9.0772,11.3465,47655
+2,1,"Síndico Devorado","CONTENCAO",5,"Médico","PREVIOUS",false,3,1800,2250,37.5,0.8,9.0772,11.3465,61271
+2,1,"Síndico Devorado","CONTENCAO",5,"Médico","PREVIOUS",false,5,1800,2250,37.5,0.8,9.0772,11.3465,102118
+2,1,"Síndico Devorado","CONTENCAO",5,"Médico","PREVIOUS",false,10,1500,1875,31.25,0.8,9.0772,11.3465,170197
+2,1,"Síndico Devorado","CONTENCAO",5,"Médico","CURRENT",false,1,2700,2700.03,45,1,14.4947,14.4947,39136
+2,1,"Síndico Devorado","CONTENCAO",5,"Médico","CURRENT",false,2,2100,2100.01,35,1,14.4947,14.4947,60878
+2,1,"Síndico Devorado","CONTENCAO",5,"Médico","CURRENT",false,3,1800,1799.99,30,1,14.4947,14.4947,78271
+2,1,"Síndico Devorado","CONTENCAO",5,"Médico","CURRENT",false,5,1800,1800,30,1,14.4947,14.4947,130452
+2,1,"Síndico Devorado","CONTENCAO",5,"Médico","CURRENT",false,10,1500,1500,25,1,14.4947,14.4947,217420
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Lutador","PREVIOUS",false,1,3600,4500.01,75,0.8,14.2202,17.7752,63991
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Lutador","PREVIOUS",false,2,2880,3599.99,60,0.8,14.2202,17.7752,102385
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Lutador","PREVIOUS",false,3,2400,3000.01,50,0.8,14.2202,17.7752,127982
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Lutador","PREVIOUS",false,5,2400,3000.01,50,0.8,14.2202,17.7752,213303
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Lutador","PREVIOUS",false,10,2100,2625,43.75,0.8,14.2202,17.7752,373280
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Lutador","CURRENT",false,1,3600,3599.98,60,1,19.0126,19.0126,68445
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Lutador","CURRENT",false,2,2880,2880.01,48,1,19.0126,19.0126,109513
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Lutador","CURRENT",false,3,2400,2400,40,1,19.0126,19.0126,136891
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Lutador","CURRENT",false,5,2400,2400,40,1,19.0126,19.0126,228152
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Lutador","CURRENT",false,10,2100,2100,35,1,19.0126,19.0126,399265
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Assassino","PREVIOUS",false,1,3600,4500.04,75,0.8,13.0466,16.3082,58710
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Assassino","PREVIOUS",false,2,2880,3599.99,60,0.8,13.0466,16.3082,93935
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Assassino","PREVIOUS",false,3,2400,3000,50,0.8,13.0466,16.3082,117419
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Assassino","PREVIOUS",false,5,2400,2999.99,50,0.8,13.0466,16.3082,195698
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Assassino","PREVIOUS",false,10,2100,2625,43.75,0.8,13.0466,16.3082,342472
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Assassino","CURRENT",false,1,3600,3599.97,60,1,17.1054,17.1054,61579
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Assassino","CURRENT",false,2,2880,2880,48,1,17.1054,17.1054,98527
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Assassino","CURRENT",false,3,2400,2400,40,1,17.1054,17.1054,123159
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Assassino","CURRENT",false,5,2400,2400,40,1,17.1054,17.1054,205265
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Assassino","CURRENT",false,10,2100,2100,35,1,17.1054,17.1054,359213
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Atirador","PREVIOUS",false,1,3600,4500.04,75,0.8,13.0466,16.3082,58710
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Atirador","PREVIOUS",false,2,2880,3599.99,60,0.8,13.0466,16.3082,93935
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Atirador","PREVIOUS",false,3,2400,3000,50,0.8,13.0466,16.3082,117419
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Atirador","PREVIOUS",false,5,2400,2999.99,50,0.8,13.0466,16.3082,195698
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Atirador","PREVIOUS",false,10,2100,2625,43.75,0.8,13.0466,16.3082,342472
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Atirador","CURRENT",false,1,3600,3599.97,60,1,17.1543,17.1543,61755
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Atirador","CURRENT",false,2,2880,2880.01,48,1,17.1543,17.1543,98809
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Atirador","CURRENT",false,3,2400,2400,40,1,17.1543,17.1543,123511
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Atirador","CURRENT",false,5,2400,2400,40,1,17.1543,17.1543,205852
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Atirador","CURRENT",false,10,2100,2100,35,1,17.1543,17.1543,360240
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Médico","PREVIOUS",false,1,3600,4499.98,75,0.8,15.4916,19.3645,69712
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Médico","PREVIOUS",false,2,2880,3600.01,60,0.8,15.4916,19.3645,111540
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Médico","PREVIOUS",false,3,2400,3000.01,50,0.8,15.4916,19.3645,139425
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Médico","PREVIOUS",false,5,2400,3000,50,0.8,15.4916,19.3645,232374
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Médico","PREVIOUS",false,10,2100,2625,43.75,0.8,15.4916,19.3645,406655
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Médico","CURRENT",false,1,3600,3599.98,60,1,20.8221,20.8221,74959
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Médico","CURRENT",false,2,2880,2880,48,1,20.8221,20.8221,119935
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Médico","CURRENT",false,3,2400,2400,40,1,20.8221,20.8221,149919
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Médico","CURRENT",false,5,2400,2400,40,1,20.8221,20.8221,249865
+2,1,"Cão Alfa da Rua das Cercas","EXTERMINIO",10,"Médico","CURRENT",false,10,2100,2100,35,1,20.8221,20.8221,437263
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Lutador","PREVIOUS",false,1,2700,3374.99,56.25,0.8,24.6884,30.8605,83323
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Lutador","PREVIOUS",false,2,2100,2625,43.75,0.8,24.6884,30.8605,129614
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Lutador","PREVIOUS",false,3,1800,2249.99,37.5,0.8,24.6884,30.8605,166646
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Lutador","PREVIOUS",false,5,1800,2250,37.5,0.8,24.6884,30.8605,277744
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Lutador","PREVIOUS",false,10,1500,1875,31.25,0.8,24.6884,30.8605,462907
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Lutador","CURRENT",false,1,2700,2700,45,1,26.8096,26.8096,72386
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Lutador","CURRENT",false,2,2100,2099.99,35,1,26.8096,26.8096,112600
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Lutador","CURRENT",false,3,1800,1800,30,1,26.8096,26.8096,144772
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Lutador","CURRENT",false,5,1800,1800,30,1,26.8096,26.8096,241286
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Lutador","CURRENT",false,10,1500,1500,25,1,26.8096,26.8096,402144
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Assassino","PREVIOUS",false,1,2700,3375.01,56.25,0.8,22.3261,27.9077,75351
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Assassino","PREVIOUS",false,2,2100,2625,43.75,0.8,22.3261,27.9077,117212
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Assassino","PREVIOUS",false,3,1800,2249.99,37.5,0.8,22.3261,27.9077,150701
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Assassino","PREVIOUS",false,5,1800,2250,37.5,0.8,22.3261,27.9077,251169
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Assassino","PREVIOUS",false,10,1500,1875,31.25,0.8,22.3261,27.9077,418615
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Assassino","CURRENT",false,1,2700,2699.98,45,1,24.6402,24.6402,66528
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Assassino","CURRENT",false,2,2100,2100.01,35,1,24.6402,24.6402,103489
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Assassino","CURRENT",false,3,1800,1800,30,1,24.6402,24.6402,133057
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Assassino","CURRENT",false,5,1800,1800,30,1,24.6402,24.6402,221761
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Assassino","CURRENT",false,10,1500,1500,25,1,24.6402,24.6402,369602
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Atirador","PREVIOUS",false,1,2700,3374.98,56.25,0.8,22.3743,27.9679,75513
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Atirador","PREVIOUS",false,2,2100,2624.99,43.75,0.8,22.3743,27.9679,117465
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Atirador","PREVIOUS",false,3,1800,2250,37.5,0.8,22.3743,27.9679,151027
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Atirador","PREVIOUS",false,5,1800,2250,37.5,0.8,22.3743,27.9679,251711
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Atirador","PREVIOUS",false,10,1500,1875,31.25,0.8,22.3743,27.9679,419519
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Atirador","CURRENT",false,1,2700,2699.99,45,1,24.5919,24.5919,66398
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Atirador","CURRENT",false,2,2100,2100,35,1,24.5919,24.5919,103286
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Atirador","CURRENT",false,3,1800,1800.01,30,1,24.5919,24.5919,132797
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Atirador","CURRENT",false,5,1800,1800,30,1,24.5919,24.5919,221328
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Atirador","CURRENT",false,10,1500,1500,25,1,24.5919,24.5919,368879
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Médico","PREVIOUS",false,1,2700,3374.98,56.25,0.8,26.9542,33.6928,90970
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Médico","PREVIOUS",false,2,2100,2625.01,43.75,0.8,26.9542,33.6928,141510
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Médico","PREVIOUS",false,3,1800,2250,37.5,0.8,26.9542,33.6928,181941
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Médico","PREVIOUS",false,5,1800,2250,37.5,0.8,26.9542,33.6928,303235
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Médico","PREVIOUS",false,10,1500,1875,31.25,0.8,26.9542,33.6928,505392
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Médico","CURRENT",false,1,2700,2700.01,45,1,29.3647,29.3647,79285
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Médico","CURRENT",false,2,2100,2100,35,1,29.3647,29.3647,123332
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Médico","CURRENT",false,3,1800,1800.01,30,1,29.3647,29.3647,158570
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Médico","CURRENT",false,5,1800,1800,30,1,29.3647,29.3647,264283
+2,2,"Capataz Enferrujado","CONTENCAO",15,"Médico","CURRENT",false,10,1500,1500,25,1,29.3647,29.3647,440471
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Lutador","PREVIOUS",false,1,3600,4499.99,75,0.8,30.1616,37.702,135727
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Lutador","PREVIOUS",false,2,2880,3600,60,0.8,30.1616,37.702,217164
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Lutador","PREVIOUS",false,3,2400,3000,50,0.8,30.1616,37.702,271455
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Lutador","PREVIOUS",false,5,2400,3000,50,0.8,30.1616,37.702,452424
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Lutador","PREVIOUS",false,10,2100,2625,43.75,0.8,30.1616,37.702,791743
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Lutador","CURRENT",false,1,3600,3600.01,60,1,32.2477,32.2477,116092
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Lutador","CURRENT",false,2,2880,2880.01,48,1,32.2477,32.2477,185747
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Lutador","CURRENT",false,3,2400,2400,40,1,32.2477,32.2477,232183
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Lutador","CURRENT",false,5,2400,2400,40,1,32.2477,32.2477,386972
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Lutador","CURRENT",false,10,2100,2100,35,1,32.2477,32.2477,677201
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Assassino","PREVIOUS",false,1,3600,4500,75,0.8,27.3645,34.2056,123140
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Assassino","PREVIOUS",false,2,2880,3600,60,0.8,27.3645,34.2056,197024
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Assassino","PREVIOUS",false,3,2400,3000,50,0.8,27.3645,34.2056,246280
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Assassino","PREVIOUS",false,5,2400,3000,50,0.8,27.3645,34.2056,410467
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Assassino","PREVIOUS",false,10,2100,2625,43.75,0.8,27.3645,34.2056,718317
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Assassino","CURRENT",false,1,3600,3599.98,60,1,29.6401,29.6401,106704
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Assassino","CURRENT",false,2,2880,2880,48,1,29.6401,29.6401,170727
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Assassino","CURRENT",false,3,2400,2400,40,1,29.6401,29.6401,213409
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Assassino","CURRENT",false,5,2400,2400,40,1,29.6401,29.6401,355681
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Assassino","CURRENT",false,10,2100,2100,35,1,29.6401,29.6401,622443
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Atirador","PREVIOUS",false,1,3600,4499.98,75,0.8,27.4119,34.2649,123353
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Atirador","PREVIOUS",false,2,2880,3600.01,60,0.8,27.4119,34.2649,197366
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Atirador","PREVIOUS",false,3,2400,3000,50,0.8,27.4119,34.2649,246707
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Atirador","PREVIOUS",false,5,2400,3000,50,0.8,27.4119,34.2649,411178
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Atirador","PREVIOUS",false,10,2100,2625,43.75,0.8,27.4119,34.2649,719562
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Atirador","CURRENT",false,1,3600,3600.01,60,1,29.5927,29.5927,106534
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Atirador","CURRENT",false,2,2880,2880,48,1,29.5927,29.5927,170454
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Atirador","CURRENT",false,3,2400,2400.01,40,1,29.5927,29.5927,213068
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Atirador","CURRENT",false,5,2400,2400,40,1,29.5927,29.5927,355113
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Atirador","CURRENT",false,10,2100,2100,35,1,29.5927,29.5927,621447
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Médico","PREVIOUS",false,1,3600,4500,75,0.8,32.864,41.08,147888
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Médico","PREVIOUS",false,2,2880,3600,60,0.8,32.864,41.08,236621
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Médico","PREVIOUS",false,3,2400,3000,50,0.8,32.864,41.08,295776
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Médico","PREVIOUS",false,5,2400,3000,50,0.8,32.864,41.08,492960
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Médico","PREVIOUS",false,10,2100,2625,43.75,0.8,32.864,41.08,862680
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Médico","CURRENT",false,1,3600,3599.99,60,1,35.2345,35.2345,126844
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Médico","CURRENT",false,2,2880,2880,48,1,35.2345,35.2345,202951
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Médico","CURRENT",false,3,2400,2400,40,1,35.2345,35.2345,253689
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Médico","CURRENT",false,5,2400,2400,40,1,35.2345,35.2345,422814
+2,2,"Empilhadeira Carniceira","EXTERMINIO",20,"Médico","CURRENT",false,10,2100,2100,35,1,35.2345,35.2345,739925
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Lutador","PREVIOUS",false,1,2700,3375.01,56.25,0.8,37.5329,46.9161,126674
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Lutador","PREVIOUS",false,2,2100,2625,43.75,0.8,37.5329,46.9161,197048
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Lutador","PREVIOUS",false,3,1800,2250,37.5,0.8,37.5329,46.9161,253347
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Lutador","PREVIOUS",false,5,1800,2250,37.5,0.8,37.5329,46.9161,422245
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Lutador","PREVIOUS",false,10,1500,1875,31.25,0.8,37.5329,46.9161,703742
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Lutador","CURRENT",false,1,2700,2699.99,45,1,40.8031,40.8031,110168
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Lutador","CURRENT",false,2,2100,2100,35,1,40.8031,40.8031,171373
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Lutador","CURRENT",false,3,1800,1800,30,1,40.8031,40.8031,220337
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Lutador","CURRENT",false,5,1800,1800,30,1,40.8031,40.8031,367228
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Lutador","CURRENT",false,10,1500,1500,25,1,40.8031,40.8031,612046
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Assassino","PREVIOUS",false,1,2700,3374.99,56.25,0.8,34.4963,43.1204,116425
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Assassino","PREVIOUS",false,2,2100,2625,43.75,0.8,34.4963,43.1204,181106
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Assassino","PREVIOUS",false,3,1800,2250,37.5,0.8,34.4963,43.1204,232850
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Assassino","PREVIOUS",false,5,1800,2250,37.5,0.8,34.4963,43.1204,388084
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Assassino","PREVIOUS",false,10,1500,1875,31.25,0.8,34.4963,43.1204,646807
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Assassino","CURRENT",false,1,2700,2699.99,45,1,37.7665,37.7665,101969
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Assassino","CURRENT",false,2,2100,2100,35,1,37.7665,37.7665,158619
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Assassino","CURRENT",false,3,1800,1800,30,1,37.7665,37.7665,203939
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Assassino","CURRENT",false,5,1800,1800,30,1,37.7665,37.7665,339898
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Assassino","CURRENT",false,10,1500,1500,25,1,37.7665,37.7665,566497
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Atirador","PREVIOUS",false,1,2700,3375.01,56.25,0.8,34.4496,43.062,116268
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Atirador","PREVIOUS",false,2,2100,2625.01,43.75,0.8,34.4496,43.062,180861
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Atirador","PREVIOUS",false,3,1800,2250,37.5,0.8,34.4496,43.062,232535
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Atirador","PREVIOUS",false,5,1800,2250,37.5,0.8,34.4496,43.062,387558
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Atirador","PREVIOUS",false,10,1500,1875,31.25,0.8,34.4496,43.062,645931
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Atirador","CURRENT",false,1,2700,2699.99,45,1,38.0935,38.0935,102852
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Atirador","CURRENT",false,2,2100,2100,35,1,38.0935,38.0935,159993
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Atirador","CURRENT",false,3,1800,1800,30,1,38.0935,38.0935,205705
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Atirador","CURRENT",false,5,1800,1800,30,1,38.0935,38.0935,342841
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Atirador","CURRENT",false,10,1500,1500,25,1,38.0935,38.0935,571402
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Médico","PREVIOUS",false,1,2700,3374.99,56.25,0.8,40.9432,51.179,138183
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Médico","PREVIOUS",false,2,2100,2625,43.75,0.8,40.9432,51.179,214952
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Médico","PREVIOUS",false,3,1800,2250,37.5,0.8,40.9432,51.179,276367
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Médico","PREVIOUS",false,5,1800,2250,37.5,0.8,40.9432,51.179,460611
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Médico","PREVIOUS",false,10,1500,1875,31.25,0.8,40.9432,51.179,767685
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Médico","CURRENT",false,1,2700,2700,45,1,44.5404,44.5404,120259
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Médico","CURRENT",false,2,2100,2100,35,1,44.5404,44.5404,187070
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Médico","CURRENT",false,3,1800,1800,30,1,44.5404,44.5404,240518
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Médico","CURRENT",false,5,1800,1800,30,1,44.5404,44.5404,400864
+2,3,"Cirurgião Sem Pulso","CONTENCAO",25,"Médico","CURRENT",false,10,1500,1500,25,1,44.5404,44.5404,668106
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Lutador","PREVIOUS",false,1,3600,4499.99,75,0.8,42.5843,53.2304,191629
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Lutador","PREVIOUS",false,2,2880,3600,60,0.8,42.5843,53.2304,306607
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Lutador","PREVIOUS",false,3,2400,3000,50,0.8,42.5843,53.2304,383259
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Lutador","PREVIOUS",false,5,2400,3000,50,0.8,42.5843,53.2304,638764
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Lutador","PREVIOUS",false,10,2100,2625,43.75,0.8,42.5843,53.2304,1117838
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Lutador","CURRENT",false,1,3600,3600.01,60,1,45.7985,45.7985,164875
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Lutador","CURRENT",false,2,2880,2880,48,1,45.7985,45.7985,263799
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Lutador","CURRENT",false,3,2400,2400,40,1,45.7985,45.7985,329749
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Lutador","CURRENT",false,5,2400,2400,40,1,45.7985,45.7985,549582
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Lutador","CURRENT",false,10,2100,2100,35,1,45.7985,45.7985,961768
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Assassino","PREVIOUS",false,1,3600,4500.01,75,0.8,39.1406,48.9257,176133
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Assassino","PREVIOUS",false,2,2880,3600,60,0.8,39.1406,48.9257,281812
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Assassino","PREVIOUS",false,3,2400,3000,50,0.8,39.1406,48.9257,352265
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Assassino","PREVIOUS",false,5,2400,3000,50,0.8,39.1406,48.9257,587109
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Assassino","PREVIOUS",false,10,2100,2625,43.75,0.8,39.1406,48.9257,1027440
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Assassino","CURRENT",false,1,3600,3600,60,1,42.3547,42.3547,152477
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Assassino","CURRENT",false,2,2880,2880,48,1,42.3547,42.3547,243963
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Assassino","CURRENT",false,3,2400,2400,40,1,42.3547,42.3547,304954
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Assassino","CURRENT",false,5,2400,2400,40,1,42.3547,42.3547,508257
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Assassino","CURRENT",false,10,2100,2100,35,1,42.3547,42.3547,889449
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Atirador","PREVIOUS",false,1,3600,4500,75,0.8,39.0947,48.8683,175926
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Atirador","PREVIOUS",false,2,2880,3600.01,60,0.8,39.0947,48.8683,281482
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Atirador","PREVIOUS",false,3,2400,3000,50,0.8,39.0947,48.8683,351852
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Atirador","PREVIOUS",false,5,2400,3000,50,0.8,39.0947,48.8683,586420
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Atirador","PREVIOUS",false,10,2100,2625,43.75,0.8,39.0947,48.8683,1026235
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Atirador","CURRENT",false,1,3600,3600,60,1,42.6761,42.6761,153634
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Atirador","CURRENT",false,2,2880,2880.01,48,1,42.6761,42.6761,245815
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Atirador","CURRENT",false,3,2400,2400,40,1,42.6761,42.6761,307268
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Atirador","CURRENT",false,5,2400,2400,40,1,42.6761,42.6761,512114
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Atirador","CURRENT",false,10,2100,2100,35,1,42.6761,42.6761,896199
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Médico","PREVIOUS",false,1,3600,4499.99,75,0.8,46.3954,57.9943,208779
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Médico","PREVIOUS",false,2,2880,3600,60,0.8,46.3954,57.9943,334047
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Médico","PREVIOUS",false,3,2400,3000,50,0.8,46.3954,57.9943,417559
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Médico","PREVIOUS",false,5,2400,3000,50,0.8,46.3954,57.9943,695931
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Médico","PREVIOUS",false,10,2100,2625,43.75,0.8,46.3954,57.9943,1217879
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Médico","CURRENT",false,1,3600,3600.01,60,1,49.931,49.931,179752
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Médico","CURRENT",false,2,2880,2880,48,1,49.931,49.931,287603
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Médico","CURRENT",false,3,2400,2400,40,1,49.931,49.931,359503
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Médico","CURRENT",false,5,2400,2400,40,1,49.931,49.931,599172
+2,3,"Paciente Zero da Ala Norte","EXTERMINIO",30,"Médico","CURRENT",false,10,2100,2100,35,1,49.931,49.931,1048552
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Lutador","PREVIOUS",false,1,2700,3375.01,56.25,0.8,50.6751,63.3439,171029
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Lutador","PREVIOUS",false,2,2100,2625,43.75,0.8,50.6751,63.3439,266045
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Lutador","PREVIOUS",false,3,1800,2250,37.5,0.8,50.6751,63.3439,342057
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Lutador","PREVIOUS",false,5,1800,2250,37.5,0.8,50.6751,63.3439,570095
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Lutador","PREVIOUS",false,10,1500,1875,31.25,0.8,50.6751,63.3439,950159
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Lutador","CURRENT",false,1,2700,2699.99,45,1,53.5242,53.5242,144515
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Lutador","CURRENT",false,2,2100,2100,35,1,53.5242,53.5242,224802
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Lutador","CURRENT",false,3,1800,1800,30,1,53.5242,53.5242,289031
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Lutador","CURRENT",false,5,1800,1800,30,1,53.5242,53.5242,481718
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Lutador","CURRENT",false,10,1500,1500,25,1,53.5242,53.5242,802863
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Assassino","PREVIOUS",false,1,2700,3374.99,56.25,0.8,46.8312,58.539,158055
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Assassino","PREVIOUS",false,2,2100,2625,43.75,0.8,46.8312,58.539,245864
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Assassino","PREVIOUS",false,3,1800,2250,37.5,0.8,46.8312,58.539,316111
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Assassino","PREVIOUS",false,5,1800,2250,37.5,0.8,46.8312,58.539,526851
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Assassino","PREVIOUS",false,10,1500,1875,31.25,0.8,46.8312,58.539,878085
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Assassino","CURRENT",false,1,2700,2700,45,1,49.8611,49.8611,134625
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Assassino","CURRENT",false,2,2100,2100,35,1,49.8611,49.8611,209417
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Assassino","CURRENT",false,3,1800,1800,30,1,49.8611,49.8611,269250
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Assassino","CURRENT",false,5,1800,1800,30,1,49.8611,49.8611,448750
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Assassino","CURRENT",false,10,1500,1500,25,1,49.8611,49.8611,747917
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Atirador","PREVIOUS",false,1,2700,3375.01,56.25,0.8,47.1477,58.9347,159124
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Atirador","PREVIOUS",false,2,2100,2625,43.75,0.8,47.1477,58.9347,247526
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Atirador","PREVIOUS",false,3,1800,2250,37.5,0.8,47.1477,58.9347,318247
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Atirador","PREVIOUS",false,5,1800,2250,37.5,0.8,47.1477,58.9347,530412
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Atirador","PREVIOUS",false,10,1500,1875,31.25,0.8,47.1477,58.9347,884020
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Atirador","CURRENT",false,1,2700,2700,45,1,50.2681,50.2681,135724
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Atirador","CURRENT",false,2,2100,2100,35,1,50.2681,50.2681,211126
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Atirador","CURRENT",false,3,1800,1800,30,1,50.2681,50.2681,271448
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Atirador","CURRENT",false,5,1800,1800,30,1,50.2681,50.2681,452413
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Atirador","CURRENT",false,10,1500,1500,25,1,50.2681,50.2681,754022
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Médico","PREVIOUS",false,1,2700,3375.01,56.25,0.8,55.1975,68.9969,186292
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Médico","PREVIOUS",false,2,2100,2625,43.75,0.8,55.1975,68.9969,289787
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Médico","PREVIOUS",false,3,1800,2250,37.5,0.8,55.1975,68.9969,372583
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Médico","PREVIOUS",false,5,1800,2250,37.5,0.8,55.1975,68.9969,620972
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Médico","PREVIOUS",false,10,1500,1875,31.25,0.8,55.1975,68.9969,1034953
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Médico","CURRENT",false,1,2700,2699.99,45,1,58.6798,58.6798,158435
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Médico","CURRENT",false,2,2100,2100,35,1,58.6798,58.6798,246455
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Médico","CURRENT",false,3,1800,1800,30,1,58.6798,58.6798,316871
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Médico","CURRENT",false,5,1800,1800,30,1,58.6798,58.6798,528118
+2,4,"Fiscal dos Mortos","CONTENCAO",35,"Médico","CURRENT",false,10,1500,1500,25,1,58.6798,58.6798,880196
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Lutador","PREVIOUS",false,1,3600,4500.01,75,0.8,55.2839,69.1049,248778
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Lutador","PREVIOUS",false,2,2880,3600,60,0.8,55.2839,69.1049,398044
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Lutador","PREVIOUS",false,3,2400,3000,50,0.8,55.2839,69.1049,497555
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Lutador","PREVIOUS",false,5,2400,3000,50,0.8,55.2839,69.1049,829258
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Lutador","PREVIOUS",false,10,2100,2625,43.75,0.8,55.2839,69.1049,1451202
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Lutador","CURRENT",false,1,3600,3599.99,60,1,58.0826,58.0826,209097
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Lutador","CURRENT",false,2,2880,2880,48,1,58.0826,58.0826,334556
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Lutador","CURRENT",false,3,2400,2400,40,1,58.0826,58.0826,418195
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Lutador","CURRENT",false,5,2400,2400,40,1,58.0826,58.0826,696991
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Lutador","CURRENT",false,10,2100,2100,35,1,58.0826,58.0826,1219734
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Assassino","PREVIOUS",false,1,3600,4500.01,75,0.8,51.0637,63.8296,229787
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Assassino","PREVIOUS",false,2,2880,3600,60,0.8,51.0637,63.8296,367659
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Assassino","PREVIOUS",false,3,2400,3000,50,0.8,51.0637,63.8296,459573
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Assassino","PREVIOUS",false,5,2400,3000,50,0.8,51.0637,63.8296,765955
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Assassino","PREVIOUS",false,10,2100,2625,43.75,0.8,51.0637,63.8296,1340422
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Assassino","CURRENT",false,1,3600,3600,60,1,54.04,54.04,194544
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Assassino","CURRENT",false,2,2880,2880,48,1,54.04,54.04,311271
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Assassino","CURRENT",false,3,2400,2400,40,1,54.04,54.04,389088
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Assassino","CURRENT",false,5,2400,2400,40,1,54.04,54.04,648481
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Assassino","CURRENT",false,10,2100,2100,35,1,54.04,54.04,1134841
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Atirador","PREVIOUS",false,1,3600,4500,75,0.8,51.3747,64.2183,231186
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Atirador","PREVIOUS",false,2,2880,3600,60,0.8,51.3747,64.2183,369897
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Atirador","PREVIOUS",false,3,2400,3000,50,0.8,51.3747,64.2183,462372
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Atirador","PREVIOUS",false,5,2400,3000,50,0.8,51.3747,64.2183,770620
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Atirador","PREVIOUS",false,10,2100,2625,43.75,0.8,51.3747,64.2183,1348585
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Atirador","CURRENT",false,1,3600,3599.99,60,1,54.4399,54.4399,195983
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Atirador","CURRENT",false,2,2880,2880,48,1,54.4399,54.4399,313574
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Atirador","CURRENT",false,3,2400,2400,40,1,54.4399,54.4399,391967
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Atirador","CURRENT",false,5,2400,2400,40,1,54.4399,54.4399,653278
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Atirador","CURRENT",false,10,2100,2100,35,1,54.4399,54.4399,1143237
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Médico","PREVIOUS",false,1,3600,4499.99,75,0.8,60.1705,75.2131,270767
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Médico","PREVIOUS",false,2,2880,3600,60,0.8,60.1705,75.2131,433228
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Médico","PREVIOUS",false,3,2400,3000,50,0.8,60.1705,75.2131,541535
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Médico","PREVIOUS",false,5,2400,3000,50,0.8,60.1705,75.2131,902558
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Médico","PREVIOUS",false,10,2100,2625,43.75,0.8,60.1705,75.2131,1579476
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Médico","CURRENT",false,1,3600,3600,60,1,63.5912,63.5912,228928
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Médico","CURRENT",false,2,2880,2880,48,1,63.5912,63.5912,366285
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Médico","CURRENT",false,3,2400,2400,40,1,63.5912,63.5912,457856
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Médico","CURRENT",false,5,2400,2400,40,1,63.5912,63.5912,763094
+2,4,"Condutor Sem Rota","EXTERMINIO",40,"Médico","CURRENT",false,10,2100,2100,35,1,63.5912,63.5912,1335415
+2,5,"Comandante Lacrado","CONTENCAO",45,"Lutador","PREVIOUS",false,1,2700,3375,56.25,0.8,62.5556,78.1945,211125
+2,5,"Comandante Lacrado","CONTENCAO",45,"Lutador","PREVIOUS",false,2,2100,2625,43.75,0.8,62.5556,78.1945,328417
+2,5,"Comandante Lacrado","CONTENCAO",45,"Lutador","PREVIOUS",false,3,1800,2250,37.5,0.8,62.5556,78.1945,422250
+2,5,"Comandante Lacrado","CONTENCAO",45,"Lutador","PREVIOUS",false,5,1800,2250,37.5,0.8,62.5556,78.1945,703750
+2,5,"Comandante Lacrado","CONTENCAO",45,"Lutador","PREVIOUS",false,10,1500,1875,31.25,0.8,62.5556,78.1945,1172917
+2,5,"Comandante Lacrado","CONTENCAO",45,"Lutador","CURRENT",false,1,2700,2699.99,45,1,65.7916,65.7916,177637
+2,5,"Comandante Lacrado","CONTENCAO",45,"Lutador","CURRENT",false,2,2100,2100,35,1,65.7916,65.7916,276325
+2,5,"Comandante Lacrado","CONTENCAO",45,"Lutador","CURRENT",false,3,1800,1800,30,1,65.7916,65.7916,355275
+2,5,"Comandante Lacrado","CONTENCAO",45,"Lutador","CURRENT",false,5,1800,1800,30,1,65.7916,65.7916,592125
+2,5,"Comandante Lacrado","CONTENCAO",45,"Lutador","CURRENT",false,10,1500,1500,25,1,65.7916,65.7916,986874
+2,5,"Comandante Lacrado","CONTENCAO",45,"Assassino","PREVIOUS",false,1,2700,3375.01,56.25,0.8,58.1389,72.6736,196219
+2,5,"Comandante Lacrado","CONTENCAO",45,"Assassino","PREVIOUS",false,2,2100,2625,43.75,0.8,58.1389,72.6736,305229
+2,5,"Comandante Lacrado","CONTENCAO",45,"Assassino","PREVIOUS",false,3,1800,2250,37.5,0.8,58.1389,72.6736,392437
+2,5,"Comandante Lacrado","CONTENCAO",45,"Assassino","PREVIOUS",false,5,1800,2250,37.5,0.8,58.1389,72.6736,654062
+2,5,"Comandante Lacrado","CONTENCAO",45,"Assassino","PREVIOUS",false,10,1500,1875,31.25,0.8,58.1389,72.6736,1090103
+2,5,"Comandante Lacrado","CONTENCAO",45,"Assassino","CURRENT",false,1,2700,2700,45,1,60.6752,60.6752,163823
+2,5,"Comandante Lacrado","CONTENCAO",45,"Assassino","CURRENT",false,2,2100,2100,35,1,60.6752,60.6752,254836
+2,5,"Comandante Lacrado","CONTENCAO",45,"Assassino","CURRENT",false,3,1800,1800,30,1,60.6752,60.6752,327646
+2,5,"Comandante Lacrado","CONTENCAO",45,"Assassino","CURRENT",false,5,1800,1800,30,1,60.6752,60.6752,546077
+2,5,"Comandante Lacrado","CONTENCAO",45,"Assassino","CURRENT",false,10,1500,1500,25,1,60.6752,60.6752,910128
+2,5,"Comandante Lacrado","CONTENCAO",45,"Atirador","PREVIOUS",false,1,2700,3375,56.25,0.8,58.5324,73.1655,197547
+2,5,"Comandante Lacrado","CONTENCAO",45,"Atirador","PREVIOUS",false,2,2100,2625,43.75,0.8,58.5324,73.1655,307295
+2,5,"Comandante Lacrado","CONTENCAO",45,"Atirador","PREVIOUS",false,3,1800,2250,37.5,0.8,58.5324,73.1655,395094
+2,5,"Comandante Lacrado","CONTENCAO",45,"Atirador","PREVIOUS",false,5,1800,2250,37.5,0.8,58.5324,73.1655,658490
+2,5,"Comandante Lacrado","CONTENCAO",45,"Atirador","PREVIOUS",false,10,1500,1875,31.25,0.8,58.5324,73.1655,1097483
+2,5,"Comandante Lacrado","CONTENCAO",45,"Atirador","CURRENT",false,1,2700,2700,45,1,61.2874,61.2874,165476
+2,5,"Comandante Lacrado","CONTENCAO",45,"Atirador","CURRENT",false,2,2100,2100,35,1,61.2874,61.2874,257407
+2,5,"Comandante Lacrado","CONTENCAO",45,"Atirador","CURRENT",false,3,1800,1800,30,1,61.2874,61.2874,330952
+2,5,"Comandante Lacrado","CONTENCAO",45,"Atirador","CURRENT",false,5,1800,1800,30,1,61.2874,61.2874,551587
+2,5,"Comandante Lacrado","CONTENCAO",45,"Atirador","CURRENT",false,10,1500,1500,25,1,61.2874,61.2874,919311
+2,5,"Comandante Lacrado","CONTENCAO",45,"Médico","PREVIOUS",false,1,2700,3375,56.25,0.8,68.4154,85.5193,230902
+2,5,"Comandante Lacrado","CONTENCAO",45,"Médico","PREVIOUS",false,2,2100,2625,43.75,0.8,68.4154,85.5193,359181
+2,5,"Comandante Lacrado","CONTENCAO",45,"Médico","PREVIOUS",false,3,1800,2250,37.5,0.8,68.4154,85.5193,461804
+2,5,"Comandante Lacrado","CONTENCAO",45,"Médico","PREVIOUS",false,5,1800,2250,37.5,0.8,68.4154,85.5193,769674
+2,5,"Comandante Lacrado","CONTENCAO",45,"Médico","PREVIOUS",false,10,1500,1875,31.25,0.8,68.4154,85.5193,1282790
+2,5,"Comandante Lacrado","CONTENCAO",45,"Médico","CURRENT",false,1,2700,2700,45,1,72.1326,72.1326,194758
+2,5,"Comandante Lacrado","CONTENCAO",45,"Médico","CURRENT",false,2,2100,2100,35,1,72.1326,72.1326,302957
+2,5,"Comandante Lacrado","CONTENCAO",45,"Médico","CURRENT",false,3,1800,1800,30,1,72.1326,72.1326,389516
+2,5,"Comandante Lacrado","CONTENCAO",45,"Médico","CURRENT",false,5,1800,1800,30,1,72.1326,72.1326,649193
+2,5,"Comandante Lacrado","CONTENCAO",45,"Médico","CURRENT",false,10,1500,1500,25,1,72.1326,72.1326,1081988
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Lutador","PREVIOUS",false,1,3600,4500.01,75,0.8,66.7273,83.4091,300273
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Lutador","PREVIOUS",false,2,2880,3600,60,0.8,66.7273,83.4091,480436
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Lutador","PREVIOUS",false,3,2400,3000,50,0.8,66.7273,83.4091,600545
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Lutador","PREVIOUS",false,5,2400,3000,50,0.8,66.7273,83.4091,1000909
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Lutador","PREVIOUS",false,10,2100,2625,43.75,0.8,66.7273,83.4091,1751591
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Lutador","CURRENT",false,1,3600,3600,60,1,69.9041,69.9041,251655
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Lutador","CURRENT",false,2,2880,2880,48,1,69.9041,69.9041,402648
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Lutador","CURRENT",false,3,2400,2400,40,1,69.9041,69.9041,503310
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Lutador","CURRENT",false,5,2400,2400,40,1,69.9041,69.9041,838849
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Lutador","CURRENT",false,10,2100,2100,35,1,69.9041,69.9041,1467986
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Assassino","PREVIOUS",false,1,3600,4500,75,0.8,61.962,77.4525,278829
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Assassino","PREVIOUS",false,2,2880,3600,60,0.8,61.962,77.4525,446127
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Assassino","PREVIOUS",false,3,2400,3000,50,0.8,61.962,77.4525,557658
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Assassino","PREVIOUS",false,5,2400,3000,50,0.8,61.962,77.4525,929430
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Assassino","PREVIOUS",false,10,2100,2625,43.75,0.8,61.962,77.4525,1626503
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Assassino","CURRENT",false,1,3600,3600,60,1,64.452,64.452,232027
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Assassino","CURRENT",false,2,2880,2880,48,1,64.452,64.452,371243
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Assassino","CURRENT",false,3,2400,2400,40,1,64.452,64.452,464054
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Assassino","CURRENT",false,5,2400,2400,40,1,64.452,64.452,773424
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Assassino","CURRENT",false,10,2100,2100,35,1,64.452,64.452,1353491
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Atirador","PREVIOUS",false,1,3600,4500,75,0.8,62.3484,77.9355,280568
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Atirador","PREVIOUS",false,2,2880,3600,60,0.8,62.3484,77.9355,448908
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Atirador","PREVIOUS",false,3,2400,3000,50,0.8,62.3484,77.9355,561136
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Atirador","PREVIOUS",false,5,2400,3000,50,0.8,62.3484,77.9355,935226
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Atirador","PREVIOUS",false,10,2100,2625,43.75,0.8,62.3484,77.9355,1636645
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Atirador","CURRENT",false,1,3600,3600,60,1,65.053,65.053,234191
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Atirador","CURRENT",false,2,2880,2880,48,1,65.053,65.053,374705
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Atirador","CURRENT",false,3,2400,2400,40,1,65.053,65.053,468381
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Atirador","CURRENT",false,5,2400,2400,40,1,65.053,65.053,780636
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Atirador","CURRENT",false,10,2100,2100,35,1,65.053,65.053,1366113
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Médico","PREVIOUS",false,1,3600,4500.01,75,0.8,72.9093,91.1366,328092
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Médico","PREVIOUS",false,2,2880,3600,60,0.8,72.9093,91.1366,524947
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Médico","PREVIOUS",false,3,2400,3000,50,0.8,72.9093,91.1366,656183
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Médico","PREVIOUS",false,5,2400,3000,50,0.8,72.9093,91.1366,1093639
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Médico","PREVIOUS",false,10,2100,2625,43.75,0.8,72.9093,91.1366,1913868
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Médico","CURRENT",false,1,3600,3600,60,1,76.5584,76.5584,275610
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Médico","CURRENT",false,2,2880,2880,48,1,76.5584,76.5584,440976
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Médico","CURRENT",false,3,2400,2400,40,1,76.5584,76.5584,551220
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Médico","CURRENT",false,5,2400,2400,40,1,76.5584,76.5584,918701
+2,5,"Besta de Descontaminação","EXTERMINIO",50,"Médico","CURRENT",false,10,2100,2100,35,1,76.5584,76.5584,1607726
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Lutador","PREVIOUS",false,1,2700,3374.99,56.25,0.8,73.9658,92.4572,249634
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Lutador","PREVIOUS",false,2,2100,2625,43.75,0.8,73.9658,92.4572,388320
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Lutador","PREVIOUS",false,3,1800,2250,37.5,0.8,73.9658,92.4572,499269
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Lutador","PREVIOUS",false,5,1800,2250,37.5,0.8,73.9658,92.4572,832115
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Lutador","PREVIOUS",false,10,1500,1875,31.25,0.8,73.9658,92.4572,1386858
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Lutador","CURRENT",true,1,2700,2700,45,1,76.8801,76.8801,207576
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Lutador","CURRENT",true,2,2100,2100,35,1,76.8801,76.8801,322897
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Lutador","CURRENT",true,3,1800,1800,30,1,76.8801,76.8801,415153
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Lutador","CURRENT",true,5,1800,1800,30,1,76.8801,76.8801,691921
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Lutador","CURRENT",true,10,1500,1500,25,1,76.8801,76.8801,1153202
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Assassino","PREVIOUS",false,1,2700,3375,56.25,0.8,68.1794,85.2242,230105
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Assassino","PREVIOUS",false,2,2100,2625,43.75,0.8,68.1794,85.2242,357942
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Assassino","PREVIOUS",false,3,1800,2250,37.5,0.8,68.1794,85.2242,460211
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Assassino","PREVIOUS",false,5,1800,2250,37.5,0.8,68.1794,85.2242,767018
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Assassino","PREVIOUS",false,10,1500,1875,31.25,0.8,68.1794,85.2242,1278363
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Assassino","CURRENT",true,1,2700,2700.01,45,1,70.7558,70.7558,191041
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Assassino","CURRENT",true,2,2100,2100,35,1,70.7558,70.7558,297174
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Assassino","CURRENT",true,3,1800,1800,30,1,70.7558,70.7558,382081
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Assassino","CURRENT",true,5,1800,1800,30,1,70.7558,70.7558,636802
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Assassino","CURRENT",true,10,1500,1500,25,1,70.7558,70.7558,1061337
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Atirador","PREVIOUS",false,1,2700,3375,56.25,0.8,68.7707,85.9633,232101
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Atirador","PREVIOUS",false,2,2100,2625,43.75,0.8,68.7707,85.9633,361046
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Atirador","PREVIOUS",false,3,1800,2250,37.5,0.8,68.7707,85.9633,464202
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Atirador","PREVIOUS",false,5,1800,2250,37.5,0.8,68.7707,85.9633,773670
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Atirador","PREVIOUS",false,10,1500,1875,31.25,0.8,68.7707,85.9633,1289450
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Atirador","CURRENT",true,1,2700,2700,45,1,71.3893,71.3893,192751
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Atirador","CURRENT",true,2,2100,2100,35,1,71.3893,71.3893,299835
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Atirador","CURRENT",true,3,1800,1800,30,1,71.3893,71.3893,385502
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Atirador","CURRENT",true,5,1800,1800,30,1,71.3893,71.3893,642504
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Atirador","CURRENT",true,10,1500,1500,25,1,71.3893,71.3893,1070840
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Médico","PREVIOUS",false,1,2700,3375,56.25,0.8,80.9349,101.1686,273155
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Médico","PREVIOUS",false,2,2100,2625,43.75,0.8,80.9349,101.1686,424908
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Médico","PREVIOUS",false,3,1800,2250,37.5,0.8,80.9349,101.1686,546311
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Médico","PREVIOUS",false,5,1800,2250,37.5,0.8,80.9349,101.1686,910518
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Médico","PREVIOUS",false,10,1500,1875,31.25,0.8,80.9349,101.1686,1517530
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Médico","CURRENT",true,1,2700,2700,45,1,84.3562,84.3562,227762
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Médico","CURRENT",true,2,2100,2100,35,1,84.3562,84.3562,354296
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Médico","CURRENT",true,3,1800,1800,30,1,84.3562,84.3562,455523
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Médico","CURRENT",true,5,1800,1800,30,1,84.3562,84.3562,759205
+2,6,"Forneiro Cinzento","CONTENCAO",55,"Médico","CURRENT",true,10,1500,1500,25,1,84.3562,84.3562,1265342
+2,6,"Tanque Vivo","EXTERMINIO",60,"Lutador","PREVIOUS",false,1,3600,4500,75,0.8,77.6916,97.1145,349612
+2,6,"Tanque Vivo","EXTERMINIO",60,"Lutador","PREVIOUS",false,2,2880,3600,60,0.8,77.6916,97.1145,559380
+2,6,"Tanque Vivo","EXTERMINIO",60,"Lutador","PREVIOUS",false,3,2400,3000,50,0.8,77.6916,97.1145,699224
+2,6,"Tanque Vivo","EXTERMINIO",60,"Lutador","PREVIOUS",false,5,2400,3000,50,0.8,77.6916,97.1145,1165374
+2,6,"Tanque Vivo","EXTERMINIO",60,"Lutador","PREVIOUS",false,10,2100,2625,43.75,0.8,77.6916,97.1145,2039404
+2,6,"Tanque Vivo","EXTERMINIO",60,"Lutador","CURRENT",true,1,3600,3600,60,1,80.5508,80.5508,289983
+2,6,"Tanque Vivo","EXTERMINIO",60,"Lutador","CURRENT",true,2,2880,2880,48,1,80.5508,80.5508,463972
+2,6,"Tanque Vivo","EXTERMINIO",60,"Lutador","CURRENT",true,3,2400,2400,40,1,80.5508,80.5508,579965
+2,6,"Tanque Vivo","EXTERMINIO",60,"Lutador","CURRENT",true,5,2400,2400,40,1,80.5508,80.5508,966609
+2,6,"Tanque Vivo","EXTERMINIO",60,"Lutador","CURRENT",true,10,2100,2100,35,1,80.5508,80.5508,1691566
+2,6,"Tanque Vivo","EXTERMINIO",60,"Assassino","PREVIOUS",false,1,3600,4500,75,0.8,71.6004,89.5005,322202
+2,6,"Tanque Vivo","EXTERMINIO",60,"Assassino","PREVIOUS",false,2,2880,3600,60,0.8,71.6004,89.5005,515523
+2,6,"Tanque Vivo","EXTERMINIO",60,"Assassino","PREVIOUS",false,3,2400,3000,50,0.8,71.6004,89.5005,644404
+2,6,"Tanque Vivo","EXTERMINIO",60,"Assassino","PREVIOUS",false,5,2400,3000,50,0.8,71.6004,89.5005,1074006
+2,6,"Tanque Vivo","EXTERMINIO",60,"Assassino","PREVIOUS",false,10,2100,2625,43.75,0.8,71.6004,89.5005,1879510
+2,6,"Tanque Vivo","EXTERMINIO",60,"Assassino","CURRENT",true,1,3600,3600,60,1,74.128,74.128,266861
+2,6,"Tanque Vivo","EXTERMINIO",60,"Assassino","CURRENT",true,2,2880,2880,48,1,74.128,74.128,426977
+2,6,"Tanque Vivo","EXTERMINIO",60,"Assassino","CURRENT",true,3,2400,2400,40,1,74.128,74.128,533722
+2,6,"Tanque Vivo","EXTERMINIO",60,"Assassino","CURRENT",true,5,2400,2400,40,1,74.128,74.128,889536
+2,6,"Tanque Vivo","EXTERMINIO",60,"Assassino","CURRENT",true,10,2100,2100,35,1,74.128,74.128,1556689
+2,6,"Tanque Vivo","EXTERMINIO",60,"Atirador","PREVIOUS",false,1,3600,4500,75,0.8,72.1805,90.2256,324812
+2,6,"Tanque Vivo","EXTERMINIO",60,"Atirador","PREVIOUS",false,2,2880,3600,60,0.8,72.1805,90.2256,519700
+2,6,"Tanque Vivo","EXTERMINIO",60,"Atirador","PREVIOUS",false,3,2400,3000,50,0.8,72.1805,90.2256,649625
+2,6,"Tanque Vivo","EXTERMINIO",60,"Atirador","PREVIOUS",false,5,2400,3000,50,0.8,72.1805,90.2256,1082708
+2,6,"Tanque Vivo","EXTERMINIO",60,"Atirador","PREVIOUS",false,10,2100,2625,43.75,0.8,72.1805,90.2256,1894738
+2,6,"Tanque Vivo","EXTERMINIO",60,"Atirador","CURRENT",true,1,3600,3599.99,60,1,74.7496,74.7496,269098
+2,6,"Tanque Vivo","EXTERMINIO",60,"Atirador","CURRENT",true,2,2880,2880,48,1,74.7496,74.7496,430558
+2,6,"Tanque Vivo","EXTERMINIO",60,"Atirador","CURRENT",true,3,2400,2400,40,1,74.7496,74.7496,538197
+2,6,"Tanque Vivo","EXTERMINIO",60,"Atirador","CURRENT",true,5,2400,2400,40,1,74.7496,74.7496,896995
+2,6,"Tanque Vivo","EXTERMINIO",60,"Atirador","CURRENT",true,10,2100,2100,35,1,74.7496,74.7496,1569741
+2,6,"Tanque Vivo","EXTERMINIO",60,"Médico","PREVIOUS",false,1,3600,4500,75,0.8,84.9431,106.1789,382244
+2,6,"Tanque Vivo","EXTERMINIO",60,"Médico","PREVIOUS",false,2,2880,3600,60,0.8,84.9431,106.1789,611590
+2,6,"Tanque Vivo","EXTERMINIO",60,"Médico","PREVIOUS",false,3,2400,3000,50,0.8,84.9431,106.1789,764488
+2,6,"Tanque Vivo","EXTERMINIO",60,"Médico","PREVIOUS",false,5,2400,3000,50,0.8,84.9431,106.1789,1274147
+2,6,"Tanque Vivo","EXTERMINIO",60,"Médico","PREVIOUS",false,10,2100,2625,43.75,0.8,84.9431,106.1789,2229757
+2,6,"Tanque Vivo","EXTERMINIO",60,"Médico","CURRENT",true,1,3600,3600,60,1,88.2996,88.2996,317878
+2,6,"Tanque Vivo","EXTERMINIO",60,"Médico","CURRENT",true,2,2880,2880,48,1,88.2996,88.2996,508606
+2,6,"Tanque Vivo","EXTERMINIO",60,"Médico","CURRENT",true,3,2400,2400,40,1,88.2996,88.2996,635757
+2,6,"Tanque Vivo","EXTERMINIO",60,"Médico","CURRENT",true,5,2400,2400,40,1,88.2996,88.2996,1059595
+2,6,"Tanque Vivo","EXTERMINIO",60,"Médico","CURRENT",true,10,2100,2100,35,1,88.2996,88.2996,1854291
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Lutador","PREVIOUS",true,1,2700,3374.99,56.25,0.8,84.2046,105.2557,284190
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Lutador","PREVIOUS",true,2,2100,2625,43.75,0.8,84.2046,105.2557,442074
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Lutador","PREVIOUS",true,3,1800,2250,37.5,0.8,84.2046,105.2557,568381
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Lutador","PREVIOUS",true,5,1800,2250,37.5,0.8,84.2046,105.2557,947302
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Lutador","PREVIOUS",true,10,1500,1875,31.25,0.8,84.2046,105.2557,1578836
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Lutador","CURRENT",true,1,2700,2700,45,1,86.8937,86.8937,234613
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Lutador","CURRENT",true,2,2100,2100,35,1,86.8937,86.8937,364953
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Lutador","CURRENT",true,3,1800,1800,30,1,86.8937,86.8937,469226
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Lutador","CURRENT",true,5,1800,1800,30,1,86.8937,86.8937,782043
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Lutador","CURRENT",true,10,1500,1500,25,1,86.8937,86.8937,1303405
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Assassino","PREVIOUS",true,1,2700,3374.99,56.25,0.8,77.4819,96.8524,261501
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Assassino","PREVIOUS",true,2,2100,2625,43.75,0.8,77.4819,96.8524,406780
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Assassino","PREVIOUS",true,3,1800,2250,37.5,0.8,77.4819,96.8524,523003
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Assassino","PREVIOUS",true,5,1800,2250,37.5,0.8,77.4819,96.8524,871672
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Assassino","PREVIOUS",true,10,1500,1875,31.25,0.8,77.4819,96.8524,1452786
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Assassino","CURRENT",true,1,2700,2700.01,45,1,79.9673,79.9673,215912
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Assassino","CURRENT",true,2,2100,2100,35,1,79.9673,79.9673,335862
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Assassino","CURRENT",true,3,1800,1800,30,1,79.9673,79.9673,431823
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Assassino","CURRENT",true,5,1800,1800,30,1,79.9673,79.9673,719705
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Assassino","CURRENT",true,10,1500,1500,25,1,79.9673,79.9673,1199509
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Atirador","PREVIOUS",true,1,2700,3375,56.25,0.8,78.0931,97.6163,263564
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Atirador","PREVIOUS",true,2,2100,2625,43.75,0.8,78.0931,97.6163,409989
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Atirador","PREVIOUS",true,3,1800,2250,37.5,0.8,78.0931,97.6163,527128
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Atirador","PREVIOUS",true,5,1800,2250,37.5,0.8,78.0931,97.6163,878547
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Atirador","PREVIOUS",true,10,1500,1875,31.25,0.8,78.0931,97.6163,1464245
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Atirador","CURRENT",true,1,2700,2700,45,1,81.1896,81.1896,219212
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Atirador","CURRENT",true,2,2100,2100,35,1,81.1896,81.1896,340996
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Atirador","CURRENT",true,3,1800,1800,30,1,81.1896,81.1896,438424
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Atirador","CURRENT",true,5,1800,1800,30,1,81.1896,81.1896,730706
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Atirador","CURRENT",true,10,1500,1500,25,1,81.1896,81.1896,1217843
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Médico","PREVIOUS",true,1,2700,3375,56.25,0.8,92.2311,115.2889,311280
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Médico","PREVIOUS",true,2,2100,2625,43.75,0.8,92.2311,115.2889,484213
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Médico","PREVIOUS",true,3,1800,2250,37.5,0.8,92.2311,115.2889,622560
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Médico","PREVIOUS",true,5,1800,2250,37.5,0.8,92.2311,115.2889,1037600
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Médico","PREVIOUS",true,10,1500,1875,31.25,0.8,92.2311,115.2889,1729334
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Médico","CURRENT",true,1,2700,2700,45,1,95.1647,95.1647,256945
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Médico","CURRENT",true,2,2100,2100,35,1,95.1647,95.1647,399692
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Médico","CURRENT",true,3,1800,1800,30,1,95.1647,95.1647,513890
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Médico","CURRENT",true,5,1800,1800,30,1,95.1647,95.1647,856483
+2,7,"Colosso do Viaduto","CONTENCAO",65,"Médico","CURRENT",true,10,1500,1500,25,1,95.1647,95.1647,1427471
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Lutador","PREVIOUS",true,1,3600,4499.99,75,0.8,87.4885,109.3607,393698
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Lutador","PREVIOUS",true,2,2880,3600,60,0.8,87.4885,109.3607,629918
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Lutador","PREVIOUS",true,3,2400,3000,50,0.8,87.4885,109.3607,787397
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Lutador","PREVIOUS",true,5,2400,3000,50,0.8,87.4885,109.3607,1312328
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Lutador","PREVIOUS",true,10,2100,2625,43.75,0.8,87.4885,109.3607,2296574
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Lutador","CURRENT",true,1,3600,3600,60,1,90.1248,90.1248,324449
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Lutador","CURRENT",true,2,2880,2880,48,1,90.1248,90.1248,519119
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Lutador","CURRENT",true,3,2400,2400,40,1,90.1248,90.1248,648899
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Lutador","CURRENT",true,5,2400,2400,40,1,90.1248,90.1248,1081498
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Lutador","CURRENT",true,10,2100,2100,35,1,90.1248,90.1248,1892622
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Assassino","PREVIOUS",true,1,3600,4500,75,0.8,80.4984,100.623,362243
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Assassino","PREVIOUS",true,2,2880,3600,60,0.8,80.4984,100.623,579589
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Assassino","PREVIOUS",true,3,2400,3000,50,0.8,80.4984,100.623,724486
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Assassino","PREVIOUS",true,5,2400,3000,50,0.8,80.4984,100.623,1207476
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Assassino","PREVIOUS",true,10,2100,2625,43.75,0.8,80.4984,100.623,2113084
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Assassino","CURRENT",true,1,3600,3600,60,1,82.935,82.935,298566
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Assassino","CURRENT",true,2,2880,2880,48,1,82.935,82.935,477705
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Assassino","CURRENT",true,3,2400,2400,40,1,82.935,82.935,597132
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Assassino","CURRENT",true,5,2400,2400,40,1,82.935,82.935,995220
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Assassino","CURRENT",true,10,2100,2100,35,1,82.935,82.935,1741634
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Atirador","PREVIOUS",true,1,3600,4500,75,0.8,81.0976,101.372,364939
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Atirador","PREVIOUS",true,2,2880,3600,60,0.8,81.0976,101.372,583903
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Atirador","PREVIOUS",true,3,2400,3000,50,0.8,81.0976,101.372,729878
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Atirador","PREVIOUS",true,5,2400,3000,50,0.8,81.0976,101.372,1216464
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Atirador","PREVIOUS",true,10,2100,2625,43.75,0.8,81.0976,101.372,2128811
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Atirador","CURRENT",true,1,3600,3600,60,1,84.1333,84.1333,302880
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Atirador","CURRENT",true,2,2880,2880,48,1,84.1333,84.1333,484608
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Atirador","CURRENT",true,3,2400,2400,40,1,84.1333,84.1333,605760
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Atirador","CURRENT",true,5,2400,2400,40,1,84.1333,84.1333,1009599
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Atirador","CURRENT",true,10,2100,2100,35,1,84.1333,84.1333,1766799
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Médico","PREVIOUS",true,1,3600,4500,75,0.8,95.7569,119.6962,430906
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Médico","PREVIOUS",true,2,2880,3600,60,0.8,95.7569,119.6962,689450
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Médico","PREVIOUS",true,3,2400,3000,50,0.8,95.7569,119.6962,861813
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Médico","PREVIOUS",true,5,2400,3000,50,0.8,95.7569,119.6962,1436354
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Médico","PREVIOUS",true,10,2100,2625,43.75,0.8,95.7569,119.6962,2513620
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Médico","CURRENT",true,1,3600,3600,60,1,98.6329,98.6329,355079
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Médico","CURRENT",true,2,2880,2880,48,1,98.6329,98.6329,568126
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Médico","CURRENT",true,3,2400,2400,40,1,98.6329,98.6329,710157
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Médico","CURRENT",true,5,2400,2400,40,1,98.6329,98.6329,1183595
+2,7,"Patrulheiro Esmagado","EXTERMINIO",70,"Médico","CURRENT",true,10,2100,2100,35,1,98.6329,98.6329,2071292
+2,8,"Protótipo H-08","CONTENCAO",75,"Lutador","PREVIOUS",true,1,2700,3375.01,56.25,0.8,93.3729,116.7161,315134
+2,8,"Protótipo H-08","CONTENCAO",75,"Lutador","PREVIOUS",true,2,2100,2625,43.75,0.8,93.3729,116.7161,490208
+2,8,"Protótipo H-08","CONTENCAO",75,"Lutador","PREVIOUS",true,3,1800,2250,37.5,0.8,93.3729,116.7161,630267
+2,8,"Protótipo H-08","CONTENCAO",75,"Lutador","PREVIOUS",true,5,1800,2250,37.5,0.8,93.3729,116.7161,1050445
+2,8,"Protótipo H-08","CONTENCAO",75,"Lutador","PREVIOUS",true,10,1500,1875,31.25,0.8,93.3729,116.7161,1750742
+2,8,"Protótipo H-08","CONTENCAO",75,"Lutador","CURRENT",true,1,2700,2700,45,1,96.2382,96.2382,259843
+2,8,"Protótipo H-08","CONTENCAO",75,"Lutador","CURRENT",true,2,2100,2100,35,1,96.2382,96.2382,404200
+2,8,"Protótipo H-08","CONTENCAO",75,"Lutador","CURRENT",true,3,1800,1800,30,1,96.2382,96.2382,519686
+2,8,"Protótipo H-08","CONTENCAO",75,"Lutador","CURRENT",true,5,1800,1800,30,1,96.2382,96.2382,866144
+2,8,"Protótipo H-08","CONTENCAO",75,"Lutador","CURRENT",true,10,1500,1500,25,1,96.2382,96.2382,1443573
+2,8,"Protótipo H-08","CONTENCAO",75,"Assassino","PREVIOUS",true,1,2700,3375,56.25,0.8,85.9154,107.3942,289964
+2,8,"Protótipo H-08","CONTENCAO",75,"Assassino","PREVIOUS",true,2,2100,2625,43.75,0.8,85.9154,107.3942,451056
+2,8,"Protótipo H-08","CONTENCAO",75,"Assassino","PREVIOUS",true,3,1800,2250,37.5,0.8,85.9154,107.3942,579929
+2,8,"Protótipo H-08","CONTENCAO",75,"Assassino","PREVIOUS",true,5,1800,2250,37.5,0.8,85.9154,107.3942,966548
+2,8,"Protótipo H-08","CONTENCAO",75,"Assassino","PREVIOUS",true,10,1500,1875,31.25,0.8,85.9154,107.3942,1610913
+2,8,"Protótipo H-08","CONTENCAO",75,"Assassino","CURRENT",true,1,2700,2700.01,45,1,88.9769,88.9769,240238
+2,8,"Protótipo H-08","CONTENCAO",75,"Assassino","CURRENT",true,2,2100,2100,35,1,88.9769,88.9769,373703
+2,8,"Protótipo H-08","CONTENCAO",75,"Assassino","CURRENT",true,3,1800,1800,30,1,88.9769,88.9769,480475
+2,8,"Protótipo H-08","CONTENCAO",75,"Assassino","CURRENT",true,5,1800,1800,30,1,88.9769,88.9769,800792
+2,8,"Protótipo H-08","CONTENCAO",75,"Assassino","CURRENT",true,10,1500,1500,25,1,88.9769,88.9769,1334653
+2,8,"Protótipo H-08","CONTENCAO",75,"Atirador","PREVIOUS",true,1,2700,3375,56.25,0.8,87.0929,108.8661,293938
+2,8,"Protótipo H-08","CONTENCAO",75,"Atirador","PREVIOUS",true,2,2100,2625,43.75,0.8,87.0929,108.8661,457238
+2,8,"Protótipo H-08","CONTENCAO",75,"Atirador","PREVIOUS",true,3,1800,2250,37.5,0.8,87.0929,108.8661,587877
+2,8,"Protótipo H-08","CONTENCAO",75,"Atirador","PREVIOUS",true,5,1800,2250,37.5,0.8,87.0929,108.8661,979795
+2,8,"Protótipo H-08","CONTENCAO",75,"Atirador","PREVIOUS",true,10,1500,1875,31.25,0.8,87.0929,108.8661,1632991
+2,8,"Protótipo H-08","CONTENCAO",75,"Atirador","CURRENT",true,1,2700,2700,45,1,89.8404,89.8404,242569
+2,8,"Protótipo H-08","CONTENCAO",75,"Atirador","CURRENT",true,2,2100,2100,35,1,89.8404,89.8404,377330
+2,8,"Protótipo H-08","CONTENCAO",75,"Atirador","CURRENT",true,3,1800,1800,30,1,89.8404,89.8404,485138
+2,8,"Protótipo H-08","CONTENCAO",75,"Atirador","CURRENT",true,5,1800,1800,30,1,89.8404,89.8404,808563
+2,8,"Protótipo H-08","CONTENCAO",75,"Atirador","CURRENT",true,10,1500,1500,25,1,89.8404,89.8404,1347606
+2,8,"Protótipo H-08","CONTENCAO",75,"Médico","PREVIOUS",true,1,2700,3375,56.25,0.8,102.1258,127.6572,344675
+2,8,"Protótipo H-08","CONTENCAO",75,"Médico","PREVIOUS",true,2,2100,2625,43.75,0.8,102.1258,127.6572,536160
+2,8,"Protótipo H-08","CONTENCAO",75,"Médico","PREVIOUS",true,3,1800,2250,37.5,0.8,102.1258,127.6572,689349
+2,8,"Protótipo H-08","CONTENCAO",75,"Médico","PREVIOUS",true,5,1800,2250,37.5,0.8,102.1258,127.6572,1148915
+2,8,"Protótipo H-08","CONTENCAO",75,"Médico","PREVIOUS",true,10,1500,1875,31.25,0.8,102.1258,127.6572,1914859
+2,8,"Protótipo H-08","CONTENCAO",75,"Médico","CURRENT",true,1,2700,2700,45,1,105.4621,105.4621,284748
+2,8,"Protótipo H-08","CONTENCAO",75,"Médico","CURRENT",true,2,2100,2100,35,1,105.4621,105.4621,442941
+2,8,"Protótipo H-08","CONTENCAO",75,"Médico","CURRENT",true,3,1800,1800,30,1,105.4621,105.4621,569495
+2,8,"Protótipo H-08","CONTENCAO",75,"Médico","CURRENT",true,5,1800,1800,30,1,105.4621,105.4621,949159
+2,8,"Protótipo H-08","CONTENCAO",75,"Médico","CURRENT",true,10,1500,1500,25,1,105.4621,105.4621,1581932
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Lutador","PREVIOUS",true,1,3600,4500,75,0.8,96.2174,120.2717,432978
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Lutador","PREVIOUS",true,2,2880,3600,60,0.8,96.2174,120.2717,692765
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Lutador","PREVIOUS",true,3,2400,3000,50,0.8,96.2174,120.2717,865957
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Lutador","PREVIOUS",true,5,2400,3000,50,0.8,96.2174,120.2717,1443261
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Lutador","PREVIOUS",true,10,2100,2625,43.75,0.8,96.2174,120.2717,2525706
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Lutador","CURRENT",true,1,3600,3600,60,1,99.0243,99.0243,356487
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Lutador","CURRENT",true,2,2880,2880,48,1,99.0243,99.0243,570380
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Lutador","CURRENT",true,3,2400,2400,40,1,99.0243,99.0243,712975
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Lutador","CURRENT",true,5,2400,2400,40,1,99.0243,99.0243,1188291
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Lutador","CURRENT",true,10,2100,2100,35,1,99.0243,99.0243,2079510
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Assassino","PREVIOUS",true,1,3600,4500,75,0.8,88.5273,110.6592,398373
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Assassino","PREVIOUS",true,2,2880,3600,60,0.8,88.5273,110.6592,637397
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Assassino","PREVIOUS",true,3,2400,3000,50,0.8,88.5273,110.6592,796746
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Assassino","PREVIOUS",true,5,2400,3000,50,0.8,88.5273,110.6592,1327910
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Assassino","PREVIOUS",true,10,2100,2625,43.75,0.8,88.5273,110.6592,2323843
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Assassino","CURRENT",true,1,3600,3600,60,1,91.5265,91.5265,329495
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Assassino","CURRENT",true,2,2880,2880,48,1,91.5265,91.5265,527192
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Assassino","CURRENT",true,3,2400,2400,40,1,91.5265,91.5265,658990
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Assassino","CURRENT",true,5,2400,2400,40,1,91.5265,91.5265,1098317
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Assassino","CURRENT",true,10,2100,2100,35,1,91.5265,91.5265,1922056
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Atirador","PREVIOUS",true,1,3600,4500,75,0.8,89.6808,112.1011,403564
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Atirador","PREVIOUS",true,2,2880,3600,60,0.8,89.6808,112.1011,645702
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Atirador","PREVIOUS",true,3,2400,3000,50,0.8,89.6808,112.1011,807128
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Atirador","PREVIOUS",true,5,2400,3000,50,0.8,89.6808,112.1011,1345213
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Atirador","PREVIOUS",true,10,2100,2625,43.75,0.8,89.6808,112.1011,2354122
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Atirador","CURRENT",true,1,3600,3599.99,60,1,92.3724,92.3724,332540
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Atirador","CURRENT",true,2,2880,2880,48,1,92.3724,92.3724,532065
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Atirador","CURRENT",true,3,2400,2400,40,1,92.3724,92.3724,665081
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Atirador","CURRENT",true,5,2400,2400,40,1,92.3724,92.3724,1108468
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Atirador","CURRENT",true,10,2100,2100,35,1,92.3724,92.3724,1939819
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Médico","PREVIOUS",true,1,3600,4500,75,0.8,105.1764,131.4705,473294
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Médico","PREVIOUS",true,2,2880,3600,60,0.8,105.1764,131.4705,757270
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Médico","PREVIOUS",true,3,2400,3000,50,0.8,105.1764,131.4705,946588
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Médico","PREVIOUS",true,5,2400,3000,50,0.8,105.1764,131.4705,1577646
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Médico","PREVIOUS",true,10,2100,2625,43.75,0.8,105.1764,131.4705,2760880
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Médico","CURRENT",true,1,3600,3600,60,1,108.4447,108.4447,390401
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Médico","CURRENT",true,2,2880,2880,48,1,108.4447,108.4447,624642
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Médico","CURRENT",true,3,2400,2400,40,1,108.4447,108.4447,780802
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Médico","CURRENT",true,5,2400,2400,40,1,108.4447,108.4447,1301337
+2,8,"Matriz de Contenção","EXTERMINIO",80,"Médico","CURRENT",true,10,2100,2100,35,1,108.4447,108.4447,2277339
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Lutador","PREVIOUS",true,1,2700,3375,56.25,0.8,101.8617,127.3272,343783
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Lutador","PREVIOUS",true,2,2100,2625,43.75,0.8,101.8617,127.3272,534774
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Lutador","PREVIOUS",true,3,1800,2250,37.5,0.8,101.8617,127.3272,687567
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Lutador","PREVIOUS",true,5,1800,2250,37.5,0.8,101.8617,127.3272,1145944
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Lutador","PREVIOUS",true,10,1500,1875,31.25,0.8,101.8617,127.3272,1909907
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Lutador","CURRENT",true,1,2700,2700,45,1,104.3159,104.3159,281653
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Lutador","CURRENT",true,2,2100,2100,35,1,104.3159,104.3159,438127
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Lutador","CURRENT",true,3,1800,1800,30,1,104.3159,104.3159,563306
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Lutador","CURRENT",true,5,1800,1800,30,1,104.3159,104.3159,938843
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Lutador","CURRENT",true,10,1500,1500,25,1,104.3159,104.3159,1564739
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Assassino","PREVIOUS",true,1,2700,3375,56.25,0.8,94.1216,117.652,317660
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Assassino","PREVIOUS",true,2,2100,2625,43.75,0.8,94.1216,117.652,494138
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Assassino","PREVIOUS",true,3,1800,2250,37.5,0.8,94.1216,117.652,635321
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Assassino","PREVIOUS",true,5,1800,2250,37.5,0.8,94.1216,117.652,1058868
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Assassino","PREVIOUS",true,10,1500,1875,31.25,0.8,94.1216,117.652,1764779
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Assassino","CURRENT",true,1,2700,2700,45,1,96.387,96.387,260245
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Assassino","CURRENT",true,2,2100,2100,35,1,96.387,96.387,404825
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Assassino","CURRENT",true,3,1800,1800,30,1,96.387,96.387,520490
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Assassino","CURRENT",true,5,1800,1800,30,1,96.387,96.387,867483
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Assassino","CURRENT",true,10,1500,1500,25,1,96.387,96.387,1445805
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Atirador","PREVIOUS",true,1,2700,3375,56.25,0.8,94.9522,118.6903,320464
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Atirador","PREVIOUS",true,2,2100,2625,43.75,0.8,94.9522,118.6903,498499
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Atirador","PREVIOUS",true,3,1800,2250,37.5,0.8,94.9522,118.6903,640927
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Atirador","PREVIOUS",true,5,1800,2250,37.5,0.8,94.9522,118.6903,1068212
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Atirador","PREVIOUS",true,10,1500,1875,31.25,0.8,94.9522,118.6903,1780354
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Atirador","CURRENT",true,1,2700,2700,45,1,98.0105,98.0105,264628
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Atirador","CURRENT",true,2,2100,2100,35,1,98.0105,98.0105,411644
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Atirador","CURRENT",true,3,1800,1800,30,1,98.0105,98.0105,529257
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Atirador","CURRENT",true,5,1800,1800,30,1,98.0105,98.0105,882095
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Atirador","CURRENT",true,10,1500,1500,25,1,98.0105,98.0105,1470158
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Médico","PREVIOUS",true,1,2700,3375,56.25,0.8,111.4898,139.3623,376278
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Médico","PREVIOUS",true,2,2100,2625,43.75,0.8,111.4898,139.3623,585322
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Médico","PREVIOUS",true,3,1800,2250,37.5,0.8,111.4898,139.3623,752556
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Médico","PREVIOUS",true,5,1800,2250,37.5,0.8,111.4898,139.3623,1254261
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Médico","PREVIOUS",true,10,1500,1875,31.25,0.8,111.4898,139.3623,2090435
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Médico","CURRENT",true,1,2700,2700,45,1,114.2839,114.2839,308567
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Médico","CURRENT",true,2,2100,2100,35,1,114.2839,114.2839,479992
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Médico","CURRENT",true,3,1800,1800,30,1,114.2839,114.2839,617133
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Médico","CURRENT",true,5,1800,1800,30,1,114.2839,114.2839,1028555
+2,9,"Titã da Forja Morta","CONTENCAO",85,"Médico","CURRENT",true,10,1500,1500,25,1,114.2839,114.2839,1714259
+2,9,"Engenho de Carne","EXTERMINIO",90,"Lutador","PREVIOUS",true,1,3600,4500,75,0.8,104.2611,130.3264,469175
+2,9,"Engenho de Carne","EXTERMINIO",90,"Lutador","PREVIOUS",true,2,2880,3600,60,0.8,104.2611,130.3264,750680
+2,9,"Engenho de Carne","EXTERMINIO",90,"Lutador","PREVIOUS",true,3,2400,3000,50,0.8,104.2611,130.3264,938350
+2,9,"Engenho de Carne","EXTERMINIO",90,"Lutador","PREVIOUS",true,5,2400,3000,50,0.8,104.2611,130.3264,1563917
+2,9,"Engenho de Carne","EXTERMINIO",90,"Lutador","PREVIOUS",true,10,2100,2625,43.75,0.8,104.2611,130.3264,2736855
+2,9,"Engenho de Carne","EXTERMINIO",90,"Lutador","CURRENT",true,1,3600,3600,60,1,106.6634,106.6634,383988
+2,9,"Engenho de Carne","EXTERMINIO",90,"Lutador","CURRENT",true,2,2880,2880,48,1,106.6634,106.6634,614381
+2,9,"Engenho de Carne","EXTERMINIO",90,"Lutador","CURRENT",true,3,2400,2400,40,1,106.6634,106.6634,767976
+2,9,"Engenho de Carne","EXTERMINIO",90,"Lutador","CURRENT",true,5,2400,2400,40,1,106.6634,106.6634,1279960
+2,9,"Engenho de Carne","EXTERMINIO",90,"Lutador","CURRENT",true,10,2100,2100,35,1,106.6634,106.6634,2239931
+2,9,"Engenho de Carne","EXTERMINIO",90,"Assassino","PREVIOUS",true,1,3600,4500,75,0.8,96.3154,120.3943,433419
+2,9,"Engenho de Carne","EXTERMINIO",90,"Assassino","PREVIOUS",true,2,2880,3600,60,0.8,96.3154,120.3943,693471
+2,9,"Engenho de Carne","EXTERMINIO",90,"Assassino","PREVIOUS",true,3,2400,3000,50,0.8,96.3154,120.3943,866839
+2,9,"Engenho de Carne","EXTERMINIO",90,"Assassino","PREVIOUS",true,5,2400,3000,50,0.8,96.3154,120.3943,1444731
+2,9,"Engenho de Carne","EXTERMINIO",90,"Assassino","PREVIOUS",true,10,2100,2625,43.75,0.8,96.3154,120.3943,2528280
+2,9,"Engenho de Carne","EXTERMINIO",90,"Assassino","CURRENT",true,1,3600,3600,60,1,98.5328,98.5328,354718
+2,9,"Engenho de Carne","EXTERMINIO",90,"Assassino","CURRENT",true,2,2880,2880,48,1,98.5328,98.5328,567549
+2,9,"Engenho de Carne","EXTERMINIO",90,"Assassino","CURRENT",true,3,2400,2400,40,1,98.5328,98.5328,709436
+2,9,"Engenho de Carne","EXTERMINIO",90,"Assassino","CURRENT",true,5,2400,2400,40,1,98.5328,98.5328,1182394
+2,9,"Engenho de Carne","EXTERMINIO",90,"Assassino","CURRENT",true,10,2100,2100,35,1,98.5328,98.5328,2069189
+2,9,"Engenho de Carne","EXTERMINIO",90,"Atirador","PREVIOUS",true,1,3600,4500,75,0.8,97.1285,121.4106,437078
+2,9,"Engenho de Carne","EXTERMINIO",90,"Atirador","PREVIOUS",true,2,2880,3600,60,0.8,97.1285,121.4106,699325
+2,9,"Engenho de Carne","EXTERMINIO",90,"Atirador","PREVIOUS",true,3,2400,3000,50,0.8,97.1285,121.4106,874156
+2,9,"Engenho de Carne","EXTERMINIO",90,"Atirador","PREVIOUS",true,5,2400,3000,50,0.8,97.1285,121.4106,1456927
+2,9,"Engenho de Carne","EXTERMINIO",90,"Atirador","PREVIOUS",true,10,2100,2625,43.75,0.8,97.1285,121.4106,2549622
+2,9,"Engenho de Carne","EXTERMINIO",90,"Atirador","CURRENT",true,1,3600,3600,60,1,100.122,100.122,360439
+2,9,"Engenho de Carne","EXTERMINIO",90,"Atirador","CURRENT",true,2,2880,2880,48,1,100.122,100.122,576702
+2,9,"Engenho de Carne","EXTERMINIO",90,"Atirador","CURRENT",true,3,2400,2400,40,1,100.122,100.122,720878
+2,9,"Engenho de Carne","EXTERMINIO",90,"Atirador","CURRENT",true,5,2400,2400,40,1,100.122,100.122,1201464
+2,9,"Engenho de Carne","EXTERMINIO",90,"Atirador","CURRENT",true,10,2100,2100,35,1,100.122,100.122,2102561
+2,9,"Engenho de Carne","EXTERMINIO",90,"Médico","PREVIOUS",true,1,3600,4500,75,0.8,114.0549,142.5686,513247
+2,9,"Engenho de Carne","EXTERMINIO",90,"Médico","PREVIOUS",true,2,2880,3600,60,0.8,114.0549,142.5686,821195
+2,9,"Engenho de Carne","EXTERMINIO",90,"Médico","PREVIOUS",true,3,2400,3000,50,0.8,114.0549,142.5686,1026494
+2,9,"Engenho de Carne","EXTERMINIO",90,"Médico","PREVIOUS",true,5,2400,3000,50,0.8,114.0549,142.5686,1710823
+2,9,"Engenho de Carne","EXTERMINIO",90,"Médico","PREVIOUS",true,10,2100,2625,43.75,0.8,114.0549,142.5686,2993940
+2,9,"Engenho de Carne","EXTERMINIO",90,"Médico","CURRENT",true,1,3600,3600,60,1,116.7897,116.7897,420443
+2,9,"Engenho de Carne","EXTERMINIO",90,"Médico","CURRENT",true,2,2880,2880,48,1,116.7897,116.7897,672709
+2,9,"Engenho de Carne","EXTERMINIO",90,"Médico","CURRENT",true,3,2400,2400,40,1,116.7897,116.7897,840886
+2,9,"Engenho de Carne","EXTERMINIO",90,"Médico","CURRENT",true,5,2400,2400,40,1,116.7897,116.7897,1401477
+2,9,"Engenho de Carne","EXTERMINIO",90,"Médico","CURRENT",true,10,2100,2100,35,1,116.7897,116.7897,2452584
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Lutador","PREVIOUS",true,1,2700,3375,56.25,0.8,109.0957,136.3697,368198
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Lutador","PREVIOUS",true,2,2100,2625,43.75,0.8,109.0957,136.3697,572753
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Lutador","PREVIOUS",true,3,1800,2250,37.5,0.8,109.0957,136.3697,736396
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Lutador","PREVIOUS",true,5,1800,2250,37.5,0.8,109.0957,136.3697,1227327
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Lutador","PREVIOUS",true,10,1500,1875,31.25,0.8,109.0957,136.3697,2045545
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Lutador","CURRENT",true,1,2700,2700,45,1,111.743,111.743,301706
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Lutador","CURRENT",true,2,2100,2100,35,1,111.743,111.743,469321
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Lutador","CURRENT",true,3,1800,1800,30,1,111.743,111.743,603412
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Lutador","CURRENT",true,5,1800,1800,30,1,111.743,111.743,1005687
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Lutador","CURRENT",true,10,1500,1500,25,1,111.743,111.743,1676145
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Assassino","PREVIOUS",true,1,2700,3375,56.25,0.8,100.7551,125.9439,340049
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Assassino","PREVIOUS",true,2,2100,2625,43.75,0.8,100.7551,125.9439,528964
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Assassino","PREVIOUS",true,3,1800,2250,37.5,0.8,100.7551,125.9439,680097
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Assassino","PREVIOUS",true,5,1800,2250,37.5,0.8,100.7551,125.9439,1133495
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Assassino","PREVIOUS",true,10,1500,1875,31.25,0.8,100.7551,125.9439,1889159
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Assassino","CURRENT",true,1,2700,2700,45,1,103.0397,103.0397,278207
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Assassino","CURRENT",true,2,2100,2100,35,1,103.0397,103.0397,432767
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Assassino","CURRENT",true,3,1800,1800,30,1,103.0397,103.0397,556414
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Assassino","CURRENT",true,5,1800,1800,30,1,103.0397,103.0397,927357
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Assassino","CURRENT",true,10,1500,1500,25,1,103.0397,103.0397,1545596
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Atirador","PREVIOUS",true,1,2700,3375,56.25,0.8,102.3145,127.8931,345311
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Atirador","PREVIOUS",true,2,2100,2625,43.75,0.8,102.3145,127.8931,537151
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Atirador","PREVIOUS",true,3,1800,2250,37.5,0.8,102.3145,127.8931,690623
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Atirador","PREVIOUS",true,5,1800,2250,37.5,0.8,102.3145,127.8931,1151038
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Atirador","PREVIOUS",true,10,1500,1875,31.25,0.8,102.3145,127.8931,1918396
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Atirador","CURRENT",true,1,2700,2700,45,1,104.3815,104.3815,281830
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Atirador","CURRENT",true,2,2100,2100,35,1,104.3815,104.3815,438402
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Atirador","CURRENT",true,3,1800,1800,30,1,104.3815,104.3815,563660
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Atirador","CURRENT",true,5,1800,1800,30,1,104.3815,104.3815,939433
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Atirador","CURRENT",true,10,1500,1500,25,1,104.3815,104.3815,1565722
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Médico","PREVIOUS",true,1,2700,3375,56.25,0.8,119.3947,149.2434,402957
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Médico","PREVIOUS",true,2,2100,2625,43.75,0.8,119.3947,149.2434,626822
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Médico","PREVIOUS",true,3,1800,2250,37.5,0.8,119.3947,149.2434,805914
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Médico","PREVIOUS",true,5,1800,2250,37.5,0.8,119.3947,149.2434,1343191
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Médico","PREVIOUS",true,10,1500,1875,31.25,0.8,119.3947,149.2434,2238651
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Médico","CURRENT",true,1,2700,2700,45,1,122.4772,122.4772,330688
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Médico","CURRENT",true,2,2100,2100,35,1,122.4772,122.4772,514404
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Médico","CURRENT",true,3,1800,1800,30,1,122.4772,122.4772,661377
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Médico","CURRENT",true,5,1800,1800,30,1,122.4772,122.4772,1102295
+2,10,"O Primeiro Infectado","CONTENCAO",95,"Médico","CURRENT",true,10,1500,1500,25,1,122.4772,122.4772,1837158
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Lutador","PREVIOUS",true,1,3600,4500,75,0.8,111.0565,138.8206,499754
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Lutador","PREVIOUS",true,2,2880,3600,60,0.8,111.0565,138.8206,799607
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Lutador","PREVIOUS",true,3,2400,3000,50,0.8,111.0565,138.8206,999509
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Lutador","PREVIOUS",true,5,2400,3000,50,0.8,111.0565,138.8206,1665848
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Lutador","PREVIOUS",true,10,2100,2625,43.75,0.8,111.0565,138.8206,2915233
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Lutador","CURRENT",true,1,3600,3600,60,1,113.6454,113.6454,409123
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Lutador","CURRENT",true,2,2880,2880,48,1,113.6454,113.6454,654597
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Lutador","CURRENT",true,3,2400,2400,40,1,113.6454,113.6454,818247
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Lutador","CURRENT",true,5,2400,2400,40,1,113.6454,113.6454,1363744
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Lutador","CURRENT",true,10,2100,2100,35,1,113.6454,113.6454,2386553
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Assassino","PREVIOUS",true,1,3600,4500,75,0.8,102.5452,128.1816,461454
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Assassino","PREVIOUS",true,2,2880,3600,60,0.8,102.5452,128.1816,738326
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Assassino","PREVIOUS",true,3,2400,3000,50,0.8,102.5452,128.1816,922907
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Assassino","PREVIOUS",true,5,2400,3000,50,0.8,102.5452,128.1816,1538179
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Assassino","PREVIOUS",true,10,2100,2625,43.75,0.8,102.5452,128.1816,2691813
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Assassino","CURRENT",true,1,3600,3600,60,1,104.7794,104.7794,377206
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Assassino","CURRENT",true,2,2880,2880,48,1,104.7794,104.7794,603530
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Assassino","CURRENT",true,3,2400,2400,40,1,104.7794,104.7794,754412
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Assassino","CURRENT",true,5,2400,2400,40,1,104.7794,104.7794,1257353
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Assassino","CURRENT",true,10,2100,2100,35,1,104.7794,104.7794,2200368
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Atirador","PREVIOUS",true,1,3600,4500,75,0.8,104.0702,130.0877,468316
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Atirador","PREVIOUS",true,2,2880,3600,60,0.8,104.0702,130.0877,749305
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Atirador","PREVIOUS",true,3,2400,3000,50,0.8,104.0702,130.0877,936632
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Atirador","PREVIOUS",true,5,2400,3000,50,0.8,104.0702,130.0877,1561053
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Atirador","PREVIOUS",true,10,2100,2625,43.75,0.8,104.0702,130.0877,2731842
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Atirador","CURRENT",true,1,3600,3600,60,1,106.0916,106.0916,381930
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Atirador","CURRENT",true,2,2880,2880,48,1,106.0916,106.0916,611088
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Atirador","CURRENT",true,3,2400,2400,40,1,106.0916,106.0916,763859
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Atirador","CURRENT",true,5,2400,2400,40,1,106.0916,106.0916,1273099
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Atirador","CURRENT",true,10,2100,2100,35,1,106.0916,106.0916,2227923
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Médico","PREVIOUS",true,1,3600,4500,75,0.8,121.4829,151.8537,546673
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Médico","PREVIOUS",true,2,2880,3600,60,0.8,121.4829,151.8537,874677
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Médico","PREVIOUS",true,3,2400,3000,50,0.8,121.4829,151.8537,1093346
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Médico","PREVIOUS",true,5,2400,3000,50,0.8,121.4829,151.8537,1822244
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Médico","PREVIOUS",true,10,2100,2625,43.75,0.8,121.4829,151.8537,3188927
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Médico","CURRENT",true,1,3600,3600,60,1,124.4974,124.4974,448191
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Médico","CURRENT",true,2,2880,2880,48,1,124.4974,124.4974,717105
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Médico","CURRENT",true,3,2400,2400,40,1,124.4974,124.4974,896381
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Médico","CURRENT",true,5,2400,2400,40,1,124.4974,124.4974,1493969
+2,10,"Coração da Ruína Carmesim","EXTERMINIO",100,"Médico","CURRENT",true,10,2100,2100,35,1,124.4974,124.4974,2614446

@@ -12,9 +12,12 @@ describe('ActiveCharacterPresenceService', () => {
         { id: 'offline-active-1' },
         { id: 'offline-active-2' },
       ]);
-    const service = new ActiveCharacterPresenceService({
-      character: { findMany },
-    } as never);
+    const service = new ActiveCharacterPresenceService(
+      {
+        character: { findMany },
+      } as never,
+      { getResolvedAppearances: jest.fn() } as never,
+    );
 
     const status = await service.getStatus(
       ['online-idle', 'online-and-active', 'online-idle'],
@@ -36,9 +39,12 @@ describe('ActiveCharacterPresenceService', () => {
     const findMany = jest
       .fn<Promise<Array<{ id: string }>>, [Prisma.CharacterFindManyArgs]>()
       .mockResolvedValue([]);
-    const service = new ActiveCharacterPresenceService({
-      character: { findMany },
-    } as never);
+    const service = new ActiveCharacterPresenceService(
+      {
+        character: { findMany },
+      } as never,
+      { getResolvedAppearances: jest.fn() } as never,
+    );
 
     await service.getStatus([], now);
 
@@ -64,5 +70,96 @@ describe('ActiveCharacterPresenceService', () => {
     expect(
       activityFilters.some((filter) => 'worldBossParticipations' in filter),
     ).toBe(true);
+    const worldBossFilter = activityFilters.find(
+      (filter) => 'worldBossParticipations' in filter,
+    );
+    expect(worldBossFilter).toMatchObject({
+      worldBossParticipations: {
+        some: {
+          leftAt: null,
+          confirmedAt: { not: null },
+          event: {
+            status: {
+              in: ['ACTIVE'],
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('lista online primeiro e informa quando a presenca vem apenas de atividade', async () => {
+    const findMany = jest
+      .fn()
+      .mockResolvedValueOnce([
+        { id: 'online-and-active' },
+        { id: 'offline-active' },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'offline-active',
+          name: 'Bia',
+          level: 20,
+          xp: 200,
+          avatarKey: 'bia',
+          class: { id: 'medico', name: 'Médico' },
+          map: { id: 'map-2', name: 'Distrito', tier: 2 },
+        },
+        {
+          id: 'online-only',
+          name: 'Ana',
+          level: 10,
+          xp: 100,
+          avatarKey: 'ana',
+          class: { id: 'lutador', name: 'Lutador' },
+          map: { id: 'map-1', name: 'Subúrbio', tier: 1 },
+        },
+        {
+          id: 'online-and-active',
+          name: 'Caio',
+          level: 5,
+          xp: 50,
+          avatarKey: 'caio',
+          class: { id: 'atirador', name: 'Atirador' },
+          map: { id: 'map-1', name: 'Subúrbio', tier: 1 },
+        },
+      ]);
+    const getResolvedAppearances = jest.fn().mockResolvedValue({
+      'online-only': { accentColor: '#fff' },
+    });
+    const service = new ActiveCharacterPresenceService(
+      { character: { findMany } } as never,
+      { getResolvedAppearances } as never,
+    );
+
+    const result = await service.getActiveCharacters(
+      ['online-only', 'online-and-active'],
+      now,
+    );
+
+    expect(result).toMatchObject({
+      activeCharacters: 3,
+      onlineCharacters: 2,
+      activityCharacters: 2,
+      offlineActivityCharacters: 1,
+      updatedAt: now.toISOString(),
+    });
+    expect(result.characters.map(({ character }) => character.id)).toEqual([
+      'online-only',
+      'online-and-active',
+      'offline-active',
+    ]);
+    expect(result.characters[0]).toMatchObject({
+      appearance: { accentColor: '#fff' },
+      presence: { online: true, inActivity: false, status: 'ONLINE' },
+    });
+    expect(result.characters[2]).toMatchObject({
+      presence: { online: false, inActivity: true, status: 'ACTIVITY' },
+    });
+    expect(getResolvedAppearances).toHaveBeenCalledWith([
+      'offline-active',
+      'online-only',
+      'online-and-active',
+    ]);
   });
 });

@@ -43,6 +43,7 @@ describe('early game equipment progression', () => {
             precision: stats.totalPrimaryStats.precision,
             technique: stats.totalPrimaryStats.technique,
             agility: stats.totalPrimaryStats.agility,
+            equipmentTier: stats.equipmentProgression.effectiveTier,
           },
         });
       const starterTtk = calculateTtk(starterStats);

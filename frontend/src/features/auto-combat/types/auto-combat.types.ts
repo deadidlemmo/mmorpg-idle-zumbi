@@ -380,6 +380,10 @@ export type AutoCombatRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "LETHAL";
 export interface AutoCombatSurvivalProjectionViewModel {
   riskLevel?: AutoCombatRiskLevel | string | null;
   expectedDamagePerKill?: number | null;
+  expectedDamagePerAttack?: number | null;
+  expectedAttacksPerKill?: number | null;
+  equipmentTierGap?: number | null;
+  incomingDamageMultiplier?: number | null;
   expectedMobHitDamage?: number | null;
   expectedDodgeChancePercent?: number | null;
   expectedCriticalChancePercent?: number | null;

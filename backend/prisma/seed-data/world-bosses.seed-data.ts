@@ -1,6 +1,7 @@
 import { EconomyCurrency, Rarity, WorldBossRewardType } from '@prisma/client';
 import {
   ECONOMY_ACTIVITY_REWARDS,
+  getPetRarityByTier,
   isEconomyLaunchTier,
 } from '../../src/common/config/economy.config';
 import { WORLD_BOSS_SCHEDULE_CONFIG } from '../../src/common/config/world-boss.config';
@@ -97,7 +98,7 @@ function buildLootTable(tier: number) {
       onlyIfDefeated: true,
       requiresMinParticipation: true,
       minContributionPercent: 0.25,
-      rarity: Rarity.LEGENDARY,
+      rarity: Rarity[getPetRarityByTier(tier)],
       sortOrder: 10,
     },
   ];

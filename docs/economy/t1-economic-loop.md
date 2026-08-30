@@ -1,5 +1,10 @@
 # Economia T1-T5 - Contrato de progressao
 
+> Para auditar as regras atuais, incluindo venda de drops ao NPC, preco real
+> de pocoes e Gold liquido por tier, use
+> `npm run economy:simulate:t1-t5` e consulte
+> `docs/economy/t1-t5-economic-simulator.md`.
+
 ## Objetivo
 
 Esta especificacao define a cadeia economica jogavel do Dead Idle do Tier 1 ao
@@ -246,19 +251,28 @@ O modelo ainda considera que cada jogador decide entrar nos 10 minutos
 anteriores ao inicio, embora o backend permita inscricao antecipada enquanto o
 evento esta agendado. Essa premissa continua explicita na configuracao.
 
-Os valores de recompensa nao sao alterados. Eventos derrotados usam 100% da
-recompensa; eventos expirados reutilizam os multiplicadores reais de progresso
-do backend (15%, 30%, 50% ou 75% para Gold e XP). Fragmentos continuam
-garantidos para participantes elegiveis, enquanto o casulo so pode cair quando
-o chefe e derrotado.
+O balanceamento deterministico v2 garante viabilidade para grupos pequenos:
+o backend congela o poder do grupo ao iniciar, deriva o HP do TTK alvo e passa
+a processar dano a cada 5 segundos sem depender de polling do jogador. Eventos
+derrotados usam 100% da recompensa; eventos expirados reutilizam os
+multiplicadores reais de progresso do backend (15%, 30%, 50% ou 75% para Gold
+e XP).
 
-Os valores de 65% de derrota para Contencao e 50% para Exterminio agora sao
-somente fallbacks. Eles sao substituidos automaticamente pela taxa observada
-quando houver 10 eventos ativados validos no respectivo slot. Duracao da
-derrota e progresso de expiracao usam o intervalo P25-P75 observado assim que
-atingem suas amostras minimas. O relatorio mostra eventos agendados, vazios,
-ativados, derrotados e expirados por slot, alem das perdas por nivel, ausencia,
-escolha/conflito e participacao insuficiente.
+Fragmentos continuam garantidos para participantes elegiveis, inclusive quando
+o casulo tambem cai. A curva T1-T5 usa `1/1`, `1/1`, `1-2`, `1-2` e `1-2`
+fragmentos; as chances de casulo, sempre condicionadas a derrota, sao `7%`,
+`7%`, `5%`, `5%` e `4%`. A telemetria observada continua separada dessa matriz
+deterministica e ainda deve atingir a amostra minima antes de novos ajustes de
+recompensa orientados pelo comportamento real.
+
+O fallback de derrota agora e `100%` nos dois slots porque a matriz v2 comprova
+que grupos com set atual ou anterior concluem dentro das 3 horas quando
+permanecem na luta. Isso nao e tratado como telemetria: a taxa observada ainda
+o substitui automaticamente quando houver 10 eventos ativados validos no
+respectivo slot. Duracao da derrota e progresso de expiracao usam o intervalo
+P25-P75 observado assim que atingem suas amostras minimas. O relatorio mostra
+eventos agendados, vazios, ativados, derrotados e expirados por slot, alem das
+perdas por nivel, ausencia, escolha/conflito e participacao insuficiente.
 
 Para auditar apenas a calibracao, use
 `npm run economy:calibrate:world-boss`. `--lookback-days=N` altera a janela;

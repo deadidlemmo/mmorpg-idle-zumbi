@@ -13,6 +13,7 @@ import {
   Rarity,
 } from '@prisma/client';
 import { getPetRarityByTier } from '../../common/config/economy.config';
+import { calculateBlackMarketSellValue } from '../../common/config/item-economy.config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
@@ -44,25 +45,6 @@ type InventoryEntryRecord = Prisma.InventoryItemGetPayload<{
 type BankEntryRecord = Prisma.BankItemGetPayload<{
   include: typeof bankEntryInclude;
 }>;
-
-const BLACK_MARKET_BASE_VALUE_BY_TIER: Record<number, number> = {
-  1: 3,
-  2: 6,
-  3: 12,
-  4: 20,
-  5: 32,
-  6: 50,
-  7: 76,
-  8: 112,
-  9: 160,
-  10: 225,
-};
-
-const BLACK_MARKET_TYPE_MULTIPLIER: Record<InventoryItemType, number> = {
-  [InventoryItemType.MATERIAL]: 1,
-  [InventoryItemType.CONSUMABLE]: 2,
-  [InventoryItemType.EQUIPMENT]: 8,
-};
 
 @Injectable()
 export class InventoryService {
@@ -476,38 +458,13 @@ export class InventoryService {
   private calculateBlackMarketSellValue(
     inventoryItem: InventoryEntryRecord | BankEntryRecord,
   ) {
-    if (inventoryItem.item.isSellable === false) {
-      return 0;
-    }
-
-    const tier = Math.min(10, Math.max(1, Math.floor(inventoryItem.item.tier)));
-    const baseValue = BLACK_MARKET_BASE_VALUE_BY_TIER[tier] ?? 3;
-    const typeMultiplier =
-      BLACK_MARKET_TYPE_MULTIPLIER[inventoryItem.type] ?? 1;
-    const rarityMultiplier = this.getBlackMarketRarityMultiplier(
-      this.getCanonicalItemRarity(inventoryItem.item),
-    );
-
-    return Math.max(
-      1,
-      Math.floor(baseValue * typeMultiplier * rarityMultiplier),
-    );
-  }
-
-  private getBlackMarketRarityMultiplier(rarity: Rarity) {
-    switch (rarity) {
-      case Rarity.UNCOMMON:
-        return 1.35;
-      case Rarity.RARE:
-        return 1.85;
-      case Rarity.EPIC:
-        return 2.6;
-      case Rarity.LEGENDARY:
-        return 3.75;
-      case Rarity.COMMON:
-      default:
-        return 1;
-    }
+    return calculateBlackMarketSellValue({
+      tier: inventoryItem.item.tier,
+      rarity: this.getCanonicalItemRarity(inventoryItem.item),
+      inventoryType: inventoryItem.type,
+      family: inventoryItem.item.family,
+      isSellable: inventoryItem.item.isSellable,
+    });
   }
 
   private getCanonicalItemRarity(item: InventoryEntryRecord['item']): Rarity {

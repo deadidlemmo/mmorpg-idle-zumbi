@@ -6,6 +6,10 @@ import {
 } from '../config/auto-combat.config';
 import { AUTO_COMBAT_BALANCE_TTK_POWER_EXPONENT } from '../config/combat-balance.config';
 import { getAutoCombatClassPassive } from './auto-combat-balance.util';
+import {
+  getAutoCombatEquipmentTierGap,
+  getAutoCombatOffensiveReadinessMultiplier,
+} from './auto-combat-pressure.util';
 
 export type AutoCombatTtkDifficultyLabel =
   | 'Muito facil'
@@ -21,6 +25,7 @@ export type AutoCombatTtkStatsInput = {
   precision?: number | null;
   technique?: number | null;
   agility?: number | null;
+  equipmentTier?: number | null;
 };
 
 export type AutoCombatTtkMobInput = {
@@ -171,8 +176,17 @@ export function calculateAutoCombatTtk(params: {
     tier: params.mob.tier,
     mobIndex,
   });
-  const playerOffensivePower = calculatePlayerOffensivePower(
+  const basePlayerOffensivePower = calculatePlayerOffensivePower(
     params.playerStats,
+  );
+  const equipmentReadinessMultiplier =
+    getAutoCombatOffensiveReadinessMultiplier({
+      mobTier: params.mob.tier,
+      equipmentTier: params.playerStats.equipmentTier,
+    });
+  const playerOffensivePower = Math.max(
+    1,
+    basePlayerOffensivePower * equipmentReadinessMultiplier,
   );
   const estimatedKillTimeSeconds = calculateAutoCombatTtkSeconds({
     baseKillTimeSeconds,
@@ -185,7 +199,14 @@ export function calculateAutoCombatTtk(params: {
     tier: Math.max(1, Math.floor(Number(params.mob.tier) || 1)),
     baseKillTimeSeconds,
     estimatedKillTimeSeconds,
+    basePlayerOffensivePower,
     playerOffensivePower,
+    equipmentTier: Math.max(0, Number(params.playerStats.equipmentTier) || 0),
+    equipmentTierGap: getAutoCombatEquipmentTierGap({
+      mobTier: params.mob.tier,
+      equipmentTier: params.playerStats.equipmentTier,
+    }),
+    equipmentReadinessMultiplier,
     monsterRecommendedPower: recommendedPower,
     killsPerMinute: 60 / estimatedKillTimeSeconds,
     killsPerHour: 3600 / estimatedKillTimeSeconds,

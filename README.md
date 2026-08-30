@@ -584,10 +584,12 @@ Campos/eventos como `eventKey`, `sequence`, `snapshotSequence`, `latestEventSequ
 
 - REST protegido em `/world-bosses`.
 - Socket.IO em `/world-bosses`.
-- Usa lobby, status de evento, dano, participacao, ranking e recompensas.
+- Usa inscricao antecipada, lobby de 15 minutos, status de evento, dano, participacao, ranking e recompensas.
 - Status: `SCHEDULED`, `LOBBY_OPEN`, `ACTIVE`, `DEFEATED`, `EXPIRED`, `REWARDED`, `CANCELLED`.
+- `POST /world-bosses/join` cria uma inscricao nao bloqueante durante `SCHEDULED`. `POST /world-bosses/confirm` encerra auto-combate/gathering e confirma a entrada no lobby atomicamente.
+- Somente participantes com `confirmedAt` entram no snapshot que define HP e DPS; depois de `ACTIVE` nao ha novas entradas nem recalculo do HP.
 - Recompensas podem incluir `PET_EGG`.
-- Ha modo de teste identificado no service (`WORLD_BOSS_TEST_UNLOCK_ENABLED = true`). Confirmar antes de tratar regras de agenda/disponibilidade como regras finais de producao.
+- O modo de teste depende de `WORLD_BOSS_TEST_UNLOCK_ENABLED=true`; o padrao e desativado.
 
 ### Vendor
 

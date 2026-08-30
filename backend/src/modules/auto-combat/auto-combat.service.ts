@@ -40,6 +40,12 @@ import {
   type AutoCombatSurvivalProjection,
 } from '../../common/utils/auto-combat-survival.util';
 import {
+  calculateAutoCombatAttackOpportunities,
+  getAutoCombatIncomingDamageMultiplier,
+  resolveAutoCombatAttackAttempts,
+} from '../../common/utils/auto-combat-pressure.util';
+import { isPotionTierUnlocked } from '../../common/utils/potion-tier.util';
+import {
   applyDropChancePenalty,
   applyXpPenalty,
   calculateTierFarmPenalty,
@@ -183,6 +189,7 @@ type FighterStats = {
   precision: number;
   technique: number;
   agility: number;
+  equipmentTier?: number;
 };
 
 type XpProgressSnapshot = {
@@ -2069,6 +2076,36 @@ export class AutoCombatService implements OnModuleDestroy {
     });
 
     return buildAutoCombatRealtimeStatusPayload(status);
+  }
+
+  async flushForWorldBossTransition(userId: string, characterId: string) {
+    const session = await this.prisma.autoCombatSession.findFirst({
+      where: {
+        characterId,
+        status: AutoCombatSessionStatus.ACTIVE,
+        phase: {
+          in: [
+            AutoCombatSessionPhase.HUNTING,
+            AutoCombatSessionPhase.COMBAT_ACTIVE,
+          ],
+        },
+        character: { userId },
+      },
+      orderBy: { startedAt: 'desc' },
+      select: { id: true },
+    });
+
+    if (!session) return null;
+
+    return this.processActiveSessionById(userId, session.id, {
+      emitRealtimeEvents: false,
+      waitForActiveProcessing: true,
+    });
+  }
+
+  async syncAfterWorldBossTransition(userId: string, characterId: string) {
+    this.stopRealtimeProcessingLoop(characterId);
+    return this.getStatus(userId, characterId);
   }
 
   async stopHunt(userId: string, characterId: string) {
@@ -5439,6 +5476,7 @@ export class AutoCombatService implements OnModuleDestroy {
       precision: combatStats.totalPrimaryStats.precision,
       technique: combatStats.totalPrimaryStats.technique,
       agility: combatStats.totalPrimaryStats.agility,
+      equipmentTier: combatStats.equipmentProgression.effectiveTier,
     };
     const calculatedTtk = calculateAutoCombatTtk({
       mob: currentMob,
@@ -5582,6 +5620,10 @@ export class AutoCombatService implements OnModuleDestroy {
             mobAttack: mobStats.attack,
             mobPrecision: mobStats.precision,
             mobTechnique: mobStats.technique,
+            mobSpeed: mobStats.speed,
+            mobTier: currentMob.tier,
+            equipmentTier: playerStats.equipmentTier,
+            killTimeSeconds: estimatedKillTimeSeconds,
             projectedKills: plannedKills,
             potion: autoPotionState
               ? {
@@ -5593,6 +5635,10 @@ export class AutoCombatService implements OnModuleDestroy {
           })
         : null;
     const xpRiskLevel = xpRiskProjection?.riskLevel ?? 'LOW';
+    const mobIncomingDamageMultiplier = getAutoCombatIncomingDamageMultiplier({
+      mobTier: currentMob.tier,
+      equipmentTier: playerStats.equipmentTier,
+    });
     let lastPotionQuantityBefore: number | null = null;
     let lastPotionQuantityAfter: number | null = null;
     let lastPotionUsedQuantity: number | null = null;
@@ -5816,12 +5862,29 @@ export class AutoCombatService implements OnModuleDestroy {
 
       killsResolved++;
 
-      if (playerHp > 0) {
+      const combatIndex = currentCombatIndex + killIndex;
+      const activeKillTtk = killIndex === 0 ? ttk : nextTtk;
+      const attackAttempts = resolveAutoCombatAttackAttempts({
+        attackOpportunities: calculateAutoCombatAttackOpportunities({
+          killTimeSeconds: activeKillTtk.estimatedKillTimeSeconds,
+          mobSpeed: mobStats.speed,
+          mobTier: currentMob.tier,
+          equipmentTier: playerStats.equipmentTier,
+        }),
+        combatIndex,
+      });
+
+      for (
+        let attackIndex = 0;
+        attackIndex < attackAttempts && playerHp > 0;
+        attackIndex++
+      ) {
         const attack = this.resolveAttack({
           attacker: mobStats,
           defender: playerStats,
           targetCurrentHp: playerHp,
           targetMaxHp: simulatedMaxHp,
+          damageMultiplier: mobIncomingDamageMultiplier,
         });
 
         mobAttackAttempts++;
@@ -5837,7 +5900,7 @@ export class AutoCombatService implements OnModuleDestroy {
         }
 
         if (playerHp > 0) {
-          tryPotionForCombat(currentCombatIndex + killIndex);
+          tryPotionForCombat(combatIndex);
           playerStats.hp = playerHp;
         }
       }
@@ -8539,6 +8602,10 @@ export class AutoCombatService implements OnModuleDestroy {
       mobAttack: mobStats.attack,
       mobPrecision: mobStats.precision,
       mobTechnique: mobStats.technique,
+      mobSpeed: mobStats.speed,
+      mobTier: mob.tier,
+      equipmentTier: playerStats.equipmentTier,
+      killTimeSeconds: ttk.estimatedKillTimeSeconds,
       projectedKills: projectedKillCount,
       potion: potionState
         ? {
@@ -9837,6 +9904,7 @@ export class AutoCombatService implements OnModuleDestroy {
       precision: combatStats.totalPrimaryStats.precision,
       technique: combatStats.totalPrimaryStats.technique,
       agility: combatStats.totalPrimaryStats.agility,
+      equipmentTier: combatStats.equipmentProgression.effectiveTier,
     };
     const potionState = this.createAutoPotionState(params.session.character);
     const huntingLevel = Math.max(
@@ -9917,6 +9985,10 @@ export class AutoCombatService implements OnModuleDestroy {
         mobAttack: projection.mobStats.attack,
         mobPrecision: projection.mobStats.precision,
         mobTechnique: projection.mobStats.technique,
+        mobSpeed: projection.mobStats.speed,
+        mobTier: projection.mob.tier,
+        equipmentTier: playerStats.equipmentTier,
+        killTimeSeconds: projection.ttk.estimatedKillTimeSeconds,
         projectedKills,
         potion: potionState
           ? {
@@ -10227,6 +10299,7 @@ export class AutoCombatService implements OnModuleDestroy {
     defender: FighterStats;
     targetCurrentHp: number;
     targetMaxHp: number;
+    damageMultiplier?: number;
   }): AttackResolution {
     const hit = this.calculateHit(params.attacker, params.defender);
 
@@ -10240,8 +10313,13 @@ export class AutoCombatService implements OnModuleDestroy {
       };
     }
 
+    const damageMultiplier = Math.max(1, Number(params.damageMultiplier) || 1);
+    const scaledFinalDamage = Math.max(
+      1,
+      Math.round(hit.finalDamage * damageMultiplier),
+    );
     const nextTargetHp = this.clampHp(
-      params.targetCurrentHp - hit.finalDamage,
+      params.targetCurrentHp - scaledFinalDamage,
       params.targetMaxHp,
     );
 
@@ -10252,7 +10330,10 @@ export class AutoCombatService implements OnModuleDestroy {
       damage: effectiveDamage,
       isCritical: hit.isCritical,
       isDodged: false,
-      criticalBonusDamage: hit.criticalBonusDamage,
+      criticalBonusDamage: Math.max(
+        0,
+        Math.round(hit.criticalBonusDamage * damageMultiplier),
+      ),
     };
   }
 
@@ -11014,6 +11095,15 @@ export class AutoCombatService implements OnModuleDestroy {
       return null;
     }
 
+    if (
+      !isPotionTierUnlocked({
+        characterLevel: character.level,
+        potion: potionItem,
+      })
+    ) {
+      return null;
+    }
+
     if (potionItem.healFlat <= 0 && potionItem.healPercent <= 0) {
       return null;
     }
@@ -11733,6 +11823,7 @@ export class AutoCombatService implements OnModuleDestroy {
       precision: combatStats.totalPrimaryStats.precision,
       technique: combatStats.totalPrimaryStats.technique,
       agility: combatStats.totalPrimaryStats.agility,
+      equipmentTier: combatStats.equipmentProgression.effectiveTier,
     };
   }
 

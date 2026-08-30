@@ -1,0 +1,182 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access */
+import { ConflictException } from '@nestjs/common';
+import { MissionStatus } from '@prisma/client';
+import type { AuditService } from '../../common/audit/audit.service';
+import type { PrismaService } from '../../prisma/prisma.service';
+import { ProgressionService } from './progression.service';
+
+describe('ProgressionService mission rewards', () => {
+  it('claims the reward snapshot instead of the mutable definition reward', async () => {
+    const characterUpdate = jest.fn().mockResolvedValue({ id: 'character-1' });
+    const ledgerCreate = jest.fn().mockResolvedValue({ id: 'ledger-1' });
+    const tx = {
+      characterMission: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'assignment-1',
+          characterId: 'character-1',
+          status: MissionStatus.COMPLETED,
+          claimedAt: null,
+          rewardTier: 5,
+          rewardXp: 990,
+          rewardGold: 13_000,
+          mission: {
+            key: 'daily-field-crafting',
+            rewardXp: 90,
+            rewardGold: 110,
+          },
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      character: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ level: 41, xp: 0 }),
+        update: characterUpdate,
+      },
+      economyLedgerEntry: { create: ledgerCreate },
+    };
+    const prisma = {
+      character: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 'character-1', level: 41 }),
+      },
+      $transaction: jest.fn(
+        (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
+      ),
+    } as unknown as PrismaService;
+    const service = new ProgressionService(prisma, {} as AuditService);
+
+    const result = await service.claimMission(
+      'user-1',
+      'character-1',
+      'assignment-1',
+    );
+
+    expect(result).toMatchObject({
+      rewardTier: 5,
+      rewardXp: 990,
+      rewardGold: 13_000,
+    });
+    expect(characterUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ gold: { increment: 13_000 } }),
+      }),
+    );
+    expect(ledgerCreate.mock.calls.map(([call]) => call.data.quantity)).toEqual(
+      [990, 13_000],
+    );
+  });
+
+  it('does not credit a mission whose claim lost the idempotency race', async () => {
+    const characterUpdate = jest.fn();
+    const tx = {
+      characterMission: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'assignment-1',
+          characterId: 'character-1',
+          status: MissionStatus.COMPLETED,
+          claimedAt: null,
+          rewardTier: 2,
+          rewardXp: 180,
+          rewardGold: 900,
+          mission: { key: 'daily-field-crafting' },
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      character: { update: characterUpdate },
+    };
+    const prisma = {
+      character: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 'character-1', level: 11 }),
+      },
+      $transaction: jest.fn(
+        (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
+      ),
+    } as unknown as PrismaService;
+    const service = new ProgressionService(prisma, {} as AuditService);
+
+    await expect(
+      service.claimMission('user-1', 'character-1', 'assignment-1'),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(characterUpdate).not.toHaveBeenCalled();
+  });
+
+  it('filters each objective by the tier frozen in the assignment', async () => {
+    const gatheringAggregate = jest
+      .fn()
+      .mockResolvedValue({ _sum: { collectedQuantity: 3 } });
+    const craftingAggregate = jest
+      .fn()
+      .mockResolvedValue({ _sum: { outputQuantity: 1 } });
+    const eventCount = jest.fn().mockResolvedValue(4);
+    const incursionCount = jest.fn().mockResolvedValue(1);
+    const prisma = {
+      gatheringSession: { aggregate: gatheringAggregate },
+      craftingSession: { aggregate: craftingAggregate },
+      autoCombatSessionEvent: { count: eventCount },
+      characterIncursionSession: { count: incursionCount },
+    } as unknown as PrismaService;
+    const service = new ProgressionService(prisma, {} as AuditService);
+    const internals = service as unknown as {
+      getObjectiveProgress(
+        characterId: string,
+        objectiveType: string,
+        since: Date,
+        characterLevel: number,
+        missionTier: number,
+      ): Promise<number>;
+    };
+    const since = new Date('2026-08-29T00:00:00.000Z');
+
+    await internals.getObjectiveProgress(
+      'character-1',
+      'GATHER_UNITS',
+      since,
+      21,
+      3,
+    );
+    await internals.getObjectiveProgress(
+      'character-1',
+      'CRAFT_ITEMS',
+      since,
+      21,
+      3,
+    );
+    await internals.getObjectiveProgress(
+      'character-1',
+      'DEFEAT_MOBS',
+      since,
+      21,
+      3,
+    );
+    await internals.getObjectiveProgress(
+      'character-1',
+      'COMPLETE_INCURSIONS',
+      since,
+      21,
+      3,
+    );
+
+    expect(gatheringAggregate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ map: { tier: 3 } }),
+      }),
+    );
+    expect(craftingAggregate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ outputItem: { tier: 3 } }),
+      }),
+    );
+    expect(eventCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ session: { map: { tier: 3 } } }),
+      }),
+    );
+    expect(incursionCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ incursion: { tier: 3 } }),
+      }),
+    );
+  });
+});

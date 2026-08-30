@@ -31,7 +31,7 @@ export const missionDefinitions = [
     objectiveType: 'CRAFT_ITEMS',
     targetValue: 1,
     rewardXp: 90,
-    rewardGold: 55,
+    rewardGold: 110,
     sortOrder: 30,
   },
   {

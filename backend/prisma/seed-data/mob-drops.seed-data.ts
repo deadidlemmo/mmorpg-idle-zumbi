@@ -2,6 +2,7 @@ import { Rarity } from '@prisma/client';
 import type { MobDropItemSeedData, MobDropTableSeedData } from '../seed-types';
 import {
   getAbsorbedAutoCombatMobOrder,
+  getActiveAutoCombatMobRank,
   isActiveAutoCombatMob,
   mobBaseDefinitions,
   type MobBaseSeedData,
@@ -17,6 +18,9 @@ import {
  * - elites dropam tambem 1 nucleo infectado de elite.
  * - cada familia de biomaterial aparece 2 vezes por tier, totalizando 20 fontes por familia.
  * - Biomaterial Cortante tem chance dobrada porque existem 2x mais receitas de arma principal.
+ * - T2 e T4 aumentam o rendimento conforme a posicao para criar progressao
+ *   economica sem duplicar os materiais compartilhados por faixa de raridade.
+ * - T5 aplica um ganho uniforme para sustentar os custos do fim do lancamento.
  */
 
 const BIOMATERIAL_FAMILIES = [
@@ -86,6 +90,34 @@ const BIOMATERIAL_DROP_CHANCE_BY_FAMILY: Record<BiomaterialFamily, number> = {
   'Biomaterial Reativo': 35,
   'Biomaterial Torácico': 35,
 };
+
+type AutoCombatDropPosition = 'START' | 'MID' | 'END';
+
+export const AUTO_COMBAT_DROP_YIELD_MULTIPLIER_BY_TIER_POSITION: Readonly<
+  Partial<Record<number, Readonly<Record<AutoCombatDropPosition, number>>>>
+> = Object.freeze({
+  2: Object.freeze({ START: 2, MID: 3, END: 4.5 }),
+  4: Object.freeze({ START: 2, MID: 2.5, END: 3.4 }),
+  5: Object.freeze({ START: 1.3, MID: 1.3, END: 1.3 }),
+});
+
+function getAutoCombatDropPosition(rank: number): AutoCombatDropPosition {
+  if (rank <= 2) return 'START';
+  if (rank <= 4) return 'MID';
+  return 'END';
+}
+
+export function getAutoCombatDropYieldMultiplier(mob: MobBaseSeedData) {
+  const rank = getActiveAutoCombatMobRank(mob);
+
+  if (rank === null) return 1;
+
+  const position = getAutoCombatDropPosition(rank);
+  return (
+    AUTO_COMBAT_DROP_YIELD_MULTIPLIER_BY_TIER_POSITION[mob.tier]?.[position] ??
+    1
+  );
+}
 
 function slugify(value: string) {
   return value
@@ -237,6 +269,25 @@ function mergeMobDrops(drops: MobDropEntry[]) {
   return Array.from(mergedDropsByItemName.values());
 }
 
+function applyAutoCombatDropYieldProgression(
+  drops: MobDropEntry[],
+  mob: MobBaseSeedData,
+) {
+  const multiplier = getAutoCombatDropYieldMultiplier(mob);
+
+  if (multiplier <= 1) return drops;
+
+  const quantityMultiplier = Math.max(1, Math.floor(multiplier));
+  const chanceMultiplier = multiplier / quantityMultiplier;
+
+  return drops.map((drop) => ({
+    ...drop,
+    dropChance: Math.min(100, Math.round(drop.dropChance * chanceMultiplier)),
+    minQuantity: drop.minQuantity * quantityMultiplier,
+    maxQuantity: drop.maxQuantity * quantityMultiplier,
+  }));
+}
+
 const tierMobCounters = new Map<number, number>();
 
 const mobDropSources: MobDropSource[] = mobBaseDefinitions.map((mob) => {
@@ -271,10 +322,10 @@ export const mobDropTables: MobDropTableSeedData[] = mobDropSources
             }),
           );
 
-    const drops = mergeMobDrops([
-      ...source.drops,
-      ...(absorbedSource?.drops ?? []),
-    ]);
+    const drops = applyAutoCombatDropYieldProgression(
+      mergeMobDrops([...source.drops, ...(absorbedSource?.drops ?? [])]),
+      source.mob,
+    );
 
     return {
       tier: source.mob.tier,

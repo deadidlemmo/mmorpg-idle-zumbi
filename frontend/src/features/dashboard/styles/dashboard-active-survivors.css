@@ -1,0 +1,370 @@
+.dashboard-sidebar__online {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    background 150ms ease;
+}
+
+.dashboard-sidebar__online:hover,
+.dashboard-sidebar__online:focus-visible {
+  color: #fff8e8;
+  outline: none;
+  background:
+    radial-gradient(
+      circle at 8% 50%,
+      rgba(123, 196, 109, 0.2),
+      transparent 38%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
+    rgba(7, 13, 10, 0.82);
+}
+
+.active-survivors-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(2, 5, 4, 0.78);
+  backdrop-filter: blur(7px);
+}
+
+.active-survivors-modal__panel {
+  width: min(46rem, 100%);
+  max-height: min(47rem, calc(100dvh - 2rem));
+  overflow: hidden;
+  border: 1px solid rgba(132, 184, 92, 0.34);
+  border-radius: 0.62rem;
+  color: var(--text-primary);
+  background: linear-gradient(
+    180deg,
+    rgba(18, 31, 21, 0.96),
+    rgba(4, 9, 7, 0.99)
+  );
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+.active-survivors-modal__header {
+  display: grid;
+  grid-template-columns: 2.7rem minmax(0, 1fr) 2.35rem;
+  align-items: center;
+  gap: 0.78rem;
+  min-height: 5.4rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid rgba(231, 227, 216, 0.09);
+}
+
+.active-survivors-modal__mark,
+.active-survivors-modal__header > button {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  place-items: center;
+  border: 1px solid rgba(132, 184, 92, 0.28);
+  border-radius: 0.5rem;
+  color: #b7df8f;
+  background: rgba(102, 149, 70, 0.09);
+}
+
+.active-survivors-modal__header > button {
+  appearance: none;
+  padding: 0;
+  color: rgba(231, 227, 216, 0.76);
+  background: rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+}
+
+.active-survivors-modal__header > button:hover,
+.active-survivors-modal__header > button:focus-visible {
+  border-color: rgba(232, 184, 78, 0.42);
+  color: #fff8e8;
+  outline: none;
+}
+
+.active-survivors-modal__header small {
+  display: block;
+  margin-bottom: 0.28rem;
+  color: #8dc664;
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.active-survivors-modal__header h2 {
+  margin: 0;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.active-survivors-modal__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-bottom: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+.active-survivors-modal__summary > div {
+  padding: 0.74rem 1rem;
+}
+
+.active-survivors-modal__summary > div + div {
+  border-left: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+.active-survivors-modal__summary dt {
+  color: rgba(231, 227, 216, 0.48);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.active-survivors-modal__summary dd {
+  margin: 0.18rem 0 0;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.active-survivors-modal__list {
+  min-height: 12rem;
+  max-height: min(31rem, calc(100dvh - 14.7rem));
+  overflow-y: auto;
+  padding: 0.42rem 0;
+  scrollbar-color: rgba(132, 184, 92, 0.42) transparent;
+}
+
+.active-survivors-modal__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 3.15rem minmax(0, 1fr) 3.7rem 7.6rem 1.5rem;
+  align-items: center;
+  gap: 0.78rem;
+  min-height: 4.6rem;
+  padding: 0.55rem 1rem;
+  border-left: 2px solid transparent;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.active-survivors-modal__row + .active-survivors-modal__row {
+  border-top: 1px solid rgba(231, 227, 216, 0.065);
+}
+
+.active-survivors-modal__row:hover,
+.active-survivors-modal__row:focus-visible {
+  border-left-color: var(--active-survivor-accent);
+  outline: none;
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--active-survivor-accent) 11%, transparent),
+      transparent 56%
+    ),
+    rgba(255, 255, 255, 0.022);
+}
+
+.active-survivors-modal__avatar {
+  width: 3.15rem;
+  height: 3.15rem;
+  border-radius: 0.4rem;
+}
+
+.active-survivors-modal__identity,
+.active-survivors-modal__identity > span {
+  min-width: 0;
+}
+
+.active-survivors-modal__identity > span {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.active-survivors-modal__identity strong {
+  overflow: hidden;
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-survivors-modal__identity em {
+  border: 1px solid rgba(132, 184, 92, 0.32);
+  border-radius: 999px;
+  padding: 0.12rem 0.35rem;
+  color: #b7df8f;
+  font-size: 0.54rem;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.active-survivors-modal__identity small {
+  display: block;
+  margin-top: 0.22rem;
+  overflow: hidden;
+  color: rgba(231, 227, 216, 0.54);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-survivors-modal__level {
+  text-align: right;
+}
+
+.active-survivors-modal__level small {
+  display: block;
+  color: rgba(231, 227, 216, 0.42);
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.active-survivors-modal__level strong {
+  color: #fff8e8;
+  font-family: var(--font-title);
+  font-size: 0.88rem;
+}
+
+.active-survivors-modal__presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  color: rgba(231, 227, 216, 0.62);
+  font-size: 0.66rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.active-survivors-modal__presence i {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: #d0a947;
+  box-shadow: 0 0 9px rgba(208, 169, 71, 0.34);
+}
+
+.active-survivors-modal__presence.is-online {
+  color: #a8d67f;
+}
+
+.active-survivors-modal__presence.is-online i {
+  background: #72c868;
+  box-shadow: 0 0 9px rgba(114, 200, 104, 0.46);
+}
+
+.active-survivors-modal__chevron {
+  color: rgba(231, 227, 216, 0.32);
+}
+
+.active-survivors-modal__row:hover .active-survivors-modal__chevron,
+.active-survivors-modal__row:focus-visible .active-survivors-modal__chevron {
+  color: #d8b65b;
+}
+
+.active-survivors-modal__state {
+  display: flex;
+  min-height: 12rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 2rem;
+  color: rgba(231, 227, 216, 0.62);
+  text-align: center;
+}
+
+.active-survivors-modal__state.is-error {
+  flex-direction: column;
+  color: #e9a8a1;
+}
+
+.active-survivors-modal__state button {
+  border: 1px solid rgba(232, 184, 78, 0.34);
+  border-radius: 0.4rem;
+  padding: 0.48rem 0.72rem;
+  color: #ffe3a3;
+  font: inherit;
+  font-weight: 850;
+  background: rgba(232, 184, 78, 0.08);
+  cursor: pointer;
+}
+
+.active-survivors-modal__state .is-spinning {
+  animation: active-survivors-spin 900ms linear infinite;
+}
+
+.active-survivors-modal__panel > footer {
+  padding: 0.58rem 1rem;
+  border-top: 1px solid rgba(231, 227, 216, 0.065);
+  color: rgba(231, 227, 216, 0.4);
+  font-size: 0.61rem;
+  font-weight: 750;
+  text-align: right;
+}
+
+@keyframes active-survivors-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .active-survivors-modal {
+    place-items: end center;
+    padding: 0;
+  }
+
+  .active-survivors-modal__panel {
+    width: 100%;
+    max-height: min(88dvh, 48rem);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 0.7rem 0.7rem 0 0;
+  }
+
+  .active-survivors-modal__header {
+    padding-inline: 0.82rem;
+  }
+
+  .active-survivors-modal__summary > div {
+    padding-inline: 0.72rem;
+  }
+
+  .active-survivors-modal__row {
+    grid-template-columns: 2.8rem minmax(0, 1fr) 2.8rem 1.2rem;
+    gap: 0.58rem;
+    padding-inline: 0.72rem;
+  }
+
+  .active-survivors-modal__avatar {
+    width: 2.8rem;
+    height: 2.8rem;
+  }
+
+  .active-survivors-modal__presence {
+    grid-column: 2 / 4;
+    margin-top: -0.5rem;
+  }
+
+  .active-survivors-modal__chevron {
+    grid-column: 4;
+    grid-row: 1 / 3;
+  }
+}

@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { AUTO_POTION_TRIGGER_PERCENT } from '../../common/config/potions.config';
+import { isPotionTierUnlocked } from '../../common/utils/potion-tier.util';
 import { calculateCombatHit } from '../../common/utils/combat-damage.util';
 import {
   applyXpPenalty,
@@ -833,6 +834,15 @@ export class CombatService {
     }
 
     if (!potionItem.usableInCombat) {
+      return null;
+    }
+
+    if (
+      !isPotionTierUnlocked({
+        characterLevel: character.level,
+        potion: potionItem,
+      })
+    ) {
       return null;
     }
 

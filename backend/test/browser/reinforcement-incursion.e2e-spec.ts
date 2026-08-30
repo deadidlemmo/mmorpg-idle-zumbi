@@ -66,6 +66,9 @@ type IncursionStatusResponse = {
   rewardedSession?: {
     id: string;
     success: boolean;
+    goldCostPaid: number;
+    entryGoldRefund: number;
+    goldReward: number;
     rewards: Array<{
       rewardType: string;
       itemId?: string | null;
@@ -156,6 +159,12 @@ async function startAndCompleteIncursion() {
 
   expect(status.rewardedSession?.id).toBe(started.session.id);
   expect(status.rewardedSession?.success).toBe(true);
+  expect(status.rewardedSession?.entryGoldRefund).toBe(
+    status.rewardedSession?.goldCostPaid,
+  );
+  expect(status.rewardedSession?.goldReward).toBeGreaterThanOrEqual(
+    status.rewardedSession?.entryGoldRefund ?? 0,
+  );
 
   return status.rewardedSession;
 }
@@ -308,6 +317,9 @@ test.describe('incursão e reforço de equipamentos', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText(reinforcementMaterialName)).toBeVisible();
+    await expect(
+      dialog.getByText('Entrada devolvida no sucesso'),
+    ).toBeVisible();
     await expect(
       dialog.getByText('Progresso de equipamento garantido'),
     ).toBeVisible();

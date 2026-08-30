@@ -22,6 +22,7 @@ type WorldBossSocketSubscription = {
 type WorldBossSocket = Socket & {
   data: {
     userId?: string;
+    worldBossAuthentication?: Promise<string>;
     joinedWorldBossRooms?: Set<string>;
     worldBossSubscriptions?: Map<string, WorldBossSocketSubscription>;
     worldBossStatusInterval?: NodeJS.Timeout;
@@ -42,31 +43,20 @@ export class WorldBossesGateway {
   ) {}
 
   async handleConnection(client: WorldBossSocket) {
+    const authentication = this.authenticateClient(client);
+    client.data.worldBossAuthentication = authentication;
+
     try {
-      const token = this.extractToken(client);
-
-      if (!token) {
-        client.emit('worldBoss:error', {
-          message: 'Token de autenticação ausente no WebSocket.',
-        });
-        client.disconnect(true);
-        return;
-      }
-
-      const user = await this.socketAuth.authenticate(token);
-
-      client.data.userId = user.id;
-      client.data.joinedWorldBossRooms = new Set<string>();
-      client.data.worldBossSubscriptions = new Map();
-      client.emit('worldBoss:connected', {
-        socketId: client.id,
-        userId: user.id,
-      });
+      await authentication;
     } catch (error) {
       client.emit('worldBoss:error', {
         message: this.extractErrorMessage(error),
       });
       client.disconnect(true);
+    } finally {
+      if (client.data.worldBossAuthentication === authentication) {
+        client.data.worldBossAuthentication = undefined;
+      }
     }
   }
 
@@ -81,6 +71,9 @@ export class WorldBossesGateway {
     @ConnectedSocket() client: WorldBossSocket,
     @MessageBody() payload: { eventId?: string; characterId?: string },
   ) {
+    const userId = await this.resolveAuthenticatedUserId(client);
+    if (!userId) return null;
+
     const eventId = this.normalizeId(payload?.eventId);
     if (!eventId) {
       client.emit('worldBoss:error', {
@@ -109,6 +102,9 @@ export class WorldBossesGateway {
     @ConnectedSocket() client: WorldBossSocket,
     @MessageBody() payload: { eventId?: string },
   ) {
+    const userId = await this.resolveAuthenticatedUserId(client);
+    if (!userId) return null;
+
     const eventId = this.normalizeId(payload?.eventId);
     if (!eventId) return null;
     const room = this.getEventRoom(eventId);
@@ -123,56 +119,70 @@ export class WorldBossesGateway {
   emitProgress(eventId: string, payload: unknown) {
     this.server
       .to(this.getEventRoom(eventId))
-      .emit('worldBoss:progress', payload);
+      .emit('worldBoss:progress', this.toPublicStatus(payload));
   }
 
-  emitJoined(eventId: string, payload: unknown) {
+  emitRegistered(eventId: string, payload: unknown) {
+    const publicPayload = this.toPublicStatus(payload);
     this.server
       .to(this.getEventRoom(eventId))
-      .emit('worldBoss:joinedLobby', payload);
+      .emit('worldBoss:registered', publicPayload);
     this.server
       .to(this.getEventRoom(eventId))
-      .emit('worldBoss:lobbyUpdated', payload);
+      .emit('worldBoss:lobbyUpdated', publicPayload);
+  }
+
+  emitConfirmed(eventId: string, payload: unknown) {
+    const publicPayload = this.toPublicStatus(payload);
+    this.server
+      .to(this.getEventRoom(eventId))
+      .emit('worldBoss:joinedLobby', publicPayload);
+    this.server
+      .to(this.getEventRoom(eventId))
+      .emit('worldBoss:lobbyUpdated', publicPayload);
   }
 
   emitLeft(eventId: string, payload: unknown) {
+    const publicPayload = this.toPublicStatus(payload);
     this.server
       .to(this.getEventRoom(eventId))
-      .emit('worldBoss:leftLobby', payload);
+      .emit('worldBoss:leftLobby', publicPayload);
     this.server
       .to(this.getEventRoom(eventId))
-      .emit('worldBoss:lobbyUpdated', payload);
-    this.server.to(this.getEventRoom(eventId)).emit('worldBoss:left', payload);
+      .emit('worldBoss:lobbyUpdated', publicPayload);
+    this.server
+      .to(this.getEventRoom(eventId))
+      .emit('worldBoss:left', publicPayload);
   }
 
   emitBattleStarted(eventId: string, payload: unknown) {
     this.server
       .to(this.getEventRoom(eventId))
-      .emit('worldBoss:battleStarted', payload);
+      .emit('worldBoss:battleStarted', this.toPublicStatus(payload));
   }
 
   emitDamage(eventId: string, payload: unknown) {
     this.server
       .to(this.getEventRoom(eventId))
-      .emit('worldBoss:damage', payload);
+      .emit('worldBoss:damage', this.toPublicStatus(payload));
   }
 
   emitDefeated(eventId: string, payload: unknown) {
     this.server
       .to(this.getEventRoom(eventId))
-      .emit('worldBoss:defeated', payload);
+      .emit('worldBoss:defeated', this.toPublicStatus(payload));
   }
 
   emitExpired(eventId: string, payload: unknown) {
     this.server
       .to(this.getEventRoom(eventId))
-      .emit('worldBoss:expired', payload);
+      .emit('worldBoss:expired', this.toPublicStatus(payload));
   }
 
   emitRewarded(eventId: string, payload: unknown) {
     this.server
       .to(this.getEventRoom(eventId))
-      .emit('worldBoss:rewarded', payload);
+      .emit('worldBoss:rewarded', this.toPublicStatus(payload));
   }
 
   private ensureStatusInterval(client: WorldBossSocket) {
@@ -220,11 +230,8 @@ export class WorldBossesGateway {
     characterId: string,
     subscription = client.data.worldBossSubscriptions?.get(eventId),
   ) {
-    const userId = client.data.userId;
-    if (!userId) {
-      client.emit('worldBoss:error', { message: 'Socket não autenticado.' });
-      return null;
-    }
+    const userId = await this.resolveAuthenticatedUserId(client);
+    if (!userId) return null;
 
     try {
       const status = await this.worldBossesService.getEventStatus(
@@ -266,6 +273,52 @@ export class WorldBossesGateway {
 
   private getEventRoom(eventId: string) {
     return `world-boss:${eventId}`;
+  }
+
+  private toPublicStatus(payload: unknown) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return payload;
+    }
+
+    const publicPayload = { ...(payload as Record<string, unknown>) };
+    delete publicPayload.participant;
+    delete publicPayload.rewardsGranted;
+    delete publicPayload.stoppedActivities;
+    delete publicPayload.eligible;
+    delete publicPayload.message;
+    return publicPayload;
+  }
+
+  private async authenticateClient(client: WorldBossSocket) {
+    const token = this.extractToken(client);
+    if (!token) {
+      throw new Error('Token de autenticação ausente no WebSocket.');
+    }
+
+    const user = await this.socketAuth.authenticate(token);
+    client.data.userId = user.id;
+    client.data.joinedWorldBossRooms = new Set<string>();
+    client.data.worldBossSubscriptions = new Map();
+    client.emit('worldBoss:connected', {
+      socketId: client.id,
+      userId: user.id,
+    });
+    return user.id;
+  }
+
+  private async resolveAuthenticatedUserId(client: WorldBossSocket) {
+    if (client.data.userId) return client.data.userId;
+
+    if (client.data.worldBossAuthentication) {
+      try {
+        return await client.data.worldBossAuthentication;
+      } catch {
+        return null;
+      }
+    }
+
+    client.emit('worldBoss:error', { message: 'Socket não autenticado.' });
+    return null;
   }
 
   private normalizeId(value?: string | null) {

@@ -14,6 +14,11 @@ import {
 } from '@prisma/client';
 import { AUTO_POTION_TRIGGER_PERCENT } from '../../common/config/potions.config';
 import {
+  getPotionTierAccess,
+  getPotionTierLockedMessage,
+  isPotionTierUnlocked,
+} from '../../common/utils/potion-tier.util';
+import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
 } from '../../common/utils/stats.util';
@@ -114,6 +119,8 @@ export class ConsumablesService {
         'Este consumível não possui efeito de cura.',
       );
     }
+
+    this.assertPotionTierUnlocked(character.level, item);
 
     const equipmentItems = this.getEquipmentItems(character);
     const gatheringBonus = calculateGatheringPrimaryBonus(
@@ -272,7 +279,10 @@ export class ConsumablesService {
       config.potionItemId,
     );
 
-    const availablePotions = await this.getAvailablePotions(character.id);
+    const availablePotions = await this.getAvailablePotions(
+      character.id,
+      character.level,
+    );
 
     return this.buildPotionConfigResponse({
       character,
@@ -369,6 +379,8 @@ export class ConsumablesService {
         );
       }
 
+      this.assertPotionTierUnlocked(character.level, potionItem);
+
       if (
         (nextUseInManualCombat || nextUseInAutoCombat) &&
         potionItem.usableInCombat !== true
@@ -431,7 +443,10 @@ export class ConsumablesService {
       config.potionItemId,
     );
 
-    const availablePotions = await this.getAvailablePotions(character.id);
+    const availablePotions = await this.getAvailablePotions(
+      character.id,
+      character.level,
+    );
 
     return {
       message: 'Configuração de poção automática atualizada com sucesso.',
@@ -464,7 +479,10 @@ export class ConsumablesService {
     return inventoryItem?.quantity ?? 0;
   }
 
-  private async getAvailablePotions(characterId: string) {
+  private async getAvailablePotions(
+    characterId: string,
+    characterLevel: number,
+  ) {
     const inventoryItems = await this.prisma.inventoryItem.findMany({
       where: {
         characterId,
@@ -485,7 +503,11 @@ export class ConsumablesService {
       .filter((inventoryItem) => {
         return (
           inventoryItem.item.slot === ItemSlot.CONSUMABLE &&
-          this.hasHealingEffect(inventoryItem.item)
+          this.hasHealingEffect(inventoryItem.item) &&
+          isPotionTierUnlocked({
+            characterLevel,
+            potion: inventoryItem.item,
+          })
         );
       })
       .sort((a, b) => {
@@ -502,6 +524,7 @@ export class ConsumablesService {
     character: {
       id: string;
       name: string;
+      level: number;
     };
     config: {
       id: string;
@@ -524,11 +547,16 @@ export class ConsumablesService {
 
     const hasPotion = Boolean(potion);
     const hasPotionInInventory = availableQuantity > 0;
+    const tierAccess = getPotionTierAccess({
+      characterLevel: character.level,
+      potion: potion ?? { minTier: 1 },
+    });
     const canAutoUseInManualCombat =
       config.enabled &&
       config.useInManualCombat &&
       hasPotion &&
       hasPotionInInventory &&
+      tierAccess.allowed &&
       potion?.slot === ItemSlot.CONSUMABLE &&
       potion?.usableInCombat === true;
 
@@ -537,6 +565,7 @@ export class ConsumablesService {
       config.useInAutoCombat &&
       hasPotion &&
       hasPotionInInventory &&
+      tierAccess.allowed &&
       potion?.slot === ItemSlot.CONSUMABLE &&
       potion?.usableInCombat === true;
 
@@ -550,12 +579,14 @@ export class ConsumablesService {
       useInAutoCombat: config.useInAutoCombat,
       potion,
       potionItem: potion,
+      tierAccess,
     };
 
     return {
       character: {
         id: character.id,
         name: character.name,
+        level: character.level,
       },
 
       ...flatConfig,
@@ -584,11 +615,28 @@ export class ConsumablesService {
         canAutoUseInManualCombat,
         canAutoUseInAutoCombat,
         canAutoUse: canAutoUseInManualCombat || canAutoUseInAutoCombat,
-        triggerText: config.enabled
-          ? 'Pocao selecionada para uso durante a batalha.'
-          : 'Nenhuma pocao selecionada para a batalha.',
+        tierAccess,
+        triggerText: !tierAccess.allowed
+          ? getPotionTierLockedMessage({
+              characterLevel: character.level,
+              potion: potion ?? { minTier: 1 },
+            })
+          : config.enabled
+            ? 'Pocao selecionada para uso durante a batalha.'
+            : 'Nenhuma pocao selecionada para a batalha.',
       },
     };
+  }
+
+  private assertPotionTierUnlocked(
+    characterLevel: number,
+    potion: Pick<Item, 'name' | 'minTier'>,
+  ) {
+    if (isPotionTierUnlocked({ characterLevel, potion })) return;
+
+    throw new BadRequestException(
+      getPotionTierLockedMessage({ characterLevel, potion }),
+    );
   }
 
   private mapPotionItem(item: Item, availableQuantity = 0) {

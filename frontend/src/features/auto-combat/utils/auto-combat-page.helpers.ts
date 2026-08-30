@@ -1,10 +1,10 @@
-import { apiClient } from '../../../services/api/apiClient';
-import { normalizeClassName } from '../../characters/api/characters.api';
+import { apiClient } from "../../../services/api/apiClient";
+import { normalizeClassName } from "../../characters/api/characters.api";
 import type {
   CharacterOverviewResponse,
   DashboardStats,
-} from '../../dashboard/types/dashboard.types';
-import { EMPTY_STATS } from '../constants/auto-combat-stat-cards';
+} from "../../dashboard/types/dashboard.types";
+import { EMPTY_STATS } from "../constants/auto-combat-stat-cards";
 import type {
   AutoCombatRealtimeActions,
   AutoCombatRealtimePotionEvent,
@@ -19,7 +19,7 @@ import type {
   RealtimeCombatState,
   RealtimeSessionTotalsState,
   UpdatePotionConfigPayload,
-} from '../types/auto-combat-page.types';
+} from "../types/auto-combat-page.types";
 import type {
   AutoCombatEncounterViewModel,
   AutoCombatBattleProgressViewModel,
@@ -28,14 +28,14 @@ import type {
   AutoCombatSessionApiViewModel,
   AutoCombatStatusResponse,
   AutoCombatSubMapViewModel,
-} from '../types/auto-combat.types';
+} from "../types/auto-combat.types";
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 export function toSafeNumber(value: unknown, fallback = 0) {
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     return fallback;
   }
 
@@ -45,7 +45,7 @@ export function toSafeNumber(value: unknown, fallback = 0) {
 }
 
 export function getOptionalNumber(value: unknown) {
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     return undefined;
   }
 
@@ -67,7 +67,7 @@ export function getFirstOptionalNumber(...values: unknown[]) {
 }
 
 export function getOptionalBoolean(value: unknown) {
-  return typeof value === 'boolean' ? value : undefined;
+  return typeof value === "boolean" ? value : undefined;
 }
 
 export function clampPercent(value: unknown) {
@@ -83,7 +83,7 @@ export function clampNumber(value: unknown, min: number, max: number) {
 }
 
 export function formatSeconds(seconds?: number | null) {
-  if (seconds === null || seconds === undefined) return '—';
+  if (seconds === null || seconds === undefined) return "—";
 
   const safeSeconds = Math.max(0, Math.floor(seconds));
   const hours = Math.floor(safeSeconds / 3600);
@@ -102,41 +102,41 @@ export function formatSeconds(seconds?: number | null) {
 }
 
 export function formatClockSeconds(seconds?: number | null) {
-  if (seconds === null || seconds === undefined) return '--:--:--';
+  if (seconds === null || seconds === undefined) return "--:--:--";
 
   const safeSeconds = Math.max(0, Math.floor(seconds));
   const hours = Math.floor(safeSeconds / 3600);
   const minutes = Math.floor((safeSeconds % 3600) / 60);
   const remainingSeconds = safeSeconds % 60;
-  const pad = (value: number) => String(value).padStart(2, '0');
+  const pad = (value: number) => String(value).padStart(2, "0");
 
   return `${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}`;
 }
 
 export function formatSessionStatus(status?: string | null) {
   const labels: Record<string, string> = {
-    ACTIVE: 'Sessão ativa',
-    STOPPED: 'Sessão interrompida manualmente',
-    FINISHED: 'Sessão finalizada',
-    DEFEATED: 'Sobrevivente derrotado',
-    FAILED: 'Sessão falhou',
-    CANCELLED: 'Sessão cancelada',
+    ACTIVE: "Sessão ativa",
+    STOPPED: "Sessão interrompida manualmente",
+    FINISHED: "Sessão finalizada",
+    DEFEATED: "Sobrevivente derrotado",
+    FAILED: "Sessão falhou",
+    CANCELLED: "Sessão cancelada",
   };
 
-  if (!status) return 'Sem sessão';
+  if (!status) return "Sem sessão";
 
   return labels[status] ?? status;
 }
 
 export function formatRiskLabel(risk?: string | null) {
   const labels: Record<string, string> = {
-    LOW: 'Baixo',
-    MEDIUM: 'Médio',
-    HIGH: 'Alto',
-    LETHAL: 'Letal',
+    LOW: "Baixo",
+    MEDIUM: "Médio",
+    HIGH: "Alto",
+    LETHAL: "Letal",
   };
 
-  if (!risk) return '—';
+  if (!risk) return "—";
 
   return labels[risk] ?? risk;
 }
@@ -153,10 +153,10 @@ export function getApiErrorMessage(error: unknown, fallback: string) {
   const message = apiError.response?.data?.message;
 
   if (Array.isArray(message)) {
-    return message.join(' ');
+    return message.join(" ");
   }
 
-  if (typeof message === 'string' && message.trim()) {
+  if (typeof message === "string" && message.trim()) {
     return message;
   }
 
@@ -168,7 +168,7 @@ export function getApiErrorMessage(error: unknown, fallback: string) {
 }
 
 export function normalizeStats(value: unknown): DashboardStats | null {
-  if (!value || typeof value !== 'object') return null;
+  if (!value || typeof value !== "object") return null;
 
   const stats = value as Partial<DashboardStats>;
 
@@ -202,18 +202,18 @@ export function normalizePotionInventoryEntry(
   const item = rawItem as unknown as PotionEquipmentItem;
 
   const id =
-    typeof item.id === 'string'
+    typeof item.id === "string"
       ? item.id
-      : typeof value.itemId === 'string'
+      : typeof value.itemId === "string"
         ? value.itemId
-        : '';
+        : "";
 
   if (!id) return null;
 
   const slot = item.slot ?? value.slot;
   const type = value.type ?? item.slot;
 
-  if (slot !== 'CONSUMABLE' && type !== 'CONSUMABLE') {
+  if (slot !== "CONSUMABLE" && type !== "CONSUMABLE") {
     return null;
   }
 
@@ -238,7 +238,7 @@ export function normalizePotionInventoryEntry(
     ...item,
     id,
     itemId: id,
-    inventoryItemId: typeof value.id === 'string' ? value.id : null,
+    inventoryItemId: typeof value.id === "string" ? value.id : null,
     quantity,
     healFlat,
     healPercent,
@@ -294,7 +294,7 @@ export function normalizePotionInventoryResponse(data: unknown) {
   return Array.from(byItemId.values()).sort((a, b) => {
     return (
       (a.tier ?? 0) - (b.tier ?? 0) ||
-      String(a.name ?? '').localeCompare(String(b.name ?? ''))
+      String(a.name ?? "").localeCompare(String(b.name ?? ""))
     );
   });
 }
@@ -326,13 +326,13 @@ export function normalizePotionConfigResponse(
     : null;
 
   const potionItemId =
-    typeof rawConfigRecord.potionItemId === 'string'
+    typeof rawConfigRecord.potionItemId === "string"
       ? rawConfigRecord.potionItemId
-      : potion?.id ?? null;
+      : (potion?.id ?? null);
 
   const hasAnyConfigValue =
     Boolean(rawConfigRecord.id) ||
-    typeof rawConfigRecord.enabled === 'boolean' ||
+    typeof rawConfigRecord.enabled === "boolean" ||
     Boolean(potionItemId) ||
     potion !== null;
 
@@ -341,20 +341,21 @@ export function normalizePotionConfigResponse(
   }
 
   return {
-    id: typeof rawConfigRecord.id === 'string' ? rawConfigRecord.id : undefined,
+    id: typeof rawConfigRecord.id === "string" ? rawConfigRecord.id : undefined,
     characterId:
-      typeof rawConfigRecord.characterId === 'string'
+      typeof rawConfigRecord.characterId === "string"
         ? rawConfigRecord.characterId
         : undefined,
     enabled: Boolean(rawConfigRecord.enabled),
     potionItemId,
-    hpThresholdPercent: clampNumber(rawConfigRecord.hpThresholdPercent, 1, 100) || 35,
+    hpThresholdPercent:
+      clampNumber(rawConfigRecord.hpThresholdPercent, 1, 100) || 35,
     useInManualCombat:
-      typeof rawConfigRecord.useInManualCombat === 'boolean'
+      typeof rawConfigRecord.useInManualCombat === "boolean"
         ? rawConfigRecord.useInManualCombat
         : true,
     useInAutoCombat:
-      typeof rawConfigRecord.useInAutoCombat === 'boolean'
+      typeof rawConfigRecord.useInAutoCombat === "boolean"
         ? rawConfigRecord.useInAutoCombat
         : true,
     potion,
@@ -362,12 +363,16 @@ export function normalizePotionConfigResponse(
   };
 }
 
-export function getPotionItem(potionConfig?: CharacterPotionConfigWithItem | null) {
+export function getPotionItem(
+  potionConfig?: CharacterPotionConfigWithItem | null,
+) {
   return potionConfig?.potion ?? potionConfig?.potionItem ?? null;
 }
 
-export function getPotionName(potionConfig?: CharacterPotionConfigWithItem | null) {
-  return getPotionItem(potionConfig)?.name ?? 'Configurar poção';
+export function getPotionName(
+  potionConfig?: CharacterPotionConfigWithItem | null,
+) {
+  return getPotionItem(potionConfig)?.name ?? "Configurar poção";
 }
 
 export function getPotionDescription(
@@ -376,93 +381,16 @@ export function getPotionDescription(
   const potionItem = getPotionItem(potionConfig);
 
   if (!potionItem) {
-    return 'Clique para escolher a poção que será usada durante a batalha.';
+    return "Clique para escolher a poção que será usada durante a batalha.";
   }
 
   return potionConfig?.enabled
-    ? 'Poção selecionada para uso durante a batalha.'
-    : 'Poção selecionada, mas uso durante a batalha desativado.';
-}
-
-export function getPotionQuantity(
-  potionConfig: CharacterPotionConfigWithItem | null,
-  availablePotions: PotionInventoryOption[],
-) {
-  const potionItem = getPotionItem(potionConfig);
-
-  if (!potionItem?.id) return 0;
-
-  const inventoryPotion = availablePotions.find(
-    (potion) => potion.itemId === potionItem.id || potion.id === potionItem.id,
-  );
-
-  return Math.max(
-    0,
-    toSafeNumber(
-      inventoryPotion?.quantity ??
-        potionItem.availableQuantity ??
-        potionItem.quantity,
-      0,
-    ),
-  );
-}
-
-export function getNormalizedQuantity(value: unknown) {
-  const quantity = getOptionalNumber(value);
-
-  if (quantity === undefined) {
-    return undefined;
-  }
-
-  return Math.max(0, Math.floor(quantity));
-}
-
-export function resolvePotionEventItemId(
-  payload: AutoCombatRealtimeEvent,
-  fallbackPotionItemId?: string | null,
-) {
-  const event = payload as AutoCombatRealtimePotionEvent;
-
-  if (typeof event.potionItemId === 'string' && event.potionItemId.trim()) {
-    return event.potionItemId.trim();
-  }
-
-  if (
-    typeof fallbackPotionItemId === 'string' &&
-    fallbackPotionItemId.trim()
-  ) {
-    return fallbackPotionItemId.trim();
-  }
-
-  return '';
-}
-
-export function resolvePotionQuantityAfter(
-  payload: AutoCombatRealtimeEvent,
-  currentQuantity: number,
-) {
-  const event = payload as AutoCombatRealtimePotionEvent;
-
-  const explicitQuantity =
-    getNormalizedQuantity(event.potionQuantityRemaining) ??
-    getNormalizedQuantity(event.potionQuantityAfter);
-
-  if (explicitQuantity !== undefined) {
-    return explicitQuantity;
-  }
-
-  const quantityBefore = getNormalizedQuantity(event.potionQuantityBefore);
-  const usedQuantity = getNormalizedQuantity(event.potionUsedQuantity) ?? 1;
-
-  if (quantityBefore !== undefined) {
-    return Math.max(0, quantityBefore - usedQuantity);
-  }
-
-  return Math.max(0, Math.floor(currentQuantity) - usedQuantity);
+    ? "Poção selecionada para uso durante a batalha."
+    : "Poção selecionada, mas uso durante a batalha desativado.";
 }
 
 export function formatPotionHeal(potion?: PotionEquipmentItem | null) {
-  if (!potion) return 'Sem cura';
+  if (!potion) return "Sem cura";
 
   const healFlat = toSafeNumber(potion.healFlat, 0);
   const healPercent = toSafeNumber(potion.healPercent, 0);
@@ -479,7 +407,7 @@ export function formatPotionHeal(potion?: PotionEquipmentItem | null) {
     return `Cura ${healFlat} HP`;
   }
 
-  return 'Sem cura';
+  return "Sem cura";
 }
 
 export async function getCharacterInventoryRaw(characterId: string) {
@@ -518,7 +446,7 @@ export function resolveCharacterStats(
     characterStats?: DashboardStats;
   };
 
-  type LooseCharacter = CharacterOverviewResponse['character'] & {
+  type LooseCharacter = CharacterOverviewResponse["character"] & {
     totalStats?: DashboardStats;
     primaryStats?: DashboardStats;
     stats?: DashboardStats;
@@ -558,14 +486,14 @@ export function buildCharacterViewModel(
     character.className ??
     character.class?.name ??
     character.gameClass?.name ??
-    'Lutador';
+    "Lutador";
 
   const currentMapName =
     character.currentMapName ??
     character.currentMap?.name ??
     character.map?.name ??
     overview.progression?.currentMap?.name ??
-    'Sem mapa';
+    "Sem mapa";
 
   return {
     ...character,
@@ -576,7 +504,7 @@ export function buildCharacterViewModel(
     level: character.level ?? 1,
     xp: character.xp ?? 0,
     totalXp: character.totalXp ?? character.xp ?? 0,
-    status: character.status ?? 'IDLE',
+    status: character.status ?? "IDLE",
     currentHp: character.currentHp ?? character.maxHp ?? 1,
     maxHp: character.maxHp ?? 1,
     avatarKey: character.avatarKey ?? null,
@@ -602,18 +530,20 @@ export function getSessionFromStatus(
 }
 
 export function normalizeSessionStatus(status?: string | null) {
-  return String(status ?? '').trim().toUpperCase();
+  return String(status ?? "")
+    .trim()
+    .toUpperCase();
 }
 
 export function isTerminalSessionStatus(status?: string | null) {
   const normalizedStatus = normalizeSessionStatus(status);
 
   return (
-    normalizedStatus === 'STOPPED' ||
-    normalizedStatus === 'FINISHED' ||
-    normalizedStatus === 'DEFEATED' ||
-    normalizedStatus === 'FAILED' ||
-    normalizedStatus === 'CANCELLED'
+    normalizedStatus === "STOPPED" ||
+    normalizedStatus === "FINISHED" ||
+    normalizedStatus === "DEFEATED" ||
+    normalizedStatus === "FAILED" ||
+    normalizedStatus === "CANCELLED"
   );
 }
 
@@ -627,7 +557,7 @@ export function isSessionActive(
     return false;
   }
 
-  if (normalizedStatus === 'ACTIVE') {
+  if (normalizedStatus === "ACTIVE") {
     return true;
   }
 
@@ -643,7 +573,7 @@ export function getActiveEncounters(subMap?: AutoCombatSubMapViewModel | null) {
       return (
         toSafeNumber(a.mob?.level, 0) - toSafeNumber(b.mob?.level, 0) ||
         toSafeNumber(a.mob?.tier, 0) - toSafeNumber(b.mob?.tier, 0) ||
-        (a.mob?.name ?? '').localeCompare(b.mob?.name ?? '')
+        (a.mob?.name ?? "").localeCompare(b.mob?.name ?? "")
       );
     });
 }
@@ -679,7 +609,7 @@ export function getActiveEncountersForMap(
     return (
       toSafeNumber(a.mob?.level, 0) - toSafeNumber(b.mob?.level, 0) ||
       toSafeNumber(a.mob?.tier, 0) - toSafeNumber(b.mob?.tier, 0) ||
-      (a.mob?.name ?? '').localeCompare(b.mob?.name ?? '')
+      (a.mob?.name ?? "").localeCompare(b.mob?.name ?? "")
     );
   });
 }
@@ -795,7 +725,7 @@ export function getDefaultSubMapId(params: {
     return sessionSubMapId;
   }
 
-  return subMaps[0]?.id ?? '';
+  return subMaps[0]?.id ?? "";
 }
 
 function getTimestampMs(value: unknown) {
@@ -805,7 +735,7 @@ function getTimestampMs(value: unknown) {
     return Number.isFinite(timestamp) ? timestamp : null;
   }
 
-  if (typeof value !== 'string' && typeof value !== 'number') {
+  if (typeof value !== "string" && typeof value !== "number") {
     return null;
   }
 
@@ -835,7 +765,8 @@ export function getRemainingSeconds(
 }
 
 export function getLatestKilledMob(status: AutoCombatStatusResponse | null) {
-  const mobs = status?.rewards?.mobs ?? status?.sessionSummary?.mobs?.kills ?? [];
+  const mobs =
+    status?.rewards?.mobs ?? status?.sessionSummary?.mobs?.kills ?? [];
 
   if (mobs.length <= 0) return null;
 
@@ -856,17 +787,19 @@ export function getThreatWeightPercent(
 }
 
 export function normalizeRealtimeEventType(type?: string | null) {
-  return String(type ?? '').trim().toUpperCase();
+  return String(type ?? "")
+    .trim()
+    .toUpperCase();
 }
 
 export function isDamageRealtimeEvent(eventType?: string | null) {
   const normalizedType = normalizeRealtimeEventType(eventType);
 
   return (
-    normalizedType === 'PLAYER_HIT' ||
-    normalizedType === 'MOB_HIT' ||
-    normalizedType === 'MOB_DEFEATED' ||
-    normalizedType === 'PLAYER_DEFEATED'
+    normalizedType === "PLAYER_HIT" ||
+    normalizedType === "MOB_HIT" ||
+    normalizedType === "MOB_DEFEATED" ||
+    normalizedType === "PLAYER_DEFEATED"
   );
 }
 
@@ -1030,8 +963,8 @@ export function buildSessionTotalsFromStatus(
 
   const isPremiumActive = Boolean(
     status?.sessionSummary?.progression?.isPremiumActive ??
-      session?.isPremiumActive ??
-      false,
+    session?.isPremiumActive ??
+    false,
   );
 
   const normalizedXp = normalizeSessionXpBreakdown({
@@ -1204,8 +1137,7 @@ export function mergeProgressKeepingHighestXp(
     currentLevelXp: incoming.currentLevelXp ?? current.currentLevelXp,
     xpToNextLevel: incoming.xpToNextLevel ?? current.xpToNextLevel,
     nextLevelXp: incoming.nextLevelXp ?? current.nextLevelXp,
-    xpProgressPercent:
-      incoming.xpProgressPercent ?? current.xpProgressPercent,
+    xpProgressPercent: incoming.xpProgressPercent ?? current.xpProgressPercent,
     xpIntoCurrentLevel:
       incoming.xpIntoCurrentLevel ?? current.xpIntoCurrentLevel,
     xpNeededForNextLevel:
@@ -1257,7 +1189,8 @@ export function getRealtimeCombat(state: AutoCombatRealtimeStateLoose) {
     state.totals ??
     null;
   const status = getRealtimeStatus(state);
-  const session = state.session ?? state.activeSession ?? getSessionFromStatus(status);
+  const session =
+    state.session ?? state.activeSession ?? getSessionFromStatus(status);
   const mobWithBattleProgress = mob as
     | { battleProgress?: AutoCombatBattleProgressViewModel | null }
     | null
@@ -1307,12 +1240,10 @@ export function getRealtimeCombat(state: AutoCombatRealtimeStateLoose) {
     cycleDurationSeconds: battleProgress?.cycleDurationSeconds ?? null,
     progressUpdatedAt: battleProgress?.progressUpdatedAt ?? null,
     serverNow: battleProgress?.serverNow ?? null,
-    estimatedKillTimeSeconds:
-      battleProgress?.estimatedKillTimeSeconds ?? null,
+    estimatedKillTimeSeconds: battleProgress?.estimatedKillTimeSeconds ?? null,
     baseKillTimeSeconds: battleProgress?.baseKillTimeSeconds ?? null,
     playerOffensivePower: battleProgress?.playerOffensivePower ?? null,
-    monsterRecommendedPower:
-      battleProgress?.monsterRecommendedPower ?? null,
+    monsterRecommendedPower: battleProgress?.monsterRecommendedPower ?? null,
     killsPerMinute: battleProgress?.killsPerMinute ?? null,
     killsPerHour: battleProgress?.killsPerHour ?? null,
     difficultyLabel: battleProgress?.difficultyLabel ?? null,
@@ -1355,7 +1286,8 @@ export function getRealtimeProgress(state: AutoCombatRealtimeStateLoose) {
 
   const character = state.character ?? null;
   const status = getRealtimeStatus(state);
-  const session = state.session ?? state.activeSession ?? getSessionFromStatus(status);
+  const session =
+    state.session ?? state.activeSession ?? getSessionFromStatus(status);
 
   if (!character) {
     return null;
@@ -1378,7 +1310,8 @@ export function getRealtimeProgress(state: AutoCombatRealtimeStateLoose) {
 
     currentLevelXp:
       character.currentLevelXp ?? character.xpIntoCurrentLevel ?? undefined,
-    xpToNextLevel: character.xpToNextLevel ?? character.nextLevelXp ?? undefined,
+    xpToNextLevel:
+      character.xpToNextLevel ?? character.nextLevelXp ?? undefined,
     nextLevelXp: character.nextLevelXp ?? character.xpToNextLevel ?? undefined,
     xpProgressPercent: character.xpProgressPercent ?? undefined,
 
@@ -1430,7 +1363,9 @@ export function buildZeroRealtimeSessionTotals(
   };
 }
 
-export function getRealtimeBattleLogEvents(state: AutoCombatRealtimeStateLoose) {
+export function getRealtimeBattleLogEvents(
+  state: AutoCombatRealtimeStateLoose,
+) {
   return state.battleLogEvents ?? state.eventLog ?? state.events ?? [];
 }
 
@@ -1458,19 +1393,21 @@ export function getPotionEventKey(payload: AutoCombatRealtimeEvent) {
   const event = payload as AutoCombatRealtimePotionEvent;
 
   return [
-    event.sessionId ?? 'no-session',
-    event.characterId ?? 'no-character',
-    event.potionItemId ?? 'no-potion',
-    event.potionQuantityBefore ?? 'no-before',
-    event.potionQuantityAfter ?? 'no-after',
-    event.potionQuantityRemaining ?? 'no-remaining',
-    event.potionUsedQuantity ?? 'no-used',
-    event.characterCurrentHp ?? 'no-hp',
-    event.round ?? 'no-round',
-    event.combatIndex ?? 'no-combat',
-  ].join('|');
+    event.sessionId ?? "no-session",
+    event.characterId ?? "no-character",
+    event.potionItemId ?? "no-potion",
+    event.potionQuantityBefore ?? "no-before",
+    event.potionQuantityAfter ?? "no-after",
+    event.potionQuantityRemaining ?? "no-remaining",
+    event.potionUsedQuantity ?? "no-used",
+    event.characterCurrentHp ?? "no-hp",
+    event.round ?? "no-round",
+    event.combatIndex ?? "no-combat",
+  ].join("|");
 }
 
-export function getRealtimeActions(context: unknown): AutoCombatRealtimeActions {
+export function getRealtimeActions(
+  context: unknown,
+): AutoCombatRealtimeActions {
   return context as AutoCombatRealtimeActions;
 }

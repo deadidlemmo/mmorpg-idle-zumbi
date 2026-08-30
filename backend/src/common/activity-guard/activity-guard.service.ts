@@ -53,11 +53,7 @@ type CharacterActivityState = {
   hasActiveWorldBoss: boolean;
 };
 
-const ACTIVE_WORLD_BOSS_EVENT_STATUSES = [
-  WorldBossEventStatus.SCHEDULED,
-  WorldBossEventStatus.LOBBY_OPEN,
-  WorldBossEventStatus.ACTIVE,
-];
+const ACTIVE_WORLD_BOSS_EVENT_STATUSES = [WorldBossEventStatus.ACTIVE];
 
 const BLOCKING_AUTO_COMBAT_PHASES = [
   AutoCombatSessionPhase.HUNTING,
@@ -248,6 +244,7 @@ export class ActivityGuardService {
         where: {
           characterId: character.id,
           leftAt: null,
+          confirmedAt: { not: null },
           event: {
             status: {
               in: ACTIVE_WORLD_BOSS_EVENT_STATUSES,
@@ -593,7 +590,7 @@ export class ActivityGuardService {
     ) {
       throw new ConflictException({
         message:
-          'Você já está aguardando outro World Boss. Saia do lobby atual antes de entrar em outro World Boss.',
+          'Você já está participando de outra Ameaça Global em andamento.',
         activeWorldBoss: state.activeWorldBossParticipation,
       });
     }
@@ -744,7 +741,7 @@ export class ActivityGuardService {
     if (state.hasActiveWorldBoss) {
       throw new ConflictException({
         message:
-          'Não é possível usar a enfermaria enquanto você está aguardando ou participando de um World Boss.',
+          'Não é possível usar a enfermaria durante uma batalha de Ameaça Global.',
         activeWorldBossSession: state.activeWorldBossParticipation,
       });
     }

@@ -9,6 +9,7 @@ import { worldBossDefinitions } from '../../../prisma/seed-data/world-bosses.see
 import {
   ECONOMY_ACTIVITY_REWARDS,
   ECONOMY_LAUNCH_TIERS,
+  getPetRarityByTier,
   isEconomyLaunchTier,
 } from '../../common/config/economy.config';
 import {
@@ -53,9 +54,27 @@ describe('world boss reward contract', () => {
           guaranteed: false,
           onlyIfDefeated: true,
           requiresMinParticipation: true,
+          rarity: Rarity[getPetRarityByTier(tier)],
         });
       }
     }
+  });
+
+  it('mantem a curva calibrada de casulos e fragmentos T1-T5', () => {
+    expect(ECONOMY_ACTIVITY_REWARDS.worldBossCocoonChancePercent).toEqual({
+      1: 7,
+      2: 7,
+      3: 5,
+      4: 5,
+      5: 4,
+    });
+    expect(ECONOMY_ACTIVITY_REWARDS.worldBossFragments).toEqual({
+      1: { min: 1, max: 1 },
+      2: { min: 1, max: 1 },
+      3: { min: 1, max: 2 },
+      4: { min: 1, max: 2 },
+      5: { min: 1, max: 2 },
+    });
   });
 
   it('entrega fragmento e permite casulo ao participante elegivel quando o chefe foi derrotado', () => {

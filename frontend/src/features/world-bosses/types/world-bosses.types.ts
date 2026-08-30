@@ -88,6 +88,7 @@ export interface WorldBossEventSummary {
   remainingSecondsToEnd?: number;
   remainingSecondsToEntryClose?: number;
   entryWindowEndsAt?: string;
+  combatStartsAt?: string;
   nextRespawnSeconds?: number;
   respawnIntervalSeconds?: number;
   currentHp: number;
@@ -97,6 +98,10 @@ export interface WorldBossEventSummary {
   totalDamage: number;
   participantCount: number;
   lobbyCount?: number;
+  registrationCount?: number;
+  targetTtkSeconds?: number | null;
+  aggregateDamagePerSecond?: number;
+  scalingVersion?: number;
   defeatedAt?: string | null;
   rewardedAt?: string | null;
   worldBoss: WorldBossSummary;
@@ -107,8 +112,14 @@ export interface WorldBossParticipantSummary {
   damageDealt: number;
   contributionPercent: number;
   joinedAt: string;
+  confirmedAt?: string | null;
+  registrationStatus?: "REGISTERED" | "CONFIRMED";
   lastContributionAt: string;
   activeSeconds: number;
+  powerScoreSnapshot?: number | null;
+  damagePerSecondSnapshot?: number | null;
+  readinessSnapshot?: number | null;
+  equipmentTierSnapshot?: number | null;
   rewardGranted: boolean;
   rewardGrantedAt?: string | null;
   rank?: number | null;
@@ -120,8 +131,9 @@ export interface WorldBossStatusResponse {
   message?: string | null;
   serverNow?: string;
   event: WorldBossEventSummary | null;
-  participant: WorldBossParticipantSummary | null;
+  participant?: WorldBossParticipantSummary | null;
   rewardsGranted?: WorldBossGrantedReward[] | null;
+  stoppedActivities?: string[];
   eligible?: { canJoin: boolean; reason?: string | null };
 }
 

@@ -8,16 +8,17 @@
    O dashboard-overrides.css fica por último para ajustes finos.
    ========================================================= */
 
-@import './styles/dashboard-base.css';
-@import './styles/dashboard-layout.css';
-@import './styles/dashboard-overview.css';
-@import './styles/dashboard-cards.css';
-@import './styles/dashboard-progress.css';
-@import './styles/dashboard-equipment.css';
-@import './styles/dashboard-stats.css';
-@import './styles/dashboard-responsive.css';
-@import './styles/dashboard-gathering.css';
-@import './styles/dashboard-activity-bar.css';
-@import './styles/dashboard-overrides.css';
-@import './styles/dashboard-navigation.css';
-@import './styles/dashboard-typography.css';
+@import "./styles/dashboard-base.css";
+@import "./styles/dashboard-layout.css";
+@import "./styles/dashboard-active-survivors.css";
+@import "./styles/dashboard-overview.css";
+@import "./styles/dashboard-cards.css";
+@import "./styles/dashboard-progress.css";
+@import "./styles/dashboard-equipment.css";
+@import "./styles/dashboard-stats.css";
+@import "./styles/dashboard-responsive.css";
+@import "./styles/dashboard-gathering.css";
+@import "./styles/dashboard-activity-bar.css";
+@import "./styles/dashboard-overrides.css";
+@import "./styles/dashboard-navigation.css";
+@import "./styles/dashboard-typography.css";

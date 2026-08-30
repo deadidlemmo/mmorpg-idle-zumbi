@@ -30,6 +30,12 @@ export function mergeWorldBossStatusSnapshot(
 
   return {
     ...next,
+    participant:
+      next.participant !== undefined
+        ? next.participant
+        : previousEventId === nextEventId
+          ? previous?.participant
+          : undefined,
     eligible:
       next.eligible ??
       (previousEventId === nextEventId ? previous?.eligible : undefined),

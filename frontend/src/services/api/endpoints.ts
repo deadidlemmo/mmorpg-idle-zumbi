@@ -83,6 +83,7 @@ export const API_ENDPOINTS = {
 
   autoCombat: {
     onlineCount: "/auto-combat/online-count",
+    activeCharacters: "/auto-combat/active-characters",
     start: "/auto-combat/start",
     startHunt: "/auto-combat/hunt/start",
     preview: "/auto-combat/preview",
@@ -187,9 +188,12 @@ export const API_ENDPOINTS = {
   worldBosses: {
     available: (characterId: string) =>
       `/world-bosses/${characterId}/available`,
+    registrations: (characterId: string) =>
+      `/world-bosses/${characterId}/registrations`,
     active: (characterId: string) => `/world-bosses/${characterId}/active`,
     status: (characterId: string) => `/world-bosses/${characterId}/status`,
     join: "/world-bosses/join",
+    confirm: "/world-bosses/confirm",
     leave: "/world-bosses/leave",
     leaveByEvent: (eventId: string) => `/world-bosses/${eventId}/leave`,
     ranking: (eventId: string) => `/world-bosses/${eventId}/ranking`,

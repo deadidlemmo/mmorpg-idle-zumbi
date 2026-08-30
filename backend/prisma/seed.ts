@@ -14,6 +14,7 @@ import {
   WorldBossRewardType,
 } from '@prisma/client';
 import { getGatheringXpPerUnitForTier } from '../src/common/config/gathering.config';
+import { getItemRarityByTier } from '../src/common/config/item-economy.config';
 import {
   buildReinforcedEquipmentStats,
   EQUIPMENT_REINFORCEMENT_MAX_LEVEL,
@@ -75,21 +76,6 @@ type MaterialSeedDataWithGatheringProgression = MaterialSeedData & {
   gatheringXpPerUnit?: number;
   baseGatheringRatePerHour?: number | null;
 };
-
-function getRarityByTier(tier: number): Rarity {
-  const safeTier = Number(tier);
-
-  if (!Number.isFinite(safeTier)) {
-    return Rarity.COMMON;
-  }
-
-  if (safeTier >= 9) return Rarity.LEGENDARY;
-  if (safeTier >= 7) return Rarity.EPIC;
-  if (safeTier >= 5) return Rarity.RARE;
-  if (safeTier >= 3) return Rarity.UNCOMMON;
-
-  return Rarity.COMMON;
-}
 
 async function upsertGameClass(data: GameClassSeedData): Promise<GameClass> {
   return prisma.gameClass.upsert({
@@ -337,7 +323,7 @@ async function upsertMaterialItem(params: {
     slug: data.slug ?? null,
     description: data.description,
     tier: data.tier,
-    rarity: getRarityByTier(data.tier),
+    rarity: getItemRarityByTier(data.tier),
     slot: ItemSlot.MATERIAL,
     family: data.family ?? 'Material',
     classId: null,
@@ -530,7 +516,7 @@ async function ensureIncursionSeedItem(params: {
     description:
       'Liga de reforço recuperada exclusivamente em incursões. É consumida para elevar equipamentos até +3.',
     tier: params.tier,
-    rarity: params.rarity ?? getRarityByTier(params.tier),
+    rarity: params.rarity ?? getItemRarityByTier(params.tier),
     slot: ItemSlot.MATERIAL,
     family: 'Material de Reforço',
     classId: null,
@@ -684,7 +670,7 @@ async function ensureWorldBossSeedItem(params: {
         ? 'Casulo biológico raro obtido em Ameaças Globais. Pode ser incubado para originar um companheiro infectado controlado.'
         : 'Fragmento mutante coletado após conter uma Ameaça Global.',
     tier: params.tier,
-    rarity: params.rarity ?? getRarityByTier(params.tier),
+    rarity: params.rarity ?? getItemRarityByTier(params.tier),
     slot: ItemSlot.MATERIAL,
     family,
     classId: null,
@@ -1763,12 +1749,12 @@ async function main() {
     equipamentosRegistrados: equipmentDefinitions.map((item) => ({
       name: item.name,
       tier: item.tier,
-      rarity: getRarityByTier(item.tier),
+      rarity: getItemRarityByTier(item.tier),
     })),
     materiaisRegistrados: materialDefinitions.map((item) => ({
       name: item.name,
       tier: item.tier,
-      rarity: getRarityByTier(item.tier),
+      rarity: getItemRarityByTier(item.tier),
       origin: item.materialOrigin,
       requiredGatheringLevel: item.requiredGatheringLevel ?? 1,
       gatheringXpPerUnit: item.isGatheringMaterial

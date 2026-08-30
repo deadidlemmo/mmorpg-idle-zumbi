@@ -1,19 +1,9 @@
 import type { ActivityTimelineSnapshot } from "../../../components/game/activityTimeline";
 
 export type IncursionRewardType =
-  | "XP"
-  | "GOLD"
-  | "CURRENCY"
-  | "MATERIAL"
-  | "CONSUMABLE"
-  | "EQUIPMENT"
-  | "ITEM";
+  "XP" | "GOLD" | "CURRENCY" | "MATERIAL" | "CONSUMABLE" | "EQUIPMENT" | "ITEM";
 export type IncursionSessionStatus =
-  | "ACTIVE"
-  | "COMPLETED"
-  | "CLAIMED"
-  | "FAILED"
-  | "CANCELLED";
+  "ACTIVE" | "COMPLETED" | "CLAIMED" | "FAILED" | "CANCELLED";
 export type IncursionDifficulty = "LOW" | "MEDIUM" | "HIGH" | "EXTREME";
 export type IncursionApproach = "CAUTIOUS" | "BALANCED" | "AGGRESSIVE";
 
@@ -75,6 +65,8 @@ export interface Incursion {
   minLevel: number;
   maxLevel: number;
   goldCost: number;
+  successEntryRefundPercent: number;
+  successEntryRefundGold: number;
   durationSeconds: number;
   difficulty: IncursionDifficulty;
   riskLevel: number;
@@ -98,6 +90,7 @@ export interface IncursionSession {
   completedAt?: string | null;
   claimedAt?: string | null;
   goldCostPaid: number;
+  entryGoldRefund: number;
   xpReward: number;
   goldReward: number;
   approach: IncursionApproach;
@@ -160,6 +153,8 @@ export interface ClaimIncursionResponse {
   session: IncursionSession;
   xpGained: number;
   goldGained: number;
+  entryGoldRefund: number;
+  lootGoldGained: number;
   goldSpent: number;
   levelUp: {
     leveledUp: boolean;

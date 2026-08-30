@@ -308,6 +308,7 @@ Models atuais de alto impacto:
 - `FUTURE_LEVEL_CAP = 100`.
 - `LEVELS_PER_TIER = 10`.
 - Formulas de progressao ficam no backend, especialmente em `backend/src/common/config/` e `backend/src/common/utils/`.
+- Missoes congelam `rewardTier`, `rewardXp` e `rewardGold` ao serem atribuidas; somente atividades do tier atribuido contam para o objetivo.
 
 ## Regras de premium e idle
 
@@ -456,6 +457,7 @@ Parametros de hunt identificados no codigo:
 - Socket.IO em `/incursions`.
 - Dificuldades: `LOW`, `MEDIUM`, `HIGH`, `EXTREME`.
 - Recompensas: `XP`, `GOLD`, `MATERIAL`, `CONSUMABLE`, `EQUIPMENT`, `ITEM`.
+- A entrada em Gold e debitada ao iniciar e devolvida integralmente apenas quando a incursao termina com sucesso; o Gold aleatorio permanece um bonus separado no ledger.
 - Sessao de incursion deve reconciliar por status backend apos F5/reconnect.
 - Incursion e atividade exclusiva.
 
@@ -465,7 +467,14 @@ Parametros de hunt identificados no codigo:
 - Socket.IO em `/world-bosses`.
 - Status: `SCHEDULED`, `LOBBY_OPEN`, `ACTIVE`, `DEFEATED`, `EXPIRED`, `REWARDED`, `CANCELLED`.
 - Recompensas podem incluir `PET_EGG`.
-- Participacao em world boss bloqueia outras atividades principais.
+- A inscricao antecipada (`confirmedAt = null`) nao bloqueia atividades. Apenas a confirmacao no lobby ou a batalha ativa bloqueiam outras atividades principais.
+- `POST /world-bosses/join` registra durante `SCHEDULED`; `POST /world-bosses/confirm` confirma durante o lobby e encerra auto-combate/gathering na mesma transacao da confirmacao.
+- O lobby dura 15 minutos completos. O snapshot e o HP usam somente participantes confirmados no fechamento; entrada nova e proibida depois de `ACTIVE`.
+- Alertas globais de 1 hora, 15 minutos e abertura do lobby sao derivados do estado REST e deduplicados no frontend.
+- Na versao de balanceamento `2`, o inicio da batalha congela atributos, DPS, readiness e tier efetivo de equipamento de cada participante; o HP e derivado do TTK alvo e desse snapshot do grupo.
+- Dano e elegibilidade avancam no scheduler do backend, com tick de 1 segundo e persistencia agregada a cada 5 segundos. REST e Socket.IO apenas leem o estado e nunca causam dano.
+- A matriz obrigatoria cobre os 20 bosses T1-T10, 1/2/3/5/10 participantes, quatro classes e sets anterior/atual via `npm run balance:world-boss:ttk:report`.
+- Nos tiers T1-T5, fragmentos continuam garantidos para participantes elegiveis. Casulos nunca sao garantidos, exigem derrota e nao substituem os fragmentos recebidos na mesma liquidacao.
 - Seed-data e `worldBoss.id` sao fontes importantes para deduplicar cards/eventos.
 - O modo de QA so ativa quando `WORLD_BOSS_TEST_UNLOCK_ENABLED=true`; o padrao e `false`.
 

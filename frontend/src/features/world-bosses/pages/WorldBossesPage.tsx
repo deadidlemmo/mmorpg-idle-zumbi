@@ -6,14 +6,13 @@ import {
 } from "react";
 import {
   Biohazard,
-  Coins,
+  BellRing,
   Dna,
   Egg,
   Eye,
+  LockKeyhole,
   PackageCheck,
   ShieldAlert,
-  Sparkles,
-  Swords,
   X,
   XCircle,
 } from "lucide-react";
@@ -55,6 +54,15 @@ import {
   reconcileWorldBossStatusSnapshots,
   upsertWorldBossStatusSnapshot,
 } from "../utils/worldBossStatus";
+import {
+  getWorldBossCocoonOptions,
+  getWorldBossRewardImageUrl,
+} from "../utils/worldBossRewardAssets";
+import {
+  WORLD_BOSS_REGISTRATION_NOTICE,
+  WORLD_BOSS_STATUS_SYNC_EVENT,
+} from "../utils/worldBossAlerts";
+import { getWorldBossImageUrl } from "../utils/worldBossAssets";
 import "../../dashboard/dashboard.css";
 import "../../gathering/styles/gathering.css";
 import "../../incursions/styles/incursions.css";
@@ -64,7 +72,7 @@ const ACTIVE_PANEL_STATUSES = new Set<WorldBossEventStatus>([
   "LOBBY_OPEN",
   "ACTIVE",
 ]);
-const WORLD_BOSS_ENTRY_WINDOW_SECONDS = 5 * 60;
+const WORLD_BOSS_ENTRY_WINDOW_SECONDS = 15 * 60;
 const SHORT_RESPAWN_SECONDS = 6 * 60 * 60;
 const LONG_RESPAWN_SECONDS = 12 * 60 * 60;
 
@@ -125,21 +133,37 @@ function getCompactStatusLabel(status: WorldBossEventStatus) {
   return labels[status];
 }
 
+function isWorldBossConfirmed(status?: WorldBossStatusResponse | null) {
+  return Boolean(
+    status?.participant &&
+    (status.participant.registrationStatus === "CONFIRMED" ||
+      status.participant.confirmedAt),
+  );
+}
+
+function isWorldBossRegistered(status?: WorldBossStatusResponse | null) {
+  return Boolean(status?.participant);
+}
+
 function getCardStatusLabel(status: WorldBossStatusResponse) {
   const event = status.event;
   if (!event) return "Indisponível";
-  if (status.participant && event.status === "SCHEDULED") return "No lobby";
-  if (status.participant && event.status === "LOBBY_OPEN") return "No lobby";
-  if (status.participant && event.status === "ACTIVE") return "Em andamento";
+  if (isWorldBossRegistered(status) && event.status !== "ACTIVE")
+    return "Inscrito";
+  if (isWorldBossConfirmed(status) && event.status === "ACTIVE")
+    return "Em andamento";
   return getCompactStatusLabel(event.status);
 }
 
 function getCardStatusTone(status: WorldBossStatusResponse) {
   const event = status.event;
   if (!event) return "locked";
-  if (status.participant && event.status === "ACTIVE") return "battle";
+  if (isWorldBossRegistered(status) && event.status !== "ACTIVE")
+    return "registered";
+  if (isWorldBossConfirmed(status) && event.status === "ACTIVE")
+    return "battle";
   if (
-    status.participant &&
+    isWorldBossRegistered(status) &&
     (event.status === "SCHEDULED" || event.status === "LOBBY_OPEN")
   )
     return "lobby";
@@ -162,9 +186,9 @@ type WorldBossRewardIdentity = {
   item?: { name: string } | null;
 };
 
-function getRewardIcon(reward: WorldBossRewardIdentity) {
-  if (reward.rewardType === "GOLD") return <Coins size={20} />;
-  if (reward.rewardType === "XP") return <Sparkles size={20} />;
+function getRewardIcon(reward: WorldBossRewardIdentity, tier: number) {
+  const imageUrl = getWorldBossRewardImageUrl(reward.rewardType, tier);
+  if (imageUrl) return <img src={imageUrl} alt="" />;
   if (reward.rewardType === "PET_EGG") return <Egg size={20} />;
   if (reward.rewardType === "CURRENCY") return <Dna size={20} />;
   return <PackageCheck size={20} />;
@@ -262,7 +286,7 @@ function WorldBossRewardReceipt({
         <ul className="world-bosses-reward-receipt__items">
           {rewards.map((reward: WorldBossGrantedReward) => (
             <li key={reward.id}>
-              <span aria-hidden="true">{getRewardIcon(reward)}</span>
+              <span aria-hidden="true">{getRewardIcon(reward, tier)}</span>
               <div>
                 <strong>{getRewardName(reward, tier)}</strong>
                 <small>+{formatNumber(reward.quantity)}</small>
@@ -375,11 +399,11 @@ function getEventTimerInfo(
 
   if (event.status === "SCHEDULED") {
     const seconds = getSecondsUntil(event.startsAt, nowMs);
-    if (status?.participant) {
+    if (isWorldBossRegistered(status)) {
       return {
         label: "Status",
         seconds,
-        text: `Aguardando no lobby — aparece em ${formatRemaining(seconds)}`,
+        text: `Inscrito — preparação em ${formatRemaining(seconds)}`,
       };
     }
 
@@ -395,20 +419,20 @@ function getEventTimerInfo(
       0,
       Math.floor((getEntryWindowEndMs(event) - nowMs) / 1000),
     );
-    if (status?.participant) {
+    if (isWorldBossRegistered(status)) {
       return {
         label: "Status",
         seconds,
         text: seconds
-          ? `No lobby — começa em ${formatRemaining(seconds)}`
-          : "No lobby — iniciando",
+          ? `Inscrito — batalha em ${formatRemaining(seconds)}`
+          : "Inscrito — iniciando batalha",
       };
     }
 
     return {
-      label: "Entrada aberta",
+      label: "Inscrições abertas",
       seconds,
-      text: `Entrada aberta — ${formatRemaining(seconds)}`,
+      text: `Batalha em — ${formatRemaining(seconds)}`,
     };
   }
 
@@ -446,9 +470,11 @@ function getSidePanelStatusInfo(
   if (event.status === "SCHEDULED") {
     const seconds = getSecondsUntil(event.startsAt, nowMs);
     return {
-      statusText: status.participant ? "No lobby" : "Aguardando aparição",
-      detailText: `Aparece em ${formatRemaining(seconds)}`,
-      timerLabel: "Aparece em",
+      statusText: isWorldBossRegistered(status)
+        ? "Inscrito"
+        : "Aguardando aparição",
+      detailText: `Preparação em ${formatRemaining(seconds)}`,
+      timerLabel: "Preparação em",
       timerText: formatRemaining(seconds),
     };
   }
@@ -459,12 +485,13 @@ function getSidePanelStatusInfo(
       Math.floor((getEntryWindowEndMs(event) - nowMs) / 1000),
     );
     const timerText = seconds ? formatRemaining(seconds) : "Iniciando";
+    const registered = isWorldBossRegistered(status);
     return {
-      statusText: status.participant ? "No lobby" : "Entrada aberta",
-      detailText: status.participant
-        ? `Começa em ${timerText}`
-        : `Janela aberta por ${timerText}`,
-      timerLabel: status.participant ? "Começa em" : "Janela",
+      statusText: registered ? "Inscrito" : "Inscrições abertas",
+      detailText: registered
+        ? `Batalha começa em ${timerText}`
+        : `Inscrições encerram em ${timerText}`,
+      timerLabel: registered ? "Batalha em" : "Inscrições",
       timerText,
     };
   }
@@ -490,66 +517,34 @@ function getSidePanelStatusInfo(
 
 function buildWorldBossTopBarActivity(
   status: WorldBossStatusResponse | null,
-  nowMs: number,
 ): DashboardTopBarActivityOverride | null {
   const event = status?.event;
   const participant = status?.participant;
 
-  if (!event || !participant) return null;
+  if (
+    !event ||
+    !participant ||
+    !isWorldBossConfirmed(status) ||
+    event.status !== "ACTIVE"
+  ) {
+    return null;
+  }
 
   const bossName = event.worldBoss.name;
-  const participantCount = event.lobbyCount ?? event.participantCount ?? 0;
+  const hpPercent = Math.max(0, Math.min(100, event.hpPercent));
 
-  if (event.status === "SCHEDULED") {
-    const seconds = getSecondsUntil(event.startsAt, nowMs);
-
-    return {
-      kind: "world-boss",
-      title: bossName,
-      subtitle: `No lobby - aparece em ${formatRemaining(seconds)}`,
-      icon: "WB",
-      badge: participantCount > 0 ? formatNumber(participantCount) : null,
-      titleText: `${bossName} - no lobby, aparece em ${formatRemaining(
-        seconds,
-      )}`,
-    };
-  }
-
-  if (event.status === "LOBBY_OPEN") {
-    const seconds = Math.max(
-      0,
-      Math.floor((getEntryWindowEndMs(event) - nowMs) / 1000),
-    );
-    const timerText = seconds ? formatRemaining(seconds) : "iniciando";
-
-    return {
-      kind: "world-boss",
-      title: bossName,
-      subtitle: `No lobby - comeca em ${timerText}`,
-      icon: "WB",
-      badge: participantCount > 0 ? formatNumber(participantCount) : null,
-      titleText: `${bossName} - no lobby, comeca em ${timerText}`,
-    };
-  }
-
-  if (event.status === "ACTIVE") {
-    const hpPercent = Math.max(0, Math.min(100, event.hpPercent));
-
-    return {
-      kind: "world-boss",
-      title: bossName,
-      subtitle: `Em andamento - ${formatNumber(event.currentHp)} HP`,
-      icon: "WB",
-      progressPercent: hpPercent,
-      stateProgress: true,
-      badge: `${Math.floor(hpPercent)}%`,
-      titleText: `${bossName} - em andamento, ${formatNumber(
-        event.currentHp,
-      )} de ${formatNumber(event.maxHp)} HP`,
-    };
-  }
-
-  return null;
+  return {
+    kind: "world-boss",
+    title: bossName,
+    subtitle: `Em andamento - ${formatNumber(event.currentHp)} HP`,
+    icon: "WB",
+    progressPercent: hpPercent,
+    stateProgress: true,
+    badge: `${Math.floor(hpPercent)}%`,
+    titleText: `${bossName} - em andamento, ${formatNumber(
+      event.currentHp,
+    )} de ${formatNumber(event.maxHp)} HP`,
+  };
 }
 
 function getEventStatusPriority(status: WorldBossStatusResponse) {
@@ -565,10 +560,14 @@ function getEventStatusPriority(status: WorldBossStatusResponse) {
 function canJoinWorldBossStatus(status: WorldBossStatusResponse) {
   const eventStatus = status.event?.status;
   return Boolean(
-    !status.participant &&
     status.eligible?.canJoin &&
-    (eventStatus === "SCHEDULED" || eventStatus === "LOBBY_OPEN"),
+    (eventStatus === "SCHEDULED" || eventStatus === "LOBBY_OPEN") &&
+    !status.participant,
   );
+}
+
+function getWorldBossEntryActionLabel() {
+  return "Inscrever-se";
 }
 
 function canLeaveWorldBossStatus(status: WorldBossStatusResponse) {
@@ -582,18 +581,14 @@ function canLeaveWorldBossStatus(status: WorldBossStatusResponse) {
 }
 
 function getLeaveWorldBossActionLabel(status: WorldBossStatusResponse | null) {
-  return status?.event?.status === "ACTIVE"
-    ? "Sair do combate"
-    : "Sair do lobby";
+  if (status?.event?.status === "ACTIVE") return "Sair do combate";
+  return "Cancelar inscrição";
 }
 
 function isBlockingWorldBossStatus(status?: WorldBossStatusResponse | null) {
   const eventStatus = status?.event?.status;
   return Boolean(
-    status?.participant &&
-    (eventStatus === "SCHEDULED" ||
-      eventStatus === "LOBBY_OPEN" ||
-      eventStatus === "ACTIVE"),
+    isWorldBossConfirmed(status) && eventStatus === "ACTIVE",
   );
 }
 
@@ -654,13 +649,15 @@ function getCanonicalBossCards(
 }
 
 function getPanelStatus(statuses: WorldBossStatusResponse[]) {
-  const joined = statuses.find(
-    (status) =>
-      status.event &&
-      status.participant &&
-      status.event.status !== "CANCELLED" &&
-      status.event.status !== "REWARDED",
-  );
+  const joined =
+    statuses.find(isBlockingWorldBossStatus) ??
+    statuses.find(
+      (status) =>
+        status.event &&
+        status.participant &&
+        status.event.status !== "CANCELLED" &&
+        status.event.status !== "REWARDED",
+    );
   if (joined) return joined;
   return (
     statuses.find(
@@ -695,6 +692,9 @@ export function WorldBossesPage() {
   const [detailsEventId, setDetailsEventId] = useState<string | null>(null);
   const [revealedRewardId, setRevealedRewardId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [registrationFeedback, setRegistrationFeedback] = useState<
+    string | null
+  >(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -726,10 +726,7 @@ export function WorldBossesPage() {
         );
         setRecentRewardStatus((current) =>
           bossesResponse.recentReward
-            ? mergeWorldBossStatusSnapshot(
-                current,
-                bossesResponse.recentReward,
-              )
+            ? mergeWorldBossStatusSnapshot(current, bossesResponse.recentReward)
             : null,
         );
         setError(null);
@@ -799,6 +796,7 @@ export function WorldBossesPage() {
 
     socket.on("worldBoss:lobbyOpened", update);
     socket.on("worldBoss:statusUpdated", update);
+    socket.on("worldBoss:registered", update);
     socket.on("worldBoss:joinedLobby", update);
     socket.on("worldBoss:leftLobby", update);
     socket.on("worldBoss:lobbyUpdated", update);
@@ -822,6 +820,7 @@ export function WorldBossesPage() {
       });
       socket.off("worldBoss:lobbyOpened", update);
       socket.off("worldBoss:statusUpdated", update);
+      socket.off("worldBoss:registered", update);
       socket.off("worldBoss:joinedLobby", update);
       socket.off("worldBoss:leftLobby", update);
       socket.off("worldBoss:lobbyUpdated", update);
@@ -856,6 +855,23 @@ export function WorldBossesPage() {
     };
   }, [detailsEventId]);
 
+  useEffect(() => {
+    const syncRegistration = (event: Event) => {
+      const status = (event as CustomEvent<WorldBossStatusResponse>).detail;
+      if (!status?.event) return;
+      setBossStatuses((current) =>
+        upsertWorldBossStatusSnapshot(current, status),
+      );
+      setRegistrationFeedback(status.message ?? WORLD_BOSS_REGISTRATION_NOTICE);
+      setError(null);
+    };
+
+    window.addEventListener(WORLD_BOSS_STATUS_SYNC_EVENT, syncRegistration);
+    return () => {
+      window.removeEventListener(WORLD_BOSS_STATUS_SYNC_EVENT, syncRegistration);
+    };
+  }, []);
+
   const character = useMemo(
     () => (overview ? buildCharacterViewModel(overview) : null),
     [overview],
@@ -881,9 +897,20 @@ export function WorldBossesPage() {
       setBossStatuses((current) =>
         upsertWorldBossStatusSnapshot(current, next),
       );
+      setRegistrationFeedback(next.message ?? WORLD_BOSS_REGISTRATION_NOTICE);
+      window.dispatchEvent(
+        new CustomEvent<WorldBossStatusResponse>(WORLD_BOSS_STATUS_SYNC_EVENT, {
+          detail: next,
+        }),
+      );
       handleCloseDetails();
       setError(null);
+      const refreshed = await getAvailableWorldBosses(characterId);
+      setBossStatuses((current) =>
+        reconcileWorldBossStatusSnapshots(current, refreshed.events),
+      );
     } catch (err) {
+      setRegistrationFeedback(null);
       setError(
         err instanceof Error
           ? err.message
@@ -906,6 +933,12 @@ export function WorldBossesPage() {
           next,
         ),
       );
+      window.dispatchEvent(
+        new CustomEvent<WorldBossStatusResponse>(WORLD_BOSS_STATUS_SYNC_EVENT, {
+          detail: next,
+        }),
+      );
+      setRegistrationFeedback(null);
       handleCloseDetails();
       setError(null);
     } catch (err) {
@@ -974,6 +1007,7 @@ export function WorldBossesPage() {
   const panelStatus = selectedStatus ?? getPanelStatus(bossStatuses);
   const panelEvent = panelStatus?.event ?? null;
   const panelBoss = panelEvent?.worldBoss ?? null;
+  const panelBossImageUrl = getWorldBossImageUrl(panelBoss);
   const panelTierClassName = getWorldBossTierClassName(panelBoss?.tier);
   const panelParticipant = panelStatus?.participant ?? null;
   const isPanelBlockedByOtherWorldBoss = panelStatus
@@ -990,6 +1024,7 @@ export function WorldBossesPage() {
   const isLobbyOpen = panelEvent?.status === "LOBBY_OPEN";
   const lobbyCount =
     panelEvent?.lobbyCount ?? panelEvent?.participantCount ?? 0;
+  const registrationCount = panelEvent?.registrationCount ?? lobbyCount;
   const panelSideInfo = getSidePanelStatusInfo(panelStatus ?? null, nowMs);
   const effectiveDetailsEventId =
     detailsEventId &&
@@ -1003,6 +1038,16 @@ export function WorldBossesPage() {
     : null;
   const detailsEvent = detailsStatus?.event ?? null;
   const detailsBoss = detailsEvent?.worldBoss ?? null;
+  const detailsBossImageUrl = getWorldBossImageUrl(detailsBoss);
+  const revealedReward =
+    detailsBoss?.rewards.find((reward) => reward.id === revealedRewardId) ??
+    null;
+  const revealedCocoonOptions =
+    revealedReward?.rewardType === "PET_EGG" &&
+    revealedReward.randomPetCocoon &&
+    detailsBoss
+      ? getWorldBossCocoonOptions(detailsBoss.tier)
+      : [];
   const detailsTimer = getEventTimerInfo(detailsStatus, nowMs);
   const isDetailsBlockedByOtherWorldBoss = detailsStatus
     ? isBlockedByOtherWorldBoss(detailsStatus, blockingWorldBossEventId)
@@ -1013,6 +1058,12 @@ export function WorldBossesPage() {
   const canLeaveDetails = detailsStatus
     ? canLeaveWorldBossStatus(detailsStatus)
     : false;
+  const isDetailsLocked = Boolean(
+    detailsStatus &&
+      !detailsStatus.participant &&
+      !detailsStatus.eligible?.canJoin &&
+      detailsEvent?.status !== "ACTIVE",
+  );
   const detailsTierClassName = getWorldBossTierClassName(detailsBoss?.tier);
   const selectedPanelEventId = panelEvent?.id ?? null;
   const visibleRewardStatus =
@@ -1021,7 +1072,6 @@ export function WorldBossesPage() {
       : recentRewardStatus;
   const topBarActivityOverride = buildWorldBossTopBarActivity(
     blockingWorldBossStatus,
-    nowMs,
   );
 
   return (
@@ -1039,8 +1089,8 @@ export function WorldBossesPage() {
               </span>
               <h1>Ameaças Globais</h1>
               <p>
-                Enfrente ameaças globais, entre no lobby e acompanhe a batalha
-                em tempo real.
+                Inscreva-se sem parar sua atividade e acompanhe a batalha em
+                tempo real quando ela começar.
               </p>
             </div>
           </section>
@@ -1048,6 +1098,12 @@ export function WorldBossesPage() {
           {error ? (
             <div className="incursions-alert incursions-alert--error world-bosses-alert">
               {error}
+            </div>
+          ) : null}
+
+          {registrationFeedback ? (
+            <div className="incursions-alert world-bosses-alert world-bosses-alert--success">
+              {registrationFeedback}
             </div>
           ) : null}
 
@@ -1113,8 +1169,8 @@ export function WorldBossesPage() {
             <div>
               <h2>Benefícios premium</h2>
               <p>
-                Alertas avançados, leitura compacta do lobby e preparação visual
-                para eventos de contenção global.
+                Alertas antecipados e preparação visual para eventos de
+                contenção global.
               </p>
             </div>
             <button
@@ -1127,7 +1183,7 @@ export function WorldBossesPage() {
 
           <section
             className="incursions-content-grid world-bosses-content-grid"
-            aria-label="World Bosses e lobby atual"
+            aria-label="World Bosses e batalha atual"
           >
             <main className="incursions-main-column world-bosses-main-column">
               <section className="gathering-card gathering-card--compact incursions-list-panel world-bosses-list-panel">
@@ -1175,6 +1231,13 @@ export function WorldBossesPage() {
                         bossEvent.status !== "ACTIVE";
                       const cardLobbyCount =
                         bossEvent.lobbyCount ?? bossEvent.participantCount ?? 0;
+                      const cardRegistrationCount =
+                        bossEvent.registrationCount ?? cardLobbyCount;
+                      const cardVisibleCount =
+                        bossEvent.status === "SCHEDULED" ||
+                        bossEvent.status === "LOBBY_OPEN"
+                          ? cardRegistrationCount
+                          : cardLobbyCount;
                       const cardTimer = getEventTimerInfo(bossStatus, nowMs);
                       const cardTone = getCardStatusTone(bossStatus);
                       const cardStatusLabel = getCardStatusLabel(bossStatus);
@@ -1189,6 +1252,7 @@ export function WorldBossesPage() {
                       const bossTierClassName = getWorldBossTierClassName(
                         cardBoss.tier,
                       );
+                      const cardBossImageUrl = getWorldBossImageUrl(cardBoss);
 
                       return (
                         <article
@@ -1248,13 +1312,25 @@ export function WorldBossesPage() {
                                   Level {getBossLevel(cardBoss)}
                                 </span>
                               </div>
-                              {cardBoss.imageUrl ? (
-                                <img src={cardBoss.imageUrl} alt="" />
+                              {cardBossImageUrl ? (
+                                <img src={cardBossImageUrl} alt="" />
                               ) : (
                                 <span className="world-bosses-boss-card__glyph">
                                   <Biohazard size={42} />
                                 </span>
                               )}
+                              {cardIsLocked ? (
+                                <div className="world-bosses-boss-card__lock">
+                                  <span>
+                                    <LockKeyhole size={26} />
+                                  </span>
+                                  <strong>Bloqueado</strong>
+                                  <small>
+                                    {bossStatus.eligible?.reason ??
+                                      "Inscrição indisponível"}
+                                  </small>
+                                </div>
+                              ) : null}
                             </div>
                             <div className="world-bosses-boss-card__content">
                               <h3 className="world-bosses-boss-card__name">
@@ -1262,8 +1338,13 @@ export function WorldBossesPage() {
                               </h3>
                               <div className="world-bosses-boss-card__meta">
                                 <span>{cardTimer.text}</span>
-                                {cardLobbyCount > 0 ? (
-                                  <small>{cardLobbyCount} no lobby</small>
+                                {cardVisibleCount > 0 ? (
+                                  <small>
+                                    {cardVisibleCount}{" "}
+                                    {bossEvent.status === "ACTIVE"
+                                      ? "participantes"
+                                      : "inscritos"}
+                                  </small>
                                 ) : null}
                               </div>
                               <div
@@ -1299,8 +1380,8 @@ export function WorldBossesPage() {
                                     }}
                                     disabled={isBusy}
                                   >
-                                    <Swords size={15} />
-                                    Entrar
+                                    <BellRing size={15} />
+                                    {getWorldBossEntryActionLabel()}
                                   </button>
                                 ) : shouldShowBlockedJoin ? (
                                   <button
@@ -1313,8 +1394,8 @@ export function WorldBossesPage() {
                                       "Você já está em outro World Boss."
                                     }
                                   >
-                                    <Swords size={15} />
-                                    Entrar
+                                    <LockKeyhole size={15} />
+                                    {getWorldBossEntryActionLabel()}
                                   </button>
                                 ) : null}
                                 {cardCanLeave ? (
@@ -1360,10 +1441,10 @@ export function WorldBossesPage() {
                   {!panelEvent || !panelBoss ? (
                     <div className="incursions-current-card__empty world-bosses-activity-empty">
                       <ShieldAlert size={24} />
-                      <h2>Nenhum lobby ativo</h2>
+                      <h2>Nenhuma batalha ativa</h2>
                       <p>
-                        Escolha uma ameaça global para ver os detalhes ou entrar
-                        no lobby.
+                        Escolha uma ameaça global para ver os detalhes ou fazer
+                        sua inscrição.
                       </p>
                     </div>
                   ) : (
@@ -1373,8 +1454,8 @@ export function WorldBossesPage() {
                           className="incursions-current-card__icon world-bosses-activity-boss__icon"
                           aria-hidden="true"
                         >
-                          {panelBoss.imageUrl ? (
-                            <img src={panelBoss.imageUrl} alt="" />
+                          {panelBossImageUrl ? (
+                            <img src={panelBossImageUrl} alt="" />
                           ) : (
                             <Biohazard size={24} />
                           )}
@@ -1435,9 +1516,19 @@ export function WorldBossesPage() {
                         </span>
                         <span>
                           <small>
-                            {isLobbyOpen ? "No lobby" : "Participantes"}
+                            {panelEvent.status === "SCHEDULED"
+                              ? "Inscritos"
+                              : isLobbyOpen
+                                ? "Inscritos"
+                                : "Participantes"}
                           </small>
-                          <strong>{lobbyCount}</strong>
+                          <strong>
+                            {panelEvent.status === "SCHEDULED"
+                              ? registrationCount
+                              : isLobbyOpen
+                                ? registrationCount
+                                : lobbyCount}
+                          </strong>
                         </span>
                         <span>
                           <small>Seu dano</small>
@@ -1472,7 +1563,8 @@ export function WorldBossesPage() {
                             onClick={() => void handleJoin(panelEvent.id)}
                             disabled={isBusy}
                           >
-                            Entrar
+                            <BellRing size={15} />
+                            {getWorldBossEntryActionLabel()}
                           </button>
                         ) : isPanelBlockedByOtherWorldBoss ? (
                           <button
@@ -1484,7 +1576,8 @@ export function WorldBossesPage() {
                               "Você já está em outro World Boss."
                             }
                           >
-                            Entrar
+                            <LockKeyhole size={15} />
+                            {getWorldBossEntryActionLabel()}
                           </button>
                         ) : null}
                         {canLeavePanel ? (
@@ -1498,9 +1591,9 @@ export function WorldBossesPage() {
                             Sair
                           </button>
                         ) : null}
-                        {!canJoinPanel && !isJoinedPanel ? (
+                        {panelStatus?.eligible?.reason && !isJoinedPanel ? (
                           <span className="world-bosses-eligible world-bosses-eligible--pending">
-                            {panelStatus?.eligible?.reason ?? "Indisponível"}
+                            {panelStatus.eligible.reason}
                           </span>
                         ) : null}
                       </div>
@@ -1548,13 +1641,18 @@ export function WorldBossesPage() {
                     className="world-bosses-modal__portrait"
                     aria-hidden="true"
                   >
-                    {detailsBoss.imageUrl ? (
-                      <img src={detailsBoss.imageUrl} alt="" />
+                    {detailsBossImageUrl ? (
+                      <img src={detailsBossImageUrl} alt="" />
                     ) : (
                       <span>
                         <Biohazard size={34} />
                       </span>
                     )}
+                    {isDetailsLocked ? (
+                      <span className="world-bosses-modal__portrait-lock">
+                        <LockKeyhole size={22} />
+                      </span>
+                    ) : null}
                   </div>
                   <div>
                     <span className="incursions-modal__eyebrow">
@@ -1580,7 +1678,9 @@ export function WorldBossesPage() {
                   <span>
                     <small>Sobreviventes</small>
                     <strong>
-                      {detailsEvent.lobbyCount ?? detailsEvent.participantCount}
+                      {detailsEvent.status === "ACTIVE"
+                        ? detailsEvent.participantCount
+                        : (detailsEvent.registrationCount ?? 0)}
                     </strong>
                   </span>
                   <span>
@@ -1591,6 +1691,15 @@ export function WorldBossesPage() {
                     </strong>
                   </span>
                 </div>
+                {isDetailsLocked && detailsStatus?.eligible?.reason ? (
+                  <div className="world-bosses-modal__blocked">
+                    <LockKeyhole size={16} />
+                    <div>
+                      <strong>Participação bloqueada</strong>
+                      <span>{detailsStatus.eligible.reason}</span>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="world-bosses-modal__rewards-section">
                   <div className="world-bosses-modal__section-head">
                     <h3>Recompensas possíveis</h3>
@@ -1637,11 +1746,14 @@ export function WorldBossesPage() {
                             className="world-bosses-reward-card__icon"
                             aria-hidden="true"
                           >
-                            {getRewardIcon(reward)}
+                            {getRewardIcon(reward, detailsBoss.tier)}
                           </span>
                           <span className="world-bosses-reward-card__reveal">
                             <strong>{rewardName}</strong>
                             <small>Quantidade {quantityLabel}</small>
+                            {reward.randomPetCocoon ? (
+                              <em>Um dos 8 casulos do tier será sorteado.</em>
+                            ) : null}
                             {requirementLabel ? (
                               <em>{requirementLabel}</em>
                             ) : null}
@@ -1650,6 +1762,22 @@ export function WorldBossesPage() {
                       );
                     })}
                   </div>
+                  {revealedCocoonOptions.length > 0 ? (
+                    <div className="world-bosses-cocoon-pool">
+                      <div className="world-bosses-cocoon-pool__head">
+                        <strong>Casulo aleatório T{detailsBoss.tier}</strong>
+                        <span>1 dos 8 possíveis</span>
+                      </div>
+                      <div className="world-bosses-cocoon-pool__grid">
+                        {revealedCocoonOptions.map((option) => (
+                          <span key={option.key}>
+                            <img src={option.imageUrl} alt="" />
+                            <small>{option.label}</small>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="world-bosses-actions world-bosses-modal-actions">
                   {canJoinDetails ? (
@@ -1659,8 +1787,8 @@ export function WorldBossesPage() {
                       onClick={() => void handleJoin(detailsEvent.id)}
                       disabled={isBusy}
                     >
-                      <Swords size={15} />
-                      Entrar
+                      <BellRing size={15} />
+                      {getWorldBossEntryActionLabel()}
                     </button>
                   ) : isDetailsBlockedByOtherWorldBoss ? (
                     <button
@@ -1672,8 +1800,8 @@ export function WorldBossesPage() {
                         "Você já está em outro World Boss."
                       }
                     >
-                      <Swords size={15} />
-                      Entrar
+                      <LockKeyhole size={15} />
+                      {getWorldBossEntryActionLabel()}
                     </button>
                   ) : null}
                   {canLeaveDetails ? (

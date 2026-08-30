@@ -26,6 +26,17 @@ export class WorldBossesController {
     return this.worldBossesService.getAvailable(request.user.id, characterId);
   }
 
+  @Get(':characterId/registrations')
+  getRegistrations(
+    @Req() request: any,
+    @Param('characterId') characterId: string,
+  ) {
+    return this.worldBossesService.getRegistrations(
+      request.user.id,
+      characterId,
+    );
+  }
+
   @Get(':characterId/active')
   async getActive(
     @Req() request: any,
@@ -71,7 +82,14 @@ export class WorldBossesController {
   @Post('join')
   async join(@Req() request: any, @Body() dto: JoinWorldBossDto) {
     const status = await this.worldBossesService.join(request.user.id, dto);
-    this.worldBossesGateway.emitJoined(dto.eventId, status);
+    this.worldBossesGateway.emitRegistered(dto.eventId, status);
+    return status;
+  }
+
+  @Post('confirm')
+  async confirm(@Req() request: any, @Body() dto: JoinWorldBossDto) {
+    const status = await this.worldBossesService.confirm(request.user.id, dto);
+    this.worldBossesGateway.emitRegistered(dto.eventId, status);
     return status;
   }
 

@@ -1,11 +1,20 @@
 import { AUTO_POTION_TRIGGER_PERCENT } from '../config/potions.config';
 import { calculateCombatDamageDetails } from './combat-damage.util';
+import {
+  calculateAutoCombatAttackOpportunities,
+  getAutoCombatEquipmentTierGap,
+  getAutoCombatIncomingDamageMultiplier,
+} from './auto-combat-pressure.util';
 
 export type AutoCombatSurvivalRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'LETHAL';
 
 export type AutoCombatSurvivalProjection = {
   riskLevel: AutoCombatSurvivalRiskLevel;
   expectedDamagePerKill: number;
+  expectedDamagePerAttack: number;
+  expectedAttacksPerKill: number;
+  equipmentTierGap: number;
+  incomingDamageMultiplier: number;
   expectedMobHitDamage: number;
   expectedDodgeChancePercent: number;
   expectedCriticalChancePercent: number;
@@ -32,6 +41,10 @@ export type ProjectAutoCombatSurvivalParams = {
   mobAttack: number;
   mobPrecision: number;
   mobTechnique: number;
+  mobSpeed?: number | null;
+  mobTier?: number | null;
+  equipmentTier?: number | null;
+  killTimeSeconds?: number | null;
   projectedKills: number;
   potion?: {
     availableQuantity?: number | null;
@@ -64,6 +77,10 @@ export function getExpectedIncomingDamagePerKill(params: {
   mobTechnique: number;
   playerDefense: number;
   playerAgility: number;
+  mobSpeed?: number | null;
+  mobTier?: number | null;
+  equipmentTier?: number | null;
+  killTimeSeconds?: number | null;
 }) {
   const safeMobPrecision = Math.max(0, Number(params.mobPrecision) || 0);
   const safeMobTechnique = Math.max(0, Number(params.mobTechnique) || 0);
@@ -94,11 +111,35 @@ export function getExpectedIncomingDamagePerKill(params: {
   const hitRate = 1 - dodgeChancePercent / 100;
   const expectedCriticalMultiplier =
     1 + (criticalChancePercent / 100) * (criticalMultiplier - 1);
-  const expectedDamage =
-    damageDetails.baseDamage * hitRate * expectedCriticalMultiplier;
+  const incomingDamageMultiplier = getAutoCombatIncomingDamageMultiplier({
+    mobTier: params.mobTier,
+    equipmentTier: params.equipmentTier,
+  });
+  const expectedDamagePerAttack =
+    damageDetails.baseDamage *
+    hitRate *
+    expectedCriticalMultiplier *
+    incomingDamageMultiplier;
+  const expectedAttacksPerKill = calculateAutoCombatAttackOpportunities({
+    killTimeSeconds: params.killTimeSeconds,
+    mobSpeed: params.mobSpeed ?? params.mobPrecision,
+    mobTier: params.mobTier,
+    equipmentTier: params.equipmentTier,
+  });
+  const expectedDamage = expectedDamagePerAttack * expectedAttacksPerKill;
 
   return {
     expectedDamagePerKill: roundNumber(Math.max(0, expectedDamage), 2),
+    expectedDamagePerAttack: roundNumber(
+      Math.max(0, expectedDamagePerAttack),
+      2,
+    ),
+    expectedAttacksPerKill,
+    equipmentTierGap: getAutoCombatEquipmentTierGap({
+      mobTier: params.mobTier,
+      equipmentTier: params.equipmentTier,
+    }),
+    incomingDamageMultiplier,
     expectedMobHitDamage: damageDetails.baseDamage,
     expectedDodgeChancePercent: roundNumber(dodgeChancePercent, 2),
     expectedCriticalChancePercent: roundNumber(criticalChancePercent, 2),
@@ -109,7 +150,8 @@ export function getExpectedIncomingDamagePerKill(params: {
 function simulateSurvival(params: {
   currentHp: number;
   maxHp: number;
-  expectedDamagePerKill: number;
+  expectedDamagePerAttack: number;
+  expectedAttacksPerKill: number;
   projectedKills: number;
   availablePotions: number;
   potionHealAmount: number;
@@ -132,21 +174,38 @@ function simulateSurvival(params: {
       break;
     }
 
-    hp = Math.max(0, hp - params.expectedDamagePerKill);
+    const fullAttacks = Math.floor(params.expectedAttacksPerKill);
+    const fractionalAttack = params.expectedAttacksPerKill - fullAttacks;
+    const attackDamages = Array.from(
+      { length: fullAttacks },
+      () => params.expectedDamagePerAttack,
+    );
 
-    if (hp <= 0) {
-      break;
+    if (fractionalAttack > 0) {
+      attackDamages.push(params.expectedDamagePerAttack * fractionalAttack);
     }
 
-    if (
-      thresholdHp !== null &&
-      potionsRemaining > 0 &&
-      params.potionHealAmount > 0 &&
-      hp <= thresholdHp
-    ) {
-      hp = clampNumber(hp + params.potionHealAmount, 0, maxHp);
-      potionsRemaining--;
-      potionsUsed++;
+    let potionUsedThisKill = false;
+
+    for (const attackDamage of attackDamages) {
+      hp = Math.max(0, hp - attackDamage);
+
+      if (hp <= 0) {
+        break;
+      }
+
+      if (
+        !potionUsedThisKill &&
+        thresholdHp !== null &&
+        potionsRemaining > 0 &&
+        params.potionHealAmount > 0 &&
+        hp <= thresholdHp
+      ) {
+        hp = clampNumber(hp + params.potionHealAmount, 0, maxHp);
+        potionsRemaining--;
+        potionsUsed++;
+        potionUsedThisKill = true;
+      }
     }
 
     if (hp <= 0) {
@@ -179,7 +238,12 @@ export function projectAutoCombatSurvival(
   const potionHealAmount = Math.max(0, Number(params.potion?.healAmount) || 0);
   const potionTriggerPercent =
     availablePotions > 0 && potionHealAmount > 0
-      ? AUTO_POTION_TRIGGER_PERCENT
+      ? clampNumber(
+          Number(params.potion?.hpThresholdPercent) ||
+            AUTO_POTION_TRIGGER_PERCENT,
+          1,
+          99,
+        )
       : null;
   const incomingDamage = getExpectedIncomingDamagePerKill(params);
 
@@ -206,7 +270,8 @@ export function projectAutoCombatSurvival(
   const withoutPotions = simulateSurvival({
     currentHp,
     maxHp,
-    expectedDamagePerKill: incomingDamage.expectedDamagePerKill,
+    expectedDamagePerAttack: incomingDamage.expectedDamagePerAttack,
+    expectedAttacksPerKill: incomingDamage.expectedAttacksPerKill,
     projectedKills,
     availablePotions: 0,
     potionHealAmount: 0,
@@ -215,7 +280,8 @@ export function projectAutoCombatSurvival(
   const withPotions = simulateSurvival({
     currentHp,
     maxHp,
-    expectedDamagePerKill: incomingDamage.expectedDamagePerKill,
+    expectedDamagePerAttack: incomingDamage.expectedDamagePerAttack,
+    expectedAttacksPerKill: incomingDamage.expectedAttacksPerKill,
     projectedKills,
     availablePotions,
     potionHealAmount,

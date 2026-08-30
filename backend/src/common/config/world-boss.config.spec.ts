@@ -8,7 +8,7 @@ describe('world boss config', () => {
   it('mantem os dois intervalos canonicos de reaparecimento', () => {
     expect(getWorldBossRespawnSeconds(0)).toBe(6 * 60 * 60);
     expect(getWorldBossRespawnSeconds(1)).toBe(12 * 60 * 60);
-    expect(WORLD_BOSS_SCHEDULE_CONFIG.entryWindowSeconds).toBe(5 * 60);
+    expect(WORLD_BOSS_SCHEDULE_CONFIG.entryWindowSeconds).toBe(15 * 60);
     expect(WORLD_BOSS_SCHEDULE_CONFIG.eventDurationSeconds).toBe(3 * 60 * 60);
   });
 

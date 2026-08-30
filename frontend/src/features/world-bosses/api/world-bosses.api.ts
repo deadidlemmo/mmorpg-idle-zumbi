@@ -26,10 +26,25 @@ export async function getAvailableWorldBosses(characterId: string) {
   return response.data;
 }
 
+export async function getWorldBossRegistrations(characterId: string) {
+  const response = await apiClient.get<WorldBossAvailableResponse>(
+    API_ENDPOINTS.worldBosses.registrations(characterId),
+  );
+  return response.data;
+}
+
 export async function joinWorldBoss(characterId: string, eventId: string) {
   const response = await apiClient.post<WorldBossStatusResponse>(
     API_ENDPOINTS.worldBosses.join,
-    { characterId, eventId },
+    { characterId, eventId, intent: "REGISTER" },
+  );
+  return response.data;
+}
+
+export async function confirmWorldBoss(characterId: string, eventId: string) {
+  const response = await apiClient.post<WorldBossStatusResponse>(
+    API_ENDPOINTS.worldBosses.confirm,
+    { characterId, eventId, intent: "CONFIRM" },
   );
   return response.data;
 }

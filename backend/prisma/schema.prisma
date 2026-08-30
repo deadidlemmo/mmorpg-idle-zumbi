@@ -1657,9 +1657,10 @@ model CharacterIncursionSession {
   completedAt DateTime?
   claimedAt   DateTime?
 
-  goldCostPaid Int @default(0)
-  xpReward     Int @default(0)
-  goldReward   Int @default(0)
+  goldCostPaid    Int @default(0)
+  entryGoldRefund Int @default(0)
+  xpReward        Int @default(0)
+  goldReward      Int @default(0)
 
   generatedRewardsJson Json?
 
@@ -1734,6 +1735,9 @@ model CharacterMission {
   status      MissionStatus @default(ACTIVE)
   progress    Int           @default(0)
   targetValue Int
+  rewardTier  Int           @default(1)
+  rewardXp    Int           @default(0)
+  rewardGold  Int           @default(0)
   assignedAt  DateTime      @default(now())
   expiresAt   DateTime?
   completedAt DateTime?
@@ -1744,6 +1748,7 @@ model CharacterMission {
 
   @@unique([characterId, missionId, periodKey])
   @@index([characterId, status])
+  @@index([characterId, rewardTier, status])
   @@index([expiresAt])
   @@map("character_missions")
 }
@@ -1883,8 +1888,15 @@ model WorldBossEvent {
   maxHp     Int
   currentHp Int
 
-  totalDamage      Int @default(0)
-  participantCount Int @default(0)
+  totalDamage       Int @default(0)
+  participantCount  Int @default(0)
+  registrationCount Int @default(0)
+
+  targetTtkSeconds                Int?
+  aggregateDamagePerSecond        Float     @default(0)
+  aggregateScalingDamagePerSecond Float     @default(0)
+  damageProcessedAt               DateTime?
+  scalingVersion                  Int       @default(1)
 
   hpLockedAt DateTime?
   defeatedAt DateTime?
@@ -1902,6 +1914,7 @@ model WorldBossEvent {
   @@index([mapId])
   @@index([tier])
   @@index([status])
+  @@index([status, damageProcessedAt])
   @@index([startsAt])
   @@index([endsAt])
   @@map("world_boss_events")
@@ -1916,7 +1929,17 @@ model WorldBossParticipant {
   damageDealt         Int   @default(0)
   contributionPercent Float @default(0)
 
+  powerScoreSnapshot             Int?
+  damagePerSecondSnapshot        Float?
+  scalingDamagePerSecondSnapshot Float?
+  readinessSnapshot              Float?
+  equipmentTierSnapshot          Float?
+  equippedPieceCountSnapshot     Int?
+  damageRemainder                Float     @default(0)
+  combatSnapshotAt               DateTime?
+
   joinedAt           DateTime  @default(now())
+  confirmedAt        DateTime?
   lastContributionAt DateTime  @default(now())
   leftAt             DateTime?
   activeSeconds      Int       @default(0)
@@ -1937,6 +1960,7 @@ model WorldBossParticipant {
 
   @@unique([eventId, characterId])
   @@index([eventId])
+  @@index([eventId, confirmedAt, leftAt])
   @@index([characterId])
   @@index([leftAt])
   @@index([rewardGranted])

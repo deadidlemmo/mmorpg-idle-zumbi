@@ -105,7 +105,7 @@ describe('calibrateWorldBossSimulation', () => {
       sampleSize: 10,
     });
     expect(long.defeatChancePercent).toMatchObject({
-      value: 50,
+      value: 100,
       source: 'FALLBACK',
       sampleSize: 0,
     });
@@ -131,10 +131,10 @@ describe('calibrateWorldBossSimulation', () => {
     expect(calendar.every((event) => event.outcome === 'EMPTY')).toBe(true);
     expect(shortEvents[0]).toMatchObject({
       startsAtMinute: 10,
-      closesAtMinute: 15,
+      closesAtMinute: 25,
       rewardMultiplier: 0,
     });
-    expect(shortEvents[1].startsAtMinute).toBe(15 + 6 * 60);
+    expect(shortEvents[1].startsAtMinute).toBe(25 + 6 * 60);
 
     const report = simulateT1Economy(
       { players: 100, days: 7, seed: 20260825 },

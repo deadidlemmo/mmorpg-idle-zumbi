@@ -81,6 +81,36 @@ test('aceita snapshot mais novo e preserva elegibilidade omitida no socket', () 
   assert.deepEqual(merged.eligible, { canJoin: true });
 });
 
+test('preserva o participante quando o evento coletivo envia apenas o estado público', () => {
+  const current = {
+    ...buildStatus({
+      currentHp: 700,
+      updatedAt: '2026-08-26T12:00:05.000Z',
+    }),
+    participant: {
+      id: 'participant-1',
+      damageDealt: 0,
+      contributionPercent: 0,
+      joinedAt: '2026-08-26T11:30:00.000Z',
+      lastContributionAt: '2026-08-26T11:30:00.000Z',
+      activeSeconds: 0,
+      rewardGranted: false,
+      eligibleForReward: false,
+      registrationStatus: 'REGISTERED' as const,
+    },
+  };
+  const publicSnapshot = buildStatus({
+    currentHp: 650,
+    updatedAt: '2026-08-26T12:00:10.000Z',
+  });
+  delete publicSnapshot.participant;
+
+  const merged = mergeWorldBossStatusSnapshot(current, publicSnapshot);
+
+  assert.equal(merged.event?.currentHp, 650);
+  assert.equal(merged.participant?.id, 'participant-1');
+});
+
 test('usa a mesma proteção no upsert realtime e na reconciliação REST', () => {
   const current = buildStatus({
     currentHp: 400,

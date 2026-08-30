@@ -91,9 +91,7 @@ function formatMultiplier(multiplier: number) {
 }
 
 function formatProgressPercent(progressPercent: number) {
-  const safeProgress = Number.isFinite(progressPercent)
-    ? progressPercent
-    : 0;
+  const safeProgress = Number.isFinite(progressPercent) ? progressPercent : 0;
 
   return Math.round(Math.min(100, Math.max(0, safeProgress)));
 }
@@ -422,8 +420,7 @@ function getRiskLabel(riskLevel?: number | null) {
 function getErrorMessage(error: unknown) {
   if (isAxiosError(error)) {
     const data = error.response?.data as
-      | { message?: string | string[] }
-      | undefined;
+      { message?: string | string[] } | undefined;
     if (Array.isArray(data?.message)) return data.message.join(" ");
     if (data?.message) return data.message;
   }
@@ -878,6 +875,18 @@ export function IncursionsPage() {
               <p>{rewardedSession.outcomeSummary}</p>
             ) : null}
 
+            {rewardedSession.success !== false &&
+            rewardedSession.entryGoldRefund > 0 ? (
+              <div className="incursions-reward-result__refund">
+                <CheckCircle2 size={15} />
+                <span>Entrada devolvida</span>
+                <strong>
+                  +{rewardedSession.entryGoldRefund.toLocaleString("pt-BR")}{" "}
+                  Gold
+                </strong>
+              </div>
+            ) : null}
+
             {rewardedSession.success !== false && earnedRewards.length > 0 ? (
               <>
                 <div className="incursions-reward-result__title">
@@ -1116,9 +1125,8 @@ export function IncursionsPage() {
                       <div>
                         <span>Progresso</span>
                         <strong>
-                          {formatProgressPercent(
-                            activeSession.progressPercent,
-                          )}%
+                          {formatProgressPercent(activeSession.progressPercent)}
+                          %
                         </strong>
                       </div>
                       <i>
@@ -1274,10 +1282,10 @@ export function IncursionsPage() {
 
                   {selectedApproachProfile ? (
                     <p className="incursions-modal__risk-note">
-                      Falhar pode remover até{" "}
+                      Na falha, a entrada é perdida e o sobrevivente pode perder
+                      até{" "}
                       {Math.round(selectedApproachProfile.failureHpRatio * 100)}
-                      % do HP máximo. O sobrevivente nunca retorna com menos de
-                      1 HP.
+                      % do HP máximo, mas nunca retorna com menos de 1 HP.
                     </p>
                   ) : null}
                 </section>
@@ -1286,6 +1294,20 @@ export function IncursionsPage() {
                   <strong className="incursions-modal__rewards-title">
                     <PackageOpen size={16} /> Loot possível
                   </strong>
+
+                  <div className="incursions-modal__refund-note">
+                    <CheckCircle2 size={17} />
+                    <span>
+                      <strong>Entrada devolvida no sucesso</strong>
+                      <small>
+                        {modalIncursion.successEntryRefundGold.toLocaleString(
+                          "pt-BR",
+                        )}{" "}
+                        Gold ({modalIncursion.successEntryRefundPercent}%) volta
+                        para o saldo. O loot abaixo é adicional.
+                      </small>
+                    </span>
+                  </div>
 
                   {modalIncursion.rewardsPreview.length > 0 ? (
                     <div className="incursions-modal__loot-grid">

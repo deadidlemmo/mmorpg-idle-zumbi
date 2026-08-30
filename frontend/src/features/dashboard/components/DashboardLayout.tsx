@@ -55,6 +55,7 @@ import {
   type DashboardTopBarActivityOverride,
   type DashboardTopBarResource,
 } from "./DashboardTopBar";
+import { ActiveSurvivorsModal } from "./ActiveSurvivorsModal";
 import "../dashboard.css";
 
 interface DashboardLayoutProps {
@@ -116,7 +117,10 @@ type GatheringSkillsSummaryLoose = {
 };
 
 type GatheringSkillsSource =
-  GatheringSkillLoose[] | GatheringSkillsSummaryLoose | null | undefined;
+  | GatheringSkillLoose[]
+  | GatheringSkillsSummaryLoose
+  | null
+  | undefined;
 
 type DashboardCharacterWithGatheringSkills = DashboardCharacterViewModel & {
   gatheringSkills?: GatheringSkillsSource;
@@ -1291,6 +1295,7 @@ function DashboardLayoutContent({
     string | null
   >(null);
   const [activeCharactersError, setActiveCharactersError] = useState(false);
+  const [isActiveSurvivorsOpen, setIsActiveSurvivorsOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -1506,6 +1511,12 @@ function DashboardLayoutContent({
         />
       ) : null}
 
+      <ActiveSurvivorsModal
+        isOpen={isActiveSurvivorsOpen}
+        viewerCharacterId={characterId}
+        onClose={() => setIsActiveSurvivorsOpen(false)}
+      />
+
       <aside className={`dashboard-sidebar ${isSidebarOpen ? "is-open" : ""}`}>
         <div className="dashboard-sidebar__brand">
           <span>Dead Idle</span>
@@ -1517,9 +1528,15 @@ function DashboardLayoutContent({
           aria-label="Comunidade e status do abrigo"
         >
           <div className="dashboard-sidebar__status-row">
-            <span
+            <button
+              type="button"
               className="dashboard-sidebar__community dashboard-sidebar__online"
               title={activeCharactersTitle}
+              onClick={() => {
+                closeSidebar();
+                setIsActiveSurvivorsOpen(true);
+              }}
+              aria-haspopup="dialog"
             >
               <span
                 className="dashboard-sidebar__online-dot"
@@ -1537,7 +1554,7 @@ function DashboardLayoutContent({
               >
                 {activeCharactersLabel.short}
               </span>
-            </span>
+            </button>
           </div>
         </section>
 

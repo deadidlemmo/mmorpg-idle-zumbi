@@ -48,12 +48,7 @@ import {
 } from "../utils/reinforcementPresentation";
 
 type EquipmentSlot =
-  | "MAIN_HAND"
-  | "OFF_HAND"
-  | "HEAD"
-  | "ARMOR"
-  | "PANTS"
-  | "BOOTS";
+  "MAIN_HAND" | "OFF_HAND" | "HEAD" | "ARMOR" | "PANTS" | "BOOTS";
 
 type EquipmentViewKey = keyof DashboardEquipmentViewModel;
 
@@ -507,7 +502,14 @@ export function EquipmentPage() {
               <div className="equipment-progression">
                 <div>
                   <span>SINERGIA DE EQUIPAMENTO</span>
-                  <strong>{equipmentProgression.craftedPieces}/6 peças</strong>
+                  <strong>
+                    {equipmentProgression.coherentPieces ??
+                      equipmentProgression.craftedPieces}
+                    /6 peças
+                    {(equipmentProgression.coherentTier ?? 0) > 0
+                      ? ` T${equipmentProgression.coherentTier}`
+                      : ""}
+                  </strong>
                 </div>
                 <div
                   className="equipment-progression__track"
@@ -517,7 +519,9 @@ export function EquipmentPage() {
                     <i
                       key={index}
                       className={
-                        index < equipmentProgression.craftedPieces
+                        index <
+                        (equipmentProgression.coherentPieces ??
+                          equipmentProgression.craftedPieces)
                           ? "is-active"
                           : ""
                       }
@@ -525,7 +529,7 @@ export function EquipmentPage() {
                   ))}
                 </div>
                 <small>
-                  +{equipmentProgression.bonusPercent}% em ataque, defesa e vida
+                  +{equipmentProgression.bonusPercent}% nos atributos das peças
                   {equipmentProgression.nextMilestone
                     ? ` · próximo bônus com ${equipmentProgression.nextMilestone} peças`
                     : " · bônus máximo ativo"}

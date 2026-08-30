@@ -26,6 +26,7 @@ import {
   projectAutoCombatSurvival,
   type AutoCombatSurvivalRiskLevel,
 } from '../src/common/utils/auto-combat-survival.util';
+import { calculateAutoCombatTtk } from '../src/common/utils/auto-combat-ttk.util';
 import {
   calculateFullStats,
   createEmptyPrimaryStats,
@@ -653,6 +654,18 @@ function buildClassTierRows(params: {
   });
   const potionHealAmount = potionHeal.healAmount;
   const rankRows = encounterPlans.map((plan): SurvivalRankRow => {
+    const ttk = calculateAutoCombatTtk({
+      mob: plan.mob,
+      playerStats: {
+        className: params.classDefinition.name,
+        attack: derived.attack,
+        speed: derived.speed,
+        precision: primary.precision,
+        technique: primary.technique,
+        agility: primary.agility,
+        equipmentTier: combatStats.equipmentProgression.effectiveTier,
+      },
+    });
     const mobAttack = applyAutoCombatIncomingDamageMultiplier({
       attack: plan.mob.attack,
       className: params.classDefinition.name,
@@ -665,6 +678,10 @@ function buildClassTierRows(params: {
       mobAttack,
       mobPrecision: plan.mob.speed,
       mobTechnique: plan.mob.level,
+      mobSpeed: plan.mob.speed,
+      mobTier: plan.mob.tier,
+      equipmentTier: combatStats.equipmentProgression.effectiveTier,
+      killTimeSeconds: ttk.estimatedKillTimeSeconds,
       projectedKills: 1,
       potion: null,
     });
@@ -1026,8 +1043,9 @@ function renderSvg(rows: SurvivalTierRow[], options: SurvivalReportOptions) {
     .sort((left, right) => right.potions100Battles - left.potions100Battles);
   const bestTier10 = tier10Rows[0];
   const worstTier10 = tier10Rows[tier10Rows.length - 1];
-  const worstNoPotionTier = [...rows]
-    .sort((left, right) => left.noPotionVsBestPercent - right.noPotionVsBestPercent)[0];
+  const worstNoPotionTier = [...rows].sort(
+    (left, right) => left.noPotionVsBestPercent - right.noPotionVsBestPercent,
+  )[0];
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Auto-combat survival and damage report">
@@ -1061,7 +1079,10 @@ function renderSvg(rows: SurvivalTierRow[], options: SurvivalReportOptions) {
 </svg>`;
 }
 
-function toCsv<T extends Record<string, unknown>>(rows: T[], headers: string[]) {
+function toCsv<T extends Record<string, unknown>>(
+  rows: T[],
+  headers: string[],
+) {
   const lines = rows.map((row) =>
     headers
       .map((header) => {

@@ -2098,6 +2098,14 @@ export class GatheringService {
     };
   }
 
+  async flushForWorldBossTransition(userId: string, characterId: string) {
+    return this.resolveActiveGathering(userId, characterId, {
+      forcePersist: true,
+      validateCollectionGuard: false,
+      throwIfMissing: false,
+    });
+  }
+
   private isTransactionConflictError(error: unknown) {
     return (
       error instanceof Prisma.PrismaClientKnownRequestError &&

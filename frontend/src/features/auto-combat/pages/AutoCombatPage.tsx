@@ -35,6 +35,8 @@ import "../auto-combat-mob-images.css";
 import "../auto-combat.css";
 import { AutoCombatBattleLog } from "../components/AutoCombatBattleLog";
 import { AutoCombatMobTransition } from "../components/AutoCombatMobTransition";
+import { AutoCombatPotionConfigModal } from "../components/AutoCombatPotionConfigModal";
+import { AutoCombatPotionStockCard } from "../components/AutoCombatPotionStockCard";
 import { AutoCombatPremiumBenefitsCard } from "../components/AutoCombatPremiumBenefitsCard";
 import { AutoCombatSessionSummary } from "../components/AutoCombatSessionSummary";
 import { AutoCombatStatsTab } from "../components/AutoCombatStatsTab";
@@ -89,7 +91,6 @@ import {
   getPotionEventKey,
   getPotionItem,
   getPotionName,
-  getPotionQuantity,
   getRealtimeActions,
   getRealtimeActiveEvent,
   getRealtimeBattleLogEvents,
@@ -113,11 +114,14 @@ import {
   normalizeSessionXpBreakdown,
   pickHighestProgress,
   resolveCharacterStats,
-  resolvePotionEventItemId,
-  resolvePotionQuantityAfter,
   toSafeNumber,
   updateCharacterPotionConfigRaw,
 } from "../utils/auto-combat-page.helpers";
+import {
+  getPotionQuantity,
+  resolvePotionEventItemId,
+  resolvePotionQuantityAfter,
+} from "../utils/potion-stock";
 import {
   getHuntEmptyStageCopy,
   shouldShowAutoCombatSessionStage,
@@ -2012,9 +2016,7 @@ export function AutoCombatPage() {
   const currentPotionConfig = autoPotionConfig ?? fallbackPotionConfig;
 
   const configuredPotionItem = getPotionItem(currentPotionConfig);
-  const configuredPotionImage = getConsumableItemImageUrl(
-    configuredPotionItem,
-  );
+  const configuredPotionImage = getConsumableItemImageUrl(configuredPotionItem);
 
   const potionOptions = (() => {
     const byId = new Map<string, PotionInventoryOption>();
@@ -2887,6 +2889,17 @@ export function AutoCombatPage() {
         0,
     ),
   );
+  const isConfiguredPotionAutoUseEnabled = Boolean(
+    configuredPotionItem?.id &&
+    currentPotionConfig?.enabled !== false &&
+    currentPotionConfig?.useInAutoCombat !== false,
+  );
+  const configuredPotionTriggerPercent = isConfiguredPotionAutoUseEnabled
+    ? clampNumber(currentPotionConfig?.hpThresholdPercent, 1, 100)
+    : null;
+  const isPotionUseFeedbackActive = Boolean(
+    providerPublicActiveEvent && providerActiveEventType === "POTION_USED",
+  );
   const huntingSnapshot = effectiveStatus?.hunting ?? null;
   const huntingSkill =
     effectiveStatus?.huntingSkill ?? huntingSnapshot?.skill ?? null;
@@ -3265,9 +3278,7 @@ export function AutoCombatPage() {
       : 1;
   const selectedThreatSurvivalProjection =
     selectedThreatMob?.survivalProjection ?? null;
-  const selectedThreatPotionEnabled = Boolean(
-    currentPotionConfig?.enabled !== false && configuredPotionItem?.id,
-  );
+  const selectedThreatPotionEnabled = Boolean(isConfiguredPotionAutoUseEnabled);
   const selectedThreatAvailablePotions = selectedThreatPotionEnabled
     ? configuredPotionQuantity
     : 0;
@@ -3466,9 +3477,7 @@ export function AutoCombatPage() {
     ? getActivityTimelineFrame(huntingTimeline)
     : null;
   const huntTimelineProgress =
-    !huntingTimeline &&
-    !showInlineHuntBattle &&
-    !isBackendEncounterReadyPhase
+    !huntingTimeline && !showInlineHuntBattle && !isBackendEncounterReadyPhase
       ? getRepeatingCycleProgress({
           nowMs: syncedSessionNowMs,
           cycleStartedAtMs: huntLastFindAtMs,
@@ -3584,45 +3593,45 @@ export function AutoCombatPage() {
   const huntingFoundLabel = displayedFoundEnemiesCount.toLocaleString("pt-BR");
   const huntingRemainingLabel =
     displayedRemainingHuntCapacity.toLocaleString("pt-BR");
-  const huntProgressStatusContent = showInlineHuntBattle
-    ? displayedBattleTargetTotal > 0
-      ? `${displayedBattleTargetDefeated}/${displayedBattleTargetTotal} abatidos`
-      : "Batalha em andamento"
-    : displayedIsHuntLimitReached
-      ? "Limite do mapa atingido"
-      : isBackendEncounterReadyPhase
-        ? "Ameaça pronta para combate"
-        : (
-            <AutoCombatHuntingCountdown
-              cycleEndsAtMs={huntCycleEndsAtMs}
-              forceComplete={hasPendingHuntProcessing}
-              serverClockOffsetMs={serverClockOffsetMs}
-              timeline={huntingTimeline}
-              variant="status"
-            />
-          );
-  const huntingActivityNextContent = displayedIsHuntLimitReached
-    ? "Limite atingido"
-    : isBackendEncounterReadyPhase
-      ? "Ameaça pronta"
-      : (
-          <AutoCombatHuntingCountdown
-            cycleEndsAtMs={huntCycleEndsAtMs}
-            forceComplete={hasPendingHuntProcessing}
-            serverClockOffsetMs={serverClockOffsetMs}
-            timeline={huntingTimeline}
-            variant="clock"
-          />
-        );
+  const huntProgressStatusContent = showInlineHuntBattle ? (
+    displayedBattleTargetTotal > 0 ? (
+      `${displayedBattleTargetDefeated}/${displayedBattleTargetTotal} abatidos`
+    ) : (
+      "Batalha em andamento"
+    )
+  ) : displayedIsHuntLimitReached ? (
+    "Limite do mapa atingido"
+  ) : isBackendEncounterReadyPhase ? (
+    "Ameaça pronta para combate"
+  ) : (
+    <AutoCombatHuntingCountdown
+      cycleEndsAtMs={huntCycleEndsAtMs}
+      forceComplete={hasPendingHuntProcessing}
+      serverClockOffsetMs={serverClockOffsetMs}
+      timeline={huntingTimeline}
+      variant="status"
+    />
+  );
+  const huntingActivityNextContent = displayedIsHuntLimitReached ? (
+    "Limite atingido"
+  ) : isBackendEncounterReadyPhase ? (
+    "Ameaça pronta"
+  ) : (
+    <AutoCombatHuntingCountdown
+      cycleEndsAtMs={huntCycleEndsAtMs}
+      forceComplete={hasPendingHuntProcessing}
+      serverClockOffsetMs={serverClockOffsetMs}
+      timeline={huntingTimeline}
+      variant="clock"
+    />
+  );
   const huntProgressStyle: AutoCombatHuntProgressStyle = {
     "--hunt-progress": `${huntProgressPercent}%`,
   };
   const huntScanClassName = [
     "auto-combat-hunt-scan",
     huntingTimeline ? "auto-combat-hunt-scan--timeline" : "",
-    !huntingTimeline &&
-    !showInlineHuntBattle &&
-    huntProgressPercent <= 0.05
+    !huntingTimeline && !showInlineHuntBattle && huntProgressPercent <= 0.05
       ? "auto-combat-hunt-scan--snap"
       : "",
   ]
@@ -3927,7 +3936,7 @@ export function AutoCombatPage() {
 
     if (overview?.activity?.hasActiveWorldBoss) {
       setErrorMessage(
-        "Você está aguardando um World Boss. Saia do lobby antes de viajar para outra rota de caça.",
+        "Você está em uma batalha de Ameaça Global. Encerre a participação antes de viajar para outra rota de caça.",
       );
       return;
     }
@@ -3986,7 +3995,7 @@ export function AutoCombatPage() {
 
     if (overview?.activity?.hasActiveWorldBoss) {
       setErrorMessage(
-        "Você está aguardando um World Boss. Saia do lobby antes de iniciar auto-combate.",
+        "Você está em uma batalha de Ameaça Global. Encerre a participação antes de iniciar auto-combate.",
       );
       return;
     }
@@ -4295,7 +4304,7 @@ export function AutoCombatPage() {
 
     if (overview?.activity?.hasActiveWorldBoss) {
       setErrorMessage(
-        "Você está aguardando um World Boss. Saia do lobby antes de iniciar auto-combate.",
+        "Você está em uma batalha de Ameaça Global. Encerre a participação antes de iniciar auto-combate.",
       );
       return;
     }
@@ -4736,7 +4745,9 @@ export function AutoCombatPage() {
 
                         <div
                           className={huntScanClassName}
-                          style={huntingTimeline ? undefined : huntProgressStyle}
+                          style={
+                            huntingTimeline ? undefined : huntProgressStyle
+                          }
                         >
                           <div className="auto-combat-hunt-scan__track">
                             {huntingTimeline ? (
@@ -4781,6 +4792,29 @@ export function AutoCombatPage() {
                       {renderHuntSkillActivityCard(
                         "auto-combat-hunt-skill-card--side-panel",
                       )}
+                    </section>
+
+                    <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--potion">
+                      <div className="auto-combat-hunt-side__section-title">
+                        <span>Poção automática</span>
+                      </div>
+
+                      <AutoCombatPotionStockCard
+                        disabled={isPotionConfigLoading}
+                        enabled={isConfiguredPotionAutoUseEnabled}
+                        healLabel={formatPotionHeal(configuredPotionItem)}
+                        imageUrl={configuredPotionImage}
+                        isBeingUsed={isPotionUseFeedbackActive}
+                        onConfigure={() => handleOpenPotionConfig(0)}
+                        potionName={
+                          configuredPotionItem
+                            ? getPotionName(currentPotionConfig)
+                            : null
+                        }
+                        remainingQuantity={configuredPotionQuantity}
+                        triggerPercent={configuredPotionTriggerPercent}
+                        usedInSession={potionsUsed}
+                      />
                     </section>
 
                     <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--premium">
@@ -5470,151 +5504,6 @@ export function AutoCombatPage() {
                     </div>
                   </div>
 
-                  {isPotionConfigPanelOpen ? (
-                    <div
-                      className="auto-combat-potion-config-modal-backdrop"
-                      role="presentation"
-                      onMouseDown={(event) => {
-                        if (event.target === event.currentTarget) {
-                          setIsPotionConfigPanelOpen(false);
-                        }
-                      }}
-                    >
-                      <article
-                        className="auto-combat-potion-config-panel auto-combat-potion-config-panel--minimal auto-combat-potion-config-panel--modal"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="auto-combat-potion-config-title"
-                        onMouseDown={(event) => event.stopPropagation()}
-                      >
-                        <div className="auto-combat-potion-config-panel__header">
-                          <div>
-                            <span>Poção automática</span>
-                            <strong id="auto-combat-potion-config-title">
-                              Escolha a poção da batalha
-                            </strong>
-                          </div>
-
-                          <button
-                            type="button"
-                            className="auto-combat-potion-config-panel__close"
-                            aria-label="Fechar configuração de poção"
-                            onClick={() => setIsPotionConfigPanelOpen(false)}
-                          >
-                            Fechar
-                          </button>
-                        </div>
-
-                        <div className="auto-combat-potion-config-grid auto-combat-potion-config-grid--minimal">
-                          <section className="auto-combat-potion-picker">
-                            <div className="auto-combat-potion-picker__header">
-                              <div className="auto-combat-potion-picker__title">
-                                <span>Poções disponíveis</span>
-                                <strong>
-                                  {potionOptions.length > 0
-                                    ? potionOptionsCountLabel
-                                    : "Inventário sem poções"}
-                                </strong>
-                              </div>
-                            </div>
-
-                            {potionOptions.length > 0 ? (
-                              <div className="auto-combat-potion-grid">
-                                {potionOptions.map((potion) => {
-                                  const potionId = potion.itemId;
-                                  const potionQuantity = Math.max(
-                                    0,
-                                    toSafeNumber(potion.quantity, 0),
-                                  );
-                                  const isSelectedPotion =
-                                    selectedPotionItemId === potionId;
-                                  const isUnavailable = potionQuantity <= 0;
-
-                                  return (
-                                    <button
-                                      key={potionId}
-                                      type="button"
-                                      className={[
-                                        "auto-combat-potion-option",
-                                        isSelectedPotion ? "is-selected" : "",
-                                        isUnavailable ? "is-unavailable" : "",
-                                      ]
-                                        .filter(Boolean)
-                                        .join(" ")}
-                                      disabled={
-                                        isPotionConfigLoading || isUnavailable
-                                      }
-                                      onClick={() => {
-                                        setSelectedPotionItemId(potionId);
-                                        setPotionConfigMessage("");
-                                      }}
-                                    >
-                                      <span className="auto-combat-potion-option__icon">
-                                        ✚
-                                      </span>
-
-                                      <span className="auto-combat-potion-option__content">
-                                        <strong>{potion.name}</strong>
-                                        <small>
-                                          {getPotionHealLabel(potion)}
-                                        </small>
-                                      </span>
-
-                                      <span className="auto-combat-potion-option__quantity">
-                                        x{potionQuantity}
-                                      </span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              <div className="auto-combat-potion-grid auto-combat-potion-grid--empty">
-                                <div className="auto-combat-potion-empty-state">
-                                  <span className="auto-combat-potion-empty-state__icon">
-                                    +
-                                  </span>
-                                  <strong>Inventário sem poções</strong>
-                                  <p>
-                                    Nenhuma poção de cura foi encontrada no
-                                    inventário deste personagem.
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </section>
-                        </div>
-
-                        {potionConfigMessage ? (
-                          <p className="auto-combat-potion-config-message">
-                            {potionConfigMessage}
-                          </p>
-                        ) : null}
-
-                        <div className="auto-combat-potion-config-actions auto-combat-potion-config-actions--minimal">
-                          <button
-                            type="button"
-                            className="auto-combat-primary-button"
-                            disabled={isPotionConfigLoading}
-                            onClick={handleSavePotionConfig}
-                          >
-                            {isPotionConfigLoading
-                              ? "Salvando..."
-                              : "Salvar configuração"}
-                          </button>
-
-                          <button
-                            type="button"
-                            className="auto-combat-secondary-button auto-combat-secondary-button--danger"
-                            disabled={isPotionConfigLoading}
-                            onClick={handleClearPotionConfig}
-                          >
-                            Remover
-                          </button>
-                        </div>
-                      </article>
-                    </div>
-                  ) : null}
-
                   <AutoCombatSessionSummary
                     status={effectiveSession?.status}
                     currentCombatIndex={currentCombatIndex}
@@ -5647,6 +5536,29 @@ export function AutoCombatPage() {
                 )}
               </section>
 
+              <section className="auto-combat-mobile-status-hunt-card auto-combat-hunt-side-section auto-combat-hunt-side-section--potion">
+                <div className="auto-combat-hunt-side__section-title">
+                  <span>Poção automática</span>
+                </div>
+
+                <AutoCombatPotionStockCard
+                  disabled={isPotionConfigLoading}
+                  enabled={isConfiguredPotionAutoUseEnabled}
+                  healLabel={formatPotionHeal(configuredPotionItem)}
+                  imageUrl={configuredPotionImage}
+                  isBeingUsed={isPotionUseFeedbackActive}
+                  onConfigure={() => handleOpenPotionConfig(0)}
+                  potionName={
+                    configuredPotionItem
+                      ? getPotionName(currentPotionConfig)
+                      : null
+                  }
+                  remainingQuantity={configuredPotionQuantity}
+                  triggerPercent={configuredPotionTriggerPercent}
+                  usedInSession={potionsUsed}
+                />
+              </section>
+
               <section className="auto-combat-mobile-status-hunt-card auto-combat-hunt-side-section auto-combat-hunt-side-section--premium">
                 <div className="auto-combat-hunt-side__section-title">
                   <span>Premium</span>
@@ -5668,6 +5580,23 @@ export function AutoCombatPage() {
           )}
         </section>
       </div>
+
+      <AutoCombatPotionConfigModal
+        getHealLabel={getPotionHealLabel}
+        isLoading={isPotionConfigLoading}
+        isOpen={isPotionConfigPanelOpen}
+        message={potionConfigMessage}
+        onClear={handleClearPotionConfig}
+        onClose={() => setIsPotionConfigPanelOpen(false)}
+        onSave={handleSavePotionConfig}
+        onSelect={(potionItemId) => {
+          setSelectedPotionItemId(potionItemId);
+          setPotionConfigMessage("");
+        }}
+        options={potionOptions}
+        optionsCountLabel={potionOptionsCountLabel}
+        selectedPotionItemId={selectedPotionItemId}
+      />
 
       {isStopHuntConfirmOpen ? (
         <div

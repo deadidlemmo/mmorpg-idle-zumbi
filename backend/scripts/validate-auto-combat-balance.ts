@@ -383,6 +383,7 @@ function simulateClass(params: {
     precision: primary.precision,
     technique: primary.technique,
     agility: primary.agility,
+    equipmentTier: combatStats.equipmentProgression.effectiveTier,
   };
   const ttk = calculateAutoCombatTtk({
     mob,
@@ -413,6 +414,10 @@ function simulateClass(params: {
     mobAttack,
     mobPrecision: mob.speed,
     mobTechnique: mob.level,
+    mobSpeed: mob.speed,
+    mobTier: mob.tier,
+    equipmentTier: combatStats.equipmentProgression.effectiveTier,
+    killTimeSeconds: ttk.estimatedKillTimeSeconds,
     projectedKills: Math.max(1, plannedKills),
     potion: {
       availableQuantity: options.potionQuantity,

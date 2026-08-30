@@ -84,6 +84,15 @@ export function getConsumableItemImageUrl(
     );
 
     if (tierImage) return tierImage;
+
+    if (nameKey.startsWith('pocao-de-vida')) {
+      const potionTierPrefix = `${Math.floor(tier)}:pocao-de-vida`;
+      const potionTierImage = Array.from(consumableImageByKey.entries()).find(
+        ([key]) => key.startsWith(potionTierPrefix),
+      )?.[1];
+
+      if (potionTierImage) return potionTierImage;
+    }
   }
 
   return consumableImageByKey.get(nameKey) ?? null;

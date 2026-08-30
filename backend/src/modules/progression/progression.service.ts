@@ -14,6 +14,10 @@ import {
   Prisma,
 } from '@prisma/client';
 import { calculateLevelProgress } from '../../common/utils/level.util';
+import {
+  getMissionBalanceTier,
+  getMissionReward,
+} from '../../common/config/mission-balance.config';
 import { AuditService } from '../../common/audit/audit.service';
 import {
   PRODUCT_EVENT_ACTIONS,
@@ -88,7 +92,7 @@ export class ProgressionService {
     const character = await this.getCharacterOrThrow(userId, characterId);
     const tutorial = await this.getTutorialProgress(userId, characterId);
 
-    await this.ensureMissionAssignments(characterId);
+    await this.ensureMissionAssignments(characterId, character.level);
     const [missions, achievements] = await Promise.all([
       this.refreshMissions(characterId, character.level),
       this.syncAchievements(characterId, character.level),
@@ -97,7 +101,9 @@ export class ProgressionService {
     return {
       serverNow: new Date().toISOString(),
       tutorial,
-      missions,
+      missions: missions.map((mission) =>
+        this.formatMissionAssignment(mission),
+      ),
       achievements,
     };
   }
@@ -504,7 +510,7 @@ export class ProgressionService {
         const levelProgress = calculateLevelProgress(
           character.level,
           character.xp,
-          assignment.mission.rewardXp,
+          assignment.rewardXp,
         );
 
         await tx.character.update({
@@ -512,28 +518,30 @@ export class ProgressionService {
           data: {
             level: levelProgress.newLevel,
             xp: levelProgress.totalXp,
-            gold: { increment: assignment.mission.rewardGold },
+            gold: { increment: assignment.rewardGold },
           },
         });
 
-        if (assignment.mission.rewardXp > 0) {
+        if (assignment.rewardXp > 0) {
           await recordEconomyEntry(tx, {
             characterId,
             direction: EconomyDirection.CREDIT,
             resourceType: EconomyResourceType.XP,
-            quantity: assignment.mission.rewardXp,
+            tier: assignment.rewardTier,
+            quantity: assignment.rewardXp,
             reason: ECONOMY_REASONS.MISSION_XP_REWARD,
             referenceType: 'CharacterMission',
             referenceId: assignment.id,
             idempotencyKey: `mission:${assignment.id}:reward:xp`,
           });
         }
-        if (assignment.mission.rewardGold > 0) {
+        if (assignment.rewardGold > 0) {
           await recordEconomyEntry(tx, {
             characterId,
             direction: EconomyDirection.CREDIT,
             resourceType: EconomyResourceType.GOLD,
-            quantity: assignment.mission.rewardGold,
+            tier: assignment.rewardTier,
+            quantity: assignment.rewardGold,
             reason: ECONOMY_REASONS.MISSION_GOLD_REWARD,
             referenceType: 'CharacterMission',
             referenceId: assignment.id,
@@ -543,8 +551,9 @@ export class ProgressionService {
 
         return {
           message: 'Recompensa da missao resgatada.',
-          rewardXp: assignment.mission.rewardXp,
-          rewardGold: assignment.mission.rewardGold,
+          rewardTier: assignment.rewardTier,
+          rewardXp: assignment.rewardXp,
+          rewardGold: assignment.rewardGold,
           levelProgress,
         };
       },
@@ -603,8 +612,12 @@ export class ProgressionService {
     });
   }
 
-  private async ensureMissionAssignments(characterId: string) {
+  private async ensureMissionAssignments(
+    characterId: string,
+    characterLevel: number,
+  ) {
     const now = new Date();
+    const rewardTier = getMissionBalanceTier(characterLevel);
     const definitions = await this.prisma.missionDefinition.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' },
@@ -621,6 +634,12 @@ export class ProgressionService {
 
     for (const definition of definitions) {
       const period = this.getMissionPeriod(definition.type, now);
+      const reward = getMissionReward({
+        missionKey: definition.key,
+        tier: rewardTier,
+        baseGold: definition.rewardGold,
+        baseXp: definition.rewardXp,
+      });
       await this.prisma.characterMission.upsert({
         where: {
           characterId_missionId_periodKey: {
@@ -635,6 +654,9 @@ export class ProgressionService {
           missionId: definition.id,
           periodKey: period.key,
           targetValue: definition.targetValue,
+          rewardTier: reward.tier,
+          rewardXp: reward.xp,
+          rewardGold: reward.gold,
           expiresAt: period.expiresAt,
         },
       });
@@ -663,6 +685,7 @@ export class ProgressionService {
           assignment.mission.objectiveType,
           assignment.assignedAt,
           characterLevel,
+          assignment.rewardTier,
         ),
       );
       const isComplete = progress >= assignment.targetValue;
@@ -753,12 +776,17 @@ export class ProgressionService {
     objectiveType: string,
     since: Date,
     characterLevel: number,
+    missionTier: number,
   ) {
     if (objectiveType === 'REACH_LEVEL') return characterLevel;
 
     if (objectiveType === 'GATHER_UNITS') {
       const result = await this.prisma.gatheringSession.aggregate({
-        where: { characterId, createdAt: { gte: since } },
+        where: {
+          characterId,
+          createdAt: { gte: since },
+          map: { tier: missionTier },
+        },
         _sum: { collectedQuantity: true },
       });
       return result._sum.collectedQuantity ?? 0;
@@ -766,7 +794,11 @@ export class ProgressionService {
 
     if (objectiveType === 'CRAFT_ITEMS') {
       const result = await this.prisma.craftingSession.aggregate({
-        where: { characterId, completedAt: { gte: since } },
+        where: {
+          characterId,
+          completedAt: { gte: since },
+          outputItem: { tier: missionTier },
+        },
         _sum: { outputQuantity: true },
       });
       return result._sum.outputQuantity ?? 0;
@@ -778,6 +810,7 @@ export class ProgressionService {
           characterId,
           type: 'MOB_DEFEATED',
           createdAt: { gte: since },
+          session: { map: { tier: missionTier } },
         },
       });
     }
@@ -788,11 +821,24 @@ export class ProgressionService {
           characterId,
           status: IncursionSessionStatus.CLAIMED,
           claimedAt: { gte: since },
+          incursion: { tier: missionTier },
         },
       });
     }
 
     return 0;
+  }
+
+  private formatMissionAssignment(assignment: MissionAssignmentWithDefinition) {
+    return {
+      ...assignment,
+      mission: {
+        ...assignment.mission,
+        targetValue: assignment.targetValue,
+        rewardXp: assignment.rewardXp,
+        rewardGold: assignment.rewardGold,
+      },
+    };
   }
 
   private getMissionPeriod(type: MissionType, now: Date) {

@@ -21,20 +21,20 @@ describe('simulateT1Economy', () => {
 
     expect(shortEvents[0]).toMatchObject({
       startsAtMinute: 10,
-      closesAtMinute: 55,
+      closesAtMinute: 50,
       outcome: 'DEFEATED',
       defeated: true,
       rewardMultiplier: 1,
     });
-    expect(shortEvents[1].startsAtMinute).toBe(55 + 6 * 60);
+    expect(shortEvents[1].startsAtMinute).toBe(50 + 6 * 60);
     expect(longEvents[0]).toMatchObject({
       startsAtMinute: 10,
-      closesAtMinute: 70,
+      closesAtMinute: 60,
       outcome: 'DEFEATED',
       defeated: true,
       rewardMultiplier: 1,
     });
-    expect(longEvents[1].startsAtMinute).toBe(70 + 12 * 60);
+    expect(longEvents[1].startsAtMinute).toBe(60 + 12 * 60);
   });
 
   it('mantem resultados finitos e sem saldos economicos negativos', () => {
@@ -114,7 +114,7 @@ describe('simulateT1Economy', () => {
   it('simula sorteio, incubacao e colecao T1 quando bosses sao derrotados', () => {
     const report = simulateT1Economy({
       players: 1000,
-      days: 7,
+      days: 14,
       seed: 20260826,
     });
 

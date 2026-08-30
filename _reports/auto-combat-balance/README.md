@@ -2,6 +2,19 @@
 
 Gerado em 2026-06-09, sem descanso automatico.
 
+## Matriz de progressao V5.5
+
+A auditoria mais recente de transicao T1-T5 esta em:
+
+```text
+dados-v5-5/README.md
+dados-v5-5/auto-combat-t1-t5-matrix.csv
+dados-v5-5/auto-combat-t1-t5-matrix.json
+```
+
+Ela cobre 5.040 combinacoes de classe, posicao no tier, equipamento,
+gathering, reforco, pet e pocao, com 210 metas automaticas aprovadas.
+
 ## Arquivo principal
 
 Abra este arquivo primeiro:
@@ -164,6 +177,8 @@ npm run balance:auto-combat:complete-report -- --kills=1000 --hunting-level=50 -
 npm run balance:auto-combat:session-report -- --kills=1000 --hunting-levels=1,10,25,50 --session-hours=6,12 --potion-quantities=0,5,10,20,50,100,150,200,300
 npm run balance:character-progression:report -- --kills=1000
 npm run balance:crafting-economy:report
+npm run balance:auto-combat:tiers:validate
+npm run balance:auto-combat:tiers -- --strict --summary-only --output-dir=../_reports/auto-combat-balance/dados-v5-5
 ```
 
 Depois de gerar os arquivos individuais, mantenha os SVGs principais na raiz e mova CSV/JSON para `dados-v5-2/` se quiser preservar a organizacao atual.

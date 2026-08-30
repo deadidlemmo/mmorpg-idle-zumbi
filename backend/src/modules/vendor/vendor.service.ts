@@ -12,6 +12,11 @@ import {
   Prisma,
   Rarity,
 } from '@prisma/client';
+import { getVendorFixedBuyPrice } from '../../common/config/vendor.config';
+import {
+  getPotionTierLockedMessage,
+  isPotionTierUnlocked,
+} from '../../common/utils/potion-tier.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
@@ -44,17 +49,6 @@ type VendorCharacterRecord = {
   userId: string;
 };
 
-const VENDOR_FIXED_BUY_PRICE_BY_NAME: Record<string, number> = {
-  'Poção de Vida Menor': 25,
-  'Poção de Vida': 80,
-  'Poção de Vida Maior': 180,
-  'Poção de Vida Superior': 420,
-  'Poção de Vida Suprema': 900,
-  'Pocao Pequena de Vida': 25,
-  'Pocao Media de Vida': 80,
-  'Pocao Grande de Vida': 180,
-};
-
 @Injectable()
 export class VendorService {
   constructor(private readonly prisma: PrismaService) {}
@@ -72,7 +66,7 @@ export class VendorService {
     });
 
     const shopItems = items
-      .filter((item) => this.isAvailableForPurchase(item))
+      .filter((item) => this.isAvailableForPurchase(item, character.level))
       .map((item) => this.mapShopItem(item));
 
     return {
@@ -115,8 +109,22 @@ export class VendorService {
         throw new NotFoundException('Item indisponivel no mercador.');
       }
 
-      if (!this.isAvailableForPurchase(item)) {
+      if (!this.isVendorCatalogItem(item)) {
         throw new BadRequestException('Item indisponivel para compra.');
+      }
+
+      if (
+        !isPotionTierUnlocked({
+          characterLevel: character.level,
+          potion: item,
+        })
+      ) {
+        throw new BadRequestException(
+          getPotionTierLockedMessage({
+            characterLevel: character.level,
+            potion: item,
+          }),
+        );
       }
 
       const stackable = this.isStackable(item);
@@ -378,8 +386,18 @@ export class VendorService {
     return item.slot === ItemSlot.CONSUMABLE || item.slot === ItemSlot.MATERIAL;
   }
 
-  private isAvailableForPurchase(item: VendorItemRecord) {
+  private isVendorCatalogItem(item: VendorItemRecord) {
     return item.slot === ItemSlot.CONSUMABLE && item.isTradable !== false;
+  }
+
+  private isAvailableForPurchase(
+    item: VendorItemRecord,
+    characterLevel: number,
+  ) {
+    return (
+      this.isVendorCatalogItem(item) &&
+      isPotionTierUnlocked({ characterLevel, potion: item })
+    );
   }
 
   private normalizeQuantity(
@@ -401,9 +419,9 @@ export class VendorService {
   }
 
   private calculateBuyPrice(item: VendorItemRecord) {
-    const fixedPotionPrice = VENDOR_FIXED_BUY_PRICE_BY_NAME[item.name];
+    const fixedPotionPrice = getVendorFixedBuyPrice(item.name);
 
-    if (fixedPotionPrice) {
+    if (fixedPotionPrice !== null) {
       return fixedPotionPrice;
     }
 

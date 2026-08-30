@@ -28,8 +28,10 @@ import { ClaimIncursionDto } from './dto/claim-incursion.dto';
 import { StartIncursionDto } from './dto/start-incursion.dto';
 import {
   calculateIncursionFailureDamage,
+  calculateIncursionSuccessEntryRefund,
   getIncursionRiskProfile,
   INCURSION_APPROACHES,
+  INCURSION_SUCCESS_ENTRY_REFUND_PERCENT,
   type IncursionApproach,
 } from './incursion-risk.util';
 
@@ -620,9 +622,13 @@ export class IncursionsService {
       const xpReward = rewards
         .filter((reward) => reward.rewardType === IncursionRewardType.XP)
         .reduce((total, reward) => total + reward.quantity, 0);
-      const goldReward = rewards
+      const lootGoldReward = rewards
         .filter((reward) => reward.rewardType === IncursionRewardType.GOLD)
         .reduce((total, reward) => total + reward.quantity, 0);
+      const entryGoldRefund = calculateIncursionSuccessEntryRefund(
+        session.goldCostPaid,
+      );
+      const goldReward = lootGoldReward + entryGoldRefund;
 
       const claim = await tx.characterIncursionSession.updateMany({
         where: {
@@ -642,9 +648,10 @@ export class IncursionsService {
           claimedAt: now,
           xpReward,
           goldReward,
+          entryGoldRefund,
           generatedRewardsJson: rewards,
           outcomeRoll,
-          outcomeSummary: `Sucesso: rolagem ${outcomeRoll.toFixed(2)} dentro de ${session.successChance}%.`,
+          outcomeSummary: `Sucesso: rolagem ${outcomeRoll.toFixed(2)} dentro de ${session.successChance}%. Entrada de ${entryGoldRefund} Gold devolvida.`,
         },
       });
 
@@ -682,13 +689,27 @@ export class IncursionsService {
           idempotencyKey: `incursion:${session.id}:reward:xp`,
         });
       }
-      if (goldReward > 0) {
+      if (entryGoldRefund > 0) {
         await recordEconomyEntry(tx, {
           characterId,
           direction: EconomyDirection.CREDIT,
           resourceType: EconomyResourceType.GOLD,
           tier: session.incursion.tier,
-          quantity: goldReward,
+          quantity: entryGoldRefund,
+          reason: ECONOMY_REASONS.INCURSION_ENTRY_REFUND,
+          referenceType: 'CharacterIncursionSession',
+          referenceId: session.id,
+          idempotencyKey: `incursion:${session.id}:entry:refund:gold`,
+          metadata: { goldCostPaid: session.goldCostPaid },
+        });
+      }
+      if (lootGoldReward > 0) {
+        await recordEconomyEntry(tx, {
+          characterId,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.GOLD,
+          tier: session.incursion.tier,
+          quantity: lootGoldReward,
           reason: ECONOMY_REASONS.INCURSION_GOLD_REWARD,
           referenceType: 'CharacterIncursionSession',
           referenceId: session.id,
@@ -792,6 +813,9 @@ export class IncursionsService {
       session: this.formatSession(result.session, now),
       xpGained: result.levelProgress.gainedXp,
       goldGained: result.session.goldReward,
+      entryGoldRefund: result.session.entryGoldRefund,
+      lootGoldGained:
+        result.session.goldReward - result.session.entryGoldRefund,
       goldSpent: result.session.goldCostPaid,
       levelUp: {
         leveledUp: result.levelProgress.leveledUp,
@@ -952,6 +976,10 @@ export class IncursionsService {
       minLevel: incursion.minLevel,
       maxLevel: incursion.maxLevel,
       goldCost: incursion.goldCost,
+      successEntryRefundPercent: INCURSION_SUCCESS_ENTRY_REFUND_PERCENT,
+      successEntryRefundGold: calculateIncursionSuccessEntryRefund(
+        Number(incursion.goldCost),
+      ),
       durationSeconds: incursion.durationSeconds,
       difficulty: incursion.difficulty,
       riskLevel: incursion.riskLevel,
@@ -1050,6 +1078,7 @@ export class IncursionsService {
       completedAt: session.completedAt,
       claimedAt: session.claimedAt,
       goldCostPaid: session.goldCostPaid,
+      entryGoldRefund: session.entryGoldRefund,
       xpReward: session.xpReward,
       goldReward: session.goldReward,
       approach: session.approach,

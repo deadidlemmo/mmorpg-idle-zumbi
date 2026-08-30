@@ -13,6 +13,7 @@ import { CraftingRealtimeProvider } from "../features/crafting/realtime/Crafting
 import { GatheringRealtimeProvider } from "../features/gathering/realtime/GatheringRealtimeProvider";
 import { IncursionsRealtimeProvider } from "../features/incursions/realtime/IncursionsRealtimeProvider";
 import { LootNotificationProvider } from "../features/loot-notifications/LootNotificationProvider";
+import { WorldBossAlertProvider } from "../features/world-bosses/realtime/WorldBossAlertProvider";
 import { useAuthStore } from "../store/auth.store";
 
 const AuthPage = lazy(() =>
@@ -204,39 +205,44 @@ function DashboardRealtimeRoute() {
 
   return (
     <LootNotificationProvider>
-      <AutoCombatRealtimeProvider
-        key={`auto-combat-${characterId}`}
+      <WorldBossAlertProvider
+        key={`world-boss-alert-${characterId}`}
         characterId={characterId}
-        autoLoad
-        refreshMs={15000}
       >
-        <AutoCombatDefeatCoordinator characterId={characterId} />
-        <GatheringRealtimeProvider
-          key={`gathering-${characterId}`}
+        <AutoCombatRealtimeProvider
+          key={`auto-combat-${characterId}`}
           characterId={characterId}
           autoLoad
           refreshMs={15000}
-          tickMs={1000}
         >
-          <CraftingRealtimeProvider
-            key={`crafting-${characterId}`}
+          <AutoCombatDefeatCoordinator characterId={characterId} />
+          <GatheringRealtimeProvider
+            key={`gathering-${characterId}`}
             characterId={characterId}
             autoLoad
             refreshMs={15000}
             tickMs={1000}
           >
-            <IncursionsRealtimeProvider
-              key={`incursions-${characterId}`}
+            <CraftingRealtimeProvider
+              key={`crafting-${characterId}`}
               characterId={characterId}
               autoLoad
               refreshMs={15000}
               tickMs={1000}
             >
-              <Outlet />
-            </IncursionsRealtimeProvider>
-          </CraftingRealtimeProvider>
-        </GatheringRealtimeProvider>
-      </AutoCombatRealtimeProvider>
+              <IncursionsRealtimeProvider
+                key={`incursions-${characterId}`}
+                characterId={characterId}
+                autoLoad
+                refreshMs={15000}
+                tickMs={1000}
+              >
+                <Outlet />
+              </IncursionsRealtimeProvider>
+            </CraftingRealtimeProvider>
+          </GatheringRealtimeProvider>
+        </AutoCombatRealtimeProvider>
+      </WorldBossAlertProvider>
     </LootNotificationProvider>
   );
 }

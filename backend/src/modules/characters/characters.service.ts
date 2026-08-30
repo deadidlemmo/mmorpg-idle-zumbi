@@ -62,6 +62,21 @@ const BLOCKING_AUTO_COMBAT_PHASES: AutoCombatSessionPhase[] = [
   AutoCombatSessionPhase.COMBAT_ACTIVE,
 ];
 
+export function buildActiveWorldBossParticipationWhere(
+  characterId: string,
+  now = new Date(),
+) {
+  return {
+    characterId,
+    leftAt: null,
+    confirmedAt: { not: null },
+    event: {
+      status: WorldBossEventStatus.ACTIVE,
+      endsAt: { gt: now },
+    },
+  };
+}
+
 const GATHERING_ORIGINS = [
   MaterialOrigin.DESMANCHE,
   MaterialOrigin.COLETA,
@@ -1142,20 +1157,7 @@ export class CharactersService {
       }),
 
       this.prisma.worldBossParticipant.findFirst({
-        where: {
-          characterId: character.id,
-          leftAt: null,
-          event: {
-            status: {
-              in: [
-                WorldBossEventStatus.SCHEDULED,
-                WorldBossEventStatus.LOBBY_OPEN,
-                WorldBossEventStatus.ACTIVE,
-              ],
-            },
-            endsAt: { gt: new Date() },
-          },
-        },
+        where: buildActiveWorldBossParticipationWhere(character.id),
         orderBy: { joinedAt: 'desc' },
         select: {
           id: true,
@@ -1660,19 +1662,7 @@ export class CharactersService {
           },
         }),
         this.prisma.worldBossParticipant.findFirst({
-          where: {
-            characterId,
-            leftAt: null,
-            event: {
-              status: {
-                in: [
-                  WorldBossEventStatus.SCHEDULED,
-                  WorldBossEventStatus.LOBBY_OPEN,
-                  WorldBossEventStatus.ACTIVE,
-                ],
-              },
-            },
-          },
+          where: buildActiveWorldBossParticipationWhere(characterId),
           select: { id: true, eventId: true, joinedAt: true },
         }),
       ]);

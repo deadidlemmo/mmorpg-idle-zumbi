@@ -257,6 +257,36 @@ AUTO_COMBAT_REALTIME_TICK_MS ~= 250ms
 
 Atencao: `AUTO_COMBAT_ROUND_DURATION_SECONDS` esta em `backend/src/common/config/auto-combat.config.ts`, mas o service atual usa `AUTO_COMBAT_EFFECTIVE_ROUND_DURATION_SECONDS = 1` em pontos importantes. Antes de alterar ritmo, TTK ou duracao de rodada, confirme o fluxo inteiro no service, nos testes e no frontend.
 
+### Pressao por exposicao (Balance V5.5)
+
+- O mob nao fica mais limitado a um unico ataque por abate no fluxo TTK.
+- O backend calcula oportunidades de ataque a partir do TTK, velocidade do mob
+  e diferenca entre o tier do mob e o tier efetivo do equipamento.
+- Fracoes de oportunidade sao resolvidas deterministicamente pelo indice do
+  combate. Processamento continuo, offline e apos reconnect produzem a mesma
+  sequencia para os mesmos indices.
+- Cada abate fica limitado a 18 oportunidades. Todas sao processadas no mesmo
+  ciclo agregado, sem novas requisicoes REST, eventos Socket.IO ou gravacoes
+  individuais por ataque.
+- A curva adicional de dano pertence apenas ao auto-combate TTK. Ela comeca
+  quando o equipamento esta mais de um tier abaixo e nao altera combate manual,
+  incursao ou world boss.
+- O tier efetivo do equipamento usa a media dos seis slots. Cada nivel de
+  reforco medio adiciona 0,25 de tier efetivo.
+- Marcos de 2/4/6 pecas exigem pecas do mesmo tier e ampliam somente os
+  atributos dessas pecas, nunca atributos base, de nivel, gathering ou itens de
+  outro tier.
+- A pocao automatica continua limitada a uma unidade por mob, mesmo quando o
+  mob recebe varias oportunidades de ataque.
+- A tela mostra a pocao configurada, o gatilho de HP, o estoque restante e o
+  total usado na sessao. O contador aplica os saldos autoritativos do evento
+  `POTION_USED`, deduplica eventos repetidos e volta a reconciliar pelo
+  inventario REST em recargas e reconexoes.
+
+A matriz completa T1-T5 e as metas de regressao ficam em
+`_reports/auto-combat-balance/dados-v5-5/` e podem ser validadas com
+`npm run balance:auto-combat:tiers:validate` no backend.
+
 ## Limites idle e premium
 
 O auto-combate importa limites de `membership.config.ts`:
@@ -286,7 +316,7 @@ O personagem nao deve iniciar auto-combate quando outra atividade incompativel e
 - gathering
 - crafting
 - incursions
-- world bosses
+- world bosses depois da confirmacao no lobby; a inscricao antecipada nao bloqueia o auto-combate
 - combate manual
 - enfermaria
 

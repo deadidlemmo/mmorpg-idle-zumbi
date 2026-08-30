@@ -329,6 +329,7 @@ export class CraftingService {
             precision: currentStats.totalPrimaryStats.precision,
             technique: currentStats.totalPrimaryStats.technique,
             agility: currentStats.totalPrimaryStats.agility,
+            equipmentTier: currentStats.equipmentProgression.effectiveTier,
           },
         })
       : null;
@@ -604,6 +605,8 @@ export class CraftingService {
                 precision: candidateStats.totalPrimaryStats.precision,
                 technique: candidateStats.totalPrimaryStats.technique,
                 agility: candidateStats.totalPrimaryStats.agility,
+                equipmentTier:
+                  candidateStats.equipmentProgression.effectiveTier,
               },
             })
           : null;

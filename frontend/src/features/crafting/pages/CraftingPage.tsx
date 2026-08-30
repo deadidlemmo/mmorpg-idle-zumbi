@@ -141,7 +141,9 @@ function formatNumber(value?: number | null) {
 function formatSignedNumber(value?: number | null) {
   const safeValue = Math.floor(Number(value) || 0);
 
-  return safeValue > 0 ? `+${formatNumber(safeValue)}` : formatNumber(safeValue);
+  return safeValue > 0
+    ? `+${formatNumber(safeValue)}`
+    : formatNumber(safeValue);
 }
 
 function formatDuration(totalSeconds?: number | null) {
@@ -841,7 +843,10 @@ function CraftingDetailsModal({
 
             <div className="crafting-impact-list">
               {combatImpactEntries.map(({ key, label, value, Icon }) => (
-                <span key={key} className={value > 0 ? "is-positive" : "is-negative"}>
+                <span
+                  key={key}
+                  className={value > 0 ? "is-positive" : "is-negative"}
+                >
                   <Icon aria-hidden="true" size={16} />
                   <em>{label}</em>
                   <strong>{formatSignedNumber(value)}</strong>
@@ -859,9 +864,12 @@ function CraftingDetailsModal({
                 <em>Poder ofensivo</em>
                 <strong>
                   {upgradePreview.offensivePower.percentDelta > 0 ? "+" : ""}
-                  {upgradePreview.offensivePower.percentDelta.toLocaleString("pt-BR", {
-                    maximumFractionDigits: 1,
-                  })}
+                  {upgradePreview.offensivePower.percentDelta.toLocaleString(
+                    "pt-BR",
+                    {
+                      maximumFractionDigits: 1,
+                    },
+                  )}
                   %
                 </strong>
               </span>
@@ -884,7 +892,9 @@ function CraftingDetailsModal({
                     <dd>
                       {upgradePreview.killSpeed.currentTtkSeconds}s
                       <ChevronRight aria-hidden="true" size={13} />
-                      <strong>{upgradePreview.killSpeed.candidateTtkSeconds}s</strong>
+                      <strong>
+                        {upgradePreview.killSpeed.candidateTtkSeconds}s
+                      </strong>
                     </dd>
                   </div>
                   <div>
@@ -911,21 +921,34 @@ function CraftingDetailsModal({
               <div>
                 <span>Sinergia de equipamento</span>
                 <strong>
-                  {upgradePreview.equipmentProgression.candidate.craftedPieces}/6 peças
+                  {upgradePreview.equipmentProgression.candidate
+                    .coherentPieces ??
+                    upgradePreview.equipmentProgression.candidate.craftedPieces}
+                  /6 peças
+                  {(upgradePreview.equipmentProgression.candidate
+                    .coherentTier ?? 0) > 0
+                    ? ` T${upgradePreview.equipmentProgression.candidate.coherentTier}`
+                    : ""}
                 </strong>
                 <em>
-                  +{upgradePreview.equipmentProgression.candidate.bonusPercent}% em
-                  ataque, defesa e vida
+                  +{upgradePreview.equipmentProgression.candidate.bonusPercent}%
+                  em atributos das peças
                 </em>
               </div>
 
-              <span className="crafting-equipment-progression__track" aria-hidden="true">
+              <span
+                className="crafting-equipment-progression__track"
+                aria-hidden="true"
+              >
                 {Array.from({ length: 6 }, (_, index) => (
                   <i
                     key={index}
                     className={
                       index <
-                      upgradePreview.equipmentProgression.candidate.craftedPieces
+                      (upgradePreview.equipmentProgression.candidate
+                        .coherentPieces ??
+                        upgradePreview.equipmentProgression.candidate
+                          .craftedPieces)
                         ? "is-active"
                         : ""
                     }

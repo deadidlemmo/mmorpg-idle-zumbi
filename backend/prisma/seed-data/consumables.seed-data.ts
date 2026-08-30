@@ -3,9 +3,8 @@ import type { ConsumableSeedData } from '../seed-types';
 
 /**
  * Pocoes vendidas pela Mara.
- * Cada item cobre dois tiers de progressao. Pocoes iniciais curam valor fixo
- * baixo, enquanto pocoes altas escalam mais por HP maximo. Isso permite usar
- * pocoes antigas no endgame, mas sem eficiencia real.
+ * As faixas de acesso evitam saltos de custo entre tiers e mantem as pocoes
+ * antigas utilizaveis, mas progressivamente menos eficientes.
  */
 export const consumableDefinitions: ConsumableSeedData[] = [
   {
@@ -15,10 +14,10 @@ export const consumableDefinitions: ConsumableSeedData[] = [
     tier: 1,
     rarity: Rarity.COMMON,
     family: 'Poção de Vida',
-    healFlat: 80,
+    healFlat: 40,
     healPercent: 0,
     minTier: 1,
-    maxTier: 2,
+    maxTier: 1,
     isSellable: false,
     isTradable: false,
   },
@@ -28,9 +27,20 @@ export const consumableDefinitions: ConsumableSeedData[] = [
     tier: 1,
     rarity: Rarity.COMMON,
     family: 'Poção de Vida',
-    healFlat: 80,
+    healFlat: 40,
     healPercent: 0,
     minTier: 1,
+    maxTier: 1,
+  },
+  {
+    name: 'Poção de Vida Leve',
+    description: 'Recupera uma quantidade leve de HP.',
+    tier: 2,
+    rarity: Rarity.UNCOMMON,
+    family: 'Poção de Vida',
+    healFlat: 100,
+    healPercent: 4,
+    minTier: 2,
     maxTier: 2,
   },
   {
@@ -39,8 +49,8 @@ export const consumableDefinitions: ConsumableSeedData[] = [
     tier: 2,
     rarity: Rarity.UNCOMMON,
     family: 'Poção de Vida',
-    healFlat: 100,
-    healPercent: 4,
+    healFlat: 120,
+    healPercent: 6,
     minTier: 3,
     maxTier: 4,
   },
@@ -50,8 +60,8 @@ export const consumableDefinitions: ConsumableSeedData[] = [
     tier: 3,
     rarity: Rarity.RARE,
     family: 'Poção de Vida',
-    healFlat: 160,
-    healPercent: 9,
+    healFlat: 300,
+    healPercent: 18,
     minTier: 5,
     maxTier: 6,
   },
@@ -61,8 +71,8 @@ export const consumableDefinitions: ConsumableSeedData[] = [
     tier: 4,
     rarity: Rarity.EPIC,
     family: 'Poção de Vida',
-    healFlat: 220,
-    healPercent: 15,
+    healFlat: 450,
+    healPercent: 24,
     minTier: 7,
     maxTier: 8,
   },
@@ -72,8 +82,8 @@ export const consumableDefinitions: ConsumableSeedData[] = [
     tier: 5,
     rarity: Rarity.LEGENDARY,
     family: 'Poção de Vida',
-    healFlat: 200,
-    healPercent: 25,
+    healFlat: 650,
+    healPercent: 32,
     minTier: 9,
     maxTier: 10,
   },

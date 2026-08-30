@@ -16,12 +16,14 @@ import {
 } from '../src/common/config/gathering.config';
 import { getAutoCombatHuntingSecondsPerEnemy } from '../src/common/utils/auto-combat-hunting.util';
 import {
+  calculateAutoCombatTtk,
   calculatePlayerOffensivePower,
   clampAutoCombatTtkSeconds,
   getAutoCombatBaseKillTimeSeconds,
   getAutoCombatMobIndex,
   getAutoCombatRecommendedPower,
 } from '../src/common/utils/auto-combat-ttk.util';
+import { applyAutoCombatIncomingDamageMultiplier } from '../src/common/utils/auto-combat-balance.util';
 import {
   projectAutoCombatSurvival,
   type AutoCombatSurvivalRiskLevel,
@@ -457,10 +459,10 @@ const balanceModels: BalanceModelDefinition[] = [
     },
   },
   {
-    key: 'balance-v4-2',
+    key: 'balance-v5-5',
     label: AUTO_COMBAT_BALANCE_MODEL_LABEL,
     description:
-      'V4.2 aplicado: TTK expoente 0.38, gathering defensivo 115%, reforca Lutador/Medico e contem picos de Atirador/Assassino.',
+      'Modelo aplicado: TTK, prontidao por tier de equipamento e pressao de dano por duracao/velocidade.',
     ttkPowerExponent: AUTO_COMBAT_BALANCE_TTK_POWER_EXPONENT,
     offensiveGatheringMultiplier:
       AUTO_COMBAT_BALANCE_OFFENSIVE_GATHERING_MULTIPLIER,
@@ -627,9 +629,7 @@ function distributePointsByWeights(
     });
   }
 
-  for (const { stat } of remainders.sort(
-    (a, b) => b.remainder - a.remainder,
-  )) {
+  for (const { stat } of remainders.sort((a, b) => b.remainder - a.remainder)) {
     if (assigned >= safeTotalPoints) {
       break;
     }
@@ -771,7 +771,9 @@ function getPassiveForClass(
   balanceModel: BalanceModelDefinition,
   className: string,
 ) {
-  return balanceModel.passiveByClass[normalizeClassName(className)] ?? NO_PASSIVE;
+  return (
+    balanceModel.passiveByClass[normalizeClassName(className)] ?? NO_PASSIVE
+  );
 }
 
 function calculateExperimentalTtk(params: {
@@ -844,34 +846,57 @@ function simulateClassAtLevel(params: {
   const derived = fullStats.derivedCombatStats;
   const primary = fullStats.totalPrimaryStats;
   const playerStats = {
+    className: classDefinition.name,
     attack: derived.attack,
     speed: derived.speed,
     precision: primary.precision,
     technique: primary.technique,
     agility: primary.agility,
+    equipmentTier: fullStats.equipmentProgression.effectiveTier,
   };
+  const isFocusedModel = balanceModel.label === FOCUSED_BALANCE_MODEL_LABEL;
   const offensivePower =
     calculatePlayerOffensivePower(playerStats) *
     passive.offensivePowerMultiplier;
-  const ttk = calculateExperimentalTtk({
-    mob,
-    offensivePower,
-    ttkPowerExponent: balanceModel.ttkPowerExponent,
-  });
+  const ttk = isFocusedModel
+    ? calculateAutoCombatTtk({ mob, playerStats })
+    : calculateExperimentalTtk({
+        mob,
+        offensivePower,
+        ttkPowerExponent: balanceModel.ttkPowerExponent,
+      });
+  const effectiveOffensivePower = isFocusedModel
+    ? ttk.playerOffensivePower
+    : offensivePower;
   const secondsPerFind = getAutoCombatHuntingSecondsPerEnemy(
     DEFAULT_HUNTING_LEVEL,
   );
   const secondsPerMob = secondsPerFind + ttk.estimatedKillTimeSeconds;
   const killsPerHour = 3600 / secondsPerMob;
   const projectedKills = Math.max(1, Math.floor(killsPerHour));
+  const currentPressureParams = isFocusedModel
+    ? {
+        mobSpeed: mob.speed,
+        mobTier: mob.tier,
+        equipmentTier: fullStats.equipmentProgression.effectiveTier,
+        killTimeSeconds: ttk.estimatedKillTimeSeconds,
+      }
+    : {};
+  const mobAttack = isFocusedModel
+    ? applyAutoCombatIncomingDamageMultiplier({
+        attack: mob.attack,
+        className: classDefinition.name,
+      })
+    : mob.attack * passive.incomingDamageMultiplier;
   const noPotionProjection = projectAutoCombatSurvival({
     currentHp: derived.maxHp,
     maxHp: derived.maxHp,
     playerDefense: derived.defense,
     playerAgility: primary.agility,
-    mobAttack: mob.attack * passive.incomingDamageMultiplier,
+    mobAttack,
     mobPrecision: mob.speed,
     mobTechnique: mob.level,
+    ...currentPressureParams,
     projectedKills,
   });
   const standardPotionProjection = projectAutoCombatSurvival({
@@ -879,21 +904,22 @@ function simulateClassAtLevel(params: {
     maxHp: derived.maxHp,
     playerDefense: derived.defense,
     playerAgility: primary.agility,
-    mobAttack: mob.attack * passive.incomingDamageMultiplier,
+    mobAttack,
     mobPrecision: mob.speed,
     mobTechnique: mob.level,
+    ...currentPressureParams,
     projectedKills,
     potion: {
       availableQuantity: 9999,
-      healAmount: Math.floor(derived.maxHp * 0.3 * passive.potionHealMultiplier),
+      healAmount: Math.floor(
+        derived.maxHp * 0.3 * passive.potionHealMultiplier,
+      ),
       hpThresholdPercent: 35,
     },
   });
   const rawXpPerHour = Math.round(killsPerHour * mob.xpReward);
   const riskMultiplier =
-    balanceModel.riskEffectiveXpMultiplier[
-      standardPotionProjection.riskLevel
-    ];
+    balanceModel.riskEffectiveXpMultiplier[standardPotionProjection.riskLevel];
   const effectiveXpPerHour = Math.round(
     rawXpPerHour * riskMultiplier * passive.effectiveXpMultiplier,
   );
@@ -909,7 +935,7 @@ function simulateClassAtLevel(params: {
     attack: derived.attack,
     defense: derived.defense,
     speed: derived.speed,
-    offensivePower: roundNumber(offensivePower, 1),
+    offensivePower: roundNumber(effectiveOffensivePower, 1),
     secondsPerFind,
     ttkSeconds: ttk.estimatedKillTimeSeconds,
     secondsPerMob,
@@ -958,7 +984,9 @@ function printScenarioDescriptions() {
   console.log('');
   console.log('Balance target:');
   console.log(`- Max best/worst ratio: ${TARGET_MAX_RATIO}x`);
-  console.log(`- Worst class should keep at least ${TARGET_MIN_WORST_PERCENT}% of best class XP/h.`);
+  console.log(
+    `- Worst class should keep at least ${TARGET_MIN_WORST_PERCENT}% of best class XP/h.`,
+  );
   console.log('');
   console.log('Assumptions:');
   console.log('- Equipment presets are class-specific stat sets.');
@@ -1002,11 +1030,13 @@ function printEquipmentStatBudgets() {
     EQUIPMENT_PRESETS.flatMap((equipmentPreset) =>
       [1, 5, 10].flatMap((tier) =>
         classDefinitions.map((classDefinition) => {
-          const stats = getEquipmentItemsPrimaryStats(buildEquipmentItems({
-            className: classDefinition.name,
-            tier,
-            equipmentPreset,
-          }));
+          const stats = getEquipmentItemsPrimaryStats(
+            buildEquipmentItems({
+              className: classDefinition.name,
+              tier,
+              equipmentPreset,
+            }),
+          );
 
           return {
             equipment: equipmentPreset.label,
@@ -1069,8 +1099,7 @@ function getLevelImbalance(params: {
       best.effectiveXpPerHour / Math.max(1, worst.effectiveXpPerHour),
     ),
     worstVsBestPercent: roundNumber(
-      (worst.effectiveXpPerHour / Math.max(1, best.effectiveXpPerHour)) *
-        100,
+      (worst.effectiveXpPerHour / Math.max(1, best.effectiveXpPerHour)) * 100,
       1,
     ),
   };
@@ -1302,9 +1331,7 @@ function printCandidateLevelDetails(rows: SimulationRow[], levels: number[]) {
         equipmentLabel: equipmentPreset.label,
         level,
       });
-      const maxXp = Math.max(
-        ...levelRows.map((row) => row.effectiveXpPerHour),
-      );
+      const maxXp = Math.max(...levelRows.map((row) => row.effectiveXpPerHour));
 
       console.log(`${equipmentPreset.label}`);
       console.table(

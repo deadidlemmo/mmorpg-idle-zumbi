@@ -1,18 +1,18 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
+import assert from "node:assert/strict";
+import test from "node:test";
 import {
   getHuntEmptyStageCopy,
   shouldShowAutoCombatSessionStage,
-} from './hunt-stage.helpers';
-import { selectVisibleCharacterProgress } from './visible-progress';
-import type { RealtimeCharacterProgressState } from '../types/auto-combat-page.types';
+} from "./hunt-stage.helpers";
+import { selectVisibleCharacterProgress } from "./visible-progress";
+import type { RealtimeCharacterProgressState } from "../types/auto-combat-page.types";
 
 function progress(
   xp: number,
   currentLevelXp: number,
 ): RealtimeCharacterProgressState {
   return {
-    sessionId: 'session-1',
+    sessionId: "session-1",
     level: 1,
     xp,
     currentLevelXp,
@@ -22,7 +22,7 @@ function progress(
   };
 }
 
-test('dashboard não usa overview/status adiantado enquanto timeline visual do provider está pendente', () => {
+test("dashboard não usa overview/status adiantado enquanto timeline visual do provider está pendente", () => {
   const providerProgress = progress(100, 100);
   const overviewProgress = progress(150, 150);
   const statusProgress = progress(150, 150);
@@ -40,7 +40,7 @@ test('dashboard não usa overview/status adiantado enquanto timeline visual do p
   assert.equal(visible?.currentLevelXp, 100);
 });
 
-test('dashboard mostra EXP confirmada após a timeline visual liberar o progresso', () => {
+test("dashboard mostra EXP confirmada após a timeline visual liberar o progresso", () => {
   const providerProgress = progress(150, 150);
   const overviewProgress = progress(150, 150);
   const statusProgress = progress(150, 150);
@@ -57,7 +57,7 @@ test('dashboard mostra EXP confirmada após a timeline visual liberar o progress
   assert.equal(visible?.currentLevelXp, 150);
 });
 
-test('retomada da caça bloqueia o card antigo mesmo com snapshot de combate pendente', () => {
+test("retomada da caça bloqueia o card antigo mesmo com snapshot de combate pendente", () => {
   const visible = shouldShowAutoCombatSessionStage({
     isStartingHunt: true,
     shouldDelayActiveSessionUntilStartSnapshot: false,
@@ -68,7 +68,7 @@ test('retomada da caça bloqueia o card antigo mesmo com snapshot de combate pen
   assert.equal(visible, false);
 });
 
-test('ameaças preservadas não mantêm mensagem de derrota após a cura', () => {
+test("ameaças preservadas não mantêm mensagem de derrota após a cura", () => {
   const copy = getHuntEmptyStageCopy({
     isStartingHunt: false,
     isActionLoading: false,
@@ -77,12 +77,12 @@ test('ameaças preservadas não mantêm mensagem de derrota após a cura', () =>
     characterHasHp: true,
   });
 
-  assert.equal(copy.title, '763 ameaças aguardando');
+  assert.equal(copy.title, "763 ameaças aguardando");
   assert.match(copy.description, /recuperado/i);
   assert.doesNotMatch(copy.description, /derrotado/i);
 });
 
-test('ameaças preservadas explicam a derrota enquanto o personagem está sem HP', () => {
+test("ameaças preservadas explicam a derrota enquanto o personagem está sem HP", () => {
   const copy = getHuntEmptyStageCopy({
     isStartingHunt: false,
     isActionLoading: false,
@@ -91,11 +91,11 @@ test('ameaças preservadas explicam a derrota enquanto o personagem está sem HP
     characterHasHp: false,
   });
 
-  assert.equal(copy.title, '1 ameaça aguardando');
+  assert.equal(copy.title, "1 ameaça aguardando");
   assert.match(copy.description, /derrotado/i);
 });
 
-test('transição de retomada não exibe estado vazio de rastreamento', () => {
+test("transição de retomada não exibe estado vazio de rastreamento", () => {
   const copy = getHuntEmptyStageCopy({
     isStartingHunt: true,
     isActionLoading: true,
@@ -104,6 +104,6 @@ test('transição de retomada não exibe estado vazio de rastreamento', () => {
     characterHasHp: true,
   });
 
-  assert.equal(copy.title, 'Retomando caçada');
-  assert.notEqual(copy.title, 'Nenhuma ameaça rastreada');
+  assert.equal(copy.title, "Retomando caçada");
+  assert.notEqual(copy.title, "Nenhuma ameaça rastreada");
 });

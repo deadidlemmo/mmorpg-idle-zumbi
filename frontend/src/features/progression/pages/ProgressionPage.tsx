@@ -87,7 +87,9 @@ function MissionCard({
       <div className="progression-item__content">
         <div className="progression-item__heading">
           <div>
-            <span>{mission.mission.type}</span>
+            <span>
+              {mission.mission.type} · T{mission.rewardTier}
+            </span>
             <h3>{mission.mission.title}</h3>
           </div>
           <strong>

@@ -304,11 +304,12 @@ export function buildWorldBossSimulationCalendar(
         outcome === 'EMPTY'
           ? config.entryWindowMinutes
           : defeated
-            ? randomInteger(
+            ? config.entryWindowMinutes +
+              randomInteger(
                 random,
                 slotCalibration.defeatedDurationMinutes.value,
               )
-            : config.eventDurationMinutes;
+            : config.entryWindowMinutes + config.eventDurationMinutes;
       const closesAtMinute = startsAtMinute + activeDurationMinutes;
 
       events.push({

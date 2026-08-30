@@ -150,6 +150,7 @@ export type WorldBossServerToClientEvents = {
   "worldBoss:error": (payload: WorldBossSocketError) => void;
   "worldBoss:statusUpdated": (payload: WorldBossStatusResponse) => void;
   "worldBoss:lobbyOpened": (payload: WorldBossStatusResponse) => void;
+  "worldBoss:registered": (payload: WorldBossStatusResponse) => void;
   "worldBoss:joinedLobby": (payload: WorldBossStatusResponse) => void;
   "worldBoss:leftLobby": (payload: WorldBossStatusResponse) => void;
   "worldBoss:lobbyUpdated": (payload: WorldBossStatusResponse) => void;

@@ -583,6 +583,7 @@ function simulateClassTier(params: {
       precision: primary.precision,
       technique: primary.technique,
       agility: primary.agility,
+      equipmentTier: combatStats.equipmentProgression.effectiveTier,
     },
   });
   const mobAttack = applyAutoCombatIncomingDamageMultiplier({
@@ -602,6 +603,10 @@ function simulateClassTier(params: {
     mobAttack,
     mobPrecision: mob.speed,
     mobTechnique: mob.level,
+    mobSpeed: mob.speed,
+    mobTier: mob.tier,
+    equipmentTier: combatStats.equipmentProgression.effectiveTier,
+    killTimeSeconds: ttk.estimatedKillTimeSeconds,
     projectedKills: kills,
     potion: {
       availableQuantity: potionQuantity,
@@ -709,6 +714,7 @@ function simulateClassTierRealSeed(params: {
         precision: primary.precision,
         technique: primary.technique,
         agility: primary.agility,
+        equipmentTier: combatStats.equipmentProgression.effectiveTier,
       },
     });
     const mobAttack = applyAutoCombatIncomingDamageMultiplier({
@@ -723,6 +729,10 @@ function simulateClassTierRealSeed(params: {
       mobAttack,
       mobPrecision: plan.mob.speed,
       mobTechnique: plan.mob.level,
+      mobSpeed: plan.mob.speed,
+      mobTier: plan.mob.tier,
+      equipmentTier: combatStats.equipmentProgression.effectiveTier,
+      killTimeSeconds: ttk.estimatedKillTimeSeconds,
       projectedKills: 1,
       potion: null,
     });
@@ -763,25 +773,30 @@ function simulateClassTierRealSeed(params: {
   });
   const encounterRiskLevels = encounterMetrics
     .filter((metric) => metric.plan.expectedKills >= 1)
-    .map((metric) =>
-      projectAutoCombatSurvival({
-        currentHp: maxHp,
-        maxHp,
-        playerDefense: derived.defense,
-        playerAgility: primary.agility,
-        mobAttack: applyAutoCombatIncomingDamageMultiplier({
-          attack: metric.plan.mob.attack,
-          className: classDefinition.name,
-        }),
-        mobPrecision: metric.plan.mob.speed,
-        mobTechnique: metric.plan.mob.level,
-        projectedKills: Math.max(1, Math.round(metric.plan.expectedKills)),
-        potion: {
-          availableQuantity: potionQuantity,
-          healAmount: potionHeal.healAmount,
-          hpThresholdPercent: 35,
-        },
-      }).riskLevel,
+    .map(
+      (metric) =>
+        projectAutoCombatSurvival({
+          currentHp: maxHp,
+          maxHp,
+          playerDefense: derived.defense,
+          playerAgility: primary.agility,
+          mobAttack: applyAutoCombatIncomingDamageMultiplier({
+            attack: metric.plan.mob.attack,
+            className: classDefinition.name,
+          }),
+          mobPrecision: metric.plan.mob.speed,
+          mobTechnique: metric.plan.mob.level,
+          mobSpeed: metric.plan.mob.speed,
+          mobTier: metric.plan.mob.tier,
+          equipmentTier: combatStats.equipmentProgression.effectiveTier,
+          killTimeSeconds: metric.ttkSeconds,
+          projectedKills: Math.max(1, Math.round(metric.plan.expectedKills)),
+          potion: {
+            availableQuantity: potionQuantity,
+            healAmount: potionHeal.healAmount,
+            hpThresholdPercent: 35,
+          },
+        }).riskLevel,
     );
   const riskLevel = getWorstRiskLevel([
     survival.riskLevel,
@@ -1175,9 +1190,7 @@ function main() {
   const rows = buildRows(options);
   const outputDir = options.outputDir;
   const sourceSlug =
-    options.source === 'real-seed-maps'
-      ? 'mapas-reais-seed'
-      : 'sintetico-tier';
+    options.source === 'real-seed-maps' ? 'mapas-reais-seed' : 'sintetico-tier';
   const baseName = `${toSlug(
     AUTO_COMBAT_BALANCE_MODEL_LABEL,
   )}-sem-descanso-${sourceSlug}-caca-nivel-${options.huntingLevel}-${options.kills}-mobs`;

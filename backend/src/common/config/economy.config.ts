@@ -17,18 +17,18 @@ export const ECONOMY_ACTIVITY_REWARDS = Object.freeze({
     5: { min: 5, max: 7 },
   },
   worldBossFragments: {
-    1: { min: 2, max: 5 },
-    2: { min: 3, max: 6 },
-    3: { min: 4, max: 7 },
-    4: { min: 5, max: 8 },
-    5: { min: 6, max: 9 },
+    1: { min: 1, max: 1 },
+    2: { min: 1, max: 1 },
+    3: { min: 1, max: 2 },
+    4: { min: 1, max: 2 },
+    5: { min: 1, max: 2 },
   },
   worldBossCocoonChancePercent: {
-    1: 0.98,
-    2: 1.16,
-    3: 1.34,
-    4: 1.52,
-    5: 1.7,
+    1: 7,
+    2: 7,
+    3: 5,
+    4: 5,
+    5: 4,
   },
   incursionReinforcementFragments: {
     1: [
@@ -550,7 +550,8 @@ export const T1_ECONOMY_CONFIG = Object.freeze({
   worldBoss: {
     fragmentReward: ECONOMY_ACTIVITY_REWARDS.worldBossFragments[1],
     goldReward: { min: 180, max: 300 },
-    cocoonChancePercent: 0.98,
+    cocoonChancePercent:
+      ECONOMY_ACTIVITY_REWARDS.worldBossCocoonChancePercent[1],
   },
   petIncubation: {
     fragmentCost: 10,
@@ -598,8 +599,8 @@ export const T1_ECONOMY_CONFIG = Object.freeze({
           label: 'Contencao',
           respawnMinutes:
             WORLD_BOSS_SCHEDULE_CONFIG.slots[0].respawnSeconds / 60,
-          defeatChancePercent: 65,
-          defeatedDurationMinutes: { min: 45, max: 90 },
+          defeatChancePercent: 100,
+          defeatedDurationMinutes: { min: 25, max: 57 },
           expiredProgressPercent: { min: 15, max: 85 },
         },
         {
@@ -608,8 +609,8 @@ export const T1_ECONOMY_CONFIG = Object.freeze({
           label: 'Exterminio',
           respawnMinutes:
             WORLD_BOSS_SCHEDULE_CONFIG.slots[1].respawnSeconds / 60,
-          defeatChancePercent: 50,
-          defeatedDurationMinutes: { min: 60, max: 120 },
+          defeatChancePercent: 100,
+          defeatedDurationMinutes: { min: 35, max: 75 },
           expiredProgressPercent: { min: 15, max: 85 },
         },
       ],

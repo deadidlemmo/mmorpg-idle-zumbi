@@ -33,6 +33,13 @@ export class AutoCombatController {
     );
   }
 
+  @Get('active-characters')
+  getActiveCharacters() {
+    return this.activeCharacterPresence.getActiveCharacters(
+      this.autoCombatGateway.getOnlineCharacterIds(),
+    );
+  }
+
   @Post('start')
   start(@Req() request: any, @Body() startAutoCombatDto: StartAutoCombatDto) {
     return this.autoCombatService.start(request.user.id, startAutoCombatDto);

@@ -1,0 +1,4387 @@
+{
+  "version": 1,
+  "assumptions": {
+    "tiers": "T1-T5",
+    "activeMobsPerTier": 6,
+    "encounterWeights": "42/24/15/9/6/4",
+    "playerBaseline": "media das 4 classes; personagem no nivel do mob; set atual; reforco 0; gathering recomendado; sem pet",
+    "goldPerHourIfExclusive": "projecao se todos os encontros fossem do mesmo mob",
+    "weightedGoldPerHour": "contribuicao no mix real de encontros do tier",
+    "npcSalePolicy": "formula autoritativa do Mercado Negro"
+  },
+  "thresholds": {
+    "highFrequencyEventChancePercent": 30,
+    "highFrequencyGoldSharePercent": 35,
+    "highFrequencyMobEncounterSharePercent": 30,
+    "highFrequencyMobGoldSharePercent": 35,
+    "highYieldMobRatioToTier": 1.75
+  },
+  "tiers": [
+    {
+      "tier": 1,
+      "activeMobCount": 6,
+      "totalEncounterWeight": 100,
+      "averageMixedKillsPerHour": 195.47,
+      "minimumMixedKillsPerHour": 191.39,
+      "maximumMixedKillsPerHour": 197.37,
+      "expectedGoldPerKill": 4.0155,
+      "averageGrossGoldPerHour": 784.91,
+      "minimumGrossGoldPerHour": 768.52,
+      "maximumGrossGoldPerHour": 792.52,
+      "averageItemUnitSellGold": 2.88,
+      "maximumItemUnitSellGold": 3,
+      "averageGoldPerDropEvent": 3,
+      "maximumGoldPerDropEvent": 4,
+      "topMobByWeightedGold": "Errante do Subúrbio",
+      "topItemByGold": "Resíduo Infecto Pálido",
+      "mobs": [
+        {
+          "tier": 1,
+          "rank": 1,
+          "position": "START",
+          "mobName": "Errante do Subúrbio",
+          "mapName": "Subúrbio Silencioso",
+          "subMapName": "Rua das Cercas",
+          "encounterWeight": 42,
+          "encounterSharePercent": 42,
+          "expectedUnitsPerKill": 1.725,
+          "expectedGoldPerKill": 4.5,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 4,
+              "expectedGoldPerKill": 1.35
+            },
+            {
+              "itemName": "Biomaterial Articular Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 1.05
+            },
+            {
+              "itemName": "Biomaterial Cortante Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 70,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.7,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 2.1
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 211.76,
+              "goldPerHourIfExclusive": 952.92
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 200,
+              "goldPerHourIfExclusive": 900
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 211.76,
+              "goldPerHourIfExclusive": 952.92
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 211.76,
+              "goldPerHourIfExclusive": 952.92
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 208.82,
+          "minimumKillsPerHourIfExclusive": 200,
+          "maximumKillsPerHourIfExclusive": 211.76,
+          "averageGoldPerHourIfExclusive": 939.69,
+          "minimumGoldPerHourIfExclusive": 900,
+          "maximumGoldPerHourIfExclusive": 952.92,
+          "averageWeightedGoldPerHour": 369.44,
+          "weightedGoldSharePercent": 47.07,
+          "ratioToTierExpectedGoldPerKill": 1.12
+        },
+        {
+          "tier": 1,
+          "rank": 2,
+          "position": "START",
+          "mobName": "Gato de Telhado Contaminado",
+          "mapName": "Subúrbio Silencioso",
+          "subMapName": "Rua das Cercas",
+          "encounterWeight": 24,
+          "encounterSharePercent": 24,
+          "expectedUnitsPerKill": 1.375,
+          "expectedGoldPerKill": 3.45,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 4,
+              "expectedGoldPerKill": 1.35
+            },
+            {
+              "itemName": "Biomaterial de Mobilidade Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 1.05
+            },
+            {
+              "itemName": "Biomaterial Craniano Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 1.05
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 200,
+              "goldPerHourIfExclusive": 690
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 200,
+              "goldPerHourIfExclusive": 690
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 200,
+              "goldPerHourIfExclusive": 690
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 200,
+              "goldPerHourIfExclusive": 690
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 200,
+          "minimumKillsPerHourIfExclusive": 200,
+          "maximumKillsPerHourIfExclusive": 200,
+          "averageGoldPerHourIfExclusive": 690,
+          "minimumGoldPerHourIfExclusive": 690,
+          "maximumGoldPerHourIfExclusive": 690,
+          "averageWeightedGoldPerHour": 161.85,
+          "weightedGoldSharePercent": 20.62,
+          "ratioToTierExpectedGoldPerKill": 0.86
+        },
+        {
+          "tier": 1,
+          "rank": 3,
+          "position": "MID",
+          "mobName": "Rastejante de Garagem",
+          "mapName": "Subúrbio Silencioso",
+          "subMapName": "Quintais Abandonados",
+          "encounterWeight": 15,
+          "encounterSharePercent": 15,
+          "expectedUnitsPerKill": 1.375,
+          "expectedGoldPerKill": 3.45,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 4,
+              "expectedGoldPerKill": 1.35
+            },
+            {
+              "itemName": "Biomaterial Reativo Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 1.05
+            },
+            {
+              "itemName": "Biomaterial Torácico Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 1.05
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 200,
+              "goldPerHourIfExclusive": 690
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 200,
+              "goldPerHourIfExclusive": 690
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 200,
+              "goldPerHourIfExclusive": 690
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 200,
+              "goldPerHourIfExclusive": 690
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 200,
+          "minimumKillsPerHourIfExclusive": 200,
+          "maximumKillsPerHourIfExclusive": 200,
+          "averageGoldPerHourIfExclusive": 690,
+          "minimumGoldPerHourIfExclusive": 690,
+          "maximumGoldPerHourIfExclusive": 690,
+          "averageWeightedGoldPerHour": 101.16,
+          "weightedGoldSharePercent": 12.89,
+          "ratioToTierExpectedGoldPerKill": 0.86
+        },
+        {
+          "tier": 1,
+          "rank": 4,
+          "position": "MID",
+          "mobName": "Morcego de Caixa d’Água",
+          "mapName": "Subúrbio Silencioso",
+          "subMapName": "Quintais Abandonados",
+          "encounterWeight": 9,
+          "encounterSharePercent": 9,
+          "expectedUnitsPerKill": 1.725,
+          "expectedGoldPerKill": 4.5,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 4,
+              "expectedGoldPerKill": 1.35
+            },
+            {
+              "itemName": "Biomaterial Cortante Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 70,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.7,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 2.1
+            },
+            {
+              "itemName": "Biomaterial Articular Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 1.05
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 180,
+              "goldPerHourIfExclusive": 810
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 171.43,
+              "goldPerHourIfExclusive": 771.44
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 171.43,
+              "goldPerHourIfExclusive": 771.44
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 180,
+              "goldPerHourIfExclusive": 810
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 175.72,
+          "minimumKillsPerHourIfExclusive": 171.43,
+          "maximumKillsPerHourIfExclusive": 180,
+          "averageGoldPerHourIfExclusive": 790.72,
+          "minimumGoldPerHourIfExclusive": 771.44,
+          "maximumGoldPerHourIfExclusive": 810,
+          "averageWeightedGoldPerHour": 79.17,
+          "weightedGoldSharePercent": 10.09,
+          "ratioToTierExpectedGoldPerKill": 1.12
+        },
+        {
+          "tier": 1,
+          "rank": 5,
+          "position": "END",
+          "mobName": "Porteiro Infectado",
+          "mapName": "Subúrbio Silencioso",
+          "subMapName": "Bloco do Síndico",
+          "encounterWeight": 6,
+          "encounterSharePercent": 6,
+          "expectedUnitsPerKill": 1.375,
+          "expectedGoldPerKill": 3.45,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 4,
+              "expectedGoldPerKill": 1.35
+            },
+            {
+              "itemName": "Biomaterial Craniano Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 1.05
+            },
+            {
+              "itemName": "Biomaterial de Mobilidade Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 1.05
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 180,
+              "goldPerHourIfExclusive": 621
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 171.43,
+              "goldPerHourIfExclusive": 591.43
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 171.43,
+              "goldPerHourIfExclusive": 591.43
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 180,
+              "goldPerHourIfExclusive": 621
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 175.72,
+          "minimumKillsPerHourIfExclusive": 171.43,
+          "maximumKillsPerHourIfExclusive": 180,
+          "averageGoldPerHourIfExclusive": 606.21,
+          "minimumGoldPerHourIfExclusive": 591.43,
+          "maximumGoldPerHourIfExclusive": 621,
+          "averageWeightedGoldPerHour": 40.46,
+          "weightedGoldSharePercent": 5.16,
+          "ratioToTierExpectedGoldPerKill": 0.86
+        },
+        {
+          "tier": 1,
+          "rank": 6,
+          "position": "END",
+          "mobName": "Síndico Devorado",
+          "mapName": "Subúrbio Silencioso",
+          "subMapName": "Bloco do Síndico",
+          "encounterWeight": 4,
+          "encounterSharePercent": 4,
+          "expectedUnitsPerKill": 1.625,
+          "expectedGoldPerKill": 4.2,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 4,
+              "expectedGoldPerKill": 1.35
+            },
+            {
+              "itemName": "Biomaterial Torácico Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 1.05
+            },
+            {
+              "itemName": "Núcleo Infectado de Elite Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 25,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.25,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 0.75
+            },
+            {
+              "itemName": "Biomaterial Reativo Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 3,
+              "maximumGoldPerDropEvent": 3,
+              "expectedGoldPerKill": 1.05
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 133.33,
+              "goldPerHourIfExclusive": 559.99
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 133.33,
+              "goldPerHourIfExclusive": 559.99
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 133.33,
+              "goldPerHourIfExclusive": 559.99
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 133.33,
+              "goldPerHourIfExclusive": 559.99
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 133.33,
+          "minimumKillsPerHourIfExclusive": 133.33,
+          "maximumKillsPerHourIfExclusive": 133.33,
+          "averageGoldPerHourIfExclusive": 559.99,
+          "minimumGoldPerHourIfExclusive": 559.99,
+          "maximumGoldPerHourIfExclusive": 559.99,
+          "averageWeightedGoldPerHour": 32.84,
+          "weightedGoldSharePercent": 4.18,
+          "ratioToTierExpectedGoldPerKill": 1.05
+        }
+      ],
+      "items": [
+        {
+          "tier": 1,
+          "itemName": "Resíduo Infecto Pálido",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 2,
+          "weightedDropEventChancePercent": 45,
+          "weightedExpectedUnitsPerKill": 0.675,
+          "averageQuantityWhenDropped": 1.5,
+          "maximumQuantityWhenDropped": 2,
+          "averageGoldPerDropEvent": 3,
+          "maximumGoldPerDropEvent": 4,
+          "expectedGoldPerKill": 1.35,
+          "averageExpectedUnitsPerHour": 131.94,
+          "averageGoldPerHour": 263.88,
+          "goldSharePercent": 33.62,
+          "sources": [
+            {
+              "mobName": "Errante do Subúrbio",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Gato de Telhado Contaminado",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Rastejante de Garagem",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Morcego de Caixa d’Água",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Porteiro Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Síndico Devorado",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            }
+          ]
+        },
+        {
+          "tier": 1,
+          "itemName": "Biomaterial Cortante Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 35.7,
+          "weightedExpectedUnitsPerKill": 0.357,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 3,
+          "maximumGoldPerDropEvent": 3,
+          "expectedGoldPerKill": 1.071,
+          "averageExpectedUnitsPerHour": 69.78,
+          "averageGoldPerHour": 209.35,
+          "goldSharePercent": 26.67,
+          "sources": [
+            {
+              "mobName": "Errante do Subúrbio",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 70,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Morcego de Caixa d’Água",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 70,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 1,
+          "itemName": "Biomaterial Articular Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 17.85,
+          "weightedExpectedUnitsPerKill": 0.1785,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 3,
+          "maximumGoldPerDropEvent": 3,
+          "expectedGoldPerKill": 0.5355,
+          "averageExpectedUnitsPerHour": 34.89,
+          "averageGoldPerHour": 104.67,
+          "goldSharePercent": 13.34,
+          "sources": [
+            {
+              "mobName": "Errante do Subúrbio",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Morcego de Caixa d’Água",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 1,
+          "itemName": "Biomaterial de Mobilidade Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 10.5,
+          "weightedExpectedUnitsPerKill": 0.105,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 3,
+          "maximumGoldPerDropEvent": 3,
+          "expectedGoldPerKill": 0.315,
+          "averageExpectedUnitsPerHour": 20.52,
+          "averageGoldPerHour": 61.57,
+          "goldSharePercent": 7.84,
+          "sources": [
+            {
+              "mobName": "Gato de Telhado Contaminado",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Porteiro Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 1,
+          "itemName": "Biomaterial Craniano Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 10.5,
+          "weightedExpectedUnitsPerKill": 0.105,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 3,
+          "maximumGoldPerDropEvent": 3,
+          "expectedGoldPerKill": 0.315,
+          "averageExpectedUnitsPerHour": 20.52,
+          "averageGoldPerHour": 61.57,
+          "goldSharePercent": 7.84,
+          "sources": [
+            {
+              "mobName": "Gato de Telhado Contaminado",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Porteiro Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 1,
+          "itemName": "Biomaterial Reativo Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 6.65,
+          "weightedExpectedUnitsPerKill": 0.0665,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 3,
+          "maximumGoldPerDropEvent": 3,
+          "expectedGoldPerKill": 0.1995,
+          "averageExpectedUnitsPerHour": 13,
+          "averageGoldPerHour": 39,
+          "goldSharePercent": 4.97,
+          "sources": [
+            {
+              "mobName": "Rastejante de Garagem",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Síndico Devorado",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 1,
+          "itemName": "Biomaterial Torácico Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 6.65,
+          "weightedExpectedUnitsPerKill": 0.0665,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 3,
+          "maximumGoldPerDropEvent": 3,
+          "expectedGoldPerKill": 0.1995,
+          "averageExpectedUnitsPerHour": 13,
+          "averageGoldPerHour": 39,
+          "goldSharePercent": 4.97,
+          "sources": [
+            {
+              "mobName": "Rastejante de Garagem",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Síndico Devorado",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 1,
+          "itemName": "Núcleo Infectado de Elite Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 1,
+          "weightedExpectedUnitsPerKill": 0.01,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 3,
+          "maximumGoldPerDropEvent": 3,
+          "expectedGoldPerKill": 0.03,
+          "averageExpectedUnitsPerHour": 1.95,
+          "averageGoldPerHour": 5.86,
+          "goldSharePercent": 0.75,
+          "sources": [
+            {
+              "mobName": "Síndico Devorado",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 25,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tier": 2,
+      "activeMobCount": 6,
+      "totalEncounterWeight": 100,
+      "averageMixedKillsPerHour": 91.89,
+      "minimumMixedKillsPerHour": 91.07,
+      "maximumMixedKillsPerHour": 93.46,
+      "expectedGoldPerKill": 9.8859,
+      "averageGrossGoldPerHour": 908.44,
+      "minimumGrossGoldPerHour": 900.3,
+      "maximumGrossGoldPerHour": 923.92,
+      "averageItemUnitSellGold": 2.88,
+      "maximumItemUnitSellGold": 3,
+      "averageGoldPerDropEvent": 8.31,
+      "maximumGoldPerDropEvent": 16,
+      "topMobByWeightedGold": "Carregador de Paletes Infectado",
+      "topItemByGold": "Resíduo Infecto Pálido",
+      "mobs": [
+        {
+          "tier": 2,
+          "rank": 1,
+          "position": "START",
+          "mobName": "Carregador de Paletes Infectado",
+          "mapName": "Distrito da Ferrugem",
+          "subMapName": "Pátio de Carga",
+          "encounterWeight": 42,
+          "encounterSharePercent": 42,
+          "expectedUnitsPerKill": 3.45,
+          "expectedGoldPerKill": 9,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 2,
+              "maxQuantity": 4,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.35,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 6,
+              "maximumGoldPerDropEvent": 8,
+              "expectedGoldPerKill": 2.7
+            },
+            {
+              "itemName": "Biomaterial Cortante Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 70,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 1.4,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 6,
+              "maximumGoldPerDropEvent": 6,
+              "expectedGoldPerKill": 4.2
+            },
+            {
+              "itemName": "Biomaterial Craniano Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 0.7,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 6,
+              "maximumGoldPerDropEvent": 6,
+              "expectedGoldPerKill": 2.1
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 156.52,
+              "goldPerHourIfExclusive": 1408.68
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 156.52,
+              "goldPerHourIfExclusive": 1408.68
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 156.52,
+              "goldPerHourIfExclusive": 1408.68
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 156.52,
+              "goldPerHourIfExclusive": 1408.68
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 156.52,
+          "minimumKillsPerHourIfExclusive": 156.52,
+          "maximumKillsPerHourIfExclusive": 156.52,
+          "averageGoldPerHourIfExclusive": 1408.68,
+          "minimumGoldPerHourIfExclusive": 1408.68,
+          "maximumGoldPerHourIfExclusive": 1408.68,
+          "averageWeightedGoldPerHour": 347.35,
+          "weightedGoldSharePercent": 38.24,
+          "ratioToTierExpectedGoldPerKill": 0.91
+        },
+        {
+          "tier": 2,
+          "rank": 2,
+          "position": "START",
+          "mobName": "Arrastador de Correntes",
+          "mapName": "Distrito da Ferrugem",
+          "subMapName": "Pátio de Carga",
+          "encounterWeight": 24,
+          "encounterSharePercent": 24,
+          "expectedUnitsPerKill": 2.75,
+          "expectedGoldPerKill": 6.9,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 2,
+              "maxQuantity": 4,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.35,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 6,
+              "maximumGoldPerDropEvent": 8,
+              "expectedGoldPerKill": 2.7
+            },
+            {
+              "itemName": "Biomaterial Reativo Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 0.7,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 6,
+              "maximumGoldPerDropEvent": 6,
+              "expectedGoldPerKill": 2.1
+            },
+            {
+              "itemName": "Biomaterial de Mobilidade Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 0.7,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 6,
+              "maximumGoldPerDropEvent": 6,
+              "expectedGoldPerKill": 2.1
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 69.23,
+              "goldPerHourIfExclusive": 477.69
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 72,
+              "goldPerHourIfExclusive": 496.8
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 69.23,
+              "goldPerHourIfExclusive": 477.69
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 70.59,
+              "goldPerHourIfExclusive": 487.07
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 70.26,
+          "minimumKillsPerHourIfExclusive": 69.23,
+          "maximumKillsPerHourIfExclusive": 72,
+          "averageGoldPerHourIfExclusive": 484.81,
+          "minimumGoldPerHourIfExclusive": 477.69,
+          "maximumGoldPerHourIfExclusive": 496.8,
+          "averageWeightedGoldPerHour": 152.17,
+          "weightedGoldSharePercent": 16.75,
+          "ratioToTierExpectedGoldPerKill": 0.7
+        },
+        {
+          "tier": 2,
+          "rank": 3,
+          "position": "MID",
+          "mobName": "Operário Prensado",
+          "mapName": "Distrito da Ferrugem",
+          "subMapName": "Linha de Prensas",
+          "encounterWeight": 15,
+          "encounterSharePercent": 15,
+          "expectedUnitsPerKill": 4.125,
+          "expectedGoldPerKill": 10.35,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 3,
+              "maxQuantity": 6,
+              "averageQuantityWhenDropped": 4.5,
+              "expectedUnitsPerKill": 2.025,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 9,
+              "maximumGoldPerDropEvent": 12,
+              "expectedGoldPerKill": 4.05
+            },
+            {
+              "itemName": "Biomaterial Torácico Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 3,
+              "maxQuantity": 3,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.05,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 9,
+              "maximumGoldPerDropEvent": 9,
+              "expectedGoldPerKill": 3.15
+            },
+            {
+              "itemName": "Biomaterial Articular Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 3,
+              "maxQuantity": 3,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.05,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 9,
+              "maximumGoldPerDropEvent": 9,
+              "expectedGoldPerKill": 3.15
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 87.8,
+              "goldPerHourIfExclusive": 908.73
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 90,
+              "goldPerHourIfExclusive": 931.5
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 87.8,
+              "goldPerHourIfExclusive": 908.73
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 87.8,
+              "goldPerHourIfExclusive": 908.73
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 88.35,
+          "minimumKillsPerHourIfExclusive": 87.8,
+          "maximumKillsPerHourIfExclusive": 90,
+          "averageGoldPerHourIfExclusive": 914.42,
+          "minimumGoldPerHourIfExclusive": 908.73,
+          "maximumGoldPerHourIfExclusive": 931.5,
+          "averageWeightedGoldPerHour": 142.66,
+          "weightedGoldSharePercent": 15.7,
+          "ratioToTierExpectedGoldPerKill": 1.05
+        },
+        {
+          "tier": 2,
+          "rank": 4,
+          "position": "MID",
+          "mobName": "Esmagado da Prensa",
+          "mapName": "Distrito da Ferrugem",
+          "subMapName": "Linha de Prensas",
+          "encounterWeight": 9,
+          "encounterSharePercent": 9,
+          "expectedUnitsPerKill": 5.175,
+          "expectedGoldPerKill": 13.5,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 3,
+              "maxQuantity": 6,
+              "averageQuantityWhenDropped": 4.5,
+              "expectedUnitsPerKill": 2.025,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 9,
+              "maximumGoldPerDropEvent": 12,
+              "expectedGoldPerKill": 4.05
+            },
+            {
+              "itemName": "Biomaterial Craniano Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 3,
+              "maxQuantity": 3,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.05,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 9,
+              "maximumGoldPerDropEvent": 9,
+              "expectedGoldPerKill": 3.15
+            },
+            {
+              "itemName": "Biomaterial Cortante Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 70,
+              "minQuantity": 3,
+              "maxQuantity": 3,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 2.1,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 9,
+              "maximumGoldPerDropEvent": 9,
+              "expectedGoldPerKill": 6.3
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 60,
+              "goldPerHourIfExclusive": 810
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 62.07,
+              "goldPerHourIfExclusive": 837.95
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 61.02,
+              "goldPerHourIfExclusive": 823.77
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 60,
+              "goldPerHourIfExclusive": 810
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 60.77,
+          "minimumKillsPerHourIfExclusive": 60,
+          "maximumKillsPerHourIfExclusive": 62.07,
+          "averageGoldPerHourIfExclusive": 820.43,
+          "minimumGoldPerHourIfExclusive": 810,
+          "maximumGoldPerHourIfExclusive": 837.95,
+          "averageWeightedGoldPerHour": 111.65,
+          "weightedGoldSharePercent": 12.29,
+          "ratioToTierExpectedGoldPerKill": 1.37
+        },
+        {
+          "tier": 2,
+          "rank": 5,
+          "position": "END",
+          "mobName": "Vigia do Galpão Infectado",
+          "mapName": "Distrito da Ferrugem",
+          "subMapName": "Galpão do Capataz",
+          "encounterWeight": 6,
+          "encounterSharePercent": 6,
+          "expectedUnitsPerKill": 6.18,
+          "expectedGoldPerKill": 15.48,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 51,
+              "minQuantity": 4,
+              "maxQuantity": 8,
+              "averageQuantityWhenDropped": 6,
+              "expectedUnitsPerKill": 3.06,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 12,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 6.12
+            },
+            {
+              "itemName": "Biomaterial de Mobilidade Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 39,
+              "minQuantity": 4,
+              "maxQuantity": 4,
+              "averageQuantityWhenDropped": 4,
+              "expectedUnitsPerKill": 1.56,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 12,
+              "maximumGoldPerDropEvent": 12,
+              "expectedGoldPerKill": 4.68
+            },
+            {
+              "itemName": "Biomaterial Reativo Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 39,
+              "minQuantity": 4,
+              "maxQuantity": 4,
+              "averageQuantityWhenDropped": 4,
+              "expectedUnitsPerKill": 1.56,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 12,
+              "maximumGoldPerDropEvent": 12,
+              "expectedGoldPerKill": 4.68
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 60,
+              "goldPerHourIfExclusive": 928.8
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 62.07,
+              "goldPerHourIfExclusive": 960.84
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 61.02,
+              "goldPerHourIfExclusive": 944.59
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 60,
+              "goldPerHourIfExclusive": 928.8
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 60.77,
+          "minimumKillsPerHourIfExclusive": 60,
+          "maximumKillsPerHourIfExclusive": 62.07,
+          "averageGoldPerHourIfExclusive": 940.76,
+          "minimumGoldPerHourIfExclusive": 928.8,
+          "maximumGoldPerHourIfExclusive": 960.84,
+          "averageWeightedGoldPerHour": 85.35,
+          "weightedGoldSharePercent": 9.4,
+          "ratioToTierExpectedGoldPerKill": 1.57
+        },
+        {
+          "tier": 2,
+          "rank": 6,
+          "position": "END",
+          "mobName": "Capataz Ferrugento",
+          "mapName": "Distrito da Ferrugem",
+          "subMapName": "Galpão do Capataz",
+          "encounterWeight": 4,
+          "encounterSharePercent": 4,
+          "expectedUnitsPerKill": 7.3,
+          "expectedGoldPerKill": 18.84,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Pálido",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 51,
+              "minQuantity": 4,
+              "maxQuantity": 8,
+              "averageQuantityWhenDropped": 6,
+              "expectedUnitsPerKill": 3.06,
+              "unitSellGold": 2,
+              "averageGoldPerDropEvent": 12,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 6.12
+            },
+            {
+              "itemName": "Biomaterial Articular Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 39,
+              "minQuantity": 4,
+              "maxQuantity": 4,
+              "averageQuantityWhenDropped": 4,
+              "expectedUnitsPerKill": 1.56,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 12,
+              "maximumGoldPerDropEvent": 12,
+              "expectedGoldPerKill": 4.68
+            },
+            {
+              "itemName": "Núcleo Infectado de Elite Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 28,
+              "minQuantity": 4,
+              "maxQuantity": 4,
+              "averageQuantityWhenDropped": 4,
+              "expectedUnitsPerKill": 1.12,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 12,
+              "maximumGoldPerDropEvent": 12,
+              "expectedGoldPerKill": 3.36
+            },
+            {
+              "itemName": "Biomaterial Torácico Comum",
+              "itemTier": 1,
+              "rarity": "COMMON",
+              "dropChancePercent": 39,
+              "minQuantity": 4,
+              "maxQuantity": 4,
+              "averageQuantityWhenDropped": 4,
+              "expectedUnitsPerKill": 1.56,
+              "unitSellGold": 3,
+              "averageGoldPerDropEvent": 12,
+              "maximumGoldPerDropEvent": 12,
+              "expectedGoldPerKill": 4.68
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 64.29,
+              "goldPerHourIfExclusive": 1211.22
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 66.67,
+              "goldPerHourIfExclusive": 1256.06
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 64.29,
+              "goldPerHourIfExclusive": 1211.22
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 64.29,
+              "goldPerHourIfExclusive": 1211.22
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 64.89,
+          "minimumKillsPerHourIfExclusive": 64.29,
+          "maximumKillsPerHourIfExclusive": 66.67,
+          "averageGoldPerHourIfExclusive": 1222.43,
+          "minimumGoldPerHourIfExclusive": 1211.22,
+          "maximumGoldPerHourIfExclusive": 1256.06,
+          "averageWeightedGoldPerHour": 69.25,
+          "weightedGoldSharePercent": 7.62,
+          "ratioToTierExpectedGoldPerKill": 1.91
+        }
+      ],
+      "items": [
+        {
+          "tier": 2,
+          "itemName": "Resíduo Infecto Pálido",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 2,
+          "weightedDropEventChancePercent": 45.6,
+          "weightedExpectedUnitsPerKill": 1.683,
+          "averageQuantityWhenDropped": 3.6908,
+          "maximumQuantityWhenDropped": 8,
+          "averageGoldPerDropEvent": 7.38,
+          "maximumGoldPerDropEvent": 16,
+          "expectedGoldPerKill": 3.366,
+          "averageExpectedUnitsPerHour": 154.66,
+          "averageGoldPerHour": 309.31,
+          "goldSharePercent": 34.05,
+          "sources": [
+            {
+              "mobName": "Carregador de Paletes Infectado",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 45,
+              "minQuantity": 2,
+              "maxQuantity": 4
+            },
+            {
+              "mobName": "Arrastador de Correntes",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 45,
+              "minQuantity": 2,
+              "maxQuantity": 4
+            },
+            {
+              "mobName": "Operário Prensado",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 45,
+              "minQuantity": 3,
+              "maxQuantity": 6
+            },
+            {
+              "mobName": "Esmagado da Prensa",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 45,
+              "minQuantity": 3,
+              "maxQuantity": 6
+            },
+            {
+              "mobName": "Vigia do Galpão Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 51,
+              "minQuantity": 4,
+              "maxQuantity": 8
+            },
+            {
+              "mobName": "Capataz Ferrugento",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 51,
+              "minQuantity": 4,
+              "maxQuantity": 8
+            }
+          ]
+        },
+        {
+          "tier": 2,
+          "itemName": "Biomaterial Cortante Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 35.7,
+          "weightedExpectedUnitsPerKill": 0.777,
+          "averageQuantityWhenDropped": 2.1765,
+          "maximumQuantityWhenDropped": 3,
+          "averageGoldPerDropEvent": 6.53,
+          "maximumGoldPerDropEvent": 9,
+          "expectedGoldPerKill": 2.331,
+          "averageExpectedUnitsPerHour": 71.4,
+          "averageGoldPerHour": 214.2,
+          "goldSharePercent": 23.58,
+          "sources": [
+            {
+              "mobName": "Carregador de Paletes Infectado",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 70,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Esmagado da Prensa",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 70,
+              "minQuantity": 3,
+              "maxQuantity": 3
+            }
+          ]
+        },
+        {
+          "tier": 2,
+          "itemName": "Biomaterial Craniano Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 17.85,
+          "weightedExpectedUnitsPerKill": 0.3885,
+          "averageQuantityWhenDropped": 2.1765,
+          "maximumQuantityWhenDropped": 3,
+          "averageGoldPerDropEvent": 6.53,
+          "maximumGoldPerDropEvent": 9,
+          "expectedGoldPerKill": 1.1655,
+          "averageExpectedUnitsPerHour": 35.7,
+          "averageGoldPerHour": 107.1,
+          "goldSharePercent": 11.79,
+          "sources": [
+            {
+              "mobName": "Carregador de Paletes Infectado",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Esmagado da Prensa",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 35,
+              "minQuantity": 3,
+              "maxQuantity": 3
+            }
+          ]
+        },
+        {
+          "tier": 2,
+          "itemName": "Biomaterial Reativo Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 10.74,
+          "weightedExpectedUnitsPerKill": 0.2616,
+          "averageQuantityWhenDropped": 2.4358,
+          "maximumQuantityWhenDropped": 4,
+          "averageGoldPerDropEvent": 7.31,
+          "maximumGoldPerDropEvent": 12,
+          "expectedGoldPerKill": 0.7848,
+          "averageExpectedUnitsPerHour": 24.04,
+          "averageGoldPerHour": 72.12,
+          "goldSharePercent": 7.94,
+          "sources": [
+            {
+              "mobName": "Arrastador de Correntes",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Vigia do Galpão Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 39,
+              "minQuantity": 4,
+              "maxQuantity": 4
+            }
+          ]
+        },
+        {
+          "tier": 2,
+          "itemName": "Biomaterial de Mobilidade Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 10.74,
+          "weightedExpectedUnitsPerKill": 0.2616,
+          "averageQuantityWhenDropped": 2.4358,
+          "maximumQuantityWhenDropped": 4,
+          "averageGoldPerDropEvent": 7.31,
+          "maximumGoldPerDropEvent": 12,
+          "expectedGoldPerKill": 0.7848,
+          "averageExpectedUnitsPerHour": 24.04,
+          "averageGoldPerHour": 72.12,
+          "goldSharePercent": 7.94,
+          "sources": [
+            {
+              "mobName": "Arrastador de Correntes",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Vigia do Galpão Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 39,
+              "minQuantity": 4,
+              "maxQuantity": 4
+            }
+          ]
+        },
+        {
+          "tier": 2,
+          "itemName": "Biomaterial Torácico Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 6.81,
+          "weightedExpectedUnitsPerKill": 0.2199,
+          "averageQuantityWhenDropped": 3.2291,
+          "maximumQuantityWhenDropped": 4,
+          "averageGoldPerDropEvent": 9.69,
+          "maximumGoldPerDropEvent": 12,
+          "expectedGoldPerKill": 0.6597,
+          "averageExpectedUnitsPerHour": 20.21,
+          "averageGoldPerHour": 60.62,
+          "goldSharePercent": 6.67,
+          "sources": [
+            {
+              "mobName": "Operário Prensado",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 35,
+              "minQuantity": 3,
+              "maxQuantity": 3
+            },
+            {
+              "mobName": "Capataz Ferrugento",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 39,
+              "minQuantity": 4,
+              "maxQuantity": 4
+            }
+          ]
+        },
+        {
+          "tier": 2,
+          "itemName": "Biomaterial Articular Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 6.81,
+          "weightedExpectedUnitsPerKill": 0.2199,
+          "averageQuantityWhenDropped": 3.2291,
+          "maximumQuantityWhenDropped": 4,
+          "averageGoldPerDropEvent": 9.69,
+          "maximumGoldPerDropEvent": 12,
+          "expectedGoldPerKill": 0.6597,
+          "averageExpectedUnitsPerHour": 20.21,
+          "averageGoldPerHour": 60.62,
+          "goldSharePercent": 6.67,
+          "sources": [
+            {
+              "mobName": "Operário Prensado",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 35,
+              "minQuantity": 3,
+              "maxQuantity": 3
+            },
+            {
+              "mobName": "Capataz Ferrugento",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 39,
+              "minQuantity": 4,
+              "maxQuantity": 4
+            }
+          ]
+        },
+        {
+          "tier": 2,
+          "itemName": "Núcleo Infectado de Elite Comum",
+          "itemTier": 1,
+          "rarity": "COMMON",
+          "unitSellGold": 3,
+          "weightedDropEventChancePercent": 1.12,
+          "weightedExpectedUnitsPerKill": 0.0448,
+          "averageQuantityWhenDropped": 4,
+          "maximumQuantityWhenDropped": 4,
+          "averageGoldPerDropEvent": 12,
+          "maximumGoldPerDropEvent": 12,
+          "expectedGoldPerKill": 0.1344,
+          "averageExpectedUnitsPerHour": 4.12,
+          "averageGoldPerHour": 12.35,
+          "goldSharePercent": 1.36,
+          "sources": [
+            {
+              "mobName": "Capataz Ferrugento",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 28,
+              "minQuantity": 4,
+              "maxQuantity": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tier": 3,
+      "activeMobCount": 6,
+      "totalEncounterWeight": 100,
+      "averageMixedKillsPerHour": 62.02,
+      "minimumMixedKillsPerHour": 61.05,
+      "maximumMixedKillsPerHour": 63.2,
+      "expectedGoldPerKill": 18.499,
+      "averageGrossGoldPerHour": 1147.27,
+      "minimumGrossGoldPerHour": 1129.34,
+      "maximumGrossGoldPerHour": 1169.23,
+      "averageItemUnitSellGold": 15.13,
+      "maximumItemUnitSellGold": 16,
+      "averageGoldPerDropEvent": 15.69,
+      "maximumGoldPerDropEvent": 18,
+      "topMobByWeightedGold": "Paciente Febril Errante",
+      "topItemByGold": "Resíduo Infecto Amarelado",
+      "mobs": [
+        {
+          "tier": 3,
+          "rank": 1,
+          "position": "START",
+          "mobName": "Paciente Febril Errante",
+          "mapName": "Hospital Santa Ruína",
+          "subMapName": "Triagem Vazia",
+          "encounterWeight": 42,
+          "encounterSharePercent": 42,
+          "expectedUnitsPerKill": 1.375,
+          "expectedGoldPerKill": 17.275,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 13.5,
+              "maximumGoldPerDropEvent": 18,
+              "expectedGoldPerKill": 6.075
+            },
+            {
+              "itemName": "Biomaterial Craniano Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 5.6
+            },
+            {
+              "itemName": "Biomaterial de Mobilidade Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 5.6
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 94.74,
+              "goldPerHourIfExclusive": 1636.63
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 97.3,
+              "goldPerHourIfExclusive": 1680.86
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 97.3,
+              "goldPerHourIfExclusive": 1680.86
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 94.74,
+              "goldPerHourIfExclusive": 1636.63
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 96.02,
+          "minimumKillsPerHourIfExclusive": 94.74,
+          "maximumKillsPerHourIfExclusive": 97.3,
+          "averageGoldPerHourIfExclusive": 1658.75,
+          "minimumGoldPerHourIfExclusive": 1636.63,
+          "maximumGoldPerHourIfExclusive": 1680.86,
+          "averageWeightedGoldPerHour": 449.97,
+          "weightedGoldSharePercent": 39.22,
+          "ratioToTierExpectedGoldPerKill": 0.93
+        },
+        {
+          "tier": 3,
+          "rank": 2,
+          "position": "START",
+          "mobName": "Mosca de Ferida Contaminada",
+          "mapName": "Hospital Santa Ruína",
+          "subMapName": "Triagem Vazia",
+          "encounterWeight": 24,
+          "encounterSharePercent": 24,
+          "expectedUnitsPerKill": 1.375,
+          "expectedGoldPerKill": 17.275,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 13.5,
+              "maximumGoldPerDropEvent": 18,
+              "expectedGoldPerKill": 6.075
+            },
+            {
+              "itemName": "Biomaterial Torácico Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 5.6
+            },
+            {
+              "itemName": "Biomaterial Reativo Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 5.6
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 47.37,
+              "goldPerHourIfExclusive": 818.32
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 49.32,
+              "goldPerHourIfExclusive": 852
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 48.65,
+              "goldPerHourIfExclusive": 840.43
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 47.37,
+              "goldPerHourIfExclusive": 818.32
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 48.18,
+          "minimumKillsPerHourIfExclusive": 47.37,
+          "maximumKillsPerHourIfExclusive": 49.32,
+          "averageGoldPerHourIfExclusive": 832.27,
+          "minimumGoldPerHourIfExclusive": 818.32,
+          "maximumGoldPerHourIfExclusive": 852,
+          "averageWeightedGoldPerHour": 257.13,
+          "weightedGoldSharePercent": 22.41,
+          "ratioToTierExpectedGoldPerKill": 0.93
+        },
+        {
+          "tier": 3,
+          "rank": 3,
+          "position": "MID",
+          "mobName": "Enfermeira de Isolamento Infectada",
+          "mapName": "Hospital Santa Ruína",
+          "subMapName": "Ala de Isolamento",
+          "encounterWeight": 15,
+          "encounterSharePercent": 15,
+          "expectedUnitsPerKill": 1.725,
+          "expectedGoldPerKill": 22.875,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 13.5,
+              "maximumGoldPerDropEvent": 18,
+              "expectedGoldPerKill": 6.075
+            },
+            {
+              "itemName": "Biomaterial Articular Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 5.6
+            },
+            {
+              "itemName": "Biomaterial Cortante Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 70,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.7,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 11.2
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 47.37,
+              "goldPerHourIfExclusive": 1083.59
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 49.32,
+              "goldPerHourIfExclusive": 1128.2
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 48.65,
+              "goldPerHourIfExclusive": 1112.87
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 47.37,
+              "goldPerHourIfExclusive": 1083.59
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 48.18,
+          "minimumKillsPerHourIfExclusive": 47.37,
+          "maximumKillsPerHourIfExclusive": 49.32,
+          "averageGoldPerHourIfExclusive": 1102.06,
+          "minimumGoldPerHourIfExclusive": 1083.59,
+          "maximumGoldPerHourIfExclusive": 1128.2,
+          "averageWeightedGoldPerHour": 212.8,
+          "weightedGoldSharePercent": 18.55,
+          "ratioToTierExpectedGoldPerKill": 1.24
+        },
+        {
+          "tier": 3,
+          "rank": 4,
+          "position": "MID",
+          "mobName": "Centopeia de Tubulação Contaminada",
+          "mapName": "Hospital Santa Ruína",
+          "subMapName": "Ala de Isolamento",
+          "encounterWeight": 9,
+          "encounterSharePercent": 9,
+          "expectedUnitsPerKill": 1.375,
+          "expectedGoldPerKill": 17.275,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 13.5,
+              "maximumGoldPerDropEvent": 18,
+              "expectedGoldPerKill": 6.075
+            },
+            {
+              "itemName": "Biomaterial de Mobilidade Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 5.6
+            },
+            {
+              "itemName": "Biomaterial Craniano Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 5.6
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 50.7,
+              "goldPerHourIfExclusive": 875.84
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 52.17,
+              "goldPerHourIfExclusive": 901.24
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 52.17,
+              "goldPerHourIfExclusive": 901.24
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 50.7,
+              "goldPerHourIfExclusive": 875.84
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 51.44,
+          "minimumKillsPerHourIfExclusive": 50.7,
+          "maximumKillsPerHourIfExclusive": 52.17,
+          "averageGoldPerHourIfExclusive": 888.54,
+          "minimumGoldPerHourIfExclusive": 875.84,
+          "maximumGoldPerHourIfExclusive": 901.24,
+          "averageWeightedGoldPerHour": 96.42,
+          "weightedGoldSharePercent": 8.4,
+          "ratioToTierExpectedGoldPerKill": 0.93
+        },
+        {
+          "tier": 3,
+          "rank": 5,
+          "position": "END",
+          "mobName": "Instrumentador Cirúrgico Infectado",
+          "mapName": "Hospital Santa Ruína",
+          "subMapName": "Centro Cirúrgico",
+          "encounterWeight": 6,
+          "encounterSharePercent": 6,
+          "expectedUnitsPerKill": 1.375,
+          "expectedGoldPerKill": 17.275,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 13.5,
+              "maximumGoldPerDropEvent": 18,
+              "expectedGoldPerKill": 6.075
+            },
+            {
+              "itemName": "Biomaterial Reativo Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 5.6
+            },
+            {
+              "itemName": "Biomaterial Torácico Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 5.6
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 50.7,
+              "goldPerHourIfExclusive": 875.84
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 52.17,
+              "goldPerHourIfExclusive": 901.24
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 52.17,
+              "goldPerHourIfExclusive": 901.24
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 50.7,
+              "goldPerHourIfExclusive": 875.84
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 51.44,
+          "minimumKillsPerHourIfExclusive": 50.7,
+          "maximumKillsPerHourIfExclusive": 52.17,
+          "averageGoldPerHourIfExclusive": 888.54,
+          "minimumGoldPerHourIfExclusive": 875.84,
+          "maximumGoldPerHourIfExclusive": 901.24,
+          "averageWeightedGoldPerHour": 64.28,
+          "weightedGoldSharePercent": 5.6,
+          "ratioToTierExpectedGoldPerKill": 0.93
+        },
+        {
+          "tier": 3,
+          "rank": 6,
+          "position": "END",
+          "mobName": "Cirurgião-Chefe Necrosado",
+          "mapName": "Hospital Santa Ruína",
+          "subMapName": "Centro Cirúrgico",
+          "encounterWeight": 4,
+          "encounterSharePercent": 4,
+          "expectedUnitsPerKill": 1.975,
+          "expectedGoldPerKill": 26.875,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.675,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 13.5,
+              "maximumGoldPerDropEvent": 18,
+              "expectedGoldPerKill": 6.075
+            },
+            {
+              "itemName": "Biomaterial Cortante Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 70,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.7,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 11.2
+            },
+            {
+              "itemName": "Núcleo Infectado de Elite Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 25,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.25,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 4
+            },
+            {
+              "itemName": "Biomaterial Articular Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.35,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 16,
+              "maximumGoldPerDropEvent": 16,
+              "expectedGoldPerKill": 5.6
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 52.94,
+              "goldPerHourIfExclusive": 1422.76
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 55.38,
+              "goldPerHourIfExclusive": 1488.34
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 54.55,
+              "goldPerHourIfExclusive": 1466.03
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 53.73,
+              "goldPerHourIfExclusive": 1443.99
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 54.15,
+          "minimumKillsPerHourIfExclusive": 52.94,
+          "maximumKillsPerHourIfExclusive": 55.38,
+          "averageGoldPerHourIfExclusive": 1455.28,
+          "minimumGoldPerHourIfExclusive": 1422.76,
+          "maximumGoldPerHourIfExclusive": 1488.34,
+          "averageWeightedGoldPerHour": 66.67,
+          "weightedGoldSharePercent": 5.81,
+          "ratioToTierExpectedGoldPerKill": 1.45
+        }
+      ],
+      "items": [
+        {
+          "tier": 3,
+          "itemName": "Resíduo Infecto Amarelado",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 9,
+          "weightedDropEventChancePercent": 45,
+          "weightedExpectedUnitsPerKill": 0.675,
+          "averageQuantityWhenDropped": 1.5,
+          "maximumQuantityWhenDropped": 2,
+          "averageGoldPerDropEvent": 13.5,
+          "maximumGoldPerDropEvent": 18,
+          "expectedGoldPerKill": 6.075,
+          "averageExpectedUnitsPerHour": 41.86,
+          "averageGoldPerHour": 376.76,
+          "goldSharePercent": 32.84,
+          "sources": [
+            {
+              "mobName": "Paciente Febril Errante",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Mosca de Ferida Contaminada",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Enfermeira de Isolamento Infectada",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Centopeia de Tubulação Contaminada",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Instrumentador Cirúrgico Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Cirurgião-Chefe Necrosado",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 45,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            }
+          ]
+        },
+        {
+          "tier": 3,
+          "itemName": "Biomaterial Craniano Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 17.85,
+          "weightedExpectedUnitsPerKill": 0.1785,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 16,
+          "maximumGoldPerDropEvent": 16,
+          "expectedGoldPerKill": 2.856,
+          "averageExpectedUnitsPerHour": 11.07,
+          "averageGoldPerHour": 177.12,
+          "goldSharePercent": 15.44,
+          "sources": [
+            {
+              "mobName": "Paciente Febril Errante",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Centopeia de Tubulação Contaminada",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 3,
+          "itemName": "Biomaterial de Mobilidade Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 17.85,
+          "weightedExpectedUnitsPerKill": 0.1785,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 16,
+          "maximumGoldPerDropEvent": 16,
+          "expectedGoldPerKill": 2.856,
+          "averageExpectedUnitsPerHour": 11.07,
+          "averageGoldPerHour": 177.12,
+          "goldSharePercent": 15.44,
+          "sources": [
+            {
+              "mobName": "Paciente Febril Errante",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Centopeia de Tubulação Contaminada",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 3,
+          "itemName": "Biomaterial Cortante Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 13.3,
+          "weightedExpectedUnitsPerKill": 0.133,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 16,
+          "maximumGoldPerDropEvent": 16,
+          "expectedGoldPerKill": 2.128,
+          "averageExpectedUnitsPerHour": 8.25,
+          "averageGoldPerHour": 131.97,
+          "goldSharePercent": 11.5,
+          "sources": [
+            {
+              "mobName": "Enfermeira de Isolamento Infectada",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 70,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Cirurgião-Chefe Necrosado",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 70,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 3,
+          "itemName": "Biomaterial Torácico Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 10.5,
+          "weightedExpectedUnitsPerKill": 0.105,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 16,
+          "maximumGoldPerDropEvent": 16,
+          "expectedGoldPerKill": 1.68,
+          "averageExpectedUnitsPerHour": 6.51,
+          "averageGoldPerHour": 104.19,
+          "goldSharePercent": 9.08,
+          "sources": [
+            {
+              "mobName": "Mosca de Ferida Contaminada",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Instrumentador Cirúrgico Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 3,
+          "itemName": "Biomaterial Reativo Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 10.5,
+          "weightedExpectedUnitsPerKill": 0.105,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 16,
+          "maximumGoldPerDropEvent": 16,
+          "expectedGoldPerKill": 1.68,
+          "averageExpectedUnitsPerHour": 6.51,
+          "averageGoldPerHour": 104.19,
+          "goldSharePercent": 9.08,
+          "sources": [
+            {
+              "mobName": "Mosca de Ferida Contaminada",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Instrumentador Cirúrgico Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 3,
+          "itemName": "Biomaterial Articular Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 6.65,
+          "weightedExpectedUnitsPerKill": 0.0665,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 16,
+          "maximumGoldPerDropEvent": 16,
+          "expectedGoldPerKill": 1.064,
+          "averageExpectedUnitsPerHour": 4.12,
+          "averageGoldPerHour": 65.99,
+          "goldSharePercent": 5.75,
+          "sources": [
+            {
+              "mobName": "Enfermeira de Isolamento Infectada",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Cirurgião-Chefe Necrosado",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 35,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 3,
+          "itemName": "Núcleo Infectado de Elite Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 1,
+          "weightedExpectedUnitsPerKill": 0.01,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 16,
+          "maximumGoldPerDropEvent": 16,
+          "expectedGoldPerKill": 0.16,
+          "averageExpectedUnitsPerHour": 0.62,
+          "averageGoldPerHour": 9.92,
+          "goldSharePercent": 0.86,
+          "sources": [
+            {
+              "mobName": "Cirurgião-Chefe Necrosado",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 25,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tier": 4,
+      "activeMobCount": 6,
+      "totalEncounterWeight": 100,
+      "averageMixedKillsPerHour": 42.44,
+      "minimumMixedKillsPerHour": 41.09,
+      "maximumMixedKillsPerHour": 43.48,
+      "expectedGoldPerKill": 42.4941,
+      "averageGrossGoldPerHour": 1803.57,
+      "minimumGrossGoldPerHour": 1746.12,
+      "maximumGrossGoldPerHour": 1847.5,
+      "averageItemUnitSellGold": 15.13,
+      "maximumItemUnitSellGold": 16,
+      "averageGoldPerDropEvent": 35.22,
+      "maximumGoldPerDropEvent": 54,
+      "topMobByWeightedGold": "Amontoado de Bagagens Vivas",
+      "topItemByGold": "Resíduo Infecto Amarelado",
+      "mobs": [
+        {
+          "tier": 4,
+          "rank": 1,
+          "position": "START",
+          "mobName": "Amontoado de Bagagens Vivas",
+          "mapName": "Terminal dos Esquecidos",
+          "subMapName": "Saguão de Embarque",
+          "encounterWeight": 42,
+          "encounterSharePercent": 42,
+          "expectedUnitsPerKill": 2.75,
+          "expectedGoldPerKill": 34.55,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 2,
+              "maxQuantity": 4,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.35,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 27,
+              "maximumGoldPerDropEvent": 36,
+              "expectedGoldPerKill": 12.15
+            },
+            {
+              "itemName": "Biomaterial de Mobilidade Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 0.7,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 32,
+              "maximumGoldPerDropEvent": 32,
+              "expectedGoldPerKill": 11.2
+            },
+            {
+              "itemName": "Biomaterial Reativo Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 0.7,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 32,
+              "maximumGoldPerDropEvent": 32,
+              "expectedGoldPerKill": 11.2
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 39.56,
+              "goldPerHourIfExclusive": 1366.8
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 41.38,
+              "goldPerHourIfExclusive": 1429.68
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 41.86,
+              "goldPerHourIfExclusive": 1446.26
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 40.45,
+              "goldPerHourIfExclusive": 1397.55
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 40.81,
+          "minimumKillsPerHourIfExclusive": 39.56,
+          "maximumKillsPerHourIfExclusive": 41.86,
+          "averageGoldPerHourIfExclusive": 1410.07,
+          "minimumGoldPerHourIfExclusive": 1366.8,
+          "maximumGoldPerHourIfExclusive": 1446.26,
+          "averageWeightedGoldPerHour": 615.89,
+          "weightedGoldSharePercent": 34.15,
+          "ratioToTierExpectedGoldPerKill": 0.81
+        },
+        {
+          "tier": 4,
+          "rank": 2,
+          "position": "START",
+          "mobName": "Enxame de Carrapatos Hemáticos",
+          "mapName": "Terminal dos Esquecidos",
+          "subMapName": "Saguão de Embarque",
+          "encounterWeight": 24,
+          "encounterSharePercent": 24,
+          "expectedUnitsPerKill": 2.75,
+          "expectedGoldPerKill": 34.55,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 45,
+              "minQuantity": 2,
+              "maxQuantity": 4,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.35,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 27,
+              "maximumGoldPerDropEvent": 36,
+              "expectedGoldPerKill": 12.15
+            },
+            {
+              "itemName": "Biomaterial Articular Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 0.7,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 32,
+              "maximumGoldPerDropEvent": 32,
+              "expectedGoldPerKill": 11.2
+            },
+            {
+              "itemName": "Biomaterial Torácico Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 0.7,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 32,
+              "maximumGoldPerDropEvent": 32,
+              "expectedGoldPerKill": 11.2
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 41.38,
+              "goldPerHourIfExclusive": 1429.68
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 43.37,
+              "goldPerHourIfExclusive": 1498.43
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 43.9,
+              "goldPerHourIfExclusive": 1516.75
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 42.86,
+              "goldPerHourIfExclusive": 1480.81
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 42.88,
+          "minimumKillsPerHourIfExclusive": 41.38,
+          "maximumKillsPerHourIfExclusive": 43.9,
+          "averageGoldPerHourIfExclusive": 1481.42,
+          "minimumGoldPerHourIfExclusive": 1429.68,
+          "maximumGoldPerHourIfExclusive": 1516.75,
+          "averageWeightedGoldPerHour": 351.94,
+          "weightedGoldSharePercent": 19.51,
+          "ratioToTierExpectedGoldPerKill": 0.81
+        },
+        {
+          "tier": 4,
+          "rank": 3,
+          "position": "MID",
+          "mobName": "Sinaleiro Sem Rosto",
+          "mapName": "Terminal dos Esquecidos",
+          "subMapName": "Plataformas Mortas",
+          "encounterWeight": 15,
+          "encounterSharePercent": 15,
+          "expectedUnitsPerKill": 4.32,
+          "expectedGoldPerKill": 57.36,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 56,
+              "minQuantity": 2,
+              "maxQuantity": 4,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.68,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 27,
+              "maximumGoldPerDropEvent": 36,
+              "expectedGoldPerKill": 15.12
+            },
+            {
+              "itemName": "Biomaterial Cortante Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 88,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 1.76,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 32,
+              "maximumGoldPerDropEvent": 32,
+              "expectedGoldPerKill": 28.16
+            },
+            {
+              "itemName": "Biomaterial Craniano Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 44,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 0.88,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 32,
+              "maximumGoldPerDropEvent": 32,
+              "expectedGoldPerKill": 14.08
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 41.38,
+              "goldPerHourIfExclusive": 2373.56
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 43.37,
+              "goldPerHourIfExclusive": 2487.7
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 43.9,
+              "goldPerHourIfExclusive": 2518.1
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 42.86,
+              "goldPerHourIfExclusive": 2458.45
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 42.88,
+          "minimumKillsPerHourIfExclusive": 41.38,
+          "maximumKillsPerHourIfExclusive": 43.9,
+          "averageGoldPerHourIfExclusive": 2459.45,
+          "minimumGoldPerHourIfExclusive": 2373.56,
+          "maximumGoldPerHourIfExclusive": 2518.1,
+          "averageWeightedGoldPerHour": 365.18,
+          "weightedGoldSharePercent": 20.25,
+          "ratioToTierExpectedGoldPerKill": 1.35
+        },
+        {
+          "tier": 4,
+          "rank": 4,
+          "position": "MID",
+          "mobName": "Casulo de Traças de Plataforma",
+          "mapName": "Terminal dos Esquecidos",
+          "subMapName": "Plataformas Mortas",
+          "encounterWeight": 9,
+          "encounterSharePercent": 9,
+          "expectedUnitsPerKill": 3.44,
+          "expectedGoldPerKill": 43.28,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 56,
+              "minQuantity": 2,
+              "maxQuantity": 4,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.68,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 27,
+              "maximumGoldPerDropEvent": 36,
+              "expectedGoldPerKill": 15.12
+            },
+            {
+              "itemName": "Biomaterial Reativo Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 44,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 0.88,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 32,
+              "maximumGoldPerDropEvent": 32,
+              "expectedGoldPerKill": 14.08
+            },
+            {
+              "itemName": "Biomaterial de Mobilidade Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 44,
+              "minQuantity": 2,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 2,
+              "expectedUnitsPerKill": 0.88,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 32,
+              "maximumGoldPerDropEvent": 32,
+              "expectedGoldPerKill": 14.08
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 43.9,
+              "goldPerHourIfExclusive": 1899.99
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 45.57,
+              "goldPerHourIfExclusive": 1972.27
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 46.15,
+              "goldPerHourIfExclusive": 1997.37
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 45,
+              "goldPerHourIfExclusive": 1947.6
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 45.16,
+          "minimumKillsPerHourIfExclusive": 43.9,
+          "maximumKillsPerHourIfExclusive": 46.15,
+          "averageGoldPerHourIfExclusive": 1954.31,
+          "minimumGoldPerHourIfExclusive": 1899.99,
+          "maximumGoldPerHourIfExclusive": 1997.37,
+          "averageWeightedGoldPerHour": 165.32,
+          "weightedGoldSharePercent": 9.17,
+          "ratioToTierExpectedGoldPerKill": 1.02
+        },
+        {
+          "tier": 4,
+          "rank": 5,
+          "position": "END",
+          "mobName": "Cobrador Fundido",
+          "mapName": "Terminal dos Esquecidos",
+          "subMapName": "Cabine Final",
+          "encounterWeight": 6,
+          "encounterSharePercent": 6,
+          "expectedUnitsPerKill": 4.695,
+          "expectedGoldPerKill": 59.055,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 51,
+              "minQuantity": 3,
+              "maxQuantity": 6,
+              "averageQuantityWhenDropped": 4.5,
+              "expectedUnitsPerKill": 2.295,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 40.5,
+              "maximumGoldPerDropEvent": 54,
+              "expectedGoldPerKill": 20.655
+            },
+            {
+              "itemName": "Biomaterial Torácico Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 40,
+              "minQuantity": 3,
+              "maxQuantity": 3,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.2,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 48,
+              "maximumGoldPerDropEvent": 48,
+              "expectedGoldPerKill": 19.2
+            },
+            {
+              "itemName": "Biomaterial Articular Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 40,
+              "minQuantity": 3,
+              "maxQuantity": 3,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.2,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 48,
+              "maximumGoldPerDropEvent": 48,
+              "expectedGoldPerKill": 19.2
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 43.9,
+              "goldPerHourIfExclusive": 2592.51
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 45.57,
+              "goldPerHourIfExclusive": 2691.14
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 46.15,
+              "goldPerHourIfExclusive": 2725.39
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 45,
+              "goldPerHourIfExclusive": 2657.48
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 45.16,
+          "minimumKillsPerHourIfExclusive": 43.9,
+          "maximumKillsPerHourIfExclusive": 46.15,
+          "averageGoldPerHourIfExclusive": 2666.63,
+          "minimumGoldPerHourIfExclusive": 2592.51,
+          "maximumGoldPerHourIfExclusive": 2725.39,
+          "averageWeightedGoldPerHour": 150.39,
+          "weightedGoldSharePercent": 8.34,
+          "ratioToTierExpectedGoldPerKill": 1.39
+        },
+        {
+          "tier": 4,
+          "rank": 6,
+          "position": "END",
+          "mobName": "Regente da Cabine Lacrada",
+          "mapName": "Terminal dos Esquecidos",
+          "subMapName": "Cabine Final",
+          "encounterWeight": 4,
+          "encounterSharePercent": 4,
+          "expectedUnitsPerKill": 6.705,
+          "expectedGoldPerKill": 91.215,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Amarelado",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 51,
+              "minQuantity": 3,
+              "maxQuantity": 6,
+              "averageQuantityWhenDropped": 4.5,
+              "expectedUnitsPerKill": 2.295,
+              "unitSellGold": 9,
+              "averageGoldPerDropEvent": 40.5,
+              "maximumGoldPerDropEvent": 54,
+              "expectedGoldPerKill": 20.655
+            },
+            {
+              "itemName": "Biomaterial Craniano Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 40,
+              "minQuantity": 3,
+              "maxQuantity": 3,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 1.2,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 48,
+              "maximumGoldPerDropEvent": 48,
+              "expectedGoldPerKill": 19.2
+            },
+            {
+              "itemName": "Núcleo Infectado de Elite Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 28,
+              "minQuantity": 3,
+              "maxQuantity": 3,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 0.84,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 48,
+              "maximumGoldPerDropEvent": 48,
+              "expectedGoldPerKill": 13.44
+            },
+            {
+              "itemName": "Biomaterial Cortante Incomum",
+              "itemTier": 3,
+              "rarity": "UNCOMMON",
+              "dropChancePercent": 79,
+              "minQuantity": 3,
+              "maxQuantity": 3,
+              "averageQuantityWhenDropped": 3,
+              "expectedUnitsPerKill": 2.37,
+              "unitSellGold": 16,
+              "averageGoldPerDropEvent": 48,
+              "maximumGoldPerDropEvent": 48,
+              "expectedGoldPerKill": 37.92
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 45.57,
+              "goldPerHourIfExclusive": 4156.67
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 47.37,
+              "goldPerHourIfExclusive": 4320.85
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 48,
+              "goldPerHourIfExclusive": 4378.32
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 46.75,
+              "goldPerHourIfExclusive": 4264.3
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 46.92,
+          "minimumKillsPerHourIfExclusive": 45.57,
+          "maximumKillsPerHourIfExclusive": 48,
+          "averageGoldPerHourIfExclusive": 4280.04,
+          "minimumGoldPerHourIfExclusive": 4156.67,
+          "maximumGoldPerHourIfExclusive": 4378.32,
+          "averageWeightedGoldPerHour": 154.86,
+          "weightedGoldSharePercent": 8.59,
+          "ratioToTierExpectedGoldPerKill": 2.15
+        }
+      ],
+      "items": [
+        {
+          "tier": 4,
+          "itemName": "Resíduo Infecto Amarelado",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 9,
+          "weightedDropEventChancePercent": 48.24,
+          "weightedExpectedUnitsPerKill": 1.5237,
+          "averageQuantityWhenDropped": 3.1586,
+          "maximumQuantityWhenDropped": 6,
+          "averageGoldPerDropEvent": 28.43,
+          "maximumGoldPerDropEvent": 54,
+          "expectedGoldPerKill": 13.7133,
+          "averageExpectedUnitsPerHour": 64.67,
+          "averageGoldPerHour": 582.03,
+          "goldSharePercent": 32.27,
+          "sources": [
+            {
+              "mobName": "Amontoado de Bagagens Vivas",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 45,
+              "minQuantity": 2,
+              "maxQuantity": 4
+            },
+            {
+              "mobName": "Enxame de Carrapatos Hemáticos",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 45,
+              "minQuantity": 2,
+              "maxQuantity": 4
+            },
+            {
+              "mobName": "Sinaleiro Sem Rosto",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 56,
+              "minQuantity": 2,
+              "maxQuantity": 4
+            },
+            {
+              "mobName": "Casulo de Traças de Plataforma",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 56,
+              "minQuantity": 2,
+              "maxQuantity": 4
+            },
+            {
+              "mobName": "Cobrador Fundido",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 51,
+              "minQuantity": 3,
+              "maxQuantity": 6
+            },
+            {
+              "mobName": "Regente da Cabine Lacrada",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 51,
+              "minQuantity": 3,
+              "maxQuantity": 6
+            }
+          ]
+        },
+        {
+          "tier": 4,
+          "itemName": "Biomaterial de Mobilidade Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 18.66,
+          "weightedExpectedUnitsPerKill": 0.3732,
+          "averageQuantityWhenDropped": 2,
+          "maximumQuantityWhenDropped": 2,
+          "averageGoldPerDropEvent": 32,
+          "maximumGoldPerDropEvent": 32,
+          "expectedGoldPerKill": 5.9712,
+          "averageExpectedUnitsPerHour": 15.84,
+          "averageGoldPerHour": 253.43,
+          "goldSharePercent": 14.05,
+          "sources": [
+            {
+              "mobName": "Amontoado de Bagagens Vivas",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Casulo de Traças de Plataforma",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 44,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            }
+          ]
+        },
+        {
+          "tier": 4,
+          "itemName": "Biomaterial Reativo Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 18.66,
+          "weightedExpectedUnitsPerKill": 0.3732,
+          "averageQuantityWhenDropped": 2,
+          "maximumQuantityWhenDropped": 2,
+          "averageGoldPerDropEvent": 32,
+          "maximumGoldPerDropEvent": 32,
+          "expectedGoldPerKill": 5.9712,
+          "averageExpectedUnitsPerHour": 15.84,
+          "averageGoldPerHour": 253.43,
+          "goldSharePercent": 14.05,
+          "sources": [
+            {
+              "mobName": "Amontoado de Bagagens Vivas",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Casulo de Traças de Plataforma",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 44,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            }
+          ]
+        },
+        {
+          "tier": 4,
+          "itemName": "Biomaterial Cortante Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 16.36,
+          "weightedExpectedUnitsPerKill": 0.3588,
+          "averageQuantityWhenDropped": 2.1932,
+          "maximumQuantityWhenDropped": 3,
+          "averageGoldPerDropEvent": 35.09,
+          "maximumGoldPerDropEvent": 48,
+          "expectedGoldPerKill": 5.7408,
+          "averageExpectedUnitsPerHour": 15.23,
+          "averageGoldPerHour": 243.66,
+          "goldSharePercent": 13.51,
+          "sources": [
+            {
+              "mobName": "Sinaleiro Sem Rosto",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 88,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Regente da Cabine Lacrada",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 79,
+              "minQuantity": 3,
+              "maxQuantity": 3
+            }
+          ]
+        },
+        {
+          "tier": 4,
+          "itemName": "Biomaterial Articular Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 10.8,
+          "weightedExpectedUnitsPerKill": 0.24,
+          "averageQuantityWhenDropped": 2.2222,
+          "maximumQuantityWhenDropped": 3,
+          "averageGoldPerDropEvent": 35.56,
+          "maximumGoldPerDropEvent": 48,
+          "expectedGoldPerKill": 3.84,
+          "averageExpectedUnitsPerHour": 10.19,
+          "averageGoldPerHour": 162.98,
+          "goldSharePercent": 9.04,
+          "sources": [
+            {
+              "mobName": "Enxame de Carrapatos Hemáticos",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Cobrador Fundido",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 40,
+              "minQuantity": 3,
+              "maxQuantity": 3
+            }
+          ]
+        },
+        {
+          "tier": 4,
+          "itemName": "Biomaterial Torácico Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 10.8,
+          "weightedExpectedUnitsPerKill": 0.24,
+          "averageQuantityWhenDropped": 2.2222,
+          "maximumQuantityWhenDropped": 3,
+          "averageGoldPerDropEvent": 35.56,
+          "maximumGoldPerDropEvent": 48,
+          "expectedGoldPerKill": 3.84,
+          "averageExpectedUnitsPerHour": 10.19,
+          "averageGoldPerHour": 162.98,
+          "goldSharePercent": 9.04,
+          "sources": [
+            {
+              "mobName": "Enxame de Carrapatos Hemáticos",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 35,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Cobrador Fundido",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 40,
+              "minQuantity": 3,
+              "maxQuantity": 3
+            }
+          ]
+        },
+        {
+          "tier": 4,
+          "itemName": "Biomaterial Craniano Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 8.2,
+          "weightedExpectedUnitsPerKill": 0.18,
+          "averageQuantityWhenDropped": 2.1951,
+          "maximumQuantityWhenDropped": 3,
+          "averageGoldPerDropEvent": 35.12,
+          "maximumGoldPerDropEvent": 48,
+          "expectedGoldPerKill": 2.88,
+          "averageExpectedUnitsPerHour": 7.64,
+          "averageGoldPerHour": 122.24,
+          "goldSharePercent": 6.78,
+          "sources": [
+            {
+              "mobName": "Sinaleiro Sem Rosto",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 44,
+              "minQuantity": 2,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Regente da Cabine Lacrada",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 40,
+              "minQuantity": 3,
+              "maxQuantity": 3
+            }
+          ]
+        },
+        {
+          "tier": 4,
+          "itemName": "Núcleo Infectado de Elite Incomum",
+          "itemTier": 3,
+          "rarity": "UNCOMMON",
+          "unitSellGold": 16,
+          "weightedDropEventChancePercent": 1.12,
+          "weightedExpectedUnitsPerKill": 0.0336,
+          "averageQuantityWhenDropped": 3,
+          "maximumQuantityWhenDropped": 3,
+          "averageGoldPerDropEvent": 48,
+          "maximumGoldPerDropEvent": 48,
+          "expectedGoldPerKill": 0.5376,
+          "averageExpectedUnitsPerHour": 1.43,
+          "averageGoldPerHour": 22.82,
+          "goldSharePercent": 1.27,
+          "sources": [
+            {
+              "mobName": "Regente da Cabine Lacrada",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 28,
+              "minQuantity": 3,
+              "maxQuantity": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tier": 5,
+      "activeMobCount": 6,
+      "totalEncounterWeight": 100,
+      "averageMixedKillsPerHour": 38.78,
+      "minimumMixedKillsPerHour": 37.35,
+      "maximumMixedKillsPerHour": 39.4,
+      "expectedGoldPerKill": 91.3438,
+      "averageGrossGoldPerHour": 3542.12,
+      "minimumGrossGoldPerHour": 3411.74,
+      "maximumGrossGoldPerHour": 3598.66,
+      "averageItemUnitSellGold": 55.63,
+      "maximumItemUnitSellGold": 59,
+      "averageGoldPerDropEvent": 57.63,
+      "maximumGoldPerDropEvent": 64,
+      "topMobByWeightedGold": "Isolado da Tenda Rasgada",
+      "topItemByGold": "Resíduo Infecto Tóxico",
+      "mobs": [
+        {
+          "tier": 5,
+          "rank": 1,
+          "position": "START",
+          "mobName": "Isolado da Tenda Rasgada",
+          "mapName": "Zona de Quarentena 9",
+          "subMapName": "Triagem Externa",
+          "encounterWeight": 42,
+          "encounterSharePercent": 42,
+          "expectedUnitsPerKill": 1.805,
+          "expectedGoldPerKill": 82.6,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Tóxico",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.885,
+              "unitSellGold": 32,
+              "averageGoldPerDropEvent": 48,
+              "maximumGoldPerDropEvent": 64,
+              "expectedGoldPerKill": 28.32
+            },
+            {
+              "itemName": "Biomaterial Reativo Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.46,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 27.14
+            },
+            {
+              "itemName": "Biomaterial Torácico Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.46,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 27.14
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 36.36,
+              "goldPerHourIfExclusive": 3003.34
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 37.89,
+              "goldPerHourIfExclusive": 3129.71
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 38.3,
+              "goldPerHourIfExclusive": 3163.58
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 38.3,
+              "goldPerHourIfExclusive": 3163.58
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 37.71,
+          "minimumKillsPerHourIfExclusive": 36.36,
+          "maximumKillsPerHourIfExclusive": 38.3,
+          "averageGoldPerHourIfExclusive": 3115.05,
+          "minimumGoldPerHourIfExclusive": 3003.34,
+          "maximumGoldPerHourIfExclusive": 3163.58,
+          "averageWeightedGoldPerHour": 1345.28,
+          "weightedGoldSharePercent": 37.98,
+          "ratioToTierExpectedGoldPerKill": 0.9
+        },
+        {
+          "tier": 5,
+          "rank": 2,
+          "position": "START",
+          "mobName": "Larva de Descarte Biológico",
+          "mapName": "Zona de Quarentena 9",
+          "subMapName": "Triagem Externa",
+          "encounterWeight": 24,
+          "encounterSharePercent": 24,
+          "expectedUnitsPerKill": 2.255,
+          "expectedGoldPerKill": 109.15,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Tóxico",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.885,
+              "unitSellGold": 32,
+              "averageGoldPerDropEvent": 48,
+              "maximumGoldPerDropEvent": 64,
+              "expectedGoldPerKill": 28.32
+            },
+            {
+              "itemName": "Biomaterial Cortante Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 91,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.91,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 53.69
+            },
+            {
+              "itemName": "Biomaterial Articular Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.46,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 27.14
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 37.5,
+              "goldPerHourIfExclusive": 4093.12
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 39.13,
+              "goldPerHourIfExclusive": 4271.04
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 39.56,
+              "goldPerHourIfExclusive": 4317.97
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 39.56,
+              "goldPerHourIfExclusive": 4317.97
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 38.94,
+          "minimumKillsPerHourIfExclusive": 37.5,
+          "maximumKillsPerHourIfExclusive": 39.56,
+          "averageGoldPerHourIfExclusive": 4250.03,
+          "minimumGoldPerHourIfExclusive": 4093.12,
+          "maximumGoldPerHourIfExclusive": 4317.97,
+          "averageWeightedGoldPerHour": 1015.83,
+          "weightedGoldSharePercent": 28.68,
+          "ratioToTierExpectedGoldPerKill": 1.19
+        },
+        {
+          "tier": 5,
+          "rank": 3,
+          "position": "MID",
+          "mobName": "Arameiro de Contenção",
+          "mapName": "Zona de Quarentena 9",
+          "subMapName": "Cercas Internas",
+          "encounterWeight": 15,
+          "encounterSharePercent": 15,
+          "expectedUnitsPerKill": 1.805,
+          "expectedGoldPerKill": 82.6,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Tóxico",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.885,
+              "unitSellGold": 32,
+              "averageGoldPerDropEvent": 48,
+              "maximumGoldPerDropEvent": 64,
+              "expectedGoldPerKill": 28.32
+            },
+            {
+              "itemName": "Biomaterial Craniano Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.46,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 27.14
+            },
+            {
+              "itemName": "Biomaterial de Mobilidade Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.46,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 27.14
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 37.5,
+              "goldPerHourIfExclusive": 3097.5
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 39.13,
+              "goldPerHourIfExclusive": 3232.14
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 39.56,
+              "goldPerHourIfExclusive": 3267.66
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 39.56,
+              "goldPerHourIfExclusive": 3267.66
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 38.94,
+          "minimumKillsPerHourIfExclusive": 37.5,
+          "maximumKillsPerHourIfExclusive": 39.56,
+          "averageGoldPerHourIfExclusive": 3216.24,
+          "minimumGoldPerHourIfExclusive": 3097.5,
+          "maximumGoldPerHourIfExclusive": 3267.66,
+          "averageWeightedGoldPerHour": 480.46,
+          "weightedGoldSharePercent": 13.56,
+          "ratioToTierExpectedGoldPerKill": 0.9
+        },
+        {
+          "tier": 5,
+          "rank": 4,
+          "position": "MID",
+          "mobName": "Lesma de Canaleta Química",
+          "mapName": "Zona de Quarentena 9",
+          "subMapName": "Cercas Internas",
+          "encounterWeight": 9,
+          "encounterSharePercent": 9,
+          "expectedUnitsPerKill": 1.805,
+          "expectedGoldPerKill": 82.6,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Tóxico",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.885,
+              "unitSellGold": 32,
+              "averageGoldPerDropEvent": 48,
+              "maximumGoldPerDropEvent": 64,
+              "expectedGoldPerKill": 28.32
+            },
+            {
+              "itemName": "Biomaterial Torácico Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.46,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 27.14
+            },
+            {
+              "itemName": "Biomaterial Reativo Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.46,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 27.14
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 39.13,
+              "goldPerHourIfExclusive": 3232.14
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 40.91,
+              "goldPerHourIfExclusive": 3379.17
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 41.38,
+              "goldPerHourIfExclusive": 3417.99
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 41.38,
+              "goldPerHourIfExclusive": 3417.99
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 40.7,
+          "minimumKillsPerHourIfExclusive": 39.13,
+          "maximumKillsPerHourIfExclusive": 41.38,
+          "averageGoldPerHourIfExclusive": 3361.82,
+          "minimumGoldPerHourIfExclusive": 3232.14,
+          "maximumGoldPerHourIfExclusive": 3417.99,
+          "averageWeightedGoldPerHour": 288.27,
+          "weightedGoldSharePercent": 8.14,
+          "ratioToTierExpectedGoldPerKill": 0.9
+        },
+        {
+          "tier": 5,
+          "rank": 5,
+          "position": "END",
+          "mobName": "Operador de Rádio Infectado",
+          "mapName": "Zona de Quarentena 9",
+          "subMapName": "Posto de Comando",
+          "encounterWeight": 6,
+          "encounterSharePercent": 6,
+          "expectedUnitsPerKill": 2.255,
+          "expectedGoldPerKill": 109.15,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Tóxico",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.885,
+              "unitSellGold": 32,
+              "averageGoldPerDropEvent": 48,
+              "maximumGoldPerDropEvent": 64,
+              "expectedGoldPerKill": 28.32
+            },
+            {
+              "itemName": "Biomaterial Articular Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.46,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 27.14
+            },
+            {
+              "itemName": "Biomaterial Cortante Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 91,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.91,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 53.69
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 39.13,
+              "goldPerHourIfExclusive": 4271.04
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 40.91,
+              "goldPerHourIfExclusive": 4465.33
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 41.38,
+              "goldPerHourIfExclusive": 4516.63
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 41.38,
+              "goldPerHourIfExclusive": 4516.63
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 40.7,
+          "minimumKillsPerHourIfExclusive": 39.13,
+          "maximumKillsPerHourIfExclusive": 41.38,
+          "averageGoldPerHourIfExclusive": 4442.41,
+          "minimumGoldPerHourIfExclusive": 4271.04,
+          "maximumGoldPerHourIfExclusive": 4516.63,
+          "averageWeightedGoldPerHour": 253.96,
+          "weightedGoldSharePercent": 7.17,
+          "ratioToTierExpectedGoldPerKill": 1.19
+        },
+        {
+          "tier": 5,
+          "rank": 6,
+          "position": "END",
+          "mobName": "Coronel Lacrado da Zona 9",
+          "mapName": "Zona de Quarentena 9",
+          "subMapName": "Posto de Comando",
+          "encounterWeight": 4,
+          "encounterSharePercent": 4,
+          "expectedUnitsPerKill": 2.135,
+          "expectedGoldPerKill": 102.07,
+          "drops": [
+            {
+              "itemName": "Resíduo Infecto Tóxico",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2,
+              "averageQuantityWhenDropped": 1.5,
+              "expectedUnitsPerKill": 0.885,
+              "unitSellGold": 32,
+              "averageGoldPerDropEvent": 48,
+              "maximumGoldPerDropEvent": 64,
+              "expectedGoldPerKill": 28.32
+            },
+            {
+              "itemName": "Biomaterial de Mobilidade Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.46,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 27.14
+            },
+            {
+              "itemName": "Núcleo Infectado de Elite Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 33,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.33,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 19.47
+            },
+            {
+              "itemName": "Biomaterial Craniano Raro",
+              "itemTier": 5,
+              "rarity": "RARE",
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1,
+              "averageQuantityWhenDropped": 1,
+              "expectedUnitsPerKill": 0.46,
+              "unitSellGold": 59,
+              "averageGoldPerDropEvent": 59,
+              "maximumGoldPerDropEvent": 59,
+              "expectedGoldPerKill": 27.14
+            }
+          ],
+          "classes": [
+            {
+              "className": "Lutador",
+              "killsPerHourIfExclusive": 40.45,
+              "goldPerHourIfExclusive": 4128.73
+            },
+            {
+              "className": "Assassino",
+              "killsPerHourIfExclusive": 42.35,
+              "goldPerHourIfExclusive": 4322.66
+            },
+            {
+              "className": "Atirador",
+              "killsPerHourIfExclusive": 42.86,
+              "goldPerHourIfExclusive": 4374.72
+            },
+            {
+              "className": "Médico",
+              "killsPerHourIfExclusive": 42.86,
+              "goldPerHourIfExclusive": 4374.72
+            }
+          ],
+          "averageKillsPerHourIfExclusive": 42.13,
+          "minimumKillsPerHourIfExclusive": 40.45,
+          "maximumKillsPerHourIfExclusive": 42.86,
+          "averageGoldPerHourIfExclusive": 4300.21,
+          "minimumGoldPerHourIfExclusive": 4128.73,
+          "maximumGoldPerHourIfExclusive": 4374.72,
+          "averageWeightedGoldPerHour": 158.32,
+          "weightedGoldSharePercent": 4.47,
+          "ratioToTierExpectedGoldPerKill": 1.12
+        }
+      ],
+      "items": [
+        {
+          "tier": 5,
+          "itemName": "Resíduo Infecto Tóxico",
+          "itemTier": 5,
+          "rarity": "RARE",
+          "unitSellGold": 32,
+          "weightedDropEventChancePercent": 59,
+          "weightedExpectedUnitsPerKill": 0.885,
+          "averageQuantityWhenDropped": 1.5,
+          "maximumQuantityWhenDropped": 2,
+          "averageGoldPerDropEvent": 48,
+          "maximumGoldPerDropEvent": 64,
+          "expectedGoldPerKill": 28.32,
+          "averageExpectedUnitsPerHour": 34.32,
+          "averageGoldPerHour": 1098.19,
+          "goldSharePercent": 31,
+          "sources": [
+            {
+              "mobName": "Isolado da Tenda Rasgada",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Larva de Descarte Biológico",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Arameiro de Contenção",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Lesma de Canaleta Química",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Operador de Rádio Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            },
+            {
+              "mobName": "Coronel Lacrado da Zona 9",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 59,
+              "minQuantity": 1,
+              "maxQuantity": 2
+            }
+          ]
+        },
+        {
+          "tier": 5,
+          "itemName": "Biomaterial Cortante Raro",
+          "itemTier": 5,
+          "rarity": "RARE",
+          "unitSellGold": 59,
+          "weightedDropEventChancePercent": 27.3,
+          "weightedExpectedUnitsPerKill": 0.273,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 59,
+          "maximumGoldPerDropEvent": 59,
+          "expectedGoldPerKill": 16.107,
+          "averageExpectedUnitsPerHour": 10.59,
+          "averageGoldPerHour": 624.6,
+          "goldSharePercent": 17.63,
+          "sources": [
+            {
+              "mobName": "Larva de Descarte Biológico",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 91,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Operador de Rádio Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 91,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 5,
+          "itemName": "Biomaterial Reativo Raro",
+          "itemTier": 5,
+          "rarity": "RARE",
+          "unitSellGold": 59,
+          "weightedDropEventChancePercent": 23.46,
+          "weightedExpectedUnitsPerKill": 0.2346,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 59,
+          "maximumGoldPerDropEvent": 59,
+          "expectedGoldPerKill": 13.8414,
+          "averageExpectedUnitsPerHour": 9.1,
+          "averageGoldPerHour": 536.74,
+          "goldSharePercent": 15.15,
+          "sources": [
+            {
+              "mobName": "Isolado da Tenda Rasgada",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Lesma de Canaleta Química",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 5,
+          "itemName": "Biomaterial Torácico Raro",
+          "itemTier": 5,
+          "rarity": "RARE",
+          "unitSellGold": 59,
+          "weightedDropEventChancePercent": 23.46,
+          "weightedExpectedUnitsPerKill": 0.2346,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 59,
+          "maximumGoldPerDropEvent": 59,
+          "expectedGoldPerKill": 13.8414,
+          "averageExpectedUnitsPerHour": 9.1,
+          "averageGoldPerHour": 536.74,
+          "goldSharePercent": 15.15,
+          "sources": [
+            {
+              "mobName": "Isolado da Tenda Rasgada",
+              "rank": 1,
+              "encounterSharePercent": 42,
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Lesma de Canaleta Química",
+              "rank": 4,
+              "encounterSharePercent": 9,
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 5,
+          "itemName": "Biomaterial Articular Raro",
+          "itemTier": 5,
+          "rarity": "RARE",
+          "unitSellGold": 59,
+          "weightedDropEventChancePercent": 13.8,
+          "weightedExpectedUnitsPerKill": 0.138,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 59,
+          "maximumGoldPerDropEvent": 59,
+          "expectedGoldPerKill": 8.142,
+          "averageExpectedUnitsPerHour": 5.35,
+          "averageGoldPerHour": 315.73,
+          "goldSharePercent": 8.91,
+          "sources": [
+            {
+              "mobName": "Larva de Descarte Biológico",
+              "rank": 2,
+              "encounterSharePercent": 24,
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Operador de Rádio Infectado",
+              "rank": 5,
+              "encounterSharePercent": 6,
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 5,
+          "itemName": "Biomaterial Craniano Raro",
+          "itemTier": 5,
+          "rarity": "RARE",
+          "unitSellGold": 59,
+          "weightedDropEventChancePercent": 8.74,
+          "weightedExpectedUnitsPerKill": 0.0874,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 59,
+          "maximumGoldPerDropEvent": 59,
+          "expectedGoldPerKill": 5.1566,
+          "averageExpectedUnitsPerHour": 3.39,
+          "averageGoldPerHour": 199.96,
+          "goldSharePercent": 5.65,
+          "sources": [
+            {
+              "mobName": "Arameiro de Contenção",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Coronel Lacrado da Zona 9",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 5,
+          "itemName": "Biomaterial de Mobilidade Raro",
+          "itemTier": 5,
+          "rarity": "RARE",
+          "unitSellGold": 59,
+          "weightedDropEventChancePercent": 8.74,
+          "weightedExpectedUnitsPerKill": 0.0874,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 59,
+          "maximumGoldPerDropEvent": 59,
+          "expectedGoldPerKill": 5.1566,
+          "averageExpectedUnitsPerHour": 3.39,
+          "averageGoldPerHour": 199.96,
+          "goldSharePercent": 5.65,
+          "sources": [
+            {
+              "mobName": "Arameiro de Contenção",
+              "rank": 3,
+              "encounterSharePercent": 15,
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            },
+            {
+              "mobName": "Coronel Lacrado da Zona 9",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 46,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        },
+        {
+          "tier": 5,
+          "itemName": "Núcleo Infectado de Elite Raro",
+          "itemTier": 5,
+          "rarity": "RARE",
+          "unitSellGold": 59,
+          "weightedDropEventChancePercent": 1.32,
+          "weightedExpectedUnitsPerKill": 0.0132,
+          "averageQuantityWhenDropped": 1,
+          "maximumQuantityWhenDropped": 1,
+          "averageGoldPerDropEvent": 59,
+          "maximumGoldPerDropEvent": 59,
+          "expectedGoldPerKill": 0.7788,
+          "averageExpectedUnitsPerHour": 0.51,
+          "averageGoldPerHour": 30.2,
+          "goldSharePercent": 0.85,
+          "sources": [
+            {
+              "mobName": "Coronel Lacrado da Zona 9",
+              "rank": 6,
+              "encounterSharePercent": 4,
+              "dropChancePercent": 33,
+              "minQuantity": 1,
+              "maxQuantity": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "severity": "ATTENTION",
+      "code": "HIGH_FREQUENCY_MOB_GOLD_CONCENTRATION",
+      "tier": 1,
+      "entity": "Errante do Subúrbio",
+      "message": "Errante do Subúrbio ocupa 42% dos encontros e gera 47.07% do Gold de drops do T1."
+    },
+    {
+      "severity": "ATTENTION",
+      "code": "HIGH_FREQUENCY_MOB_GOLD_CONCENTRATION",
+      "tier": 2,
+      "entity": "Carregador de Paletes Infectado",
+      "message": "Carregador de Paletes Infectado ocupa 42% dos encontros e gera 38.24% do Gold de drops do T2."
+    },
+    {
+      "severity": "ATTENTION",
+      "code": "HIGH_YIELD_MOB",
+      "tier": 2,
+      "entity": "Capataz Ferrugento",
+      "message": "Capataz Ferrugento entrega 1.91x o Gold por abate ponderado do T2."
+    },
+    {
+      "severity": "ATTENTION",
+      "code": "HIGH_FREQUENCY_MOB_GOLD_CONCENTRATION",
+      "tier": 3,
+      "entity": "Paciente Febril Errante",
+      "message": "Paciente Febril Errante ocupa 42% dos encontros e gera 39.22% do Gold de drops do T3."
+    },
+    {
+      "severity": "ATTENTION",
+      "code": "HIGH_YIELD_MOB",
+      "tier": 4,
+      "entity": "Regente da Cabine Lacrada",
+      "message": "Regente da Cabine Lacrada entrega 2.15x o Gold por abate ponderado do T4."
+    },
+    {
+      "severity": "ATTENTION",
+      "code": "HIGH_FREQUENCY_MOB_GOLD_CONCENTRATION",
+      "tier": 5,
+      "entity": "Isolado da Tenda Rasgada",
+      "message": "Isolado da Tenda Rasgada ocupa 42% dos encontros e gera 37.98% do Gold de drops do T5."
+    }
+  ],
+  "integrity": {
+    "status": "HEALTHY",
+    "activeMobCount": 30,
+    "dropEntryCount": 95,
+    "auditedItemTierRows": 40
+  },
+  "database": {
+    "status": "HEALTHY",
+    "checkedMobCount": 30,
+    "checkedDropCount": 95,
+    "mismatches": []
+  }
+}

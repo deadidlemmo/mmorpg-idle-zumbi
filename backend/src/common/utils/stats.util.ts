@@ -32,6 +32,7 @@ type GameClassStats = {
 
 type ItemStatsBonus = {
   tier?: number | null;
+  enhancementLevel?: number | null;
   strengthBonus?: number | null;
   vitalityBonus?: number | null;
   agilityBonus?: number | null;
@@ -49,6 +50,11 @@ type PrimaryStatsInput = Partial<PrimaryStats> | null | undefined;
 
 export type EquipmentProgression = {
   craftedPieces: number;
+  coherentPieces: number;
+  coherentTier: number;
+  averageTier: number;
+  effectiveTier: number;
+  averageEnhancementLevel: number;
   activeMilestone: number;
   nextMilestone: number | null;
   bonusPercent: number;
@@ -59,6 +65,8 @@ export const EQUIPMENT_PROGRESSION_MILESTONES = [
   { pieces: 4, bonusPercent: 8 },
   { pieces: 6, bonusPercent: 12 },
 ] as const;
+
+export const EQUIPMENT_REINFORCEMENT_EFFECTIVE_TIER_STEP = 0.25;
 
 const GATHERING_STAT_BY_ORIGIN: Record<string, keyof PrimaryStats> = {
   DESMANCHE: 'strength',
@@ -162,19 +170,51 @@ export function getEquipmentPrimaryBonus(
 export function getEquipmentProgression(
   equipmentItems: Array<ItemStatsBonus | null | undefined>,
 ): EquipmentProgression {
-  const craftedPieces = Math.min(
-    6,
-    equipmentItems.filter((item) => Number(item?.tier ?? 0) >= 1).length,
-  );
+  const craftedItems = equipmentItems
+    .filter((item): item is ItemStatsBonus => Number(item?.tier ?? 0) >= 1)
+    .slice(0, 6);
+  const craftedPieces = craftedItems.length;
+  const tierCounts = new Map<number, number>();
+
+  for (const item of craftedItems) {
+    const tier = Math.max(1, Math.floor(Number(item.tier) || 1));
+    tierCounts.set(tier, (tierCounts.get(tier) ?? 0) + 1);
+  }
+
+  const coherentEntry = Array.from(tierCounts.entries()).sort(
+    ([leftTier, leftCount], [rightTier, rightCount]) =>
+      rightCount - leftCount || rightTier - leftTier,
+  )[0];
+  const coherentTier = coherentEntry?.[0] ?? 0;
+  const coherentPieces = coherentEntry?.[1] ?? 0;
+  const averageTier =
+    craftedItems.reduce(
+      (total, item) => total + Math.max(1, Math.floor(Number(item.tier) || 1)),
+      0,
+    ) / 6;
+  const averageEnhancementLevel =
+    craftedItems.reduce(
+      (total, item) =>
+        total + Math.max(0, Math.floor(Number(item.enhancementLevel) || 0)),
+      0,
+    ) / 6;
+  const effectiveTier =
+    averageTier +
+    averageEnhancementLevel * EQUIPMENT_REINFORCEMENT_EFFECTIVE_TIER_STEP;
   const activeMilestone = [...EQUIPMENT_PROGRESSION_MILESTONES]
     .reverse()
-    .find((milestone) => craftedPieces >= milestone.pieces);
+    .find((milestone) => coherentPieces >= milestone.pieces);
   const nextMilestone = EQUIPMENT_PROGRESSION_MILESTONES.find(
-    (milestone) => craftedPieces < milestone.pieces,
+    (milestone) => coherentPieces < milestone.pieces,
   );
 
   return {
     craftedPieces,
+    coherentPieces,
+    coherentTier,
+    averageTier: Number(averageTier.toFixed(2)),
+    effectiveTier: Number(effectiveTier.toFixed(2)),
+    averageEnhancementLevel: Number(averageEnhancementLevel.toFixed(2)),
     activeMilestone: activeMilestone?.pieces ?? 0,
     nextMilestone: nextMilestone?.pieces ?? null,
     bonusPercent: activeMilestone?.bonusPercent ?? 0,
@@ -182,9 +222,9 @@ export function getEquipmentProgression(
 }
 
 function applyEquipmentProgressionBonus(
-  stats: DerivedCombatStats,
+  stats: PrimaryStats,
   progression: EquipmentProgression,
-): DerivedCombatStats {
+): PrimaryStats {
   if (progression.bonusPercent <= 0) {
     return stats;
   }
@@ -192,10 +232,12 @@ function applyEquipmentProgressionBonus(
   const multiplier = 1 + progression.bonusPercent / 100;
 
   return {
-    maxHp: Math.round(stats.maxHp * multiplier),
-    attack: Math.round(stats.attack * multiplier),
-    defense: Math.round(stats.defense * multiplier),
-    speed: stats.speed,
+    strength: Math.round(stats.strength * multiplier),
+    vitality: Math.round(stats.vitality * multiplier),
+    agility: Math.round(stats.agility * multiplier),
+    precision: Math.round(stats.precision * multiplier),
+    technique: Math.round(stats.technique * multiplier),
+    willpower: Math.round(stats.willpower * multiplier),
   };
 }
 
@@ -303,8 +345,23 @@ export function calculateFullStats(
 
   const levelBonusStats = getLevelPrimaryBonus(gameClass.name, safeLevel);
 
-  const equipmentBonusStats = getEquipmentPrimaryBonus(equipmentItems);
   const equipmentProgression = getEquipmentProgression(equipmentItems);
+  const coherentEquipmentItems = equipmentItems.filter(
+    (item) =>
+      equipmentProgression.coherentTier > 0 &&
+      Math.floor(Number(item?.tier) || 0) === equipmentProgression.coherentTier,
+  );
+  const otherEquipmentItems = equipmentItems.filter(
+    (item) =>
+      Math.floor(Number(item?.tier) || 0) !== equipmentProgression.coherentTier,
+  );
+  const equipmentBonusStats = sumPrimaryStats(
+    applyEquipmentProgressionBonus(
+      getEquipmentPrimaryBonus(coherentEquipmentItems),
+      equipmentProgression,
+    ),
+    getEquipmentPrimaryBonus(otherEquipmentItems),
+  );
   const gatheringBonusStats = normalizePrimaryStats(gatheringBonus);
 
   const totalPrimaryStats = sumManyPrimaryStats([
@@ -314,9 +371,10 @@ export function calculateFullStats(
     gatheringBonusStats,
   ]);
 
-  const derivedCombatStats = applyEquipmentProgressionBonus(
-    calculateDerivedCombatStats(gameClass.name, safeLevel, totalPrimaryStats),
-    equipmentProgression,
+  const derivedCombatStats = calculateDerivedCombatStats(
+    gameClass.name,
+    safeLevel,
+    totalPrimaryStats,
   );
 
   return {

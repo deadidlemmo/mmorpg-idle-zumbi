@@ -201,6 +201,19 @@
   font-size: 0.72rem;
 }
 
+.incursions-reward-result__refund {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  color: #bce48c;
+  font-size: 0.7rem;
+}
+
+.incursions-reward-result__refund strong {
+  color: #e7cb76;
+}
+
 .incursions-reward-result__title {
   display: inline-flex;
   align-items: center;
@@ -1316,7 +1329,8 @@
   font-weight: 950;
 }
 
-.incursions-modal__reinforcement-note {
+.incursions-modal__reinforcement-note,
+.incursions-modal__refund-note {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -1327,18 +1341,28 @@
   background: rgba(60, 43, 18, 0.3);
 }
 
-.incursions-modal__reinforcement-note > span {
+.incursions-modal__refund-note {
+  margin-top: 0.64rem;
+  color: #a9d570;
+  border-left-color: rgba(169, 213, 112, 0.72);
+  background: rgba(24, 54, 25, 0.32);
+}
+
+.incursions-modal__reinforcement-note > span,
+.incursions-modal__refund-note > span {
   display: grid;
   min-width: 0;
   gap: 2px;
 }
 
-.incursions-modal__reinforcement-note strong {
+.incursions-modal__reinforcement-note strong,
+.incursions-modal__refund-note strong {
   color: #f2e8cf;
   font-size: 0.7rem;
 }
 
-.incursions-modal__reinforcement-note small {
+.incursions-modal__reinforcement-note small,
+.incursions-modal__refund-note small {
   color: rgba(225, 217, 195, 0.58);
   font-size: 0.65rem;
   line-height: 1.35;

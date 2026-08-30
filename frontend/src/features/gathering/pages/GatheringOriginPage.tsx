@@ -61,7 +61,7 @@ const GATHERING_ORIGIN_BY_SLUG = {
 } as const satisfies Record<string, GatheringAllowedOrigin>;
 
 const WORLD_BOSS_ACTIVITY_LOCK_MESSAGE =
-  'Você está aguardando ou participando de um World Boss. Saia do lobby para iniciar gathering.';
+  'Você está em uma batalha de Ameaça Global. Encerre a participação antes de iniciar gathering.';
 
 type GatheringOriginSlug = keyof typeof GATHERING_ORIGIN_BY_SLUG;
 

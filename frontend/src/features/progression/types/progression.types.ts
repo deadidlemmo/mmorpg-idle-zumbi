@@ -48,6 +48,9 @@ export interface CharacterMission {
   status: MissionStatus;
   progress: number;
   targetValue: number;
+  rewardTier: number;
+  rewardXp: number;
+  rewardGold: number;
   periodKey: string;
   assignedAt: string;
   expiresAt?: string | null;

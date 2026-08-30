@@ -1,5 +1,5 @@
 export const WORLD_BOSS_SCHEDULE_CONFIG = Object.freeze({
-  entryWindowSeconds: 5 * 60,
+  entryWindowSeconds: 15 * 60,
   initialLobbyLeadSeconds: 10 * 60,
   eventDurationSeconds: 3 * 60 * 60,
   slots: [

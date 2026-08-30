@@ -1,0 +1,8 @@
+﻿"tipo";"tier";"atividade";"categoria";"amostras";"operacoes";"unidades";"goldTotal";"goldPorDia";"goldBrutoPorHora";"goldLiquidoPorHora";"xpPorHora";"sucessoPercentual";"observacao"
+"ATIVIDADE";"1";"CRAFTING_STATION";"";"30";"";"";"";"";"5518.32";"-18394.41";"6231.61";"";"Retorno observado da bancada; liquido compara output com oportunidade de vender os ingredientes."
+"ATIVIDADE";"1";"GATHERING";"";"61";"";"";"";"";"216.92";"216.92";"375.92";"";"Valor observado usa quantidade coletada e liquidacao NPC; sessoes longas podem incluir periodos sem resolucao ativa."
+"ATIVIDADE";"1";"INCURSION";"";"4";"";"";"";"";"0";"-106.67";"214.4";"75";"Gold observado inclui recompensa direta menos entrada; itens e moedas especiais nao foram convertidos em Gold."
+"ATIVIDADE";"1";"MISSIONS";"";"15";"";"";"";"";"";"";"";"100";"Totais observados usam o tier e a recompensa congelados na atribuicao; missoes continuam sem retorno/h porque nao persistem tempo ativo dedicado."
+"ATIVIDADE";"2";"CRAFTING_STATION";"";"1";"";"";"";"";"5760";"-89040";"8280";"";"Retorno observado da bancada; liquido compara output com oportunidade de vender os ingredientes."
+"VENDA_NPC";"N/D";"BLACK_MARKET";"EQUIPMENT";"";"4";"4";"96";"3.2";"";"";"";"";"Janela de 30 dias."
+"VENDA_NPC";"1";"BLACK_MARKET";"MATERIAL";"";"16";"4770";"14310";"477";"";"";"";"";"Janela de 30 dias."

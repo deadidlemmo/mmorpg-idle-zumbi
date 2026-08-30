@@ -4,6 +4,8 @@ export const INCURSION_APPROACHES = [
   'AGGRESSIVE',
 ] as const;
 
+export const INCURSION_SUCCESS_ENTRY_REFUND_PERCENT = 100;
+
 export type IncursionApproach = (typeof INCURSION_APPROACHES)[number];
 
 export type IncursionRiskProfile = {
@@ -70,4 +72,12 @@ export function calculateIncursionFailureDamage(
 ) {
   const profile = getIncursionRiskProfile(riskLevel, approach);
   return Math.max(1, Math.round(Math.max(1, maxHp) * profile.failureHpRatio));
+}
+
+export function calculateIncursionSuccessEntryRefund(goldCostPaid: number) {
+  const safeGoldCost = Math.max(0, Math.floor(Number(goldCostPaid) || 0));
+
+  return Math.floor(
+    (safeGoldCost * INCURSION_SUCCESS_ENTRY_REFUND_PERCENT) / 100,
+  );
 }

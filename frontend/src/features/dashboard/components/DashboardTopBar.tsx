@@ -129,12 +129,7 @@ type LooseRecord = Record<string, unknown>;
 type DashboardTopBarActivityViewModel = DashboardTopBarActivityOverride;
 
 const WORLD_BOSS_TOPBAR_REFRESH_MS = 15000;
-const WORLD_BOSS_ENTRY_WINDOW_SECONDS = 5 * 60;
-const WORLD_BOSS_ACTIVE_STATUSES = new Set([
-  'SCHEDULED',
-  'LOBBY_OPEN',
-  'ACTIVE',
-]);
+const WORLD_BOSS_ACTIVE_STATUSES = new Set(['ACTIVE']);
 
 const worldBossStatusCache = new Map<string, WorldBossStatusResponse | null>();
 
@@ -246,56 +241,6 @@ function formatCompactDuration(seconds?: number | null): string {
   return `${remainingSeconds}s`;
 }
 
-function formatWorldBossDuration(seconds?: number | null): string {
-  if (seconds === null || seconds === undefined) return '0s';
-
-  const safeSeconds = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor((safeSeconds % 3600) / 60);
-  const remainingSeconds = safeSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(
-      remainingSeconds,
-    ).padStart(2, '0')}s`;
-  }
-
-  if (minutes > 0) {
-    return `${minutes}m ${String(remainingSeconds).padStart(2, '0')}s`;
-  }
-
-  return `${remainingSeconds}s`;
-}
-
-function getWorldBossSecondsUntil(
-  value?: string | Date | null,
-  nowMs = Date.now(),
-): number {
-  if (!value) return 0;
-
-  const targetMs = new Date(value).getTime();
-
-  if (!Number.isFinite(targetMs)) return 0;
-
-  return Math.max(0, Math.floor((targetMs - nowMs) / 1000));
-}
-
-function getWorldBossEntryWindowEndMs(
-  event: WorldBossStatusResponse['event'],
-): number {
-  if (!event) return 0;
-
-  const apiValueMs = event.entryWindowEndsAt
-    ? new Date(event.entryWindowEndsAt).getTime()
-    : Number.NaN;
-
-  if (Number.isFinite(apiValueMs)) return apiValueMs;
-
-  return (
-    new Date(event.startsAt).getTime() + WORLD_BOSS_ENTRY_WINDOW_SECONDS * 1000
-  );
-}
-
 function isActiveWorldBossStatus(
   status?: WorldBossStatusResponse | null,
 ): boolean {
@@ -308,7 +253,6 @@ function isActiveWorldBossStatus(
 
 function buildWorldBossActivity(
   status: WorldBossStatusResponse | null,
-  nowMs: number,
 ): DashboardTopBarActivityViewModel | null {
   const event = status?.event;
   const participant = status?.participant;
@@ -318,38 +262,6 @@ function buildWorldBossActivity(
   }
 
   const bossName = event.worldBoss.name;
-  const participantCount = event.lobbyCount ?? event.participantCount ?? 0;
-
-  if (event.status === 'SCHEDULED') {
-    const seconds = getWorldBossSecondsUntil(event.startsAt, nowMs);
-    const timerText = formatWorldBossDuration(seconds);
-
-    return {
-      kind: 'world-boss',
-      title: bossName,
-      subtitle: `No lobby - aparece em ${timerText}`,
-      icon: 'WB',
-      badge: participantCount > 0 ? formatNumber(participantCount) : null,
-      titleText: `${bossName} - no lobby, aparece em ${timerText}`,
-    };
-  }
-
-  if (event.status === 'LOBBY_OPEN') {
-    const seconds = Math.max(
-      0,
-      Math.floor((getWorldBossEntryWindowEndMs(event) - nowMs) / 1000),
-    );
-    const timerText = seconds ? formatWorldBossDuration(seconds) : 'iniciando';
-
-    return {
-      kind: 'world-boss',
-      title: bossName,
-      subtitle: `No lobby - comeca em ${timerText}`,
-      icon: 'WB',
-      badge: participantCount > 0 ? formatNumber(participantCount) : null,
-      titleText: `${bossName} - no lobby, comeca em ${timerText}`,
-    };
-  }
 
   const hpPercent = clampPercent(event.hpPercent);
 
@@ -1592,8 +1504,8 @@ export function DashboardTopBar({
   ]);
 
   const worldBossActivity = useMemo(() => {
-    return buildWorldBossActivity(worldBossStatus, nowMs);
-  }, [nowMs, worldBossStatus]);
+    return buildWorldBossActivity(worldBossStatus);
+  }, [worldBossStatus]);
 
   const activity = useMemo(() => {
     const autoCombatActivity = suppressAutoCombatActivityFallback
