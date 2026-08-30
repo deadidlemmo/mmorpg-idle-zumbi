@@ -41,6 +41,9 @@ coverage/
 playwright-report/
 test-results/
 
+# Ensaios locais curtos do harness de carga; suites oficiais ficam versionaveis.
+_reports/load-test/smoke-*/
+
 # Arquivos temporários
 tmp/
 temp/

@@ -101,6 +101,7 @@ type AutoCombatOperationalMetrics = {
     AutoCombatContextCounters
   >;
   tickDurations: TimedMetricSample[];
+  tickSchedulingLags: TimedMetricSample[];
   processingLockWaitDurations: TimedMetricSample[];
   eventEmissionDelays: TimedMetricSample[];
   clientEventTransitDelays: TimedMetricSample[];
@@ -246,6 +247,7 @@ export class ObservabilityService {
       ]),
     ),
     tickDurations: [],
+    tickSchedulingLags: [],
     processingLockWaitDurations: [],
     eventEmissionDelays: [],
     clientEventTransitDelays: [],
@@ -347,6 +349,13 @@ export class ObservabilityService {
     if (!params.acquired) {
       this.autoCombatMetrics.distributedLockMisses += 1;
     }
+  }
+
+  recordAutoCombatTickSchedulingLag(durationMs: number) {
+    this.recordSeriesSample(
+      this.autoCombatMetrics.tickSchedulingLags,
+      durationMs,
+    );
   }
 
   recordAutoCombatTickError() {
@@ -797,6 +806,7 @@ export class ObservabilityService {
     }
 
     const memory = process.memoryUsage();
+    const cpu = process.cpuUsage();
     lines.push('# TYPE dead_idle_http_in_flight_requests gauge');
     lines.push(`dead_idle_http_in_flight_requests ${this.inFlightRequests}`);
     lines.push('# TYPE dead_idle_process_uptime_seconds gauge');
@@ -807,6 +817,14 @@ export class ObservabilityService {
     lines.push(`dead_idle_process_resident_memory_bytes ${memory.rss}`);
     lines.push('# TYPE dead_idle_process_heap_used_bytes gauge');
     lines.push(`dead_idle_process_heap_used_bytes ${memory.heapUsed}`);
+    lines.push('# TYPE dead_idle_process_cpu_user_seconds_total counter');
+    lines.push(
+      `dead_idle_process_cpu_user_seconds_total ${(cpu.user / 1_000_000).toFixed(6)}`,
+    );
+    lines.push('# TYPE dead_idle_process_cpu_system_seconds_total counter');
+    lines.push(
+      `dead_idle_process_cpu_system_seconds_total ${(cpu.system / 1_000_000).toFixed(6)}`,
+    );
     this.appendAutoCombatPrometheusMetrics(lines);
     const backup = this.backupStatusService.getStatus();
     lines.push('# TYPE dead_idle_backup_last_success_timestamp_seconds gauge');
@@ -1147,6 +1165,12 @@ export class ObservabilityService {
         minimumRecordedAt,
         minimumSampleSequence,
       ),
+      tickSchedulingLag: this.summarizeSeries(
+        this.autoCombatMetrics.tickSchedulingLags,
+        now,
+        minimumRecordedAt,
+        minimumSampleSequence,
+      ),
       processingLockWait: this.summarizeSeries(
         this.autoCombatMetrics.processingLockWaitDurations,
         now,
@@ -1303,6 +1327,7 @@ export class ObservabilityService {
 
     const series: Array<[string, MetricSeriesSummary]> = [
       ['tick_duration_ms', snapshot.tickDuration],
+      ['tick_scheduling_lag_ms', snapshot.tickSchedulingLag],
       ['processing_lock_wait_ms', snapshot.processingLockWait],
       ['event_emission_delay_ms', snapshot.eventEmissionDelay],
       ['client_event_transit_delay_ms', snapshot.clientEventTransitDelay],

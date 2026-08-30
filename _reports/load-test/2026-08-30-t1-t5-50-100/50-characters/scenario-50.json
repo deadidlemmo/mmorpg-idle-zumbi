@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "startedAt": "2026-08-30T04:58:45.769Z",
+  "finishedAt": "2026-08-30T04:59:53.140Z",
+  "host": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "cpuModel": "AMD Ryzen 5 7600X 6-Core Processor             ",
+    "logicalCpus": 12,
+    "totalMemoryMiB": 31784.87,
+    "freeMemoryAtReportMiB": 10364.14
+  },
+  "config": {
+    "users": 50,
+    "durationSeconds": 60,
+    "warmupSeconds": 5,
+    "sampleIntervalMs": 1000,
+    "battleQuantity": 1000,
+    "reconnectStormPercent": 100
+  },
+  "distribution": {
+    "byTier": {
+      "T1": 10,
+      "T2": 10,
+      "T3": 10,
+      "T4": 10,
+      "T5": 10
+    },
+    "byClass": {
+      "Lutador": 13,
+      "Assassino": 13,
+      "Atirador": 12,
+      "Médico": 12
+    }
+  },
+  "startup": {
+    "fixturesPrepared": 50,
+    "initialSocketConnectMs": {
+      "samples": 50,
+      "average": 12.23,
+      "p50": 9.65,
+      "p95": 22.47,
+      "p99": 25.94,
+      "max": 25.94
+    },
+    "initialRoomJoinMs": {
+      "samples": 50,
+      "average": 17.67,
+      "p50": 13.81,
+      "p95": 32.91,
+      "p99": 33.71,
+      "max": 33.71
+    },
+    "battleStartMs": {
+      "samples": 50,
+      "average": 159.2,
+      "p50": 152.52,
+      "p95": 220.77,
+      "p99": 225.73,
+      "max": 225.73
+    },
+    "battleStartRetries": 0,
+    "battlesStarted": 50,
+    "battleStartErrors": []
+  },
+  "resources": {
+    "processCpuPercentOfOneCore": {
+      "samples": 61,
+      "average": 12.31,
+      "p50": 6.27,
+      "p95": 46.71,
+      "p99": 119.56,
+      "max": 119.56
+    },
+    "rssMiB": {
+      "samples": 62,
+      "average": 225.96,
+      "p50": 241.08,
+      "p95": 272.91,
+      "p99": 289.19,
+      "max": 289.19
+    },
+    "heapUsedMiB": {
+      "samples": 62,
+      "average": 55.64,
+      "p50": 48.81,
+      "p95": 86.16,
+      "p99": 110.74,
+      "max": 110.74
+    },
+    "postgresConnections": {
+      "samples": 62,
+      "average": 13,
+      "p50": 13,
+      "p95": 13,
+      "p99": 13,
+      "max": 13,
+      "activeAverage": 0.05,
+      "activeP95": 0,
+      "activeMax": 2,
+      "configuredMax": 100
+    }
+  },
+  "autoCombat": {
+    "ticks": 201,
+    "ticksPerSecond": 3.34,
+    "tickErrors": 0,
+    "distributedLockMisses": 0,
+    "tickDurationMs": {
+      "p95": 126,
+      "p99": 145,
+      "max": 171
+    },
+    "tickSchedulingLagMs": {
+      "p95": 4,
+      "p99": 12,
+      "max": 15
+    },
+    "realtimeEvents": 112,
+    "socketPayloadMiB": 4.943,
+    "activeLoops": {
+      "samples": 62,
+      "average": 50,
+      "p50": 50,
+      "p95": 50,
+      "p99": 50,
+      "max": 50
+    }
+  },
+  "sockets": {
+    "initialConnectionsAttempted": 50,
+    "initialConnectionsSucceeded": 50,
+    "reconnectsAttempted": 50,
+    "transportReconnectsSucceeded": 50,
+    "roomRejoinsSucceeded": 50,
+    "reconciliationsSucceeded": 50,
+    "transportReconnectMs": {
+      "samples": 50,
+      "average": 279.17,
+      "p50": 275.23,
+      "p95": 407.6,
+      "p99": 411.23,
+      "max": 411.23
+    },
+    "roomRejoinMs": {
+      "samples": 50,
+      "average": 294.71,
+      "p50": 288.73,
+      "p95": 437.1,
+      "p99": 437.57,
+      "max": 437.57
+    },
+    "reconciliationMs": {
+      "samples": 50,
+      "average": 367.34,
+      "p50": 376.87,
+      "p95": 508.25,
+      "p99": 512.5,
+      "max": 512.5
+    },
+    "eventsReceived": 163,
+    "connectErrors": [],
+    "socketErrors": []
+  },
+  "assessment": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "Todas as batalhas iniciaram",
+        "passed": true,
+        "actual": "50/50",
+        "target": "50/50"
+      },
+      {
+        "name": "Loops simultaneos atingiram a carga alvo",
+        "passed": true,
+        "actual": "50",
+        "target": ">= 50"
+      },
+      {
+        "name": "Sockets simultaneos atingiram a carga alvo",
+        "passed": true,
+        "actual": "50",
+        "target": ">= 50"
+      },
+      {
+        "name": "Reconexao de transporte",
+        "passed": true,
+        "actual": "50/50",
+        "target": ">= 99%"
+      },
+      {
+        "name": "Reentrada na sala",
+        "passed": true,
+        "actual": "50/50",
+        "target": ">= 99%"
+      },
+      {
+        "name": "Reconciliacao REST apos reconexao",
+        "passed": true,
+        "actual": "50/50",
+        "target": ">= 99%"
+      },
+      {
+        "name": "Sem erros de tick",
+        "passed": true,
+        "actual": "0",
+        "target": "0"
+      },
+      {
+        "name": "Sem falhas de lock distribuido",
+        "passed": true,
+        "actual": "0",
+        "target": "0"
+      },
+      {
+        "name": "Atraso P95 do agendador",
+        "passed": true,
+        "actual": "4 ms",
+        "target": "<= 250 ms"
+      },
+      {
+        "name": "Duracao P95 do tick",
+        "passed": true,
+        "actual": "126 ms",
+        "target": "<= 500 ms"
+      },
+      {
+        "name": "Conexoes PostgreSQL abaixo de 80% do limite",
+        "passed": true,
+        "actual": "13/100",
+        "target": "<= 80%"
+      }
+    ]
+  }
+}

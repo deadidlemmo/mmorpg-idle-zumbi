@@ -140,6 +140,7 @@ type AutoCombatRealtimeLoop = {
   userId: string;
   timer: ReturnType<typeof setTimeout> | null;
   running: boolean;
+  scheduledForMs: number | null;
 };
 
 type AppliedHuntingPetBonus = {
@@ -2511,7 +2512,10 @@ export class AutoCombatService implements OnModuleDestroy {
           });
         },
         {
-          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          // O personagem ja esta bloqueado e a mudanca de fase usa update
+          // condicional. Read Committed preserva essa exclusao por personagem
+          // sem gerar abortos SSI entre jogadores independentes.
+          isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
         },
       );
     } catch (error) {
@@ -3041,6 +3045,7 @@ export class AutoCombatService implements OnModuleDestroy {
       userId,
       timer: null,
       running: false,
+      scheduledForMs: null,
     };
 
     this.realtimeLoops.set(characterId, loop);
@@ -3065,13 +3070,21 @@ export class AutoCombatService implements OnModuleDestroy {
       clearTimeout(loop.timer);
     }
 
-    loop.timer = setTimeout(
-      () => {
-        loop.timer = null;
-        void this.runRealtimeProcessingTick(characterId, loop);
-      },
-      Math.max(0, Math.ceil(delayMs)),
-    );
+    const safeDelayMs = Math.max(0, Math.ceil(delayMs));
+    loop.scheduledForMs = Date.now() + safeDelayMs;
+    loop.timer = setTimeout(() => {
+      const scheduledForMs = loop.scheduledForMs;
+      loop.timer = null;
+      loop.scheduledForMs = null;
+
+      if (scheduledForMs !== null) {
+        this.observability.recordAutoCombatTickSchedulingLag(
+          Math.max(0, Date.now() - scheduledForMs),
+        );
+      }
+
+      void this.runRealtimeProcessingTick(characterId, loop);
+    }, safeDelayMs);
   }
 
   private async runRealtimeProcessingTick(
@@ -3191,6 +3204,7 @@ export class AutoCombatService implements OnModuleDestroy {
     if (!loop) return;
 
     if (loop.timer) clearTimeout(loop.timer);
+    loop.scheduledForMs = null;
     this.realtimeLoops.delete(characterId);
     this.observability.setAutoCombatActiveLoops(this.realtimeLoops.size);
   }

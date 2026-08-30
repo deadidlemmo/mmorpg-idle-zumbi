@@ -43,7 +43,12 @@ export interface AdminUser {
 export interface AdminCosmeticEntitlement {
   id: string;
   source:
-    "PURCHASE" | "BUNDLE" | "SEASON_PASS" | "EVENT" | "ACHIEVEMENT" | "ADMIN";
+    | "PURCHASE"
+    | "BUNDLE"
+    | "SEASON_PASS"
+    | "EVENT"
+    | "ACHIEVEMENT"
+    | "ADMIN";
   sourceReference: string | null;
   grantedAt: string;
   expiresAt: string | null;
@@ -225,6 +230,7 @@ export interface AdminOperations {
     outOfOrderEvents: number;
     compressedVisualCycles: number;
     tickDuration: AdminMetricSeries;
+    tickSchedulingLag: AdminMetricSeries;
     processingLockWait: AdminMetricSeries;
     eventEmissionDelay: AdminMetricSeries;
     clientEventTransitDelay: AdminMetricSeries;

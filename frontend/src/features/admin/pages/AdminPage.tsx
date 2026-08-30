@@ -936,8 +936,13 @@ export function AdminPage() {
                   : "Sem dados"}
               </dd>
               <span>
-                p95{" "}
-                {formatMetricPercentile(autoCombatMetrics?.tickDuration, "p95")}
+                Duração p95{" "}
+                {formatMetricPercentile(autoCombatMetrics?.tickDuration, "p95")}{" "}
+                · atraso p95{" "}
+                {formatMetricPercentile(
+                  autoCombatMetrics?.tickSchedulingLag,
+                  "p95",
+                )}
               </span>
             </div>
             <div>

@@ -185,6 +185,12 @@ describe('ObservabilityService', () => {
     expect(metrics).toContain(
       'dead_idle_backup_last_verification_timestamp_seconds 1787308200',
     );
+    expect(metrics).toMatch(
+      /dead_idle_process_cpu_user_seconds_total \d+(?:\.\d+)?/,
+    );
+    expect(metrics).toMatch(
+      /dead_idle_process_cpu_system_seconds_total \d+(?:\.\d+)?/,
+    );
   });
 
   it('registra a linha de base operacional do auto-combate', async () => {
@@ -193,6 +199,8 @@ describe('ObservabilityService', () => {
     service.setAutoCombatActiveLoops(2);
     service.recordAutoCombatTick({ durationMs: 80, acquired: true });
     service.recordAutoCombatTick({ durationMs: 240, acquired: false });
+    service.recordAutoCombatTickSchedulingLag(15);
+    service.recordAutoCombatTickSchedulingLag(35);
     service.recordAutoCombatTickError();
     service.recordAutoCombatProcessingLockWait(150);
     service.recordAutoCombatRealtimeEvent({
@@ -301,6 +309,12 @@ describe('ObservabilityService', () => {
         p50: 80,
         p95: 240,
       },
+      tickSchedulingLag: {
+        samples: 2,
+        average: 25,
+        p50: 15,
+        p95: 35,
+      },
       clientEventTransitDelay: {
         samples: 1,
         p95: 480,
@@ -349,6 +363,9 @@ describe('ObservabilityService', () => {
     );
     expect(metrics).toContain(
       'dead_idle_auto_combat_socket_payload_bytes_by_event_total{event_name="auto-combat:status"} 1200',
+    );
+    expect(metrics).toContain(
+      'dead_idle_auto_combat_tick_scheduling_lag_ms{stat="p95"} 35',
     );
   });
 
