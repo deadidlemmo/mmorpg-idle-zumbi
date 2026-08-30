@@ -8,6 +8,7 @@ import {
   test,
   type Browser,
   type BrowserContext,
+  type Locator,
   type Page,
 } from '@playwright/test';
 
@@ -110,6 +111,65 @@ async function openAuthenticatedPage(
   return { context, page };
 }
 
+async function installNonBlockingGlobalAlert(page: Page, target: Locator) {
+  const targetBox = await target.boundingBox();
+  if (!targetBox) {
+    throw new Error('A aba social nao possui area clicavel.');
+  }
+
+  await page.evaluate((box) => {
+    const layer = document.createElement('div');
+    layer.className = 'world-boss-global-alert-layer';
+    layer.dataset.e2eGlobalAlert = 'true';
+    Object.assign(layer.style, {
+      display: 'block',
+      padding: '0',
+    });
+
+    const alert = document.createElement('section');
+    alert.className = 'world-boss-global-alert';
+    Object.assign(alert.style, {
+      position: 'fixed',
+      left: `${box.x}px`,
+      top: `${box.y}px`,
+      width: `${box.width}px`,
+      height: `${box.height}px`,
+      minHeight: `${box.height}px`,
+      gridTemplateColumns: '1fr',
+    });
+
+    const content = document.createElement('div');
+    content.className = 'world-boss-global-alert__content';
+    content.style.padding = '0';
+    const message = document.createElement('small');
+    message.textContent = 'Sua atividade continuara normalmente.';
+    content.append(message);
+    alert.append(content);
+
+    const action = document.createElement('button');
+    action.className = 'world-boss-global-alert__secondary';
+    action.textContent = 'Ver ameaca';
+    action.style.position = 'fixed';
+    action.style.left = '-9999px';
+    alert.append(action);
+
+    layer.append(alert);
+    document.body.append(layer);
+  }, targetBox);
+
+  const alert = page.locator('[data-e2e-global-alert]');
+  await expect(alert.locator('.world-boss-global-alert')).toHaveCSS(
+    'pointer-events',
+    'none',
+  );
+  await expect(alert.getByRole('button', { name: 'Ver ameaca' })).toHaveCSS(
+    'pointer-events',
+    'auto',
+  );
+
+  return alert;
+}
+
 test.describe('aliados, ranking e inspeção', () => {
   test.describe.configure({ mode: 'serial' });
 
@@ -165,7 +225,15 @@ test.describe('aliados, ranking e inspeção', () => {
       `/dashboard/${target.characterId}/allies`,
     );
     extraContexts.push(targetSession.context);
-    await targetSession.page.getByRole('tab', { name: /Recebidos/ }).click();
+    const receivedTab = targetSession.page.getByRole('tab', {
+      name: /Recebidos/,
+    });
+    const syntheticAlert = await installNonBlockingGlobalAlert(
+      targetSession.page,
+      receivedTab,
+    );
+    await receivedTab.click();
+    await syntheticAlert.evaluate((element) => element.remove());
     const incoming = targetSession.page
       .locator('.social-row')
       .filter({ hasText: requester.characterName });
