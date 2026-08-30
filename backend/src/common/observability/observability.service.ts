@@ -645,8 +645,11 @@ export class ObservabilityService {
         state: backup.state,
         maxAgeHours: backup.maxAgeHours,
         verificationMaxAgeHours: backup.verificationMaxAgeHours,
+        offsiteMaxAgeHours: backup.offsiteMaxAgeHours,
         backupAgeHours: backup.backupAgeHours,
         verificationAgeHours: backup.verificationAgeHours,
+        offsiteAgeHours: backup.offsiteAgeHours,
+        integrity: backup.integrity.state,
       },
       alerts,
     };

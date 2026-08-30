@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 type BackupRunStatus = {
@@ -20,17 +21,34 @@ type BackupStatusFile = {
   backup?: BackupRunStatus;
   verification?: BackupRunStatus;
   restore?: BackupRunStatus & { targetDatabase?: string };
+  offsite?: BackupRunStatus & {
+    provider?: string;
+    bucket?: string;
+    objectKey?: string;
+    uploadedAt?: string;
+  };
+};
+
+type BackupIntegrityStatus = {
+  state: 'valid' | 'invalid' | 'missing' | 'unknown';
+  checkedAt: string;
+  sizeBytes: number | null;
+  sha256: string | null;
 };
 
 export type BackupOperationalStatus = {
   state: 'healthy' | 'stale' | 'failed' | 'unknown';
   maxAgeHours: number;
   verificationMaxAgeHours: number;
+  offsiteMaxAgeHours: number;
   backupAgeHours: number | null;
   verificationAgeHours: number | null;
+  offsiteAgeHours: number | null;
+  integrity: BackupIntegrityStatus;
   lastBackup: BackupRunStatus | null;
   lastVerification: BackupRunStatus | null;
   lastRestore: BackupStatusFile['restore'] | null;
+  lastOffsite: BackupStatusFile['offsite'] | null;
 };
 
 @Injectable()
@@ -46,36 +64,59 @@ export class BackupStatusService {
       return this.cache.status;
     }
 
-    const maxAgeHours = this.getPositiveConfig('BACKUP_MAX_AGE_HOURS', 26);
+    const maxAgeHours = this.getPositiveConfig('BACKUP_MAX_AGE_HOURS', 4);
     const verificationMaxAgeHours = this.getPositiveConfig(
       'BACKUP_VERIFICATION_MAX_AGE_HOURS',
       168,
     );
-    const statusFile = this.readStatusFile();
+    const offsiteMaxAgeHours = this.getPositiveConfig(
+      'BACKUP_OFFSITE_MAX_AGE_HOURS',
+      4,
+    );
+    const offsiteRequired =
+      this.configService
+        .get<string>('BACKUP_OFFSITE_REQUIRED')
+        ?.trim()
+        .toLowerCase() !== 'false';
+    const { statusFile, statusPath } = this.readStatusFile();
     const lastBackup = statusFile?.backup ?? null;
     const lastVerification = statusFile?.verification ?? null;
     const lastRestore = statusFile?.restore ?? null;
+    const lastOffsite = statusFile?.offsite ?? null;
     const backupAgeHours = this.getAgeHours(lastBackup?.createdAt, now);
     const verificationAgeHours = this.getAgeHours(
       lastVerification?.verifiedAt,
       now,
     );
+    const offsiteAgeHours = this.getAgeHours(lastOffsite?.uploadedAt, now);
+    const integrity = this.verifyBackupIntegrity(statusPath, lastBackup, now);
     const hasFailure =
       lastBackup?.status === 'failed' ||
       lastVerification?.status === 'failed' ||
-      lastRestore?.status === 'failed';
+      lastRestore?.status === 'failed' ||
+      lastOffsite?.status === 'failed' ||
+      integrity.state === 'invalid' ||
+      integrity.state === 'missing';
     const hasSuccessfulBackup =
       lastBackup?.status === 'success' && backupAgeHours !== null;
     const hasSuccessfulVerification =
       lastVerification?.status === 'success' && verificationAgeHours !== null;
+    const hasSuccessfulOffsite =
+      lastOffsite?.status === 'success' && offsiteAgeHours !== null;
     let state: BackupOperationalStatus['state'] = 'unknown';
 
     if (hasFailure) {
       state = 'failed';
-    } else if (hasSuccessfulBackup && hasSuccessfulVerification) {
+    } else if (
+      hasSuccessfulBackup &&
+      hasSuccessfulVerification &&
+      integrity.state === 'valid' &&
+      (!offsiteRequired || hasSuccessfulOffsite)
+    ) {
       state =
         backupAgeHours <= maxAgeHours &&
-        verificationAgeHours <= verificationMaxAgeHours
+        verificationAgeHours <= verificationMaxAgeHours &&
+        (!offsiteRequired || offsiteAgeHours! <= offsiteMaxAgeHours)
           ? 'healthy'
           : 'stale';
     }
@@ -84,18 +125,25 @@ export class BackupStatusService {
       state,
       maxAgeHours,
       verificationMaxAgeHours,
+      offsiteMaxAgeHours,
       backupAgeHours,
       verificationAgeHours,
+      offsiteAgeHours,
+      integrity,
       lastBackup,
       lastVerification,
       lastRestore,
+      lastOffsite,
     } satisfies BackupOperationalStatus;
-    this.cache = { expiresAt: now + 5_000, status };
+    this.cache = { expiresAt: now + 30_000, status };
 
     return status;
   }
 
-  private readStatusFile(): BackupStatusFile | null {
+  private readStatusFile(): {
+    statusFile: BackupStatusFile | null;
+    statusPath: string;
+  } {
     const configuredPath = this.configService
       .get<string>('BACKUP_STATUS_PATH')
       ?.trim();
@@ -104,9 +152,67 @@ export class BackupStatusService {
     );
 
     try {
-      return JSON.parse(readFileSync(statusPath, 'utf8')) as BackupStatusFile;
+      return {
+        statusFile: JSON.parse(
+          readFileSync(statusPath, 'utf8'),
+        ) as BackupStatusFile,
+        statusPath,
+      };
     } catch {
-      return null;
+      return { statusFile: null, statusPath };
+    }
+  }
+
+  private verifyBackupIntegrity(
+    statusPath: string,
+    backup: BackupRunStatus | null,
+    now: number,
+  ): BackupIntegrityStatus {
+    const checkedAt = new Date(now).toISOString();
+    if (backup?.status !== 'success' || !backup.file) {
+      return {
+        state: 'unknown',
+        checkedAt,
+        sizeBytes: null,
+        sha256: null,
+      };
+    }
+
+    const backupPath = path.join(
+      path.dirname(statusPath),
+      path.basename(backup.file),
+    );
+    const manifestPath = `${backupPath}.sha256.json`;
+
+    try {
+      const fileStats = statSync(backupPath);
+      const manifest = JSON.parse(
+        readFileSync(manifestPath, 'utf8'),
+      ) as BackupRunStatus;
+      const sha256 = createHash('sha256')
+        .update(readFileSync(backupPath))
+        .digest('hex');
+      const valid =
+        manifest.file === path.basename(backupPath) &&
+        manifest.sizeBytes === fileStats.size &&
+        manifest.sha256 === sha256 &&
+        backup.sizeBytes === fileStats.size &&
+        backup.sha256 === sha256;
+
+      return {
+        state: valid ? 'valid' : 'invalid',
+        checkedAt,
+        sizeBytes: fileStats.size,
+        sha256,
+      };
+    } catch (error) {
+      const errorCode = (error as NodeJS.ErrnoException).code;
+      return {
+        state: errorCode === 'ENOENT' ? 'missing' : 'invalid',
+        checkedAt,
+        sizeBytes: null,
+        sha256: null,
+      };
     }
   }
 

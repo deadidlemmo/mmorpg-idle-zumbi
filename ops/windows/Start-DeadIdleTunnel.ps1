@@ -1,17 +1,29 @@
 [CmdletBinding()]
-param()
+param(
+    [string]$StateRoot = '',
+    [string]$TokenFile = ''
+)
 
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $frontendRoot = Join-Path $repoRoot 'frontend'
-$stateRoot = Join-Path $env:LOCALAPPDATA 'DeadIdle'
+if (-not $StateRoot) {
+    $StateRoot = Join-Path $env:LOCALAPPDATA 'DeadIdle'
+}
+if (-not $TokenFile) {
+    $TokenFile = Join-Path $env:ProgramData 'DeadIdle\secrets\cloudflared-token.txt'
+}
 $logRoot = Join-Path $stateRoot 'logs'
 $supervisorLog = Join-Path $logRoot 'tunnel-supervisor.log'
 $stdoutLog = Join-Path $logRoot 'tunnel.stdout.log'
 $stderrLog = Join-Path $logRoot 'tunnel.stderr.log'
 $healthUrl = 'https://deadidle-api.botpokeidle.com.br/health'
 $tunnelName = 'deadidle-local-api'
+$cloudflaredPath = @(
+    (Join-Path $env:ProgramData 'DeadIdle\bin\cloudflared.exe'),
+    (Get-Command cloudflared.exe -ErrorAction SilentlyContinue).Source
+) | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
 
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
 
@@ -89,20 +101,28 @@ while ($true) {
     }
 
     $consecutiveFailures = 0
-    $npmPath = (Get-Command npm.cmd -ErrorAction Stop).Source
-    Write-SupervisorLog 'Iniciando o tunel nomeado pelo Wrangler.'
-
-    Push-Location $frontendRoot
     try {
-        & $npmPath exec --yes wrangler -- tunnel run $tunnelName --log-level info >> $stdoutLog 2>> $stderrLog
-        $exitCode = $LASTEXITCODE
+        if ($cloudflaredPath -and (Test-Path -LiteralPath $TokenFile)) {
+            Write-SupervisorLog 'Iniciando o tunel nomeado com token de servico.'
+            & $cloudflaredPath tunnel run --token-file $TokenFile --loglevel info --metrics 127.0.0.1:20241 >> $stdoutLog 2>> $stderrLog
+            $exitCode = $LASTEXITCODE
+        }
+        else {
+            $npmPath = (Get-Command npm.cmd -ErrorAction Stop).Source
+            Write-SupervisorLog 'Token de servico ausente; iniciando o tunel pelo Wrangler.'
+            Push-Location $frontendRoot
+            try {
+                & $npmPath exec --yes wrangler -- tunnel run $tunnelName --log-level info >> $stdoutLog 2>> $stderrLog
+                $exitCode = $LASTEXITCODE
+            }
+            finally {
+                Pop-Location
+            }
+        }
     }
     catch {
         $exitCode = -1
         Write-SupervisorLog "Falha ao iniciar o tunel: $($_.Exception.Message)"
-    }
-    finally {
-        Pop-Location
     }
 
     Write-SupervisorLog "Processo do tunel encerrou. ExitCode=$exitCode."

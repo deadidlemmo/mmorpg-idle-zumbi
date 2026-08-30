@@ -307,7 +307,7 @@ export function calculateDerivedCombatStats(
       break;
 
     case 'assassino':
-      attack = stats.agility + stats.precision;
+      attack = stats.agility + stats.precision + (safeLevel === 1 ? 1 : 0);
       break;
 
     case 'medico':

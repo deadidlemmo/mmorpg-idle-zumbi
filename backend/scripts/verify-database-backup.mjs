@@ -1,9 +1,11 @@
+import 'dotenv/config';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { getErrorMessage, updateBackupStatus } from './backup-status.mjs';
+import { resolvePostgresCommand } from './postgres-cli.mjs';
 
 const databaseUrl = process.env.DATABASE_URL;
 const backupArgument = process.argv.find((argument) =>
@@ -24,11 +26,15 @@ verificationUrl.pathname = `/${verificationDatabase}`;
 let databaseCreated = false;
 
 function run(command, args) {
-  const result = spawnSync(command, args, {
+  const resolvedCommand = resolvePostgresCommand(command);
+  const result = spawnSync(resolvedCommand, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
+  if (result.error) {
+    throw result.error;
+  }
   if (result.status !== 0) {
     throw new Error(`${command} falhou: ${result.stderr || result.stdout}`);
   }

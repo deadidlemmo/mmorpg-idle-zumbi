@@ -28,6 +28,25 @@ function buildStatEquipment(count: number, tier = 1, enhancementLevel = 0) {
 }
 
 describe('equipment progression', () => {
+  it('normalizes the Assassino opening without changing later levels', () => {
+    const assassinClass = {
+      name: 'Assassino',
+      baseStrength: 5,
+      baseVitality: 2,
+      baseAgility: 8,
+      basePrecision: 8,
+      baseTechnique: 5,
+      baseWillpower: 2,
+    };
+
+    expect(
+      calculateFullStats(assassinClass, [], 1).derivedCombatStats.attack,
+    ).toBe(17);
+    expect(
+      calculateFullStats(assassinClass, [], 2).derivedCombatStats.attack,
+    ).toBe(20);
+  });
+
   it('unlocks combat bonuses at two, four and six crafted pieces', () => {
     expect(getEquipmentProgression(buildEquipment(1))).toMatchObject({
       craftedPieces: 1,

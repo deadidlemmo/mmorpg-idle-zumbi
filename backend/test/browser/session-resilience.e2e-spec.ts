@@ -424,11 +424,7 @@ test.describe('resiliencia da sessao e tutorial', () => {
     const permanentObjective = page.getByRole('complementary', {
       name: 'Objetivo inicial permanente',
     });
-    await expect(permanentObjective).toBeVisible();
-    await expect(permanentObjective.getByText('0/6')).toBeVisible();
-    await expect(permanentObjective.getByText('Recurso')).toBeVisible();
-    await expect(permanentObjective.getByText('T1 criado')).toBeVisible();
-    await expect(permanentObjective.getByText('Slots')).toBeVisible();
+    await expect(permanentObjective).toHaveCount(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect

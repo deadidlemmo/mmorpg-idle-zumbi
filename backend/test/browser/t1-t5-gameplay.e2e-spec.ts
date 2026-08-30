@@ -9,6 +9,7 @@ import {
   type APIRequestContext,
   type Page,
 } from '@playwright/test';
+import { getEquipmentProgression } from '../../src/common/utils/stats.util';
 
 const apiUrl = process.env.E2E_API_URL ?? 'http://127.0.0.1:3100';
 const accessTokenKey = 'dead_idle_access_token';
@@ -98,7 +99,7 @@ type QaCharacter = {
 type CraftResponse = {
   craftedItem: { id: string; slot: ItemSlot; tier: number; quantity: number };
   consumed: Array<{ itemId: string; quantity: number }>;
-  craftingSession: { id: string; status: string };
+  craftingSession: { id: string; status: string; completesAt: string };
 };
 
 const qaCharacters: QaCharacter[] = [];
@@ -113,7 +114,7 @@ function getFixtureRecipes(character: QaCharacter) {
 }
 
 function sumStats(items: EquipmentFixture[]) {
-  return items.reduce(
+  const totals = items.reduce(
     (total, item) => ({
       strength: total.strength + item.strengthBonus,
       vitality: total.vitality + item.vitalityBonus,
@@ -131,6 +132,22 @@ function sumStats(items: EquipmentFixture[]) {
       willpower: 0,
     },
   );
+  const { bonusPercent } = getEquipmentProgression(items);
+
+  if (bonusPercent <= 0) {
+    return totals;
+  }
+
+  const multiplier = 1 + bonusPercent / 100;
+
+  return {
+    strength: Math.round(totals.strength * multiplier),
+    vitality: Math.round(totals.vitality * multiplier),
+    agility: Math.round(totals.agility * multiplier),
+    precision: Math.round(totals.precision * multiplier),
+    technique: Math.round(totals.technique * multiplier),
+    willpower: Math.round(totals.willpower * multiplier),
+  };
 }
 
 async function authenticatePage(page: Page, character: QaCharacter) {
@@ -892,19 +909,24 @@ test.describe('ciclo jogável de equipamentos T1-T5', () => {
       )
       .toBe(true);
 
-    await prisma.craftingSession.update({
-      where: { id: craftBody.craftingSession.id },
-      data: { completesAt: new Date(Date.now() - 1_000) },
-    });
+    const completionTimeoutMs = Math.max(
+      10_000,
+      Date.parse(craftBody.craftingSession.completesAt) - Date.now() + 5_000,
+    );
 
     await expect
-      .poll(async () =>
-        prisma.inventoryItem.findUnique({
-          where: {
-            characterId_itemId: { characterId: primary.id, itemId: fixture.id },
-          },
-          select: { quantity: true },
-        }),
+      .poll(
+        async () =>
+          prisma.inventoryItem.findUnique({
+            where: {
+              characterId_itemId: {
+                characterId: primary.id,
+                itemId: fixture.id,
+              },
+            },
+            select: { quantity: true },
+          }),
+        { timeout: completionTimeoutMs },
       )
       .toEqual({ quantity: fixture.outputQuantity });
 

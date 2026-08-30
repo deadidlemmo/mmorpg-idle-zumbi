@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+    [string]$StateRoot = ''
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -7,12 +9,18 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $backendRoot = Join-Path $repoRoot 'backend'
 $composeFile = Join-Path $repoRoot 'infra\docker-compose.yml'
 $mainFile = Join-Path $backendRoot 'dist\main.js'
-$stateRoot = Join-Path $env:LOCALAPPDATA 'DeadIdle'
+if (-not $StateRoot) {
+    $StateRoot = Join-Path $env:LOCALAPPDATA 'DeadIdle'
+}
 $logRoot = Join-Path $stateRoot 'logs'
 $supervisorLog = Join-Path $logRoot 'backend-supervisor.log'
 $stdoutLog = Join-Path $logRoot 'backend.stdout.log'
 $stderrLog = Join-Path $logRoot 'backend.stderr.log'
 $healthUrl = 'http://127.0.0.1:3000/health'
+$dockerPath = @(
+    (Get-Command docker.exe -ErrorAction SilentlyContinue).Source,
+    (Join-Path $env:ProgramFiles 'Docker\Docker\resources\bin\docker.exe')
+) | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
 
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
 
@@ -51,8 +59,12 @@ function Test-BackendHealth {
 }
 
 function Test-DockerReady {
+    if (-not $dockerPath) {
+        return $false
+    }
+
     try {
-        & docker info *> $null
+        & $dockerPath info *> $null
         return $LASTEXITCODE -eq 0
     }
     catch {
@@ -78,6 +90,12 @@ function Wait-DockerReady {
 function Start-DockerDesktopIfNeeded {
     if (Test-DockerReady) {
         return $true
+    }
+
+    if ([System.Security.Principal.WindowsIdentity]::GetCurrent().IsSystem) {
+        Start-Service -Name 'com.docker.service' -ErrorAction SilentlyContinue
+        Write-SupervisorLog 'Aguardando o Docker Desktop Service no contexto SYSTEM.'
+        return Wait-DockerReady -TimeoutSeconds 300
     }
 
     $dockerDesktopCandidates = @(
@@ -107,7 +125,7 @@ function Ensure-Infrastructure {
     $previousErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        $composeOutput = & docker compose -f $composeFile up -d 2>&1
+        $composeOutput = & $dockerPath compose -f $composeFile up -d 2>&1
         $composeExitCode = $LASTEXITCODE
     }
     finally {

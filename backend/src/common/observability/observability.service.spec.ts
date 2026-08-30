@@ -32,8 +32,16 @@ describe('ObservabilityService', () => {
         state: 'healthy',
         maxAgeHours: 26,
         verificationMaxAgeHours: 168,
+        offsiteMaxAgeHours: 4,
         backupAgeHours: 1,
         verificationAgeHours: 1,
+        offsiteAgeHours: 1,
+        integrity: {
+          state: 'valid',
+          checkedAt: '2026-08-21T11:00:00.000Z',
+          sizeBytes: 1024,
+          sha256: 'abc',
+        },
         lastBackup: {
           status: 'success',
           createdAt: '2026-08-21T10:00:00.000Z',
@@ -43,6 +51,10 @@ describe('ObservabilityService', () => {
           verifiedAt: '2026-08-21T10:30:00.000Z',
         },
         lastRestore: null,
+        lastOffsite: {
+          status: 'success',
+          uploadedAt: '2026-08-21T10:00:00.000Z',
+        },
       })),
     };
     const dispatcher = { dispatch: jest.fn().mockResolvedValue(undefined) };
@@ -124,6 +136,8 @@ describe('ObservabilityService', () => {
       state: 'healthy',
       backupAgeHours: 1,
       verificationAgeHours: 1,
+      offsiteAgeHours: 1,
+      integrity: 'valid',
     });
     expect(health.backup).not.toHaveProperty('lastBackup');
     expect(health.backup).not.toHaveProperty('lastRestore');

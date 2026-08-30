@@ -254,7 +254,10 @@ test.describe('pets aplicados às atividades', () => {
     const incubator = page.locator('.pets-incubator');
     await expect(incubator).toBeVisible();
     await expect(page.locator('.pets-page__drop-source')).toContainText(
-      'Drop de Ameaça Global',
+      'Casulos encontrados em',
+    );
+    await expect(page.locator('.pets-page__drop-source')).toContainText(
+      'Ameaças Globais',
     );
     await expect(
       page.getByText('Escolher casulo', { exact: true }),

@@ -12,7 +12,7 @@ import {
   type LootNotificationContextValue,
   type LootNotificationPayload,
 } from './lootNotificationContext';
-import { selectLatestNotification } from './lootNotificationQueue';
+import { enqueueNotifications } from './lootNotificationQueue';
 import './loot-notifications.css';
 
 interface LootNotificationToast extends LootNotificationPayload {
@@ -26,6 +26,7 @@ interface LootNotificationProviderProps {
 
 
 const MAX_PROCESSED_KEYS = 240;
+const MAX_NOTIFICATION_QUEUE_SIZE = 5;
 const LOOT_NOTIFICATION_TTL_MS = 4200;
 
 function getSourceLabel(source?: string | null) {
@@ -80,16 +81,8 @@ export function LootNotificationProvider({
     [],
   );
   const processedKeysRef = useRef<Set<string>>(new Set());
-  const timersRef = useRef<Map<string, number>>(new Map());
 
   const removeNotification = useCallback((id: string) => {
-    const timeoutId = timersRef.current.get(id);
-
-    if (timeoutId !== undefined) {
-      window.clearTimeout(timeoutId);
-      timersRef.current.delete(id);
-    }
-
     setNotifications((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
@@ -143,26 +136,16 @@ export function LootNotificationProvider({
       }
 
       processedKeysRef.current = trimProcessedKeys(processedKeysRef.current);
-      const latestToast = selectLatestNotification(nextToasts);
-
-      if (!latestToast) {
-        return;
-      }
-
-      for (const timeoutId of timersRef.current.values()) {
-        window.clearTimeout(timeoutId);
-      }
-
-      timersRef.current.clear();
-      setNotifications([latestToast]);
-
-      const timeoutId = window.setTimeout(() => {
-        removeNotification(latestToast.id);
-      }, LOOT_NOTIFICATION_TTL_MS);
-
-      timersRef.current.set(latestToast.id, timeoutId);
+      setNotifications((current) =>
+        enqueueNotifications(
+          current,
+          nextToasts,
+          MAX_NOTIFICATION_QUEUE_SIZE,
+          (notification) => notification.kind === 'combat-result',
+        ),
+      );
     },
-    [removeNotification],
+    [],
   );
 
   const notifyLoot = useCallback(
@@ -172,17 +155,19 @@ export function LootNotificationProvider({
     [notifyLootBatch],
   );
 
+  const activeNotificationId = notifications[0]?.id ?? null;
+
   useEffect(() => {
-    const activeTimers = timersRef.current;
+    if (!activeNotificationId) {
+      return;
+    }
 
-    return () => {
-      for (const timeoutId of activeTimers.values()) {
-        window.clearTimeout(timeoutId);
-      }
+    const timeoutId = window.setTimeout(() => {
+      removeNotification(activeNotificationId);
+    }, LOOT_NOTIFICATION_TTL_MS);
 
-      activeTimers.clear();
-    };
-  }, []);
+    return () => window.clearTimeout(timeoutId);
+  }, [activeNotificationId, removeNotification]);
 
   const value = useMemo<LootNotificationContextValue>(
     () => ({ notifyLoot, notifyLootBatch }),
@@ -199,7 +184,7 @@ export function LootNotificationProvider({
         aria-atomic="true"
         aria-relevant="additions text"
       >
-        {notifications.map((notification) => (
+        {notifications.slice(0, 1).map((notification) => (
           <article
             key={notification.id}
             className="loot-notification-card"

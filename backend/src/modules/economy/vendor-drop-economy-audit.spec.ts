@@ -27,11 +27,11 @@ describe('vendor drop economy audit', () => {
     expect(errante.classes).toHaveLength(4);
     expect(errante.encounterSharePercent).toBe(42);
     expect(errante.expectedGoldPerKill).toBe(4.5);
-    expect(errante.averageGoldPerHourIfExclusive).toBe(939.69);
-    expect(errante.averageWeightedGoldPerHour).toBe(369.44);
+    expect(errante.averageGoldPerHourIfExclusive).toBe(952.92);
+    expect(errante.averageWeightedGoldPerHour).toBe(371.5);
 
     expect(report.tiers.map((tier) => tier.averageGrossGoldPerHour)).toEqual([
-      784.91, 908.44, 1147.27, 1803.57, 3542.12,
+      789.29, 908.44, 1147.27, 1803.57, 3542.12,
     ]);
   });
 
@@ -63,7 +63,7 @@ describe('vendor drop economy audit', () => {
       maximumQuantityWhenDropped: 2,
       averageGoldPerDropEvent: 3,
       maximumGoldPerDropEvent: 4,
-      averageGoldPerHour: 263.88,
+      averageGoldPerHour: 265.36,
       goldSharePercent: 33.62,
     });
 

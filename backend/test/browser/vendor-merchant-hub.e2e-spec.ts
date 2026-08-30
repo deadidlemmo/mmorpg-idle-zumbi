@@ -102,7 +102,7 @@ test.describe('hub de mercadores', () => {
       merchantList.getByText('Mercador', { exact: true }),
     ).toBeVisible();
     await expect(
-      merchantList.getByText('Vende', { exact: true }),
+      merchantList.getByText('Especialidade', { exact: true }),
     ).toBeVisible();
 
     const heroArtwork = page.locator('.merchant-hub-hero__portrait img');
@@ -136,9 +136,9 @@ test.describe('hub de mercadores', () => {
       name: 'Abrir Balcão da Mara',
     });
     await expect(merchantCard).toBeVisible();
-    await expect(merchantCard.locator('.merchant-card__tag')).toHaveText([
-      'Poções',
-    ]);
+    await expect(
+      merchantCard.locator('.merchant-card__offer-copy strong'),
+    ).toHaveText(['Poções']);
     await expect(merchantCard).toHaveAttribute(
       'href',
       `/dashboard/${player.characterId}/consumables/mara`,
@@ -178,7 +178,7 @@ test.describe('hub de mercadores', () => {
         document.querySelector('.merchant-card h3')!,
       ).fontFamily,
       merchantBody: getComputedStyle(
-        document.querySelector('.merchant-card__body > span')!,
+        document.querySelector('.merchant-card__npc > span')!,
       ).fontFamily,
     }));
     expect(typography.heroTitle).toContain('Rajdhani');
@@ -189,7 +189,7 @@ test.describe('hub de mercadores', () => {
     const desktopBox = await merchantCard.boundingBox();
     expect(desktopBox).not.toBeNull();
     expect(desktopBox!.height).toBeGreaterThanOrEqual(80);
-    expect(desktopBox!.height).toBeLessThan(110);
+    expect(desktopBox!.height).toBeLessThanOrEqual(124);
     await page.screenshot({
       path: testInfo.outputPath('merchant-hub-desktop.png'),
       fullPage: true,
@@ -199,7 +199,7 @@ test.describe('hub de mercadores', () => {
     const mobileBox = await merchantCard.boundingBox();
     expect(mobileBox).not.toBeNull();
     expect(mobileBox!.height).toBeGreaterThanOrEqual(88);
-    expect(mobileBox!.height).toBeLessThan(120);
+    expect(mobileBox!.height).toBeLessThanOrEqual(136);
     const mobileAvatarBox = await merchantCard
       .locator('.merchant-card__avatar')
       .boundingBox();

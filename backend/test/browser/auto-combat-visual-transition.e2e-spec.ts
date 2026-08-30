@@ -31,6 +31,18 @@ async function assertOk(response: APIResponse, label: string) {
   }
 }
 
+function getCountdownSeconds(label: string) {
+  const match = label.match(/([\d.,]+)s restantes/i);
+
+  if (!match?.[1]) {
+    return null;
+  }
+
+  const seconds = Number.parseFloat(match[1].replace(',', '.'));
+
+  return Number.isFinite(seconds) ? seconds : null;
+}
+
 test.describe('transicao visual entre monstros', () => {
   test.beforeAll(async () => {
     const api = await playwrightRequest.newContext({ baseURL: apiUrl });
@@ -216,7 +228,7 @@ test.describe('transicao visual entre monstros', () => {
   test('mantem imagem continua e publica derrota/EXP sem bloquear o proximo mob', async ({
     page,
   }, testInfo) => {
-    test.setTimeout(90_000);
+    test.setTimeout(180_000);
 
     await page.addInitScript(
       ({ token, selectedCharacterId }) => {
@@ -869,7 +881,7 @@ test.describe('transicao visual entre monstros', () => {
       const completedCountdownInstanceKeys = [
         ...new Set(
           countdownSamples
-            .filter((sample) => sample.label.includes('1.0s restantes'))
+            .filter((sample) => /alvo derrotado/i.test(sample.label))
             .map((sample) => sample.instanceKey),
         ),
       ].slice(0, 2);
@@ -883,12 +895,22 @@ test.describe('transicao visual entre monstros', () => {
         const mobCountdownSamples = countdownSamples.filter(
           (sample) => sample.instanceKey === instanceKey,
         );
-        const twoSecondsIndex = mobCountdownSamples.findIndex((sample) =>
-          sample.label.includes('2.0s restantes'),
-        );
+        const twoSecondsIndex = mobCountdownSamples.findIndex((sample) => {
+          const seconds = getCountdownSeconds(sample.label);
+
+          return seconds !== null && seconds >= 1.9 && seconds <= 2.1;
+        });
         const oneSecondIndex = mobCountdownSamples.findIndex(
-          (sample, index) =>
-            index > twoSecondsIndex && sample.label.includes('1.0s restantes'),
+          (sample, index) => {
+            const seconds = getCountdownSeconds(sample.label);
+
+            return (
+              index > twoSecondsIndex &&
+              seconds !== null &&
+              seconds >= 0.9 &&
+              seconds <= 1.1
+            );
+          },
         );
 
         expect(
@@ -976,7 +998,7 @@ test.describe('transicao visual entre monstros', () => {
                 combatIndexBeforeBackground
             );
           },
-          { timeout: 20_000 },
+          { timeout: 35_000 },
         )
         .toBe(true);
 

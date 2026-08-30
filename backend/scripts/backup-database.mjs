@@ -1,9 +1,11 @@
+import 'dotenv/config';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { getErrorMessage, updateBackupStatus } from './backup-status.mjs';
+import { resolvePostgresCommand } from './postgres-cli.mjs';
 
 const outputArgument = process.argv.find((argument) =>
   argument.startsWith('--output='),
@@ -23,7 +25,7 @@ try {
   await mkdir(path.dirname(outputPath), { recursive: true });
 
   const result = spawnSync(
-    'pg_dump',
+    resolvePostgresCommand('pg_dump'),
     [
       `--dbname=${postgresCliUrl.toString()}`,
       '--format=custom',
@@ -35,6 +37,9 @@ try {
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
   );
 
+  if (result.error) {
+    throw result.error;
+  }
   if (result.status !== 0) {
     throw new Error(`pg_dump falhou: ${result.stderr || result.stdout}`);
   }
