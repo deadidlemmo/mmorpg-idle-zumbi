@@ -4,6 +4,7 @@
 
 .dashboard-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   color: var(--text-primary);
@@ -27,6 +28,7 @@
   flex-direction: column;
   gap: 0.82rem;
   height: 100vh;
+  height: 100dvh;
   padding: 1rem;
   overflow-y: auto;
   background:

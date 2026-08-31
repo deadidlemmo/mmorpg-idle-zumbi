@@ -8,6 +8,7 @@
   display: grid;
   grid-template-columns: 252px minmax(0, 1fr);
   min-height: 100vh;
+  min-height: 100dvh;
   color: var(--text-primary);
   font-family: var(--font-body);
   background:
@@ -24,6 +25,7 @@
   flex-direction: column;
   width: 252px;
   height: 100vh;
+  height: 100dvh;
   min-height: 0;
   padding: 1rem 0.8rem;
   background: var(--menu-bg);
@@ -186,6 +188,7 @@
   display: flex;
   min-width: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   flex-direction: column;
 }
 

@@ -18,6 +18,7 @@
 
 .character-page {
   min-height: 100vh;
+  min-height: 100dvh;
   padding: clamp(1rem, 2.6vw, 1.75rem);
   background:
     radial-gradient(
