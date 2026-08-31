@@ -38,6 +38,16 @@ export interface StorefrontOfferDefinition {
 
 export const PREMIUM_PASS_ITEM_SLUG = 'passe-premium-30-dias';
 
+export const PREMIUM_CORE_BENEFITS = [
+  '+20% de EXP de Personagem',
+  '+20% de EXP de Rastreio',
+  '+20% de EXP de Expedições',
+  '+20% de EXP de Criação',
+  'Até 12 horas de progresso idle',
+  'Coleção Último Abrigo enquanto Premium estiver ativo',
+  'Benefícios válidos para toda a conta',
+] as const;
+
 export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
   {
     key: 'premium-abrigo-monthly',
@@ -51,12 +61,7 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
     priceCents: 1990,
     premiumDays: 30,
     tradeable: false,
-    benefits: [
-      '+20% de EXP em gathering, batalha e caça',
-      'Até 12 horas de progresso idle',
-      'Coleção completa Último Abrigo',
-      'Benefícios válidos para toda a conta',
-    ],
+    benefits: PREMIUM_CORE_BENEFITS,
   },
   {
     key: 'premium-abrigo-30d-item',
@@ -70,11 +75,7 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
     premiumDays: 30,
     itemSlug: PREMIUM_PASS_ITEM_SLUG,
     tradeable: true,
-    benefits: [
-      '30 dias de Premium ao utilizar',
-      'Entregue como item no inventário',
-      'Sem renovação automática',
-    ],
+    benefits: PREMIUM_CORE_BENEFITS,
   },
   {
     key: 'cash-100',

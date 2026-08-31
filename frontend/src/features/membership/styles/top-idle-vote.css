@@ -103,6 +103,12 @@
   color: #d9ec72;
 }
 
+.topidle-login-card__icon .premium-placeholder-icon__mark {
+  display: block;
+  width: 34px;
+  height: 34px;
+}
+
 .topidle-login-card__heading > div {
   display: grid;
   min-width: 0;

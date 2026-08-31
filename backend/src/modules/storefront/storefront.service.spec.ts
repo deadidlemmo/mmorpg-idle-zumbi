@@ -121,6 +121,22 @@ describe('StorefrontService', () => {
       pricedAt1990.every((offer) => offer.price.formatted.includes('19,90')),
     ).toBe(true);
 
+    const premiumPlan = catalog.offers.find(
+      (offer) => offer.key === 'premium-abrigo-monthly',
+    );
+    const premiumPass = catalog.offers.find(
+      (offer) => offer.key === 'premium-abrigo-30d-item',
+    );
+    expect(premiumPass?.benefits).toEqual(premiumPlan?.benefits);
+    expect(premiumPlan?.benefits).toEqual(
+      expect.arrayContaining([
+        '+20% de EXP de Personagem',
+        '+20% de EXP de Rastreio',
+        '+20% de EXP de Expedições',
+        '+20% de EXP de Criação',
+      ]),
+    );
+
     const helix = catalog.offers.find(
       (offer) => offer.key === 'pacote-nucleo-helix',
     );

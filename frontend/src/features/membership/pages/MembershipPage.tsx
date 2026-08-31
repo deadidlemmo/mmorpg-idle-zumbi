@@ -3,7 +3,6 @@ import {
   useMemo,
   useState,
   type CSSProperties,
-  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -16,16 +15,19 @@ import {
   Crown,
   Frame,
   Gauge,
+  Hammer,
   Image as ImageIcon,
   LoaderCircle,
   LockKeyhole,
   PackageOpen,
   PanelsTopLeft,
+  Pickaxe,
+  Radar,
   ShieldCheck,
   Sparkles,
+  Swords,
   UserRound,
   X,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
@@ -44,7 +46,10 @@ import {
 } from "../api/storefront.api";
 import { getTopIdleRewardStatus } from "../api/top-idle.api";
 import { TopIdleVoteBadge } from "../TopIdleVoteBadge";
-import { MEMBERSHIP_BENEFIT_LABELS } from "../constants/membership-benefits";
+import {
+  MEMBERSHIP_BENEFIT_LABELS,
+  MEMBERSHIP_XP_BENEFIT_TOPICS,
+} from "../constants/membership-benefits";
 import type {
   StorefrontCatalogResponse,
   StorefrontCosmeticItem,
@@ -307,13 +312,11 @@ function MembershipPurchaseButton({
 
 function PremiumOptionCard({
   offer,
-  coverImage,
   checkoutEnabled,
   isCheckingOut,
   onCheckout,
 }: {
   offer: StorefrontOffer;
-  coverImage: string | null;
   checkoutEnabled: boolean;
   isCheckingOut: boolean;
   onCheckout: (offer: StorefrontOffer) => void;
@@ -326,35 +329,47 @@ function PremiumOptionCard({
       className={`membership-premium-option${isMonthlyPlan ? " is-primary" : ""}`}
       style={{ "--offer-accent": offer.accentColor } as CSSProperties}
     >
-      <div
-        className="membership-premium-option__visual"
-        style={
-          coverImage ? { backgroundImage: `url("${coverImage}")` } : undefined
-        }
-      >
-        <span>{isMonthlyPlan ? "Plano mensal" : "Item de 30 dias"}</span>
-        <PremiumPlaceholderIcon className="membership-premium-icon" />
-      </div>
-
       <div className="membership-premium-option__body">
-        <header>
-          <div>
+        <header className="membership-premium-option__header">
+          <PremiumPlaceholderIcon className="membership-premium-icon" />
+          <div className="membership-premium-option__identity">
+            <span className="membership-premium-option__eyebrow">
+              {isMonthlyPlan ? "Plano mensal" : "Consumível de 30 dias"}
+            </span>
             <h3>{offer.name}</h3>
             <span>{offer.billingLabel}</span>
           </div>
-          <strong>{offer.price.formatted}</strong>
+          <strong className="membership-premium-option__price">
+            {offer.price.formatted}
+          </strong>
         </header>
 
         <p>{offer.description}</p>
 
-        <ul>
-          {offer.benefits.map((benefit) => (
-            <li key={benefit}>
-              <Check size={15} aria-hidden="true" />
-              <span>{benefit}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="membership-premium-option__activation">
+          {isMonthlyPlan ? (
+            <BadgeCheck size={19} aria-hidden="true" />
+          ) : (
+            <PackageOpen size={19} aria-hidden="true" />
+          )}
+          <span>
+            <strong>
+              {isMonthlyPlan
+                ? "Ativação direta na conta"
+                : "Consumível entregue na Mochila"}
+            </strong>
+            <small>
+              {isMonthlyPlan
+                ? "Renovação mensal até o cancelamento."
+                : "Ative quando quiser, sem renovação automática."}
+            </small>
+          </span>
+        </div>
+
+        <div className="membership-premium-option__shared-benefits">
+          <Check size={15} aria-hidden="true" />
+          <span>Inclui todos os benefícios Premium acima</span>
+        </div>
 
         {activeUntil ? <small>Ativo até {activeUntil}</small> : null}
 
@@ -370,24 +385,24 @@ function PremiumOptionCard({
   );
 }
 
-function MembershipAdvantage({
+function PremiumBenefitTopic({
   icon: Icon,
   value,
   label,
-  children,
+  detail,
 }: {
   icon: LucideIcon;
   value: string;
   label: string;
-  children: ReactNode;
+  detail: string;
 }) {
   return (
-    <article className="membership-advantage">
+    <article className="membership-premium-benefit">
       <Icon size={20} aria-hidden="true" />
       <div>
         <strong>{value}</strong>
         <span>{label}</span>
-        <small>{children}</small>
+        <small>{detail}</small>
       </div>
     </article>
   );
@@ -403,9 +418,7 @@ function TopIdleRewardBanner({ status }: { status: TopIdleRewardStatus }) {
       className="membership-topidle-reward"
       aria-labelledby="membership-topidle-title"
     >
-      <span className="membership-topidle-reward__icon" aria-hidden="true">
-        <Crown size={24} />
-      </span>
+      <PremiumPlaceholderIcon className="membership-topidle-reward__icon" />
 
       <div className="membership-topidle-reward__body">
         <span className="membership-eyebrow">1 dia de Premium</span>
@@ -926,9 +939,6 @@ export function MembershipPage() {
   const checkoutEnabled = Boolean(
     storefront?.checkout.enabled && checkoutProvider,
   );
-  const premiumCoverImage = getCosmeticImage(
-    premiumPlan?.collection?.coverAssetKey,
-  );
   const premiumCosmeticCount = premiumPlan?.collection?.items.length ?? 0;
 
   async function handleCheckout(offer: StorefrontOffer) {
@@ -1038,12 +1048,74 @@ export function MembershipPage() {
             role="tabpanel"
             aria-labelledby="membership-tab-premium"
           >
+            <section
+              className="membership-premium-benefits"
+              aria-labelledby="membership-premium-benefits-title"
+            >
+              <header className="membership-premium-benefits__header">
+                <PremiumPlaceholderIcon className="membership-premium-benefits__icon" />
+                <div>
+                  <span className="membership-eyebrow">
+                    Incluído no plano e no passe
+                  </span>
+                  <h2 id="membership-premium-benefits-title">
+                    Mais EXP e o dobro de progresso idle
+                  </h2>
+                  <p>
+                    As duas opções ativam exatamente os mesmos benefícios em
+                    toda a conta.
+                  </p>
+                </div>
+              </header>
+
+              <div className="membership-premium-benefits__grid">
+                {MEMBERSHIP_XP_BENEFIT_TOPICS.map((benefit) => {
+                  const Icon =
+                    benefit.key === "character"
+                      ? Swords
+                      : benefit.key === "tracking"
+                        ? Radar
+                        : benefit.key === "expeditions"
+                          ? Pickaxe
+                          : Hammer;
+
+                  return (
+                    <PremiumBenefitTopic
+                      key={benefit.key}
+                      icon={Icon}
+                      value={MEMBERSHIP_BENEFIT_LABELS.xpBonus}
+                      label={benefit.label}
+                      detail={benefit.detail}
+                    />
+                  );
+                })}
+                <PremiumBenefitTopic
+                  icon={Clock3}
+                  value={MEMBERSHIP_BENEFIT_LABELS.premiumIdleLimit}
+                  label="de progresso idle"
+                  detail={`Conta gratuita: ${MEMBERSHIP_BENEFIT_LABELS.freeIdleLimit}`}
+                />
+                <PremiumBenefitTopic
+                  icon={Sparkles}
+                  value={String(premiumCosmeticCount)}
+                  label="cosméticos Premium"
+                  detail="Coleção Último Abrigo enquanto ativo"
+                />
+                <PremiumBenefitTopic
+                  icon={ShieldCheck}
+                  value="Toda a conta"
+                  label="um Premium para todos"
+                  detail="Válido para todos os personagens"
+                />
+              </div>
+            </section>
+
             <header className="membership-section-heading">
               <div>
                 <span className="membership-eyebrow">Comprar Premium</span>
                 <h2>Escolha a forma de ativação</h2>
               </div>
-              <p>Plano mensal ou passe de 30 dias.</p>
+              <p>Os benefícios são iguais. Muda apenas como você ativa.</p>
             </header>
 
             <div className="membership-premium-options">
@@ -1051,7 +1123,6 @@ export function MembershipPage() {
                 <PremiumOptionCard
                   key={offer.key}
                   offer={offer}
-                  coverImage={premiumCoverImage}
                   checkoutEnabled={checkoutEnabled}
                   isCheckingOut={checkingOutOfferKey === offer.key}
                   onCheckout={(selectedOffer) =>
@@ -1064,48 +1135,6 @@ export function MembershipPage() {
             {topIdleReward ? (
               <TopIdleRewardBanner status={topIdleReward} />
             ) : null}
-
-            <section
-              className="membership-premium-benefits"
-              aria-labelledby="membership-premium-benefits-title"
-            >
-              <header>
-                <span className="membership-eyebrow">Vantagens</span>
-                <h2 id="membership-premium-benefits-title">
-                  O que o Premium libera
-                </h2>
-              </header>
-              <div>
-                <MembershipAdvantage
-                  icon={Zap}
-                  value={MEMBERSHIP_BENEFIT_LABELS.xpBonus}
-                  label="de EXP"
-                >
-                  Batalha, caça e expedições
-                </MembershipAdvantage>
-                <MembershipAdvantage
-                  icon={Clock3}
-                  value={MEMBERSHIP_BENEFIT_LABELS.premiumIdleLimit}
-                  label="de progresso idle"
-                >
-                  Conta gratuita: {MEMBERSHIP_BENEFIT_LABELS.freeIdleLimit}
-                </MembershipAdvantage>
-                <MembershipAdvantage
-                  icon={Sparkles}
-                  value={String(premiumCosmeticCount)}
-                  label="cosméticos"
-                >
-                  Coleção Último Abrigo enquanto ativo
-                </MembershipAdvantage>
-                <MembershipAdvantage
-                  icon={ShieldCheck}
-                  value="Toda a conta"
-                  label="benefício compartilhado"
-                >
-                  Válido para todos os personagens
-                </MembershipAdvantage>
-              </div>
-            </section>
           </section>
         ) : null}
 

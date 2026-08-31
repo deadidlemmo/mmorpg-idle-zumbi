@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Clock3, Crown, X } from "lucide-react";
+import { Clock3, X } from "lucide-react";
+import { PremiumPlaceholderIcon } from "../../components/PremiumPlaceholderIcon";
 import { useAuthStore } from "../../store/auth.store";
 import { getTopIdleRewardStatus } from "./api/top-idle.api";
 import type { TopIdleRewardStatus } from "./types/top-idle.types";
@@ -90,9 +91,7 @@ export function TopIdleLoginPrompt() {
         </button>
 
         <div className="topidle-login-card__heading">
-          <span className="topidle-login-card__icon" aria-hidden="true">
-            <Crown size={21} />
-          </span>
+          <PremiumPlaceholderIcon className="topidle-login-card__icon" />
           <div>
             <span>Recompensa por voto</span>
             <h2 id="topidle-login-title">
