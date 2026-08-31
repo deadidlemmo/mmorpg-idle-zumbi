@@ -33,6 +33,7 @@ type PetFixture = {
   characterPetId: string;
   petDefinitionId: string;
   cocoonItemId: string;
+  fragmentItemId: string;
   name: string;
   tier: number;
   specialization: PetSpecialization;
@@ -205,6 +206,7 @@ test.describe('pets aplicados às atividades', () => {
       characterPetId: characterPetIdByDefinition.get(definition.id)!,
       petDefinitionId: definition.id,
       cocoonItemId: definition.cocoonItemId,
+      fragmentItemId: definition.fragmentItemId,
       name: definition.name,
       tier: definition.tier,
       specialization: definition.specialization,
@@ -219,12 +221,18 @@ test.describe('pets aplicados às atividades', () => {
         type: InventoryItemType.MATERIAL,
       })),
     });
-    await prisma.characterEconomyBalance.createMany({
-      data: [1, 2, 3, 4, 5].map((tier) => ({
+    const fragmentItemIdsByTier = new Map(
+      definitions.map((definition) => [
+        definition.tier,
+        definition.fragmentItemId,
+      ]),
+    );
+    await prisma.inventoryItem.createMany({
+      data: [...fragmentItemIdsByTier.values()].map((itemId) => ({
         characterId,
-        currency: EconomyCurrency.WORLD_BOSS_FRAGMENT,
-        tier,
-        balance: 999,
+        itemId,
+        quantity: 999,
+        type: InventoryItemType.MATERIAL,
       })),
     });
     await prisma.character.update({
@@ -359,9 +367,20 @@ test.describe('pets aplicados às atividades', () => {
     await page.goto(
       `/dashboard/${characterId}/resources?currency=WORLD_BOSS_FRAGMENT&tier=1`,
     );
-    await expect(page.locator('.economy-exchange__source-rule')).toContainText(
-      'Casulos são obtidos exclusivamente como drop de Ameaças Globais.',
+    await expect(page).toHaveURL(
+      new RegExp(`/dashboard/${characterId}/inventory$`),
     );
+    await expect(
+      page.getByRole('main', { name: 'Mochila do personagem' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', {
+        name: /Ver detalhes de Fragmento de Ameaça T1/i,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Central de Recursos', exact: true }),
+    ).toHaveCount(0);
     await expect(
       page.getByText('Escolher casulo', { exact: true }),
     ).toHaveCount(0);
@@ -443,17 +462,15 @@ test.describe('pets aplicados às atividades', () => {
       equipped.equippedPetId,
     );
 
-    const balanceBefore =
-      await prisma.characterEconomyBalance.findUniqueOrThrow({
-        where: {
-          characterId_currency_tier: {
-            characterId,
-            currency: EconomyCurrency.WORLD_BOSS_FRAGMENT,
-            tier: 1,
-          },
+    const balanceBefore = await prisma.inventoryItem.findUniqueOrThrow({
+      where: {
+        characterId_itemId: {
+          characterId,
+          itemId: huntingPet.fragmentItemId,
         },
-        select: { balance: true },
-      });
+      },
+      select: { quantity: true },
+    });
     const cocoonBefore = await prisma.inventoryItem.findUniqueOrThrow({
       where: {
         characterId_itemId: {
@@ -489,18 +506,15 @@ test.describe('pets aplicados às atividades', () => {
     expect(results.filter((result) => result.applied)).toHaveLength(1);
     expect(results.filter((result) => !result.applied)).toHaveLength(1);
 
-    const balanceAfter = await prisma.characterEconomyBalance.findUniqueOrThrow(
-      {
-        where: {
-          characterId_currency_tier: {
-            characterId,
-            currency: EconomyCurrency.WORLD_BOSS_FRAGMENT,
-            tier: 1,
-          },
+    const balanceAfter = await prisma.inventoryItem.findUniqueOrThrow({
+      where: {
+        characterId_itemId: {
+          characterId,
+          itemId: huntingPet.fragmentItemId,
         },
-        select: { balance: true },
       },
-    );
+      select: { quantity: true },
+    });
     const cocoonAfter = await prisma.inventoryItem.findUniqueOrThrow({
       where: {
         characterId_itemId: {
@@ -510,7 +524,7 @@ test.describe('pets aplicados às atividades', () => {
       },
       select: { quantity: true },
     });
-    expect(balanceAfter.balance - balanceBefore.balance).toBe(10);
+    expect(balanceAfter.quantity - balanceBefore.quantity).toBe(10);
     expect(cocoonBefore.quantity - cocoonAfter.quantity).toBe(1);
 
     const choicePet = findPet(PetSpecialization.GATHERING_COLETA, 1);
@@ -566,18 +580,17 @@ test.describe('pets aplicados às atividades', () => {
       select: { quantity: true },
     });
     const balanceAfterRejectedChoice =
-      await prisma.characterEconomyBalance.findUniqueOrThrow({
+      await prisma.inventoryItem.findUniqueOrThrow({
         where: {
-          characterId_currency_tier: {
+          characterId_itemId: {
             characterId,
-            currency: EconomyCurrency.WORLD_BOSS_FRAGMENT,
-            tier: 1,
+            itemId: choicePet.fragmentItemId,
           },
         },
-        select: { balance: true },
+        select: { quantity: true },
       });
     expect(choiceCocoonAfter.quantity).toBe(choiceCocoonBefore.quantity);
-    expect(balanceAfterRejectedChoice.balance).toBe(balanceAfter.balance);
+    expect(balanceAfterRejectedChoice.quantity).toBe(balanceAfter.quantity);
   });
 
   test('aplica a troca de pet somente no próximo ciclo de gathering e preserva progresso offline', async ({

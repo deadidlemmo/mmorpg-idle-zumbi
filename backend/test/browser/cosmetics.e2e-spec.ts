@@ -371,8 +371,26 @@ test.describe('cosméticos e inspeção pública', () => {
         exact: true,
       }),
     ).toBeVisible();
-    await expect(page.getByText('R$ 19,90', { exact: true })).toBeVisible();
-    await expect(page.getByText('R$ 24,90', { exact: true })).toBeVisible();
+    const monthlyPremiumCard = page
+      .locator('.membership-premium-option')
+      .filter({
+        has: page.getByRole('heading', {
+          name: 'Premium do Abrigo',
+          exact: true,
+        }),
+      });
+    const premiumItemCard = page.locator('.membership-premium-option').filter({
+      has: page.getByRole('heading', {
+        name: 'Passe Premium de 30 dias',
+        exact: true,
+      }),
+    });
+    await expect(
+      monthlyPremiumCard.getByText('R$ 19,90', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      premiumItemCard.getByText('R$ 19,90', { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText('+20%', { exact: true })).toBeVisible();
     await expect(page.getByText('12 horas', { exact: true })).toBeVisible();
     await expect(page.getByText('38', { exact: true })).toBeVisible();
@@ -390,7 +408,7 @@ test.describe('cosméticos e inspeção pública', () => {
     for (const [amount, price] of [
       ['100', 'R$ 9,90'],
       ['200', 'R$ 17,90'],
-      ['500', 'R$ 39,90'],
+      ['500', 'R$ 19,90'],
     ] as const) {
       const card = page.locator(`.membership-cash-card--cash-${amount}`);
       await expect(card).toHaveCount(1);
@@ -406,6 +424,17 @@ test.describe('cosméticos e inspeção pública', () => {
     await expect(
       page.getByRole('heading', { name: 'Protocolo Carmesim', exact: true }),
     ).toBeVisible();
+    for (const packageName of ['Núcleo Helix', 'Protocolo Carmesim']) {
+      const packageCard = page.locator('.membership-package-card').filter({
+        has: page.getByRole('heading', {
+          name: packageName,
+          exact: true,
+        }),
+      });
+      await expect(
+        packageCard.getByText('R$ 19,90', { exact: true }),
+      ).toBeVisible();
+    }
     await expect(page.getByText('Market e trade entre jogadores')).toHaveCount(
       0,
     );
