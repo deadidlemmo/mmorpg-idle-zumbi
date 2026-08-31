@@ -14,7 +14,6 @@ import {
   Coins,
   CreditCard,
   Crown,
-  ExternalLink,
   Frame,
   Gauge,
   Image as ImageIcon,
@@ -25,7 +24,6 @@ import {
   ShieldCheck,
   Sparkles,
   UserRound,
-  Vote,
   X,
   Zap,
   type LucideIcon,
@@ -45,6 +43,7 @@ import {
   getStorefrontOrder,
 } from "../api/storefront.api";
 import { getTopIdleRewardStatus } from "../api/top-idle.api";
+import { TopIdleVoteBadge } from "../TopIdleVoteBadge";
 import { MEMBERSHIP_BENEFIT_LABELS } from "../constants/membership-benefits";
 import type {
   StorefrontCatalogResponse,
@@ -405,15 +404,17 @@ function TopIdleRewardBanner({ status }: { status: TopIdleRewardStatus }) {
       aria-labelledby="membership-topidle-title"
     >
       <span className="membership-topidle-reward__icon" aria-hidden="true">
-        <Vote size={24} />
+        <Crown size={24} />
       </span>
 
       <div className="membership-topidle-reward__body">
-        <span className="membership-eyebrow">Recompensa por voto</span>
-        <h2 id="membership-topidle-title">Apoie o Dead Idle no TopIdle</h2>
+        <span className="membership-eyebrow">1 dia de Premium</span>
+        <h2 id="membership-topidle-title">
+          Vote no Dead Idle e receba Premium
+        </h2>
         <p>
-          Receba {status.reward.premiumDays} dia de Premium por voto válido.
-          Uma recompensa por conta a cada {status.reward.cooldownHours} horas.
+          O benefício entra automaticamente na sua conta após um voto válido.
+          Limite de uma recompensa a cada {status.reward.cooldownHours} horas.
         </p>
         {!status.canReceiveReward && nextRewardAt ? (
           <small>
@@ -424,17 +425,13 @@ function TopIdleRewardBanner({ status }: { status: TopIdleRewardStatus }) {
       </div>
 
       {status.canReceiveReward ? (
-        <a
-          className="membership-topidle-reward__action"
+        <TopIdleVoteBadge
+          className="membership-topidle-reward__vote"
           href={status.voteUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Votar e receber
-          <ExternalLink size={16} aria-hidden="true" />
-        </a>
+        />
       ) : (
-        <span className="membership-topidle-reward__action is-disabled">
+        <span className="membership-topidle-reward__cooldown">
+          <Check size={16} aria-hidden="true" />
           Recompensa recebida
         </span>
       )}

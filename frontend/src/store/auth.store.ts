@@ -13,6 +13,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   isInitialized: boolean;
+  loginEventId: number;
   error: string | null;
 
   login: (email: string, password: string) => Promise<void>;
@@ -69,6 +70,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: Boolean(initialToken),
   isLoading: false,
   isInitialized: false,
+  loginEventId: 0,
   error: null,
 
   async login(email, password) {
@@ -82,13 +84,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       setAuthToken(response.accessToken);
 
-      set({
+      set((state) => ({
         user: response.user,
         accessToken: response.accessToken,
         isAuthenticated: true,
         isLoading: false,
+        loginEventId: state.loginEventId + 1,
         error: null,
-      });
+      }));
     } catch (error) {
       removeAuthToken();
 

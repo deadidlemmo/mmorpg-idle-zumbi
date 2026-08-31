@@ -352,13 +352,18 @@
 }
 
 .membership-topidle-reward {
+  position: relative;
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
-  border-top: 1px solid rgba(192, 224, 89, 0.28);
-  border-bottom: 1px solid rgba(192, 224, 89, 0.28);
-  padding: 15px 2px;
+  overflow: hidden;
+  border: 1px solid rgba(192, 224, 89, 0.3);
+  border-left: 3px solid #ff8126;
+  border-radius: 8px;
+  padding: 16px;
+  background: rgba(7, 18, 14, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 .membership-topidle-reward__icon {
@@ -382,7 +387,7 @@
   margin: 0;
   color: #fff8df;
   font-family: var(--font-title);
-  font-size: 1rem;
+  font-size: 1.06rem;
   font-weight: 950;
   letter-spacing: 0;
 }
@@ -403,32 +408,24 @@
   font-weight: 850;
 }
 
-.membership-topidle-reward__action {
+.membership-topidle-reward__vote {
+  justify-self: end;
+}
+
+.membership-topidle-reward__cooldown {
   display: inline-flex;
   min-height: 38px;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid rgba(205, 226, 93, 0.46);
+  border: 1px solid rgba(191, 197, 168, 0.18);
   border-radius: 6px;
   padding: 0 14px;
-  background: rgba(137, 172, 45, 0.17);
-  color: #fff5c7;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(237, 235, 210, 0.52);
   font-family: var(--font-title);
   font-size: 0.72rem;
   font-weight: 950;
-  text-decoration: none;
-}
-
-.membership-topidle-reward__action:hover {
-  border-color: rgba(216, 237, 103, 0.74);
-  background: rgba(137, 172, 45, 0.25);
-}
-
-.membership-topidle-reward__action.is-disabled {
-  border-color: rgba(191, 197, 168, 0.18);
-  background: rgba(255, 255, 255, 0.035);
-  color: rgba(237, 235, 210, 0.46);
 }
 
 .membership-premium-option.is-primary {
@@ -1260,9 +1257,15 @@
     height: 40px;
   }
 
-  .membership-topidle-reward__action {
+  .membership-topidle-reward__vote,
+  .membership-topidle-reward__cooldown {
     grid-column: 1 / -1;
     width: 100%;
+  }
+
+  .membership-topidle-reward__vote {
+    justify-self: center;
+    max-width: 280px;
   }
 
   .membership-cash-card {

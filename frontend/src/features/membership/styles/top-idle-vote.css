@@ -1,0 +1,187 @@
+.topidle-vote-badge {
+  display: block;
+  width: min(240px, 100%);
+  border-radius: 8px;
+  text-decoration: none;
+  transition:
+    transform var(--transition-fast),
+    filter var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.topidle-vote-badge img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.topidle-vote-badge:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(255, 129, 38, 0.2);
+}
+
+.topidle-vote-badge:focus-visible {
+  outline: 2px solid #ff9a43;
+  outline-offset: 3px;
+}
+
+.topidle-login-notification {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: var(--z-toast);
+  width: min(390px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+.topidle-login-card {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 129, 38, 0.62);
+  border-left: 3px solid #ff8126;
+  border-radius: 8px;
+  padding: 16px;
+  background: rgba(7, 16, 13, 0.98);
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  pointer-events: auto;
+  animation: topidle-login-card-enter 220ms ease-out both;
+}
+
+.topidle-login-card.is-waiting {
+  border-color: rgba(205, 214, 170, 0.3);
+  border-left-color: rgba(205, 214, 170, 0.62);
+}
+
+.topidle-login-card__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0;
+  background: transparent;
+  color: rgba(237, 235, 210, 0.58);
+  cursor: pointer;
+}
+
+.topidle-login-card__close:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff8df;
+}
+
+.topidle-login-card__close:focus-visible {
+  outline: 2px solid #ff9a43;
+  outline-offset: 2px;
+}
+
+.topidle-login-card__heading {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding-right: 30px;
+}
+
+.topidle-login-card__icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgba(192, 224, 89, 0.34);
+  border-radius: 7px;
+  background: rgba(137, 172, 45, 0.12);
+  color: #d9ec72;
+}
+
+.topidle-login-card__heading > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.topidle-login-card__heading span:not(.topidle-login-card__icon) {
+  color: #ff9a43;
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.topidle-login-card h2 {
+  margin: 0;
+  color: #fff8df;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 950;
+  letter-spacing: 0;
+  line-height: 1.18;
+}
+
+.topidle-login-card p {
+  margin: 0;
+  padding-right: 8px;
+  color: rgba(237, 235, 210, 0.74);
+  font-size: 0.77rem;
+  line-height: 1.5;
+}
+
+.topidle-login-card__vote {
+  width: 240px;
+  max-width: 100%;
+}
+
+.topidle-login-card__cooldown {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #d8d8be;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+@keyframes topidle-login-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .topidle-login-notification {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+  }
+
+  .topidle-login-card {
+    padding: 14px;
+  }
+
+  .topidle-login-card__vote {
+    width: min(100%, 280px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topidle-login-card,
+  .topidle-vote-badge {
+    animation: none;
+    transition: none;
+  }
+}

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="52" viewBox="0 0 240 52" role="img" aria-labelledby="title desc">
+  <title id="title">Vote neste jogo no TopIdle</title>
+  <desc id="desc">Botao laranja e escuro para acessar o ranking TopIdle</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1">
+      <stop stop-color="#101516"/>
+      <stop offset="1" stop-color="#1a2022"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ff9a43"/>
+      <stop offset="1" stop-color="#ff6f13"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="238" height="50" rx="10" fill="url(#bg)" stroke="#ff8126" stroke-width="2"/>
+  <circle cx="28" cy="26" r="16" fill="none" stroke="url(#orange)" stroke-width="4"/>
+  <path d="M21 31V23m7 8V17m7 14V21" fill="none" stroke="#ff8126" stroke-width="3" stroke-linecap="round"/>
+  <text x="54" y="22" fill="#fff7f1" font-family="Arial,sans-serif" font-size="12" font-weight="700">VOTE NESTE JOGO</text>
+  <text x="54" y="39" fill="#ff8126" font-family="Arial,sans-serif" font-size="16" font-weight="900">NO TOPIDLE</text>
+  <path d="m218 21 6 5-6 5" fill="none" stroke="#ff8126" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

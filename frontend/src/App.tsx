@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { AppRoutes } from './app/routes';
+import { TopIdleLoginPrompt } from './features/membership/TopIdleLoginPrompt';
 import { subscribeToAuthSessionExpired } from './services/api/authToken';
 import { useAuthStore } from './store/auth.store';
 
@@ -23,7 +24,12 @@ function App() {
     );
   }
 
-  return <AppRoutes />;
+  return (
+    <>
+      <AppRoutes />
+      <TopIdleLoginPrompt />
+    </>
+  );
 }
 
 export default App;
