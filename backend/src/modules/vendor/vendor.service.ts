@@ -12,7 +12,10 @@ import {
   Prisma,
   Rarity,
 } from '@prisma/client';
-import { getVendorFixedBuyPrice } from '../../common/config/vendor.config';
+import {
+  getVendorFixedBuyPrice,
+  VENDOR_FIXED_BUY_PRICE_BY_NAME,
+} from '../../common/config/vendor.config';
 import {
   getPotionTierLockedMessage,
   isPotionTierUnlocked,
@@ -59,7 +62,9 @@ export class VendorService {
     const items = await this.prisma.item.findMany({
       where: {
         slot: ItemSlot.CONSUMABLE,
-        isTradable: true,
+        name: {
+          in: Object.keys(VENDOR_FIXED_BUY_PRICE_BY_NAME),
+        },
       },
       include: VENDOR_ITEM_INCLUDE,
       orderBy: [{ minTier: 'asc' }, { tier: 'asc' }, { name: 'asc' }],
@@ -387,7 +392,10 @@ export class VendorService {
   }
 
   private isVendorCatalogItem(item: VendorItemRecord) {
-    return item.slot === ItemSlot.CONSUMABLE && item.isTradable !== false;
+    return (
+      item.slot === ItemSlot.CONSUMABLE &&
+      getVendorFixedBuyPrice(item.name) !== null
+    );
   }
 
   private isAvailableForPurchase(

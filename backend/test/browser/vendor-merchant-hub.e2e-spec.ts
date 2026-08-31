@@ -224,5 +224,8 @@ test.describe('hub de mercadores', () => {
     await expect(
       page.getByRole('heading', { name: 'Mara, a Mercadora' }),
     ).toBeVisible();
+    await expect(
+      page.getByText('Passe Premium de 30 dias', { exact: true }),
+    ).toHaveCount(0);
   });
 });
