@@ -1136,6 +1136,12 @@
   .gathering-origin-skill-card .auto-combat-hunt-skill-card__top {
     gap: 0.58rem !important;
   }
+
+  .gathering-origin-current-card .auto-combat-hunt-skill-card__controls,
+  .gathering-origin-current-card .gathering-session__header-actions {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
 }
 
 /* Contencao de overflow lateral nos cards do painel direito. */
