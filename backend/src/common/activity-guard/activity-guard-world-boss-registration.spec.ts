@@ -5,6 +5,7 @@ import { ActivityGuardService } from './activity-guard.service';
 
 function createPrisma(activeWorldBossParticipation: unknown = null) {
   let worldBossQuery: unknown = null;
+  let autoCombatQuery: unknown = null;
   const findWorldBossParticipation = jest.fn((query: unknown) => {
     worldBossQuery = query;
     const statuses = (
@@ -37,7 +38,12 @@ function createPrisma(activeWorldBossParticipation: unknown = null) {
         maxHp: 100,
       }),
     },
-    autoCombatSession: { findFirst: jest.fn().mockResolvedValue(null) },
+    autoCombatSession: {
+      findFirst: jest.fn((query: unknown) => {
+        autoCombatQuery = query;
+        return Promise.resolve(null);
+      }),
+    },
     gatheringSession: { findFirst: jest.fn().mockResolvedValue(null) },
     craftingSession: { findFirst: jest.fn().mockResolvedValue(null) },
     characterIncursionSession: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -48,6 +54,7 @@ function createPrisma(activeWorldBossParticipation: unknown = null) {
   return {
     prisma,
     getWorldBossQuery: () => worldBossQuery,
+    getAutoCombatQuery: () => autoCombatQuery,
   };
 }
 
@@ -117,5 +124,22 @@ describe('ActivityGuardService world boss registration', () => {
         userId: 'user-1',
       }),
     ).rejects.toThrow(ConflictException);
+  });
+
+  it('considera bloqueador somente o autocombate cujo endsAt ainda nao venceu', async () => {
+    const { prisma, getAutoCombatQuery } = createPrisma();
+    const service = new ActivityGuardService(prisma);
+    const beforeQuery = Date.now();
+
+    await service.getCharacterActivityState({
+      characterId: 'character-1',
+      userId: 'user-1',
+    });
+
+    const query = getAutoCombatQuery() as {
+      where: { endsAt: { gt: Date } };
+    };
+    expect(query.where.endsAt.gt).toBeInstanceOf(Date);
+    expect(query.where.endsAt.gt.getTime()).toBeGreaterThanOrEqual(beforeQuery);
   });
 });

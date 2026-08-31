@@ -36,7 +36,7 @@ import {
   WORLD_BOSS_SCHEDULE_CONFIG,
 } from '../../common/config/world-boss.config';
 import { DistributedLockService } from '../../common/redis/distributed-lock.service';
-import { calculateLevelProgress } from '../../common/utils/level.util';
+import { grantCharacterXp } from '../../common/utils/character-xp.util';
 import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
@@ -2070,23 +2070,13 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     const goldReward = rewards
       .filter((r) => r.rewardType === WorldBossRewardType.GOLD)
       .reduce((t, r) => t + r.quantity, 0);
-    const character = await tx.character.findUniqueOrThrow({
-      where: { id: characterId },
-      select: { level: true, xp: true },
-    });
-    const levelProgress = calculateLevelProgress(
-      character.level,
-      character.xp,
-      xpReward,
-    );
-    await tx.character.update({
-      where: { id: characterId },
-      data: {
-        level: levelProgress.newLevel,
-        xp: levelProgress.totalXp,
-        gold: { increment: goldReward },
-      },
-    });
+    await grantCharacterXp(tx, characterId, xpReward);
+    if (goldReward > 0) {
+      await tx.character.update({
+        where: { id: characterId },
+        data: { gold: { increment: goldReward } },
+      });
+    }
 
     if (xpReward > 0) {
       await recordEconomyEntry(tx, {

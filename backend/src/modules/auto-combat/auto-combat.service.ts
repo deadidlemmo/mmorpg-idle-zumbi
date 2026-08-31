@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
   OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import {
   AutoCombatHuntBatchStatus,
@@ -33,6 +34,7 @@ import {
   AUTO_COMBAT_TTK_PROGRESS_UPDATES_PER_SECOND,
 } from '../../common/config/auto-combat.config';
 import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
+import { tryConsumeInventoryStack } from '../../common/inventory/inventory-stack.util';
 import { AUTO_POTION_TRIGGER_PERCENT } from '../../common/config/potions.config';
 import { calculateCombatHit } from '../../common/utils/combat-damage.util';
 import {
@@ -55,6 +57,7 @@ import {
   calculateLevelProgress,
   getLevelProgress,
 } from '../../common/utils/level.util';
+import { grantCharacterXp } from '../../common/utils/character-xp.util';
 import {
   calculatePremiumXpBreakdown,
   isPremiumActive,
@@ -129,6 +132,10 @@ const AUTO_COMBAT_RECENT_EVENTS_LIMIT = 20;
 const AUTO_COMBAT_MAX_REALTIME_EVENTS_TO_EMIT = 20;
 const AUTO_COMBAT_STATUS_LOCK_WAIT_MS = 3000;
 const AUTO_COMBAT_STATUS_LOCK_POLL_MS = 50;
+const AUTO_COMBAT_EXPIRY_SWEEP_INTERVAL_MS = 30_000;
+const AUTO_COMBAT_EXPIRY_SWEEP_BATCH_SIZE = 100;
+const AUTO_COMBAT_EXPIRY_RECOVERY_MAX_STEPS = 16;
+const AUTO_COMBAT_EXPIRY_LOCK_TTL_MS = 120_000;
 
 const AUTO_COMBAT_CONCURRENT_PROCESSING_MESSAGE =
   'Processamento abortado: outra execução já avançou esta sessão.';
@@ -344,6 +351,7 @@ type AutoCombatRealtimeEvent = {
   totalCombats?: number;
   totalRounds?: number;
   totalKills?: number;
+  killsGained?: number;
   totalXpGained?: number;
   totalLoot?: number;
   potionsUsed?: number;
@@ -831,7 +839,7 @@ type RealtimeRoundResult = {
 };
 
 @Injectable()
-export class AutoCombatService implements OnModuleDestroy {
+export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(AutoCombatService.name);
 
   private readonly realtimeLoops = new Map<string, AutoCombatRealtimeLoop>();
@@ -839,6 +847,10 @@ export class AutoCombatService implements OnModuleDestroy {
   private readonly processingLocks = new Set<string>();
 
   private readonly potionUsageByCombat = new Set<string>();
+
+  private expirySweepTimer: ReturnType<typeof setInterval> | null = null;
+
+  private expirySweepRunning = false;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -849,7 +861,27 @@ export class AutoCombatService implements OnModuleDestroy {
     private readonly petBonuses: PetBonusesService,
   ) {}
 
+  onModuleInit() {
+    void this.reconcileExpiredSessions().catch((error: unknown) => {
+      this.logger.error(
+        `Falha na reconciliacao inicial de sessoes vencidas: ${this.getErrorMessage(error)}`,
+      );
+    });
+
+    this.expirySweepTimer = setInterval(() => {
+      void this.reconcileExpiredSessions().catch((error: unknown) => {
+        this.logger.error(
+          `Falha na reconciliacao periodica de sessoes vencidas: ${this.getErrorMessage(error)}`,
+        );
+      });
+    }, AUTO_COMBAT_EXPIRY_SWEEP_INTERVAL_MS);
+    this.expirySweepTimer.unref?.();
+  }
+
   onModuleDestroy() {
+    if (this.expirySweepTimer) clearInterval(this.expirySweepTimer);
+    this.expirySweepTimer = null;
+
     for (const loop of this.realtimeLoops.values()) {
       if (loop.timer) clearTimeout(loop.timer);
     }
@@ -858,6 +890,153 @@ export class AutoCombatService implements OnModuleDestroy {
     this.processingLocks.clear();
     this.potionUsageByCombat.clear();
     this.observability.setAutoCombatActiveLoops(0);
+  }
+
+  async reconcileExpiredSessions(now = new Date()) {
+    if (this.expirySweepRunning) {
+      return { found: 0, finished: 0, failed: 0, skipped: true };
+    }
+
+    this.expirySweepRunning = true;
+
+    try {
+      const expiredSessions = await this.prisma.autoCombatSession.findMany({
+        where: {
+          status: AutoCombatSessionStatus.ACTIVE,
+          endsAt: { lte: now },
+        },
+        orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
+        take: AUTO_COMBAT_EXPIRY_SWEEP_BATCH_SIZE,
+        select: {
+          id: true,
+          characterId: true,
+          character: {
+            select: { userId: true },
+          },
+        },
+      });
+      let finished = 0;
+      let failed = 0;
+
+      for (const session of expiredSessions) {
+        try {
+          const reconciled = await this.reconcileExpiredSession(
+            session.character.userId,
+            session.id,
+            now,
+          );
+          if (reconciled) finished += 1;
+        } catch (error) {
+          failed += 1;
+          this.logger.error(
+            `Falha ao reconciliar autocombate vencido ${session.id}: ${this.getErrorMessage(error)}`,
+          );
+        }
+      }
+
+      if (finished > 0 || failed > 0) {
+        this.logger.log(
+          `Autocombates vencidos: encontrados=${expiredSessions.length}, finalizados=${finished}, falhas=${failed}.`,
+        );
+      }
+
+      return {
+        found: expiredSessions.length,
+        finished,
+        failed,
+        skipped: false,
+      };
+    } finally {
+      this.expirySweepRunning = false;
+    }
+  }
+
+  async reconcileExpiredSession(
+    userId: string,
+    sessionId: string,
+    now = new Date(),
+  ) {
+    const lockTarget = await this.prisma.autoCombatSession.findUnique({
+      where: { id: sessionId },
+      select: { characterId: true },
+    });
+    if (!lockTarget) return true;
+
+    const lockResult = await this.distributedLock.runExclusive(
+      `dead-idle:auto-combat:${lockTarget.characterId}`,
+      AUTO_COMBAT_EXPIRY_LOCK_TTL_MS,
+      async () => {
+        for (
+          let step = 0;
+          step < AUTO_COMBAT_EXPIRY_RECOVERY_MAX_STEPS;
+          step += 1
+        ) {
+          const session = await this.loadAutoCombatSession(userId, sessionId);
+
+          if (
+            !session ||
+            session.status !== AutoCombatSessionStatus.ACTIVE ||
+            session.endsAt.getTime() > now.getTime()
+          ) {
+            return true;
+          }
+
+          if (session.phase === AutoCombatSessionPhase.ENCOUNTER_READY) {
+            await this.finishExpiredSession(
+              session,
+              'Sessao encerrada porque o limite de tempo foi atingido.',
+            );
+            return true;
+          }
+
+          try {
+            const response = await this.processActiveSessionById(
+              userId,
+              session.id,
+              {
+                emitRealtimeEvents: false,
+                waitForActiveProcessing: true,
+              },
+            );
+
+            if (!response.active) return true;
+          } catch (error) {
+            if (error instanceof BadRequestException) {
+              await this.finishExpiredSession(
+                session,
+                'Sessao vencida encerrada porque o encontro nao esta mais disponivel.',
+              );
+              return true;
+            }
+
+            throw error;
+          }
+        }
+
+        this.logger.warn(
+          `Autocombate vencido ${sessionId} excedeu o limite de passos da reconciliacao.`,
+        );
+        return false;
+      },
+    );
+
+    return lockResult.acquired ? lockResult.value : false;
+  }
+
+  private async finishExpiredSession(session: any, message: string) {
+    const finishedSession = await this.finishActiveSessionAtEnd(session);
+    const response = await this.buildSessionResponse(finishedSession.id, {
+      message,
+      processing: this.buildEmptyProcessingSummary(),
+    });
+
+    this.clearPotionUsageForSession(finishedSession.id);
+    this.stopRealtimeProcessingLoop(session.characterId);
+    this.autoCombatGateway.emitSessionUpdated(session.characterId, response);
+    this.autoCombatGateway.emitStatus(session.characterId, response);
+    this.autoCombatGateway.emitFinished(session.characterId, response);
+
+    return response;
   }
 
   private async waitForProcessingLockRelease(characterId: string) {
@@ -875,6 +1054,10 @@ export class AutoCombatService implements OnModuleDestroy {
     this.observability.recordAutoCombatProcessingLockWait(
       Date.now() - startedAt,
     );
+  }
+
+  private getErrorMessage(error: unknown) {
+    return error instanceof Error ? error.message : String(error);
   }
 
   private aggregateMapEncounters(subMaps: any[]) {
@@ -1093,26 +1276,15 @@ export class AutoCombatService implements OnModuleDestroy {
       },
     });
 
-    if (
-      activeSession &&
-      activeSession.phase !== AutoCombatSessionPhase.ENCOUNTER_READY &&
-      activeSession.endsAt.getTime() <= Date.now()
-    ) {
-      const expiredResponse = await this.processActiveSessionById(
-        userId,
-        activeSession.id,
-        {
-          emitRealtimeEvents: false,
-          waitForActiveProcessing: true,
+    if (activeSession && activeSession.endsAt.getTime() <= Date.now()) {
+      await this.reconcileExpiredSession(userId, activeSession.id);
+      activeSession = await this.prisma.autoCombatSession.findFirst({
+        where: {
+          characterId: character.id,
+          status: AutoCombatSessionStatus.ACTIVE,
         },
-      );
-
-      if (!expiredResponse.active) {
-        this.stopRealtimeProcessingLoop(character.id);
-        activeSession = null;
-      } else {
-        return expiredResponse;
-      }
+        orderBy: { startedAt: 'desc' },
+      });
     }
 
     if (
@@ -6100,6 +6272,7 @@ export class AutoCombatService implements OnModuleDestroy {
           totalCombats: totalKillsAfterKill,
           totalRounds: totalRoundsAfterRound,
           totalKills: totalKillsAfterKill,
+          killsGained: killsResolved,
           totalXpGained: totalXpAfterKill,
           totalLoot: getTotalLootNow(),
           potionsUsed:
@@ -6544,6 +6717,7 @@ export class AutoCombatService implements OnModuleDestroy {
           totalCombats: resolvedTotalCombats,
           totalRounds: resolvedTotalRounds,
           totalKills: resolvedTotalKills,
+          killsGained: payload.killsGained,
           totalXpGained: resolvedTotalXpGained,
           totalLoot: resolvedTotalLoot,
           potionsUsed: resolvedPotionsUsed,
@@ -7000,6 +7174,7 @@ export class AutoCombatService implements OnModuleDestroy {
         totalCombats: totalKillsAfterKill,
         totalRounds: totalRoundsAfterRound,
         totalKills: totalKillsAfterKill,
+        killsGained: 1,
         totalXpGained: totalXpAfterKill,
         totalLoot: totalLootAfterKill,
         potionsUsed: totalPotionsAfterRound,
@@ -7258,13 +7433,13 @@ export class AutoCombatService implements OnModuleDestroy {
         },
       });
 
+      await grantCharacterXp(tx, session.characterId, result.xpGained);
+
       await tx.character.update({
         where: {
           id: session.characterId,
         },
         data: {
-          xp: result.finalXp,
-          level: result.finalLevel,
           currentHp: result.finalCurrentHp,
           maxHp: result.finalMaxHp,
           status:
@@ -7461,23 +7636,15 @@ export class AutoCombatService implements OnModuleDestroy {
         });
 
         if (potionInventoryItem) {
-          if (potionInventoryItem.quantity <= result.potionsUsed) {
-            await tx.inventoryItem.delete({
-              where: {
-                id: potionInventoryItem.id,
-              },
-            });
-          } else {
-            await tx.inventoryItem.update({
-              where: {
-                id: potionInventoryItem.id,
-              },
-              data: {
-                quantity: {
-                  decrement: result.potionsUsed,
-                },
-              },
-            });
+          const remaining = await tryConsumeInventoryStack(tx, {
+            characterId: session.characterId,
+            itemId: result.potionItemId,
+            quantity: result.potionsUsed,
+          });
+          if (remaining === null) {
+            throw new ConflictException(
+              'O estoque de poções mudou durante o processamento.',
+            );
           }
 
           await accumulateEconomyEntry(tx, {
@@ -7486,10 +7653,7 @@ export class AutoCombatService implements OnModuleDestroy {
             resourceType: EconomyResourceType.ITEM,
             itemId: result.potionItemId,
             tier: potionInventoryItem.item.tier,
-            quantity: Math.min(
-              potionInventoryItem.quantity,
-              result.potionsUsed,
-            ),
+            quantity: result.potionsUsed,
             reason: ECONOMY_REASONS.AUTO_COMBAT_POTION_USED,
             referenceType: 'AutoCombatSession',
             referenceId: session.id,
@@ -10465,6 +10629,7 @@ export class AutoCombatService implements OnModuleDestroy {
     totalCombats?: number;
     totalRounds?: number;
     totalKills?: number;
+    killsGained?: number;
     totalXpGained?: number;
     totalLoot?: number;
     potionsUsed?: number;
@@ -10659,6 +10824,7 @@ export class AutoCombatService implements OnModuleDestroy {
       totalCombats: params.totalCombats,
       totalRounds: params.totalRounds,
       totalKills: params.totalKills,
+      killsGained: params.killsGained,
       totalXpGained: params.totalXpGained,
       totalLoot: params.totalLoot,
       potionsUsed: params.potionsUsed,

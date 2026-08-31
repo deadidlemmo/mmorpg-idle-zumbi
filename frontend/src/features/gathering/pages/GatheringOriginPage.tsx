@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, MapPin, Route } from 'lucide-react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { ActivityProgressCard } from '../../../components/game/ActivityProgressCard';
 import npcArsenalNogueira from '../../../assets/images/npcs/npc_arsenal_nogueira.webp';
@@ -12,7 +12,10 @@ import {
   buildMapVisualStyle,
   getMapImageByName,
 } from '../../auto-combat/assets/auto-combat-map-assets';
-import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
+import {
+  getCharacterOverview,
+  updateCharacterCurrentMap,
+} from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
 import '../../dashboard/dashboard.css';
 import type {
@@ -760,8 +763,7 @@ export function GatheringOriginPage() {
   );
   const [usageMaterial, setUsageMaterial] =
     useState<GatheringMaterialViewModel | null>(null);
-  const [classFilter, setClassFilter] =
-    useState<GatheringClassFilter>('ALL');
+  const [classFilter, setClassFilter] = useState<GatheringClassFilter>('ALL');
 
   const [overviewGatheringSkill, setOverviewGatheringSkill] =
     useState<GatheringSkillViewModel | null>(null);
@@ -833,6 +835,21 @@ export function GatheringOriginPage() {
   const currentMapLevelRangeLabel = formatMapLevelRange(currentMap);
   const currentMapTierClassName = getMapTierClassName(currentMap?.tier);
   const fallbackRatePerHour = materialsResponse?.ratePerHour ?? null;
+  const characterCurrentMap = character?.currentMap ?? character?.map ?? null;
+  const characterCurrentMapId = characterCurrentMap?.id ?? null;
+  const characterCurrentMapName =
+    characterCurrentMap?.name ?? character?.currentMapName ?? 'outro mapa';
+  const isCharacterOnDisplayedMap = Boolean(
+    currentMap?.id && characterCurrentMapId === currentMap.id,
+  );
+  const mapTravelRequiredMessage = currentMap
+    ? `Viaje para ${currentMap.name} antes de iniciar a coleta.`
+    : 'Selecione e visite o mapa deste material antes de iniciar a coleta.';
+  const isGatheringStartDisabled =
+    hasActiveWorldBoss || !isCharacterOnDisplayedMap;
+  const gatheringStartDisabledReason = hasActiveWorldBoss
+    ? WORLD_BOSS_ACTIVITY_LOCK_MESSAGE
+    : mapTravelRequiredMessage;
 
   const activeMaterialId = getActiveMaterialId(status);
   const activeOrigin = getActiveOrigin(status);
@@ -893,7 +910,9 @@ export function GatheringOriginPage() {
 
   const selectedMaterial = useMemo(
     () =>
-      filteredMaterials.find((material) => material.id === selectedMaterialId) ??
+      filteredMaterials.find(
+        (material) => material.id === selectedMaterialId,
+      ) ??
       filteredMaterials[0] ??
       null,
     [filteredMaterials, selectedMaterialId],
@@ -1023,6 +1042,12 @@ export function GatheringOriginPage() {
       return;
     }
 
+    if (!isCharacterOnDisplayedMap) {
+      setPageErrorMessage(mapTravelRequiredMessage);
+      setFeedback(null);
+      return;
+    }
+
     setIsPageBusy(true);
     setPageErrorMessage(null);
     setFeedback(null);
@@ -1071,6 +1096,37 @@ export function GatheringOriginPage() {
           : response.switched
             ? `Coleta alterada para ${material.name}.${collectedMessage}`
             : `Coleta iniciada: ${material.name}.`,
+      );
+    } catch (error) {
+      setPageErrorMessage(extractGatheringApiError(error));
+    } finally {
+      setIsPageBusy(false);
+    }
+  }
+
+  async function handleTravelToDisplayedMap() {
+    if (
+      isBusy ||
+      !safeCharacterId ||
+      !currentMap?.id ||
+      isCharacterOnDisplayedMap
+    ) {
+      return;
+    }
+
+    setIsPageBusy(true);
+    setPageErrorMessage(null);
+    setFeedback(null);
+
+    try {
+      const updatedOverview = await updateCharacterCurrentMap(
+        safeCharacterId,
+        currentMap.id,
+      );
+
+      setCharacter(buildGatheringDashboardCharacter(updatedOverview));
+      setFeedback(
+        `Você viajou para ${currentMap.name}. A coleta está liberada.`,
       );
     } catch (error) {
       setPageErrorMessage(extractGatheringApiError(error));
@@ -1284,7 +1340,7 @@ export function GatheringOriginPage() {
             ]
               .filter(Boolean)
               .join(' ')}
-            aria-label={`Mapa atual: ${currentMapName}`}
+            aria-label={`${isCharacterOnDisplayedMap ? 'Mapa atual' : 'Mapa selecionado'}: ${currentMapName}`}
           >
             <div
               className="gathering-origin-map-context__media"
@@ -1299,7 +1355,7 @@ export function GatheringOriginPage() {
 
             <div className="gathering-origin-map-context__body">
               <span className="gathering-origin-map-context__eyebrow">
-                Mapa atual
+                {isCharacterOnDisplayedMap ? 'Mapa atual' : 'Mapa para coleta'}
               </span>
 
               <div className="gathering-origin-map-context__title-row">
@@ -1314,13 +1370,34 @@ export function GatheringOriginPage() {
 
                   {currentMapLevelRangeLabel ? (
                     <span className="gathering-origin-map-context__chip gathering-origin-map-context__chip--level">
-                      {currentMapLevelRangeLabel}
+                      Combate {currentMapLevelRangeLabel}
                     </span>
                   ) : null}
                 </div>
               </div>
             </div>
           </section>
+
+          {!isCharacterOnDisplayedMap && currentMap ? (
+            <div className="gathering-origin-map-travel" role="status">
+              <MapPin size={20} aria-hidden="true" />
+              <div>
+                <strong>Viaje para coletar neste mapa</strong>
+                <span>
+                  Você está em {characterCurrentMapName}. A viagem não exige
+                  nível de personagem.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleTravelToDisplayedMap()}
+                disabled={isBusy}
+              >
+                <Route size={16} aria-hidden="true" />
+                {isBusy ? 'Viajando...' : 'Viajar'}
+              </button>
+            </div>
+          ) : null}
 
           <aside className="gathering-origin-premium-card">
             <div
@@ -1392,8 +1469,8 @@ export function GatheringOriginPage() {
                       isCurrentOriginActive ? activeMaterialId : null
                     }
                     isBusy={isBusy}
-                    isStartDisabled={hasActiveWorldBoss}
-                    startDisabledReason={WORLD_BOSS_ACTIVITY_LOCK_MESSAGE}
+                    isStartDisabled={isGatheringStartDisabled}
+                    startDisabledReason={gatheringStartDisabledReason}
                     onSelectMaterial={handleSelectMaterial}
                     onStartMaterial={handleStartMaterial}
                     onViewMaterialUsage={handleViewMaterialUsage}
@@ -1482,8 +1559,8 @@ export function GatheringOriginPage() {
             gatheringSkill={gatheringSkill}
             fallbackRatePerHour={fallbackRatePerHour}
             isBusy={isBusy}
-            isStartDisabled={hasActiveWorldBoss}
-            startDisabledReason={WORLD_BOSS_ACTIVITY_LOCK_MESSAGE}
+            isStartDisabled={isGatheringStartDisabled}
+            startDisabledReason={gatheringStartDisabledReason}
             onStart={handleStartMaterial}
             onClose={handleCloseUsageModal}
           />

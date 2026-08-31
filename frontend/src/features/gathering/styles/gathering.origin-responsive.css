@@ -364,6 +364,17 @@
     justify-content: flex-end !important;
   }
 
+  .gathering-origin-map-travel {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.52rem;
+    padding: 0.58rem;
+  }
+
+  .gathering-origin-map-travel button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
   .gathering-origin-materials-panel__header {
     margin-bottom: 0.62rem;
     padding-bottom: 0.52rem;

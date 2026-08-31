@@ -11,6 +11,7 @@ import {
   MarketListingStatus,
   Prisma,
 } from '@prisma/client';
+import { tryConsumeInventoryStack } from '../../common/inventory/inventory-stack.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
@@ -301,24 +302,17 @@ export class MarketplaceService {
         );
       }
 
-      const reserved = await tx.inventoryItem.updateMany({
-        where: {
-          id: inventoryItem.id,
-          characterId: character.id,
-          quantity: { gte: dto.quantity },
-        },
-        data: { quantity: { decrement: dto.quantity } },
+      const remaining = await tryConsumeInventoryStack(tx, {
+        characterId: character.id,
+        itemId: inventoryItem.itemId,
+        quantity: dto.quantity,
       });
 
-      if (reserved.count !== 1) {
+      if (remaining === null) {
         throw new ConflictException(
           'O estoque mudou enquanto o anúncio era criado. Tente novamente.',
         );
       }
-
-      await tx.inventoryItem.deleteMany({
-        where: { id: inventoryItem.id, quantity: 0 },
-      });
 
       const created = await tx.marketListing.create({
         data: {

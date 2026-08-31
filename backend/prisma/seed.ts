@@ -13,7 +13,10 @@ import {
   Rarity,
   WorldBossRewardType,
 } from '@prisma/client';
-import { getGatheringXpPerUnitForTier } from '../src/common/config/gathering.config';
+import {
+  resolveGatheringMaterialBaseRatePerHour,
+  resolveGatheringMaterialXpPerUnit,
+} from '../src/common/config/gathering.config';
 import { getItemRarityByTier } from '../src/common/config/item-economy.config';
 import {
   buildReinforcedEquipmentStats,
@@ -319,8 +322,19 @@ async function upsertMaterialItem(params: {
   const isMobDrop = data.materialOrigin === 'DROP_MOBS';
   const isGatheringMaterial = data.isGatheringMaterial ?? false;
   const gatheringXpPerUnit = isGatheringMaterial
-    ? getGatheringXpPerUnitForTier(data.tier)
+    ? resolveGatheringMaterialXpPerUnit({
+        tier: data.tier,
+        requiredGatheringLevel: data.requiredGatheringLevel,
+        gatheringXpPerUnit: data.gatheringXpPerUnit,
+      })
     : (data.gatheringXpPerUnit ?? (isMobDrop ? 0 : 1));
+  const baseGatheringRatePerHour = isGatheringMaterial
+    ? resolveGatheringMaterialBaseRatePerHour({
+        tier: data.tier,
+        requiredGatheringLevel: data.requiredGatheringLevel,
+        baseGatheringRatePerHour: data.baseGatheringRatePerHour,
+      })
+    : (data.baseGatheringRatePerHour ?? null);
 
   return upsertItemByName({
     name: data.name,
@@ -338,7 +352,7 @@ async function upsertMaterialItem(params: {
 
     requiredGatheringLevel: data.requiredGatheringLevel ?? 1,
     gatheringXpPerUnit,
-    baseGatheringRatePerHour: data.baseGatheringRatePerHour ?? null,
+    baseGatheringRatePerHour,
 
     strengthBonus: 0,
     vitalityBonus: 0,
@@ -1222,6 +1236,12 @@ async function validateOfficialGatheringMaterials() {
   const expectedMaterialNames = new Set(
     officialGatheringMaterialDefinitions.map((material) => material.name),
   );
+  const officialGatheringMaterialByName = new Map(
+    officialGatheringMaterialDefinitions.map((material) => [
+      material.name,
+      material,
+    ]),
+  );
 
   if (
     expectedMaterialNames.size !== officialGatheringMaterialDefinitions.length
@@ -1371,18 +1391,60 @@ async function validateOfficialGatheringMaterials() {
     select: {
       name: true,
       tier: true,
+      requiredGatheringLevel: true,
       gatheringXpPerUnit: true,
+      baseGatheringRatePerHour: true,
     },
   });
 
-  const invalidGatheringXp = gatheringXpRows.find(
-    (item) =>
-      item.gatheringXpPerUnit !== getGatheringXpPerUnitForTier(item.tier),
-  );
+  const invalidGatheringProgression = gatheringXpRows.find((item) => {
+    const definition = officialGatheringMaterialByName.get(item.name);
 
-  if (invalidGatheringXp) {
+    if (!definition) {
+      return true;
+    }
+
+    const expectedRequiredLevel = definition.requiredGatheringLevel ?? 1;
+    const expectedXpPerUnit = resolveGatheringMaterialXpPerUnit({
+      tier: definition.tier,
+      requiredGatheringLevel: expectedRequiredLevel,
+      gatheringXpPerUnit: definition.gatheringXpPerUnit,
+    });
+    const expectedBaseRatePerHour = resolveGatheringMaterialBaseRatePerHour({
+      tier: definition.tier,
+      requiredGatheringLevel: expectedRequiredLevel,
+      baseGatheringRatePerHour: definition.baseGatheringRatePerHour,
+    });
+
+    return (
+      item.requiredGatheringLevel !== expectedRequiredLevel ||
+      item.gatheringXpPerUnit !== expectedXpPerUnit ||
+      item.baseGatheringRatePerHour !== expectedBaseRatePerHour
+    );
+  });
+
+  if (invalidGatheringProgression) {
+    const definition = officialGatheringMaterialByName.get(
+      invalidGatheringProgression.name,
+    );
+    const expectedRequiredLevel = definition?.requiredGatheringLevel ?? 1;
+    const expectedXpPerUnit = definition
+      ? resolveGatheringMaterialXpPerUnit({
+          tier: definition.tier,
+          requiredGatheringLevel: expectedRequiredLevel,
+          gatheringXpPerUnit: definition.gatheringXpPerUnit,
+        })
+      : null;
+    const expectedBaseRatePerHour = definition
+      ? resolveGatheringMaterialBaseRatePerHour({
+          tier: definition.tier,
+          requiredGatheringLevel: expectedRequiredLevel,
+          baseGatheringRatePerHour: definition.baseGatheringRatePerHour,
+        })
+      : null;
+
     throw new Error(
-      `Validação de gathering falhou: ${invalidGatheringXp.name} deveria conceder ${getGatheringXpPerUnitForTier(invalidGatheringXp.tier)} XP por unidade, encontrado ${invalidGatheringXp.gatheringXpPerUnit}.`,
+      `Validação de gathering falhou: ${invalidGatheringProgression.name} esperava nível ${expectedRequiredLevel}, ${expectedXpPerUnit} XP/unidade e ${expectedBaseRatePerHour}/h; encontrado nível ${invalidGatheringProgression.requiredGatheringLevel}, ${invalidGatheringProgression.gatheringXpPerUnit} XP/unidade e ${invalidGatheringProgression.baseGatheringRatePerHour}/h.`,
     );
   }
 
@@ -1868,9 +1930,19 @@ async function main() {
       origin: item.materialOrigin,
       requiredGatheringLevel: item.requiredGatheringLevel ?? 1,
       gatheringXpPerUnit: item.isGatheringMaterial
-        ? getGatheringXpPerUnitForTier(item.tier)
+        ? resolveGatheringMaterialXpPerUnit({
+            tier: item.tier,
+            requiredGatheringLevel: item.requiredGatheringLevel,
+            gatheringXpPerUnit: item.gatheringXpPerUnit,
+          })
         : (item.gatheringXpPerUnit ?? 1),
-      baseGatheringRatePerHour: item.baseGatheringRatePerHour ?? null,
+      baseGatheringRatePerHour: item.isGatheringMaterial
+        ? resolveGatheringMaterialBaseRatePerHour({
+            tier: item.tier,
+            requiredGatheringLevel: item.requiredGatheringLevel,
+            baseGatheringRatePerHour: item.baseGatheringRatePerHour,
+          })
+        : (item.baseGatheringRatePerHour ?? null),
     })),
     consumiveisRegistrados: consumableDefinitions.map((item) => ({
       name: item.name,

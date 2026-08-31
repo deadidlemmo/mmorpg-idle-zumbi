@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import {
   ItemSlot,
   Prisma,
 } from '@prisma/client';
+import { tryConsumeInventoryStack } from '../../common/inventory/inventory-stack.util';
 import { AUTO_POTION_TRIGGER_PERCENT } from '../../common/config/potions.config';
 import {
   getPotionTierAccess,
@@ -100,7 +102,6 @@ export class ConsumablesService {
       return this.activatePremiumPass({
         characterId: character.id,
         userId: character.userId,
-        inventoryItemId: inventoryItem.id,
         inventoryQuantity: inventoryItem.quantity,
         item,
         operationId,
@@ -182,7 +183,18 @@ export class ConsumablesService {
     const newCurrentHp = Math.min(maxHp, currentHp + healAmount);
     const effectiveHeal = newCurrentHp - currentHp;
 
-    await this.prisma.$transaction(async (tx) => {
+    const newQuantity = await this.prisma.$transaction(async (tx) => {
+      const remaining = await tryConsumeInventoryStack(tx, {
+        characterId: character.id,
+        itemId: inventoryItem.itemId,
+        quantity: 1,
+      });
+      if (remaining === null) {
+        throw new ConflictException(
+          'O estoque do consumível mudou. Atualize a mochila e tente novamente.',
+        );
+      }
+
       await tx.character.update({
         where: {
           id: character.id,
@@ -192,25 +204,6 @@ export class ConsumablesService {
           maxHp,
         },
       });
-
-      if (inventoryItem.quantity <= 1) {
-        await tx.inventoryItem.delete({
-          where: {
-            id: inventoryItem.id,
-          },
-        });
-      } else {
-        await tx.inventoryItem.update({
-          where: {
-            id: inventoryItem.id,
-          },
-          data: {
-            quantity: {
-              decrement: 1,
-            },
-          },
-        });
-      }
 
       await recordEconomyEntry(tx, {
         characterId: character.id,
@@ -225,6 +218,8 @@ export class ConsumablesService {
         idempotencyKey: `consumable:${operationId}:item`,
         metadata: { effectiveHeal },
       });
+
+      return remaining;
     });
 
     return {
@@ -239,10 +234,7 @@ export class ConsumablesService {
         maxHp,
       },
 
-      consumable: this.mapPotionItem(
-        item,
-        Math.max(0, inventoryItem.quantity - 1),
-      ),
+      consumable: this.mapPotionItem(item, newQuantity),
 
       healing: {
         calculatedHeal: healAmount,
@@ -252,7 +244,7 @@ export class ConsumablesService {
 
       inventory: {
         previousQuantity: inventoryItem.quantity,
-        newQuantity: Math.max(0, inventoryItem.quantity - 1),
+        newQuantity,
       },
     };
   }
@@ -260,20 +252,20 @@ export class ConsumablesService {
   private async activatePremiumPass(params: {
     characterId: string;
     userId: string;
-    inventoryItemId: string;
     inventoryQuantity: number;
     item: Item;
     operationId: string;
   }) {
     const premiumDays = 30;
     const dayMs = 24 * 60 * 60 * 1000;
-    const premiumUntil = await this.prisma.$transaction(
+    const activation = await this.prisma.$transaction(
       async (tx) => {
-        const claimed = await tx.inventoryItem.updateMany({
-          where: { id: params.inventoryItemId, quantity: { gte: 1 } },
-          data: { quantity: { decrement: 1 } },
+        const remaining = await tryConsumeInventoryStack(tx, {
+          characterId: params.characterId,
+          itemId: params.item.id,
+          quantity: 1,
         });
-        if (claimed.count !== 1) {
+        if (remaining === null) {
           throw new BadRequestException(
             'O Passe Premium já foi usado ou não está mais na mochila.',
           );
@@ -298,9 +290,6 @@ export class ConsumablesService {
           where: { id: params.userId },
           data: { premiumUntil: nextPremiumUntil },
         });
-        await tx.inventoryItem.deleteMany({
-          where: { id: params.inventoryItemId, quantity: { lte: 0 } },
-        });
         await recordEconomyEntry(tx, {
           characterId: params.characterId,
           direction: EconomyDirection.DEBIT,
@@ -318,23 +307,22 @@ export class ConsumablesService {
           },
         });
 
-        return nextPremiumUntil;
+        return { premiumUntil: nextPremiumUntil, remaining };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
-    const newQuantity = Math.max(0, params.inventoryQuantity - 1);
 
     return {
       message: 'Passe Premium ativado. Sua conta recebeu 30 dias de Premium.',
       kind: 'PREMIUM_PASS' as const,
       premium: {
         daysAdded: premiumDays,
-        premiumUntil,
+        premiumUntil: activation.premiumUntil,
       },
-      consumable: this.mapPotionItem(params.item, newQuantity),
+      consumable: this.mapPotionItem(params.item, activation.remaining),
       inventory: {
         previousQuantity: params.inventoryQuantity,
-        newQuantity,
+        newQuantity: activation.remaining,
       },
     };
   }

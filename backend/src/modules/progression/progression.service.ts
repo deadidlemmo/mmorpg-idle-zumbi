@@ -13,7 +13,7 @@ import {
   MissionType,
   Prisma,
 } from '@prisma/client';
-import { calculateLevelProgress } from '../../common/utils/level.util';
+import { grantCharacterXp } from '../../common/utils/character-xp.util';
 import {
   getMissionBalanceTier,
   getMissionReward,
@@ -503,21 +503,15 @@ export class ProgressionService {
           throw new ConflictException('A recompensa ja foi resgatada.');
         }
 
-        const character = await tx.character.findUniqueOrThrow({
-          where: { id: characterId },
-          select: { level: true, xp: true },
-        });
-        const levelProgress = calculateLevelProgress(
-          character.level,
-          character.xp,
+        const levelProgress = await grantCharacterXp(
+          tx,
+          characterId,
           assignment.rewardXp,
         );
 
         await tx.character.update({
           where: { id: characterId },
           data: {
-            level: levelProgress.newLevel,
-            xp: levelProgress.totalXp,
             gold: { increment: assignment.rewardGold },
           },
         });
@@ -678,15 +672,16 @@ export class ProgressionService {
     const refreshed: MissionAssignmentWithDefinition[] = [];
 
     for (const assignment of assignments) {
+      const measuredProgress = await this.getObjectiveProgress(
+        characterId,
+        assignment.mission.objectiveType,
+        assignment.assignedAt,
+        characterLevel,
+        assignment.rewardTier,
+      );
       const progress = Math.min(
         assignment.targetValue,
-        await this.getObjectiveProgress(
-          characterId,
-          assignment.mission.objectiveType,
-          assignment.assignedAt,
-          characterLevel,
-          assignment.rewardTier,
-        ),
+        Math.max(assignment.progress, measuredProgress),
       );
       const isComplete = progress >= assignment.targetValue;
       const updated = await this.prisma.characterMission.update({
@@ -805,14 +800,7 @@ export class ProgressionService {
     }
 
     if (objectiveType === 'DEFEAT_MOBS') {
-      return this.prisma.autoCombatSessionEvent.count({
-        where: {
-          characterId,
-          type: 'MOB_DEFEATED',
-          createdAt: { gte: since },
-          session: { map: { tier: missionTier } },
-        },
-      });
+      return this.getAutoCombatMissionKills(characterId, since, missionTier);
     }
 
     if (objectiveType === 'COMPLETE_INCURSIONS') {
@@ -827,6 +815,130 @@ export class ProgressionService {
     }
 
     return 0;
+  }
+
+  private async getAutoCombatMissionKills(
+    characterId: string,
+    since: Date,
+    missionTier: number,
+  ) {
+    const events = await this.prisma.autoCombatSessionEvent.findMany({
+      where: {
+        characterId,
+        type: 'MOB_DEFEATED',
+        createdAt: { gte: since },
+        session: { map: { tier: missionTier } },
+      },
+      orderBy: [{ sessionId: 'asc' }, { sequence: 'asc' }],
+      select: {
+        sessionId: true,
+        payloadJson: true,
+        session: { select: { startedAt: true } },
+      },
+    });
+
+    if (events.length === 0) return 0;
+
+    const sinceTimestamp = since.getTime();
+    const sessionsNeedingBaseline = new Set(
+      events
+        .filter(
+          (event) =>
+            event.session.startedAt.getTime() < sinceTimestamp &&
+            this.getEventPayloadInteger(event.payloadJson, 'killsGained', 1) ===
+              null,
+        )
+        .map((event) => event.sessionId),
+    );
+    const previousTotals = new Map<string, number>();
+
+    await Promise.all(
+      Array.from(sessionsNeedingBaseline).map(async (sessionId) => {
+        const previousEvent =
+          await this.prisma.autoCombatSessionEvent.findFirst({
+            where: {
+              sessionId,
+              type: 'MOB_DEFEATED',
+              createdAt: { lt: since },
+            },
+            orderBy: { sequence: 'desc' },
+            select: { payloadJson: true },
+          });
+        const previousTotal = this.getCumulativeMobKills(
+          previousEvent?.payloadJson,
+        );
+
+        if (previousTotal !== null) {
+          previousTotals.set(sessionId, previousTotal);
+        }
+      }),
+    );
+
+    let kills = 0;
+
+    for (const event of events) {
+      const explicitKills = this.getEventPayloadInteger(
+        event.payloadJson,
+        'killsGained',
+        1,
+      );
+      const cumulativeKills = this.getCumulativeMobKills(event.payloadJson);
+
+      if (explicitKills !== null) {
+        kills += explicitKills;
+      } else if (cumulativeKills !== null) {
+        const previousTotal = previousTotals.get(event.sessionId);
+
+        if (previousTotal !== undefined) {
+          kills += Math.max(1, cumulativeKills - previousTotal);
+        } else if (event.session.startedAt.getTime() >= sinceTimestamp) {
+          kills += Math.max(1, cumulativeKills);
+        } else {
+          // Sem o evento anterior preservado, a linha antiga comprova uma
+          // derrota, mas nao permite atribuir todo o acumulado da sessao.
+          kills += 1;
+        }
+      } else {
+        kills += 1;
+      }
+
+      if (cumulativeKills !== null) {
+        previousTotals.set(event.sessionId, cumulativeKills);
+      }
+    }
+
+    return kills;
+  }
+
+  private getCumulativeMobKills(payload: Prisma.JsonValue | undefined) {
+    return (
+      this.getEventPayloadInteger(payload, 'totalKills', 0) ??
+      this.getEventPayloadInteger(payload, 'totalCombats', 0)
+    );
+  }
+
+  private getEventPayloadInteger(
+    payload: Prisma.JsonValue | undefined,
+    key: string,
+    minimum: number,
+  ) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return null;
+    }
+
+    const value = payload[key];
+
+    if (typeof value !== 'number' && typeof value !== 'string') {
+      return null;
+    }
+
+    const numericValue = Number(value);
+
+    if (!Number.isFinite(numericValue)) return null;
+
+    const integerValue = Math.floor(numericValue);
+
+    return integerValue >= minimum ? integerValue : null;
   }
 
   private formatMissionAssignment(assignment: MissionAssignmentWithDefinition) {

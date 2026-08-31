@@ -9,7 +9,6 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AutoCombatModule } from './modules/auto-combat/auto-combat.module';
 import { CharactersModule } from './modules/characters/characters.module';
-import { CombatModule } from './modules/combat/combat.module';
 import { ConsumablesModule } from './modules/consumables/consumables.module';
 import { CraftingModule } from './modules/crafting/crafting.module';
 import { EquipmentModule } from './modules/equipment/equipment.module';
@@ -83,7 +82,6 @@ import { isConfigEnabled } from './common/redis/redis-client.factory';
     CosmeticsModule,
     StorefrontModule,
     MarketplaceModule,
-    CombatModule,
     AutoCombatModule,
 
     InventoryModule,

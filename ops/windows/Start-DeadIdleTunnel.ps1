@@ -1,12 +1,16 @@
 [CmdletBinding()]
 param(
     [string]$StateRoot = '',
-    [string]$TokenFile = ''
+    [string]$TokenFile = '',
+    [string]$RepoRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+if (-not $RepoRoot) {
+    $RepoRoot = Join-Path $PSScriptRoot '..\..'
+}
+$repoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 $frontendRoot = Join-Path $repoRoot 'frontend'
 if (-not $StateRoot) {
     $StateRoot = Join-Path $env:LOCALAPPDATA 'DeadIdle'
@@ -104,16 +108,30 @@ while ($true) {
     try {
         if ($cloudflaredPath -and (Test-Path -LiteralPath $TokenFile)) {
             Write-SupervisorLog 'Iniciando o tunel nomeado com token de servico.'
-            & $cloudflaredPath tunnel run --token-file $TokenFile --loglevel info --metrics 127.0.0.1:20241 >> $stdoutLog 2>> $stderrLog
-            $exitCode = $LASTEXITCODE
+            $nativeErrorActionPreference = $ErrorActionPreference
+            $ErrorActionPreference = 'Continue'
+            try {
+                & $cloudflaredPath tunnel --loglevel info --metrics 127.0.0.1:20241 run --token-file $TokenFile >> $stdoutLog 2>> $stderrLog
+                $exitCode = $LASTEXITCODE
+            }
+            finally {
+                $ErrorActionPreference = $nativeErrorActionPreference
+            }
         }
         else {
             $npmPath = (Get-Command npm.cmd -ErrorAction Stop).Source
             Write-SupervisorLog 'Token de servico ausente; iniciando o tunel pelo Wrangler.'
             Push-Location $frontendRoot
             try {
-                & $npmPath exec --yes wrangler -- tunnel run $tunnelName --log-level info >> $stdoutLog 2>> $stderrLog
-                $exitCode = $LASTEXITCODE
+                $nativeErrorActionPreference = $ErrorActionPreference
+                $ErrorActionPreference = 'Continue'
+                try {
+                    & $npmPath exec --yes wrangler -- tunnel run $tunnelName --log-level info >> $stdoutLog 2>> $stderrLog
+                    $exitCode = $LASTEXITCODE
+                }
+                finally {
+                    $ErrorActionPreference = $nativeErrorActionPreference
+                }
             }
             finally {
                 Pop-Location

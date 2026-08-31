@@ -17,10 +17,11 @@ Abra o PowerShell como administrador e execute:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\ops\windows\Install-DeadIdleStartupTasks.ps1
 ```
 
-No modo administrativo, backend e tunel rodam como `SYSTEM`, com gatilhos no
-boot e no login. O instalador tambem torna o Docker Desktop Service automatico,
-instala uma copia privada do `cloudflared` e protege o token do tunel em
-`%ProgramData%\DeadIdle\secrets`.
+No modo administrativo, backend e tunel rodam como `SYSTEM`. O motor WSL2 do
+Docker Desktop roda como o usuario local via `S4U`, sem exigir sessao interativa.
+As tres tarefas possuem gatilhos no boot e no login. O instalador tambem torna
+o Docker Desktop Service automatico, instala copias protegidas dos supervisores
+e do `cloudflared` em `%ProgramData%\DeadIdle` e protege o token do tunel.
 
 Se a elevacao administrativa ainda nao puder ser autorizada, use a contingencia:
 
@@ -32,6 +33,7 @@ Essa contingencia so inicia backend e tunel depois do login do usuario.
 
 Tarefas registradas:
 
+- `DeadIdle-Docker`: inicia e supervisiona o motor WSL2 antes do login.
 - `DeadIdle-Backend`: garante Docker Compose e reinicia o backend quando ele cai.
 - `DeadIdle-Tunnel`: monitora o endpoint publico e reinicia o tunel nomeado.
 - `DeadIdle-Backup`: executa a cada duas horas.
@@ -66,7 +68,8 @@ pelo manifesto. `status.json` sozinho nao basta para declarar o backup saudavel.
 
 O release exige working tree limpo e executa backup local/externo, migrations,
 auditorias, lint, testes, builds, reinicio, health checks local/publico e deploy
-do frontend no Cloudflare Pages:
+do frontend no Cloudflare Pages. O script solicita elevacao administrativa para
+reiniciar com seguranca o backend supervisionado por `SYSTEM`:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\ops\windows\Release-DeadIdle.ps1
@@ -79,7 +82,7 @@ desse tipo deve ser decidida com base no dump criado no inicio do release.
 ## Diagnostico
 
 ```powershell
-Get-ScheduledTask -TaskName DeadIdle-Backend, DeadIdle-Tunnel, DeadIdle-Backup, DeadIdle-Restore-Drill
+Get-ScheduledTask -TaskName DeadIdle-Docker, DeadIdle-Backend, DeadIdle-Tunnel, DeadIdle-Backup, DeadIdle-Restore-Drill
 Get-ScheduledTaskInfo -TaskName DeadIdle-Backup
 Invoke-RestMethod http://127.0.0.1:3000/health
 Invoke-RestMethod https://deadidle-api.botpokeidle.com.br/health

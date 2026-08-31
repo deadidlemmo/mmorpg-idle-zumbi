@@ -109,12 +109,21 @@ describe('ProgressionService mission rewards', () => {
     const craftingAggregate = jest
       .fn()
       .mockResolvedValue({ _sum: { outputQuantity: 1 } });
-    const eventCount = jest.fn().mockResolvedValue(4);
+    const eventFindMany = jest.fn().mockResolvedValue([
+      {
+        sessionId: 'session-1',
+        payloadJson: { killsGained: 4, totalKills: 4 },
+        session: { startedAt: new Date('2026-08-29T00:01:00.000Z') },
+      },
+    ]);
     const incursionCount = jest.fn().mockResolvedValue(1);
     const prisma = {
       gatheringSession: { aggregate: gatheringAggregate },
       craftingSession: { aggregate: craftingAggregate },
-      autoCombatSessionEvent: { count: eventCount },
+      autoCombatSessionEvent: {
+        findMany: eventFindMany,
+        findFirst: jest.fn(),
+      },
       characterIncursionSession: { count: incursionCount },
     } as unknown as PrismaService;
     const service = new ProgressionService(prisma, {} as AuditService);
@@ -168,7 +177,7 @@ describe('ProgressionService mission rewards', () => {
         where: expect.objectContaining({ outputItem: { tier: 3 } }),
       }),
     );
-    expect(eventCount).toHaveBeenCalledWith(
+    expect(eventFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ session: { map: { tier: 3 } } }),
       }),
@@ -176,6 +185,88 @@ describe('ProgressionService mission rewards', () => {
     expect(incursionCount).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ incursion: { tier: 3 } }),
+      }),
+    );
+  });
+
+  it('counts every kill represented by one batched auto-combat event', async () => {
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        sessionId: 'session-1',
+        payloadJson: { killsGained: 10, totalKills: 42 },
+        session: { startedAt: new Date('2026-08-28T23:00:00.000Z') },
+      },
+    ]);
+    const findFirst = jest.fn();
+    const prisma = {
+      autoCombatSessionEvent: { findMany, findFirst },
+    } as unknown as PrismaService;
+    const service = new ProgressionService(prisma, {} as AuditService);
+    const internals = service as unknown as {
+      getObjectiveProgress(
+        characterId: string,
+        objectiveType: string,
+        since: Date,
+        characterLevel: number,
+        missionTier: number,
+      ): Promise<number>;
+    };
+
+    const progress = await internals.getObjectiveProgress(
+      'character-1',
+      'DEFEAT_MOBS',
+      new Date('2026-08-29T00:00:00.000Z'),
+      1,
+      1,
+    );
+
+    expect(progress).toBe(10);
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+
+  it('reconstructs legacy kill batches from the prior cumulative total', async () => {
+    const startedAt = new Date('2026-08-28T23:00:00.000Z');
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        sessionId: 'session-1',
+        payloadJson: { totalKills: 15 },
+        session: { startedAt },
+      },
+      {
+        sessionId: 'session-1',
+        payloadJson: { totalKills: 20 },
+        session: { startedAt },
+      },
+    ]);
+    const findFirst = jest
+      .fn()
+      .mockResolvedValue({ payloadJson: { totalKills: 10 } });
+    const prisma = {
+      autoCombatSessionEvent: { findMany, findFirst },
+    } as unknown as PrismaService;
+    const service = new ProgressionService(prisma, {} as AuditService);
+    const internals = service as unknown as {
+      getObjectiveProgress(
+        characterId: string,
+        objectiveType: string,
+        since: Date,
+        characterLevel: number,
+        missionTier: number,
+      ): Promise<number>;
+    };
+
+    const progress = await internals.getObjectiveProgress(
+      'character-1',
+      'DEFEAT_MOBS',
+      new Date('2026-08-29T00:00:00.000Z'),
+      1,
+      1,
+    );
+
+    expect(progress).toBe(10);
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ sessionId: 'session-1' }),
       }),
     );
   });

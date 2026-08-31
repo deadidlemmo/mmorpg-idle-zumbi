@@ -88,7 +88,7 @@ export const GETTING_STARTED_PAGE: WikiEditorialPage = {
     {
       title: "2. Confira o mapa",
       paragraphs: [
-        "Mapas mostram a faixa de nível de cada região. Viajar define onde suas expedições, caçadas, incursões e ameaças disponíveis serão consultadas.",
+        "A viagem é livre. O mapa escolhido define onde você pode coletar; combate, incursões e Ameaças Globais continuam respeitando o nível indicado.",
       ],
       links: [{ label: "Ver mapas e áreas", to: "/wiki/maps" }],
     },
@@ -563,7 +563,7 @@ export const WIKI_SYSTEM_PAGES: WikiEditorialPage[] = [
     title: "Mapas e viagem",
     eyebrow: "Mundo",
     summary:
-      "Regiões e subáreas organizam tiers, faixas de nível, encontros e atividades disponíveis.",
+      "Viaje livremente entre regiões; cada atividade mantém seus próprios requisitos.",
     keywords: ["mapa", "área", "região", "viajar", "desbloquear"],
     sections: [
       {
@@ -575,9 +575,12 @@ export const WIKI_SYSTEM_PAGES: WikiEditorialPage[] = [
         ],
       },
       {
-        title: "Desbloqueio",
-        paragraphs: [
-          "Seu nível precisa estar dentro da faixa exigida. Mapas bloqueados mostram o requisito antes da viagem.",
+        title: "O que cada requisito controla",
+        bullets: [
+          "Viagem: liberada em todos os mapas quando não há outra atividade em andamento.",
+          "Coleta: exige estar no mapa e ter o nível da profissão pedido pelo material.",
+          "Combate: T2 exige nível 11, T3 exige 21, e assim por diante.",
+          "Criação: depende do nível de Criação e dos ingredientes, não do nível do personagem.",
         ],
       },
     ],
@@ -726,7 +729,7 @@ export const PROGRESSION_PAGE: WikiEditorialPage = {
     {
       title: "O que acompanhar",
       bullets: [
-        "Nível do personagem para mapas, monstros, incursões e bosses.",
+        "Nível do personagem para combate, incursões, bosses e uso de equipamentos.",
         "Tier e coerência dos equipamentos atuais.",
         "Proficiência de cada Expedição e de Criação.",
         "Poções e custos sustentáveis para sessões longas.",
@@ -772,14 +775,14 @@ export const WIKI_GUIDES: Array<{
     keywords: ["item", "equipamento", "melhor", "onde", "drop", "comprar"],
   },
   {
-    question: "Por que não consigo entrar em uma área?",
+    question: "Por que não consigo lutar ou coletar neste mapa?",
     answer:
-      "Compare seu nível com a faixa do mapa e verifique se já existe uma atividade exclusiva em andamento.",
+      "Viajar é livre. Para lutar, compare o nível do personagem com o requisito de combate. Para coletar, esteja no mapa e confira o nível da profissão exigido pelo material. Uma atividade em andamento também pode impedir a viagem.",
     links: [
       { label: "Consultar mapas", to: "/wiki/maps" },
       { label: "Entender progressão", to: "/wiki/progression" },
     ],
-    keywords: ["bloqueado", "mapa", "nível"],
+    keywords: ["bloqueado", "mapa", "nível", "viajar", "coletar"],
   },
   {
     question: "Por que estou gastando muitas poções?",

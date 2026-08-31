@@ -2139,41 +2139,32 @@ export function buildActivityEconomyAudit(
       tier.crafting.selfSupplySummary.netGoldEquivalentPerHour /
       Math.max(1, autoCombat?.netGoldEquivalentPerHour ?? 0);
 
-    if (tier.tier >= 3) {
-      const isRecoveryCalibrated =
-        craftingRecoveryRatio >= 0.25 && craftingRecoveryRatio <= 0.35;
-      const isSelfSupplyProfitable =
-        tier.crafting.selfSupplySummary.netGoldEquivalentPerHour > 0;
-      const isBelowAutoCombat =
-        craftingToAutoGoldRatio >= 0 && craftingToAutoGoldRatio <= 0.2;
-      const preservesIngredientSink = tier.crafting.recipes.every(
-        (recipe) => recipe.outputNpcSaleGold < recipe.inputNpcOpportunityGold,
-      );
-      const calibrated =
-        isRecoveryCalibrated &&
-        isSelfSupplyProfitable &&
-        isBelowAutoCombat &&
-        preservesIngredientSink;
+    const isRecoveryCalibrated =
+      craftingRecoveryRatio >= 0.25 && craftingRecoveryRatio <= 0.35;
+    const isSelfSupplyProfitable =
+      tier.crafting.selfSupplySummary.netGoldEquivalentPerHour > 0;
+    const isBelowAutoCombat =
+      craftingToAutoGoldRatio >= 0 && craftingToAutoGoldRatio <= 0.2;
+    const preservesIngredientSink = tier.crafting.recipes.every(
+      (recipe) => recipe.outputNpcSaleGold < recipe.inputNpcOpportunityGold,
+    );
+    const calibrated =
+      isRecoveryCalibrated &&
+      isSelfSupplyProfitable &&
+      isBelowAutoCombat &&
+      preservesIngredientSink;
 
-      findings.push({
-        severity: calibrated ? 'INFO' : 'HIGH',
-        code: calibrated
-          ? 'CRAFTING_NPC_LIQUIDATION_CALIBRATED'
-          : 'CRAFTING_NPC_LIQUIDATION_OUTSIDE_TARGET',
-        tier: tier.tier,
-        message:
-          `Equipamentos craftáveis recuperam ${(craftingRecoveryRatio * 100).toFixed(1)}% do valor NPC dos ingredientes; ` +
-          `o ciclo autossuficiente entrega ${tier.crafting.selfSupplySummary.netGoldEquivalentPerHour.toFixed(2)} Gold/h ` +
-          `(${(craftingToAutoGoldRatio * 100).toFixed(1)}% do autocombate).`,
-      });
-    } else if (tier.crafting.stationSummary.netGoldEquivalentPerHour < 0) {
-      findings.push({
-        severity: 'ATTENTION',
-        code: 'CRAFTING_DESTROYS_NPC_LIQUIDATION_VALUE',
-        tier: tier.tier,
-        message: `Criar e vender ao NPC perde ${Math.abs(tier.crafting.stationSummary.netGoldEquivalentPerHour)} Gold equivalente por hora de bancada frente a vender os ingredientes.`,
-      });
-    }
+    findings.push({
+      severity: calibrated ? 'INFO' : 'HIGH',
+      code: calibrated
+        ? 'CRAFTING_NPC_LIQUIDATION_CALIBRATED'
+        : 'CRAFTING_NPC_LIQUIDATION_OUTSIDE_TARGET',
+      tier: tier.tier,
+      message:
+        `Equipamentos craftáveis recuperam ${(craftingRecoveryRatio * 100).toFixed(1)}% do valor NPC dos ingredientes; ` +
+        `o ciclo autossuficiente entrega ${tier.crafting.selfSupplySummary.netGoldEquivalentPerHour.toFixed(2)} Gold/h ` +
+        `(${(craftingToAutoGoldRatio * 100).toFixed(1)}% do autocombate).`,
+    });
 
     const balancedIncursion = tier.representativeActivities.find(
       (activity) => activity.mode === 'BALANCED_MEDIA_DAS_2_INCURSOES',

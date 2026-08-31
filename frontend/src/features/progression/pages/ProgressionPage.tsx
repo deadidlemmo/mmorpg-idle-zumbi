@@ -224,6 +224,23 @@ export function ProgressionPage() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
+  useEffect(() => {
+    const refreshVisibleProgress = () => {
+      if (document.visibilityState !== "visible") return;
+      void load().catch(() => undefined);
+    };
+    const interval = window.setInterval(refreshVisibleProgress, 10_000);
+
+    document.addEventListener("visibilitychange", refreshVisibleProgress);
+    window.addEventListener("focus", refreshVisibleProgress);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshVisibleProgress);
+      window.removeEventListener("focus", refreshVisibleProgress);
+    };
+  }, [load]);
+
   const character = useMemo(
     () => (overview ? buildCharacter(overview) : null),
     [overview],

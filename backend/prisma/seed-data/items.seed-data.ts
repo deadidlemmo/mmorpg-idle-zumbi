@@ -1,4 +1,8 @@
 import { ItemSlot, MaterialOrigin, Rarity } from '@prisma/client';
+import {
+  getGatheringMaterialBaseRatePerHour,
+  getGatheringMaterialXpPerUnit,
+} from '../../src/common/config/gathering.config';
 import type { EquipmentSeedData, MaterialSeedData } from '../seed-types';
 
 type MaterialSeedDataWithGatheringProgression = MaterialSeedData & {
@@ -706,6 +710,14 @@ function createLaunchGatheringMaterialDefinitions(): MaterialSeedDataWithGatheri
           materialSlot: null,
           isGatheringMaterial: true,
           requiredGatheringLevel: tierConfig.requiredLevels[variantIndex],
+          gatheringXpPerUnit: getGatheringMaterialXpPerUnit({
+            tier: tierConfig.tier,
+            requiredGatheringLevel: tierConfig.requiredLevels[variantIndex],
+          }),
+          baseGatheringRatePerHour: getGatheringMaterialBaseRatePerHour({
+            tier: tierConfig.tier,
+            requiredGatheringLevel: tierConfig.requiredLevels[variantIndex],
+          }),
         }),
       ),
     ),

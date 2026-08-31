@@ -113,10 +113,8 @@ describe('PetsService com fragmentos físicos', () => {
   });
 
   it('consome o custo integral da pilha física na mesma transação', async () => {
-    const inventoryUpdate = jest
-      .fn()
-      .mockResolvedValueOnce({ count: 1 })
-      .mockResolvedValueOnce({ count: 1 });
+    const inventoryUpdate = jest.fn().mockResolvedValue({ count: 0 });
+    const inventoryDelete = jest.fn().mockResolvedValue({ count: 1 });
     const ledgerCreate = jest.fn((input: { data: Record<string, unknown> }) => {
       void input;
       return Promise.resolve({ id: 'ledger' });
@@ -148,7 +146,7 @@ describe('PetsService com fragmentos físicos', () => {
       inventoryItem: {
         findUnique: jest.fn().mockResolvedValue({ quantity: 10 }),
         updateMany: inventoryUpdate,
-        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: inventoryDelete,
       },
       economyLedgerEntry: { create: ledgerCreate },
     };
@@ -175,7 +173,7 @@ describe('PetsService com fragmentos físicos', () => {
       where: {
         characterId: 'character-id',
         itemId: 'cocoon-item-id',
-        quantity: { gte: 1 },
+        quantity: { gt: 1 },
       },
       data: { quantity: { decrement: 1 } },
     });
@@ -183,9 +181,23 @@ describe('PetsService com fragmentos físicos', () => {
       where: {
         characterId: 'character-id',
         itemId: 'fragment-item-id',
-        quantity: { gte: 10 },
+        quantity: { gt: 10 },
       },
       data: { quantity: { decrement: 10 } },
+    });
+    expect(inventoryDelete).toHaveBeenNthCalledWith(1, {
+      where: {
+        characterId: 'character-id',
+        itemId: 'cocoon-item-id',
+        quantity: 1,
+      },
+    });
+    expect(inventoryDelete).toHaveBeenNthCalledWith(2, {
+      where: {
+        characterId: 'character-id',
+        itemId: 'fragment-item-id',
+        quantity: 10,
+      },
     });
     expect(
       ledgerCreate.mock.calls.some(
@@ -273,7 +285,8 @@ describe('PetsService com fragmentos físicos', () => {
   });
 
   it('aborta a incubação quando o estoque físico muda durante a transação', async () => {
-    const inventoryUpdate = jest
+    const inventoryUpdate = jest.fn().mockResolvedValue({ count: 0 });
+    const inventoryDelete = jest
       .fn()
       .mockResolvedValueOnce({ count: 1 })
       .mockResolvedValueOnce({ count: 0 });
@@ -301,7 +314,7 @@ describe('PetsService com fragmentos físicos', () => {
       inventoryItem: {
         findUnique: jest.fn().mockResolvedValue({ quantity: 10 }),
         updateMany: inventoryUpdate,
-        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: inventoryDelete,
       },
     };
     const transaction = jest.fn(
@@ -453,7 +466,8 @@ describe('PetsService collection operations', () => {
   });
 
   it('converte casulos repetidos em fragmentos do mesmo tier', async () => {
-    const inventoryUpdate = jest.fn().mockResolvedValue({ count: 1 });
+    const inventoryUpdate = jest.fn().mockResolvedValue({ count: 0 });
+    const inventoryDelete = jest.fn().mockResolvedValue({ count: 1 });
     const fragmentUpsert = jest.fn().mockResolvedValue({ quantity: 20 });
     const ledgerCreate = jest.fn((input: { data: Record<string, unknown> }) => {
       void input;
@@ -479,7 +493,7 @@ describe('PetsService collection operations', () => {
       inventoryItem: {
         findUnique: jest.fn().mockResolvedValue({ quantity: 2 }),
         updateMany: inventoryUpdate,
-        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: inventoryDelete,
         upsert: fragmentUpsert,
       },
     });
@@ -502,6 +516,13 @@ describe('PetsService collection operations', () => {
         data: { quantity: { decrement: 2 } },
       }),
     );
+    expect(inventoryDelete).toHaveBeenCalledWith({
+      where: {
+        characterId: 'character-id',
+        itemId: 'cocoon-item-id',
+        quantity: 2,
+      },
+    });
     const [fragmentUpsertArgs] = fragmentUpsert.mock.calls[0] as unknown as [
       Prisma.InventoryItemUpsertArgs,
     ];
@@ -550,7 +571,7 @@ describe('PetsService collection operations', () => {
       },
       inventoryItem: {
         findUnique: jest.fn().mockResolvedValue({ quantity: 1 }),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     });

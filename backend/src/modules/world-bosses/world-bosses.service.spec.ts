@@ -219,7 +219,10 @@ describe('WorldBossesService rewards', () => {
     const grantedRewardCreate = jest.fn().mockResolvedValue({
       id: 'granted-reward-xp',
     });
-    const characterUpdate = jest.fn().mockResolvedValue({});
+    const characterUpdate = jest.fn().mockResolvedValue({
+      level: 11,
+      xp: 500,
+    });
     const ledgerCreate = jest.fn().mockResolvedValue({});
     const tx = {
       $queryRaw: jest.fn().mockResolvedValue([{ id: 'character-1' }]),

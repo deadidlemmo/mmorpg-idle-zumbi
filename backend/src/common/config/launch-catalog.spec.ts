@@ -178,4 +178,29 @@ describe('catálogo de lançamento T1-T5', () => {
       2660, 2660, 2660, 2660, 2660, 2660,
     ]);
   });
+
+  it('mantém duas variantes distintas de coleta em cada origem e tier', () => {
+    for (const tier of LAUNCH_TIERS) {
+      for (const origin of GATHERING_ORIGINS) {
+        const variants = materialDefinitions
+          .filter(
+            (material) =>
+              material.tier === tier && material.materialOrigin === origin,
+          )
+          .sort(
+            (left, right) =>
+              (left.requiredGatheringLevel ?? 1) -
+              (right.requiredGatheringLevel ?? 1),
+          );
+
+        expect(variants).toHaveLength(2);
+        expect(variants[1].gatheringXpPerUnit).toBeGreaterThan(
+          variants[0].gatheringXpPerUnit ?? 0,
+        );
+        expect(variants[1].baseGatheringRatePerHour).toBeLessThan(
+          variants[0].baseGatheringRatePerHour ?? 0,
+        );
+      }
+    }
+  });
 });

@@ -238,14 +238,12 @@ describe('real T1-T5 economy simulator', () => {
     expect(report.assumptions.marketplaceGoldEffect).toBe('TRANSFER_ONLY');
   });
 
-  it('uses the calibrated craftable-equipment NPC floor only at T3-T5', () => {
+  it('uses the calibrated craftable-equipment NPC floor at T1-T5', () => {
     expect(report.tiers.map((tier) => tier.crafting.outputNpcGold)).toEqual([
-      24, 48, 760, 1_226, 3_226,
+      31, 237, 760, 1_226, 3_226,
     ]);
 
-    for (const tier of report.tiers.filter(
-      (candidate) => candidate.tier >= 3,
-    )) {
+    for (const tier of report.tiers) {
       const recoveryRatio =
         tier.crafting.outputNpcGold / tier.crafting.inputNpcOpportunityGold;
 

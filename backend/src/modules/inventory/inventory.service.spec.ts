@@ -15,6 +15,7 @@ describe('InventoryService - liquidação e troca de itens', () => {
     },
     inventoryItem: {
       findFirst: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       updateMany: jest.fn(),
       deleteMany: jest.fn(),
     },
@@ -158,6 +159,7 @@ describe('InventoryService - liquidação e troca de itens', () => {
       },
     });
     tx.inventoryItem.deleteMany.mockResolvedValue({ count: 1 });
+    tx.inventoryItem.updateMany.mockResolvedValue({ count: 0 });
     tx.character.update.mockResolvedValue({ gold: 1_260 });
     tx.economyLedgerEntry.create.mockResolvedValue({});
 

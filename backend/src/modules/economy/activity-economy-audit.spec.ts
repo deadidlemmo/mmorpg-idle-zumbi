@@ -102,10 +102,8 @@ describe('complete T1-T5 activity economy audit', () => {
     }
   });
 
-  it('keeps T3-T5 NPC crafting liquidation inside the calibrated band', () => {
-    for (const tier of report.tiers.filter(
-      (candidate) => candidate.tier >= 3,
-    )) {
+  it('keeps T1-T5 NPC crafting liquidation inside the calibrated band', () => {
+    for (const tier of report.tiers) {
       const autoCombat = tier.autoCombat.summary;
       const crafting = tier.crafting.selfSupplySummary;
 

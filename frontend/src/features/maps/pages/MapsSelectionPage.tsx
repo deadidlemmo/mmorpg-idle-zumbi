@@ -4,9 +4,10 @@ import {
   Lock,
   MapPin,
   MapPinned,
+  Pickaxe,
   Route,
   ShieldCheck,
-  Skull,
+  Swords,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
@@ -40,7 +41,8 @@ function buildCharacterViewModel(
   overview: CharacterOverviewResponse,
 ): DashboardCharacterViewModel {
   const character = overview.character;
-  const className = character.class?.name ?? character.gameClass?.name ?? 'Lutador';
+  const className =
+    character.class?.name ?? character.gameClass?.name ?? 'Lutador';
   const currentMapName =
     character.currentMap?.name ??
     character.map?.name ??
@@ -55,7 +57,11 @@ function buildCharacterViewModel(
     classId: character.classId ?? normalizeClassName(className),
     level: character.level ?? 1,
     xp: character.xp ?? 0,
-    totalXp: character.totalXp ?? character.levelProgress?.totalXp ?? character.xp ?? 0,
+    totalXp:
+      character.totalXp ??
+      character.levelProgress?.totalXp ??
+      character.xp ??
+      0,
     currentLevelXp:
       character.currentLevelXp ??
       character.xpIntoCurrentLevel ??
@@ -90,10 +96,15 @@ function buildCharacterViewModel(
       character.levelProgress?.xpNeededForNextLevel ??
       null,
     currentLevelStartXp:
-      character.currentLevelStartXp ?? character.levelProgress?.currentLevelStartXp ?? null,
+      character.currentLevelStartXp ??
+      character.levelProgress?.currentLevelStartXp ??
+      null,
     nextLevelRequiredXp:
-      character.nextLevelRequiredXp ?? character.levelProgress?.nextLevelRequiredXp ?? null,
-    isAtLevelCap: character.isAtLevelCap ?? character.levelProgress?.isAtLevelCap ?? false,
+      character.nextLevelRequiredXp ??
+      character.levelProgress?.nextLevelRequiredXp ??
+      null,
+    isAtLevelCap:
+      character.isAtLevelCap ?? character.levelProgress?.isAtLevelCap ?? false,
     levelProgress: character.levelProgress ?? null,
     status: character.status ?? 'ACTIVE',
     currentHp: character.currentHp ?? character.maxHp ?? 1,
@@ -105,7 +116,8 @@ function buildCharacterViewModel(
     class: character.class ?? null,
     gameClass: character.gameClass ?? null,
     map: character.map ?? null,
-    currentMap: character.currentMap ?? overview.progression?.currentMap ?? null,
+    currentMap:
+      character.currentMap ?? overview.progression?.currentMap ?? null,
     equipment: character.equipment ?? overview.equipment ?? {},
     potionConfig: character.potionConfig ?? character.autoPotionConfig ?? null,
     potionConfigs: character.potionConfigs ?? [],
@@ -165,7 +177,9 @@ function getApiErrorMessage(error: unknown) {
 
 export function MapsSelectionPage() {
   const { characterId } = useParams();
-  const [overview, setOverview] = useState<CharacterOverviewResponse | null>(null);
+  const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
+    null,
+  );
   const [maps, setMaps] = useState<AutoCombatMapViewModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingMapId, setUpdatingMapId] = useState<string | null>(null);
@@ -192,7 +206,9 @@ export function MapsSelectionPage() {
         }
       } catch {
         if (isMounted) {
-          setErrorMessage('Não foi possível carregar os mapas agora. Tente novamente em instantes.');
+          setErrorMessage(
+            'Não foi possível carregar os mapas agora. Tente novamente em instantes.',
+          );
         }
       } finally {
         if (isMounted) {
@@ -232,13 +248,6 @@ export function MapsSelectionPage() {
   async function handleEnterMap(map: AutoCombatMapViewModel) {
     if (!characterId || updatingMapId) return;
 
-    const minLevel = getGameMapMinLevel(map);
-
-    if (characterLevel < minLevel) {
-      setErrorMessage(`Mapa bloqueado. ${map.name} requer nível ${minLevel}.`);
-      return;
-    }
-
     if (map.id === currentMapId) {
       return;
     }
@@ -247,7 +256,10 @@ export function MapsSelectionPage() {
       setUpdatingMapId(map.id);
       setErrorMessage(null);
 
-      const updatedOverview = await updateCharacterCurrentMap(characterId, map.id);
+      const updatedOverview = await updateCharacterCurrentMap(
+        characterId,
+        map.id,
+      );
 
       setOverview(updatedOverview);
     } catch (error) {
@@ -292,7 +304,7 @@ export function MapsSelectionPage() {
             {sortedMaps.map((map) => {
               const minLevel = getGameMapMinLevel(map);
               const maxLevel = getGameMapMaxLevel(map);
-              const isUnlocked = characterLevel >= minLevel;
+              const isCombatUnlocked = characterLevel >= minLevel;
               const isCurrentMap = map.id === currentMapId;
               const isUpdatingThisMap = updatingMapId === map.id;
               const mapImage = map.imageUrl ?? getMapImageByName(map.name);
@@ -305,7 +317,8 @@ export function MapsSelectionPage() {
                   className={[
                     'maps-selection-card',
                     tierClassName,
-                    isUnlocked ? 'is-unlocked' : 'is-locked',
+                    'is-unlocked',
+                    !isCombatUnlocked ? 'is-combat-locked' : null,
                     isCurrentMap ? 'is-current-map' : null,
                   ]
                     .filter(Boolean)
@@ -313,7 +326,7 @@ export function MapsSelectionPage() {
                   aria-label={
                     isCurrentMap
                       ? `${map.name}, mapa atual de ${character.name}`
-                      : `${map.name}, disponível a partir do nível ${minLevel}`
+                      : `${map.name}, viagem liberada; combate disponível no nível ${minLevel}`
                   }
                   aria-current={isCurrentMap ? 'location' : undefined}
                 >
@@ -323,33 +336,44 @@ export function MapsSelectionPage() {
                   >
                     {!mapImage ? <MapPinned aria-hidden="true" /> : null}
 
-                    <span className="maps-selection-card__tier">Tier {map.tier}</span>
-                    <span className="maps-selection-card__stage">{progressionLabel}</span>
+                    <span className="maps-selection-card__tier">
+                      Tier {map.tier}
+                    </span>
+                    <span className="maps-selection-card__stage">
+                      {progressionLabel}
+                    </span>
 
                     {isCurrentMap ? (
                       <div
                         className="maps-selection-card__current-marker"
                         aria-label={`${character.name} está neste mapa`}
                       >
-                        <span className="maps-selection-card__current-avatar" aria-hidden="true">
+                        <span
+                          className="maps-selection-card__current-avatar"
+                          aria-hidden="true"
+                        >
                           {avatarImage ? (
                             <img src={avatarImage} alt="" />
                           ) : (
                             <span>{character.name.slice(0, 1)}</span>
                           )}
                         </span>
-                        <span className="maps-selection-card__current-pin" aria-hidden="true">
+                        <span
+                          className="maps-selection-card__current-pin"
+                          aria-hidden="true"
+                        >
                           <MapPin size={16} />
                         </span>
                       </div>
                     ) : null}
 
-                    {!isUnlocked ? (
+                    {!isCombatUnlocked ? (
                       <div
                         className="maps-selection-card__lock"
-                        aria-label={`Bloqueado — requer nível ${minLevel}`}
+                        aria-label={`Combate bloqueado — requer nível ${minLevel}`}
                       >
                         <Lock size={22} aria-hidden="true" />
+                        <span>Combate</span>
                       </div>
                     ) : null}
                   </div>
@@ -357,7 +381,9 @@ export function MapsSelectionPage() {
                   <div className="maps-selection-card__body">
                     <div className="maps-selection-card__title-row">
                       <div>
-                        <span>{isCurrentMap ? 'Você está aqui' : progressionLabel}</span>
+                        <span>
+                          {isCurrentMap ? 'Você está aqui' : progressionLabel}
+                        </span>
                         <h3>{map.name}</h3>
                       </div>
 
@@ -366,59 +392,76 @@ export function MapsSelectionPage() {
                           className="maps-selection-card__status-icon maps-selection-card__status-icon--current"
                           aria-hidden="true"
                         />
-                      ) : isUnlocked ? (
+                      ) : isCombatUnlocked ? (
                         <ShieldCheck
                           className="maps-selection-card__status-icon"
                           aria-hidden="true"
                         />
                       ) : (
-                        <Skull
+                        <Lock
                           className="maps-selection-card__status-icon"
                           aria-hidden="true"
                         />
                       )}
                     </div>
 
-                    <div className="maps-selection-card__level-pill">
-                      <span>Faixa recomendada</span>
-                      <strong>Nv. {minLevel}-{maxLevel}</strong>
+                    <div
+                      className="maps-selection-card__access"
+                      aria-label="Acessos do mapa"
+                    >
+                      <div>
+                        <Route size={15} aria-hidden="true" />
+                        <span>Viagem</span>
+                        <strong>Liberada</strong>
+                      </div>
+                      <div>
+                        <Pickaxe size={15} aria-hidden="true" />
+                        <span>Coleta</span>
+                        <strong>Conforme profissão</strong>
+                      </div>
+                      <div
+                        className={!isCombatUnlocked ? 'is-blocked' : undefined}
+                      >
+                        <Swords size={15} aria-hidden="true" />
+                        <span>Combate</span>
+                        <strong>
+                          {isCombatUnlocked
+                            ? `Nv. ${minLevel}-${maxLevel}`
+                            : `Disponível no Nv. ${minLevel}`}
+                        </strong>
+                      </div>
                     </div>
 
                     <div className="maps-selection-card__footer">
-                      {isUnlocked ? (
-                        <button
-                          className={[
-                            'maps-selection-card__action',
-                            isCurrentMap ? 'maps-selection-card__action--current' : null,
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          type="button"
-                          onClick={() => handleEnterMap(map)}
-                          disabled={Boolean(updatingMapId)}
-                          aria-label={
-                            isCurrentMap
-                              ? `${map.name} já é o mapa atual`
-                              : `Definir ${map.name} como mapa atual`
-                          }
-                        >
-                          {isCurrentMap ? (
-                            <MapPin size={16} aria-hidden="true" />
-                          ) : (
-                            <Route size={16} aria-hidden="true" />
-                          )}
-                          {isUpdatingThisMap
-                            ? 'Definindo rota...'
-                            : isCurrentMap
-                              ? 'Você está aqui'
-                              : 'Entrar no mapa'}
-                        </button>
-                      ) : (
-                        <button className="maps-selection-card__action" type="button" disabled>
-                          <Lock size={16} aria-hidden="true" />
-                          Disponível no nível {minLevel}
-                        </button>
-                      )}
+                      <button
+                        className={[
+                          'maps-selection-card__action',
+                          isCurrentMap
+                            ? 'maps-selection-card__action--current'
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                        type="button"
+                        onClick={() => handleEnterMap(map)}
+                        disabled={Boolean(updatingMapId)}
+                        aria-label={
+                          isCurrentMap
+                            ? `${map.name} já é o mapa atual`
+                            : `Viajar para ${map.name}`
+                        }
+                      >
+                        {isCurrentMap ? (
+                          <MapPin size={16} aria-hidden="true" />
+                        ) : (
+                          <Route size={16} aria-hidden="true" />
+                        )}
+                        {isUpdatingThisMap
+                          ? 'Viajando...'
+                          : isCurrentMap
+                            ? 'Você está aqui'
+                            : 'Viajar'}
+                      </button>
                     </div>
                   </div>
                 </article>

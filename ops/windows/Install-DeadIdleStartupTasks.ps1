@@ -7,6 +7,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $frontendRoot = Join-Path $repoRoot 'frontend'
+$dockerScript = Join-Path $PSScriptRoot 'Start-DeadIdleDocker.ps1'
 $backendScript = Join-Path $PSScriptRoot 'Start-DeadIdleBackend.ps1'
 $tunnelScript = Join-Path $PSScriptRoot 'Start-DeadIdleTunnel.ps1'
 $backupScript = Join-Path $PSScriptRoot 'Invoke-DeadIdleBackup.ps1'
@@ -21,6 +22,7 @@ $isAdministrator = $principal.IsInRole(
 )
 
 $missingFiles = @(
+    $dockerScript,
     $backendScript,
     $tunnelScript,
     $backupScript,
@@ -41,8 +43,12 @@ else {
     Join-Path $env:LOCALAPPDATA 'DeadIdle'
 }
 $serviceBinRoot = Join-Path $serviceStateRoot 'bin'
+$serviceScriptRoot = Join-Path $serviceStateRoot 'scripts'
 $secretRoot = Join-Path $serviceStateRoot 'secrets'
 $tokenFile = Join-Path $secretRoot 'cloudflared-token.txt'
+$taskDockerScript = $dockerScript
+$taskBackendScript = $backendScript
+$taskTunnelScript = $tunnelScript
 
 New-Item -ItemType Directory -Path $serviceStateRoot -Force | Out-Null
 
@@ -72,12 +78,53 @@ function Protect-SecretFile {
     Set-Acl -LiteralPath $Path -AclObject $acl
 }
 
+function Protect-ServiceScriptDirectory {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $systemAccount = ([System.Security.Principal.SecurityIdentifier]::new('S-1-5-18')).Translate([System.Security.Principal.NTAccount])
+    $administratorsAccount = ([System.Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount])
+    $userAccount = $identity.User.Translate([System.Security.Principal.NTAccount])
+    $acl = [System.Security.AccessControl.DirectorySecurity]::new()
+    $acl.SetAccessRuleProtection($true, $false)
+    $acl.SetOwner($systemAccount)
+
+    foreach ($account in @($systemAccount, $administratorsAccount)) {
+        $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new(
+            $account,
+            [System.Security.AccessControl.FileSystemRights]::FullControl,
+            [System.Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit',
+            [System.Security.AccessControl.PropagationFlags]::None,
+            [System.Security.AccessControl.AccessControlType]::Allow
+        ))
+    }
+    $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new(
+        $userAccount,
+        [System.Security.AccessControl.FileSystemRights]::ReadAndExecute,
+        [System.Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit',
+        [System.Security.AccessControl.PropagationFlags]::None,
+        [System.Security.AccessControl.AccessControlType]::Allow
+    ))
+
+    Set-Acl -LiteralPath $Path -AclObject $acl
+}
+
 if ($isAdministrator) {
-    New-Item -ItemType Directory -Path $serviceBinRoot, $secretRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path $serviceBinRoot, $serviceScriptRoot, $secretRoot -Force | Out-Null
     $cloudflaredServicePath = Join-Path $serviceBinRoot 'cloudflared.exe'
     $cloudflaredSource = (Get-Command cloudflared.exe -ErrorAction SilentlyContinue).Source
     if ($cloudflaredSource) {
-        Copy-Item -LiteralPath $cloudflaredSource -Destination $cloudflaredServicePath -Force
+        $shouldCopyCloudflared = -not (Test-Path -LiteralPath $cloudflaredServicePath)
+        if (-not $shouldCopyCloudflared) {
+            $sourceHash = (Get-FileHash -LiteralPath $cloudflaredSource -Algorithm SHA256).Hash
+            $serviceHash = (Get-FileHash -LiteralPath $cloudflaredServicePath -Algorithm SHA256).Hash
+            $shouldCopyCloudflared = $sourceHash -ne $serviceHash
+        }
+
+        if ($shouldCopyCloudflared) {
+            Stop-ScheduledTask -TaskName 'DeadIdle-Tunnel' -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+            Copy-Item -LiteralPath $cloudflaredSource -Destination $cloudflaredServicePath -Force
+        }
     }
     if (-not (Test-Path -LiteralPath $cloudflaredServicePath)) {
         throw 'cloudflared.exe nao foi encontrado para instalar o servico.'
@@ -114,7 +161,15 @@ if ($isAdministrator) {
         )
     }
     Protect-SecretFile -Path $tokenFile
+    $taskDockerScript = Join-Path $serviceScriptRoot 'Start-DeadIdleDocker.ps1'
+    $taskBackendScript = Join-Path $serviceScriptRoot 'Start-DeadIdleBackend.ps1'
+    $taskTunnelScript = Join-Path $serviceScriptRoot 'Start-DeadIdleTunnel.ps1'
+    Copy-Item -LiteralPath $dockerScript -Destination $taskDockerScript -Force
+    Copy-Item -LiteralPath $backendScript -Destination $taskBackendScript -Force
+    Copy-Item -LiteralPath $tunnelScript -Destination $taskTunnelScript -Force
+    Protect-ServiceScriptDirectory -Path $serviceScriptRoot
     Set-Service -Name 'com.docker.service' -StartupType Automatic -ErrorAction SilentlyContinue
+    Start-Service -Name 'com.docker.service' -ErrorAction Stop
 }
 
 $settings = New-ScheduledTaskSettingsSet `
@@ -125,6 +180,42 @@ $settings = New-ScheduledTaskSettingsSet `
     -RestartCount 999 `
     -RestartInterval (New-TimeSpan -Minutes 1) `
     -ExecutionTimeLimit ([TimeSpan]::Zero)
+
+$dockerPrincipal = if ($isAdministrator) {
+    New-ScheduledTaskPrincipal `
+        -UserId $currentUser `
+        -LogonType S4U `
+        -RunLevel Limited
+}
+else {
+    New-ScheduledTaskPrincipal `
+        -UserId $currentUser `
+        -LogonType Interactive `
+        -RunLevel Limited
+}
+$dockerTriggers = if ($isAdministrator) {
+    @(
+        (New-ScheduledTaskTrigger -AtStartup),
+        (New-ScheduledTaskTrigger -AtLogOn -User $currentUser)
+    )
+}
+else {
+    @((New-ScheduledTaskTrigger -AtLogOn -User $currentUser))
+}
+$dockerArguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$taskDockerScript`" -StateRoot `"$serviceStateRoot`""
+$dockerAction = New-ScheduledTaskAction `
+    -Execute $powerShellExe `
+    -Argument $dockerArguments `
+    -WorkingDirectory $repoRoot
+Stop-ScheduledTask -TaskName 'DeadIdle-Docker' -ErrorAction SilentlyContinue
+Register-ScheduledTask `
+    -TaskName 'DeadIdle-Docker' `
+    -Action $dockerAction `
+    -Trigger $dockerTriggers `
+    -Principal $dockerPrincipal `
+    -Settings $settings `
+    -Description 'Mantem o motor WSL2 do Docker Desktop disponivel desde o boot, sem exigir login interativo.' `
+    -Force | Out-Null
 
 if ($isAdministrator) {
     $servicePrincipal = New-ScheduledTaskPrincipal `
@@ -149,17 +240,24 @@ else {
 $serviceTasks = @(
     @{
         Name = 'DeadIdle-Backend'
-        Script = $backendScript
-        ExtraArguments = "-StateRoot `"$serviceStateRoot`""
+        Script = $taskBackendScript
+        ExtraArguments = "-StateRoot `"$serviceStateRoot`" -RepoRoot `"$repoRoot`""
         Description = 'Mantem PostgreSQL, Redis e o backend local do DeadIdle disponiveis desde o boot.'
     },
     @{
         Name = 'DeadIdle-Tunnel'
-        Script = $tunnelScript
-        ExtraArguments = "-StateRoot `"$serviceStateRoot`" -TokenFile `"$tokenFile`""
+        Script = $taskTunnelScript
+        ExtraArguments = "-StateRoot `"$serviceStateRoot`" -TokenFile `"$tokenFile`" -RepoRoot `"$repoRoot`""
         Description = 'Mantem o tunel publico nomeado do DeadIdle disponivel desde o boot.'
     }
 )
+
+# Uma tarefa em execucao preserva o principal antigo mesmo apos Register-ScheduledTask
+# com -Force. Pare os supervisores antes de trocar Interactive por SYSTEM.
+foreach ($task in $serviceTasks) {
+    Stop-ScheduledTask -TaskName $task.Name -ErrorAction SilentlyContinue
+}
+Start-Sleep -Seconds 2
 
 foreach ($task in $serviceTasks) {
     $arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$($task.Script)`" $($task.ExtraArguments)"
@@ -182,7 +280,7 @@ $automationPrincipal = if ($isAdministrator) {
     New-ScheduledTaskPrincipal `
         -UserId $currentUser `
         -LogonType S4U `
-        -RunLevel Highest
+        -RunLevel Limited
 }
 else {
     New-ScheduledTaskPrincipal `
@@ -231,11 +329,13 @@ foreach ($task in $automationTasks) {
         -Force | Out-Null
 }
 
+Start-ScheduledTask -TaskName 'DeadIdle-Docker'
 Start-ScheduledTask -TaskName 'DeadIdle-Backend'
 Start-ScheduledTask -TaskName 'DeadIdle-Tunnel'
 
 Start-Sleep -Seconds 2
 Get-ScheduledTask -TaskName @(
+    'DeadIdle-Docker',
     'DeadIdle-Backend',
     'DeadIdle-Tunnel',
     'DeadIdle-Backup',

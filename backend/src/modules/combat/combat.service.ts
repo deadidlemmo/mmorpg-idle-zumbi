@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -19,6 +20,7 @@ import {
   applyXpPenalty,
   calculateTierFarmPenalty,
 } from '../../common/utils/farm-penalty.util';
+import { grantCharacterXp } from '../../common/utils/character-xp.util';
 import { calculateLevelProgress } from '../../common/utils/level.util';
 import {
   calculateFullStats,
@@ -28,6 +30,7 @@ import {
   applyPremiumXpBonus,
   isPremiumActive,
 } from '../../common/utils/membership.util';
+import { tryConsumeInventoryStack } from '../../common/inventory/inventory-stack.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
@@ -227,7 +230,7 @@ export class CombatService {
       isPremiumActive(character.user),
     );
 
-    const levelProgress = calculateLevelProgress(
+    let levelProgress = calculateLevelProgress(
       character.level,
       character.xp,
       xpGained,
@@ -303,13 +306,13 @@ export class CombatService {
         },
       });
 
+      levelProgress = await grantCharacterXp(tx, character.id, xpGained);
+
       await tx.character.update({
         where: {
           id: character.id,
         },
         data: {
-          xp: levelProgress.totalXp,
-          level: levelProgress.newLevel,
           currentHp: finalCurrentHp,
           maxHp: newMaxHp,
         },
@@ -393,23 +396,15 @@ export class CombatService {
         });
 
         if (potionInventoryItem) {
-          if (potionInventoryItem.quantity <= simulation.potionsUsed) {
-            await tx.inventoryItem.delete({
-              where: {
-                id: potionInventoryItem.id,
-              },
-            });
-          } else {
-            await tx.inventoryItem.update({
-              where: {
-                id: potionInventoryItem.id,
-              },
-              data: {
-                quantity: {
-                  decrement: simulation.potionsUsed,
-                },
-              },
-            });
+          const remaining = await tryConsumeInventoryStack(tx, {
+            characterId: character.id,
+            itemId: simulation.potionItemId,
+            quantity: simulation.potionsUsed,
+          });
+          if (remaining === null) {
+            throw new ConflictException(
+              'O estoque de poções mudou durante o combate.',
+            );
           }
 
           await recordEconomyEntry(tx, {
@@ -418,10 +413,7 @@ export class CombatService {
             resourceType: EconomyResourceType.ITEM,
             itemId: simulation.potionItemId,
             tier: potionInventoryItem.item.tier,
-            quantity: Math.min(
-              potionInventoryItem.quantity,
-              simulation.potionsUsed,
-            ),
+            quantity: simulation.potionsUsed,
             reason: ECONOMY_REASONS.MANUAL_COMBAT_POTION_USED,
             referenceType: 'Combat',
             referenceId: combat.id,

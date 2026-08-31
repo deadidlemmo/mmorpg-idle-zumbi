@@ -17,6 +17,7 @@ import {
   getPetRarityByTier,
   WORLD_BOSS_FRAGMENT_ITEM_FAMILY,
 } from '../../common/config/economy.config';
+import { tryConsumeInventoryStack } from '../../common/inventory/inventory-stack.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
@@ -335,49 +336,30 @@ export class PetsService {
               itemQuantityConsumed: definition.fragmentCost,
             };
 
-            const cocoonDebit = await tx.inventoryItem.updateMany({
-              where: {
-                characterId,
-                itemId: definition.cocoonItemId,
-                quantity: { gte: 1 },
-              },
-              data: { quantity: { decrement: 1 } },
+            const cocoonBalance = await tryConsumeInventoryStack(tx, {
+              characterId,
+              itemId: definition.cocoonItemId,
+              quantity: 1,
             });
-            if (cocoonDebit.count !== 1) {
+            if (cocoonBalance === null) {
               throw new BadRequestException(
                 `É necessário 1x ${definition.cocoonItem.name}.`,
               );
             }
-            await tx.inventoryItem.deleteMany({
-              where: {
-                characterId,
-                itemId: definition.cocoonItemId,
-                quantity: { lte: 0 },
-              },
-            });
 
-            const fragmentDebit = await tx.inventoryItem.updateMany({
-              where: {
+            const fragmentItemBalanceAfter = await tryConsumeInventoryStack(
+              tx,
+              {
                 characterId,
                 itemId: definition.fragmentItemId,
-                quantity: { gte: definition.fragmentCost },
+                quantity: definition.fragmentCost,
               },
-              data: { quantity: { decrement: definition.fragmentCost } },
-            });
-            if (fragmentDebit.count !== 1) {
+            );
+            if (fragmentItemBalanceAfter === null) {
               throw new ConflictException(
                 'O estoque de fragmentos mudou. Tente novamente.',
               );
             }
-            const fragmentItemBalanceAfter =
-              fragmentItemBalance - definition.fragmentCost;
-            await tx.inventoryItem.deleteMany({
-              where: {
-                characterId,
-                itemId: definition.fragmentItemId,
-                quantity: { lte: 0 },
-              },
-            });
             await recordEconomyEntry(tx, {
               characterId,
               direction: EconomyDirection.DEBIT,
@@ -864,28 +846,17 @@ export class PetsService {
               );
             }
 
-            const debited = await tx.inventoryItem.updateMany({
-              where: {
-                characterId,
-                itemId: definition.cocoonItemId,
-                quantity: { gte: input.quantity + reservedQuantity },
-              },
-              data: { quantity: { decrement: input.quantity } },
+            const remainingCocoons = await tryConsumeInventoryStack(tx, {
+              characterId,
+              itemId: definition.cocoonItemId,
+              quantity: input.quantity,
+              minimumRemaining: reservedQuantity,
             });
-            if (debited.count !== 1) {
+            if (remainingCocoons === null) {
               throw new ConflictException(
                 'O estoque de casulos mudou. Tente novamente.',
               );
             }
-            const remainingCocoons =
-              (cocoonInventory?.quantity ?? 0) - input.quantity;
-            await tx.inventoryItem.deleteMany({
-              where: {
-                characterId,
-                itemId: definition.cocoonItemId,
-                quantity: { lte: 0 },
-              },
-            });
 
             const outputQuantity =
               input.quantity *

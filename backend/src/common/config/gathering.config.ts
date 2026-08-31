@@ -26,6 +26,8 @@ export const GATHERING_STAT_BONUS_PER_LEVEL = 2;
 export const GATHERING_PRODUCTION_BONUS_PER_LEVEL = 0.015;
 export const GATHERING_AFFINITY_XP_MULTIPLIER = 1.15;
 export const GATHERING_AFFINITY_PRODUCTION_MULTIPLIER = 1.05;
+export const GATHERING_LEVELS_PER_MATERIAL_TIER = 5;
+export const ADVANCED_GATHERING_MATERIAL_XP_MULTIPLIER = 1.2;
 
 export const GATHERING_XP_PER_UNIT_BY_TIER: Record<number, number> = {
   1: 4,
@@ -44,6 +46,100 @@ export function getGatheringXpPerUnitForTier(tier: number) {
   const safeTier = Math.max(1, Math.floor(Number(tier) || 1));
 
   return GATHERING_XP_PER_UNIT_BY_TIER[safeTier] ?? safeTier * 2;
+}
+
+export function getGatheringBaseRatePerHourForTier(tier: number) {
+  const safeTier = Math.max(1, Math.floor(Number(tier) || 1));
+
+  return GATHERING_RATE_BY_TIER[safeTier] ?? 1;
+}
+
+export function getGatheringMaterialTierStartLevel(tier: number) {
+  const safeTier = Math.max(1, Math.floor(Number(tier) || 1));
+
+  return (safeTier - 1) * GATHERING_LEVELS_PER_MATERIAL_TIER + 1;
+}
+
+export function isAdvancedGatheringMaterial(params: {
+  tier: number;
+  requiredGatheringLevel?: number | null;
+}) {
+  const requiredLevel = Math.max(
+    1,
+    Math.floor(Number(params.requiredGatheringLevel) || 1),
+  );
+
+  return requiredLevel > getGatheringMaterialTierStartLevel(params.tier);
+}
+
+export function getGatheringMaterialXpPerUnit(params: {
+  tier: number;
+  requiredGatheringLevel?: number | null;
+}) {
+  const baseXpPerUnit = getGatheringXpPerUnitForTier(params.tier);
+
+  if (!isAdvancedGatheringMaterial(params)) {
+    return baseXpPerUnit;
+  }
+
+  return Math.max(
+    baseXpPerUnit + 1,
+    Math.ceil(baseXpPerUnit * ADVANCED_GATHERING_MATERIAL_XP_MULTIPLIER),
+  );
+}
+
+export function getGatheringMaterialBaseRatePerHour(params: {
+  tier: number;
+  requiredGatheringLevel?: number | null;
+}) {
+  const baseRatePerHour = getGatheringBaseRatePerHourForTier(params.tier);
+
+  if (!isAdvancedGatheringMaterial(params)) {
+    return baseRatePerHour;
+  }
+
+  const baseXpPerHour =
+    baseRatePerHour * getGatheringXpPerUnitForTier(params.tier);
+  const advancedXpPerUnit = getGatheringMaterialXpPerUnit(params);
+
+  return Math.max(1, Math.round(baseXpPerHour / advancedXpPerUnit));
+}
+
+export function resolveGatheringMaterialXpPerUnit(params: {
+  tier: number;
+  requiredGatheringLevel?: number | null;
+  gatheringXpPerUnit?: number | null;
+}) {
+  const configuredXp = Math.floor(Number(params.gatheringXpPerUnit) || 0);
+  const baseXp = getGatheringXpPerUnitForTier(params.tier);
+
+  // Existing databases stored the tier base XP in both variants. Treat that
+  // value as legacy only for the advanced material, while preserving real
+  // per-item overrides.
+  if (
+    configuredXp > 0 &&
+    (!isAdvancedGatheringMaterial(params) || configuredXp !== baseXp)
+  ) {
+    return configuredXp;
+  }
+
+  return getGatheringMaterialXpPerUnit(params);
+}
+
+export function resolveGatheringMaterialBaseRatePerHour(params: {
+  tier: number;
+  requiredGatheringLevel?: number | null;
+  baseGatheringRatePerHour?: number | null;
+}) {
+  const configuredRate = Math.floor(
+    Number(params.baseGatheringRatePerHour) || 0,
+  );
+
+  if (configuredRate > 0) {
+    return configuredRate;
+  }
+
+  return getGatheringMaterialBaseRatePerHour(params);
 }
 
 export function getGatheringXpToNextLevel(level: number) {

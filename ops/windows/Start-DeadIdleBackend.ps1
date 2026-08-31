@@ -1,11 +1,15 @@
 [CmdletBinding()]
 param(
-    [string]$StateRoot = ''
+    [string]$StateRoot = '',
+    [string]$RepoRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+if (-not $RepoRoot) {
+    $RepoRoot = Join-Path $PSScriptRoot '..\..'
+}
+$repoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 $backendRoot = Join-Path $repoRoot 'backend'
 $composeFile = Join-Path $repoRoot 'infra\docker-compose.yml'
 $mainFile = Join-Path $backendRoot 'dist\main.js'

@@ -7,6 +7,35 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = [System.Security.Principal.WindowsPrincipal]::new($identity)
+$isAdministrator = $principal.IsInRole(
+    [System.Security.Principal.WindowsBuiltInRole]::Administrator
+)
+if (-not $isAdministrator) {
+    $escapedScriptPath = $PSCommandPath.Replace("'", "''")
+    $elevatedCommand = "& '$escapedScriptPath'"
+    if ($SkipTests) { $elevatedCommand += ' -SkipTests' }
+    if ($SkipPagesDeploy) { $elevatedCommand += ' -SkipPagesDeploy' }
+    if ($AllowDirty) { $elevatedCommand += ' -AllowDirty' }
+    $encodedCommand = [Convert]::ToBase64String(
+        [Text.Encoding]::Unicode.GetBytes($elevatedCommand)
+    )
+    $elevatedProcess = Start-Process `
+        -FilePath 'powershell.exe' `
+        -Verb RunAs `
+        -ArgumentList @(
+            '-NoProfile',
+            '-ExecutionPolicy',
+            'Bypass',
+            '-EncodedCommand',
+            $encodedCommand
+        ) `
+        -Wait `
+        -PassThru
+    exit $elevatedProcess.ExitCode
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $backendRoot = Join-Path $repoRoot 'backend'
 $frontendRoot = Join-Path $repoRoot 'frontend'

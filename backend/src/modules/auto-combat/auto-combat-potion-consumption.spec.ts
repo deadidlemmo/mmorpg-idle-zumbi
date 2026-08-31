@@ -211,6 +211,9 @@ describe('AutoCombatService potion consumption', () => {
     );
     const tx = {
       character: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ level: 20, xp: 1_000 }),
         update: jest.fn().mockResolvedValue({}),
       },
       inventoryItem: {
@@ -220,8 +223,9 @@ describe('AutoCombatService potion consumption', () => {
           quantity: 10,
           item: { tier: 2 },
         }),
-        update: jest.fn().mockResolvedValue({}),
-        delete: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ quantity: 6 }),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       economyLedgerEntry: {
         upsert: ledgerUpsert,
@@ -250,9 +254,13 @@ describe('AutoCombatService potion consumption', () => {
 
     await service.persistRealtimeRoundResult(session, result);
 
-    expect(tx.inventoryItem.delete).not.toHaveBeenCalled();
-    expect(tx.inventoryItem.update).toHaveBeenCalledWith({
-      where: { id: 'inventory-potion-1' },
+    expect(tx.inventoryItem.deleteMany).not.toHaveBeenCalled();
+    expect(tx.inventoryItem.updateMany).toHaveBeenCalledWith({
+      where: {
+        characterId: 'character-1',
+        itemId: POTION_ITEM_ID,
+        quantity: { gt: 4 },
+      },
       data: { quantity: { decrement: 4 } },
     });
     const ledgerArgs = ledgerUpsert.mock.calls[0]?.[0];

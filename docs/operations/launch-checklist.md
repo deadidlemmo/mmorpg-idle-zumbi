@@ -2,6 +2,7 @@
 
 ## Configuracao obrigatoria
 
+- `NODE_ENV` esta definido como `production` no backend publico.
 - `DATABASE_URL` aponta para PostgreSQL com TLS e credencial exclusiva.
 - `JWT_SECRET` e `METRICS_TOKEN` sao segredos longos e distintos.
 - `ALERT_WEBHOOK_URL` entrega alertas no canal operacional e, quando usado,

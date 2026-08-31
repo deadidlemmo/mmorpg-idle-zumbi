@@ -323,6 +323,7 @@ describe('MarketplaceService - Fragmento de Ameaça', () => {
     },
     inventoryItem: {
       findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       updateMany: jest.fn(),
       deleteMany: jest.fn(),
     },
@@ -352,6 +353,7 @@ describe('MarketplaceService - Fragmento de Ameaça', () => {
       item: fragmentItem,
     });
     tx.inventoryItem.updateMany.mockResolvedValue({ count: 1 });
+    tx.inventoryItem.findUniqueOrThrow.mockResolvedValue({ quantity: 5 });
     tx.inventoryItem.deleteMany.mockResolvedValue({ count: 0 });
     tx.marketListing.create.mockResolvedValue(createdListing);
     tx.economyLedgerEntry.create.mockResolvedValue({});
@@ -371,9 +373,9 @@ describe('MarketplaceService - Fragmento de Ameaça', () => {
     });
     expect(tx.inventoryItem.updateMany).toHaveBeenCalledWith({
       where: {
-        id: inventoryItemId,
         characterId,
-        quantity: { gte: 4 },
+        itemId: fragmentItemId,
+        quantity: { gt: 4 },
       },
       data: { quantity: { decrement: 4 } },
     });

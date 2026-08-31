@@ -164,7 +164,7 @@ describe('EconomyService com recursos físicos', () => {
       where: {
         characterId: 'character-1',
         itemId: SOURCE_ITEM_ID,
-        quantity: { gte: 6 },
+        quantity: { gt: 6 },
       },
       data: { quantity: { decrement: 6 } },
     });

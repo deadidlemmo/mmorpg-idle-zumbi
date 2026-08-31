@@ -18,13 +18,13 @@ export class MetricsTokenGuard implements CanActivate {
       .get<string>('METRICS_TOKEN')
       ?.trim();
     const production =
-      this.configService.get<string>('NODE_ENV')?.toLowerCase() ===
+      this.configService.get<string>('NODE_ENV')?.trim().toLowerCase() ===
       'production';
 
-    if (!expectedToken) {
+    if (!expectedToken || (production && expectedToken.length < 32)) {
       if (production) {
         throw new ServiceUnavailableException(
-          'Endpoint de metricas indisponivel sem METRICS_TOKEN.',
+          'Endpoint de metricas indisponivel sem METRICS_TOKEN forte.',
         );
       }
 

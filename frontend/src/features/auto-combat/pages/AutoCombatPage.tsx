@@ -1912,7 +1912,7 @@ export function AutoCombatPage() {
     getMobPortraitImage(selectedThreatMob?.name);
   const selectedThreatDrops = selectedThreatMob?.drops ?? [];
 
-  const selectedMapIsUnlocked = selectedMap
+  const selectedMapCombatIsUnlocked = selectedMap
     ? currentSelectionLevel >= getGameMapMinLevel(selectedMap)
     : false;
 
@@ -3745,19 +3745,19 @@ export function AutoCombatPage() {
   const canStartHunt =
     !overview?.activity?.hasActiveWorldBoss &&
     Boolean(selectedMap) &&
-    selectedMapIsUnlocked &&
+    selectedMapCombatIsUnlocked &&
     characterHasHp &&
     (!hasActiveSession || canResumeHunt);
 
   const canTravelToSelectedMap =
     !overview?.activity?.hasActiveWorldBoss &&
     Boolean(selectedMap) &&
-    selectedMapIsUnlocked &&
     !hasActiveSession;
 
   const canStartCombat =
     !isBackendEncounterReadyPhase &&
     selectedMapHasActiveEncounters &&
+    selectedMapCombatIsUnlocked &&
     !showActiveSession &&
     !isActionLoading &&
     characterHasHp;
@@ -3941,13 +3941,6 @@ export function AutoCombatPage() {
       return;
     }
 
-    if (!selectedMapIsUnlocked) {
-      setErrorMessage(
-        `Este mapa libera no nível ${getGameMapMinLevel(selectedMap)}.`,
-      );
-      return;
-    }
-
     if (!canTravelToSelectedMap) {
       setErrorMessage(
         "Não foi possível viajar com a seleção atual. Verifique se já existe uma atividade ativa.",
@@ -4012,9 +4005,9 @@ export function AutoCombatPage() {
       return;
     }
 
-    if (!selectedMapIsUnlocked) {
+    if (!selectedMapCombatIsUnlocked) {
       setErrorMessage(
-        `Este mapa libera no nível ${getGameMapMinLevel(selectedMap)}.`,
+        `O combate neste mapa libera no nível ${getGameMapMinLevel(selectedMap)}. A viagem e a coleta continuam disponíveis.`,
       );
       return;
     }
@@ -4316,6 +4309,13 @@ export function AutoCombatPage() {
       return;
     }
 
+    if (!selectedMapCombatIsUnlocked) {
+      setErrorMessage(
+        `O combate neste mapa libera no nível ${getGameMapMinLevel(selectedMap)}. A viagem e a coleta continuam disponíveis.`,
+      );
+      return;
+    }
+
     if (!selectedMapHasActiveEncounters) {
       setErrorMessage(
         "Este mapa ainda não possui inimigos cadastrados para o auto-combate.",
@@ -4571,7 +4571,7 @@ export function AutoCombatPage() {
                         .join(" ")}
                       style={selectedMapVisualStyle}
                     >
-                      <span>Zona atual</span>
+                      <span>Zona selecionada</span>
 
                       <strong>{selectedMapName}</strong>
 
@@ -4598,8 +4598,10 @@ export function AutoCombatPage() {
                       <strong>{selectedMapName}</strong>
 
                       <p>
-                        {selectedMap?.description ??
-                          "Escolha um mapa disponível e inicie a caça para revelar os infectados próximos."}
+                        {!selectedMapCombatIsUnlocked && selectedMap
+                          ? `Viagem liberada. Combate disponível no nível ${getGameMapMinLevel(selectedMap)}; a coleta depende apenas da profissão.`
+                          : (selectedMap?.description ??
+                            "Escolha um mapa e inicie a caça para revelar os infectados próximos.")}
                       </p>
 
                       <label className="auto-combat-field auto-combat-field--map">
@@ -4619,7 +4621,8 @@ export function AutoCombatPage() {
 
                             {availableMaps.map((gameMap) => (
                               <option key={gameMap.id} value={gameMap.id}>
-                                {gameMap.name}
+                                {gameMap.name} · combate Nv.{" "}
+                                {getGameMapMinLevel(gameMap)}
                               </option>
                             ))}
                           </select>

@@ -20,6 +20,7 @@ import {
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { buildActivityTimelineSnapshot } from '../../common/utils/activity-timeline.util';
 import { calculateLevelProgress } from '../../common/utils/level.util';
+import { grantCharacterXp } from '../../common/utils/character-xp.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
@@ -692,17 +693,11 @@ export class IncursionsService {
         );
       }
 
-      const levelProgress = calculateLevelProgress(
-        character.level,
-        character.xp,
-        xpReward,
-      );
+      const levelProgress = await grantCharacterXp(tx, characterId, xpReward);
 
       await tx.character.update({
         where: { id: characterId },
         data: {
-          level: levelProgress.newLevel,
-          xp: levelProgress.totalXp,
           gold: { increment: goldReward },
         },
       });

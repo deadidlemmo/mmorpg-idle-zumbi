@@ -30,7 +30,9 @@ export const BLACK_MARKET_FAMILY_MULTIPLIER: Readonly<Record<string, number>> =
 export const CRAFTABLE_EQUIPMENT_BLACK_MARKET_FLOOR_BY_TIER: Readonly<
   Partial<Record<number, number>>
 > = Object.freeze({
-  // T3-T5 recuperam 30% do valor NPC dos ingredientes das receitas canonicas.
+  // T1-T5 recuperam cerca de 30% do valor NPC dos ingredientes canonicos.
+  1: 31,
+  2: 237,
   3: 760,
   4: 1_226,
   5: 3_226,

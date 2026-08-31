@@ -23,6 +23,13 @@ describe('AppController (e2e)', () => {
       .expect('Hello World!');
   });
 
+  it('/combat/start (POST) nao expoe o combate manual legado', () => {
+    return request(app.getHttpServer())
+      .post('/combat/start')
+      .send({ characterId: 'character-1', mobId: 'mob-1' })
+      .expect(404);
+  });
+
   afterEach(async () => {
     await app.close();
   });

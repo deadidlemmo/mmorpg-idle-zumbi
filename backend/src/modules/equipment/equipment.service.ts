@@ -13,6 +13,7 @@ import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
 } from '../../common/utils/stats.util';
+import { tryConsumeInventoryStack } from '../../common/inventory/inventory-stack.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EquipItemDto } from './dto/equip-item.dto';
 import { UnequipItemDto } from './dto/unequip-item.dto';
@@ -106,113 +107,84 @@ export class EquipmentService {
   }
 
   async equip(userId: string, equipItemDto: EquipItemDto) {
-    const character = await this.prisma.character.findFirst({
-      where: {
-        id: equipItemDto.characterId,
+    const result = await this.prisma.$transaction(async (tx) => {
+      const character = await this.lockAndLoadCharacter(
+        tx,
         userId,
-      },
-      include: {
-        class: true,
-        equipment: {
-          include: {
-            mainHand: true,
-            offHand: true,
-            head: true,
-            armor: true,
-            pants: true,
-            boots: true,
-          },
-        },
-        gatheringSkills: true,
-      },
-    });
-
-    if (!character) {
-      throw new NotFoundException('Personagem não encontrado.');
-    }
-
-    const inventoryItem = await this.prisma.inventoryItem.findFirst({
-      where: {
-        characterId: character.id,
-        itemId: equipItemDto.itemId,
-      },
-      include: {
-        item: {
-          include: {
-            class: true,
-            map: true,
-          },
-        },
-      },
-    });
-
-    if (!inventoryItem) {
-      throw new NotFoundException('Item não encontrado no inventário.');
-    }
-
-    if (inventoryItem.quantity <= 0) {
-      throw new BadRequestException('Quantidade insuficiente do item.');
-    }
-
-    if (inventoryItem.type !== InventoryItemType.EQUIPMENT) {
-      throw new BadRequestException('Este item não é um equipamento.');
-    }
-
-    const item = inventoryItem.item;
-
-    if (item.classId && item.classId !== character.classId) {
-      throw new BadRequestException(
-        `Este item pertence à classe ${item.class?.name}.`,
+        equipItemDto.characterId,
       );
-    }
-
-    if (item.map?.minLevel && character.level < item.map.minLevel) {
-      throw new BadRequestException(
-        `Este item exige nível ${item.map.minLevel}.`,
-      );
-    }
-
-    const oldEquipmentItems = this.getEquipmentItems(character);
-    const gatheringBonus = calculateGatheringPrimaryBonus(
-      character.gatheringSkills,
-    );
-
-    const oldStats = calculateFullStats(
-      character.class,
-      oldEquipmentItems,
-      character.level,
-      gatheringBonus,
-    );
-
-    const oldMaxHp = oldStats.derivedCombatStats.maxHp;
-
-    const oldCurrentHp = this.clampHp(
-      character.currentHp ?? oldMaxHp,
-      oldMaxHp,
-    );
-
-    const currentlyEquippedItem = this.getEquippedItemBySlot(
-      character.equipment ?? {},
-      item.slot,
-    );
-
-    if (currentlyEquippedItem?.id === item.id) {
-      throw new BadRequestException('Este item jÃ¡ estÃ¡ equipado.');
-    }
-
-    const updateData = this.getEquipmentUpdateData(item.slot, item.id);
-
-    const equipment = await this.prisma.$transaction(async (tx) => {
-      await this.decrementInventoryItem(tx, inventoryItem);
-
-      const updatedEquipment = await tx.equipment.upsert({
+      const inventoryItem = await tx.inventoryItem.findUnique({
         where: {
-          characterId: character.id,
+          characterId_itemId: {
+            characterId: character.id,
+            itemId: equipItemDto.itemId,
+          },
         },
-        create: {
-          characterId: character.id,
-          ...updateData,
+        include: {
+          item: {
+            include: {
+              class: true,
+              map: true,
+            },
+          },
         },
+      });
+
+      if (!inventoryItem) {
+        throw new NotFoundException('Item não encontrado no inventário.');
+      }
+      if (inventoryItem.type !== InventoryItemType.EQUIPMENT) {
+        throw new BadRequestException('Este item não é um equipamento.');
+      }
+
+      const item = inventoryItem.item;
+      if (item.classId && item.classId !== character.classId) {
+        throw new BadRequestException(
+          `Este item pertence à classe ${item.class?.name}.`,
+        );
+      }
+      if (item.map?.minLevel && character.level < item.map.minLevel) {
+        throw new BadRequestException(
+          `Este item exige nível ${item.map.minLevel}.`,
+        );
+      }
+
+      const gatheringBonus = calculateGatheringPrimaryBonus(
+        character.gatheringSkills,
+      );
+      const oldStats = calculateFullStats(
+        character.class,
+        this.getEquipmentItems(character),
+        character.level,
+        gatheringBonus,
+      );
+      const oldMaxHp = oldStats.derivedCombatStats.maxHp;
+      const oldCurrentHp = this.clampHp(
+        character.currentHp ?? oldMaxHp,
+        oldMaxHp,
+      );
+      const currentlyEquippedItem = this.getEquippedItemBySlot(
+        character.equipment ?? {},
+        item.slot,
+      );
+
+      if (currentlyEquippedItem?.id === item.id) {
+        throw new BadRequestException('Este item já está equipado.');
+      }
+
+      const remaining = await tryConsumeInventoryStack(tx, {
+        characterId: character.id,
+        itemId: item.id,
+        quantity: 1,
+      });
+      if (remaining === null) {
+        throw new BadRequestException('Quantidade insuficiente do item.');
+      }
+
+      const updateData = this.getEquipmentUpdateData(item.slot, item.id);
+      const equipment = await tx.equipment.upsert({
+        where: { characterId: character.id },
+        create: { characterId: character.id, ...updateData },
         update: updateData,
         include: {
           mainHand: true,
@@ -232,35 +204,48 @@ export class EquipmentService {
         });
       }
 
-      return updatedEquipment;
+      const newEquipmentItems = this.getEquipmentItemsFromEquipment(equipment);
+      const newStats = calculateFullStats(
+        character.class,
+        newEquipmentItems,
+        character.level,
+        gatheringBonus,
+      );
+      const newMaxHp = newStats.derivedCombatStats.maxHp;
+      const newCurrentHp = this.calculateCurrentHpAfterEquipmentChange({
+        oldCurrentHp,
+        oldMaxHp,
+        newMaxHp,
+      });
+
+      await tx.character.update({
+        where: { id: character.id },
+        data: { maxHp: newMaxHp, currentHp: newCurrentHp },
+      });
+
+      return {
+        character,
+        equipment,
+        item,
+        newEquipmentItems,
+        newStats,
+        oldCurrentHp,
+        oldMaxHp,
+        newCurrentHp,
+        newMaxHp,
+      };
     });
-
-    const newEquipmentItems = this.getEquipmentItemsFromEquipment(equipment);
-
-    const newStats = calculateFullStats(
-      character.class,
+    const {
+      character,
+      equipment,
+      item,
       newEquipmentItems,
-      character.level,
-      gatheringBonus,
-    );
-
-    const newMaxHp = newStats.derivedCombatStats.maxHp;
-
-    const newCurrentHp = this.calculateCurrentHpAfterEquipmentChange({
+      newStats,
       oldCurrentHp,
       oldMaxHp,
+      newCurrentHp,
       newMaxHp,
-    });
-
-    await this.prisma.character.update({
-      where: {
-        id: character.id,
-      },
-      data: {
-        maxHp: newMaxHp,
-        currentHp: newCurrentHp,
-      },
-    });
+    } = result;
 
     const equippedT1Slots = newEquipmentItems.filter(
       (equippedItem) => (equippedItem?.tier ?? 0) >= 1,
@@ -331,67 +316,41 @@ export class EquipmentService {
   }
 
   async unequip(userId: string, unequipItemDto: UnequipItemDto) {
-    const character = await this.prisma.character.findFirst({
-      where: {
-        id: unequipItemDto.characterId,
+    const result = await this.prisma.$transaction(async (tx) => {
+      const character = await this.lockAndLoadCharacter(
+        tx,
         userId,
-      },
-      include: {
-        class: true,
-        equipment: {
-          include: {
-            mainHand: true,
-            offHand: true,
-            head: true,
-            armor: true,
-            pants: true,
-            boots: true,
-          },
-        },
-        gatheringSkills: true,
-      },
-    });
+        unequipItemDto.characterId,
+      );
 
-    if (!character) {
-      throw new NotFoundException('Personagem nÃ£o encontrado.');
-    }
+      if (!character.equipment) {
+        throw new BadRequestException('Nenhum equipamento encontrado.');
+      }
 
-    if (!character.equipment) {
-      throw new BadRequestException('Nenhum equipamento encontrado.');
-    }
+      const equippedItem = this.getEquippedItemBySlot(
+        character.equipment,
+        unequipItemDto.slot,
+      );
+      if (!equippedItem) {
+        throw new BadRequestException('Nenhum item equipado neste slot.');
+      }
 
-    const equippedItem = this.getEquippedItemBySlot(
-      character.equipment,
-      unequipItemDto.slot,
-    );
-
-    if (!equippedItem) {
-      throw new BadRequestException('Nenhum item equipado neste slot.');
-    }
-
-    const oldEquipmentItems = this.getEquipmentItems(character);
-    const gatheringBonus = calculateGatheringPrimaryBonus(
-      character.gatheringSkills,
-    );
-
-    const oldStats = calculateFullStats(
-      character.class,
-      oldEquipmentItems,
-      character.level,
-      gatheringBonus,
-    );
-
-    const oldMaxHp = oldStats.derivedCombatStats.maxHp;
-    const oldCurrentHp = this.clampHp(
-      character.currentHp ?? oldMaxHp,
-      oldMaxHp,
-    );
-
-    const equipment = await this.prisma.$transaction(async (tx) => {
-      const updatedEquipment = await tx.equipment.update({
-        where: {
-          characterId: character.id,
-        },
+      const gatheringBonus = calculateGatheringPrimaryBonus(
+        character.gatheringSkills,
+      );
+      const oldStats = calculateFullStats(
+        character.class,
+        this.getEquipmentItems(character),
+        character.level,
+        gatheringBonus,
+      );
+      const oldMaxHp = oldStats.derivedCombatStats.maxHp;
+      const oldCurrentHp = this.clampHp(
+        character.currentHp ?? oldMaxHp,
+        oldMaxHp,
+      );
+      const equipment = await tx.equipment.update({
+        where: { characterId: character.id },
         data: this.getEquipmentClearData(unequipItemDto.slot),
         include: {
           mainHand: true,
@@ -409,35 +368,44 @@ export class EquipmentService {
         type: InventoryItemType.EQUIPMENT,
       });
 
-      return updatedEquipment;
+      const newEquipmentItems = this.getEquipmentItemsFromEquipment(equipment);
+      const newStats = calculateFullStats(
+        character.class,
+        newEquipmentItems,
+        character.level,
+        gatheringBonus,
+      );
+      const newMaxHp = newStats.derivedCombatStats.maxHp;
+      const newCurrentHp = this.calculateCurrentHpAfterEquipmentChange({
+        oldCurrentHp,
+        oldMaxHp,
+        newMaxHp,
+      });
+
+      await tx.character.update({
+        where: { id: character.id },
+        data: { maxHp: newMaxHp, currentHp: newCurrentHp },
+      });
+
+      return {
+        equipment,
+        equippedItem,
+        newStats,
+        oldCurrentHp,
+        oldMaxHp,
+        newCurrentHp,
+        newMaxHp,
+      };
     });
-
-    const newEquipmentItems = this.getEquipmentItemsFromEquipment(equipment);
-
-    const newStats = calculateFullStats(
-      character.class,
-      newEquipmentItems,
-      character.level,
-      gatheringBonus,
-    );
-
-    const newMaxHp = newStats.derivedCombatStats.maxHp;
-
-    const newCurrentHp = this.calculateCurrentHpAfterEquipmentChange({
+    const {
+      equipment,
+      equippedItem,
+      newStats,
       oldCurrentHp,
       oldMaxHp,
+      newCurrentHp,
       newMaxHp,
-    });
-
-    await this.prisma.character.update({
-      where: {
-        id: character.id,
-      },
-      data: {
-        maxHp: newMaxHp,
-        currentHp: newCurrentHp,
-      },
-    });
+    } = result;
 
     return {
       message: `${equippedItem.name} desequipado com sucesso.`,
@@ -466,6 +434,38 @@ export class EquipmentService {
     };
   }
 
+  private async lockAndLoadCharacter(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    characterId: string,
+  ) {
+    const locked = await tx.character.updateMany({
+      where: { id: characterId, userId },
+      data: { updatedAt: new Date() },
+    });
+    if (locked.count !== 1) {
+      throw new NotFoundException('Personagem não encontrado.');
+    }
+
+    return tx.character.findUniqueOrThrow({
+      where: { id: characterId },
+      include: {
+        class: true,
+        equipment: {
+          include: {
+            mainHand: true,
+            offHand: true,
+            head: true,
+            armor: true,
+            pants: true,
+            boots: true,
+          },
+        },
+        gatheringSkills: true,
+      },
+    });
+  }
+
   private getEquipmentItems(character: CharacterEquipmentContainer) {
     return [
       character.equipment?.mainHand,
@@ -486,43 +486,6 @@ export class EquipmentService {
       equipment.pants,
       equipment.boots,
     ];
-  }
-
-  private async decrementInventoryItem(
-    tx: Prisma.TransactionClient,
-    inventoryItem: { id: string; quantity: number },
-  ) {
-    if (inventoryItem.quantity <= 1) {
-      const deletedItem = await tx.inventoryItem.deleteMany({
-        where: {
-          id: inventoryItem.id,
-        },
-      });
-
-      if (deletedItem.count <= 0) {
-        throw new BadRequestException('Quantidade insuficiente do item.');
-      }
-
-      return;
-    }
-
-    const updatedItem = await tx.inventoryItem.updateMany({
-      where: {
-        id: inventoryItem.id,
-        quantity: {
-          gt: 1,
-        },
-      },
-      data: {
-        quantity: {
-          decrement: 1,
-        },
-      },
-    });
-
-    if (updatedItem.count <= 0) {
-      throw new BadRequestException('Quantidade insuficiente do item.');
-    }
   }
 
   private async incrementInventoryItem(

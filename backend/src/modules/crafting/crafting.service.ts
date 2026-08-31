@@ -31,6 +31,7 @@ import {
   PRODUCT_EVENT_ACTIONS,
   PRODUCT_MILESTONE_KEYS,
 } from '../../common/audit/product-events.constants';
+import { tryConsumeInventoryStack } from '../../common/inventory/inventory-stack.util';
 import {
   applyPremiumXpBonus,
   isPremiumActive,
@@ -1211,31 +1212,20 @@ export class CraftingService {
       }
 
       for (const ingredient of recipe.ingredients) {
-        await tx.inventoryItem.update({
-          where: {
-            characterId_itemId: {
-              characterId: dto.characterId,
-              itemId: ingredient.itemId,
-            },
-          },
-          data: {
-            quantity: {
-              decrement: ingredient.quantity * craftQuantity,
-            },
-          },
+        const requiredQuantity = ingredient.quantity * craftQuantity;
+        const remaining = await tryConsumeInventoryStack(tx, {
+          characterId: dto.characterId,
+          itemId: ingredient.itemId,
+          quantity: requiredQuantity,
         });
+        if (remaining === null) {
+          throw new ConflictException(
+            'O estoque de materiais mudou. Revise a mochila e tente novamente.',
+          );
+        }
       }
 
       const outputQuantity = recipe.outputQuantity * craftQuantity;
-
-      await tx.inventoryItem.deleteMany({
-        where: {
-          characterId: dto.characterId,
-          quantity: {
-            lte: 0,
-          },
-        },
-      });
 
       const craftingSession = await tx.craftingSession.create({
         data: {

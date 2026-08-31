@@ -18,6 +18,10 @@ import {
   WORLD_BOSS_FRAGMENT_ITEMS,
 } from '../../common/config/economy.config';
 import { calculateBlackMarketSellValue } from '../../common/config/item-economy.config';
+import {
+  tryConsumeBankStack,
+  tryConsumeInventoryStack,
+} from '../../common/inventory/inventory-stack.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
@@ -153,7 +157,14 @@ export class InventoryService {
         inventoryItem.quantity,
       );
 
-      await this.decrementInventoryItem(tx, inventoryItem, quantity);
+      const remaining = await tryConsumeInventoryStack(tx, {
+        characterId: moveItemDto.characterId,
+        itemId: moveItemDto.itemId,
+        quantity,
+      });
+      if (remaining === null) {
+        throw new BadRequestException('Quantidade insuficiente do item.');
+      }
 
       await tx.bankItem.upsert({
         where: {
@@ -209,7 +220,14 @@ export class InventoryService {
         bankItem.quantity,
       );
 
-      await this.decrementBankItem(tx, bankItem, quantity);
+      const remaining = await tryConsumeBankStack(tx, {
+        characterId: moveItemDto.characterId,
+        itemId: moveItemDto.itemId,
+        quantity,
+      });
+      if (remaining === null) {
+        throw new BadRequestException('Quantidade insuficiente do item.');
+      }
 
       await tx.inventoryItem.upsert({
         where: {
@@ -302,7 +320,14 @@ export class InventoryService {
         );
       }
 
-      await this.decrementInventoryItem(tx, inventoryItem, quantity);
+      const remaining = await tryConsumeInventoryStack(tx, {
+        characterId: character.id,
+        itemId: inventoryItem.itemId,
+        quantity,
+      });
+      if (remaining === null) {
+        throw new BadRequestException('Quantidade insuficiente do item.');
+      }
 
       const updatedCharacter = await tx.character.update({
         where: {
@@ -479,71 +504,6 @@ export class InventoryService {
     if (!isPetCocoon) return item.rarity;
 
     return Rarity[getPetRarityByTier(item.tier)];
-  }
-
-  private async decrementInventoryItem(
-    tx: Prisma.TransactionClient,
-    inventoryItem: { id: string; quantity: number },
-    quantity: number,
-  ) {
-    if (inventoryItem.quantity === quantity) {
-      const deletedItem = await tx.inventoryItem.deleteMany({
-        where: {
-          id: inventoryItem.id,
-        },
-      });
-
-      if (deletedItem.count <= 0) {
-        throw new BadRequestException('Quantidade insuficiente do item.');
-      }
-
-      return;
-    }
-
-    const updatedItem = await tx.inventoryItem.updateMany({
-      where: {
-        id: inventoryItem.id,
-        quantity: {
-          gte: quantity,
-        },
-      },
-      data: {
-        quantity: {
-          decrement: quantity,
-        },
-      },
-    });
-
-    if (updatedItem.count <= 0) {
-      throw new BadRequestException('Quantidade insuficiente do item.');
-    }
-  }
-
-  private async decrementBankItem(
-    tx: Prisma.TransactionClient,
-    bankItem: { id: string; quantity: number },
-    quantity: number,
-  ) {
-    if (bankItem.quantity === quantity) {
-      await tx.bankItem.delete({
-        where: {
-          id: bankItem.id,
-        },
-      });
-
-      return;
-    }
-
-    await tx.bankItem.update({
-      where: {
-        id: bankItem.id,
-      },
-      data: {
-        quantity: {
-          decrement: quantity,
-        },
-      },
-    });
   }
 
   private mapInventoryEntry(

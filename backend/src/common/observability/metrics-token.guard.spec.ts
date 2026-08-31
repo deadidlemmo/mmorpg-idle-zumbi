@@ -27,9 +27,10 @@ describe('MetricsTokenGuard', () => {
   });
 
   it('rejeita token incorreto', () => {
+    const expectedToken = 'a'.repeat(64);
     const config = {
       get: jest.fn((key: string) =>
-        key === 'METRICS_TOKEN' ? 'segredo-forte' : 'production',
+        key === 'METRICS_TOKEN' ? expectedToken : 'production',
       ),
     };
     const guard = new MetricsTokenGuard(config as never);
@@ -40,15 +41,29 @@ describe('MetricsTokenGuard', () => {
   });
 
   it('aceita bearer token correto', () => {
+    const expectedToken = 'b'.repeat(64);
     const config = {
       get: jest.fn((key: string) =>
-        key === 'METRICS_TOKEN' ? 'segredo-forte' : 'production',
+        key === 'METRICS_TOKEN' ? expectedToken : 'production',
       ),
     };
     const guard = new MetricsTokenGuard(config as never);
 
     expect(
-      guard.canActivate(createContext('Bearer segredo-forte') as never),
+      guard.canActivate(createContext(`Bearer ${expectedToken}`) as never),
     ).toBe(true);
+  });
+
+  it('rejeita token curto em producao', () => {
+    const config = {
+      get: jest.fn((key: string) =>
+        key === 'METRICS_TOKEN' ? 'curto' : 'production',
+      ),
+    };
+    const guard = new MetricsTokenGuard(config as never);
+
+    expect(() =>
+      guard.canActivate(createContext('Bearer curto') as never),
+    ).toThrow(ServiceUnavailableException);
   });
 });

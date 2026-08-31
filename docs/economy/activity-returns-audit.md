@@ -193,10 +193,11 @@ liquido negativo recebem tempo `N/D` em vez de um numero enganoso.
 
 ## Diagnostico atual
 
-- Equipamentos craftaveis T3-T5 recuperam 30% do valor NPC dos ingredientes.
-  O ciclo autossuficiente fica positivo, mas entrega somente 8,6-17,7% do
+- Equipamentos craftaveis T1-T5 recuperam cerca de 30% do valor NPC dos
+  ingredientes.
+  O ciclo autossuficiente fica positivo, mas entrega somente 9,9-18,4% do
   Gold/h do autocombate e continua consumindo valor, preservando a venda entre
-  jogadores como melhor destino economico. T1-T2 mantem a regra anterior.
+  jogadores como melhor destino economico.
 - Incursoes devolvem 100% da entrada no sucesso e 90% na falha. A abordagem
   balanceada preserva aproximadamente 65% do XP/h do autocombate e permanece
   positiva após o custo esperado de poções, sem competir com o farm de Gold.

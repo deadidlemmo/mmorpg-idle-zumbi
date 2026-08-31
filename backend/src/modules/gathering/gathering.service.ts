@@ -28,9 +28,10 @@ import {
   GATHERING_STAT_BONUS_PER_LEVEL,
   getGatheringRateMultiplier,
   getGatheringStatBonus,
-  getGatheringXpPerUnitForTier,
   getGatheringXpProgressPercent,
   getGatheringXpToNextLevel,
+  resolveGatheringMaterialBaseRatePerHour,
+  resolveGatheringMaterialXpPerUnit,
 } from '../../common/config/gathering.config';
 import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
 import { calculateGatheringReward } from '../../common/utils/gathering.util';
@@ -234,8 +235,38 @@ function normalizeClassName(value?: string | null) {
     .toUpperCase();
 }
 
-function getMaterialGatheringXpPerUnit(material: { tier: number }) {
-  return getGatheringXpPerUnitForTier(material.tier);
+type GatheringMaterialProgressionSource = {
+  tier: number;
+  requiredGatheringLevel?: number | null;
+  gatheringXpPerUnit?: number | null;
+  baseGatheringRatePerHour?: number | null;
+};
+
+function getMaterialGatheringXpPerUnit(
+  material: GatheringMaterialProgressionSource,
+) {
+  return resolveGatheringMaterialXpPerUnit(material);
+}
+
+function getMaterialBaseGatheringRatePerHour(
+  material: GatheringMaterialProgressionSource,
+) {
+  return resolveGatheringMaterialBaseRatePerHour(material);
+}
+
+function ensureCharacterIsOnGatheringMap(params: {
+  characterMapId?: string | null;
+  map: { id: string; name: string };
+}) {
+  if (params.characterMapId === params.map.id) {
+    return;
+  }
+
+  throw new BadRequestException({
+    message: `Viaje para ${params.map.name} antes de iniciar a coleta.`,
+    currentMapId: params.characterMapId ?? null,
+    requiredMapId: params.map.id,
+  });
 }
 
 function calculateSessionGatheringXp(params: {
@@ -279,6 +310,7 @@ function normalizeGatheringTargetMaterial(targetMaterial?: unknown) {
   return {
     ...material,
     gatheringXpPerUnit: getMaterialGatheringXpPerUnit(material),
+    baseGatheringRatePerHour: getMaterialBaseGatheringRatePerHour(material),
   };
 }
 
@@ -979,7 +1011,9 @@ export class GatheringService {
     const idleProgressLimitSeconds = getIdleProgressLimitSeconds(premiumActive);
     const rateProfile = calculateProductionRateProfile({
       tier: session.map.tier,
-      baseGatheringRatePerHour: session.targetMaterial.baseGatheringRatePerHour,
+      baseGatheringRatePerHour: getMaterialBaseGatheringRatePerHour(
+        session.targetMaterial,
+      ),
       skillLevel: gatheringSkill.level,
       isAffinity: affinity,
     });
@@ -1398,6 +1432,8 @@ export class GatheringService {
       materials: materials.map((material) => {
         const usedInRecipes = mapUsedInRecipes(material);
         const relatedClasses = getRelatedClassesFromRecipes(usedInRecipes);
+        const baseGatheringRatePerHour =
+          getMaterialBaseGatheringRatePerHour(material);
 
         return {
           id: material.id,
@@ -1414,9 +1450,8 @@ export class GatheringService {
           mapId: material.mapId,
           requiredGatheringLevel: material.requiredGatheringLevel,
           gatheringXpPerUnit: getMaterialGatheringXpPerUnit(material),
-          baseGatheringRatePerHour: material.baseGatheringRatePerHour,
-          ratePerHour:
-            material.baseGatheringRatePerHour ?? rewardPreview.ratePerHour,
+          baseGatheringRatePerHour,
+          ratePerHour: baseGatheringRatePerHour,
           isUnlockedByDefault: material.requiredGatheringLevel <= 1,
           usedInRecipes,
           usedInRecipeCount: usedInRecipes.length,
@@ -1520,13 +1555,10 @@ export class GatheringService {
       });
     }
 
-    if (character.level < gameMap.minLevel) {
-      throw new BadRequestException({
-        message: 'O personagem ainda não possui nível mínimo para este mapa.',
-        characterLevel: character.level,
-        requiredMinLevel: gameMap.minLevel,
-      });
-    }
+    ensureCharacterIsOnGatheringMap({
+      characterMapId: character.mapId,
+      map: gameMap,
+    });
 
     const gatheringSkill = await this.getOrCreateGatheringSkill({
       characterId: dto.characterId,
@@ -1594,7 +1626,8 @@ export class GatheringService {
     const now = new Date();
     const initialRateProfile = calculateProductionRateProfile({
       tier: gameMap.tier,
-      baseGatheringRatePerHour: targetMaterial.baseGatheringRatePerHour,
+      baseGatheringRatePerHour:
+        getMaterialBaseGatheringRatePerHour(targetMaterial),
       skillLevel: gatheringSkill.level,
       isAffinity: affinity,
     });
@@ -1624,6 +1657,11 @@ export class GatheringService {
               lockCharacter: true,
               allowActiveGathering: true,
             });
+
+          ensureCharacterIsOnGatheringMap({
+            characterMapId: currentActivityState.character.mapId,
+            map: gameMap,
+          });
 
           const currentSession = currentActivityState.activeGatheringSession;
 

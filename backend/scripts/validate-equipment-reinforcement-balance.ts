@@ -1,12 +1,6 @@
-import {
-  EconomyCurrency,
-  IncursionRewardType,
-  ItemSlot,
-  PrismaClient,
-} from '@prisma/client';
+import { ItemSlot, PrismaClient } from '@prisma/client';
 import 'dotenv/config';
 import { buildRecipeAudits } from '../prisma/audit-economy-time';
-import { incursionDefinitions } from '../prisma/seed-data/incursions.seed-data';
 import {
   ECONOMY_ACTIVITY_REWARDS,
   ECONOMY_EXCHANGE_CONFIG,
@@ -14,11 +8,10 @@ import {
   EQUIPMENT_REINFORCEMENT_CONFIG,
   EQUIPMENT_REINFORCEMENT_MAX_LEVEL,
   buildReinforcedEquipmentStats,
-  type EconomyLaunchTier,
   type EquipmentReinforcementSlot,
   type EquipmentReinforcementStats,
 } from '../src/common/config/economy.config';
-import { getIncursionRiskProfile } from '../src/modules/incursions/incursion-risk.util';
+import { getBestBalancedReinforcementRate } from './equipment-reinforcement-balance-audit';
 
 const prisma = new PrismaClient();
 
@@ -68,59 +61,6 @@ function getFamilyKey(item: AuditedItem, tier = item.tier) {
 
 function averageReward(range: { min: number; max: number }) {
   return (range.min + range.max) / 2;
-}
-
-function averageLootQuantity(range: {
-  minQuantity: number;
-  maxQuantity: number;
-}) {
-  return (range.minQuantity + range.maxQuantity) / 2;
-}
-
-function getBestBalancedReinforcementRate(tier: EconomyLaunchTier) {
-  const candidates = incursionDefinitions
-    .filter((incursion) => incursion.tier === tier)
-    .map((incursion) => {
-      const risk = getIncursionRiskProfile(incursion.riskLevel, 'BALANCED');
-      const reinforcementReward = incursion.lootTable.find(
-        (reward) =>
-          reward.rewardType === IncursionRewardType.MATERIAL &&
-          reward.itemName === `Fragmento de Reforço T${tier}`,
-      );
-      const tokenReward = incursion.lootTable.find(
-        (reward) =>
-          reward.rewardType === IncursionRewardType.CURRENCY &&
-          reward.currency === EconomyCurrency.INCURSION_TOKEN,
-      );
-
-      if (!reinforcementReward || !tokenReward) return null;
-
-      const directPerSuccess = averageLootQuantity(reinforcementReward);
-      const tokensPerSuccess = averageLootQuantity(tokenReward);
-      const convertedPerSuccess =
-        (tokensPerSuccess /
-          ECONOMY_EXCHANGE_CONFIG.incursionReinforcement.currencyCost) *
-        ECONOMY_EXCHANGE_CONFIG.incursionReinforcement.itemQuantity;
-      const fragmentsPerSuccess = directPerSuccess + convertedPerSuccess;
-      const fragmentsPerAttempt =
-        fragmentsPerSuccess * (risk.successChance / 100);
-      const durationHours =
-        (incursion.durationSeconds * risk.durationMultiplier) / 3600;
-
-      return {
-        name: incursion.name,
-        fragmentsPerSuccess,
-        fragmentsPerHour: fragmentsPerAttempt / durationHours,
-        successChance: risk.successChance,
-        durationMinutes: durationHours * 60,
-      };
-    })
-    .filter((candidate): candidate is NonNullable<typeof candidate> => !!candidate)
-    .sort(
-      (left, right) => right.fragmentsPerHour - left.fragmentsPerHour,
-    );
-
-  return candidates[0] ?? null;
 }
 
 async function main() {
@@ -310,9 +250,7 @@ async function main() {
       'Sucessos sem fichas': Number((fragmentCost / directAverage).toFixed(2)),
       'Melhor incursão': bestRate?.name ?? '-',
       'Tempo +3':
-        reinforcementHours === null
-          ? '-'
-          : `${reinforcementHours.toFixed(2)}h`,
+        reinforcementHours === null ? '-' : `${reinforcementHours.toFixed(2)}h`,
       'Próximo tier':
         nextTierCraftHours === null
           ? '-'

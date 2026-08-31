@@ -22,6 +22,7 @@ import {
   isEconomyLaunchTier,
   WORLD_BOSS_FRAGMENT_ITEMS,
 } from '../../common/config/economy.config';
+import { tryConsumeInventoryStack } from '../../common/inventory/inventory-stack.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ExchangeEconomyOfferDto } from './dto/exchange-economy-offer.dto';
 import { ECONOMY_REASONS } from './economy.constants';
@@ -268,28 +269,16 @@ export class EconomyService {
               };
             }
 
-            const debited = await tx.inventoryItem.updateMany({
-              where: {
-                characterId,
-                itemId: sourceItem.id,
-                quantity: { gte: totalCost },
-              },
-              data: { quantity: { decrement: totalCost } },
+            const sourceBalance = await tryConsumeInventoryStack(tx, {
+              characterId,
+              itemId: sourceItem.id,
+              quantity: totalCost,
             });
-            if (debited.count !== 1) {
+            if (sourceBalance === null) {
               throw new BadRequestException(
                 `Quantidade insuficiente de ${sourceItem.name}.`,
               );
             }
-            const sourceBalance = await tx.inventoryItem.findUniqueOrThrow({
-              where: {
-                characterId_itemId: {
-                  characterId,
-                  itemId: sourceItem.id,
-                },
-              },
-              select: { quantity: true },
-            });
             const metadata = {
               requestId: input.requestId,
               offerId: offer.id,
@@ -305,7 +294,7 @@ export class EconomyService {
               itemId: sourceItem.id,
               tier: offer.tier,
               quantity: totalCost,
-              balanceAfter: sourceBalance.quantity,
+              balanceAfter: sourceBalance,
               reason: ECONOMY_REASONS.ECONOMY_EXCHANGE_SOURCE_ITEM_SPENT,
               idempotencyKey: sourceKey,
               referenceType: 'EconomyExchange',
@@ -340,14 +329,6 @@ export class EconomyService {
               referenceId: offer.item.id,
               metadata,
             });
-            await tx.inventoryItem.deleteMany({
-              where: {
-                characterId,
-                itemId: sourceItem.id,
-                quantity: { lte: 0 },
-              },
-            });
-
             return {
               applied: true,
               message: `${totalQuantity}x ${offer.item.name} recebido.`,
@@ -355,7 +336,7 @@ export class EconomyService {
               exchangeCount,
               totalCost,
               totalQuantity,
-              balance: sourceBalance.quantity,
+              balance: sourceBalance,
             };
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },

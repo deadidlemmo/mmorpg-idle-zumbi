@@ -266,6 +266,7 @@ export interface AutoCombatRealtimeEvent {
   totalCombats?: number | null;
   totalRounds?: number | null;
   totalKills?: number | null;
+  killsGained?: number | null;
   totalXpGained?: number | null;
   totalLoot?: number | null;
   potionsUsed?: number | null;

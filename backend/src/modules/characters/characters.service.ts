@@ -32,9 +32,10 @@ import {
   GATHERING_STAT_BONUS_PER_LEVEL,
   getGatheringRateMultiplier,
   getGatheringStatBonus,
-  getGatheringXpPerUnitForTier,
   getGatheringXpProgressPercent,
   getGatheringXpToNextLevel,
+  resolveGatheringMaterialBaseRatePerHour,
+  resolveGatheringMaterialXpPerUnit,
 } from '../../common/config/gathering.config';
 import { getIdleProgressLimitSeconds } from '../../common/config/membership.config';
 import { calculateGatheringReward } from '../../common/utils/gathering.util';
@@ -748,7 +749,6 @@ export class CharactersService {
       },
       select: {
         id: true,
-        level: true,
         status: true,
       },
     });
@@ -774,19 +774,11 @@ export class CharactersService {
       },
       select: {
         id: true,
-        name: true,
-        minLevel: true,
       },
     });
 
     if (!gameMap) {
       throw new NotFoundException('Mapa não encontrado.');
-    }
-
-    if (character.level < gameMap.minLevel) {
-      throw new BadRequestException(
-        `Mapa bloqueado. ${gameMap.name} requer nível ${gameMap.minLevel}.`,
-      );
     }
 
     await this.prisma.character.update({
@@ -2325,11 +2317,9 @@ export class CharactersService {
 
     const defaultRatePerHour = Math.max(1, defaultReward.ratePerHour);
 
-    const materialBaseRate =
-      activeGatheringSession.targetMaterial.baseGatheringRatePerHour &&
-      activeGatheringSession.targetMaterial.baseGatheringRatePerHour > 0
-        ? activeGatheringSession.targetMaterial.baseGatheringRatePerHour
-        : defaultRatePerHour;
+    const materialBaseRate = resolveGatheringMaterialBaseRatePerHour(
+      activeGatheringSession.targetMaterial,
+    );
 
     const skillMultiplier =
       gatheringSkill?.productionMultiplier &&
@@ -2370,12 +2360,10 @@ export class CharactersService {
         materialOrigin: activeGatheringSession.targetMaterial.materialOrigin,
         requiredGatheringLevel:
           activeGatheringSession.targetMaterial.requiredGatheringLevel ?? 1,
-        gatheringXpPerUnit: getGatheringXpPerUnitForTier(
-          activeGatheringSession.targetMaterial.tier,
+        gatheringXpPerUnit: resolveGatheringMaterialXpPerUnit(
+          activeGatheringSession.targetMaterial,
         ),
-        baseGatheringRatePerHour:
-          activeGatheringSession.targetMaterial.baseGatheringRatePerHour ??
-          null,
+        baseGatheringRatePerHour: materialBaseRate,
       },
 
       map: {
@@ -2602,10 +2590,11 @@ export class CharactersService {
           requiredGatheringLevel:
             inventoryItem.item.requiredGatheringLevel ?? 1,
           gatheringXpPerUnit: inventoryItem.item.isGatheringMaterial
-            ? getGatheringXpPerUnitForTier(inventoryItem.item.tier)
+            ? resolveGatheringMaterialXpPerUnit(inventoryItem.item)
             : (inventoryItem.item.gatheringXpPerUnit ?? 1),
-          baseGatheringRatePerHour:
-            inventoryItem.item.baseGatheringRatePerHour ?? null,
+          baseGatheringRatePerHour: inventoryItem.item.isGatheringMaterial
+            ? resolveGatheringMaterialBaseRatePerHour(inventoryItem.item)
+            : (inventoryItem.item.baseGatheringRatePerHour ?? null),
         })),
 
       consumables: inventoryItems

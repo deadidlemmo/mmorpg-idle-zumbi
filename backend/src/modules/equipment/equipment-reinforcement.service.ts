@@ -21,6 +21,7 @@ import {
   calculateFullStats,
   calculateGatheringPrimaryBonus,
 } from '../../common/utils/stats.util';
+import { tryConsumeInventoryStack } from '../../common/inventory/inventory-stack.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
@@ -199,12 +200,15 @@ export class EquipmentReinforcementService {
       try {
         return await this.prisma.$transaction(
           async (tx) => {
-            const character = await tx.character.findFirst({
-              where: {
-                id: dto.characterId,
-                userId,
-                deletedAt: null,
-              },
+            const locked = await tx.character.updateMany({
+              where: { id: dto.characterId, userId, deletedAt: null },
+              data: { updatedAt: new Date() },
+            });
+            if (locked.count !== 1) {
+              throw new NotFoundException('Personagem não encontrado.');
+            }
+            const character = await tx.character.findUnique({
+              where: { id: dto.characterId },
               include: {
                 class: true,
                 gatheringSkills: true,
@@ -290,26 +294,16 @@ export class EquipmentReinforcementService {
               );
             }
 
-            const consumedMaterial = await tx.inventoryItem.updateMany({
-              where: {
-                characterId: character.id,
-                itemId: reinforcementMaterial.id,
-                quantity: { gte: cost.fragmentCost },
-              },
-              data: { quantity: { decrement: cost.fragmentCost } },
+            const materialBalance = await tryConsumeInventoryStack(tx, {
+              characterId: character.id,
+              itemId: reinforcementMaterial.id,
+              quantity: cost.fragmentCost,
             });
-            if (consumedMaterial.count !== 1) {
+            if (materialBalance === null) {
               throw new BadRequestException(
                 `São necessários ${cost.fragmentCost}x ${reinforcementMaterial.name}.`,
               );
             }
-            await tx.inventoryItem.deleteMany({
-              where: {
-                characterId: character.id,
-                itemId: reinforcementMaterial.id,
-                quantity: { lte: 0 },
-              },
-            });
 
             const goldDebit = await tx.character.updateMany({
               where: { id: character.id, gold: { gte: cost.goldCost } },

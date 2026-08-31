@@ -37,6 +37,7 @@ type CharacterActivityState = {
     name: string;
     status: CharacterStatus;
     level: number;
+    mapId: string | null;
     currentHp: number | null;
     maxHp: number | null;
   };
@@ -79,6 +80,7 @@ export class ActivityGuardService {
         name: true,
         status: true,
         level: true,
+        mapId: true,
         currentHp: true,
         maxHp: true,
       },
@@ -111,6 +113,7 @@ export class ActivityGuardService {
           phase: {
             in: BLOCKING_AUTO_COMBAT_PHASES,
           },
+          endsAt: { gt: now },
         },
         orderBy: {
           startedAt: 'desc',

@@ -111,6 +111,7 @@ describe('ConsumablesService potion tier lock', () => {
     const tx = {
       inventoryItem: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ quantity: 1 }),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       user: {
@@ -160,7 +161,11 @@ describe('ConsumablesService potion tier lock', () => {
       inventory: { previousQuantity: 2, newQuantity: 1 },
     });
     expect(tx.inventoryItem.updateMany).toHaveBeenCalledWith({
-      where: { id: 'inventory-1', quantity: { gte: 1 } },
+      where: {
+        characterId: 'character-1',
+        itemId: premiumPass.id,
+        quantity: { gt: 1 },
+      },
       data: { quantity: { decrement: 1 } },
     });
     expect(tx.user.update).toHaveBeenCalledWith({
