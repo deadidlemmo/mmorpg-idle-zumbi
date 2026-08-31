@@ -154,6 +154,12 @@ export function ActiveSurvivorsModal({
                 "--active-survivor-accent":
                   entry.appearance?.accentColor ?? "#86b85c",
               } as CSSProperties;
+              const presenceLabel =
+                entry.presence.activity?.label ??
+                (entry.presence.online ? "Online" : "Em atividade");
+              const presenceState = entry.presence.activity
+                ? "activity"
+                : entry.presence.status.toLowerCase();
 
               return (
                 <Link
@@ -186,10 +192,11 @@ export function ActiveSurvivorsModal({
                     <strong>{character.level}</strong>
                   </span>
                   <span
-                    className={`active-survivors-modal__presence is-${entry.presence.status.toLowerCase()}`}
+                    className={`active-survivors-modal__presence is-${presenceState}`}
+                    title={presenceLabel}
                   >
                     <i aria-hidden="true" />
-                    {entry.presence.online ? "Online" : "Em atividade"}
+                    {presenceLabel}
                   </span>
                   <ChevronRight
                     className="active-survivors-modal__chevron"

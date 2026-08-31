@@ -1,15 +1,11 @@
 import { isAxiosError } from 'axios';
 import {
   CheckCircle2,
-  Lock,
   MapPin,
   MapPinned,
-  Pickaxe,
   Route,
-  ShieldCheck,
-  Swords,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { getAutoCombatMaps } from '../../auto-combat/api/auto-combat.api';
 import {
@@ -18,8 +14,6 @@ import {
 } from '../../auto-combat/assets/auto-combat-map-assets';
 import type { AutoCombatMapViewModel } from '../../auto-combat/types/auto-combat.types';
 import {
-  getGameMapMaxLevel,
-  getGameMapMinLevel,
   getVisibleCombatMaps,
 } from '../../auto-combat/utils/auto-combat-page.helpers';
 import { normalizeClassName } from '../../characters/api/characters.api';
@@ -31,6 +25,7 @@ import {
 import { DashboardCard } from '../../dashboard/components/DashboardCard';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
 import '../../dashboard/dashboard.css';
+import { useLootNotifications } from '../../loot-notifications/lootNotificationContext';
 import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
@@ -177,6 +172,8 @@ function getApiErrorMessage(error: unknown) {
 
 export function MapsSelectionPage() {
   const { characterId } = useParams();
+  const { notifyLoot } = useLootNotifications();
+  const travelNotificationSequenceRef = useRef(0);
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
@@ -231,7 +228,6 @@ export function MapsSelectionPage() {
   }, [overview]);
 
   const sortedMaps = useMemo(() => getVisibleCombatMaps(maps), [maps]);
-  const characterLevel = character?.level ?? 1;
   const currentMapId =
     character?.currentMap?.id ??
     character?.map?.id ??
@@ -262,6 +258,18 @@ export function MapsSelectionPage() {
       );
 
       setOverview(updatedOverview);
+      travelNotificationSequenceRef.current += 1;
+      notifyLoot({
+        idempotencyKey: `map-travel:${characterId}:${map.id}:${updatedOverview.character.updatedAt ?? travelNotificationSequenceRef.current}`,
+        itemName: `Você entrou em ${map.name}`,
+        quantity: 1,
+        imageUrl: map.imageUrl ?? getMapImageByName(map.name),
+        rarity: 'COMMON',
+        source: 'system',
+        kind: 'travel',
+        eyebrow: 'Localização atualizada',
+        displayQuantity: false,
+      });
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error));
     } finally {
@@ -302,9 +310,6 @@ export function MapsSelectionPage() {
         >
           <div className="maps-selection-grid">
             {sortedMaps.map((map) => {
-              const minLevel = getGameMapMinLevel(map);
-              const maxLevel = getGameMapMaxLevel(map);
-              const isCombatUnlocked = characterLevel >= minLevel;
               const isCurrentMap = map.id === currentMapId;
               const isUpdatingThisMap = updatingMapId === map.id;
               const mapImage = map.imageUrl ?? getMapImageByName(map.name);
@@ -318,7 +323,6 @@ export function MapsSelectionPage() {
                     'maps-selection-card',
                     tierClassName,
                     'is-unlocked',
-                    !isCombatUnlocked ? 'is-combat-locked' : null,
                     isCurrentMap ? 'is-current-map' : null,
                   ]
                     .filter(Boolean)
@@ -326,7 +330,7 @@ export function MapsSelectionPage() {
                   aria-label={
                     isCurrentMap
                       ? `${map.name}, mapa atual de ${character.name}`
-                      : `${map.name}, viagem liberada; combate disponível no nível ${minLevel}`
+                      : `${map.name}, destino disponível`
                   }
                   aria-current={isCurrentMap ? 'location' : undefined}
                 >
@@ -367,15 +371,6 @@ export function MapsSelectionPage() {
                       </div>
                     ) : null}
 
-                    {!isCombatUnlocked ? (
-                      <div
-                        className="maps-selection-card__lock"
-                        aria-label={`Combate bloqueado — requer nível ${minLevel}`}
-                      >
-                        <Lock size={22} aria-hidden="true" />
-                        <span>Combate</span>
-                      </div>
-                    ) : null}
                   </div>
 
                   <div className="maps-selection-card__body">
@@ -392,44 +387,12 @@ export function MapsSelectionPage() {
                           className="maps-selection-card__status-icon maps-selection-card__status-icon--current"
                           aria-hidden="true"
                         />
-                      ) : isCombatUnlocked ? (
-                        <ShieldCheck
-                          className="maps-selection-card__status-icon"
-                          aria-hidden="true"
-                        />
                       ) : (
-                        <Lock
+                        <MapPinned
                           className="maps-selection-card__status-icon"
                           aria-hidden="true"
                         />
                       )}
-                    </div>
-
-                    <div
-                      className="maps-selection-card__access"
-                      aria-label="Acessos do mapa"
-                    >
-                      <div>
-                        <Route size={15} aria-hidden="true" />
-                        <span>Viagem</span>
-                        <strong>Liberada</strong>
-                      </div>
-                      <div>
-                        <Pickaxe size={15} aria-hidden="true" />
-                        <span>Coleta</span>
-                        <strong>Conforme profissão</strong>
-                      </div>
-                      <div
-                        className={!isCombatUnlocked ? 'is-blocked' : undefined}
-                      >
-                        <Swords size={15} aria-hidden="true" />
-                        <span>Combate</span>
-                        <strong>
-                          {isCombatUnlocked
-                            ? `Nv. ${minLevel}-${maxLevel}`
-                            : `Disponível no Nv. ${minLevel}`}
-                        </strong>
-                      </div>
                     </div>
 
                     <div className="maps-selection-card__footer">

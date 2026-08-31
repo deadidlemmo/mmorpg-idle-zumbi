@@ -65,6 +65,16 @@ export interface ActiveCharacterEntry {
     online: boolean;
     inActivity: boolean;
     status: "ONLINE" | "ACTIVITY";
+    activity?: {
+      type:
+        | "AUTO_COMBAT"
+        | "GATHERING"
+        | "CRAFTING"
+        | "INCURSION"
+        | "WORLD_BOSS"
+        | "INFIRMARY";
+      label: string;
+    } | null;
   };
 }
 

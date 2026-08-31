@@ -148,7 +148,7 @@
 .active-survivors-modal__row {
   position: relative;
   display: grid;
-  grid-template-columns: 3.15rem minmax(0, 1fr) 3.7rem 7.6rem 1.5rem;
+  grid-template-columns: 3.15rem minmax(0, 1fr) 3.7rem 11rem 1.5rem;
   align-items: center;
   gap: 0.78rem;
   min-height: 4.6rem;
@@ -248,9 +248,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.38rem;
+  min-width: 0;
+  overflow: hidden;
   color: rgba(231, 227, 216, 0.62);
   font-size: 0.66rem;
   font-weight: 850;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

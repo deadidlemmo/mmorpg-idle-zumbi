@@ -1,4 +1,8 @@
-import type { Prisma } from '@prisma/client';
+import {
+  AutoCombatSessionPhase,
+  CharacterStatus,
+  type Prisma,
+} from '@prisma/client';
 import { ActiveCharacterPresenceService } from './active-character-presence.service';
 
 describe('ActiveCharacterPresenceService', () => {
@@ -52,6 +56,7 @@ describe('ActiveCharacterPresenceService', () => {
     const activityFilters = query?.where?.OR ?? [];
 
     expect(query?.where?.deletedAt).toBeNull();
+    expect(query?.where?.status).toBe(CharacterStatus.ACTIVE);
     expect(query?.select).toEqual({ id: true });
     expect(activityFilters).toHaveLength(6);
     expect(activityFilters).toContainEqual({ infirmaryEndsAt: { gt: now } });
@@ -161,5 +166,122 @@ describe('ActiveCharacterPresenceService', () => {
       'online-only',
       'online-and-active',
     ]);
+  });
+
+  it('descreve a atividade atual de cada sobrevivente', async () => {
+    const map = { id: 'map-1', name: 'Distrito da Ferrugem', tier: 2 };
+    const baseCharacter = {
+      level: 11,
+      xp: 100,
+      avatarKey: null,
+      class: { id: 'lutador', name: 'Lutador' },
+      map,
+    };
+    const characters = [
+      {
+        ...baseCharacter,
+        id: 'boss',
+        name: 'Boss',
+        worldBossParticipations: [
+          {
+            event: {
+              worldBoss: { name: 'Capataz Enferrujado' },
+            },
+          },
+        ],
+      },
+      {
+        ...baseCharacter,
+        id: 'incursion',
+        name: 'Incursão',
+        incursionSessions: [{ incursion: { name: 'Ruptura no Viaduto' } }],
+      },
+      {
+        ...baseCharacter,
+        id: 'hunting',
+        name: 'Rastreio',
+        autoCombatSessions: [
+          {
+            phase: AutoCombatSessionPhase.HUNTING,
+            map: { name: 'Distrito da Ferrugem' },
+            subMap: { name: 'Galpão do Capataz' },
+          },
+        ],
+      },
+      {
+        ...baseCharacter,
+        id: 'combat',
+        name: 'Combate',
+        autoCombatSessions: [
+          {
+            phase: AutoCombatSessionPhase.COMBAT_ACTIVE,
+            map: { name: 'Distrito da Ferrugem' },
+            subMap: { name: 'Galpão do Capataz' },
+          },
+        ],
+      },
+      {
+        ...baseCharacter,
+        id: 'gathering',
+        name: 'Coleta',
+        gatheringSessions: [{ targetMaterial: { name: 'Sucata Oxidada' } }],
+      },
+      {
+        ...baseCharacter,
+        id: 'crafting',
+        name: 'Criação',
+        craftingSessions: [{ outputItem: { name: 'Armadura de Retalhos' } }],
+      },
+      {
+        ...baseCharacter,
+        id: 'infirmary',
+        name: 'Enfermaria',
+        infirmaryEndsAt: new Date('2026-08-27T13:00:00.000Z'),
+      },
+    ];
+    const findMany = jest
+      .fn()
+      .mockResolvedValueOnce(characters.map(({ id }) => ({ id })))
+      .mockResolvedValueOnce(characters);
+    const service = new ActiveCharacterPresenceService(
+      { character: { findMany } } as never,
+      { getResolvedAppearances: jest.fn().mockResolvedValue({}) } as never,
+    );
+
+    const result = await service.getActiveCharacters([], now);
+    const activityByCharacter = Object.fromEntries(
+      result.characters.map((entry) => [
+        entry.character.id,
+        entry.presence.activity,
+      ]),
+    );
+
+    expect(activityByCharacter).toMatchObject({
+      boss: {
+        type: 'WORLD_BOSS',
+        label: 'Ameaça Global: Capataz Enferrujado',
+      },
+      incursion: {
+        type: 'INCURSION',
+        label: 'Incursão: Ruptura no Viaduto',
+      },
+      hunting: {
+        type: 'AUTO_COMBAT',
+        label: 'Rastreando em Distrito da Ferrugem',
+      },
+      combat: {
+        type: 'AUTO_COMBAT',
+        label: 'Em combate em Galpão do Capataz',
+      },
+      gathering: {
+        type: 'GATHERING',
+        label: 'Coletando Sucata Oxidada',
+      },
+      crafting: {
+        type: 'CRAFTING',
+        label: 'Fabricando Armadura de Retalhos',
+      },
+      infirmary: { type: 'INFIRMARY', label: 'Na enfermaria' },
+    });
   });
 });

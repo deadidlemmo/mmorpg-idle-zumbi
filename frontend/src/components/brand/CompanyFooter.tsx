@@ -1,6 +1,8 @@
+import { ArrowUpRight, BookOpenText, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import discordIcon from "../../assets/images/brand/discord.webp";
 import ncSoftLogo from "../../assets/images/company/nc-soft-logo-horizontal.webp";
 import { DISCORD_INVITE_URL } from "../../config/externalLinks";
-import { Link } from "react-router-dom";
 
 const currentYear = new Date().getFullYear();
 
@@ -19,16 +21,39 @@ export function CompanyFooter() {
         </div>
       </div>
 
-      <nav className="company-footer__links" aria-label="Links institucionais">
+      <nav
+        className="company-footer__community"
+        aria-label="Comunidade e guias"
+      >
         <a
           href={DISCORD_INVITE_URL}
-          className="company-footer__link"
+          className="company-footer__community-link"
           target="_blank"
           rel="noreferrer"
         >
-          Suporte
+          <span className="company-footer__community-icon company-footer__community-icon--discord">
+            <img src={discordIcon} alt="" aria-hidden="true" />
+          </span>
+          <span className="company-footer__community-copy">
+            <small>Comunidade e suporte</small>
+            <strong>Discord</strong>
+          </span>
+          <ArrowUpRight size={17} aria-hidden="true" />
         </a>
 
+        <Link to="/wiki" className="company-footer__community-link">
+          <span className="company-footer__community-icon company-footer__community-icon--wiki">
+            <BookOpenText size={24} strokeWidth={1.8} aria-hidden="true" />
+          </span>
+          <span className="company-footer__community-copy">
+            <small>Enciclopédia oficial</small>
+            <strong>Dead Idle Wiki</strong>
+          </span>
+          <ChevronRight size={17} aria-hidden="true" />
+        </Link>
+      </nav>
+
+      <nav className="company-footer__links" aria-label="Links institucionais">
         <Link to="/privacy" className="company-footer__link">
           Privacidade
         </Link>

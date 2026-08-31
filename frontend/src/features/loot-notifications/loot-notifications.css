@@ -79,6 +79,27 @@
   --loot-source-rgb: 231, 227, 216;
 }
 
+.loot-notification-card[data-kind='travel'] {
+  --loot-source-rgb: 132, 184, 92;
+  min-height: 4rem;
+}
+
+.loot-notification-card[data-kind='travel'] .loot-notification-card__icon img {
+  height: 100%;
+  padding: 0;
+  object-fit: cover;
+}
+
+.loot-notification-card[data-kind='travel'] .loot-notification-card__name {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.2;
+  text-overflow: clip;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .loot-notification-card[data-rarity='uncommon'] {
   box-shadow:
     var(--shadow-md),
