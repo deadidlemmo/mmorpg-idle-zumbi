@@ -1359,9 +1359,16 @@ strong {
 }
 
 .company-footer__community-icon--wiki {
-  color: #e2c654;
-  background: rgba(226, 198, 84, 0.08);
+  background: rgba(11, 22, 14, 0.9);
   border: 1px solid rgba(226, 198, 84, 0.34);
+}
+
+.company-footer__community-icon--wiki img {
+  display: block;
+  width: 35px;
+  height: 35px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(120, 183, 45, 0.24));
 }
 
 .company-footer__community-copy {

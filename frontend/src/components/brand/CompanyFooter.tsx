@@ -1,5 +1,6 @@
-import { ArrowUpRight, BookOpenText, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import wikiSearchIcon from "../../assets/images/brand/dead-idle-wiki-search-icon.webp";
 import discordIcon from "../../assets/images/brand/discord.webp";
 import ncSoftLogo from "../../assets/images/company/nc-soft-logo-horizontal.webp";
 import { DISCORD_INVITE_URL } from "../../config/externalLinks";
@@ -43,7 +44,7 @@ export function CompanyFooter() {
 
         <Link to="/wiki" className="company-footer__community-link">
           <span className="company-footer__community-icon company-footer__community-icon--wiki">
-            <BookOpenText size={24} strokeWidth={1.8} aria-hidden="true" />
+            <img src={wikiSearchIcon} alt="" aria-hidden="true" />
           </span>
           <span className="company-footer__community-copy">
             <small>Enciclopédia oficial</small>
