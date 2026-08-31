@@ -14,6 +14,7 @@ import {
   Coins,
   CreditCard,
   Crown,
+  ExternalLink,
   Frame,
   Gauge,
   Image as ImageIcon,
@@ -24,6 +25,7 @@ import {
   ShieldCheck,
   Sparkles,
   UserRound,
+  Vote,
   X,
   Zap,
   type LucideIcon,
@@ -42,6 +44,7 @@ import {
   getStorefrontCatalog,
   getStorefrontOrder,
 } from "../api/storefront.api";
+import { getTopIdleRewardStatus } from "../api/top-idle.api";
 import { MEMBERSHIP_BENEFIT_LABELS } from "../constants/membership-benefits";
 import type {
   StorefrontCatalogResponse,
@@ -51,6 +54,7 @@ import type {
   StorefrontOrderResponse,
   StorefrontProviderKey,
 } from "../types/storefront.types";
+import type { TopIdleRewardStatus } from "../types/top-idle.types";
 import "../styles/membership.css";
 
 type MembershipStoreTab = "premium" | "cash" | "packages";
@@ -109,6 +113,16 @@ function formatPremiumUntil(value?: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(date);
+}
+
+function formatTopIdleAvailability(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function getOfferTone(offer: StorefrontOffer) {
@@ -377,6 +391,54 @@ function MembershipAdvantage({
         <small>{children}</small>
       </div>
     </article>
+  );
+}
+
+function TopIdleRewardBanner({ status }: { status: TopIdleRewardStatus }) {
+  if (!status.enabled || !status.voteUrl) return null;
+
+  const nextRewardAt = formatTopIdleAvailability(status.nextRewardAt);
+
+  return (
+    <section
+      className="membership-topidle-reward"
+      aria-labelledby="membership-topidle-title"
+    >
+      <span className="membership-topidle-reward__icon" aria-hidden="true">
+        <Vote size={24} />
+      </span>
+
+      <div className="membership-topidle-reward__body">
+        <span className="membership-eyebrow">Recompensa por voto</span>
+        <h2 id="membership-topidle-title">Apoie o Dead Idle no TopIdle</h2>
+        <p>
+          Receba {status.reward.premiumDays} dia de Premium por voto válido.
+          Uma recompensa por conta a cada {status.reward.cooldownHours} horas.
+        </p>
+        {!status.canReceiveReward && nextRewardAt ? (
+          <small>
+            <Clock3 size={14} aria-hidden="true" />
+            Próxima recompensa em {nextRewardAt}
+          </small>
+        ) : null}
+      </div>
+
+      {status.canReceiveReward ? (
+        <a
+          className="membership-topidle-reward__action"
+          href={status.voteUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Votar e receber
+          <ExternalLink size={16} aria-hidden="true" />
+        </a>
+      ) : (
+        <span className="membership-topidle-reward__action is-disabled">
+          Recompensa recebida
+        </span>
+      )}
+    </section>
   );
 }
 
@@ -668,6 +730,8 @@ export function MembershipPage() {
     useState<DashboardCharacterViewModel | null>(null);
   const [storefront, setStorefront] =
     useState<StorefrontCatalogResponse | null>(null);
+  const [topIdleReward, setTopIdleReward] =
+    useState<TopIdleRewardStatus | null>(null);
   const [activeTab, setActiveTab] = useState<MembershipStoreTab>("premium");
   const [selectedPackage, setSelectedPackage] =
     useState<StorefrontOffer | null>(null);
@@ -694,14 +758,17 @@ export function MembershipPage() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
-        const [overviewResponse, storefrontResponse] = await Promise.all([
+        const [overviewResponse, storefrontResponse, topIdleResponse] =
+          await Promise.all([
           getCharacterOverview(safeCharacterId),
           getStorefrontCatalog(safeCharacterId),
-        ]);
+            getTopIdleRewardStatus().catch(() => null),
+          ]);
 
         if (!isMounted) return;
         setCharacter(buildGatheringDashboardCharacter(overviewResponse));
         setStorefront(storefrontResponse);
+        setTopIdleReward(topIdleResponse);
       } catch (error) {
         if (isMounted) setErrorMessage(getMembershipPageError(error));
       } finally {
@@ -714,6 +781,31 @@ export function MembershipPage() {
       isMounted = false;
     };
   }, [safeCharacterId]);
+
+  useEffect(() => {
+    if (!safeCharacterId || !topIdleReward?.enabled) return;
+
+    let isMounted = true;
+    async function refreshRewardAfterFocus() {
+      try {
+        const [rewardStatus, storefrontResponse] = await Promise.all([
+          getTopIdleRewardStatus(),
+          getStorefrontCatalog(safeCharacterId),
+        ]);
+        if (!isMounted) return;
+        setTopIdleReward(rewardStatus);
+        setStorefront(storefrontResponse);
+      } catch {
+        // O estado anterior continua válido até a próxima atualização.
+      }
+    }
+
+    window.addEventListener("focus", refreshRewardAfterFocus);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", refreshRewardAfterFocus);
+    };
+  }, [safeCharacterId, topIdleReward?.enabled]);
 
   const availableProviders = useMemo(
     () =>
@@ -971,6 +1063,10 @@ export function MembershipPage() {
                 />
               ))}
             </div>
+
+            {topIdleReward ? (
+              <TopIdleRewardBanner status={topIdleReward} />
+            ) : null}
 
             <section
               className="membership-premium-benefits"

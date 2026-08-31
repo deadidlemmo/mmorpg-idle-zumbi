@@ -105,6 +105,13 @@ enum StorefrontSubscriptionStatus {
   CANCELLED
 }
 
+enum TopIdleVoteRewardStatus {
+  RECEIVED
+  GRANTED
+  COOLDOWN
+  DISABLED
+}
+
 enum ItemSlot {
   MAIN_HAND
   OFF_HAND
@@ -290,10 +297,11 @@ enum PetEffectType {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  role         UserRole @default(PLAYER)
+  id                String   @id @default(uuid())
+  email             String   @unique
+  passwordHash      String
+  role              UserRole @default(PLAYER)
+  topIdleRewardCode String   @unique @default(uuid()) @db.VarChar(36)
 
   premiumUntil DateTime?
 
@@ -321,6 +329,7 @@ model User {
   cosmeticEntitlements    UserCosmeticEntitlement[]
   storefrontOrders        StorefrontOrder[]
   storefrontSubscriptions StorefrontSubscription[]
+  topIdleVoteRewards      TopIdleVoteReward[]
 
   @@map("users")
 }
@@ -761,6 +770,26 @@ model StorefrontSubscription {
   @@unique([provider, providerSubscriptionId])
   @@index([userId, status])
   @@map("storefront_subscriptions")
+}
+
+model TopIdleVoteReward {
+  id             String                  @id @default(uuid())
+  eventId        String                  @unique @db.VarChar(180)
+  userId         String?
+  identifierHash String                  @db.Char(64)
+  status         TopIdleVoteRewardStatus @default(RECEIVED)
+  premiumDays    Int                     @default(1)
+  premiumBefore  DateTime?
+  premiumAfter   DateTime?
+  receivedAt     DateTime                @default(now())
+  processedAt    DateTime?
+  grantedAt      DateTime?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, grantedAt])
+  @@index([status, receivedAt])
+  @@map("top_idle_vote_rewards")
 }
 
 model CharacterAppearance {

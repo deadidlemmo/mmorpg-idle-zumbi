@@ -5,6 +5,7 @@ import {
   StorefrontSubscriptionStatus,
 } from '@prisma/client';
 import type { PrismaService } from '../../prisma/prisma.service';
+import { PremiumEntitlementService } from '../membership/premium-entitlement.service';
 import { StorefrontFulfillmentService } from './storefront-fulfillment.service';
 
 function order(offerKey: string, offerKind: string) {
@@ -25,6 +26,7 @@ function order(offerKey: string, offerKind: string) {
 
 function transaction(orderValue: ReturnType<typeof order>) {
   return {
+    $queryRaw: jest.fn().mockResolvedValue([{ id: 'user-1' }]),
     storefrontOrder: {
       findUnique: jest.fn().mockResolvedValue(orderValue),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -79,6 +81,7 @@ function serviceWith(tx: ReturnType<typeof transaction>) {
   return {
     service: new StorefrontFulfillmentService(
       prisma as unknown as PrismaService,
+      new PremiumEntitlementService(),
     ),
     prisma,
   };

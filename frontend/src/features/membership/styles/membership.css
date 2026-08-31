@@ -351,6 +351,86 @@
   min-height: 264px;
 }
 
+.membership-topidle-reward {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border-top: 1px solid rgba(192, 224, 89, 0.28);
+  border-bottom: 1px solid rgba(192, 224, 89, 0.28);
+  padding: 15px 2px;
+}
+
+.membership-topidle-reward__icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(192, 224, 89, 0.34);
+  border-radius: 6px;
+  background: rgba(137, 172, 45, 0.12);
+  color: #d9ec72;
+}
+
+.membership-topidle-reward__body {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.membership-topidle-reward__body h2 {
+  margin: 0;
+  color: #fff8df;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.membership-topidle-reward__body p {
+  margin: 0;
+  color: rgba(237, 235, 210, 0.68);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.membership-topidle-reward__body small {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #e6cc69;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.membership-topidle-reward__action {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(205, 226, 93, 0.46);
+  border-radius: 6px;
+  padding: 0 14px;
+  background: rgba(137, 172, 45, 0.17);
+  color: #fff5c7;
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.membership-topidle-reward__action:hover {
+  border-color: rgba(216, 237, 103, 0.74);
+  background: rgba(137, 172, 45, 0.25);
+}
+
+.membership-topidle-reward__action.is-disabled {
+  border-color: rgba(191, 197, 168, 0.18);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(237, 235, 210, 0.46);
+}
+
 .membership-premium-option.is-primary {
   box-shadow:
     inset 0 2px 0 color-mix(in srgb, var(--offer-accent) 72%, transparent),
@@ -1167,6 +1247,22 @@
   .membership-premium-option {
     grid-template-columns: 118px minmax(0, 1fr);
     min-height: 248px;
+  }
+
+  .membership-topidle-reward {
+    grid-template-columns: 42px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+  }
+
+  .membership-topidle-reward__icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .membership-topidle-reward__action {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   .membership-cash-card {

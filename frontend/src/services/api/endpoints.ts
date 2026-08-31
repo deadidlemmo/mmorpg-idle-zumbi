@@ -68,6 +68,10 @@ export const API_ENDPOINTS = {
     order: (orderId: string) => `/storefront/orders/${orderId}`,
   },
 
+  topIdle: {
+    reward: "/topidle/reward",
+  },
+
   chat: {
     generalMessages: "/chat/general/messages",
   },

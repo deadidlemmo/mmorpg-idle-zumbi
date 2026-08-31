@@ -16,141 +16,142 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
+import { PremiumEntitlementService } from '../membership/premium-entitlement.service';
 import { PREMIUM_PASS_ITEM_SLUG, STOREFRONT_OFFERS } from './storefront.config';
 import type { StorefrontPaymentUpdate } from './storefront-payment.types';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const TRANSACTION_RETRIES = 3;
 
 @Injectable()
 export class StorefrontFulfillmentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly premiumEntitlements: PremiumEntitlementService,
+  ) {}
 
   async applyPaymentUpdate(input: StorefrontPaymentUpdate) {
-    return this.prisma.$transaction(
-      async (tx) => {
-        const order = await tx.storefrontOrder.findUnique({
-          where: { id: input.orderId },
-        });
+    return this.runSerializable(async (tx) => {
+      const order = await tx.storefrontOrder.findUnique({
+        where: { id: input.orderId },
+      });
 
-        if (!order) throw new NotFoundException('Pedido não encontrado.');
-        if (order.provider !== input.provider) {
-          throw new BadRequestException('Provedor divergente no pagamento.');
-        }
-        if (
-          input.amountCents !== order.amountCents ||
-          input.currency.toUpperCase() !== order.currency
-        ) {
-          throw new BadRequestException(
-            'Valor ou moeda divergente no pagamento confirmado.',
-          );
-        }
+      if (!order) throw new NotFoundException('Pedido não encontrado.');
+      if (order.provider !== input.provider) {
+        throw new BadRequestException('Provedor divergente no pagamento.');
+      }
+      if (
+        input.amountCents !== order.amountCents ||
+        input.currency.toUpperCase() !== order.currency
+      ) {
+        throw new BadRequestException(
+          'Valor ou moeda divergente no pagamento confirmado.',
+        );
+      }
 
-        const payment = await tx.storefrontPayment.upsert({
-          where: {
-            provider_providerPaymentId: {
-              provider: input.provider,
-              providerPaymentId: input.providerPaymentId,
-            },
-          },
-          create: {
-            orderId: order.id,
+      const payment = await tx.storefrontPayment.upsert({
+        where: {
+          provider_providerPaymentId: {
             provider: input.provider,
             providerPaymentId: input.providerPaymentId,
-            providerEventId: input.providerEventId ?? null,
-            status: input.status,
-            providerStatus: input.providerStatus,
-            amountCents: input.amountCents,
-            currency: input.currency.toUpperCase(),
-            paidAt: input.paidAt ?? null,
-            periodEndsAt: input.periodEndsAt ?? null,
-            metadata: input.metadata ?? undefined,
           },
-          update: {
-            providerEventId: input.providerEventId ?? undefined,
-            status: input.status,
+        },
+        create: {
+          orderId: order.id,
+          provider: input.provider,
+          providerPaymentId: input.providerPaymentId,
+          providerEventId: input.providerEventId ?? null,
+          status: input.status,
+          providerStatus: input.providerStatus,
+          amountCents: input.amountCents,
+          currency: input.currency.toUpperCase(),
+          paidAt: input.paidAt ?? null,
+          periodEndsAt: input.periodEndsAt ?? null,
+          metadata: input.metadata ?? undefined,
+        },
+        update: {
+          providerEventId: input.providerEventId ?? undefined,
+          status: input.status,
+          providerStatus: input.providerStatus,
+          paidAt: input.paidAt ?? undefined,
+          periodEndsAt: input.periodEndsAt ?? undefined,
+          metadata: input.metadata ?? undefined,
+        },
+      });
+
+      if (input.status !== StorefrontPaymentStatus.APPROVED) {
+        await this.applyNonApprovedStatus(tx, order.id, input);
+        return { applied: false, orderId: order.id, status: input.status };
+      }
+
+      const claimedPayment = await tx.storefrontPayment.updateMany({
+        where: {
+          id: payment.id,
+          fulfillmentAppliedAt: null,
+        },
+        data: { fulfillmentAppliedAt: new Date() },
+      });
+      if (claimedPayment.count === 0) {
+        return { applied: false, duplicate: true, orderId: order.id };
+      }
+
+      const offer = STOREFRONT_OFFERS.find(
+        (candidate) => candidate.key === order.offerKey,
+      );
+      if (!offer || offer.kind !== order.offerKind) {
+        throw new BadRequestException('Oferta do pedido não é mais válida.');
+      }
+
+      if (offer.kind !== 'SUBSCRIPTION') {
+        const claimedOrder = await tx.storefrontOrder.updateMany({
+          where: { id: order.id, fulfilledAt: null },
+          data: {
+            status: StorefrontOrderStatus.FULFILLED,
             providerStatus: input.providerStatus,
-            paidAt: input.paidAt ?? undefined,
-            periodEndsAt: input.periodEndsAt ?? undefined,
-            metadata: input.metadata ?? undefined,
+            paidAt: input.paidAt ?? new Date(),
+            fulfilledAt: new Date(),
+            failureCode: null,
           },
         });
 
-        if (input.status !== StorefrontPaymentStatus.APPROVED) {
-          await this.applyNonApprovedStatus(tx, order.id, input);
-          return { applied: false, orderId: order.id, status: input.status };
-        }
-
-        const claimedPayment = await tx.storefrontPayment.updateMany({
-          where: {
-            id: payment.id,
-            fulfillmentAppliedAt: null,
-          },
-          data: { fulfillmentAppliedAt: new Date() },
-        });
-        if (claimedPayment.count === 0) {
+        if (claimedOrder.count === 0) {
           return { applied: false, duplicate: true, orderId: order.id };
         }
+      }
 
-        const offer = STOREFRONT_OFFERS.find(
-          (candidate) => candidate.key === order.offerKey,
-        );
-        if (!offer || offer.kind !== order.offerKind) {
-          throw new BadRequestException('Oferta do pedido não é mais válida.');
-        }
-
-        if (offer.kind !== 'SUBSCRIPTION') {
-          const claimedOrder = await tx.storefrontOrder.updateMany({
-            where: { id: order.id, fulfilledAt: null },
-            data: {
-              status: StorefrontOrderStatus.FULFILLED,
-              providerStatus: input.providerStatus,
-              paidAt: input.paidAt ?? new Date(),
-              fulfilledAt: new Date(),
-              failureCode: null,
-            },
+      switch (offer.kind) {
+        case 'SUBSCRIPTION':
+          await this.grantPremium(tx, {
+            order,
+            premiumDays: offer.premiumDays ?? 30,
+            input,
           });
+          break;
+        case 'PREMIUM_ITEM':
+          await this.grantPremiumItem(tx, order);
+          break;
+        case 'CASH_PACKAGE':
+          await this.grantCash(tx, order, offer.cashAmount ?? 0);
+          break;
+        case 'PERMANENT_PACKAGE':
+          await this.grantCosmeticCollection(tx, order, offer.collectionKey);
+          break;
+      }
 
-          if (claimedOrder.count === 0) {
-            return { applied: false, duplicate: true, orderId: order.id };
-          }
-        }
+      if (offer.kind === 'SUBSCRIPTION') {
+        await tx.storefrontOrder.update({
+          where: { id: order.id },
+          data: {
+            status: StorefrontOrderStatus.FULFILLED,
+            providerStatus: input.providerStatus,
+            paidAt: order.paidAt ?? input.paidAt ?? new Date(),
+            fulfilledAt: order.fulfilledAt ?? new Date(),
+            failureCode: null,
+          },
+        });
+      }
 
-        switch (offer.kind) {
-          case 'SUBSCRIPTION':
-            await this.grantPremium(tx, {
-              order,
-              premiumDays: offer.premiumDays ?? 30,
-              input,
-            });
-            break;
-          case 'PREMIUM_ITEM':
-            await this.grantPremiumItem(tx, order);
-            break;
-          case 'CASH_PACKAGE':
-            await this.grantCash(tx, order, offer.cashAmount ?? 0);
-            break;
-          case 'PERMANENT_PACKAGE':
-            await this.grantCosmeticCollection(tx, order, offer.collectionKey);
-            break;
-        }
-
-        if (offer.kind === 'SUBSCRIPTION') {
-          await tx.storefrontOrder.update({
-            where: { id: order.id },
-            data: {
-              status: StorefrontOrderStatus.FULFILLED,
-              providerStatus: input.providerStatus,
-              paidAt: order.paidAt ?? input.paidAt ?? new Date(),
-              fulfilledAt: order.fulfilledAt ?? new Date(),
-              failureCode: null,
-            },
-          });
-        }
-
-        return { applied: true, orderId: order.id, offerKind: offer.kind };
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+      return { applied: true, orderId: order.id, offerKind: offer.kind };
+    });
   }
 
   async updateSubscriptionStatus(params: {
@@ -273,22 +274,9 @@ export class StorefrontFulfillmentService {
       input: StorefrontPaymentUpdate;
     },
   ) {
-    const user = await tx.user.findUnique({
-      where: { id: params.order.userId },
-      select: { premiumUntil: true },
-    });
-    if (!user) throw new NotFoundException('Usuário do pedido não encontrado.');
-
-    const now = new Date();
-    const startsAt =
-      user.premiumUntil && user.premiumUntil > now ? user.premiumUntil : now;
-    const premiumUntil = new Date(
-      startsAt.getTime() + params.premiumDays * DAY_MS,
-    );
-
-    await tx.user.update({
-      where: { id: params.order.userId },
-      data: { premiumUntil },
+    const entitlement = await this.premiumEntitlements.extendPremium(tx, {
+      userId: params.order.userId,
+      premiumDays: params.premiumDays,
     });
 
     const subscriptionId =
@@ -308,13 +296,15 @@ export class StorefrontFulfillmentService {
         providerSubscriptionId: subscriptionId,
         providerCustomerId: params.input.customerId ?? null,
         status: StorefrontSubscriptionStatus.ACTIVE,
-        currentPeriodEndsAt: params.input.periodEndsAt ?? premiumUntil,
+        currentPeriodEndsAt:
+          params.input.periodEndsAt ?? entitlement.premiumUntil,
       },
       update: {
         providerSubscriptionId: subscriptionId,
         providerCustomerId: params.input.customerId ?? undefined,
         status: StorefrontSubscriptionStatus.ACTIVE,
-        currentPeriodEndsAt: params.input.periodEndsAt ?? premiumUntil,
+        currentPeriodEndsAt:
+          params.input.periodEndsAt ?? entitlement.premiumUntil,
         cancelledAt: null,
       },
     });
@@ -423,5 +413,28 @@ export class StorefrontFulfillmentService {
       })),
       skipDuplicates: true,
     });
+  }
+
+  private async runSerializable<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    for (let attempt = 1; attempt <= TRANSACTION_RETRIES; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (
+          attempt < TRANSACTION_RETRIES &&
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2034'
+        ) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new Error('Transação de entrega não concluída.');
   }
 }
