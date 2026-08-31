@@ -1,6 +1,6 @@
 tier,rarity,cocoonChancePercent,expectedWinsPerCocoon,averageFragmentsPerWin,fragmentCost,expectedCalendarHoursForCocoon,expectedCalendarHoursForFragments,expectedCalendarHoursForInputs,limitingInput
-1,"COMMON",7,14.29,1,10,63.47,44.43,63.47,"COCOON"
-2,"COMMON",7,14.29,1,14,63.47,62.2,63.47,"COCOON"
-3,"UNCOMMON",5,20,1.5,18,88.86,53.32,88.86,"COCOON"
-4,"UNCOMMON",5,20,1.5,24,88.86,71.09,88.86,"COCOON"
-5,"RARE",4,25,1.5,30,111.08,88.86,111.08,"COCOON"
+1,"COMMON",18,5.56,2.5,10,25.45,18.32,25.45,"COCOON"
+2,"COMMON",16,6.25,3.5,14,28.63,18.32,28.63,"COCOON"
+3,"UNCOMMON",14,7.14,4.5,18,32.72,18.32,32.72,"COCOON"
+4,"UNCOMMON",12,8.33,5.5,24,38.17,19.99,38.17,"COCOON"
+5,"RARE",10,10,6.5,30,45.8,21.14,45.8,"COCOON"

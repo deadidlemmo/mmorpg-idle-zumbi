@@ -100,6 +100,10 @@ import {
 import { buildAutoCombatHuntingTimeline } from './auto-combat-hunting-timeline';
 import { buildAutoCombatRealtimeStatusPayload } from './auto-combat-realtime-payload';
 import {
+  buildAutoCombatSessionTelemetrySnapshot,
+  withAutoCombatPhaseDurationIncrement,
+} from './auto-combat-session-telemetry';
+import {
   assertAutoCombatPhaseTransition,
   buildHuntCycleKey,
 } from './auto-combat-state-machine';
@@ -1059,6 +1063,11 @@ export class AutoCombatService implements OnModuleDestroy {
             boots: true,
           },
         },
+        equippedPet: {
+          include: {
+            petDefinition: true,
+          },
+        },
         gatheringSkills: true,
       },
     });
@@ -1368,10 +1377,16 @@ export class AutoCombatService implements OnModuleDestroy {
 
     const huntingSkill = await this.getOrCreateHuntingSkill(character.id);
     const now = new Date();
-    const sessionDurationSeconds = getIdleProgressLimitSeconds(
-      isPremiumActive(character.user, now),
-    );
+    const premiumActive = isPremiumActive(character.user, now);
+    const sessionDurationSeconds = getIdleProgressLimitSeconds(premiumActive);
     const endsAt = new Date(now.getTime() + sessionDurationSeconds * 1000);
+    const sessionTelemetrySnapshot = buildAutoCombatSessionTelemetrySnapshot({
+      character,
+      huntingSkill,
+      mapId: huntTarget.map.id,
+      mapTier: huntTarget.map.tier,
+      premiumActive,
+    });
     const resumedTrackedBatchResponse =
       await this.resumePreservedHuntBatchIfAvailable({
         userId,
@@ -1382,6 +1397,7 @@ export class AutoCombatService implements OnModuleDestroy {
         now,
         endsAt,
         sessionDurationSeconds,
+        sessionTelemetrySnapshot,
       });
 
     if (resumedTrackedBatchResponse) {
@@ -1444,6 +1460,7 @@ export class AutoCombatService implements OnModuleDestroy {
               huntStartedAt: now,
               lastHuntProcessedAt: now,
               huntingLevelAtStart: huntingSkill.level,
+              ...sessionTelemetrySnapshot,
               huntingXpGained: 0,
               foundEnemiesCount: 0,
               bonusEnemiesFound: 0,
@@ -1640,6 +1657,9 @@ export class AutoCombatService implements OnModuleDestroy {
     now: Date;
     endsAt: Date;
     sessionDurationSeconds: number;
+    sessionTelemetrySnapshot: ReturnType<
+      typeof buildAutoCombatSessionTelemetrySnapshot
+    >;
   }) {
     const huntBatch = await this.prisma.autoCombatHuntBatch.findFirst({
       where: {
@@ -1731,6 +1751,7 @@ export class AutoCombatService implements OnModuleDestroy {
             lastHuntProcessedAt: params.now,
             huntingLevelAtStart:
               huntBatch.huntingLevelAtStart ?? params.huntingLevel,
+            ...params.sessionTelemetrySnapshot,
             huntingXpGained: huntBatch.huntingXpGained ?? 0,
             foundEnemiesCount: huntBatch.foundEnemiesCount ?? 0,
             bonusEnemiesFound: huntBatch.bonusEnemiesFound ?? 0,
@@ -7490,7 +7511,7 @@ export class AutoCombatService implements OnModuleDestroy {
         status: AutoCombatSessionStatus.ACTIVE,
         lastProcessedAt: session.lastProcessedAt,
       },
-      data,
+      data: withAutoCombatPhaseDurationIncrement(session, data),
     });
 
     if (updateResult.count === 0) {
@@ -7511,7 +7532,7 @@ export class AutoCombatService implements OnModuleDestroy {
         lastProcessedAt: session.lastProcessedAt,
         lastHuntProcessedAt: session.lastHuntProcessedAt ?? null,
       },
-      data,
+      data: withAutoCombatPhaseDurationIncrement(session, data),
     });
 
     if (updateResult.count === 0) {
@@ -7535,7 +7556,7 @@ export class AutoCombatService implements OnModuleDestroy {
         lastProcessedAt: session.lastProcessedAt,
       },
       data: {
-        ...data,
+        ...withAutoCombatPhaseDurationIncrement(session, data),
         phase: nextPhase,
       },
     });
@@ -11869,6 +11890,7 @@ export class AutoCombatService implements OnModuleDestroy {
       attack: applyAutoCombatIncomingDamageMultiplier({
         attack: stats.attack,
         className,
+        mobTier: mob.tier,
       }),
     };
   }

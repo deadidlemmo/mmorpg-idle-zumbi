@@ -3,19 +3,31 @@ export const FUTURE_LEVEL_CAP = 100;
 
 export const LEVELS_PER_TIER = 10;
 
-// Base de balanceamento idle para auto-combate 24h.
-// 7200 vitorias por dia = 1 abate efetivo a cada 12 segundos.
-// O round real roda a cada 3 segundos, mas lutas longas, derrotas, troca de mob,
-// pocoes e gargalos de equipamento reduzem a taxa sustentada.
+// Unidade historica usada para converter o orcamento de cada tier em XP.
+// Nao representa um dia de calendario: a taxa real depende de caca, TTK,
+// equipamento, derrotas e pausas entre sessoes.
 export const EXPECTED_COMBATS_PER_DAY = 7200;
+
+// Meta de produto para o lancamento. A comunicacao usa dias de calendario;
+// os simuladores convertem a faixa para horas ativas com este perfil de
+// referencia. Jogadores com mais ou menos tempo diario continuam na mesma
+// curva global de XP, sem multiplicadores por classe.
+export const PROGRESSION_CALENDAR_TARGET = Object.freeze({
+  minCalendarDays: 60,
+  maxCalendarDays: 90,
+  referenceActiveHoursPerDay: 8,
+  minActiveHours: 480,
+  maxActiveHours: 720,
+});
 
 // Meta aproximada por fase de conteudo.
 //
 // Lancamento:
 // - Level cap 50.
 // - Conteudo ate T5.
-// - Objetivo realista: 1-50 em aproximadamente 2 a 3 meses para jogador
-//   mantendo sessoes de auto-combate ativas, sem limite diario artificial.
+// - Objetivo: 1-50 em 60-90 dias de calendario no perfil de referencia.
+// - Niveis 1-20 preservam integralmente a curva publicada.
+// - T3 recebe uma reducao intermediaria; a aceleracao principal fica em T4/T5.
 //
 // Expansao:
 // - Futuro level cap 100.
@@ -29,9 +41,9 @@ export const EXPECTED_COMBATS_PER_DAY = 7200;
 export const TIER_TARGET_DAYS: Record<number, number> = {
   1: 1,
   2: 3,
-  3: 5,
-  4: 6,
-  5: 8,
+  3: 1.5,
+  4: 0.8,
+  5: 1,
 
   // Preparado para expansao futura 51-100.
   6: 10,

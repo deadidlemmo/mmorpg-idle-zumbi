@@ -1,4 +1,4 @@
-import { EconomyCurrency, Rarity, WorldBossRewardType } from '@prisma/client';
+import { Rarity, WorldBossRewardType } from '@prisma/client';
 import {
   ECONOMY_ACTIVITY_REWARDS,
   getPetRarityByTier,
@@ -39,30 +39,20 @@ function buildLootTable(tier: number) {
   const goldMin = 180 * tier;
   const goldMax = 280 * tier + tier * tier * 20;
 
-  const fragmentReward = isEconomyLaunchTier(tier)
-    ? {
-        rewardType: WorldBossRewardType.CURRENCY,
-        currency: EconomyCurrency.WORLD_BOSS_FRAGMENT,
-        minQuantity: ECONOMY_ACTIVITY_REWARDS.worldBossFragments[tier].min,
-        maxQuantity: ECONOMY_ACTIVITY_REWARDS.worldBossFragments[tier].max,
-        chance: 100,
-        guaranteed: true,
-        requiresMinParticipation: true,
-        rarity: tier >= 4 ? Rarity.RARE : Rarity.UNCOMMON,
-        sortOrder: 2,
-      }
-    : {
-        rewardType: WorldBossRewardType.MATERIAL,
-        itemName: `Fragmento de Ameaça T${tier}`,
-        minQuantity: Math.max(2, tier),
-        maxQuantity: 4 + tier * 2,
-        chance: 75,
-        guaranteed: false,
-        requiresMinParticipation: true,
-        rarity:
-          tier >= 7 ? Rarity.EPIC : tier >= 4 ? Rarity.RARE : Rarity.UNCOMMON,
-        sortOrder: 2,
-      };
+  const launchFragmentReward = isEconomyLaunchTier(tier)
+    ? ECONOMY_ACTIVITY_REWARDS.worldBossFragments[tier]
+    : null;
+  const fragmentReward = {
+    rewardType: WorldBossRewardType.MATERIAL,
+    itemName: `Fragmento de Ameaça T${tier}`,
+    minQuantity: launchFragmentReward?.min ?? Math.max(2, tier),
+    maxQuantity: launchFragmentReward?.max ?? 4 + tier * 2,
+    chance: launchFragmentReward ? 100 : 75,
+    guaranteed: Boolean(launchFragmentReward),
+    requiresMinParticipation: true,
+    rarity: tier >= 7 ? Rarity.EPIC : tier >= 4 ? Rarity.RARE : Rarity.UNCOMMON,
+    sortOrder: 2,
+  };
 
   return [
     {

@@ -43,6 +43,7 @@ import {
 import { MarketItemThumb } from "../components/MarketItemThumb";
 import type {
   MarketCharacterSummary,
+  MarketItemClassFilter,
   MarketListing,
   MarketListingSort,
   MarketListingStatus,
@@ -66,7 +67,7 @@ const EMPTY_PAGINATION: MarketPagination = {
 
 const STATUS_LABELS: Record<MarketListingStatus, string> = {
   ACTIVE: "Ativo",
-  SOLD_OUT: "Esgotado",
+  SOLD_OUT: "Vendido",
   CANCELLED: "Cancelado",
 };
 
@@ -83,6 +84,10 @@ function formatDate(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function formatUnitLabel(quantity: number) {
+  return quantity === 1 ? "unidade" : "unidades";
 }
 
 function getItemTypeLabel(item: MarketSellableItem) {
@@ -158,6 +163,9 @@ export function MarketplacePage() {
   const [typeFilter, setTypeFilter] = useState("");
   const [tierFilter, setTierFilter] = useState("");
   const [rarityFilter, setRarityFilter] = useState("");
+  const [classFilter, setClassFilter] = useState<MarketItemClassFilter | "">(
+    "",
+  );
   const [sort, setSort] = useState<MarketListingSort>("NEWEST");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [catalog, setCatalog] = useState<MarketListingsResponse>({
@@ -227,6 +235,7 @@ export function MarketplacePage() {
           type: typeFilter || undefined,
           tier: tierFilter ? Number(tierFilter) : undefined,
           rarity: rarityFilter || undefined,
+          itemClass: classFilter || undefined,
           sort,
           page: catalogPage,
           pageSize: 20,
@@ -281,6 +290,7 @@ export function MarketplacePage() {
     activeTab,
     catalogPage,
     characterId,
+    classFilter,
     deferredSearch,
     minePage,
     mineStatus,
@@ -327,8 +337,9 @@ export function MarketplacePage() {
   );
 
   const filterCount = useMemo(
-    () => [typeFilter, tierFilter, rarityFilter].filter(Boolean).length,
-    [rarityFilter, tierFilter, typeFilter],
+    () =>
+      [typeFilter, tierFilter, rarityFilter, classFilter].filter(Boolean).length,
+    [classFilter, rarityFilter, tierFilter, typeFilter],
   );
 
   function changeTab(tab: MarketTab) {
@@ -600,6 +611,23 @@ export function MarketplacePage() {
                     <option value="EPIC">Épico</option>
                     <option value="LEGENDARY">Lendário</option>
                   </select>
+                  <select
+                    value={classFilter}
+                    onChange={(event) => {
+                      setClassFilter(
+                        event.target.value as MarketItemClassFilter | "",
+                      );
+                      setCatalogPage(1);
+                    }}
+                    aria-label="Filtrar por classe"
+                  >
+                    <option value="">Todas as classes</option>
+                    <option value="GENERAL">Uso geral</option>
+                    <option value="LUTADOR">Lutador</option>
+                    <option value="ASSASSINO">Assassino</option>
+                    <option value="ATIRADOR">Atirador</option>
+                    <option value="MEDICO">Médico</option>
+                  </select>
                   {filterCount > 0 ? (
                     <button
                       type="button"
@@ -608,6 +636,7 @@ export function MarketplacePage() {
                         setTypeFilter("");
                         setTierFilter("");
                         setRarityFilter("");
+                        setClassFilter("");
                         setCatalogPage(1);
                       }}
                     >
@@ -669,7 +698,7 @@ export function MarketplacePage() {
                     </div>
                     <div className="market-row__stock" data-label="Disponível">
                       <strong>{formatGold(listing.quantityRemaining)}</strong>
-                      <small>unidades</small>
+                      <small>{formatUnitLabel(listing.quantityRemaining)}</small>
                     </div>
                     <div
                       className="market-row__price"
@@ -681,6 +710,7 @@ export function MarketplacePage() {
                     <button
                       type="button"
                       className="market-row__action"
+                      aria-label={`Comprar ${listing.item.name}`}
                       onClick={() => openBuy(listing)}
                     >
                       <ShoppingCart size={16} />
@@ -693,10 +723,10 @@ export function MarketplacePage() {
               <div className="market-empty">
                 <PackageOpen size={28} />
                 <strong>Nenhum anúncio encontrado</strong>
-                <span>Ajuste os filtros ou publique o primeiro lote.</span>
+                <span>Ajuste os filtros ou coloque um item à venda.</span>
                 <button type="button" onClick={() => changeTab("sell")}>
                   <Tag size={15} />
-                  Anunciar item
+                  Vender item
                 </button>
               </div>
             )}
@@ -752,11 +782,12 @@ export function MarketplacePage() {
                     </div>
                     <div className="market-row__stock" data-label="Na mochila">
                       <strong>{formatGold(entry.quantity)}</strong>
-                      <small>unidades</small>
+                      <small>{formatUnitLabel(entry.quantity)}</small>
                     </div>
                     <button
                       type="button"
                       className="market-row__action"
+                      aria-label={`Vender ${entry.item.name}`}
                       disabled={
                         (sellable.activeListings ?? 0) >=
                         (sellable.maxActiveListings ?? 30)
@@ -764,7 +795,7 @@ export function MarketplacePage() {
                       onClick={() => openSell(entry)}
                     >
                       <Tag size={16} />
-                      <span>Anunciar</span>
+                      <span>Vender</span>
                     </button>
                   </article>
                 ))}
@@ -805,7 +836,7 @@ export function MarketplacePage() {
               >
                 <option value="">Todos os status</option>
                 <option value="ACTIVE">Ativos</option>
-                <option value="SOLD_OUT">Esgotados</option>
+                <option value="SOLD_OUT">Vendidos</option>
                 <option value="CANCELLED">Cancelados</option>
               </select>
             </div>
@@ -878,7 +909,7 @@ export function MarketplacePage() {
                 <strong>Nenhum anúncio nesta categoria</strong>
                 <button type="button" onClick={() => changeTab("sell")}>
                   <Tag size={15} />
-                  Anunciar item
+                  Vender item
                 </button>
               </div>
             )}
@@ -1086,7 +1117,7 @@ export function MarketplacePage() {
                 disabled={isMutating || !canPublish}
               >
                 <Tag size={16} />
-                {isMutating ? "Publicando..." : "Publicar anúncio"}
+                {isMutating ? "Publicando..." : "Colocar à venda"}
               </button>
             </footer>
           </form>

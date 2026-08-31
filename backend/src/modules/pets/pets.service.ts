@@ -6,15 +6,16 @@ import {
 } from '@nestjs/common';
 import {
   CharacterPetStatus,
-  EconomyCurrency,
   EconomyDirection,
   EconomyResourceType,
+  InventoryItemType,
   PetSpecialization,
   Prisma,
 } from '@prisma/client';
 import {
   getPetDuplicateCocoonRecovery,
   getPetRarityByTier,
+  WORLD_BOSS_FRAGMENT_ITEM_FAMILY,
 } from '../../common/config/economy.config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
@@ -25,6 +26,17 @@ import { StartPetIncubationDto } from './dto/start-pet-incubation.dto';
 
 const PET_DEFINITION_INCLUDE = {
   cocoonItem: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      tier: true,
+      rarity: true,
+      family: true,
+    },
+  },
+  fragmentItem: {
     select: {
       id: true,
       name: true,
@@ -71,12 +83,15 @@ export class PetsService {
         gold: true,
         equippedPetId: true,
         inventoryItems: {
-          where: { item: { petDefinition: { isNot: null } } },
+          where: {
+            item: {
+              OR: [
+                { petDefinition: { isNot: null } },
+                { family: WORLD_BOSS_FRAGMENT_ITEM_FAMILY },
+              ],
+            },
+          },
           select: { itemId: true, quantity: true },
-        },
-        economyBalances: {
-          where: { currency: EconomyCurrency.WORLD_BOSS_FRAGMENT },
-          select: { tier: true, balance: true },
         },
         pets: {
           include: CHARACTER_PET_INCLUDE,
@@ -94,11 +109,8 @@ export class PetsService {
       include: PET_DEFINITION_INCLUDE,
       orderBy: [{ tier: 'asc' }, { sortOrder: 'asc' }],
     });
-    const cocoonBalanceByItemId = new Map(
+    const inventoryBalanceByItemId = new Map(
       character.inventoryItems.map((entry) => [entry.itemId, entry.quantity]),
-    );
-    const fragmentBalanceByTier = new Map(
-      character.economyBalances.map((entry) => [entry.tier, entry.balance]),
     );
     const petByDefinitionId = new Map(
       character.pets.map((pet) => [pet.petDefinitionId, pet]),
@@ -140,7 +152,7 @@ export class PetsService {
       pets: definitions.map((definition) => {
         const characterPet = petByDefinitionId.get(definition.id) ?? null;
         const cocoonQuantity =
-          cocoonBalanceByItemId.get(definition.cocoonItemId) ?? 0;
+          inventoryBalanceByItemId.get(definition.cocoonItemId) ?? 0;
         const duplicateCocoonQuantity = Math.max(
           0,
           cocoonQuantity - (characterPet ? 0 : 1),
@@ -148,7 +160,9 @@ export class PetsService {
         const duplicateRecovery = getPetDuplicateCocoonRecovery(
           definition.tier,
         );
-        const fragmentBalance = fragmentBalanceByTier.get(definition.tier) ?? 0;
+        const fragmentItemBalance =
+          inventoryBalanceByItemId.get(definition.fragmentItemId) ?? 0;
+        const fragmentBalance = fragmentItemBalance;
         const reason = this.getUnavailableReason({
           characterPet,
           activeIncubation,
@@ -197,6 +211,7 @@ export class PetsService {
             ...definition.cocoonItem,
             rarity,
           },
+          fragmentItem: definition.fragmentItem,
           characterPet: characterPet
             ? this.formatCharacterPet(
                 characterPet,
@@ -294,6 +309,32 @@ export class PetsService {
               );
             }
 
+            const fragmentInventory = await tx.inventoryItem.findUnique({
+              where: {
+                characterId_itemId: {
+                  characterId,
+                  itemId: definition.fragmentItemId,
+                },
+              },
+              select: { quantity: true },
+            });
+            const fragmentItemBalance = Math.max(
+              0,
+              fragmentInventory?.quantity ?? 0,
+            );
+            if (fragmentItemBalance < definition.fragmentCost) {
+              throw new BadRequestException(
+                `São necessários ${definition.fragmentCost}x ${definition.fragmentItem.name}.`,
+              );
+            }
+            const baseLedgerKey = `pet-incubation:${characterId}:${input.requestId}`;
+            const fragmentLedgerMetadata = {
+              requestId: input.requestId,
+              petDefinitionId: definition.id,
+              fragmentItemId: definition.fragmentItemId,
+              itemQuantityConsumed: definition.fragmentCost,
+            };
+
             const cocoonDebit = await tx.inventoryItem.updateMany({
               where: {
                 characterId,
@@ -315,19 +356,42 @@ export class PetsService {
               },
             });
 
-            const baseLedgerKey = `pet-incubation:${characterId}:${input.requestId}`;
-            const fragmentDebit =
-              await this.economyService.debitWalletInTransaction(tx, {
+            const fragmentDebit = await tx.inventoryItem.updateMany({
+              where: {
                 characterId,
-                currency: EconomyCurrency.WORLD_BOSS_FRAGMENT,
-                tier: definition.tier,
-                quantity: definition.fragmentCost,
-                reason: ECONOMY_REASONS.PET_INCUBATION_FRAGMENT,
-                idempotencyKey: `${baseLedgerKey}:fragment`,
-                referenceType: 'PetDefinition',
-                referenceId: definition.id,
-                metadata: { requestId: input.requestId },
-              });
+                itemId: definition.fragmentItemId,
+                quantity: { gte: definition.fragmentCost },
+              },
+              data: { quantity: { decrement: definition.fragmentCost } },
+            });
+            if (fragmentDebit.count !== 1) {
+              throw new ConflictException(
+                'O estoque de fragmentos mudou. Tente novamente.',
+              );
+            }
+            const fragmentItemBalanceAfter =
+              fragmentItemBalance - definition.fragmentCost;
+            await tx.inventoryItem.deleteMany({
+              where: {
+                characterId,
+                itemId: definition.fragmentItemId,
+                quantity: { lte: 0 },
+              },
+            });
+            await recordEconomyEntry(tx, {
+              characterId,
+              direction: EconomyDirection.DEBIT,
+              resourceType: EconomyResourceType.ITEM,
+              itemId: definition.fragmentItemId,
+              tier: definition.tier,
+              quantity: definition.fragmentCost,
+              balanceAfter: fragmentItemBalanceAfter,
+              reason: ECONOMY_REASONS.PET_INCUBATION_FRAGMENT,
+              idempotencyKey: `${baseLedgerKey}:fragment:item`,
+              referenceType: 'PetDefinition',
+              referenceId: definition.id,
+              metadata: fragmentLedgerMetadata,
+            });
 
             const goldDebit = await tx.character.updateMany({
               where: { id: characterId, gold: { gte: definition.goldCost } },
@@ -392,7 +456,7 @@ export class PetsService {
             });
 
             return {
-              applied: fragmentDebit.applied,
+              applied: true,
               message: `${definition.name} entrou na incubadora.`,
               pet: this.formatCharacterPet(characterPet, now),
             };
@@ -733,6 +797,7 @@ export class PetsService {
                 where: { idempotencyKey: outputLedgerKey },
               });
               const metadata = this.getLedgerMetadata(existing.metadata);
+              const outputMetadata = this.getLedgerMetadata(output.metadata);
               const cocoonName =
                 typeof metadata.cocoonName === 'string'
                   ? metadata.cocoonName
@@ -744,7 +809,10 @@ export class PetsService {
                 cocoonName,
                 quantity: input.quantity,
                 outputQuantity: output.quantity,
-                outputBalance: output.balanceAfter ?? 0,
+                outputBalance:
+                  typeof outputMetadata.totalBalanceAfter === 'number'
+                    ? outputMetadata.totalBalanceAfter
+                    : (output.balanceAfter ?? 0),
               });
             }
 
@@ -869,20 +937,44 @@ export class PetsService {
                 metadata,
               });
             } else {
-              const credit =
-                await this.economyService.creditWalletInTransaction(tx, {
+              const fragmentInventory = await tx.inventoryItem.upsert({
+                where: {
+                  characterId_itemId: {
+                    characterId,
+                    itemId: definition.fragmentItemId,
+                  },
+                },
+                create: {
                   characterId,
-                  currency: EconomyCurrency.WORLD_BOSS_FRAGMENT,
-                  tier: definition.tier,
+                  itemId: definition.fragmentItemId,
                   quantity: outputQuantity,
-                  reason:
-                    ECONOMY_REASONS.PET_DUPLICATE_COCOON_FRAGMENTS_RECEIVED,
-                  idempotencyKey: outputLedgerKey,
-                  referenceType: 'PetDefinition',
-                  referenceId: definition.id,
-                  metadata,
-                });
-              outputBalance = credit.balance;
+                  type: InventoryItemType.MATERIAL,
+                },
+                update: {
+                  quantity: { increment: outputQuantity },
+                  type: InventoryItemType.MATERIAL,
+                },
+                select: { quantity: true },
+              });
+              outputBalance = fragmentInventory.quantity;
+              await recordEconomyEntry(tx, {
+                characterId,
+                direction: EconomyDirection.CREDIT,
+                resourceType: EconomyResourceType.ITEM,
+                itemId: definition.fragmentItemId,
+                tier: definition.tier,
+                quantity: outputQuantity,
+                balanceAfter: fragmentInventory.quantity,
+                reason: ECONOMY_REASONS.PET_DUPLICATE_COCOON_FRAGMENTS_RECEIVED,
+                idempotencyKey: outputLedgerKey,
+                referenceType: 'PetDefinition',
+                referenceId: definition.id,
+                metadata: {
+                  ...metadata,
+                  fragmentItemId: definition.fragmentItemId,
+                  totalBalanceAfter: fragmentInventory.quantity,
+                },
+              });
             }
 
             return this.buildDuplicateRecoveryResponse({

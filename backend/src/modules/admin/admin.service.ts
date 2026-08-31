@@ -13,6 +13,10 @@ import {
 } from '@prisma/client';
 import { AuditService } from '../../common/audit/audit.service';
 import { PRODUCT_EVENT_ACTIONS } from '../../common/audit/product-events.constants';
+import {
+  INCURSION_TOKEN_ITEMS,
+  WORLD_BOSS_FRAGMENT_ITEMS,
+} from '../../common/config/economy.config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ObservabilityService } from '../../common/observability/observability.service';
 import {
@@ -198,7 +202,8 @@ export class AdminService {
       trackingStart,
       ledgerFlow,
       ledgerReasons,
-      walletBalances,
+      resourceInventoryBalances,
+      resourceBankBalances,
       ledgerTrackingStart,
       activePetIncubations,
       collectedPets,
@@ -326,13 +331,39 @@ export class AdminService {
         _sum: { quantity: true },
         _count: { _all: true },
       }),
-      this.prisma.characterEconomyBalance.groupBy({
-        by: ['currency', 'tier'],
+      this.prisma.inventoryItem.findMany({
         where: {
-          tier: { gte: 1, lte: 5 },
+          quantity: { gt: 0 },
+          item: {
+            slug: {
+              in: [...INCURSION_TOKEN_ITEMS, ...WORLD_BOSS_FRAGMENT_ITEMS].map(
+                (item) => item.slug,
+              ),
+            },
+          },
           character: { user: PRODUCT_USER_WHERE },
         },
-        _sum: { balance: true },
+        select: {
+          quantity: true,
+          item: { select: { tier: true, slug: true } },
+        },
+      }),
+      this.prisma.bankItem.findMany({
+        where: {
+          quantity: { gt: 0 },
+          item: {
+            slug: {
+              in: [...INCURSION_TOKEN_ITEMS, ...WORLD_BOSS_FRAGMENT_ITEMS].map(
+                (item) => item.slug,
+              ),
+            },
+          },
+          character: { user: PRODUCT_USER_WHERE },
+        },
+        select: {
+          quantity: true,
+          item: { select: { tier: true, slug: true } },
+        },
       }),
       this.prisma.economyLedgerEntry.findFirst({
         where: { character: { user: PRODUCT_USER_WHERE } },
@@ -620,12 +651,22 @@ export class AdminService {
       return { credited, debited, net: credited - debited };
     };
     const goldLedger = buildResourceFlow(EconomyResourceType.GOLD);
-    const walletBalanceByKey = new Map(
-      walletBalances.map((entry) => [
-        `${entry.currency}:${entry.tier}`,
-        entry._sum.balance ?? 0,
-      ]),
-    );
+    const walletBalanceByKey = new Map<string, number>();
+    for (const entry of [
+      ...resourceInventoryBalances,
+      ...resourceBankBalances,
+    ]) {
+      const currency = INCURSION_TOKEN_ITEMS.some(
+        (item) => item.slug === entry.item.slug,
+      )
+        ? EconomyCurrency.INCURSION_TOKEN
+        : EconomyCurrency.WORLD_BOSS_FRAGMENT;
+      const key = `${currency}:${entry.item.tier}`;
+      walletBalanceByKey.set(
+        key,
+        (walletBalanceByKey.get(key) ?? 0) + entry.quantity,
+      );
+    }
     const ledgerEntries = ledgerFlow.reduce(
       (total, entry) => total + entry._count._all,
       0,

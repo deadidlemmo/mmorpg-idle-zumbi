@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title description">
+  <title id="title">Passe Premium de 30 dias</title>
+  <desc id="description">Medalhao dourado e verde com uma coroa ao centro.</desc>
+  <defs>
+    <radialGradient id="bg" cx="32%" cy="24%" r="72%">
+      <stop offset="0" stop-color="#fff7bb"/>
+      <stop offset=".24" stop-color="#efd15d"/>
+      <stop offset=".58" stop-color="#9f741f"/>
+      <stop offset="1" stop-color="#1d2b1a"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="48" y1="32" x2="208" y2="232">
+      <stop offset="0" stop-color="#f7e47c"/>
+      <stop offset=".52" stop-color="#97d75b"/>
+      <stop offset="1" stop-color="#436b2d"/>
+    </linearGradient>
+    <linearGradient id="crown" x1="72" y1="68" x2="184" y2="184">
+      <stop offset="0" stop-color="#fff3a8"/>
+      <stop offset=".48" stop-color="#e4b83d"/>
+      <stop offset="1" stop-color="#8e5f18"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#000" flood-opacity=".5"/>
+    </filter>
+  </defs>
+  <circle cx="128" cy="128" r="116" fill="url(#bg)" stroke="#f7df7d" stroke-width="8"/>
+  <circle cx="128" cy="128" r="98" fill="#050d0a" fill-opacity=".58" stroke="url(#ring)" stroke-width="12"/>
+  <g stroke="#e7d166" stroke-width="8" stroke-linecap="round" opacity=".62">
+    <path d="M128 30v29M128 197v29M30 128h29M197 128h29"/>
+    <path d="m59 59 21 21M176 176l21 21M197 59l-21 21M80 176l-21 21"/>
+  </g>
+  <g filter="url(#shadow)">
+    <path d="m74 157 14-70 30 37 10-58 10 58 30-37 14 70H74Z" fill="url(#crown)" stroke="#fff0a1" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M84 173h88" stroke="#fff0a1" stroke-width="20" stroke-linecap="round"/>
+    <path d="M84 173h88" stroke="#9f6d1e" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="128" cy="119" r="10" fill="#9bed5b"/>
+    <circle cx="97" cy="139" r="7" fill="#fff0a1"/>
+    <circle cx="159" cy="139" r="7" fill="#fff0a1"/>
+  </g>
+  <path d="M83 195c19 15 71 15 90 0" fill="none" stroke="#8fcb56" stroke-width="9" stroke-linecap="round" opacity=".72"/>
+</svg>

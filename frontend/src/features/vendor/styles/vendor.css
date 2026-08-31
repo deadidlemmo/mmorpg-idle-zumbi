@@ -1369,33 +1369,50 @@
   }
 
   .merchant-card {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 68px minmax(0, 1fr) 34px;
     grid-template-areas:
-      "identity action"
-      "offers action";
-    gap: 8px 10px;
-    min-height: 118px;
-    padding: 12px;
+      "avatar body action"
+      "avatar offers action";
+    gap: 7px 12px;
+    min-height: 108px;
+    padding: 12px 11px 12px 12px;
   }
 
   .merchant-card__identity {
-    grid-area: identity;
+    display: contents;
   }
 
   .merchant-card__avatar {
+    grid-area: avatar;
+    align-self: center;
     width: 68px;
     height: 68px;
   }
 
+  .merchant-card__body {
+    grid-area: body;
+    align-self: end;
+  }
+
   .merchant-card__offers {
     grid-area: offers;
-    padding-left: 84px;
+    align-self: start;
+    display: grid;
+    gap: 6px;
+    padding-left: 0;
   }
 
   .merchant-card__action {
     grid-area: action;
+    align-self: center;
+    justify-self: end;
     width: 34px;
     height: 34px;
+    justify-content: center;
+    color: rgba(242, 236, 206, 0.82);
+    border: 1px solid rgba(168, 202, 142, 0.2);
+    border-radius: 6px;
+    background: rgba(8, 19, 13, 0.78);
   }
 
   .merchant-card__action span {
@@ -1404,20 +1421,36 @@
 
   .merchant-card h3 {
     font-size: 0.88rem;
+    line-height: 1.18;
+    white-space: normal;
+  }
+
+  .merchant-card__npc {
+    gap: 3px 6px;
+    margin-top: 4px;
   }
 
   .merchant-card__npc span {
-    display: none;
+    font-size: 0.64rem;
   }
 
   .merchant-card__offer {
-    grid-template-columns: 30px minmax(0, 1fr);
+    grid-template-columns: 28px minmax(0, 1fr);
     gap: 8px;
   }
 
   .merchant-card__offer-icon {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(230, 209, 111, 0.24);
+    border-left-color: rgba(230, 209, 111, 0.48);
+    border-radius: 4px;
+    background: rgba(230, 209, 111, 0.06);
+  }
+
+  .merchant-card__offer-icon svg {
+    width: 17px;
+    height: 17px;
   }
 
   .merchant-card__offer-copy strong {

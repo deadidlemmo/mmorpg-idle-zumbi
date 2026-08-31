@@ -589,6 +589,7 @@ function simulateClassTier(params: {
   const mobAttack = applyAutoCombatIncomingDamageMultiplier({
     attack: mob.attack,
     className: classDefinition.name,
+    mobTier: mob.tier,
   });
   const potionHeal = calculateAutoCombatPotionHeal({
     tier,
@@ -720,6 +721,7 @@ function simulateClassTierRealSeed(params: {
     const mobAttack = applyAutoCombatIncomingDamageMultiplier({
       attack: plan.mob.attack,
       className: classDefinition.name,
+      mobTier: plan.mob.tier,
     });
     const survival = projectAutoCombatSurvival({
       currentHp: maxHp,
@@ -783,6 +785,7 @@ function simulateClassTierRealSeed(params: {
           mobAttack: applyAutoCombatIncomingDamageMultiplier({
             attack: metric.plan.mob.attack,
             className: classDefinition.name,
+            mobTier: metric.plan.mob.tier,
           }),
           mobPrecision: metric.plan.mob.speed,
           mobTechnique: metric.plan.mob.level,

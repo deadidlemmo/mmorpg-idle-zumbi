@@ -38,8 +38,11 @@ import {
 import {
   EQUIPMENT_REINFORCEMENT_CONFIG,
   EQUIPMENT_REINFORCEMENT_MAX_LEVEL,
+  getIncursionTokenItemByTier,
   PET_DEFINITIONS,
+  getPetBossAvailabilityProjection,
   getEquipmentReinforcementCost,
+  PET_BOSS_AVAILABILITY_TARGET,
 } from '../src/common/config/economy.config';
 import {
   GATHERING_AFFINITY_PRODUCTION_MULTIPLIER,
@@ -62,9 +65,11 @@ import {
   WORLD_BOSS_SCHEDULE_CONFIG,
 } from '../src/common/config/world-boss.config';
 import {
+  calculateIncursionFailureEntryRefund,
   calculateIncursionSuccessEntryRefund,
   getIncursionRiskProfile,
 } from '../src/modules/incursions/incursion-risk.util';
+import { isWorldBossFragmentReward } from '../src/modules/world-bosses/world-boss-rewards';
 import { loadWorldBossSimulationCalibration } from '../src/modules/economy/world-boss-simulation-calibration.repository';
 import {
   createFallbackWorldBossSimulationCalibration,
@@ -147,6 +152,8 @@ type AutoCombatEconomy = {
   potionBuyPrice: number;
   potionsPer100Kills: number;
   potionGoldPerHour: number;
+  averageMaxHp: number;
+  averagePotionHealAmount: number;
   dropNpcValuePerHour: number;
   netGoldEquivalentPerHour: number;
   defeatChancePercent: number;
@@ -155,6 +162,8 @@ type AutoCombatEconomy = {
     killsPerHour: number;
     characterXpPerHour: number;
     potionGoldPerHour: number;
+    maxHp: number;
+    potionHealAmount: number;
     defeatChancePercent: number;
     dropUnitsPerHourByItem: Record<string, number>;
   }>;
@@ -237,10 +246,14 @@ type IncursionEconomy = {
   failureChancePercent: number;
   expectedFailureHpLossPercentPerAttempt: number;
   entryGold: number;
+  successEntryRefundGold: number;
+  failureEntryRefundGold: number;
   expectedEntryRefundGoldPerAttempt: number;
   expectedLootGoldPerAttempt: number;
   expectedDirectGoldPerAttempt: number;
   expectedItemNpcValuePerAttempt: number;
+  expectedWalletNetGoldPerAttempt: number;
+  expectedRecoveryPotionGoldPerAttempt: number;
   expectedNetGoldPerAttempt: number;
   expectedCharacterXpPerAttempt: number;
   expectedIncursionTokensPerAttempt: number;
@@ -458,6 +471,7 @@ function getItemNpcSaleGold(params: {
   rarity?: Rarity;
   inventoryType: InventoryItemType;
   family?: string | null;
+  isCraftable?: boolean;
   isSellable?: boolean;
 }) {
   return calculateBlackMarketSellValue({
@@ -465,6 +479,7 @@ function getItemNpcSaleGold(params: {
     rarity: params.rarity ?? getItemRarityByTier(params.tier),
     inventoryType: params.inventoryType,
     family: params.family,
+    isCraftable: params.isCraftable,
     isSellable: params.isSellable,
   });
 }
@@ -566,6 +581,7 @@ function buildSaleCatalog(): SaleCatalogRow[] {
           rarity: item.rarity,
           inventoryType: InventoryItemType.EQUIPMENT,
           family: item.family,
+          isCraftable: item.isCraftable,
         }),
         acquisition: 'CRAFTING',
       }),
@@ -666,6 +682,19 @@ function buildClassAutoCombatEconomy(tier: LaunchTier, className: string) {
         row.potionsPer100Kills,
     ),
   );
+  const weightedMaxHp = sum(
+    rows.map(
+      ({ row, mob }) =>
+        (getActiveAutoCombatEncounterWeight(mob) / totalWeight) * row.hp,
+    ),
+  );
+  const weightedPotionHealAmount = sum(
+    rows.map(
+      ({ row, mob }) =>
+        (getActiveAutoCombatEncounterWeight(mob) / totalWeight) *
+        row.potionHealAmount,
+    ),
+  );
   const potionPrice = rows[0]?.row.potionBuyPrice ?? 0;
   const potionGoldPerHour =
     killsPerHour * (weightedPotionsPer100 / 100) * potionPrice;
@@ -697,6 +726,8 @@ function buildClassAutoCombatEconomy(tier: LaunchTier, className: string) {
     killsPerHour: round(killsPerHour, 4),
     characterXpPerHour: round(killsPerHour * weightedXpPerKill, 4),
     potionGoldPerHour: round(potionGoldPerHour, 4),
+    maxHp: round(weightedMaxHp, 4),
+    potionHealAmount: round(weightedPotionHealAmount, 4),
     defeatChancePercent: round(defeatChancePercent, 4),
     dropUnitsPerHourByItem: Object.fromEntries(
       Object.entries(dropUnitsPerHourByItem).map(([key, value]) => [
@@ -750,6 +781,11 @@ function buildAutoCombatEconomy(
     potionBuyPrice: firstPotion?.potionBuyPrice ?? 0,
     potionsPer100Kills: scenario.averagePotionsPer100Kills,
     potionGoldPerHour: scenario.averagePotionGoldPerHour,
+    averageMaxHp: round(average(classes.map((entry) => entry.maxHp)), 4),
+    averagePotionHealAmount: round(
+      average(classes.map((entry) => entry.potionHealAmount)),
+      4,
+    ),
     dropNpcValuePerHour: scenario.averageGrossGoldPerHour,
     netGoldEquivalentPerHour: scenario.averageNetGoldPerHour,
     defeatChancePercent: round(defeatChancePercent),
@@ -1118,6 +1154,7 @@ function buildCraftingEconomy(params: {
 function buildIncursionEconomy(
   tier: LaunchTier,
   saleCatalog: SaleCatalogRow[],
+  autoCombat: AutoCombatEconomy,
 ): IncursionEconomy[] {
   const valueByItemName = new Map(
     saleCatalog.map((item) => [item.itemName, item.npcSaleGold]),
@@ -1155,21 +1192,41 @@ function buildIncursionEconomy(
           } else if (reward.rewardType === IncursionRewardType.CURRENCY) {
             tokens += expectedQuantity;
           } else if (reward.rewardType === IncursionRewardType.MATERIAL) {
-            reinforcementFragments += expectedQuantity;
-            itemNpcValue +=
-              expectedQuantity *
-              (valueByItemName.get(reward.itemName ?? '') ?? 0);
+            const itemName = reward.itemName ?? '';
+            if (itemName === getIncursionTokenItemByTier(tier).name) {
+              tokens += expectedQuantity;
+            } else {
+              reinforcementFragments += expectedQuantity;
+              itemNpcValue +=
+                expectedQuantity * (valueByItemName.get(itemName) ?? 0);
+            }
           } else if (reward.itemName) {
             itemNpcValue +=
               expectedQuantity * (valueByItemName.get(reward.itemName) ?? 0);
           }
         }
 
+        const successEntryRefundGold = calculateIncursionSuccessEntryRefund(
+          incursion.goldCost,
+        );
+        const failureEntryRefundGold = calculateIncursionFailureEntryRefund(
+          incursion.goldCost,
+        );
         const entryRefundGold =
-          successRatio *
-          calculateIncursionSuccessEntryRefund(incursion.goldCost);
+          successRatio * successEntryRefundGold +
+          (1 - successRatio) * failureEntryRefundGold;
         const directGold = lootGold + entryRefundGold;
-        const expectedNetGold = directGold + itemNpcValue - incursion.goldCost;
+        const expectedWalletNetGold =
+          directGold + itemNpcValue - incursion.goldCost;
+        const expectedFailureHpLoss =
+          autoCombat.averageMaxHp * (1 - successRatio) * risk.failureHpRatio;
+        const expectedRecoveryPotionGold =
+          autoCombat.averagePotionHealAmount > 0
+            ? (expectedFailureHpLoss / autoCombat.averagePotionHealAmount) *
+              autoCombat.potionBuyPrice
+            : 0;
+        const expectedNetGold =
+          expectedWalletNetGold - expectedRecoveryPotionGold;
         const attemptsPerHour = 1 / durationHours;
         const expectedFailureHpLossPercentPerAttempt =
           (1 - successRatio) * risk.failureHpRatio * 100;
@@ -1186,10 +1243,16 @@ function buildIncursionEconomy(
             expectedFailureHpLossPercentPerAttempt,
           ),
           entryGold: incursion.goldCost,
+          successEntryRefundGold,
+          failureEntryRefundGold,
           expectedEntryRefundGoldPerAttempt: round(entryRefundGold),
           expectedLootGoldPerAttempt: round(lootGold),
           expectedDirectGoldPerAttempt: round(directGold),
           expectedItemNpcValuePerAttempt: round(itemNpcValue),
+          expectedWalletNetGoldPerAttempt: round(expectedWalletNetGold),
+          expectedRecoveryPotionGoldPerAttempt: round(
+            expectedRecoveryPotionGold,
+          ),
           expectedNetGoldPerAttempt: round(expectedNetGold),
           expectedCharacterXpPerAttempt: round(characterXp),
           expectedIncursionTokensPerAttempt: round(tokens),
@@ -1205,7 +1268,10 @@ function buildIncursionEconomy(
             grossGoldEquivalentPerHour: round(
               (directGold + itemNpcValue) * attemptsPerHour,
             ),
-            directGoldCostPerHour: round(incursion.goldCost * attemptsPerHour),
+            directGoldCostPerHour: round(
+              (incursion.goldCost + expectedRecoveryPotionGold) *
+                attemptsPerHour,
+            ),
             inputOpportunityCostPerHour: 0,
             netGoldEquivalentPerHour: round(expectedNetGold * attemptsPerHour),
             characterXpPerHour: round(characterXp * attemptsPerHour),
@@ -1215,7 +1281,7 @@ function buildIncursionEconomy(
               (tokens + reinforcementFragments) * attemptsPerHour,
             ),
             availability: 'CONTINUOUS',
-            note: 'Sucesso devolve integralmente a entrada; falha perde a entrada e HP. O custo de recuperar HP nao foi convertido em Gold porque nao existe preco canonico unico para essa recuperacao.',
+            note: 'Sucesso devolve 100% da entrada e falha devolve 90%; o retorno liquido desconta o custo proporcional da pocao canonica para recuperar o HP esperado da falha.',
           },
         };
       }),
@@ -1308,7 +1374,7 @@ function buildWorldBossEconomy(params: {
                 reward.maxQuantity,
                 expiredMultiplier,
               );
-        } else if (reward.rewardType === WorldBossRewardType.CURRENCY) {
+        } else if (isWorldBossFragmentReward(reward)) {
           expectedFragments += average([
             reward.minQuantity,
             reward.maxQuantity,
@@ -1507,7 +1573,10 @@ function buildMissionEconomy(params: {
       expectedAttempts = mission.targetValue / successRatio;
       dedicatedHours =
         (balancedIncursion.durationMinutes / 60) * expectedAttempts;
-      directGoldCost = balancedIncursion.entryGold * expectedAttempts;
+      directGoldCost =
+        (balancedIncursion.entryGold +
+          balancedIncursion.expectedRecoveryPotionGoldPerAttempt) *
+        expectedAttempts;
       underlyingDirectGold =
         (balancedIncursion.expectedDirectGoldPerAttempt / successRatio) *
         mission.targetValue;
@@ -1745,27 +1814,21 @@ function buildProgressionAcquisition(params: {
 
   if (!pet) throw new Error(`Pet canonico ausente para T${params.tier}.`);
 
-  const worldBossFragmentRate = sum(
-    params.worldBosses.map((boss) => {
-      const calibrationFactor =
-        boss.activationChancePercent / 100 / boss.expectedCycleHours;
-      return boss.expectedFragmentsPerActivatedEvent * calibrationFactor;
-    }),
-  );
-  const cocoonRate = sum(
-    params.worldBosses.map((boss) => {
-      const calibrationFactor =
-        boss.activationChancePercent / 100 / boss.expectedCycleHours;
-      return boss.expectedCocoonsPerActivatedEvent * calibrationFactor;
-    }),
-  );
+  const petAvailability = getPetBossAvailabilityProjection(params.tier);
+  if (!petAvailability) {
+    throw new Error(`Projecao de disponibilidade T${params.tier} ausente.`);
+  }
+
+  // Disponibilidade individual nao pode usar a taxa global de eventos vazios:
+  // quando o jogador se inscreve, ele proprio ativa a oportunidade. Gold/XP
+  // global dos bosses continua usando a telemetria real em buildWorldBossEconomy.
+  const hoursPerEligibleVictory =
+    24 / PET_BOSS_AVAILABILITY_TARGET.eligibleVictoriesPerCalendarDay;
   const petFragmentHours =
-    worldBossFragmentRate > 0 ? pet.fragmentCost / worldBossFragmentRate : null;
-  const petCocoonHours = cocoonRate > 0 ? 1 / cocoonRate : null;
-  const petInputHours =
-    petFragmentHours !== null && petCocoonHours !== null
-      ? Math.max(petFragmentHours, petCocoonHours)
-      : null;
+    petAvailability.guaranteedFragmentVictories * hoursPerEligibleVictory;
+  const petCocoonHours =
+    (100 / petAvailability.chancePercent) * hoursPerEligibleVictory;
+  const petInputHours = Math.max(petFragmentHours, petCocoonHours);
 
   return {
     tier: params.tier,
@@ -1782,12 +1845,9 @@ function buildProgressionAcquisition(params: {
     petGoldCost: pet.goldCost,
     petFragmentCost: pet.fragmentCost,
     petIncubationHours: round(pet.incubationSeconds / 3_600),
-    expectedCalendarHoursForPetFragments:
-      petFragmentHours === null ? null : round(petFragmentHours),
-    expectedCalendarHoursForPetCocoon:
-      petCocoonHours === null ? null : round(petCocoonHours),
-    expectedCalendarHoursUntilPetInputs:
-      petInputHours === null ? null : round(petInputHours),
+    expectedCalendarHoursForPetFragments: round(petFragmentHours),
+    expectedCalendarHoursForPetCocoon: round(petCocoonHours),
+    expectedCalendarHoursUntilPetInputs: round(petInputHours),
   };
 }
 
@@ -1824,7 +1884,7 @@ function buildAffordability(params: {
     goldCost: params.progression.petGoldCost,
     className: null,
     source: 'CANONICAL',
-    additionalRequirement: `1 casulo + ${params.progression.petFragmentCost} fragmentos; ${params.progression.expectedCalendarHoursUntilPetInputs === null ? 'N/D' : `${params.progression.expectedCalendarHoursUntilPetInputs}h`} de calendario estimadas; ${params.progression.petIncubationHours}h de incubacao.`,
+    additionalRequirement: `1 casulo + ${params.progression.petFragmentCost} fragmentos; ${params.progression.expectedCalendarHoursUntilPetInputs === null ? 'N/D' : `${params.progression.expectedCalendarHoursUntilPetInputs}h`} de calendario estimadas no perfil de 1 vitoria elegivel/dia; ${params.progression.petIncubationHours}h de incubacao.`,
   };
   const marketTargets: GoldTarget[] = params.marketplaceSets
     .filter(
@@ -1968,7 +2028,7 @@ export function buildActivityEconomyAudit(
       autoCombat,
       saleCatalog,
     });
-    const incursions = buildIncursionEconomy(tier, saleCatalog);
+    const incursions = buildIncursionEconomy(tier, saleCatalog, autoCombat);
     const worldBosses = buildWorldBossEconomy({
       tier,
       calibration,
@@ -1988,7 +2048,7 @@ export function buildActivityEconomyAudit(
       rows: incursions
         .filter((entry) => entry.approach === 'BALANCED')
         .map((entry) => entry.summary),
-      note: 'Media das duas incursoes do tier. Fragmentos e fichas nao sao convertidos em Gold por nao possuirem venda canonica.',
+      note: 'Media das duas incursoes do tier. A entrada retorna 100% no sucesso e 90% na falha; fragmentos e fichas nao recebem valor arbitrario em Gold.',
     });
     const worldBossCalendarSummary = averageActivityRows({
       tier,
@@ -2065,7 +2125,48 @@ export function buildActivityEconomyAudit(
   }> = [];
 
   for (const tier of tiers) {
-    if (tier.crafting.stationSummary.netGoldEquivalentPerHour < 0) {
+    const craftingRecoveryRatio = average(
+      tier.crafting.recipes.map(
+        (recipe) =>
+          recipe.outputNpcSaleGold /
+          Math.max(1, recipe.inputNpcOpportunityGold),
+      ),
+    );
+    const autoCombat = tier.representativeActivities.find(
+      (activity) => activity.activity === 'AUTO_COMBAT',
+    );
+    const craftingToAutoGoldRatio =
+      tier.crafting.selfSupplySummary.netGoldEquivalentPerHour /
+      Math.max(1, autoCombat?.netGoldEquivalentPerHour ?? 0);
+
+    if (tier.tier >= 3) {
+      const isRecoveryCalibrated =
+        craftingRecoveryRatio >= 0.25 && craftingRecoveryRatio <= 0.35;
+      const isSelfSupplyProfitable =
+        tier.crafting.selfSupplySummary.netGoldEquivalentPerHour > 0;
+      const isBelowAutoCombat =
+        craftingToAutoGoldRatio >= 0 && craftingToAutoGoldRatio <= 0.2;
+      const preservesIngredientSink = tier.crafting.recipes.every(
+        (recipe) => recipe.outputNpcSaleGold < recipe.inputNpcOpportunityGold,
+      );
+      const calibrated =
+        isRecoveryCalibrated &&
+        isSelfSupplyProfitable &&
+        isBelowAutoCombat &&
+        preservesIngredientSink;
+
+      findings.push({
+        severity: calibrated ? 'INFO' : 'HIGH',
+        code: calibrated
+          ? 'CRAFTING_NPC_LIQUIDATION_CALIBRATED'
+          : 'CRAFTING_NPC_LIQUIDATION_OUTSIDE_TARGET',
+        tier: tier.tier,
+        message:
+          `Equipamentos craftáveis recuperam ${(craftingRecoveryRatio * 100).toFixed(1)}% do valor NPC dos ingredientes; ` +
+          `o ciclo autossuficiente entrega ${tier.crafting.selfSupplySummary.netGoldEquivalentPerHour.toFixed(2)} Gold/h ` +
+          `(${(craftingToAutoGoldRatio * 100).toFixed(1)}% do autocombate).`,
+      });
+    } else if (tier.crafting.stationSummary.netGoldEquivalentPerHour < 0) {
       findings.push({
         severity: 'ATTENTION',
         code: 'CRAFTING_DESTROYS_NPC_LIQUIDATION_VALUE',
@@ -2077,18 +2178,30 @@ export function buildActivityEconomyAudit(
     const balancedIncursion = tier.representativeActivities.find(
       (activity) => activity.mode === 'BALANCED_MEDIA_DAS_2_INCURSOES',
     );
-    if (balancedIncursion && balancedIncursion.netGoldEquivalentPerHour < 0) {
-      const entryLossRatio =
-        Math.abs(balancedIncursion.netGoldEquivalentPerHour) /
-        Math.max(1, balancedIncursion.directGoldCostPerHour);
+    if (balancedIncursion && autoCombat) {
+      const xpRatio =
+        balancedIncursion.characterXpPerHour /
+        Math.max(1, autoCombat.characterXpPerHour);
+      const goldRatio =
+        balancedIncursion.netGoldEquivalentPerHour /
+        Math.max(1, autoCombat.netGoldEquivalentPerHour);
+      const isGoldViable = balancedIncursion.netGoldEquivalentPerHour >= 0;
+      const isXpCalibrated = xpRatio >= 0.6 && xpRatio <= 0.7;
+      const isGoldContained = goldRatio <= 0.1;
+      const calibrated = isGoldViable && isXpCalibrated && isGoldContained;
+
       findings.push({
-        severity: entryLossRatio <= 0.35 ? 'INFO' : 'HIGH',
-        code:
-          entryLossRatio <= 0.35
-            ? 'INCURSION_PROGRESS_SINK_CALIBRATED'
-            : 'INCURSION_GOLD_SINK_EXCESSIVE',
+        severity: calibrated ? 'INFO' : 'HIGH',
+        code: calibrated
+          ? 'INCURSION_RETURN_CALIBRATED'
+          : 'INCURSION_RETURN_OUTSIDE_TARGET',
         tier: tier.tier,
-        message: `A incursao balanceada consome em media ${(entryLossRatio * 100).toFixed(1)}% da entrada; o restante retorna em Gold, alem de XP, fichas e fragmentos.`,
+        message:
+          'A incursao balanceada entrega ' +
+          (xpRatio * 100).toFixed(1) +
+          '% do XP/h e ' +
+          (goldRatio * 100).toFixed(1) +
+          '% do Gold liquido/h do autocombate, alem de fichas e fragmentos.',
       });
     }
 
@@ -2185,7 +2298,7 @@ export function buildActivityEconomyAudit(
       crafting:
         'Drops diferentes acumulam simultaneamente no mix; o tempo de farm e limitado pelo ingrediente mais demorado. Variancia de RNG nao esta incluida.',
       incursions:
-        'Todas as duas incursoes e tres abordagens; HP perdido nao recebe conversao arbitraria para Gold.',
+        'Todas as duas incursoes e tres abordagens; reembolso depende do resultado e o HP perdido usa o custo proporcional da pocao canonica do tier.',
       worldBoss: `Jogador elegivel, participacao minima cumprida; recompensas expiradas usam multiplicador coletivo e ${WORLD_BOSS_REWARD_CONFIG.nonDefeatedChanceMultiplier}x apenas em rolagens nao garantidas.`,
       missions:
         'Objetivos tratados como dedicados. Taxa por hora nao remove os limites diario e semanal.',
@@ -3376,11 +3489,16 @@ export function writeActivityEconomyReport(
           perdaHpEsperadaPercentualPorTentativa:
             row.expectedFailureHpLossPercentPerAttempt,
           entradaGold: row.entryGold,
+          reembolsoSucessoGold: row.successEntryRefundGold,
+          reembolsoFalhaGold: row.failureEntryRefundGold,
           reembolsoEntradaEsperadoPorTentativa:
             row.expectedEntryRefundGoldPerAttempt,
           goldLootEsperadoPorTentativa: row.expectedLootGoldPerAttempt,
           goldDiretoEsperadoPorTentativa: row.expectedDirectGoldPerAttempt,
           valorItemNpcEsperadoPorTentativa: row.expectedItemNpcValuePerAttempt,
+          goldCarteiraLiquidoPorTentativa: row.expectedWalletNetGoldPerAttempt,
+          custoRecuperacaoHpPorTentativa:
+            row.expectedRecoveryPotionGoldPerAttempt,
           goldLiquidoEsperadoPorTentativa: row.expectedNetGoldPerAttempt,
           goldLiquidoPorHora: row.summary.netGoldEquivalentPerHour,
           xpPersonagemPorHora: row.summary.characterXpPerHour,

@@ -338,6 +338,7 @@ function buildMatrixRow(params: {
   const mobAttack = applyAutoCombatIncomingDamageMultiplier({
     attack: mob.attack,
     className: params.classDefinition.name,
+    mobTier: mob.tier,
   });
   const survival = projectAutoCombatSurvival({
     currentHp: visibleStats.derivedCombatStats.maxHp,

@@ -5,6 +5,7 @@ export const INCURSION_APPROACHES = [
 ] as const;
 
 export const INCURSION_SUCCESS_ENTRY_REFUND_PERCENT = 100;
+export const INCURSION_FAILURE_ENTRY_REFUND_PERCENT = 90;
 
 export type IncursionApproach = (typeof INCURSION_APPROACHES)[number];
 
@@ -75,9 +76,24 @@ export function calculateIncursionFailureDamage(
 }
 
 export function calculateIncursionSuccessEntryRefund(goldCostPaid: number) {
+  return calculateIncursionEntryRefund(
+    goldCostPaid,
+    INCURSION_SUCCESS_ENTRY_REFUND_PERCENT,
+  );
+}
+
+export function calculateIncursionFailureEntryRefund(goldCostPaid: number) {
+  return calculateIncursionEntryRefund(
+    goldCostPaid,
+    INCURSION_FAILURE_ENTRY_REFUND_PERCENT,
+  );
+}
+
+function calculateIncursionEntryRefund(
+  goldCostPaid: number,
+  refundPercent: number,
+) {
   const safeGoldCost = Math.max(0, Math.floor(Number(goldCostPaid) || 0));
 
-  return Math.floor(
-    (safeGoldCost * INCURSION_SUCCESS_ENTRY_REFUND_PERCENT) / 100,
-  );
+  return Math.floor((safeGoldCost * refundPercent) / 100);
 }

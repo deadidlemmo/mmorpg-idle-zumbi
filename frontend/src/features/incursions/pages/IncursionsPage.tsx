@@ -25,7 +25,6 @@ import {
 } from "../../auto-combat/assets/auto-combat-map-assets";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
-import { ResourceCenterShortcut } from "../../economy/components/ResourceCenterShortcut";
 import {
   getCharacterEquipment,
   type CharacterEquipmentResponse,
@@ -251,6 +250,13 @@ function getLootImageUrl(loot: IncursionLootPreview) {
 
 function isReinforcementLoot(loot: IncursionLootPreview) {
   return /fragmento de reforço/i.test(getLootName(loot));
+}
+
+function isIncursionTokenLoot(loot: IncursionLootPreview) {
+  return (
+    (loot.rewardType === "CURRENCY" && loot.currency === "INCURSION_TOKEN") ||
+    /ficha de incursão/i.test(getLootName(loot))
+  );
 }
 
 function LootFallbackIcon({ loot }: { loot: IncursionLootPreview }) {
@@ -875,11 +881,18 @@ export function IncursionsPage() {
               <p>{rewardedSession.outcomeSummary}</p>
             ) : null}
 
-            {rewardedSession.success !== false &&
-            rewardedSession.entryGoldRefund > 0 ? (
+            {rewardedSession.entryGoldRefund > 0 ? (
               <div className="incursions-reward-result__refund">
-                <CheckCircle2 size={15} />
-                <span>Entrada devolvida</span>
+                {rewardedSession.success === false ? (
+                  <ShieldAlert size={15} />
+                ) : (
+                  <CheckCircle2 size={15} />
+                )}
+                <span>
+                  {rewardedSession.success === false
+                    ? "Entrada parcialmente devolvida"
+                    : "Entrada devolvida"}
+                </span>
                 <strong>
                   +{rewardedSession.entryGoldRefund.toLocaleString("pt-BR")}{" "}
                   Gold
@@ -1000,11 +1013,8 @@ export function IncursionsPage() {
                     const statusTone = getStatusTone(statusLabel);
                     const reinforcementPreview =
                       incursion.rewardsPreview.find(isReinforcementLoot);
-                    const tokenPreview = incursion.rewardsPreview.find(
-                      (reward) =>
-                        reward.rewardType === "CURRENCY" &&
-                        reward.currency === "INCURSION_TOKEN",
-                    );
+                    const tokenPreview =
+                      incursion.rewardsPreview.find(isIncursionTokenLoot);
 
                     return (
                       <button
@@ -1200,10 +1210,6 @@ export function IncursionsPage() {
                 )}
               </div>
             </section>
-            <ResourceCenterShortcut
-              characterId={characterId}
-              source="INCURSION"
-            />
           </aside>
         </section>
 
@@ -1282,8 +1288,12 @@ export function IncursionsPage() {
 
                   {selectedApproachProfile ? (
                     <p className="incursions-modal__risk-note">
-                      Na falha, a entrada é perdida e o sobrevivente pode perder
-                      até{" "}
+                      Falha: devolve{" "}
+                      {modalIncursion.failureEntryRefundGold.toLocaleString(
+                        "pt-BR",
+                      )}{" "}
+                      Gold ({modalIncursion.failureEntryRefundPercent}%) e pode
+                      causar até{" "}
                       {Math.round(selectedApproachProfile.failureHpRatio * 100)}
                       % do HP máximo, mas nunca retorna com menos de 1 HP.
                     </p>
@@ -1298,13 +1308,19 @@ export function IncursionsPage() {
                   <div className="incursions-modal__refund-note">
                     <CheckCircle2 size={17} />
                     <span>
-                      <strong>Entrada devolvida no sucesso</strong>
+                      <strong>Entrada protegida</strong>
                       <small>
+                        Sucesso:{" "}
                         {modalIncursion.successEntryRefundGold.toLocaleString(
                           "pt-BR",
                         )}{" "}
-                        Gold ({modalIncursion.successEntryRefundPercent}%) volta
-                        para o saldo. O loot abaixo é adicional.
+                        Gold ({modalIncursion.successEntryRefundPercent}%).
+                        Falha:{" "}
+                        {modalIncursion.failureEntryRefundGold.toLocaleString(
+                          "pt-BR",
+                        )}{" "}
+                        Gold ({modalIncursion.failureEntryRefundPercent}%). Loot
+                        adicional.
                       </small>
                     </span>
                   </div>

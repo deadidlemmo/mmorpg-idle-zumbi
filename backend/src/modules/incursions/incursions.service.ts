@@ -27,10 +27,12 @@ import { EconomyService } from '../economy/economy.service';
 import { ClaimIncursionDto } from './dto/claim-incursion.dto';
 import { StartIncursionDto } from './dto/start-incursion.dto';
 import {
+  calculateIncursionFailureEntryRefund,
   calculateIncursionFailureDamage,
   calculateIncursionSuccessEntryRefund,
   getIncursionRiskProfile,
   INCURSION_APPROACHES,
+  INCURSION_FAILURE_ENTRY_REFUND_PERCENT,
   INCURSION_SUCCESS_ENTRY_REFUND_PERCENT,
   type IncursionApproach,
 } from './incursion-risk.util';
@@ -554,13 +556,16 @@ export class IncursionsService {
       if (!success) {
         const safeMaxHp = Math.max(1, character.maxHp ?? 1);
         const safeCurrentHp = Math.max(1, character.currentHp ?? safeMaxHp);
+        const entryGoldRefund = calculateIncursionFailureEntryRefund(
+          session.goldCostPaid,
+        );
         const rawHpLoss = calculateIncursionFailureDamage(
           safeMaxHp,
           session.incursion.riskLevel,
           session.approach as IncursionApproach,
         );
         const hpLost = Math.min(Math.max(0, safeCurrentHp - 1), rawHpLoss);
-        const outcomeSummary = `Falha: rolagem ${outcomeRoll.toFixed(2)} acima de ${session.successChance}%. O sobrevivente perdeu ${hpLost} HP.`;
+        const outcomeSummary = `Falha: rolagem ${outcomeRoll.toFixed(2)} acima de ${session.successChance}%. ${entryGoldRefund} Gold da entrada foram devolvidos e o sobrevivente perdeu ${hpLost} HP.`;
         const failed = await tx.characterIncursionSession.updateMany({
           where: {
             id: session.id,
@@ -577,6 +582,8 @@ export class IncursionsService {
             status: IncursionSessionStatus.FAILED,
             completedAt: effectiveCompletedAt,
             claimedAt: now,
+            entryGoldRefund,
+            goldReward: entryGoldRefund,
             outcomeRoll,
             outcomeSummary,
             generatedRewardsJson: [],
@@ -589,10 +596,34 @@ export class IncursionsService {
           );
         }
 
-        if (hpLost > 0) {
+        if (hpLost > 0 || entryGoldRefund > 0) {
           await tx.character.update({
             where: { id: characterId },
-            data: { currentHp: safeCurrentHp - hpLost },
+            data: {
+              ...(hpLost > 0 ? { currentHp: safeCurrentHp - hpLost } : {}),
+              ...(entryGoldRefund > 0
+                ? { gold: { increment: entryGoldRefund } }
+                : {}),
+            },
+          });
+        }
+
+        if (entryGoldRefund > 0) {
+          await recordEconomyEntry(tx, {
+            characterId,
+            direction: EconomyDirection.CREDIT,
+            resourceType: EconomyResourceType.GOLD,
+            tier: session.incursion.tier,
+            quantity: entryGoldRefund,
+            reason: ECONOMY_REASONS.INCURSION_ENTRY_REFUND,
+            referenceType: 'CharacterIncursionSession',
+            referenceId: session.id,
+            idempotencyKey: `incursion:${session.id}:entry:refund:gold`,
+            metadata: {
+              goldCostPaid: session.goldCostPaid,
+              outcome: 'FAILED',
+              refundPercent: INCURSION_FAILURE_ENTRY_REFUND_PERCENT,
+            },
           });
         }
 
@@ -730,17 +761,9 @@ export class IncursionsService {
         });
 
         if (reward.currency && reward.quantity > 0) {
-          await this.economyService.creditWalletInTransaction(tx, {
-            characterId,
-            currency: reward.currency,
-            tier: session.incursion.tier,
-            quantity: reward.quantity,
-            reason: ECONOMY_REASONS.INCURSION_TOKEN_REWARD,
-            referenceType: 'IncursionSessionReward',
-            referenceId: grantedReward.id,
-            idempotencyKey: `incursion-reward:${grantedReward.id}:currency`,
-            metadata: { rewardType: reward.rewardType },
-          });
+          throw new ConflictException(
+            'A recompensa da incursão ainda usa o saldo legado. Atualize os dados canônicos.',
+          );
         }
 
         if (reward.itemId && reward.quantity > 0) {
@@ -817,6 +840,8 @@ export class IncursionsService {
       lootGoldGained:
         result.session.goldReward - result.session.entryGoldRefund,
       goldSpent: result.session.goldCostPaid,
+      netEntryGoldSpent:
+        result.session.goldCostPaid - result.session.entryGoldRefund,
       levelUp: {
         leveledUp: result.levelProgress.leveledUp,
         levelsGained: result.levelProgress.levelsGained,
@@ -978,6 +1003,10 @@ export class IncursionsService {
       goldCost: incursion.goldCost,
       successEntryRefundPercent: INCURSION_SUCCESS_ENTRY_REFUND_PERCENT,
       successEntryRefundGold: calculateIncursionSuccessEntryRefund(
+        Number(incursion.goldCost),
+      ),
+      failureEntryRefundPercent: INCURSION_FAILURE_ENTRY_REFUND_PERCENT,
+      failureEntryRefundGold: calculateIncursionFailureEntryRefund(
         Number(incursion.goldCost),
       ),
       durationSeconds: incursion.durationSeconds,

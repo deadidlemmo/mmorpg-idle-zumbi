@@ -11,6 +11,7 @@ import {
   InventoryItemType,
   Item,
   ItemSlot,
+  Prisma,
 } from '@prisma/client';
 import { AUTO_POTION_TRIGGER_PERCENT } from '../../common/config/potions.config';
 import {
@@ -25,6 +26,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
+import { PREMIUM_PASS_ITEM_SLUG } from '../storefront/storefront.config';
 import { UpdatePotionConfigDto } from './dto/update-potion-config.dto';
 import { UseConsumableDto } from './dto/use-consumable.dto';
 
@@ -59,26 +61,6 @@ export class ConsumablesService {
       throw new NotFoundException('Personagem não encontrado.');
     }
 
-    if (!character.class) {
-      throw new BadRequestException(
-        'Classe do personagem não encontrada. Não foi possível calcular o HP máximo.',
-      );
-    }
-
-    const activeAutoCombatSession =
-      await this.prisma.autoCombatSession.findFirst({
-        where: {
-          characterId: character.id,
-          status: AutoCombatSessionStatus.ACTIVE,
-        },
-      });
-
-    if (activeAutoCombatSession) {
-      throw new BadRequestException(
-        'Não é possível usar consumível manualmente durante uma sessão de auto-combate ativa.',
-      );
-    }
-
     const inventoryItem = await this.prisma.inventoryItem.findUnique({
       where: {
         characterId_itemId: {
@@ -111,6 +93,37 @@ export class ConsumablesService {
     if (item.usableOutOfCombat !== true) {
       throw new BadRequestException(
         'Este consumível não pode ser usado fora de combate.',
+      );
+    }
+
+    if (item.slug === PREMIUM_PASS_ITEM_SLUG) {
+      return this.activatePremiumPass({
+        characterId: character.id,
+        userId: character.userId,
+        inventoryItemId: inventoryItem.id,
+        inventoryQuantity: inventoryItem.quantity,
+        item,
+        operationId,
+      });
+    }
+
+    if (!character.class) {
+      throw new BadRequestException(
+        'Classe do personagem não encontrada. Não foi possível calcular o HP máximo.',
+      );
+    }
+
+    const activeAutoCombatSession =
+      await this.prisma.autoCombatSession.findFirst({
+        where: {
+          characterId: character.id,
+          status: AutoCombatSessionStatus.ACTIVE,
+        },
+      });
+
+    if (activeAutoCombatSession) {
+      throw new BadRequestException(
+        'Não é possível usar consumível manualmente durante uma sessão de auto-combate ativa.',
       );
     }
 
@@ -240,6 +253,88 @@ export class ConsumablesService {
       inventory: {
         previousQuantity: inventoryItem.quantity,
         newQuantity: Math.max(0, inventoryItem.quantity - 1),
+      },
+    };
+  }
+
+  private async activatePremiumPass(params: {
+    characterId: string;
+    userId: string;
+    inventoryItemId: string;
+    inventoryQuantity: number;
+    item: Item;
+    operationId: string;
+  }) {
+    const premiumDays = 30;
+    const dayMs = 24 * 60 * 60 * 1000;
+    const premiumUntil = await this.prisma.$transaction(
+      async (tx) => {
+        const claimed = await tx.inventoryItem.updateMany({
+          where: { id: params.inventoryItemId, quantity: { gte: 1 } },
+          data: { quantity: { decrement: 1 } },
+        });
+        if (claimed.count !== 1) {
+          throw new BadRequestException(
+            'O Passe Premium já foi usado ou não está mais na mochila.',
+          );
+        }
+
+        const user = await tx.user.findUnique({
+          where: { id: params.userId },
+          select: { premiumUntil: true },
+        });
+        if (!user) throw new NotFoundException('Conta não encontrada.');
+
+        const now = new Date();
+        const startsAt =
+          user.premiumUntil && user.premiumUntil > now
+            ? user.premiumUntil
+            : now;
+        const nextPremiumUntil = new Date(
+          startsAt.getTime() + premiumDays * dayMs,
+        );
+
+        await tx.user.update({
+          where: { id: params.userId },
+          data: { premiumUntil: nextPremiumUntil },
+        });
+        await tx.inventoryItem.deleteMany({
+          where: { id: params.inventoryItemId, quantity: { lte: 0 } },
+        });
+        await recordEconomyEntry(tx, {
+          characterId: params.characterId,
+          direction: EconomyDirection.DEBIT,
+          resourceType: EconomyResourceType.ITEM,
+          itemId: params.item.id,
+          tier: params.item.tier,
+          quantity: 1,
+          reason: ECONOMY_REASONS.PREMIUM_PASS_ACTIVATED,
+          referenceType: 'PremiumPassActivation',
+          referenceId: params.operationId,
+          idempotencyKey: `premium-pass:${params.operationId}:item`,
+          metadata: {
+            premiumDays,
+            premiumUntil: nextPremiumUntil.toISOString(),
+          },
+        });
+
+        return nextPremiumUntil;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+    const newQuantity = Math.max(0, params.inventoryQuantity - 1);
+
+    return {
+      message: 'Passe Premium ativado. Sua conta recebeu 30 dias de Premium.',
+      kind: 'PREMIUM_PASS' as const,
+      premium: {
+        daysAdded: premiumDays,
+        premiumUntil,
+      },
+      consumable: this.mapPotionItem(params.item, newQuantity),
+      inventory: {
+        previousQuantity: params.inventoryQuantity,
+        newQuantity,
       },
     };
   }

@@ -9,7 +9,7 @@ export const WORLD_BOSS_STATUS_SYNC_EVENT =
   "dead-idle:world-boss-status-sync";
 
 export const WORLD_BOSS_REGISTRATION_NOTICE =
-  "Sua atividade continuará normalmente. Quando a batalha começar, ela será encerrada automaticamente e deverá ser iniciada novamente depois do boss. Criações e incursões interrompidas não recuperam materiais ou custos.";
+  "Sua atividade continua até a batalha. Criações e incursões interrompidas não são reembolsadas.";
 
 export function getWorldBossAlertMilestone(
   status: WorldBossStatusResponse,
@@ -39,10 +39,10 @@ export function getWorldBossAlertKey(
 
 export function getWorldBossAlertCopy(milestone: WorldBossAlertMilestone) {
   if (milestone === "ONE_HOUR") {
-    return "A preparação começa em até 1 hora. Inscreva-se sem encerrar sua atividade.";
+    return "Inscrições abertas · começa em até 1 hora.";
   }
   if (milestone === "FIFTEEN_MINUTES") {
-    return "A preparação começa em até 15 minutos. Ainda dá tempo de se inscrever.";
+    return "Começa em até 15 minutos.";
   }
-  return "Preparação final aberta. A batalha começa em até 15 minutos.";
+  return "Entrada aberta · começa em até 15 minutos.";
 }

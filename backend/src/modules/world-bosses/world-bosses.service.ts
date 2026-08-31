@@ -26,6 +26,10 @@ import {
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import {
+  PET_BOSS_DAILY_REWARD_POLICY,
+  WORLD_BOSS_DAILY_XP_REWARD_POLICY,
+} from '../../common/config/economy.config';
+import {
   getWorldBossCollectiveRewardMultiplier,
   getWorldBossRespawnSeconds,
   WORLD_BOSS_REWARD_CONFIG,
@@ -48,6 +52,10 @@ import { IncursionsService } from '../incursions/incursions.service';
 import { JoinWorldBossDto } from './dto/join-world-boss.dto';
 import { LeaveWorldBossDto } from './dto/leave-world-boss.dto';
 import {
+  applyWorldBossDailyXpRewardPolicy,
+  applyWorldBossDailyPetRewardPolicy,
+  getWorldBossDailyXpMultiplier,
+  getUtcDailyResetWindow,
   selectRandomPetCocoonCandidate,
   selectWorldBossRewards,
   type SelectedWorldBossReward,
@@ -203,7 +211,7 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       bosses.map((boss) => this.ensureDisplayEventForBoss(boss, now)),
     );
 
-    const statuses = await Promise.all(
+    const formattedStatuses = await Promise.all(
       events.map(async (event) => {
         const availableEvent = await this.advanceEventState(event);
         const participant = await this.prisma.worldBossParticipant.findUnique({
@@ -254,11 +262,21 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         };
       }),
     );
-    const recentReward = await this.findRecentRewardStatus(
+    const recentRewardStatus = await this.findRecentRewardStatus(
       characterId,
       character.mapId,
       now,
     );
+    const dailyXpReward = character.map
+      ? await this.getDailyXpRewardStatus(characterId, character.map.tier, now)
+      : null;
+    const statuses = dailyXpReward
+      ? formattedStatuses.map((status) => ({ ...status, dailyXpReward }))
+      : formattedStatuses;
+    const recentReward =
+      recentRewardStatus && dailyXpReward
+        ? { ...recentRewardStatus, dailyXpReward }
+        : recentRewardStatus;
 
     return {
       events: statuses,
@@ -1984,6 +2002,10 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
     });
     if (claim.count === 0) return [];
 
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "characters" WHERE "id" = ${characterId} FOR UPDATE`,
+    );
+
     const participant = await tx.worldBossParticipant.findUniqueOrThrow({
       where: { id: participantId },
     });
@@ -1995,10 +2017,29 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       defeated,
       progressRatio: progress,
     });
+    const dailyRewardState = await this.getDailyPetRewardState(
+      tx,
+      participantId,
+      characterId,
+      event.tier,
+      now,
+      defeated && participant.eligibleForReward,
+    );
+    const petRewardCandidates = applyWorldBossDailyPetRewardPolicy(
+      event.worldBoss.rewards,
+      dailyRewardState,
+      PET_BOSS_DAILY_REWARD_POLICY,
+    );
+    const rewardCandidates = applyWorldBossDailyXpRewardPolicy(
+      petRewardCandidates,
+      event.tier,
+      dailyRewardState,
+      WORLD_BOSS_DAILY_XP_REWARD_POLICY,
+    );
     const selectedRewards = selectWorldBossRewards({
       event,
       participant,
-      rewards: event.worldBoss.rewards,
+      rewards: rewardCandidates,
       collectiveMultiplier,
       nonDefeatedChanceMultiplier:
         WORLD_BOSS_REWARD_CONFIG.nonDefeatedChanceMultiplier,
@@ -2086,17 +2127,9 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
         },
       });
       if (reward.currency && reward.quantity > 0) {
-        await this.economyService.creditWalletInTransaction(tx, {
-          characterId,
-          currency: reward.currency,
-          tier: event.tier,
-          quantity: reward.quantity,
-          reason: ECONOMY_REASONS.WORLD_BOSS_FRAGMENT_REWARD,
-          referenceType: 'WorldBossGrantedReward',
-          referenceId: grantedReward.id,
-          idempotencyKey: `world-boss-reward:${grantedReward.id}:currency`,
-          metadata: { rewardType: reward.rewardType },
-        });
+        throw new ConflictException(
+          'A recompensa da Ameaça Global ainda usa o saldo legado. Atualize os dados canônicos.',
+        );
       }
       if (reward.itemId && reward.quantity > 0) {
         await tx.inventoryItem.upsert({
@@ -2120,16 +2153,112 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
           itemId: reward.itemId,
           tier: event.tier,
           quantity: reward.quantity,
-          reason: ECONOMY_REASONS.WORLD_BOSS_ITEM_REWARD,
+          reason: reward.isWorldBossFragment
+            ? ECONOMY_REASONS.WORLD_BOSS_FRAGMENT_REWARD
+            : ECONOMY_REASONS.WORLD_BOSS_ITEM_REWARD,
           referenceType: 'WorldBossGrantedReward',
           referenceId: grantedReward.id,
           idempotencyKey: `world-boss-reward:${grantedReward.id}:item`,
-          metadata: { rewardType: reward.rewardType },
+          metadata: {
+            rewardType: reward.rewardType,
+            isWorldBossFragment: reward.isWorldBossFragment,
+          },
         });
       }
     }
 
     return rewards;
+  }
+
+  private async getDailyPetRewardState(
+    tx: Tx,
+    participantId: string,
+    characterId: string,
+    tier: number,
+    now: Date,
+    eligibleVictory: boolean,
+  ) {
+    const { startsAt, endsAt } = getUtcDailyResetWindow(now);
+    const dailyRewardWindow = { gte: startsAt, lt: endsAt };
+
+    const [previousEligibleVictories, cocoonsGranted] = await Promise.all([
+      tx.worldBossParticipant.count({
+        where: {
+          id: { not: participantId },
+          characterId,
+          eligibleForReward: true,
+          rewardGranted: true,
+          rewardGrantedAt: dailyRewardWindow,
+          event: {
+            tier,
+            OR: [
+              { status: WorldBossEventStatus.DEFEATED },
+              { status: WorldBossEventStatus.REWARDED },
+              { defeatedAt: { not: null } },
+              { currentHp: { lte: 0 } },
+            ],
+          },
+        },
+      }),
+      tx.worldBossGrantedReward.count({
+        where: {
+          rewardType: WorldBossRewardType.PET_EGG,
+          participant: {
+            characterId,
+            rewardGrantedAt: dailyRewardWindow,
+            event: { tier },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      eligibleVictory,
+      previousEligibleVictories,
+      cocoonsGranted,
+    };
+  }
+
+  private async getDailyXpRewardStatus(
+    characterId: string,
+    tier: number,
+    now: Date,
+  ) {
+    const { startsAt, endsAt } = getUtcDailyResetWindow(now);
+    const eligibleVictoriesToday = await this.prisma.worldBossParticipant.count(
+      {
+        where: {
+          characterId,
+          eligibleForReward: true,
+          rewardGranted: true,
+          rewardGrantedAt: { gte: startsAt, lt: endsAt },
+          event: {
+            tier,
+            OR: [
+              { status: WorldBossEventStatus.DEFEATED },
+              { status: WorldBossEventStatus.REWARDED },
+              { defeatedAt: { not: null } },
+              { currentHp: { lte: 0 } },
+            ],
+          },
+        },
+      },
+    );
+    const nextVictoryMultiplier = getWorldBossDailyXpMultiplier(
+      tier,
+      eligibleVictoriesToday,
+      WORLD_BOSS_DAILY_XP_REWARD_POLICY,
+    );
+
+    return {
+      resetTimeZone: WORLD_BOSS_DAILY_XP_REWARD_POLICY.resetTimeZone,
+      eligibleVictoriesToday,
+      nextVictoryMultiplier,
+      nextVictoryPercent: Math.round(nextVictoryMultiplier * 100),
+      unrestricted:
+        tier <= WORLD_BOSS_DAILY_XP_REWARD_POLICY.unrestrictedThroughTier,
+      resetsAt: endsAt,
+    };
   }
 
   private async selectRandomPetCocoonItemId(tx: Tx, tier: number) {
@@ -2551,6 +2680,8 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
       imageUrl: boss.imageUrl,
       assetKey: boss.assetKey,
       map: boss.map,
+      petRewardPolicy: PET_BOSS_DAILY_REWARD_POLICY,
+      xpRewardPolicy: WORLD_BOSS_DAILY_XP_REWARD_POLICY,
       rewards:
         boss.rewards?.map((reward: any) => ({
           id: reward.id,

@@ -1,7 +1,9 @@
 import {
+  calculateIncursionFailureEntryRefund,
   calculateIncursionFailureDamage,
   calculateIncursionSuccessEntryRefund,
   getIncursionRiskProfile,
+  INCURSION_FAILURE_ENTRY_REFUND_PERCENT,
   INCURSION_SUCCESS_ENTRY_REFUND_PERCENT,
 } from './incursion-risk.util';
 
@@ -34,5 +36,12 @@ describe('incursion risk', () => {
     expect(INCURSION_SUCCESS_ENTRY_REFUND_PERCENT).toBe(100);
     expect(calculateIncursionSuccessEntryRefund(1_150)).toBe(1_150);
     expect(calculateIncursionSuccessEntryRefund(-10)).toBe(0);
+  });
+
+  it('keeps only ten percent of the entry after a failed resolution', () => {
+    expect(INCURSION_FAILURE_ENTRY_REFUND_PERCENT).toBe(90);
+    expect(calculateIncursionFailureEntryRefund(1_150)).toBe(1_035);
+    expect(calculateIncursionFailureEntryRefund(125)).toBe(112);
+    expect(calculateIncursionFailureEntryRefund(-10)).toBe(0);
   });
 });

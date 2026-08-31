@@ -3,6 +3,7 @@ import { equipmentDefinitions } from '../prisma/seed-data/items.seed-data';
 import { buildMobCombatStats } from '../prisma/seed-data/mob-stats.seed-data';
 import {
   AUTO_COMBAT_BALANCE_DEFENSIVE_GATHERING_MULTIPLIER,
+  AUTO_COMBAT_BALANCE_MODEL_KEY,
   AUTO_COMBAT_BALANCE_MODEL_LABEL,
   AUTO_COMBAT_BALANCE_OFFENSIVE_GATHERING_MULTIPLIER,
   AUTO_COMBAT_BALANCE_RISK_XP_MULTIPLIER,
@@ -459,7 +460,7 @@ const balanceModels: BalanceModelDefinition[] = [
     },
   },
   {
-    key: 'balance-v5-5',
+    key: AUTO_COMBAT_BALANCE_MODEL_KEY,
     label: AUTO_COMBAT_BALANCE_MODEL_LABEL,
     description:
       'Modelo aplicado: TTK, prontidao por tier de equipamento e pressao de dano por duracao/velocidade.',
@@ -886,6 +887,7 @@ function simulateClassAtLevel(params: {
     ? applyAutoCombatIncomingDamageMultiplier({
         attack: mob.attack,
         className: classDefinition.name,
+        mobTier: mob.tier,
       })
     : mob.attack * passive.incomingDamageMultiplier;
   const noPotionProjection = projectAutoCombatSurvival({

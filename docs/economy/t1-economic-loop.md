@@ -18,8 +18,8 @@ outra.
 - Toda entrada ou saida confirmada gera um registro no ledger.
 - Quantidades do ledger sao positivas; `CREDIT` e `DEBIT` definem a direcao.
 - Operacoes discretas usam chaves idempotentes e transacoes serializaveis.
-- Fichas e fragmentos pertencem ao personagem, possuem tier e nao ocupam a
-  mochila.
+- Fichas e fragmentos sao itens fisicos da mochila, possuem tier e nunca usam
+  um saldo paralelo.
 - Transferencias entre mochila e banco nao criam nem destroem recursos.
 - Cash nao e convertido diretamente em recursos negociaveis.
 - Reforcos sao garantidos, sem chance de falha, e limitados a `+3`.
@@ -152,9 +152,12 @@ correspondentes, portanto nao concorre com o reforco desde o inicio do tier.
 - `2` Fichas de Incursao geram `3` materiais comuns escolhidos.
 - `3` Fragmentos de Ameaca geram `2` drops de mob escolhidos.
 
-Casulos nao fazem parte da Central de trocas: sao exclusivos do drop aleatorio
-de Ameacas Globais. A protecao dos Fragmentos de Ameaca cobre somente materiais
-e custos de incubacao, sem substituir a recompensa rara do chefe.
+Casulos sao exclusivos do drop aleatorio de Ameacas Globais. Ao selecionar uma
+Ficha de Incursao ou um Fragmento de Ameaca na mochila, a acao `Trocar` exibe
+somente as opcoes do mesmo tier. Fragmentos podem ser negociados no Mercado do
+Abrigo, mas Mercador e Mercado Negro os rejeitam. A protecao dos fragmentos
+cobre somente materiais e custos de incubacao, sem substituir a recompensa rara
+do chefe.
 
 As telas separam as ofertas principais das emergenciais para deixar claro que
 gathering e auto-combate continuam sendo as fontes eficientes dos materiais
@@ -259,9 +262,9 @@ multiplicadores reais de progresso do backend (15%, 30%, 50% ou 75% para Gold
 e XP).
 
 Fragmentos continuam garantidos para participantes elegiveis, inclusive quando
-o casulo tambem cai. A curva T1-T5 usa `1/1`, `1/1`, `1-2`, `1-2` e `1-2`
-fragmentos; as chances de casulo, sempre condicionadas a derrota, sao `7%`,
-`7%`, `5%`, `5%` e `4%`. A telemetria observada continua separada dessa matriz
+o casulo tambem cai. A curva T1-T5 usa `2-3`, `3-4`, `4-5`, `5-6` e `6-7`
+fragmentos; as chances de casulo, sempre condicionadas a derrota, sao `18%`,
+`16%`, `14%`, `12%` e `10%`. A telemetria observada continua separada dessa matriz
 deterministica e ainda deve atingir a amostra minima antes de novos ajustes de
 recompensa orientados pelo comportamento real.
 

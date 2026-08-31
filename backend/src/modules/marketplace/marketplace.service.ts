@@ -18,6 +18,7 @@ import { BuyMarketListingDto } from './dto/buy-market-listing.dto';
 import { CancelMarketListingDto } from './dto/cancel-market-listing.dto';
 import { CreateMarketListingDto } from './dto/create-market-listing.dto';
 import {
+  MarketItemClassFilter,
   MarketListingSort,
   MarketListingsQueryDto,
 } from './dto/market-listings-query.dto';
@@ -28,6 +29,16 @@ const MAX_UNIT_PRICE = 1_000_000_000;
 const MAX_TOTAL_PRICE = 2_000_000_000;
 const MAX_DATABASE_INT = 2_147_483_647;
 const TRANSACTION_RETRIES = 3;
+
+const MARKET_ITEM_CLASS_NAMES: Record<
+  Exclude<MarketItemClassFilter, MarketItemClassFilter.GENERAL>,
+  string
+> = {
+  [MarketItemClassFilter.LUTADOR]: 'Lutador',
+  [MarketItemClassFilter.ASSASSINO]: 'Assassino',
+  [MarketItemClassFilter.ATIRADOR]: 'Atirador',
+  [MarketItemClassFilter.MEDICO]: 'Médico',
+};
 
 const marketListingInclude = {
   item: true,
@@ -104,12 +115,24 @@ export class MarketplaceService {
       });
     }
 
-    if (query.tier !== undefined || query.rarity) {
+    if (query.tier !== undefined || query.rarity || query.itemClass) {
+      const itemClassFilter: Prisma.ItemWhereInput =
+        query.itemClass === MarketItemClassFilter.GENERAL
+          ? { classId: null }
+          : query.itemClass
+            ? {
+                class: {
+                  is: { name: MARKET_ITEM_CLASS_NAMES[query.itemClass] },
+                },
+              }
+            : {};
+
       filters.push({
         item: {
           is: {
             ...(query.tier !== undefined ? { tier: query.tier } : {}),
             ...(query.rarity ? { rarity: query.rarity } : {}),
+            ...itemClassFilter,
           },
         },
       });

@@ -6,6 +6,12 @@ import type {
 export type MarketListingStatus = "ACTIVE" | "SOLD_OUT" | "CANCELLED";
 export type MarketListingSort =
   "NEWEST" | "PRICE_ASC" | "PRICE_DESC" | "QUANTITY_DESC";
+export type MarketItemClassFilter =
+  | "GENERAL"
+  | "LUTADOR"
+  | "ASSASSINO"
+  | "ATIRADOR"
+  | "MEDICO";
 
 export interface MarketCharacterSummary {
   id: string;
@@ -112,6 +118,7 @@ export interface MarketListingsQuery {
   type?: string;
   tier?: number;
   rarity?: string;
+  itemClass?: MarketItemClassFilter;
   status?: MarketListingStatus;
   sort?: MarketListingSort;
   page?: number;

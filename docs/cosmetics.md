@@ -39,7 +39,8 @@ Jogador autenticado:
 - `PATCH /cosmetics/characters/:characterId/appearance`
 - `GET /social/characters/:characterId/profile`
 - `GET /storefront/characters/:characterId`
-- `POST /storefront/checkout` (contrato reservado; cobrança desativada)
+- `POST /storefront/checkout`
+- `GET /storefront/orders/:orderId`
 
 Administrador:
 
@@ -52,7 +53,7 @@ concessão é idempotente por usuário, cosmético, origem e referência externa
 Use `sourceReference` para o identificador do pagamento, pacote ou evento; assim
 um webhook repetido não cria direitos duplicados.
 
-## Fluxo comercial futuro
+## Fluxo comercial
 
 1. O provedor confirma o pagamento por webhook autenticado.
 2. O backend valida valor, produto, estado e idempotência do evento.
@@ -61,7 +62,7 @@ um webhook repetido não cria direitos duplicados.
 5. Cancelamento ou estorno revoga somente os direitos associados ao pagamento.
 
 O painel administrativo concede e revoga direitos para suporte e testes. Ele não
-substitui a validação de webhook do futuro provedor de pagamento.
+substitui a validação dos webhooks do Mercado Pago ou da Stripe.
 
 ## Catálogo inicial
 

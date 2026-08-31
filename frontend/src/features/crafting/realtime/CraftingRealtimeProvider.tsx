@@ -22,6 +22,7 @@ import {
 import { useActivityTimelineProviderState } from "../../../components/game/useActivityTimelineProviderState";
 import { getAuthToken } from "../../../services/api/authToken";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
+import { getEquipmentItemImageUrl } from "../../equipment/utils/equipmentItemAssets";
 import { useLootNotifications } from "../../loot-notifications/lootNotificationContext";
 import {
   extractCraftingApiError,
@@ -348,6 +349,7 @@ export function CraftingRealtimeProvider({
           itemId: session.outputItem.id,
           itemName: session.outputItem.name,
           quantity,
+          imageUrl: getEquipmentItemImageUrl(session.outputItem),
           rarity: session.outputItem.rarity,
           source: "crafting",
         });

@@ -121,6 +121,7 @@ export type MaterialSeedData = {
 
 export type ConsumableSeedData = {
   name: string;
+  slug?: string;
   description: string;
   tier: number;
   rarity: Rarity;
@@ -132,6 +133,8 @@ export type ConsumableSeedData = {
   isCraftable?: boolean;
   isSellable?: boolean;
   isTradable?: boolean;
+  usableInCombat?: boolean;
+  usableOutOfCombat?: boolean;
 };
 
 export type CraftingIngredientSeedData = {

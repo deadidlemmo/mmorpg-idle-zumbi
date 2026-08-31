@@ -7,6 +7,15 @@ export const API_ENDPOINTS = {
     confirmPasswordReset: "/auth/password-reset/confirm",
   },
 
+  wiki: {
+    summary: "/wiki/summary",
+    search: "/wiki/search",
+    catalog: (kind: "items" | "monsters" | "maps" | "bosses") =>
+      `/wiki/${kind}`,
+    entity: (kind: "items" | "monsters" | "maps" | "bosses", slug: string) =>
+      `/wiki/${kind}/${encodeURIComponent(slug)}`,
+  },
+
   admin: {
     summary: "/admin/summary",
     operations: "/admin/operations",
@@ -21,10 +30,8 @@ export const API_ENDPOINTS = {
   },
 
   economy: {
-    wallet: (characterId: string) =>
-      `/economy/characters/${characterId}/wallet`,
-    exchangeOffers: (characterId: string) =>
-      `/economy/characters/${characterId}/exchange-offers`,
+    itemExchangeOffers: (characterId: string, itemId: string) =>
+      `/economy/characters/${characterId}/items/${itemId}/exchange-offers`,
     exchanges: (characterId: string) =>
       `/economy/characters/${characterId}/exchanges`,
   },
@@ -58,6 +65,7 @@ export const API_ENDPOINTS = {
   storefront: {
     catalog: (characterId: string) => `/storefront/characters/${characterId}`,
     checkout: "/storefront/checkout",
+    order: (orderId: string) => `/storefront/orders/${orderId}`,
   },
 
   chat: {

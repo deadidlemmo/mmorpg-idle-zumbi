@@ -1,4 +1,15 @@
 export type StorefrontProviderKey = "MERCADO_PAGO" | "STRIPE";
+export type StorefrontProviderState = "PLANNED" | "AVAILABLE" | "UNAVAILABLE";
+export type StorefrontOrderStatus =
+  | "PENDING"
+  | "CHECKOUT_CREATED"
+  | "PAYMENT_PENDING"
+  | "FULFILLED"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "FAILED"
+  | "REFUNDED"
+  | "CHARGEBACK_REVIEW";
 export type StorefrontOfferKind =
   "SUBSCRIPTION" | "PREMIUM_ITEM" | "CASH_PACKAGE" | "PERMANENT_PACKAGE";
 export type StorefrontOfferKey =
@@ -39,7 +50,7 @@ export interface StorefrontOffer {
   name: string;
   eyebrow: string;
   description: string;
-  collectionKey: string;
+  collectionKey?: string;
   billingLabel: string;
   accentColor: string;
   benefits: string[];
@@ -74,24 +85,57 @@ export interface StorefrontCatalogResponse {
     providers: Array<{
       key: StorefrontProviderKey;
       name: string;
-      state: "PLANNED" | "AVAILABLE" | "UNAVAILABLE";
+      state: StorefrontProviderState;
     }>;
   };
   membership: {
     isPremiumActive: boolean;
     premiumUntil?: string | null;
+    subscription?: {
+      id: string;
+      provider: StorefrontProviderKey;
+      status: "PENDING" | "ACTIVE" | "PAST_DUE" | "PAUSED" | "CANCELLED";
+      currentPeriodEndsAt?: string | null;
+      cancelAtPeriodEnd: boolean;
+    } | null;
   };
   offers: StorefrontOffer[];
 }
 
 export interface CreateStorefrontCheckoutPayload {
+  requestId: string;
   characterId: string;
   offerKey: StorefrontOfferKey;
   provider: StorefrontProviderKey;
 }
 
 export interface CreateStorefrontCheckoutResponse {
+  orderId: string;
   checkoutId: string;
   checkoutUrl: string;
   expiresAt?: string | null;
+  provider: StorefrontProviderKey;
+  status: StorefrontOrderStatus;
+}
+
+export interface StorefrontOrderResponse {
+  id: string;
+  offerKey: StorefrontOfferKey;
+  offerKind: StorefrontOfferKind;
+  provider: StorefrontProviderKey;
+  status: StorefrontOrderStatus;
+  amountCents: number;
+  currency: "BRL";
+  providerStatus?: string | null;
+  expiresAt?: string | null;
+  paidAt?: string | null;
+  fulfilledAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  price: {
+    amountCents: number;
+    currency: "BRL";
+    formatted: string;
+  };
+  delivered: boolean;
 }

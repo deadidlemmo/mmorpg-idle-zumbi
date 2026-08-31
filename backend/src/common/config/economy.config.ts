@@ -4,6 +4,43 @@ export const ECONOMY_LAUNCH_TIERS = [1, 2, 3, 4, 5] as const;
 
 export type EconomyLaunchTier = (typeof ECONOMY_LAUNCH_TIERS)[number];
 
+export const WORLD_BOSS_FRAGMENT_ITEM_FAMILY = 'Material de Ameaça Global';
+export const INCURSION_TOKEN_ITEM_FAMILY = 'Ficha de Incursão';
+
+export const WORLD_BOSS_FRAGMENT_ITEMS = Object.freeze(
+  Array.from({ length: 10 }, (_, index) => {
+    const tier = index + 1;
+    return Object.freeze({
+      tier,
+      name: `Fragmento de Ameaça T${tier}`,
+      slug: `fragmento-de-ameaca-t${tier}`,
+      isSellable: false,
+      isTradable: true,
+    });
+  }),
+);
+
+export function getWorldBossFragmentItemByTier(tier: number) {
+  return WORLD_BOSS_FRAGMENT_ITEMS.find((item) => item.tier === tier) ?? null;
+}
+
+export const INCURSION_TOKEN_ITEMS = Object.freeze(
+  Array.from({ length: 10 }, (_, index) => {
+    const tier = index + 1;
+    return Object.freeze({
+      tier,
+      name: `Ficha de Incursão T${tier}`,
+      slug: `ficha-de-incursao-t${tier}`,
+      isSellable: false,
+      isTradable: false,
+    });
+  }),
+);
+
+export function getIncursionTokenItemByTier(tier: number) {
+  return INCURSION_TOKEN_ITEMS.find((item) => item.tier === tier) ?? null;
+}
+
 export function isEconomyLaunchTier(tier: number): tier is EconomyLaunchTier {
   return (ECONOMY_LAUNCH_TIERS as readonly number[]).includes(tier);
 }
@@ -17,18 +54,18 @@ export const ECONOMY_ACTIVITY_REWARDS = Object.freeze({
     5: { min: 5, max: 7 },
   },
   worldBossFragments: {
-    1: { min: 1, max: 1 },
-    2: { min: 1, max: 1 },
-    3: { min: 1, max: 2 },
-    4: { min: 1, max: 2 },
-    5: { min: 1, max: 2 },
+    1: { min: 2, max: 3 },
+    2: { min: 3, max: 4 },
+    3: { min: 4, max: 5 },
+    4: { min: 5, max: 6 },
+    5: { min: 6, max: 7 },
   },
   worldBossCocoonChancePercent: {
-    1: 7,
-    2: 7,
-    3: 5,
-    4: 5,
-    5: 4,
+    1: 18,
+    2: 16,
+    3: 14,
+    4: 12,
+    5: 10,
   },
   incursionReinforcementFragments: {
     1: [
@@ -319,6 +356,66 @@ const PET_TIER_CONFIG = Object.freeze({
     npcSaleGold: 2000,
   },
 } as const);
+
+export const PET_BOSS_AVAILABILITY_TARGET = Object.freeze({
+  eligibleVictoriesPerCalendarDay: 1,
+  minMedianCalendarDays: 4,
+  maxMedianCalendarDays: 7,
+  maxP90CalendarDays: 22,
+  maxVictoriesForGuaranteedFragments: 5,
+});
+
+export const PET_BOSS_DAILY_REWARD_POLICY = Object.freeze({
+  resetTimeZone: 'UTC',
+  fullRewardVictoriesPerTier: 1,
+  maxCocoonsPerTier: 1,
+  subsequentCocoonChanceMultiplier: 0.01,
+  subsequentFragmentQuantity: 1,
+});
+
+export const WORLD_BOSS_DAILY_XP_REWARD_POLICY = Object.freeze({
+  resetTimeZone: 'UTC',
+  unrestrictedThroughTier: 1,
+  fullRewardVictoriesPerTier: 1,
+  secondVictoryMultiplier: 0.5,
+  subsequentVictoryMultiplier: 0.25,
+});
+
+function geometricAttemptsForProbability(
+  chancePercent: number,
+  probability: number,
+) {
+  const chance = Math.max(0.0001, Math.min(0.9999, chancePercent / 100));
+  return Math.ceil(Math.log(1 - probability) / Math.log(1 - chance));
+}
+
+export function getPetBossAvailabilityProjection(tier: number) {
+  if (!isEconomyLaunchTier(tier)) return null;
+
+  const chancePercent =
+    ECONOMY_ACTIVITY_REWARDS.worldBossCocoonChancePercent[tier];
+  const fragmentReward = ECONOMY_ACTIVITY_REWARDS.worldBossFragments[tier];
+  const fragmentCost = PET_TIER_CONFIG[tier].fragmentCost;
+  const victoriesPerDay =
+    PET_BOSS_AVAILABILITY_TARGET.eligibleVictoriesPerCalendarDay;
+  const medianVictories = geometricAttemptsForProbability(chancePercent, 0.5);
+  const p90Victories = geometricAttemptsForProbability(chancePercent, 0.9);
+  const guaranteedFragmentVictories = Math.ceil(
+    fragmentCost / fragmentReward.min,
+  );
+
+  return {
+    tier,
+    chancePercent,
+    fragmentReward,
+    fragmentCost,
+    medianVictories,
+    p90Victories,
+    medianCalendarDays: medianVictories / victoriesPerDay,
+    p90CalendarDays: p90Victories / victoriesPerDay,
+    guaranteedFragmentVictories,
+  };
+}
 
 export const PET_DUPLICATE_COCOON_RECOVERY_CONFIG = Object.freeze({
   fragmentsPerCocoon: 10,

@@ -8,6 +8,9 @@ import {
 
 export class CreateStorefrontCheckoutDto {
   @IsUUID('4')
+  requestId!: string;
+
+  @IsUUID('4')
   characterId!: string;
 
   @IsIn(STOREFRONT_OFFER_KEYS)

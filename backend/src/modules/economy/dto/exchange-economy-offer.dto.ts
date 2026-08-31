@@ -1,4 +1,12 @@
-import { IsString, IsUUID, Matches } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class ExchangeEconomyOfferDto {
   @IsString()
@@ -9,4 +17,13 @@ export class ExchangeEconomyOfferDto {
 
   @IsUUID()
   requestId: string;
+
+  @IsUUID()
+  sourceItemId: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(999)
+  exchangeCount?: number;
 }

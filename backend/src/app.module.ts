@@ -25,6 +25,7 @@ import { MobsModule } from './modules/mobs/mobs.module';
 import { UsersModule } from './modules/users/users.module';
 import { VendorModule } from './modules/vendor/vendor.module';
 import { WorldBossesModule } from './modules/world-bosses/world-bosses.module';
+import { WikiModule } from './modules/wiki/wiki.module';
 import { ProgressionModule } from './modules/progression/progression.module';
 import { PetsModule } from './modules/pets/pets.module';
 import { SocialModule } from './modules/social/social.module';
@@ -95,6 +96,7 @@ import { isConfigEnabled } from './common/redis/redis-client.factory';
     IncursionsModule,
     VendorModule,
     WorldBossesModule,
+    WikiModule,
     PetsModule,
     ProgressionModule,
     SocialModule,

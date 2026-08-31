@@ -317,9 +317,7 @@ test.describe('incursão e reforço de equipamentos', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText(reinforcementMaterialName)).toBeVisible();
-    await expect(
-      dialog.getByText('Entrada devolvida no sucesso'),
-    ).toBeVisible();
+    await expect(dialog.getByText('Entrada protegida')).toBeVisible();
     await expect(
       dialog.getByText('Progresso de equipamento garantido'),
     ).toBeVisible();
@@ -398,6 +396,76 @@ test.describe('incursão e reforço de equipamentos', () => {
     ).gold;
 
     expect(earnedFragmentBalance).toBeGreaterThanOrEqual(22);
+  });
+
+  test('reembolsa 90% da entrada na falha sem conceder loot duplicado', async ({
+    page,
+  }) => {
+    const before = await prisma.character.findUniqueOrThrow({
+      where: { id: characterId },
+      select: { gold: true, currentHp: true },
+    });
+    const startResponse = await api.post('/incursions/start', {
+      data: {
+        characterId,
+        incursionId,
+        approach: 'BALANCED',
+      },
+    });
+    await requireOk(startResponse, 'Iniciar incursão destinada à falha');
+    const started = (await startResponse.json()) as {
+      session: { id: string; goldCostPaid: number };
+    };
+
+    await prisma.characterIncursionSession.update({
+      where: { id: started.session.id },
+      data: {
+        endsAt: new Date(Date.now() - 1_000),
+        outcomeRoll: 100,
+      },
+    });
+
+    const statusResponse = await api.get(
+      '/incursions/' + characterId + '/status',
+    );
+    await requireOk(statusResponse, 'Resolver falha da incursão');
+    const rewarded = ((await statusResponse.json()) as IncursionStatusResponse)
+      .rewardedSession;
+    const expectedRefund = Math.floor(started.session.goldCostPaid * 0.9);
+
+    expect(rewarded).toMatchObject({
+      id: started.session.id,
+      success: false,
+      entryGoldRefund: expectedRefund,
+      goldReward: expectedRefund,
+      rewards: [],
+    });
+
+    const after = await prisma.character.findUniqueOrThrow({
+      where: { id: characterId },
+      select: { gold: true, currentHp: true },
+    });
+    expect(after.gold).toBe(
+      before.gold - started.session.goldCostPaid + expectedRefund,
+    );
+    expect(after.currentHp).toBeLessThan(before.currentHp);
+
+    const refunds = await prisma.economyLedgerEntry.count({
+      where: {
+        characterId,
+        referenceId: started.session.id,
+        reason: 'INCURSION_ENTRY_REFUND',
+        quantity: expectedRefund,
+      },
+    });
+    expect(refunds).toBe(1);
+
+    await authenticatePage(page);
+    await page.goto('/dashboard/' + characterId + '/incursions');
+    const result = page.locator('.incursions-reward-result');
+    await expect(result).toContainText('Entrada parcialmente devolvida');
+    await page.reload();
+    await expect(result).toContainText('Entrada parcialmente devolvida');
   });
 
   test('reforça do +0 ao +3 sem duplicar custos e mantém estado após reconnect', async ({
@@ -594,16 +662,18 @@ test.describe('incursão e reforço de equipamentos', () => {
     expect(alreadyMaximum.status()).toBe(400);
     expect(await readMessage(alreadyMaximum)).toContain('já está no +3');
 
-    await page.goto(
-      `/dashboard/${characterId}/resources?currency=INCURSION_TOKEN`,
-    );
-    const workshopLink = page.getByRole('link', {
-      name: /Oficina de reforço/i,
-    });
-    await expect(workshopLink).toBeVisible();
-    await workshopLink.click();
+    await page.goto(`/dashboard/${characterId}/inventory`);
+    await page
+      .getByRole('button', {
+        name: /Ver detalhes de Ficha de Incursão T1/i,
+      })
+      .click({ force: true });
+    await page.getByRole('button', { name: 'Trocar', exact: true }).click();
     await expect(
-      page.getByRole('heading', { name: 'Reforço garantido' }),
+      page.getByRole('dialog', { name: 'Ficha de Incursão T1' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'Opções de troca' }),
     ).toBeVisible();
   });
 });

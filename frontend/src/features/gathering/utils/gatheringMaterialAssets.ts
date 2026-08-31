@@ -1,3 +1,5 @@
+import { resolveMaterialImageSlug } from './materialImageAliases';
+
 type GatheringMaterialAssetLike = {
   name?: string | null;
   slug?: string | null;
@@ -111,14 +113,15 @@ export function getGatheringMaterialImageUrl(
 
   if (directImage) return directImage;
 
-  const slug =
+  const slug = normalizeImageKey(
     getCleanImageUrl(material.slug) ??
-    getCleanImageUrl(material.assetKey) ??
-    normalizeImageKey(material.name);
+      getCleanImageUrl(material.assetKey) ??
+      material.name,
+  );
 
   if (!slug) return null;
 
-  return materialImageBySlug.get(slug) ?? null;
+  return materialImageBySlug.get(resolveMaterialImageSlug(slug)) ?? null;
 }
 
 export function getGatheringRecipeOutputImageUrl(

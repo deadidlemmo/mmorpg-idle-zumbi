@@ -67,6 +67,8 @@ export interface Incursion {
   goldCost: number;
   successEntryRefundPercent: number;
   successEntryRefundGold: number;
+  failureEntryRefundPercent: number;
+  failureEntryRefundGold: number;
   durationSeconds: number;
   difficulty: IncursionDifficulty;
   riskLevel: number;
@@ -156,6 +158,7 @@ export interface ClaimIncursionResponse {
   entryGoldRefund: number;
   lootGoldGained: number;
   goldSpent: number;
+  netEntryGoldSpent: number;
   levelUp: {
     leveledUp: boolean;
     levelsGained: number;

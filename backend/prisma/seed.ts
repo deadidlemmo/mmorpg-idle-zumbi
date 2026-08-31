@@ -18,8 +18,12 @@ import { getItemRarityByTier } from '../src/common/config/item-economy.config';
 import {
   buildReinforcedEquipmentStats,
   EQUIPMENT_REINFORCEMENT_MAX_LEVEL,
+  INCURSION_TOKEN_ITEM_FAMILY,
+  INCURSION_TOKEN_ITEMS,
+  getWorldBossFragmentItemByTier,
   PET_DEFINITIONS,
-  type EquipmentReinforcementSlot,
+  WORLD_BOSS_FRAGMENT_ITEM_FAMILY,
+  WORLD_BOSS_FRAGMENT_ITEMS,
   type EquipmentReinforcementStats,
 } from '../src/common/config/economy.config';
 import { classDefinitions } from './seed-data/classes.seed-data';
@@ -270,7 +274,7 @@ async function upsertEquipmentReinforcementVariants(baseItem: Item) {
     const stats = buildReinforcedEquipmentStats(
       baseStats,
       baseItem.tier,
-      baseItem.slot as EquipmentReinforcementSlot,
+      baseItem.slot,
       level,
     );
 
@@ -396,6 +400,7 @@ async function upsertMobDropMaterialItem(
 async function upsertConsumableItem(data: ConsumableSeedData): Promise<Item> {
   const itemData: Prisma.ItemUncheckedCreateInput = {
     name: data.name,
+    slug: data.slug ?? null,
     description: data.description,
     tier: data.tier,
     rarity: data.rarity,
@@ -418,8 +423,8 @@ async function upsertConsumableItem(data: ConsumableSeedData): Promise<Item> {
 
     healFlat: data.healFlat,
     healPercent: data.healPercent,
-    usableInCombat: true,
-    usableOutOfCombat: true,
+    usableInCombat: data.usableInCombat ?? true,
+    usableOutOfCombat: data.usableOutOfCombat ?? true,
     minTier: data.minTier,
     maxTier: data.maxTier,
 
@@ -699,8 +704,107 @@ async function ensureWorldBossSeedItem(params: {
   });
 }
 
-async function upsertPetDefinitions() {
+async function upsertWorldBossFragmentItems() {
+  const itemsByTier = new Map<number, Item>();
+
+  for (const definition of WORLD_BOSS_FRAGMENT_ITEMS) {
+    const item = await upsertItemByName({
+      name: definition.name,
+      slug: definition.slug,
+      description: 'Fragmento mutante coletado após conter uma Ameaça Global.',
+      tier: definition.tier,
+      rarity: getItemRarityByTier(definition.tier),
+      slot: ItemSlot.MATERIAL,
+      family: WORLD_BOSS_FRAGMENT_ITEM_FAMILY,
+      classId: null,
+      mapId: null,
+      materialOrigin: MaterialOrigin.DROP_MOBS,
+      materialSlot: null,
+      isGatheringMaterial: false,
+      requiredGatheringLevel: 1,
+      gatheringXpPerUnit: 0,
+      baseGatheringRatePerHour: null,
+      strengthBonus: 0,
+      vitalityBonus: 0,
+      agilityBonus: 0,
+      precisionBonus: 0,
+      techniqueBonus: 0,
+      willpowerBonus: 0,
+      healFlat: 0,
+      healPercent: 0,
+      usableInCombat: false,
+      usableOutOfCombat: false,
+      minTier: null,
+      maxTier: null,
+      isSellable: definition.isSellable,
+      isTradable: definition.isTradable,
+      isCraftable: false,
+      baseItemId: null,
+      enhancementLevel: 0,
+    });
+    itemsByTier.set(definition.tier, item);
+  }
+
+  return itemsByTier;
+}
+
+async function upsertIncursionTokenItems() {
+  for (const definition of INCURSION_TOKEN_ITEMS) {
+    await upsertItemByName({
+      name: definition.name,
+      slug: definition.slug,
+      description: `Ficha operacional T${definition.tier} obtida em incursões. Pode ser trocada por recursos do mesmo tier pela mochila.`,
+      tier: definition.tier,
+      rarity: getItemRarityByTier(definition.tier),
+      slot: ItemSlot.MATERIAL,
+      family: INCURSION_TOKEN_ITEM_FAMILY,
+      classId: null,
+      mapId: null,
+      materialOrigin: null,
+      materialSlot: null,
+      isGatheringMaterial: false,
+      requiredGatheringLevel: 1,
+      gatheringXpPerUnit: 0,
+      baseGatheringRatePerHour: null,
+      strengthBonus: 0,
+      vitalityBonus: 0,
+      agilityBonus: 0,
+      precisionBonus: 0,
+      techniqueBonus: 0,
+      willpowerBonus: 0,
+      healFlat: 0,
+      healPercent: 0,
+      usableInCombat: false,
+      usableOutOfCombat: false,
+      minTier: null,
+      maxTier: null,
+      isSellable: definition.isSellable,
+      isTradable: definition.isTradable,
+      isCraftable: false,
+      baseItemId: null,
+      enhancementLevel: 0,
+    });
+  }
+}
+
+async function upsertPetDefinitions(fragmentItemsByTier: Map<number, Item>) {
   for (const [index, definition] of PET_DEFINITIONS.entries()) {
+    const fragmentDefinition = getWorldBossFragmentItemByTier(definition.tier);
+    const fragmentItem = fragmentItemsByTier.get(definition.tier);
+    if (!fragmentDefinition || !fragmentItem) {
+      throw new Error(
+        `Fragmento canônico não encontrado para o pet T${definition.tier}.`,
+      );
+    }
+    if (
+      fragmentItem.name !== fragmentDefinition.name ||
+      fragmentItem.tier !== definition.tier
+    ) {
+      throw new Error(
+        `Fragmento inválido para ${definition.name}: esperado ${fragmentDefinition.name}.`,
+      );
+    }
+
     const cocoonItemData = {
       name: definition.cocoonItemName,
       slug: definition.cocoonItemSlug,
@@ -753,6 +857,7 @@ async function upsertPetDefinitions() {
         effectBasisPoints: definition.effectBasisPoints,
         npcSaleGold: definition.npcSaleGold,
         cocoonItemId: cocoonItem.id,
+        fragmentItemId: fragmentItem.id,
         incubationSeconds: definition.incubationSeconds,
         fragmentCost: definition.fragmentCost,
         goldCost: definition.goldCost,
@@ -771,6 +876,7 @@ async function upsertPetDefinitions() {
         effectBasisPoints: definition.effectBasisPoints,
         npcSaleGold: definition.npcSaleGold,
         cocoonItemId: cocoonItem.id,
+        fragmentItemId: fragmentItem.id,
         incubationSeconds: definition.incubationSeconds,
         fragmentCost: definition.fragmentCost,
         goldCost: definition.goldCost,
@@ -1612,6 +1718,8 @@ async function main() {
     });
   }
 
+  const worldBossFragmentItems = await upsertWorldBossFragmentItems();
+
   console.log('Criando/atualizando Ameaças Globais e loot tables...');
 
   for (const worldBossDefinition of worldBossDefinitions) {
@@ -1623,9 +1731,11 @@ async function main() {
     });
   }
 
-  await upsertPetDefinitions();
+  await upsertPetDefinitions(worldBossFragmentItems);
 
   console.log('Criando/atualizando incursões e loot tables...');
+
+  await upsertIncursionTokenItems();
 
   for (const incursionDefinition of incursionDefinitions) {
     const gameMap = getRequiredMap(mapsByName, incursionDefinition.mapName);

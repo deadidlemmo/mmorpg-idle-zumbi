@@ -27,6 +27,15 @@ export const BLACK_MARKET_FAMILY_MULTIPLIER: Readonly<Record<string, number>> =
     'Resíduo Infecto': 0.55,
   });
 
+export const CRAFTABLE_EQUIPMENT_BLACK_MARKET_FLOOR_BY_TIER: Readonly<
+  Partial<Record<number, number>>
+> = Object.freeze({
+  // T3-T5 recuperam 30% do valor NPC dos ingredientes das receitas canonicas.
+  3: 760,
+  4: 1_226,
+  5: 3_226,
+});
+
 export function getItemRarityByTier(tier: number): Rarity {
   const safeTier = Number(tier);
 
@@ -60,6 +69,7 @@ export function calculateBlackMarketSellValue(params: {
   rarity: Rarity;
   inventoryType: InventoryItemType;
   family?: string | null;
+  isCraftable?: boolean | null;
   isSellable?: boolean | null;
 }) {
   if (params.isSellable === false) return 0;
@@ -80,5 +90,15 @@ export function calculateBlackMarketSellValue(params: {
     ),
   );
 
-  return Math.max(1, Math.round(canonicalValue * familyMultiplier));
+  const canonicalFamilyValue = Math.max(
+    1,
+    Math.round(canonicalValue * familyMultiplier),
+  );
+  const craftableEquipmentFloor =
+    params.inventoryType === InventoryItemType.EQUIPMENT &&
+    params.isCraftable === true
+      ? CRAFTABLE_EQUIPMENT_BLACK_MARKET_FLOOR_BY_TIER[tier]
+      : undefined;
+
+  return Math.max(canonicalFamilyValue, craftableEquipmentFloor ?? 0);
 }

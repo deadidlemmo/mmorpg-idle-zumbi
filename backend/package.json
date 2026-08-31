@@ -51,6 +51,9 @@
     "balance:world-boss:ttk": "node node_modules/tsx/dist/cli.mjs scripts/simulate-world-boss-ttk.ts",
     "balance:world-boss:ttk:validate": "node node_modules/tsx/dist/cli.mjs scripts/simulate-world-boss-ttk.ts --strict",
     "balance:world-boss:ttk:report": "node node_modules/tsx/dist/cli.mjs scripts/simulate-world-boss-ttk.ts --strict --output-dir=../_reports/world-boss-ttk",
+    "economy:simulate:world-boss:matches": "node node_modules/tsx/dist/cli.mjs scripts/simulate-world-boss-economy.ts",
+    "economy:simulate:world-boss:matches:validate": "node node_modules/tsx/dist/cli.mjs scripts/simulate-world-boss-economy.ts --strict",
+    "economy:simulate:world-boss:matches:report": "node node_modules/tsx/dist/cli.mjs scripts/simulate-world-boss-economy.ts --output-dir=../_reports/world-boss-economy",
     "balance:character-progression:report": "node node_modules/tsx/dist/cli.mjs scripts/export-character-progression-report.ts",
     "balance:crafting-economy:report": "node node_modules/tsx/dist/cli.mjs scripts/export-crafting-economy-balance-report.ts",
     "economy:simulate:t1": "node node_modules/tsx/dist/cli.mjs scripts/simulate-t1-economy.ts",
@@ -91,12 +94,14 @@
     "class-validator": "^0.15.1",
     "helmet": "^8.3.0",
     "ioredis": "^5.10.1",
+    "mercadopago": "^3.6.0",
     "nodemailer": "^9.0.5",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "stripe": "^22.6.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

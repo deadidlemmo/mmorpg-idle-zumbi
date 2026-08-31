@@ -61,7 +61,7 @@ describe('real T1-T5 economy simulator', () => {
       report.tiers.map(
         (tier) => tier.autoCombat.current.averagePotionCostSharePercent,
       ),
-    ).toEqual([2.05, 5.98, 20.2, 20.64, 23.84]);
+    ).toEqual([2.05, 5.98, 15.46, 17.23, 20.26]);
 
     for (const tier of report.tiers) {
       for (const classEconomy of tier.autoCombat.current.classes) {
@@ -69,6 +69,42 @@ describe('real T1-T5 economy simulator', () => {
           expect(position.survives100Kills).toBe(true);
           expect(position.netGoldPerHour).toBeGreaterThan(0);
         }
+      }
+    }
+  });
+
+  it('keeps current-set net Gold within 10% across all classes', () => {
+    for (const tier of report.tiers) {
+      const classNetGold = tier.autoCombat.current.classes.map(
+        (classEconomy) => classEconomy.netGoldPerHour,
+      );
+      const bestNetGold = Math.max(...classNetGold);
+      const worstNetGold = Math.min(...classNetGold);
+      const gapPercent = ((bestNetGold - worstNetGold) / bestNetGold) * 100;
+
+      expect(gapPercent).toBeLessThanOrEqual(10);
+    }
+  });
+
+  it('caps T3-T5 potion pressure for Assassino and Atirador', () => {
+    for (const tier of report.tiers.filter(
+      (candidate) => candidate.tier >= 3,
+    )) {
+      const byClass = new Map(
+        tier.autoCombat.current.classes.map((classEconomy) => [
+          classEconomy.className,
+          classEconomy,
+        ]),
+      );
+      const defensiveBaseline = Math.min(
+        byClass.get('Lutador')?.potionsPer100Kills ?? 0,
+        byClass.get('Médico')?.potionsPer100Kills ?? 0,
+      );
+
+      for (const className of ['Assassino', 'Atirador']) {
+        expect(
+          byClass.get(className)?.potionsPer100Kills ?? Infinity,
+        ).toBeLessThanOrEqual(defensiveBaseline * 1.7);
       }
     }
   });
@@ -184,12 +220,38 @@ describe('real T1-T5 economy simulator', () => {
     expect(tierOne.gathering.baseGoldPerHour).toBe(270);
     expect(tierOne.crafting.directGoldFee).toBe(0);
     expect(tierOne.crafting.inputNpcOpportunityGold).toBe(105.41);
-    expect(tierOne.incursions[0].expectedEntryRefund).toBeCloseTo(45.5, 2);
-    expect(tierOne.incursions[0].expectedNetGold).toBeCloseTo(0.23, 2);
+    expect(tierOne.incursions[0].successEntryRefund).toBe(50);
+    expect(tierOne.incursions[0].failureEntryRefund).toBe(45);
+    expect(tierOne.incursions[0].expectedEntryRefund).toBeCloseTo(49.55, 2);
+    expect(tierOne.incursions[0].expectedWalletNetGold).toBeGreaterThan(0);
+    expect(tierOne.incursions[0].expectedRecoveryPotionGold).toBeGreaterThan(0);
+    expect(tierOne.incursions[0].expectedNetGold).toBeGreaterThan(0);
+    for (const tier of report.tiers) {
+      expect(
+        tier.incursions.every((incursion) => incursion.expectedNetGold >= 0),
+      ).toBe(true);
+    }
     expect(tierOne.worldBoss?.averageGold).toBe(240);
     expect(
       report.missions.byTier.map((tier) => tier.recurringGoldPerDay),
     ).toEqual([351.43, 1362.86, 4164.29, 6742.86, 16050]);
     expect(report.assumptions.marketplaceGoldEffect).toBe('TRANSFER_ONLY');
+  });
+
+  it('uses the calibrated craftable-equipment NPC floor only at T3-T5', () => {
+    expect(report.tiers.map((tier) => tier.crafting.outputNpcGold)).toEqual([
+      24, 48, 760, 1_226, 3_226,
+    ]);
+
+    for (const tier of report.tiers.filter(
+      (candidate) => candidate.tier >= 3,
+    )) {
+      const recoveryRatio =
+        tier.crafting.outputNpcGold / tier.crafting.inputNpcOpportunityGold;
+
+      expect(recoveryRatio).toBeGreaterThanOrEqual(0.25);
+      expect(recoveryRatio).toBeLessThanOrEqual(0.35);
+      expect(tier.crafting.resourceValueDestroyedByCrafting).toBeGreaterThan(0);
+    }
   });
 });

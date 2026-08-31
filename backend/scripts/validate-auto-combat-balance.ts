@@ -400,6 +400,7 @@ function simulateClass(params: {
   const mobAttack = applyAutoCombatIncomingDamageMultiplier({
     attack: mob.attack,
     className: classDefinition.name,
+    mobTier: mob.tier,
   });
   const potionHeal = calculateAutoCombatPotionHeal({
     tier,

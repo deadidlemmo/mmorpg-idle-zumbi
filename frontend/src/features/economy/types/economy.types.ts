@@ -35,6 +35,11 @@ export interface EconomyExchangeOffer {
 export interface EconomyExchangeOffersResponse {
   character: { id: string; name: string };
   tier: number;
+  sourceItem: EconomyExchangeItem & {
+    currency: EconomyCurrency;
+    currencyLabel: string;
+    quantity: number;
+  };
   balances: EconomyBalance[];
   offers: EconomyExchangeOffer[];
 }
@@ -43,5 +48,8 @@ export interface EconomyExchangeResponse {
   applied: boolean;
   message: string;
   offer: EconomyExchangeOffer;
+  exchangeCount: number;
+  totalCost: number;
+  totalQuantity: number;
   balance: number;
 }

@@ -2,20 +2,19 @@ import { isAxiosError } from "axios";
 import {
   AlertCircle,
   ArrowRightLeft,
-  Biohazard,
   CheckCircle2,
-  Coins,
+  Minus,
   PackageCheck,
+  Plus,
   ShieldCheck,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
 import {
   exchangeEconomyOffer,
-  getEconomyExchangeOffers,
+  getEconomyExchangeOffersForItem,
 } from "../api/economy.api";
 import type {
-  EconomyCurrency,
   EconomyExchangeOffer,
   EconomyExchangeOffersResponse,
 } from "../types/economy.types";
@@ -23,8 +22,8 @@ import "../styles/economy.css";
 
 interface EconomyExchangePanelProps {
   characterId: string;
-  tier: number;
-  currency: EconomyCurrency;
+  sourceItemId: string;
+  onExchangeComplete?: (balance: number) => void | Promise<void>;
 }
 
 function getErrorMessage(error: unknown) {
@@ -39,44 +38,28 @@ function getErrorMessage(error: unknown) {
     : "Não foi possível concluir a troca.";
 }
 
-function getCurrencyCostLabel(
-  currency: EconomyCurrency,
-  cost: number,
-  singularLabel: string,
-) {
-  if (cost === 1) return singularLabel;
-  return currency === "INCURSION_TOKEN"
-    ? "Fichas de Incursão"
-    : "Fragmentos de Ameaça";
-}
-
 export function EconomyExchangePanel({
   characterId,
-  tier,
-  currency,
+  sourceItemId,
+  onExchangeComplete,
 }: EconomyExchangePanelProps) {
   const [data, setData] = useState<EconomyExchangeOffersResponse | null>(null);
-  const [resolvedRequestKey, setResolvedRequestKey] = useState<string | null>(
-    null,
-  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const [exchangingOfferId, setExchangingOfferId] = useState<string | null>(
     null,
   );
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const pendingRequest = useRef<{ offerId: string; requestId: string } | null>(
-    null,
-  );
-
-  const requestKey = `${characterId}:${tier}:${currency}`;
-
-  const applyOffers = useCallback((response: EconomyExchangeOffersResponse) => {
-    setData(response);
-  }, []);
+  const pendingRequest = useRef<{
+    offerId: string;
+    requestId: string;
+    exchangeCount: number;
+  } | null>(null);
 
   const load = useCallback(
-    () => getEconomyExchangeOffers(characterId, tier, currency),
-    [characterId, currency, tier],
+    () => getEconomyExchangeOffersForItem(characterId, sourceItemId),
+    [characterId, sourceItemId],
   );
 
   useEffect(() => {
@@ -85,9 +68,10 @@ export function EconomyExchangePanel({
     void load()
       .then((response) => {
         if (disposed) return;
-        applyOffers(response);
+        setData(response);
         setError(null);
         setMessage(null);
+        setCounts({});
         pendingRequest.current = null;
       })
       .catch((loadError) => {
@@ -96,53 +80,66 @@ export function EconomyExchangePanel({
         setError(getErrorMessage(loadError));
       })
       .finally(() => {
-        if (!disposed) setResolvedRequestKey(requestKey);
+        if (!disposed) setIsLoading(false);
       });
 
     return () => {
       disposed = true;
     };
-  }, [applyOffers, load, requestKey]);
+  }, [load]);
 
-  const isLoading = resolvedRequestKey !== requestKey;
-  const visibleError = isLoading ? null : error;
-  const visibleMessage = isLoading ? null : message;
-
-  const balance =
-    data?.balances.find((entry) => entry.currency === currency)?.balance ?? 0;
+  const balance = data?.sourceItem.quantity ?? 0;
+  const currency = data?.sourceItem.currency ?? "INCURSION_TOKEN";
   const offerGroups = useMemo(
     () => [
       {
         key: "PRIMARY" as const,
         label: "Uso principal",
-        description: "Componentes dedicados ao reforço de equipamentos.",
         offers:
           data?.offers.filter((offer) => offer.category === "PRIMARY") ?? [],
       },
       {
         key: "EMERGENCY" as const,
-        label: "Proteção contra azar",
-        description:
-          currency === "WORLD_BOSS_FRAGMENT"
-            ? "Drops de mob para completar receitas em situações pontuais."
-            : "Materiais comuns para completar uma receita em situações pontuais.",
+        label: "Materiais alternativos",
         offers:
           data?.offers.filter((offer) => offer.category === "EMERGENCY") ?? [],
       },
     ],
-    [currency, data?.offers],
+    [data?.offers],
   );
 
+  function getExchangeCount(offer: EconomyExchangeOffer) {
+    const maximum = Math.max(0, Math.floor(balance / offer.cost));
+    return Math.min(maximum || 1, Math.max(1, counts[offer.id] ?? 1));
+  }
+
+  function updateExchangeCount(offer: EconomyExchangeOffer, value: number) {
+    const maximum = Math.max(1, Math.floor(balance / offer.cost));
+    setCounts((current) => ({
+      ...current,
+      [offer.id]: Math.min(maximum, Math.max(1, Math.floor(value) || 1)),
+    }));
+    setMessage(null);
+  }
+
   async function handleExchange(offer: EconomyExchangeOffer) {
-    if (balance < offer.cost || exchangingOfferId) return;
+    const exchangeCount = getExchangeCount(offer);
+    const totalCost = offer.cost * exchangeCount;
+    if (balance < totalCost || exchangingOfferId) return;
+
     setExchangingOfferId(offer.id);
     setError(null);
     setMessage(null);
 
     const request =
-      pendingRequest.current?.offerId === offer.id
+      pendingRequest.current?.offerId === offer.id &&
+      pendingRequest.current.exchangeCount === exchangeCount
         ? pendingRequest.current
-        : { offerId: offer.id, requestId: crypto.randomUUID() };
+        : {
+            offerId: offer.id,
+            requestId: crypto.randomUUID(),
+            exchangeCount,
+          };
     pendingRequest.current = request;
 
     try {
@@ -150,10 +147,15 @@ export function EconomyExchangePanel({
         characterId,
         request.offerId,
         request.requestId,
+        sourceItemId,
+        request.exchangeCount,
       );
       setMessage(response.message);
-      applyOffers(await load());
+      const refreshed = await load();
+      setData(refreshed);
+      setCounts({});
       pendingRequest.current = null;
+      await onExchangeComplete?.(response.balance);
     } catch (exchangeError) {
       setError(getErrorMessage(exchangeError));
     } finally {
@@ -161,35 +163,11 @@ export function EconomyExchangePanel({
     }
   }
 
-  if (tier < 1 || tier > 5) return null;
-
   return (
     <section
       className={`economy-exchange economy-exchange--${currency.toLowerCase()}`}
-      aria-label={`Trocas T${tier}`}
+      aria-label="Opções de troca"
     >
-      <header className="economy-exchange__header">
-        <span className="economy-exchange__currency-icon" aria-hidden="true">
-          <Coins size={20} />
-        </span>
-        <span>
-          <small>{data?.balances[0]?.label ?? "Moeda especial"}</small>
-          <strong>Ofertas T{tier}</strong>
-        </span>
-        <span className="economy-exchange__balance">
-          <small>Saldo</small>
-          <strong>{balance.toLocaleString("pt-BR")}</strong>
-        </span>
-      </header>
-
-      {currency === "WORLD_BOSS_FRAGMENT" ? (
-        <p className="economy-exchange__source-rule">
-          <Biohazard size={16} aria-hidden="true" />
-          Casulos são obtidos exclusivamente como drop de Ameaças Globais.
-          Fragmentos podem ser usados aqui somente para materiais.
-        </p>
-      ) : null}
-
       {isLoading ? (
         <p className="economy-exchange__status">Carregando trocas...</p>
       ) : data?.offers.length ? (
@@ -205,17 +183,18 @@ export function EconomyExchangePanel({
                       <ShieldCheck size={17} />
                     )}
                   </span>
-                  <div>
-                    <strong>{group.label}</strong>
-                    <small>{group.description}</small>
-                  </div>
+                  <strong>{group.label}</strong>
                 </header>
 
                 <div className="economy-exchange__offers">
                   {group.offers.map((offer) => {
                     const imageUrl = getGatheringMaterialImageUrl(offer.item);
+                    const exchangeCount = getExchangeCount(offer);
+                    const maximum = Math.floor(balance / offer.cost);
+                    const totalCost = offer.cost * exchangeCount;
+                    const totalQuantity = offer.quantity * exchangeCount;
                     const canExchange =
-                      balance >= offer.cost && exchangingOfferId === null;
+                      maximum > 0 && exchangingOfferId === null;
                     const isCurrentExchange = exchangingOfferId === offer.id;
 
                     return (
@@ -236,20 +215,40 @@ export function EconomyExchangePanel({
                         <div className="economy-exchange__offer-copy">
                           <small>Você recebe</small>
                           <strong>
-                            {offer.quantity}x {offer.item.name}
+                            {totalQuantity}x {offer.item.name}
                           </strong>
-                          <span>{offer.purpose}</span>
-                        </div>
-                        <div className="economy-exchange__offer-cost">
-                          <small>Custo</small>
-                          <strong>{offer.cost.toLocaleString("pt-BR")}</strong>
                           <span>
-                            {getCurrencyCostLabel(
-                              offer.currency,
-                              offer.cost,
-                              offer.currencyLabel,
-                            )}
+                            Custo: {totalCost}x {data.sourceItem.name}
                           </span>
+                        </div>
+                        <div
+                          className="economy-exchange__stepper"
+                          aria-label="Quantidade de trocas"
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateExchangeCount(offer, exchangeCount - 1)
+                            }
+                            disabled={!canExchange || exchangeCount <= 1}
+                            aria-label="Diminuir quantidade"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span>
+                            <small>Trocas</small>
+                            <strong>{maximum > 0 ? exchangeCount : 0}</strong>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateExchangeCount(offer, exchangeCount + 1)
+                            }
+                            disabled={!canExchange || exchangeCount >= maximum}
+                            aria-label="Aumentar quantidade"
+                          >
+                            <Plus size={14} />
+                          </button>
                         </div>
                         <button
                           type="button"
@@ -260,11 +259,9 @@ export function EconomyExchangePanel({
                           <ArrowRightLeft size={15} />
                           {isCurrentExchange
                             ? "Trocando..."
-                            : balance < offer.cost
-                              ? "Saldo insuficiente"
-                              : group.key === "EMERGENCY"
-                                ? "Usar proteção"
-                                : "Trocar"}
+                            : maximum <= 0
+                              ? "Quantidade insuficiente"
+                              : "Trocar"}
                         </button>
                       </article>
                     );
@@ -276,21 +273,21 @@ export function EconomyExchangePanel({
         </div>
       ) : (
         <p className="economy-exchange__status">
-          Nenhuma oferta ativa encontrada neste tier.
+          Nenhuma troca disponível para este item.
         </p>
       )}
 
       <div className="economy-exchange__feedbacks" aria-live="polite">
-        {visibleError ? (
+        {error ? (
           <p className="economy-exchange__feedback is-error">
             <AlertCircle size={15} />
-            {visibleError}
+            {error}
           </p>
         ) : null}
-        {visibleMessage ? (
+        {message ? (
           <p className="economy-exchange__feedback is-success">
             <CheckCircle2 size={15} />
-            {visibleMessage}
+            {message}
           </p>
         ) : null}
       </div>

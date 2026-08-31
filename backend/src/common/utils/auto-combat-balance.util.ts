@@ -5,6 +5,7 @@ import {
   AUTO_COMBAT_BALANCE_RISK_XP_MULTIPLIER,
   AUTO_COMBAT_CLASS_PASSIVES,
   AUTO_COMBAT_DEFAULT_CLASS_PASSIVE,
+  AUTO_COMBAT_INCOMING_DAMAGE_MULTIPLIER_BY_CLASS_AND_TIER,
   type AutoCombatBalanceRiskLevel,
   type AutoCombatClassPassive,
 } from '../config/combat-balance.config';
@@ -97,6 +98,7 @@ export function applyAutoCombatXpEfficiency(params: {
 export function applyAutoCombatIncomingDamageMultiplier(params: {
   attack: number;
   className?: string | null;
+  mobTier?: number | null;
 }) {
   const attack = Math.max(0, Number(params.attack) || 0);
 
@@ -104,9 +106,17 @@ export function applyAutoCombatIncomingDamageMultiplier(params: {
     return 0;
   }
 
+  const classKey = normalizeAutoCombatClassKey(params.className);
   const passive = getAutoCombatClassPassive(params.className);
+  const mobTier = Math.floor(Number(params.mobTier) || 0);
+  const tierMultiplier =
+    AUTO_COMBAT_INCOMING_DAMAGE_MULTIPLIER_BY_CLASS_AND_TIER[classKey]?.[
+      mobTier
+    ];
+  const incomingDamageMultiplier =
+    tierMultiplier ?? passive.incomingDamageMultiplier;
 
-  return Math.max(1, Math.floor(attack * passive.incomingDamageMultiplier));
+  return Math.max(1, Math.floor(attack * incomingDamageMultiplier));
 }
 
 export function applyAutoCombatPotionHealMultiplier(params: {

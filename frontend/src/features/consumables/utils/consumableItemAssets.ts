@@ -8,32 +8,35 @@ interface ConsumableAssetLike {
 }
 
 const consumableImageModules = import.meta.glob(
-  '../../../assets/images/items/consumables/**/*.{png,jpg,jpeg,webp,avif}',
+  "../../../assets/images/items/consumables/**/*.{png,jpg,jpeg,webp,avif,svg}",
   {
     eager: true,
-    import: 'default',
-    query: '?url',
+    import: "default",
+    query: "?url",
   },
 ) as Record<string, string>;
 
 const consumableImageByKey = new Map<string, string>();
 
 function normalizeImageKey(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
+  if (typeof value !== "string") return null;
 
   const normalized = value
     .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
   return normalized || null;
 }
 
 for (const [path, imageUrl] of Object.entries(consumableImageModules)) {
-  const fileName = path.split('/').pop()?.replace(/\.(png|jpe?g|webp|avif)$/i, '');
+  const fileName = path
+    .split("/")
+    .pop()
+    ?.replace(/\.(png|jpe?g|webp|avif|svg)$/i, "");
   const fileKey = normalizeImageKey(fileName);
 
   if (!fileKey) continue;
@@ -51,7 +54,7 @@ for (const [path, imageUrl] of Object.entries(consumableImageModules)) {
 }
 
 function getDirectImageUrl(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 export function getConsumableItemImageUrl(
@@ -85,7 +88,7 @@ export function getConsumableItemImageUrl(
 
     if (tierImage) return tierImage;
 
-    if (nameKey.startsWith('pocao-de-vida')) {
+    if (nameKey.startsWith("pocao-de-vida")) {
       const potionTierPrefix = `${Math.floor(tier)}:pocao-de-vida`;
       const potionTierImage = Array.from(consumableImageByKey.entries()).find(
         ([key]) => key.startsWith(potionTierPrefix),

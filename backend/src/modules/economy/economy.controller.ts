@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  ParseUUIDPipe,
   Post,
   Query,
   Req,
@@ -24,6 +25,19 @@ export class EconomyController {
     @Param('characterId') characterId: string,
   ) {
     return this.economyService.getWallet(request.user.id, characterId);
+  }
+
+  @Get('characters/:characterId/items/:itemId/exchange-offers')
+  getExchangeOffersForItem(
+    @Req() request: { user: { id: string } },
+    @Param('characterId') characterId: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+  ) {
+    return this.economyService.getExchangeOffersForItem(
+      request.user.id,
+      characterId,
+      itemId,
+    );
   }
 
   @Get('characters/:characterId/exchange-offers')

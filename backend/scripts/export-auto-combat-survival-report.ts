@@ -669,6 +669,7 @@ function buildClassTierRows(params: {
     const mobAttack = applyAutoCombatIncomingDamageMultiplier({
       attack: plan.mob.attack,
       className: params.classDefinition.name,
+      mobTier: plan.mob.tier,
     });
     const survival = projectAutoCombatSurvival({
       currentHp: maxHp,

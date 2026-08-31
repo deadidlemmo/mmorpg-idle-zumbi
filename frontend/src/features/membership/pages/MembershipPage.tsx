@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 import {
   BadgeCheck,
   Check,
+  CircleAlert,
   Clock3,
   Coins,
   CreditCard,
@@ -16,18 +17,20 @@ import {
   Frame,
   Gauge,
   Image as ImageIcon,
+  LoaderCircle,
+  LockKeyhole,
   PackageOpen,
   PanelsTopLeft,
   ShieldCheck,
   Sparkles,
-  Ticket,
   UserRound,
   X,
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import cashIcon from "../../../assets/images/coins/cash.webp";
+import { PremiumPlaceholderIcon } from "../../../components/PremiumPlaceholderIcon";
 import { getCosmeticImage } from "../../cosmetics/constants/cosmetic-assets";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
@@ -37,6 +40,7 @@ import { buildGatheringDashboardCharacter } from "../../gathering/utils/gatherin
 import {
   createStorefrontCheckout,
   getStorefrontCatalog,
+  getStorefrontOrder,
 } from "../api/storefront.api";
 import { MEMBERSHIP_BENEFIT_LABELS } from "../constants/membership-benefits";
 import type {
@@ -44,6 +48,7 @@ import type {
   StorefrontCosmeticItem,
   StorefrontCosmeticType,
   StorefrontOffer,
+  StorefrontOrderResponse,
   StorefrontProviderKey,
 } from "../types/storefront.types";
 import "../styles/membership.css";
@@ -119,6 +124,134 @@ function getItemsByType(
   return items.filter((item) => item.type === type);
 }
 
+function PaymentProviderSelector({
+  checkout,
+  selectedProvider,
+  onSelect,
+}: {
+  checkout: StorefrontCatalogResponse["checkout"];
+  selectedProvider: StorefrontProviderKey | null;
+  onSelect: (provider: StorefrontProviderKey) => void;
+}) {
+  const availableProviders = checkout.providers.filter(
+    (provider) => provider.state === "AVAILABLE",
+  );
+
+  return (
+    <section className="membership-payment-method" aria-label="Pagamento">
+      <div className="membership-payment-method__label">
+        {availableProviders.length > 0 ? (
+          <CreditCard size={18} aria-hidden="true" />
+        ) : (
+          <LockKeyhole size={18} aria-hidden="true" />
+        )}
+        <span>
+          <strong>Forma de pagamento</strong>
+          <small>{checkout.message}</small>
+        </span>
+      </div>
+
+      {availableProviders.length > 0 ? (
+        <div
+          className="membership-payment-method__options"
+          role="radiogroup"
+          aria-label="Escolha a forma de pagamento"
+        >
+          {availableProviders.map((provider) => (
+            <button
+              key={provider.key}
+              type="button"
+              role="radio"
+              aria-checked={selectedProvider === provider.key}
+              className={selectedProvider === provider.key ? "is-active" : ""}
+              onClick={() => onSelect(provider.key)}
+            >
+              {provider.name}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <span className="membership-payment-method__locked">Em preparação</span>
+      )}
+    </section>
+  );
+}
+
+function CheckoutStatusNotice({
+  returnState,
+  order,
+  error,
+}: {
+  returnState: string | null;
+  order: StorefrontOrderResponse | null;
+  error: string | null;
+}) {
+  if (!returnState) return null;
+
+  if (returnState === "cancelled") {
+    return (
+      <div className="membership-checkout-status is-neutral" role="status">
+        <CircleAlert size={19} aria-hidden="true" />
+        <span>
+          <strong>Pagamento cancelado</strong>
+          <small>Nenhuma cobrança ou entrega foi confirmada.</small>
+        </span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="membership-checkout-status is-error" role="alert">
+        <CircleAlert size={19} aria-hidden="true" />
+        <span>
+          <strong>Não foi possível confirmar agora</strong>
+          <small>{error}</small>
+        </span>
+      </div>
+    );
+  }
+
+  if (order?.status === "FULFILLED") {
+    return (
+      <div className="membership-checkout-status is-success" role="status">
+        <BadgeCheck size={19} aria-hidden="true" />
+        <span>
+          <strong>Pagamento confirmado</strong>
+          <small>Compra entregue automaticamente à sua conta.</small>
+        </span>
+      </div>
+    );
+  }
+
+  if (
+    order &&
+    ["FAILED", "EXPIRED", "REFUNDED", "CHARGEBACK_REVIEW"].includes(
+      order.status,
+    )
+  ) {
+    return (
+      <div className="membership-checkout-status is-error" role="alert">
+        <CircleAlert size={19} aria-hidden="true" />
+        <span>
+          <strong>Pagamento não concluído</strong>
+          <small>O pedido não gerou uma entrega. Tente novamente.</small>
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="membership-checkout-status is-pending" role="status">
+      <LoaderCircle size={19} aria-hidden="true" />
+      <span>
+        <strong>Confirmando pagamento</strong>
+        <small>A entrega ocorre após a confirmação do provedor.</small>
+      </span>
+    </div>
+  );
+}
+
 function MembershipPurchaseButton({
   offer,
   checkoutEnabled,
@@ -187,11 +320,7 @@ function PremiumOptionCard({
         }
       >
         <span>{isMonthlyPlan ? "Plano mensal" : "Item de 30 dias"}</span>
-        {isMonthlyPlan ? (
-          <Crown size={31} aria-hidden="true" />
-        ) : (
-          <Ticket size={31} aria-hidden="true" />
-        )}
+        <PremiumPlaceholderIcon className="membership-premium-icon" />
       </div>
 
       <div className="membership-premium-option__body">
@@ -531,7 +660,10 @@ function PackageContentsModal({
 
 export function MembershipPage() {
   const { characterId } = useParams();
+  const [searchParams] = useSearchParams();
   const safeCharacterId = characterId ?? "";
+  const checkoutReturnState = searchParams.get("checkout");
+  const checkoutOrderId = searchParams.get("orderId");
   const [character, setCharacter] =
     useState<DashboardCharacterViewModel | null>(null);
   const [storefront, setStorefront] =
@@ -542,6 +674,14 @@ export function MembershipPage() {
   const [checkingOutOfferKey, setCheckingOutOfferKey] = useState<string | null>(
     null,
   );
+  const [selectedProviderKey, setSelectedProviderKey] =
+    useState<StorefrontProviderKey | null>(null);
+  const [returnedOrder, setReturnedOrder] =
+    useState<StorefrontOrderResponse | null>(null);
+  const [checkoutReturnError, setCheckoutReturnError] = useState<{
+    orderId: string;
+    message: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -575,6 +715,98 @@ export function MembershipPage() {
     };
   }, [safeCharacterId]);
 
+  const availableProviders = useMemo(
+    () =>
+      storefront?.checkout.providers.filter(
+        (provider) => provider.state === "AVAILABLE",
+      ) ?? [],
+    [storefront],
+  );
+
+  useEffect(() => {
+    if (
+      !safeCharacterId ||
+      !checkoutOrderId ||
+      !checkoutReturnState ||
+      checkoutReturnState === "cancelled"
+    ) {
+      return;
+    }
+
+    const orderId = checkoutOrderId;
+
+    let isMounted = true;
+    let timerId: number | undefined;
+    let attempts = 0;
+
+    async function refreshAfterDelivery() {
+      const [overviewResponse, storefrontResponse] = await Promise.all([
+        getCharacterOverview(safeCharacterId),
+        getStorefrontCatalog(safeCharacterId),
+      ]);
+      if (!isMounted) return;
+      setCharacter(buildGatheringDashboardCharacter(overviewResponse));
+      setStorefront(storefrontResponse);
+    }
+
+    async function pollOrder() {
+      try {
+        const order = await getStorefrontOrder(orderId);
+        if (!isMounted) return;
+
+        setReturnedOrder(order);
+        setCheckoutReturnError(null);
+
+        if (order.status === "FULFILLED") {
+          await refreshAfterDelivery();
+          return;
+        }
+
+        if (
+          [
+            "FAILED",
+            "EXPIRED",
+            "CANCELLED",
+            "REFUNDED",
+            "CHARGEBACK_REVIEW",
+          ].includes(order.status)
+        ) {
+          return;
+        }
+
+        attempts += 1;
+        if (attempts >= 30) {
+          setCheckoutReturnError({
+            orderId,
+            message:
+              "A confirmação ainda está pendente. O pedido continuará sendo processado pelo servidor.",
+          });
+          return;
+        }
+
+        timerId = window.setTimeout(() => void pollOrder(), 2_000);
+      } catch (error) {
+        if (!isMounted) return;
+        attempts += 1;
+        if (attempts < 5) {
+          timerId = window.setTimeout(() => void pollOrder(), 2_000);
+          return;
+        }
+        setCheckoutReturnError({
+          orderId,
+          message: getMembershipPageError(error),
+        });
+      }
+    }
+
+    void pollOrder();
+
+    return () => {
+      isMounted = false;
+      if (timerId !== undefined) window.clearTimeout(timerId);
+    };
+  }, [checkoutOrderId, checkoutReturnState, safeCharacterId]);
+
   const premiumOffers = useMemo(
     () =>
       storefront?.offers.filter(
@@ -598,9 +830,10 @@ export function MembershipPage() {
       ) ?? [],
     [storefront],
   );
-  const checkoutProvider = storefront?.checkout.providers.find(
-    (provider) => provider.state === "AVAILABLE",
-  );
+  const checkoutProvider =
+    availableProviders.find(
+      (provider) => provider.key === selectedProviderKey,
+    ) ?? availableProviders[0];
   const checkoutEnabled = Boolean(
     storefront?.checkout.enabled && checkoutProvider,
   );
@@ -615,9 +848,10 @@ export function MembershipPage() {
     setErrorMessage(null);
     try {
       const checkout = await createStorefrontCheckout({
+        requestId: crypto.randomUUID(),
         characterId: safeCharacterId,
         offerKey: offer.key,
-        provider: checkoutProvider.key as StorefrontProviderKey,
+        provider: checkoutProvider.key,
       });
       window.location.assign(checkout.checkoutUrl);
     } catch (error) {
@@ -659,6 +893,16 @@ export function MembershipPage() {
           <p>Escolha uma categoria e veja exatamente o que recebe.</p>
         </header>
 
+        <CheckoutStatusNotice
+          returnState={checkoutReturnState}
+          order={returnedOrder?.id === checkoutOrderId ? returnedOrder : null}
+          error={
+            checkoutReturnError?.orderId === checkoutOrderId
+              ? checkoutReturnError.message
+              : null
+          }
+        />
+
         <nav
           className="membership-tabs"
           role="tablist"
@@ -678,7 +922,11 @@ export function MembershipPage() {
                 className={isActive ? "is-active" : ""}
                 onClick={() => setActiveTab(tab.key)}
               >
-                <Icon size={19} aria-hidden="true" />
+                {tab.key === "premium" ? (
+                  <PremiumPlaceholderIcon className="membership-tab-premium-icon" />
+                ) : (
+                  <Icon size={19} aria-hidden="true" />
+                )}
                 <span>
                   <strong>{tab.label}</strong>
                   <small>{tab.description}</small>
@@ -687,6 +935,12 @@ export function MembershipPage() {
             );
           })}
         </nav>
+
+        <PaymentProviderSelector
+          checkout={storefront.checkout}
+          selectedProvider={checkoutProvider?.key ?? null}
+          onSelect={setSelectedProviderKey}
+        />
 
         {activeTab === "premium" ? (
           <section

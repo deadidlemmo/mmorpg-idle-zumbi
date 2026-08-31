@@ -1349,10 +1349,17 @@
     min-width: 22px;
     height: 22px;
     padding-inline: 0.34rem;
-    display: grid;
-    place-items: center;
     font-size: 0.56rem;
     line-height: 1;
+  }
+
+  .dashboard-topbar__activity-status-bubble.dashboard-topbar__hunting-queue-toggle {
+    display: inline-flex;
+    min-width: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.18rem;
+    padding-inline: 0.38rem 0.3rem;
   }
 
   .dashboard-topbar__resource {
@@ -1452,6 +1459,12 @@
     height: 22px;
     padding-inline: 0.32rem;
     font-size: 0.54rem;
+  }
+
+  .dashboard-topbar__activity-status-bubble.dashboard-topbar__hunting-queue-toggle {
+    min-width: 40px;
+    gap: 0.14rem;
+    padding-inline: 0.34rem 0.26rem;
   }
 
   .dashboard-topbar__resource {

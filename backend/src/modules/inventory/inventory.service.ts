@@ -12,7 +12,11 @@ import {
   Prisma,
   Rarity,
 } from '@prisma/client';
-import { getPetRarityByTier } from '../../common/config/economy.config';
+import {
+  getPetRarityByTier,
+  INCURSION_TOKEN_ITEMS,
+  WORLD_BOSS_FRAGMENT_ITEMS,
+} from '../../common/config/economy.config';
 import { calculateBlackMarketSellValue } from '../../common/config/item-economy.config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
@@ -463,6 +467,7 @@ export class InventoryService {
       rarity: this.getCanonicalItemRarity(inventoryItem.item),
       inventoryType: inventoryItem.type,
       family: inventoryItem.item.family,
+      isCraftable: inventoryItem.item.isCraftable,
       isSellable: inventoryItem.item.isSellable,
     });
   }
@@ -583,6 +588,15 @@ export class InventoryService {
         isCraftable: inventoryItem.item.isCraftable,
         isSellable: inventoryItem.item.isSellable,
         isTradable: inventoryItem.item.isTradable,
+        exchangeCurrency: INCURSION_TOKEN_ITEMS.some(
+          (item) => item.slug === inventoryItem.item.slug,
+        )
+          ? 'INCURSION_TOKEN'
+          : WORLD_BOSS_FRAGMENT_ITEMS.some(
+                (item) => item.slug === inventoryItem.item.slug,
+              )
+            ? 'WORLD_BOSS_FRAGMENT'
+            : null,
         baseItemId: inventoryItem.item.baseItemId,
         enhancementLevel: inventoryItem.item.enhancementLevel,
 

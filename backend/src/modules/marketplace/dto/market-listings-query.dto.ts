@@ -17,6 +17,14 @@ export enum MarketListingSort {
   QUANTITY_DESC = 'QUANTITY_DESC',
 }
 
+export enum MarketItemClassFilter {
+  GENERAL = 'GENERAL',
+  LUTADOR = 'LUTADOR',
+  ASSASSINO = 'ASSASSINO',
+  ATIRADOR = 'ATIRADOR',
+  MEDICO = 'MEDICO',
+}
+
 export class MarketListingsQueryDto {
   @IsOptional()
   @IsString()
@@ -37,6 +45,10 @@ export class MarketListingsQueryDto {
   @IsOptional()
   @IsEnum(Rarity)
   rarity?: Rarity;
+
+  @IsOptional()
+  @IsEnum(MarketItemClassFilter)
+  itemClass?: MarketItemClassFilter;
 
   @IsOptional()
   @IsEnum(MarketListingStatus)

@@ -2,9 +2,9 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  ArrowLeftRight,
   Backpack,
   Biohazard,
+  BookOpen,
   Crosshair,
   Crown,
   Footprints,
@@ -117,10 +117,7 @@ type GatheringSkillsSummaryLoose = {
 };
 
 type GatheringSkillsSource =
-  | GatheringSkillLoose[]
-  | GatheringSkillsSummaryLoose
-  | null
-  | undefined;
+  GatheringSkillLoose[] | GatheringSkillsSummaryLoose | null | undefined;
 
 type DashboardCharacterWithGatheringSkills = DashboardCharacterViewModel & {
   gatheringSkills?: GatheringSkillsSource;
@@ -381,11 +378,6 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: <Store size={17} strokeWidth={1.9} />,
   },
   {
-    label: "Recursos",
-    path: "resources",
-    icon: <ArrowLeftRight size={17} strokeWidth={1.9} />,
-  },
-  {
     label: "Premium",
     path: "membership",
     icon: <Crown size={17} strokeWidth={1.9} />,
@@ -425,6 +417,11 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     path: "allies",
     icon: <Users size={17} strokeWidth={1.9} />,
   },
+  {
+    label: "Wiki",
+    path: "/wiki",
+    icon: <BookOpen size={17} strokeWidth={1.9} />,
+  },
 ];
 
 const DASHBOARD_OVERVIEW_NAV_ITEM = DASHBOARD_NAV_ITEMS.find(
@@ -456,13 +453,12 @@ const DASHBOARD_SHELTER_NAV_ITEMS = [
   "infirmary",
   "consumables",
   "market",
-  "resources",
   "membership",
 ]
   .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
   .filter((item): item is DashboardNavItem => Boolean(item));
 
-const DASHBOARD_COMMUNITY_NAV_ITEMS = ["rankings", "allies"]
+const DASHBOARD_COMMUNITY_NAV_ITEMS = ["rankings", "allies", "/wiki"]
   .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
   .filter((item): item is DashboardNavItem => Boolean(item));
 
@@ -1472,7 +1468,9 @@ function DashboardLayoutContent({
   }
 
   function renderSidebarNavItem(item: DashboardNavItem) {
-    const to = item.path
+    const to = item.path.startsWith("/")
+      ? item.path
+      : item.path
       ? `${dashboardBasePath}/${item.path}`
       : dashboardBasePath;
 

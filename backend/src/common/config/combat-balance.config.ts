@@ -10,8 +10,8 @@ export type AutoCombatClassPassive = {
   effectiveXpMultiplier: number;
 };
 
-export const AUTO_COMBAT_BALANCE_MODEL_KEY = 'balance-v5-5';
-export const AUTO_COMBAT_BALANCE_MODEL_LABEL = 'Balance V5.5';
+export const AUTO_COMBAT_BALANCE_MODEL_KEY = 'balance-v5-6';
+export const AUTO_COMBAT_BALANCE_MODEL_LABEL = 'Balance V5.6';
 
 export const AUTO_COMBAT_BALANCE_TTK_POWER_EXPONENT = 0.75;
 export const AUTO_COMBAT_BALANCE_OFFENSIVE_GATHERING_MULTIPLIER = 0.38;
@@ -88,5 +88,21 @@ export const AUTO_COMBAT_CLASS_PASSIVES: Record<
     incomingDamageMultiplier: 0.75,
     potionHealMultiplier: 1.25,
     effectiveXpMultiplier: 1.1,
+  },
+};
+
+export const AUTO_COMBAT_INCOMING_DAMAGE_MULTIPLIER_BY_CLASS_AND_TIER: Record<
+  string,
+  Readonly<Partial<Record<number, number>>>
+> = {
+  assassino: {
+    3: 0.28,
+    4: 0.28,
+    5: 0.28,
+  },
+  atirador: {
+    3: 0.28,
+    4: 0.28,
+    5: 0.28,
   },
 };

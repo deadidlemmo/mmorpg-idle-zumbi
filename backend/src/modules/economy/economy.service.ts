@@ -16,7 +16,11 @@ import {
 import {
   ECONOMY_EXCHANGE_CONFIG,
   ECONOMY_LAUNCH_TIERS,
+  getIncursionTokenItemByTier,
+  getWorldBossFragmentItemByTier,
+  INCURSION_TOKEN_ITEMS,
   isEconomyLaunchTier,
+  WORLD_BOSS_FRAGMENT_ITEMS,
 } from '../../common/config/economy.config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ExchangeEconomyOfferDto } from './dto/exchange-economy-offer.dto';
@@ -38,18 +42,6 @@ type EconomyExchangeItem = {
   materialOrigin: MaterialOrigin | null;
 };
 
-export interface WalletMutationInput {
-  characterId: string;
-  currency: EconomyCurrency;
-  tier: number;
-  quantity: number;
-  reason: string;
-  idempotencyKey: string;
-  referenceType?: string | null;
-  referenceId?: string | null;
-  metadata?: Prisma.InputJsonValue;
-}
-
 @Injectable()
 export class EconomyService {
   constructor(private readonly prisma: PrismaService) {}
@@ -64,18 +56,30 @@ export class EconomyService {
       throw new NotFoundException('Personagem nao encontrado.');
     }
 
-    const storedBalances = await this.prisma.characterEconomyBalance.findMany({
+    const storedItems = await this.prisma.inventoryItem.findMany({
       where: {
         characterId,
-        tier: { in: Array.from(ECONOMY_LAUNCH_TIERS) },
+        item: {
+          slug: {
+            in: [...INCURSION_TOKEN_ITEMS, ...WORLD_BOSS_FRAGMENT_ITEMS].map(
+              (item) => item.slug,
+            ),
+          },
+        },
       },
-      orderBy: [{ tier: 'asc' }, { currency: 'asc' }],
+      select: {
+        quantity: true,
+        updatedAt: true,
+        item: { select: { tier: true, slug: true } },
+      },
     });
     const balanceByKey = new Map(
-      storedBalances.map((entry) => [
-        `${entry.currency}:${entry.tier}`,
-        entry.balance,
-      ]),
+      storedItems.flatMap((entry) => {
+        const currency = this.getCurrencyForItemSlug(entry.item.slug);
+        return currency
+          ? [[`${currency}:${entry.item.tier}`, entry.quantity] as const]
+          : [];
+      }),
     );
 
     return {
@@ -89,7 +93,7 @@ export class EconomyService {
         })),
       })),
       updatedAt:
-        storedBalances.reduce<Date | null>(
+        storedItems.reduce<Date | null>(
           (latest, entry) =>
             !latest || entry.updatedAt > latest ? entry.updatedAt : latest,
           null,
@@ -104,36 +108,86 @@ export class EconomyService {
     currencyInput?: string,
   ) {
     this.assertLaunchTier(tier);
-    const character = await this.prisma.character.findFirst({
-      where: { id: characterId, userId, deletedAt: null },
-      select: { id: true, name: true },
-    });
-    if (!character) throw new NotFoundException('Personagem nao encontrado.');
-
-    const currencies = currencyInput
-      ? [this.parseCurrency(currencyInput)]
-      : Object.values(EconomyCurrency);
-    const sources = currencies.flatMap((currency) =>
-      this.getExchangeSourcesForCurrency(currency),
+    const currency = this.parseCurrency(
+      currencyInput ?? EconomyCurrency.INCURSION_TOKEN,
     );
-    const [items, balances] = await Promise.all([
-      this.findOfferItems(tier, sources),
-      this.prisma.characterEconomyBalance.findMany({
-        where: { characterId, tier, currency: { in: currencies } },
+    const definition = this.getSourceItemDefinition(currency, tier);
+    if (!definition) {
+      throw new BadRequestException('Recurso econômico não encontrado.');
+    }
+    const sourceItem = await this.prisma.item.findUnique({
+      where: { slug: definition.slug },
+      select: { id: true },
+    });
+    if (!sourceItem) {
+      throw new NotFoundException('Item de troca não encontrado.');
+    }
+
+    return this.getExchangeOffersForItem(userId, characterId, sourceItem.id);
+  }
+
+  async getExchangeOffersForItem(
+    userId: string,
+    characterId: string,
+    sourceItemId: string,
+  ) {
+    const [character, sourceItem, inventoryItem] = await Promise.all([
+      this.prisma.character.findFirst({
+        where: { id: characterId, userId, deletedAt: null },
+        select: { id: true, name: true },
+      }),
+      this.prisma.item.findUnique({
+        where: { id: sourceItemId },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          tier: true,
+          rarity: true,
+          description: true,
+        },
+      }),
+      this.prisma.inventoryItem.findUnique({
+        where: { characterId_itemId: { characterId, itemId: sourceItemId } },
+        select: { quantity: true },
       }),
     ]);
-    const balanceByCurrency = new Map(
-      balances.map((balance) => [balance.currency, balance.balance]),
-    );
+    if (!character) throw new NotFoundException('Personagem nao encontrado.');
+    if (!sourceItem)
+      throw new NotFoundException('Item de troca não encontrado.');
+
+    const currency = this.getCurrencyForItemSlug(sourceItem.slug);
+    if (!currency || !isEconomyLaunchTier(sourceItem.tier)) {
+      throw new BadRequestException('Este item não possui trocas disponíveis.');
+    }
+    const definition = this.getSourceItemDefinition(currency, sourceItem.tier);
+    if (!definition || definition.slug !== sourceItem.slug) {
+      throw new BadRequestException(
+        'Este item não é um recurso econômico válido.',
+      );
+    }
+
+    const sources = this.getExchangeSourcesForCurrency(currency);
+    const items = await this.findOfferItems(sourceItem.tier, sources);
+    const quantity = inventoryItem?.quantity ?? 0;
 
     return {
       character,
-      tier,
-      balances: currencies.map((currency) => ({
+      tier: sourceItem.tier,
+      sourceItem: {
+        ...sourceItem,
+        rarity: String(sourceItem.rarity),
         currency,
-        label: this.getCurrencyLabel(currency),
-        balance: balanceByCurrency.get(currency) ?? 0,
-      })),
+        currencyLabel: this.getCurrencyLabel(currency),
+        quantity,
+      },
+      balances: [
+        {
+          currency,
+          label: this.getCurrencyLabel(currency),
+          balance: quantity,
+        },
+      ],
       offers: items.map(({ item, source }) =>
         this.buildExchangeOffer(source, item),
       ),
@@ -146,6 +200,7 @@ export class EconomyService {
     input: ExchangeEconomyOfferDto,
   ) {
     const parsedOffer = this.parseOfferId(input.offerId);
+    const exchangeCount = input.exchangeCount ?? 1;
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
@@ -165,50 +220,111 @@ export class EconomyService {
               parsedOffer.itemId,
             );
             const offer = this.buildExchangeOffer(parsedOffer.source, item);
+            const currency = offer.currency;
+            const sourceDefinition = this.getSourceItemDefinition(
+              currency,
+              offer.tier,
+            );
+            if (!sourceDefinition) {
+              throw new BadRequestException('Recurso de troca inválido.');
+            }
+            const sourceItem = await tx.item.findFirst({
+              where: {
+                id: input.sourceItemId,
+                slug: sourceDefinition.slug,
+                tier: offer.tier,
+                slot: ItemSlot.MATERIAL,
+              },
+              select: { id: true, name: true },
+            });
+            if (!sourceItem) {
+              throw new BadRequestException(
+                'A oferta não corresponde ao recurso selecionado.',
+              );
+            }
+            const totalCost = offer.cost * exchangeCount;
+            const totalQuantity = offer.quantity * exchangeCount;
             const baseKey = `economy-exchange:${characterId}:${input.requestId}`;
-            const currencyKey = `${baseKey}:currency`;
+            const sourceKey = `${baseKey}:source-item`;
             const existing = await tx.economyLedgerEntry.findUnique({
-              where: { idempotencyKey: currencyKey },
+              where: { idempotencyKey: sourceKey },
             });
 
             if (existing) {
-              this.assertSameExchange(existing, offer.id);
+              this.assertSameExchange(
+                existing,
+                offer.id,
+                sourceItem.id,
+                exchangeCount,
+              );
               return {
                 applied: false,
                 message: 'Esta troca ja havia sido concluida.',
                 offer,
+                exchangeCount,
+                totalCost,
+                totalQuantity,
                 balance: existing.balanceAfter ?? 0,
               };
             }
 
-            const debit = await this.debitWalletInTransaction(tx, {
+            const debited = await tx.inventoryItem.updateMany({
+              where: {
+                characterId,
+                itemId: sourceItem.id,
+                quantity: { gte: totalCost },
+              },
+              data: { quantity: { decrement: totalCost } },
+            });
+            if (debited.count !== 1) {
+              throw new BadRequestException(
+                `Quantidade insuficiente de ${sourceItem.name}.`,
+              );
+            }
+            const sourceBalance = await tx.inventoryItem.findUniqueOrThrow({
+              where: {
+                characterId_itemId: {
+                  characterId,
+                  itemId: sourceItem.id,
+                },
+              },
+              select: { quantity: true },
+            });
+            const metadata = {
+              requestId: input.requestId,
+              offerId: offer.id,
+              sourceItemId: sourceItem.id,
+              exchangeCount,
+              totalCost,
+              totalQuantity,
+            };
+            await recordEconomyEntry(tx, {
               characterId,
-              currency: offer.currency,
+              direction: EconomyDirection.DEBIT,
+              resourceType: EconomyResourceType.ITEM,
+              itemId: sourceItem.id,
               tier: offer.tier,
-              quantity: offer.cost,
-              reason: ECONOMY_REASONS.ECONOMY_EXCHANGE_CURRENCY_SPENT,
-              idempotencyKey: currencyKey,
+              quantity: totalCost,
+              balanceAfter: sourceBalance.quantity,
+              reason: ECONOMY_REASONS.ECONOMY_EXCHANGE_SOURCE_ITEM_SPENT,
+              idempotencyKey: sourceKey,
               referenceType: 'EconomyExchange',
               referenceId: offer.item.id,
-              metadata: {
-                requestId: input.requestId,
-                offerId: offer.id,
-                itemName: offer.item.name,
-                itemQuantity: offer.quantity,
-              },
+              metadata,
             });
 
-            await tx.inventoryItem.upsert({
+            const receivedItem = await tx.inventoryItem.upsert({
               where: {
                 characterId_itemId: { characterId, itemId: offer.item.id },
               },
-              update: { quantity: { increment: offer.quantity } },
+              update: { quantity: { increment: totalQuantity } },
               create: {
                 characterId,
                 itemId: offer.item.id,
-                quantity: offer.quantity,
+                quantity: totalQuantity,
                 type: InventoryItemType.MATERIAL,
               },
+              select: { quantity: true },
             });
             await recordEconomyEntry(tx, {
               characterId,
@@ -216,24 +332,30 @@ export class EconomyService {
               resourceType: EconomyResourceType.ITEM,
               itemId: offer.item.id,
               tier: offer.tier,
-              quantity: offer.quantity,
+              quantity: totalQuantity,
+              balanceAfter: receivedItem.quantity,
               reason: ECONOMY_REASONS.ECONOMY_EXCHANGE_ITEM_RECEIVED,
               idempotencyKey: `${baseKey}:item`,
               referenceType: 'EconomyExchange',
               referenceId: offer.item.id,
-              metadata: {
-                requestId: input.requestId,
-                offerId: offer.id,
-                currency: offer.currency,
-                currencyCost: offer.cost,
+              metadata,
+            });
+            await tx.inventoryItem.deleteMany({
+              where: {
+                characterId,
+                itemId: sourceItem.id,
+                quantity: { lte: 0 },
               },
             });
 
             return {
-              applied: debit.applied,
-              message: `${offer.quantity}x ${offer.item.name} recebido.`,
+              applied: true,
+              message: `${totalQuantity}x ${offer.item.name} recebido.`,
               offer,
-              balance: debit.balance,
+              exchangeCount,
+              totalCost,
+              totalQuantity,
+              balance: sourceBalance.quantity,
             };
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -252,152 +374,6 @@ export class EconomyService {
     throw new ConflictException(
       'A troca encontrou concorrencia. Tente novamente.',
     );
-  }
-
-  creditWallet(input: WalletMutationInput) {
-    return this.mutateWallet(EconomyDirection.CREDIT, input);
-  }
-
-  debitWallet(input: WalletMutationInput) {
-    return this.mutateWallet(EconomyDirection.DEBIT, input);
-  }
-
-  creditWalletInTransaction(
-    tx: Prisma.TransactionClient,
-    input: WalletMutationInput,
-  ) {
-    return this.mutateWalletInTransaction(tx, EconomyDirection.CREDIT, input);
-  }
-
-  debitWalletInTransaction(
-    tx: Prisma.TransactionClient,
-    input: WalletMutationInput,
-  ) {
-    return this.mutateWalletInTransaction(tx, EconomyDirection.DEBIT, input);
-  }
-
-  private async mutateWallet(
-    direction: EconomyDirection,
-    input: WalletMutationInput,
-  ) {
-    this.assertWalletInput(input);
-
-    try {
-      return await this.prisma.$transaction(
-        (tx) => this.mutateWalletInTransaction(tx, direction, input),
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-    } catch (error) {
-      if (!this.isUniqueConstraintError(error)) throw error;
-
-      const existing = await this.prisma.economyLedgerEntry.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
-      });
-      if (!existing) throw error;
-
-      return {
-        applied: false,
-        balance: existing.balanceAfter ?? 0,
-        ledgerEntry: existing,
-      };
-    }
-  }
-
-  private async mutateWalletInTransaction(
-    tx: Prisma.TransactionClient,
-    direction: EconomyDirection,
-    input: WalletMutationInput,
-  ) {
-    this.assertWalletInput(input);
-
-    const existing = await tx.economyLedgerEntry.findUnique({
-      where: { idempotencyKey: input.idempotencyKey },
-    });
-    if (existing) {
-      return {
-        applied: false,
-        balance: existing.balanceAfter ?? 0,
-        ledgerEntry: existing,
-      };
-    }
-
-    const character = await tx.character.findFirst({
-      where: { id: input.characterId, deletedAt: null },
-      select: { id: true },
-    });
-    if (!character) throw new NotFoundException('Personagem nao encontrado.');
-
-    if (direction === EconomyDirection.CREDIT) {
-      await tx.characterEconomyBalance.upsert({
-        where: {
-          characterId_currency_tier: {
-            characterId: input.characterId,
-            currency: input.currency,
-            tier: input.tier,
-          },
-        },
-        create: {
-          characterId: input.characterId,
-          currency: input.currency,
-          tier: input.tier,
-          balance: input.quantity,
-        },
-        update: { balance: { increment: input.quantity } },
-      });
-    } else {
-      const debited = await tx.characterEconomyBalance.updateMany({
-        where: {
-          characterId: input.characterId,
-          currency: input.currency,
-          tier: input.tier,
-          balance: { gte: input.quantity },
-        },
-        data: { balance: { decrement: input.quantity } },
-      });
-      if (debited.count !== 1) {
-        throw new BadRequestException(
-          `Saldo insuficiente de ${this.getCurrencyLabel(input.currency)} T${input.tier}.`,
-        );
-      }
-    }
-
-    const balance = await tx.characterEconomyBalance.findUniqueOrThrow({
-      where: {
-        characterId_currency_tier: {
-          characterId: input.characterId,
-          currency: input.currency,
-          tier: input.tier,
-        },
-      },
-      select: { balance: true },
-    });
-    const ledgerEntry = await recordEconomyEntry(tx, {
-      characterId: input.characterId,
-      direction,
-      resourceType: EconomyResourceType.CURRENCY,
-      currency: input.currency,
-      tier: input.tier,
-      quantity: input.quantity,
-      balanceAfter: balance.balance,
-      reason: input.reason,
-      idempotencyKey: input.idempotencyKey,
-      referenceType: input.referenceType,
-      referenceId: input.referenceId,
-      metadata: input.metadata,
-    });
-
-    return { applied: true, balance: balance.balance, ledgerEntry };
-  }
-
-  private assertWalletInput(input: WalletMutationInput) {
-    if (!Number.isSafeInteger(input.quantity) || input.quantity <= 0) {
-      throw new BadRequestException(
-        'A quantidade deve ser um inteiro positivo.',
-      );
-    }
-    if (!Number.isInteger(input.tier) || input.tier < 1 || input.tier > 10) {
-      throw new BadRequestException('O tier deve estar entre 1 e 10.');
-    }
   }
 
   private async findOfferItems(tier: number, sources: EconomyExchangeSource[]) {
@@ -626,6 +602,8 @@ export class EconomyService {
   private assertSameExchange(
     entry: { metadata: Prisma.JsonValue | null },
     offerId: string,
+    sourceItemId: string,
+    exchangeCount: number,
   ) {
     const metadata = entry.metadata;
     const existingOfferId =
@@ -635,9 +613,26 @@ export class EconomyService {
       typeof metadata.offerId === 'string'
         ? metadata.offerId
         : null;
+    const existingSourceItemId =
+      metadata &&
+      typeof metadata === 'object' &&
+      !Array.isArray(metadata) &&
+      typeof metadata.sourceItemId === 'string'
+        ? metadata.sourceItemId
+        : null;
+    const existingExchangeCount =
+      metadata &&
+      typeof metadata === 'object' &&
+      !Array.isArray(metadata) &&
+      typeof metadata.exchangeCount === 'number'
+        ? metadata.exchangeCount
+        : null;
     if (
       !existingOfferId ||
-      this.normalizeOfferId(existingOfferId) !== this.normalizeOfferId(offerId)
+      this.normalizeOfferId(existingOfferId) !==
+        this.normalizeOfferId(offerId) ||
+      existingSourceItemId !== sourceItemId ||
+      existingExchangeCount !== exchangeCount
     ) {
       throw new ConflictException(
         'A identificacao desta troca ja foi usada em outra oferta.',
@@ -663,6 +658,23 @@ export class EconomyService {
       throw new BadRequestException('Moeda economica invalida.');
     }
     return currency as EconomyCurrency;
+  }
+
+  private getSourceItemDefinition(currency: EconomyCurrency, tier: number) {
+    return currency === EconomyCurrency.INCURSION_TOKEN
+      ? getIncursionTokenItemByTier(tier)
+      : getWorldBossFragmentItemByTier(tier);
+  }
+
+  private getCurrencyForItemSlug(slug: string | null) {
+    if (!slug) return null;
+    if (INCURSION_TOKEN_ITEMS.some((item) => item.slug === slug)) {
+      return EconomyCurrency.INCURSION_TOKEN;
+    }
+    if (WORLD_BOSS_FRAGMENT_ITEMS.some((item) => item.slug === slug)) {
+      return EconomyCurrency.WORLD_BOSS_FRAGMENT;
+    }
+    return null;
   }
 
   private getExchangeSourcesForCurrency(

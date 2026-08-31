@@ -1,5 +1,12 @@
 import { ConfigService } from '@nestjs/config';
-import { Prisma, WorldBossEventStatus } from '@prisma/client';
+import {
+  EconomyResourceType,
+  InventoryItemType,
+  Prisma,
+  Rarity,
+  WorldBossEventStatus,
+  WorldBossRewardType,
+} from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import { DistributedLockService } from '../../common/redis/distributed-lock.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -63,6 +70,407 @@ describe('WorldBossesService rewards', () => {
       },
     });
     expect(findUniqueOrThrow).not.toHaveBeenCalled();
+  });
+
+  it('entrega Fragmento de Ameaça como item sem criar novo saldo legado', async () => {
+    const inventoryUpsert = jest.fn().mockResolvedValue({ quantity: 3 });
+    const grantedRewardCreate = jest.fn().mockResolvedValue({
+      id: 'granted-reward-1',
+    });
+    const ledgerCreate = jest.fn().mockResolvedValue({});
+    const creditWalletInTransaction = jest.fn();
+    const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'character-1' }]),
+      worldBossParticipant: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: 'participant-1',
+          eligibleForReward: true,
+          contributionPercent: 100,
+        }),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      worldBossGrantedReward: {
+        count: jest.fn().mockResolvedValue(0),
+        create: grantedRewardCreate,
+      },
+      character: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ level: 10, xp: 0 }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      inventoryItem: { upsert: inventoryUpsert },
+      economyLedgerEntry: { create: ledgerCreate },
+    } as unknown as Prisma.TransactionClient;
+    const economyService = {
+      creditWalletInTransaction,
+    } as unknown as EconomyService;
+    const service = new WorldBossesService(
+      {} as PrismaService,
+      {} as ActivityGuardService,
+      {} as DistributedLockService,
+      economyService,
+      {} as AutoCombatService,
+      {} as GatheringService,
+      {} as CraftingService,
+      {} as IncursionsService,
+      {
+        get: jest.fn().mockReturnValue(undefined),
+      } as unknown as ConfigService,
+    ) as unknown as {
+      grantReward(
+        transaction: Prisma.TransactionClient,
+        event: unknown,
+        participantId: string,
+        characterId: string,
+        now: Date,
+      ): Promise<Array<Record<string, unknown>>>;
+    };
+    const fragmentItem = {
+      id: 'fragment-item-t1',
+      name: 'Fragmento de Ameaça T1',
+      tier: 1,
+      rarity: Rarity.COMMON,
+      slot: 'MATERIAL',
+      family: 'Material de Ameaça Global',
+    };
+
+    const rewards = await service.grantReward(
+      tx,
+      {
+        id: 'event-1',
+        tier: 1,
+        status: WorldBossEventStatus.DEFEATED,
+        currentHp: 0,
+        maxHp: 100,
+        totalDamage: 100,
+        defeatedAt: new Date('2026-08-30T12:00:00.000Z'),
+        worldBoss: {
+          rewards: [
+            {
+              rewardType: WorldBossRewardType.MATERIAL,
+              itemId: fragmentItem.id,
+              item: fragmentItem,
+              currency: null,
+              minQuantity: 3,
+              maxQuantity: 3,
+              chance: 100,
+              guaranteed: true,
+              onlyIfDefeated: false,
+              requiresMinParticipation: true,
+              randomPetCocoon: false,
+              minContributionPercent: 0,
+              rarity: Rarity.COMMON,
+            },
+          ],
+        },
+      },
+      'participant-1',
+      'character-1',
+      new Date('2026-08-30T12:00:00.000Z'),
+    );
+
+    expect(creditWalletInTransaction).not.toHaveBeenCalled();
+    const [grantedRewardCreateArgs] = grantedRewardCreate.mock
+      .calls[0] as unknown as [Prisma.WorldBossGrantedRewardCreateArgs];
+    expect(grantedRewardCreateArgs.data).toMatchObject({
+      rewardType: WorldBossRewardType.MATERIAL,
+      itemId: fragmentItem.id,
+      currency: null,
+      quantity: 3,
+    });
+    expect(inventoryUpsert).toHaveBeenCalledWith({
+      where: {
+        characterId_itemId: {
+          characterId: 'character-1',
+          itemId: fragmentItem.id,
+        },
+      },
+      update: {
+        quantity: { increment: 3 },
+        type: InventoryItemType.MATERIAL,
+      },
+      create: {
+        characterId: 'character-1',
+        itemId: fragmentItem.id,
+        quantity: 3,
+        type: InventoryItemType.MATERIAL,
+      },
+    });
+    const [ledgerArgs] = ledgerCreate.mock.calls[0] as [
+      { data: { resourceType: EconomyResourceType; itemId: string } },
+    ];
+    expect(ledgerArgs.data).toMatchObject({
+      resourceType: EconomyResourceType.ITEM,
+      itemId: fragmentItem.id,
+      tier: 1,
+      quantity: 3,
+      reason: 'WORLD_BOSS_FRAGMENT_REWARD',
+    });
+    expect(rewards).toEqual([
+      expect.objectContaining({
+        itemId: fragmentItem.id,
+        quantity: 3,
+        isWorldBossFragment: true,
+      }),
+    ]);
+  });
+
+  it('persiste apenas 50% do XP na segunda vitória elegível T2 do dia', async () => {
+    const grantedRewardCreate = jest.fn().mockResolvedValue({
+      id: 'granted-reward-xp',
+    });
+    const characterUpdate = jest.fn().mockResolvedValue({});
+    const ledgerCreate = jest.fn().mockResolvedValue({});
+    const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'character-1' }]),
+      worldBossParticipant: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: 'participant-2',
+          eligibleForReward: true,
+          contributionPercent: 100,
+        }),
+        count: jest.fn().mockResolvedValue(1),
+      },
+      worldBossGrantedReward: {
+        count: jest.fn().mockResolvedValue(0),
+        create: grantedRewardCreate,
+      },
+      character: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ level: 11, xp: 0 }),
+        update: characterUpdate,
+      },
+      economyLedgerEntry: { create: ledgerCreate },
+    } as unknown as Prisma.TransactionClient;
+    const service = new WorldBossesService(
+      {} as PrismaService,
+      {} as ActivityGuardService,
+      {} as DistributedLockService,
+      {} as EconomyService,
+      {} as AutoCombatService,
+      {} as GatheringService,
+      {} as CraftingService,
+      {} as IncursionsService,
+      { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService,
+    ) as unknown as {
+      grantReward(
+        transaction: Prisma.TransactionClient,
+        event: unknown,
+        participantId: string,
+        characterId: string,
+        now: Date,
+      ): Promise<Array<{ rewardType: WorldBossRewardType; quantity: number }>>;
+    };
+
+    const rewards = await service.grantReward(
+      tx,
+      {
+        id: 'event-2',
+        tier: 2,
+        status: WorldBossEventStatus.DEFEATED,
+        currentHp: 0,
+        maxHp: 100,
+        totalDamage: 100,
+        defeatedAt: new Date('2026-08-30T16:00:00.000Z'),
+        worldBoss: {
+          rewards: [
+            {
+              rewardType: WorldBossRewardType.XP,
+              itemId: null,
+              currency: null,
+              minQuantity: 1_000,
+              maxQuantity: 1_000,
+              chance: 100,
+              guaranteed: true,
+              onlyIfDefeated: false,
+              requiresMinParticipation: true,
+              randomPetCocoon: false,
+              minContributionPercent: 0,
+              rarity: null,
+            },
+          ],
+        },
+      },
+      'participant-2',
+      'character-1',
+      new Date('2026-08-30T16:00:00.000Z'),
+    );
+
+    expect(rewards).toEqual([
+      expect.objectContaining({
+        rewardType: WorldBossRewardType.XP,
+        quantity: 500,
+      }),
+    ]);
+    expect(characterUpdate).toHaveBeenCalledTimes(1);
+    const [grantedRewardArgs] = grantedRewardCreate.mock
+      .calls[0] as unknown as [Prisma.WorldBossGrantedRewardCreateArgs];
+    expect(grantedRewardArgs.data).toMatchObject({
+      participantId: 'participant-2',
+      rewardType: WorldBossRewardType.XP,
+      quantity: 500,
+    });
+    const [ledgerArgs] = ledgerCreate.mock.calls[0] as unknown as [
+      {
+        data: {
+          characterId: string;
+          resourceType: EconomyResourceType;
+          quantity: number;
+          idempotencyKey: string;
+        };
+      },
+    ];
+    expect(ledgerArgs.data).toMatchObject({
+      characterId: 'character-1',
+      resourceType: EconomyResourceType.XP,
+      quantity: 500,
+      idempotencyKey: 'world-boss:participant-2:reward:xp',
+    });
+  });
+
+  it('consulta vitorias e casulos apenas no tier e reset UTC atuais', async () => {
+    const participantCount = jest.fn().mockResolvedValue(2);
+    const cocoonCount = jest.fn().mockResolvedValue(1);
+    const tx = {
+      worldBossParticipant: { count: participantCount },
+      worldBossGrantedReward: { count: cocoonCount },
+    } as unknown as Prisma.TransactionClient;
+    const service = new WorldBossesService(
+      {} as PrismaService,
+      {} as ActivityGuardService,
+      {} as DistributedLockService,
+      {} as EconomyService,
+      {} as AutoCombatService,
+      {} as GatheringService,
+      {} as CraftingService,
+      {} as IncursionsService,
+      {
+        get: jest.fn().mockReturnValue(undefined),
+      } as unknown as ConfigService,
+    ) as unknown as {
+      getDailyPetRewardState(
+        transaction: Prisma.TransactionClient,
+        participantId: string,
+        characterId: string,
+        tier: number,
+        now: Date,
+        eligibleVictory: boolean,
+      ): Promise<{
+        eligibleVictory: boolean;
+        previousEligibleVictories: number;
+        cocoonsGranted: number;
+      }>;
+    };
+
+    const state = await service.getDailyPetRewardState(
+      tx,
+      'participant-current',
+      'character-1',
+      3,
+      new Date('2026-08-30T18:45:00.000Z'),
+      true,
+    );
+
+    expect(state).toEqual({
+      eligibleVictory: true,
+      previousEligibleVictories: 2,
+      cocoonsGranted: 1,
+    });
+    const rewardGrantedAt = {
+      gte: new Date('2026-08-30T00:00:00.000Z'),
+      lt: new Date('2026-08-31T00:00:00.000Z'),
+    };
+    expect(participantCount).toHaveBeenCalledWith({
+      where: {
+        id: { not: 'participant-current' },
+        characterId: 'character-1',
+        eligibleForReward: true,
+        rewardGranted: true,
+        rewardGrantedAt,
+        event: {
+          tier: 3,
+          OR: [
+            { status: WorldBossEventStatus.DEFEATED },
+            { status: WorldBossEventStatus.REWARDED },
+            { defeatedAt: { not: null } },
+            { currentHp: { lte: 0 } },
+          ],
+        },
+      },
+    });
+    expect(cocoonCount).toHaveBeenCalledWith({
+      where: {
+        rewardType: 'PET_EGG',
+        participant: {
+          characterId: 'character-1',
+          rewardGrantedAt,
+          event: { tier: 3 },
+        },
+      },
+    });
+  });
+
+  it('expõe o multiplicador da próxima vitória usando o histórico diário do tier', async () => {
+    const count = jest.fn().mockResolvedValue(1);
+    const service = new WorldBossesService(
+      {
+        worldBossParticipant: { count },
+      } as unknown as PrismaService,
+      {} as ActivityGuardService,
+      {} as DistributedLockService,
+      {} as EconomyService,
+      {} as AutoCombatService,
+      {} as GatheringService,
+      {} as CraftingService,
+      {} as IncursionsService,
+      { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService,
+    ) as unknown as {
+      getDailyXpRewardStatus(
+        characterId: string,
+        tier: number,
+        now: Date,
+      ): Promise<{
+        eligibleVictoriesToday: number;
+        nextVictoryMultiplier: number;
+        nextVictoryPercent: number;
+        unrestricted: boolean;
+        resetsAt: Date;
+      }>;
+    };
+
+    const status = await service.getDailyXpRewardStatus(
+      'character-1',
+      3,
+      new Date('2026-08-30T18:45:00.000Z'),
+    );
+
+    expect(status).toMatchObject({
+      eligibleVictoriesToday: 1,
+      nextVictoryMultiplier: 0.5,
+      nextVictoryPercent: 50,
+      unrestricted: false,
+      resetsAt: new Date('2026-08-31T00:00:00.000Z'),
+    });
+    expect(count).toHaveBeenCalledWith({
+      where: {
+        characterId: 'character-1',
+        eligibleForReward: true,
+        rewardGranted: true,
+        rewardGrantedAt: {
+          gte: new Date('2026-08-30T00:00:00.000Z'),
+          lt: new Date('2026-08-31T00:00:00.000Z'),
+        },
+        event: {
+          tier: 3,
+          OR: [
+            { status: WorldBossEventStatus.DEFEATED },
+            { status: WorldBossEventStatus.REWARDED },
+            { defeatedAt: { not: null } },
+            { currentHp: { lte: 0 } },
+          ],
+        },
+      },
+    });
   });
 
   it('liquida em lote participantes offline e marca o evento como recompensado', async () => {
@@ -155,6 +563,16 @@ describe('WorldBossesService rewards', () => {
       { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService,
     ) as unknown as {
       formatBoss(boss: Record<string, unknown>): {
+        petRewardPolicy: {
+          maxCocoonsPerTier: number;
+          subsequentCocoonChanceMultiplier: number;
+          subsequentFragmentQuantity: number;
+        };
+        xpRewardPolicy: {
+          unrestrictedThroughTier: number;
+          secondVictoryMultiplier: number;
+          subsequentVictoryMultiplier: number;
+        };
         rewards: Array<{ randomPetCocoon?: boolean }>;
       };
     };
@@ -191,6 +609,16 @@ describe('WorldBossesService rewards', () => {
     });
 
     expect(formatted.rewards[0]?.randomPetCocoon).toBe(true);
+    expect(formatted.petRewardPolicy).toMatchObject({
+      maxCocoonsPerTier: 1,
+      subsequentCocoonChanceMultiplier: 0.01,
+      subsequentFragmentQuantity: 1,
+    });
+    expect(formatted.xpRewardPolicy).toMatchObject({
+      unrestrictedThroughTier: 1,
+      secondVictoryMultiplier: 0.5,
+      subsequentVictoryMultiplier: 0.25,
+    });
   });
 });
 

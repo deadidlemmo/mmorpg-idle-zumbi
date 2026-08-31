@@ -46,6 +46,64 @@ describe('item economy config', () => {
   });
 
   it.each([
+    [3, Rarity.UNCOMMON, 760],
+    [4, Rarity.UNCOMMON, 1_226],
+    [5, Rarity.RARE, 3_226],
+  ])(
+    'applies the craftable-equipment liquidation floor at tier %s',
+    (tier, rarity, expected) => {
+      expect(
+        calculateBlackMarketSellValue({
+          tier,
+          rarity,
+          inventoryType: InventoryItemType.EQUIPMENT,
+          isCraftable: true,
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  it.each([
+    [1, Rarity.COMMON, 24],
+    [2, Rarity.COMMON, 48],
+  ])(
+    'preserves the existing craftable-equipment value at tier %s',
+    (tier, rarity, expected) => {
+      expect(
+        calculateBlackMarketSellValue({
+          tier,
+          rarity,
+          inventoryType: InventoryItemType.EQUIPMENT,
+          isCraftable: true,
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  it('does not raise the value of non-craftable equipment', () => {
+    expect(
+      calculateBlackMarketSellValue({
+        tier: 5,
+        rarity: Rarity.RARE,
+        inventoryType: InventoryItemType.EQUIPMENT,
+        isCraftable: false,
+      }),
+    ).toBe(473);
+  });
+
+  it('keeps bound craftable equipment unsellable', () => {
+    expect(
+      calculateBlackMarketSellValue({
+        tier: 5,
+        rarity: Rarity.RARE,
+        inventoryType: InventoryItemType.EQUIPMENT,
+        isCraftable: true,
+        isSellable: false,
+      }),
+    ).toBe(0);
+  });
+
+  it.each([
     [1, Rarity.COMMON, 2],
     [3, Rarity.UNCOMMON, 9],
     [5, Rarity.RARE, 32],

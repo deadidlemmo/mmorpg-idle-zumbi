@@ -81,4 +81,8 @@ A transição `ENCOUNTER_READY -> COMBAT_ACTIVE` passou a usar `ReadCommitted`. 
 
 Este resultado prova capacidade técnica local, não equilíbrio econômico. A distribuição T1-T5 amplia a cobertura de código, mas continua sendo sintética. Nenhum preço, drop, recompensa, poção ou atributo foi alterado.
 
-O gargalo de aproximadamente 496-860 horas de calendário para insumos de pets continua válido até haver amostras reais suficientes por atividade, classe, tier e posição do tier.
+O gargalo antigo de 496-860 horas foi recalibrado depois deste ensaio. O
+contrato atual projeta 133-240 horas de calendário para os insumos no perfil de
+uma vitória elegível por dia. O teste de carga continua provando apenas
+capacidade técnica; a telemetria real de bosses precisa atingir a amostra mínima
+antes de uma nova revisão de recompensas.

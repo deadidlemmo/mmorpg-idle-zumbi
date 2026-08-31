@@ -4,24 +4,25 @@ import {
   useState,
   type ChangeEvent,
   type CSSProperties,
-} from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import goldIcon from '../../../assets/images/coins/gold.webp';
-import { normalizeClassName } from '../../characters/api/characters.api';
-import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
-import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
-import { DashboardEquipmentBody } from '../../dashboard/components/DashboardEquipmentBody';
-import '../../dashboard/dashboard.css';
+} from "react";
+import { Link, Navigate, useParams } from "react-router-dom";
+import goldIcon from "../../../assets/images/coins/gold.webp";
+import { normalizeClassName } from "../../characters/api/characters.api";
+import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
+import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
+import { DashboardEquipmentBody } from "../../dashboard/components/DashboardEquipmentBody";
+import "../../dashboard/dashboard.css";
 import type {
   CharacterOverviewResponse,
   DashboardCharacterViewModel,
   DashboardEquipmentItem,
   DashboardEquipmentViewModel,
-} from '../../dashboard/types/dashboard.types';
-import { EmptyInventoryState } from '../components/EmptyInventoryState';
-import { InventoryFilters } from '../components/InventoryFilters';
-import { InventoryGrid } from '../components/InventoryGrid';
-import { InventoryItemDetailsModal } from '../components/InventoryItemDetailsModal';
+} from "../../dashboard/types/dashboard.types";
+import { EmptyInventoryState } from "../components/EmptyInventoryState";
+import { InventoryFilters } from "../components/InventoryFilters";
+import { InventoryExchangeModal } from "../components/InventoryExchangeModal";
+import { InventoryGrid } from "../components/InventoryGrid";
+import { InventoryItemDetailsModal } from "../components/InventoryItemDetailsModal";
 import {
   getCharacterBank,
   getCharacterEquipment,
@@ -32,15 +33,15 @@ import {
   sellInventoryItemToBlackMarket,
   unequipInventoryItem,
   withdrawInventoryItemFromBank,
-} from '../api/inventory.api';
-import { useInventory } from '../hooks/useInventory';
-import '../styles/inventory.css';
+} from "../api/inventory.api";
+import { useInventory } from "../hooks/useInventory";
+import "../styles/inventory.css";
 import type {
   InventoryEntry,
   InventoryFilterKey,
   InventoryItemActionFeedback,
   InventoryItemActionViewModel,
-} from '../types/inventory.types';
+} from "../types/inventory.types";
 import {
   buildInventoryFilters,
   filterInventoryItems,
@@ -53,9 +54,9 @@ import {
   getInventoryItemRarityCssVariables,
   getInventoryItemVisualRarity,
   getInventoryPrimaryDetail,
-} from '../utils/inventory.utils';
+} from "../utils/inventory.utils";
 
-type InventoryTabKey = 'inventory' | 'equipped' | 'bank';
+type InventoryTabKey = "inventory" | "equipped" | "bank";
 
 const INVENTORY_TABS: Array<{
   key: InventoryTabKey;
@@ -63,19 +64,19 @@ const INVENTORY_TABS: Array<{
   description: string;
 }> = [
   {
-    key: 'inventory',
-    label: 'Inventário',
-    description: 'Itens guardados na mochila',
+    key: "inventory",
+    label: "Inventário",
+    description: "Itens guardados na mochila",
   },
   {
-    key: 'equipped',
-    label: 'Equipados',
-    description: 'Conjunto ativo do personagem',
+    key: "equipped",
+    label: "Equipados",
+    description: "Conjunto ativo do personagem",
   },
   {
-    key: 'bank',
-    label: 'Banco',
-    description: 'Armazenamento seguro',
+    key: "bank",
+    label: "Banco",
+    description: "Armazenamento seguro",
   },
 ];
 
@@ -83,17 +84,17 @@ function useIsMobileInventoryDetails() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 760px)');
+    const mediaQuery = window.matchMedia("(max-width: 760px)");
 
     function updateIsMobile() {
       setIsMobile(mediaQuery.matches);
     }
 
     updateIsMobile();
-    mediaQuery.addEventListener('change', updateIsMobile);
+    mediaQuery.addEventListener("change", updateIsMobile);
 
     return () => {
-      mediaQuery.removeEventListener('change', updateIsMobile);
+      mediaQuery.removeEventListener("change", updateIsMobile);
     };
   }, []);
 
@@ -106,13 +107,13 @@ function buildCharacterViewModel(
   const character = overview.character;
 
   const className =
-    character.class?.name ?? character.gameClass?.name ?? 'Lutador';
+    character.class?.name ?? character.gameClass?.name ?? "Lutador";
 
   const currentMapName =
     character.currentMap?.name ??
     character.map?.name ??
     overview.progression?.currentMap?.name ??
-    'Sem mapa';
+    "Sem mapa";
 
   return {
     ...character,
@@ -186,7 +187,7 @@ function buildCharacterViewModel(
 
     levelProgress: character.levelProgress ?? null,
 
-    status: character.status ?? 'ACTIVE',
+    status: character.status ?? "ACTIVE",
 
     currentHp: character.currentHp ?? character.maxHp ?? 1,
     maxHp: character.maxHp ?? 1,
@@ -223,12 +224,12 @@ function buildCharacterViewModel(
 type InventoryEntryLoose = InventoryEntry & {
   id?: string | null;
   inventoryItemId?: string | null;
-  item?: InventoryEntry['item'] & {
+  item?: InventoryEntry["item"] & {
     id?: string | null;
   };
 };
 
-type InventorySelectionSource = 'inventory' | 'equipped' | 'bank';
+type InventorySelectionSource = "inventory" | "equipped" | "bank";
 
 interface InventorySelectionState {
   source: InventorySelectionSource;
@@ -236,30 +237,30 @@ interface InventorySelectionState {
   emptySlotLabel?: string | null;
 }
 
-const EMPTY_PANEL_TEXT = 'Clique em um slot para visualizar os detalhes.';
+const EMPTY_PANEL_TEXT = "Clique em um slot para visualizar os detalhes.";
 
 function isEquipmentEntry(entry: InventoryEntry) {
-  const entryType = String(entry.type ?? '').toUpperCase();
-  const slot = String(entry.item.slot ?? '').toUpperCase();
+  const entryType = String(entry.type ?? "").toUpperCase();
+  const slot = String(entry.item.slot ?? "").toUpperCase();
 
   return (
-    entryType === 'EQUIPMENT' && slot !== 'MATERIAL' && slot !== 'CONSUMABLE'
+    entryType === "EQUIPMENT" && slot !== "MATERIAL" && slot !== "CONSUMABLE"
   );
 }
 
 function isConsumableEntry(entry: InventoryEntry) {
-  const entryType = String(entry.type ?? '').toUpperCase();
-  const slot = String(entry.item.slot ?? '').toUpperCase();
+  const entryType = String(entry.type ?? "").toUpperCase();
+  const slot = String(entry.item.slot ?? "").toUpperCase();
 
-  return entryType === 'CONSUMABLE' || slot === 'CONSUMABLE';
+  return entryType === "CONSUMABLE" || slot === "CONSUMABLE";
 }
 
 function isBlackMarketStackableEntry(entry: InventoryEntry) {
-  const entryType = String(entry.type ?? '').toUpperCase();
-  const slot = String(entry.item.slot ?? '').toUpperCase();
+  const entryType = String(entry.type ?? "").toUpperCase();
+  const slot = String(entry.item.slot ?? "").toUpperCase();
 
   return (
-    entryType !== 'EQUIPMENT' && (slot === 'MATERIAL' || slot === 'CONSUMABLE')
+    entryType !== "EQUIPMENT" && (slot === "MATERIAL" || slot === "CONSUMABLE")
   );
 }
 
@@ -270,7 +271,10 @@ function getBlackMarketUnitValue(entry: InventoryEntry) {
     return Math.floor(backendValue);
   }
 
-  const tier = Math.min(10, Math.max(1, Math.floor(Number(entry.item.tier) || 1)));
+  const tier = Math.min(
+    10,
+    Math.max(1, Math.floor(Number(entry.item.tier) || 1)),
+  );
   const baseValueByTier: Record<number, number> = {
     1: 3,
     2: 6,
@@ -296,12 +300,15 @@ function getBlackMarketUnitValue(entry: InventoryEntry) {
       ? 2
       : 1;
   const rarityMultiplier =
-    rarityMultiplierByKey[String(entry.item.rarity ?? 'COMMON').toUpperCase()] ??
-    1;
+    rarityMultiplierByKey[
+      String(entry.item.rarity ?? "COMMON").toUpperCase()
+    ] ?? 1;
 
   return Math.max(
     1,
-    Math.floor((baseValueByTier[tier] ?? 3) * typeMultiplier * rarityMultiplier),
+    Math.floor(
+      (baseValueByTier[tier] ?? 3) * typeMultiplier * rarityMultiplier,
+    ),
   );
 }
 
@@ -321,57 +328,65 @@ function getInventoryItemActions(
 ): InventoryItemActionViewModel[] {
   if (!entry || entry.quantity <= 0) return [];
 
-  if (source === 'equipped' && isEquipmentEntry(entry)) {
+  if (source === "equipped" && isEquipmentEntry(entry)) {
     return [
       {
-        kind: 'unequip',
-        label: 'Desequipar',
-        description: 'Remove este item do slot atual do personagem.',
+        kind: "unequip",
+        label: "Desequipar",
+        description: "Remove este item do slot atual do personagem.",
       },
     ];
   }
 
-  if (source === 'bank') {
+  if (source === "bank") {
     return [
       {
-        kind: 'withdraw',
-        label: 'Retirar',
-        description: 'Move este item do banco para a mochila.',
+        kind: "withdraw",
+        label: "Retirar",
+        description: "Move este item do banco para a mochila.",
       },
     ];
   }
 
-  if (source !== 'inventory') return [];
+  if (source !== "inventory") return [];
 
   const actions: InventoryItemActionViewModel[] = [];
 
   if (isConsumableEntry(entry)) {
     actions.push({
-      kind: 'consume',
-      label: 'Usar',
-      description: 'Consome 1 unidade e aplica o efeito do item.',
+      kind: "consume",
+      label: "Usar",
+      description: "Consome 1 unidade e aplica o efeito do item.",
     });
   }
 
   if (isEquipmentEntry(entry)) {
     actions.push({
-      kind: 'equip',
-      label: 'Equipar',
-      description: 'Move este item para o slot compat\u00edvel do personagem.',
+      kind: "equip",
+      label: "Equipar",
+      description: "Move este item para o slot compat\u00edvel do personagem.",
+    });
+  }
+
+  if (entry.item.exchangeCurrency) {
+    actions.push({
+      kind: "exchange",
+      label: "Trocar",
+      description: "Escolha um recurso do mesmo tier e confirme a quantidade.",
     });
   }
 
   actions.push({
-    kind: 'deposit',
-    label: 'Enviar ao banco',
-    description: '',
+    kind: "deposit",
+    label: "Enviar ao banco",
+    description: "",
   });
 
   if (entry.item.isSellable !== false) {
     actions.push({
-      kind: 'blackMarket',
-      label: 'Vender',
-      description: 'Converte este item em Gold sem passar pelo Mercador.',
+      kind: "blackMarket",
+      label: "Vender",
+      description: "Converte este item em Gold sem passar pelo Mercador.",
     });
   }
 
@@ -402,7 +417,7 @@ function buildEquippedInventoryEntry(
   return {
     inventoryItemId: `equipped-${item.id}`,
     quantity: 1,
-    type: 'EQUIPMENT',
+    type: "EQUIPMENT",
     item: {
       id: item.id,
       name: item.name,
@@ -442,13 +457,13 @@ function getInventoryEntryId(entry?: InventoryEntry | null) {
 }
 
 function hasPositiveNumber(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
 function formatQuantity(quantity?: number | null) {
   const safeQuantity = Math.max(0, Math.floor(Number(quantity) || 0));
 
-  return safeQuantity.toLocaleString('pt-BR');
+  return safeQuantity.toLocaleString("pt-BR");
 }
 
 function buildDetails(entry: InventoryEntry): Array<[string, string]> {
@@ -456,12 +471,12 @@ function buildDetails(entry: InventoryEntry): Array<[string, string]> {
   const rarity = getInventoryItemVisualRarity(entry);
 
   const details: Array<[string, string | null]> = [
-    ['Quantidade', formatQuantity(entry.quantity)],
-    ['Tipo', formatInventoryType(entry)],
-    ['Raridade', rarity.label],
-    ['Tier', typeof item.tier === 'number' ? String(item.tier) : null],
-    ['Origem', formatMaterialOrigin(item.materialOrigin)],
-    ['Classe', item.class?.name ?? null],
+    ["Quantidade", formatQuantity(entry.quantity)],
+    ["Tipo", formatInventoryType(entry)],
+    ["Raridade", rarity.label],
+    ["Tier", typeof item.tier === "number" ? String(item.tier) : null],
+    ["Origem", formatMaterialOrigin(item.materialOrigin)],
+    ["Classe", item.class?.name ?? null],
   ];
 
   return details.filter((detail): detail is [string, string] =>
@@ -477,7 +492,10 @@ interface InventoryDesktopDetailsPanelProps {
   actions?: InventoryItemActionViewModel[];
   actionFeedback?: InventoryItemActionFeedback | null;
   isActionBusy?: boolean;
-  onUseItem?: (entry: InventoryEntry, action: InventoryItemActionViewModel) => void;
+  onUseItem?: (
+    entry: InventoryEntry,
+    action: InventoryItemActionViewModel,
+  ) => void;
 }
 
 function InventoryDesktopDetailsPanel({
@@ -498,7 +516,7 @@ function InventoryDesktopDetailsPanel({
       >
         <div className="inventory-details-panel__empty-icon">▦</div>
 
-        <strong>{emptySlotLabel ? 'Slot vazio' : 'Selecione um item'}</strong>
+        <strong>{emptySlotLabel ? "Slot vazio" : "Selecione um item"}</strong>
 
         <p>
           {emptySlotLabel
@@ -510,14 +528,13 @@ function InventoryDesktopDetailsPanel({
   }
 
   const item = entry.item;
-  const itemName = item.name?.trim() || 'Item desconhecido';
+  const itemName = item.name?.trim() || "Item desconhecido";
   const description = item.description?.trim();
 
   const bonuses = getInventoryBonusList(item);
   const rarity = getInventoryItemVisualRarity(entry);
-  const rarityStyle = getInventoryItemRarityCssVariables(
-    entry,
-  ) as CSSProperties | undefined;
+  const rarityStyle = getInventoryItemRarityCssVariables(entry) as
+    CSSProperties | undefined;
   const typeLabel = formatInventoryType(entry);
   const primaryDetail = getInventoryPrimaryDetail(entry);
   const details = buildDetails(entry);
@@ -577,14 +594,14 @@ function InventoryDesktopDetailsPanel({
           <span>{typeLabel}</span>
           <span>x{formatQuantity(entry.quantity)}</span>
 
-          {typeof item.tier === 'number' ? <span>Tier {item.tier}</span> : null}
+          {typeof item.tier === "number" ? <span>Tier {item.tier}</span> : null}
         </div>
       </div>
 
       <div className="inventory-details-panel__section">
         <h3>Descrição</h3>
 
-        <p>{description || 'Sem descrição registrada para este item.'}</p>
+        <p>{description || "Sem descrição registrada para este item."}</p>
       </div>
 
       {hasStats ? (
@@ -633,7 +650,7 @@ function InventoryDesktopDetailsPanel({
                 disabled={isActionBusy}
                 onClick={() => onUseItem?.(entry, action)}
               >
-                {isActionBusy ? 'Processando...' : action.label}
+                {isActionBusy ? "Processando..." : action.label}
               </button>
             ))}
           </div>
@@ -679,22 +696,22 @@ function InventoryBlackMarketSaleModal({
     if (!entry) return undefined;
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         onClose();
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [entry, onClose]);
 
   if (!entry) return null;
 
   const item = entry.item;
-  const itemName = item.name?.trim() || 'Item desconhecido';
+  const itemName = item.name?.trim() || "Item desconhecido";
   const isStackable = isBlackMarketStackableEntry(entry);
   const maxQuantity = isStackable
     ? Math.max(0, entry.quantity)
@@ -706,9 +723,8 @@ function InventoryBlackMarketSaleModal({
   const canSell = maxQuantity > 0 && !isBusy;
   const imageUrl = getInventoryItemImageUrl(entry);
   const rarity = getInventoryItemVisualRarity(entry);
-  const rarityStyle = getInventoryItemRarityCssVariables(
-    entry,
-  ) as CSSProperties | undefined;
+  const rarityStyle = getInventoryItemRarityCssVariables(entry) as
+    CSSProperties | undefined;
   const quickQuantities = [1, 5, 10].filter(
     (quickQuantity) => quickQuantity <= Math.max(1, maxQuantity),
   );
@@ -830,7 +846,7 @@ function InventoryBlackMarketSaleModal({
                 <button
                   key={quickQuantity}
                   type="button"
-                  className={quantity === quickQuantity ? 'is-active' : ''}
+                  className={quantity === quickQuantity ? "is-active" : ""}
                   onClick={() => onQuantityChange(quickQuantity)}
                   disabled={!canSell}
                 >
@@ -840,7 +856,7 @@ function InventoryBlackMarketSaleModal({
 
               <button
                 type="button"
-                className={quantity === maxQuantity ? 'is-active' : ''}
+                className={quantity === maxQuantity ? "is-active" : ""}
                 onClick={() => onQuantityChange(maxQuantity)}
                 disabled={!canSell}
               >
@@ -870,7 +886,7 @@ function InventoryBlackMarketSaleModal({
             disabled={!canSell}
             onClick={onConfirm}
           >
-            {isBusy ? 'Vendendo...' : 'Confirmar venda'}
+            {isBusy ? "Vendendo..." : "Confirmar venda"}
           </button>
 
           <button
@@ -889,10 +905,10 @@ function InventoryBlackMarketSaleModal({
 
 export function InventoryPage() {
   const { characterId } = useParams();
-  const [activeTab, setActiveTab] = useState<InventoryTabKey>('inventory');
-  const [activeFilter, setActiveFilter] = useState<InventoryFilterKey>('ALL');
+  const [activeTab, setActiveTab] = useState<InventoryTabKey>("inventory");
+  const [activeFilter, setActiveFilter] = useState<InventoryFilterKey>("ALL");
   const [selection, setSelection] = useState<InventorySelectionState>({
-    source: 'inventory',
+    source: "inventory",
     entry: null,
     emptySlotLabel: null,
   });
@@ -905,6 +921,7 @@ export function InventoryPage() {
     entry: InventoryEntry;
     quantity: number;
   } | null>(null);
+  const [exchangeItem, setExchangeItem] = useState<InventoryEntry | null>(null);
   const [blackMarketFeedback, setBlackMarketFeedback] =
     useState<InventoryItemActionFeedback | null>(null);
   const [blackMarketPageFeedback, setBlackMarketPageFeedback] =
@@ -913,16 +930,16 @@ export function InventoryPage() {
   const [equipmentSnapshot, setEquipmentSnapshot] =
     useState<DashboardEquipmentViewModel | null>(null);
   const [isEquipmentLoading, setIsEquipmentLoading] = useState(false);
-  const [equipmentError, setEquipmentError] = useState('');
+  const [equipmentError, setEquipmentError] = useState("");
   const [bankItems, setBankItems] = useState<InventoryEntry[]>([]);
   const [isBankLoading, setIsBankLoading] = useState(false);
-  const [bankError, setBankError] = useState('');
+  const [bankError, setBankError] = useState("");
 
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
   const [isCharacterLoading, setIsCharacterLoading] = useState(true);
-  const [characterError, setCharacterError] = useState('');
+  const [characterError, setCharacterError] = useState("");
 
   const {
     items,
@@ -951,7 +968,7 @@ export function InventoryPage() {
 
       try {
         setIsCharacterLoading(true);
-        setCharacterError('');
+        setCharacterError("");
 
         const data = await getCharacterOverview(characterId);
 
@@ -961,7 +978,7 @@ export function InventoryPage() {
       } catch {
         if (isMounted) {
           setCharacterError(
-            'Não foi possível carregar os dados do personagem.',
+            "Não foi possível carregar os dados do personagem.",
           );
         }
       } finally {
@@ -1003,7 +1020,7 @@ export function InventoryPage() {
   }
 
   useEffect(() => {
-    if (!characterId || activeTab !== 'equipped') return undefined;
+    if (!characterId || activeTab !== "equipped") return undefined;
 
     let isMounted = true;
     const selectedCharacterId = characterId;
@@ -1011,7 +1028,7 @@ export function InventoryPage() {
     async function loadEquipment() {
       try {
         setIsEquipmentLoading(true);
-        setEquipmentError('');
+        setEquipmentError("");
 
         const data = await getCharacterEquipment(selectedCharacterId);
 
@@ -1021,7 +1038,7 @@ export function InventoryPage() {
       } catch {
         if (isMounted) {
           setEquipmentError(
-            'N\u00e3o foi poss\u00edvel carregar os equipamentos.',
+            "N\u00e3o foi poss\u00edvel carregar os equipamentos.",
           );
         }
       } finally {
@@ -1039,7 +1056,7 @@ export function InventoryPage() {
   }, [activeTab, characterId]);
 
   useEffect(() => {
-    if (!characterId || activeTab !== 'bank') return undefined;
+    if (!characterId || activeTab !== "bank") return undefined;
 
     let isMounted = true;
     const selectedCharacterId = characterId;
@@ -1047,7 +1064,7 @@ export function InventoryPage() {
     async function loadBank() {
       try {
         setIsBankLoading(true);
-        setBankError('');
+        setBankError("");
 
         const data = await getCharacterBank(selectedCharacterId);
 
@@ -1056,7 +1073,7 @@ export function InventoryPage() {
         }
       } catch {
         if (isMounted) {
-          setBankError('N\u00e3o foi poss\u00edvel carregar o banco.');
+          setBankError("N\u00e3o foi poss\u00edvel carregar o banco.");
         }
       } finally {
         if (isMounted) {
@@ -1091,7 +1108,7 @@ export function InventoryPage() {
   const selectedDetailsItem = useMemo(() => {
     if (!selection.entry || selection.source !== activeTab) return null;
 
-    if (activeTab === 'equipped') {
+    if (activeTab === "equipped") {
       const currentSelectedItem = findEquipmentItemById(
         equipmentForDisplay,
         selection.entry.item.id,
@@ -1102,7 +1119,7 @@ export function InventoryPage() {
         : null;
     }
 
-    if (activeTab === 'bank') {
+    if (activeTab === "bank") {
       const currentSelectedItemId = getInventoryEntryId(selection.entry);
 
       return (
@@ -1112,7 +1129,7 @@ export function InventoryPage() {
       );
     }
 
-    if (activeTab !== 'inventory') {
+    if (activeTab !== "inventory") {
       return selection.entry;
     }
 
@@ -1161,13 +1178,22 @@ export function InventoryPage() {
   ) {
     if (!characterId) return;
 
-    const action = getInventoryItemActions(entry, activeTab).find((itemAction) => {
-      return itemAction.kind === requestedAction.kind;
-    });
+    const action = getInventoryItemActions(entry, activeTab).find(
+      (itemAction) => {
+        return itemAction.kind === requestedAction.kind;
+      },
+    );
 
     if (!action) return;
 
-    if (action.kind === 'blackMarket') {
+    if (action.kind === "exchange") {
+      setExchangeItem(entry);
+      setIsDetailsModalOpen(false);
+      setItemActionFeedback(null);
+      return;
+    }
+
+    if (action.kind === "blackMarket") {
       setBlackMarketSale({
         entry,
         quantity: clampSaleQuantity(entry, 1),
@@ -1194,32 +1220,32 @@ export function InventoryPage() {
       };
 
       const result =
-        action.kind === 'equip'
+        action.kind === "equip"
           ? await equipInventoryItem(payload)
-          : action.kind === 'unequip'
+          : action.kind === "unequip"
             ? await unequipInventoryItem({
                 characterId,
-                slot: String(entry.item.slot ?? ''),
+                slot: String(entry.item.slot ?? ""),
               })
-            : action.kind === 'deposit'
+            : action.kind === "deposit"
               ? await depositInventoryItemToBank(storagePayload)
-              : action.kind === 'withdraw'
+              : action.kind === "withdraw"
                 ? await withdrawInventoryItemFromBank(storagePayload)
                 : await consumeInventoryItem(payload);
 
       setItemActionFeedback({
-        tone: 'success',
+        tone: "success",
         message:
           result.message ??
-          (action.kind === 'equip'
-            ? 'Item equipado com sucesso.'
-            : action.kind === 'unequip'
-              ? 'Item desequipado com sucesso.'
-              : action.kind === 'deposit'
-                ? 'Item enviado ao banco.'
-                : action.kind === 'withdraw'
-                  ? 'Item retirado do banco.'
-                  : 'Item usado com sucesso.'),
+          (action.kind === "equip"
+            ? "Item equipado com sucesso."
+            : action.kind === "unequip"
+              ? "Item desequipado com sucesso."
+              : action.kind === "deposit"
+                ? "Item enviado ao banco."
+                : action.kind === "withdraw"
+                  ? "Item retirado do banco."
+                  : "Item usado com sucesso."),
       });
 
       await Promise.allSettled([
@@ -1229,32 +1255,61 @@ export function InventoryPage() {
         refreshBankItems(),
       ]);
 
-      if (action.kind === 'unequip') {
-        clearSelection('equipped');
-      } else if (action.kind === 'deposit') {
-        clearSelection('inventory');
-      } else if (action.kind === 'withdraw') {
-        clearSelection('bank');
+      if (action.kind === "unequip") {
+        clearSelection("equipped");
+      } else if (action.kind === "deposit") {
+        clearSelection("inventory");
+      } else if (action.kind === "withdraw") {
+        clearSelection("bank");
       }
     } catch (error) {
       setItemActionFeedback({
-        tone: 'error',
+        tone: "error",
         message: extractInventoryActionApiError(
           error,
-          action.kind === 'equip'
-            ? 'N\u00e3o foi poss\u00edvel equipar este item.'
-            : action.kind === 'unequip'
-              ? 'N\u00e3o foi poss\u00edvel desequipar este item.'
-              : action.kind === 'deposit'
-                ? 'N\u00e3o foi poss\u00edvel enviar este item ao banco.'
-                : action.kind === 'withdraw'
-                  ? 'N\u00e3o foi poss\u00edvel retirar este item do banco.'
-                  : 'N\u00e3o foi poss\u00edvel usar este consum\u00edvel.',
+          action.kind === "equip"
+            ? "N\u00e3o foi poss\u00edvel equipar este item."
+            : action.kind === "unequip"
+              ? "N\u00e3o foi poss\u00edvel desequipar este item."
+              : action.kind === "deposit"
+                ? "N\u00e3o foi poss\u00edvel enviar este item ao banco."
+                : action.kind === "withdraw"
+                  ? "N\u00e3o foi poss\u00edvel retirar este item do banco."
+                  : "N\u00e3o foi poss\u00edvel usar este consum\u00edvel.",
         ),
       });
     } finally {
       setIsItemActionBusy(false);
     }
+  }
+
+  async function handleExchangeComplete(balance: number) {
+    await refetch();
+
+    if (balance <= 0) {
+      setExchangeItem(null);
+      clearSelection("inventory");
+      return;
+    }
+
+    setExchangeItem((current) =>
+      current ? { ...current, quantity: balance } : current,
+    );
+    setSelection((current) => {
+      const currentEntry = current.entry;
+      if (
+        current.source !== "inventory" ||
+        !currentEntry ||
+        currentEntry.item.id !== exchangeItem?.item.id
+      ) {
+        return current;
+      }
+
+      return {
+        ...current,
+        entry: { ...currentEntry, quantity: balance },
+      };
+    });
   }
 
   function handleBlackMarketQuantityChange(quantity: number) {
@@ -1291,7 +1346,7 @@ export function InventoryPage() {
       const remainingQuantity = Math.max(0, entry.quantity - soldQuantity);
 
       setItemActionFeedback({
-        tone: 'success',
+        tone: "success",
         message: successMessage,
       });
 
@@ -1299,11 +1354,11 @@ export function InventoryPage() {
         setBlackMarketSale(null);
         setBlackMarketFeedback(null);
         setBlackMarketPageFeedback({
-          tone: 'success',
+          tone: "success",
           message: successMessage,
         });
         setSelection({
-          source: 'inventory',
+          source: "inventory",
           entry: null,
           emptySlotLabel: null,
         });
@@ -1318,7 +1373,7 @@ export function InventoryPage() {
         });
 
         setBlackMarketFeedback({
-          tone: 'success',
+          tone: "success",
           message: successMessage,
         });
       }
@@ -1327,15 +1382,15 @@ export function InventoryPage() {
     } catch (error) {
       const message = extractInventoryActionApiError(
         error,
-        'Não foi possível vender este item no Mercado Negro.',
+        "Não foi possível vender este item no Mercado Negro.",
       );
 
       setBlackMarketFeedback({
-        tone: 'error',
+        tone: "error",
         message,
       });
       setItemActionFeedback({
-        tone: 'error',
+        tone: "error",
         message,
       });
     } finally {
@@ -1360,7 +1415,7 @@ export function InventoryPage() {
     return (
       <main className="dashboard-error">
         <h1>Erro ao carregar mochila</h1>
-        <p>{characterError || 'Personagem não encontrado.'}</p>
+        <p>{characterError || "Personagem não encontrado."}</p>
       </main>
     );
   }
@@ -1408,7 +1463,7 @@ export function InventoryPage() {
                   <button
                     key={tab.key}
                     type="button"
-                    className={`inventory-tab${isActive ? ' is-active' : ''}`}
+                    className={`inventory-tab${isActive ? " is-active" : ""}`}
                     onClick={() => {
                       setActiveTab(tab.key);
                       clearSelection(tab.key);
@@ -1425,7 +1480,7 @@ export function InventoryPage() {
               })}
             </div>
 
-            {activeTab === 'inventory' ? (
+            {activeTab === "inventory" ? (
               <>
                 <div className="inventory-panel__header inventory-panel__header--stacked">
                   <div>
@@ -1434,7 +1489,7 @@ export function InventoryPage() {
                   </div>
 
                   <p>
-                    <strong>{filteredItems.length}</strong> de {items.length}{' '}
+                    <strong>{filteredItems.length}</strong> de {items.length}{" "}
                     tipos visíveis
                   </p>
                 </div>
@@ -1444,7 +1499,7 @@ export function InventoryPage() {
                   activeFilter={activeFilter}
                   onChange={(filter) => {
                     setActiveFilter(filter);
-                    clearSelection('inventory');
+                    clearSelection("inventory");
                   }}
                 />
 
@@ -1472,7 +1527,7 @@ export function InventoryPage() {
                       items={filteredItems}
                       onSelectItem={(entry) => {
                         updateSelection({
-                          source: 'inventory',
+                          source: "inventory",
                           entry,
                           emptySlotLabel: null,
                         });
@@ -1494,7 +1549,7 @@ export function InventoryPage() {
               </>
             ) : null}
 
-            {activeTab === 'equipped' ? (
+            {activeTab === "equipped" ? (
               <section
                 className="inventory-equipped-tab"
                 aria-labelledby="inventory-equipped-title"
@@ -1531,7 +1586,7 @@ export function InventoryPage() {
                     selectedItemId={selectedItemId}
                     onSelectSlot={({ item, label }) => {
                       updateSelection({
-                        source: 'equipped',
+                        source: "equipped",
                         entry: item ? buildEquippedInventoryEntry(item) : null,
                         emptySlotLabel: item ? null : label,
                       });
@@ -1541,7 +1596,7 @@ export function InventoryPage() {
               </section>
             ) : null}
 
-            {activeTab === 'bank' ? (
+            {activeTab === "bank" ? (
               <section
                 className="inventory-bank-tab"
                 aria-labelledby="inventory-bank-title"
@@ -1581,7 +1636,7 @@ export function InventoryPage() {
                       items={bankItems}
                       onSelectItem={(entry) => {
                         updateSelection({
-                          source: 'bank',
+                          source: "bank",
                           entry,
                           emptySlotLabel: null,
                         });
@@ -1591,7 +1646,7 @@ export function InventoryPage() {
                       emptySlotLabel="Vazio"
                       onSelectEmptySlot={(slotNumber) => {
                         updateSelection({
-                          source: 'bank',
+                          source: "bank",
                           entry: null,
                           emptySlotLabel: `Slot ${slotNumber}`,
                         });
@@ -1650,6 +1705,13 @@ export function InventoryPage() {
           }}
           onQuantityChange={handleBlackMarketQuantityChange}
           onConfirm={handleConfirmBlackMarketSale}
+        />
+
+        <InventoryExchangeModal
+          characterId={characterId}
+          entry={exchangeItem}
+          onClose={() => setExchangeItem(null)}
+          onExchangeComplete={handleExchangeComplete}
         />
       </main>
     </DashboardLayout>

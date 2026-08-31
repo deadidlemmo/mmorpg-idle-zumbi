@@ -32,6 +32,7 @@ import {
 } from '../src/common/config/item-economy.config';
 import { getMissionReward } from '../src/common/config/mission-balance.config';
 import {
+  calculateIncursionFailureEntryRefund,
   calculateIncursionSuccessEntryRefund,
   getIncursionRiskProfile,
 } from '../src/modules/incursions/incursion-risk.util';
@@ -625,6 +626,7 @@ function buildCraftingEconomy(tier: EconomyTier, mobDropUnitGold: number) {
     tier,
     rarity: getItemRarityByTier(tier),
     inventoryType: InventoryItemType.EQUIPMENT,
+    isCraftable: true,
   });
   const gatheringInputQuantity =
     policy.mainGatheringQuantity + policy.secondaryGatheringQuantity;
@@ -645,11 +647,70 @@ function buildCraftingEconomy(tier: EconomyTier, mobDropUnitGold: number) {
   };
 }
 
-function buildIncursionEconomy(tier: EconomyTier) {
+function buildIncursionRecoveryProfile(tier: EconomyTier, rows: MatrixRow[]) {
+  const classes = BASELINE_CLASSES.map((className) => {
+    const selectedRows = selectCombatRows({
+      rows,
+      tier,
+      className,
+      gear: 'CURRENT',
+    });
+    const weightedRows = selectedRows.map((row) => {
+      const mob = mobBaseDefinitions.find(
+        (candidate) =>
+          candidate.tier === tier &&
+          getActiveAutoCombatMobRank(candidate) === row.mobRank,
+      );
+
+      if (!mob) {
+        throw new Error(`Mob T${tier} rank ${row.mobRank} ausente.`);
+      }
+
+      return {
+        row,
+        weight: getActiveAutoCombatEncounterWeight(mob),
+      };
+    });
+    const totalWeight = weightedRows.reduce(
+      (total, entry) => total + entry.weight,
+      0,
+    );
+
+    if (totalWeight <= 0 || weightedRows.length === 0) {
+      throw new Error(`Perfil de recuperacao T${tier} ${className} ausente.`);
+    }
+
+    const weightedAverage = (selector: (row: MatrixRow) => number) =>
+      weightedRows.reduce(
+        (total, entry) =>
+          total + (entry.weight / totalWeight) * selector(entry.row),
+        0,
+      );
+
+    return {
+      maxHp: weightedAverage((row) => row.hp),
+      potionHealAmount: weightedAverage((row) => row.potionHealAmount),
+      potionBuyPrice: weightedRows[0].row.potionBuyPrice,
+    };
+  });
+
+  return {
+    averageMaxHp: average(classes.map((entry) => entry.maxHp)),
+    averagePotionHealAmount: average(
+      classes.map((entry) => entry.potionHealAmount),
+    ),
+    potionBuyPrice: classes[0]?.potionBuyPrice ?? 0,
+  };
+}
+
+function buildIncursionEconomy(tier: EconomyTier, rows: MatrixRow[]) {
+  const recoveryProfile = buildIncursionRecoveryProfile(tier, rows);
+
   return incursionDefinitions
     .filter((incursion) => incursion.tier === tier)
     .map((incursion) => {
       const risk = getIncursionRiskProfile(incursion.riskLevel, 'BALANCED');
+      const successRatio = risk.successChance / 100;
       const goldReward = incursion.lootTable.find(
         (reward) => reward.rewardType === IncursionRewardType.GOLD,
       );
@@ -657,15 +718,31 @@ function buildIncursionEconomy(tier: EconomyTier) {
         ? (goldReward.minQuantity + goldReward.maxQuantity) / 2
         : 0;
       const expectedLootGold = goldReward
-        ? (risk.successChance / 100) *
+        ? successRatio *
           (goldReward.chance / 100) *
           averageGoldOnRoll *
           risk.rewardMultiplier
         : 0;
+      const successEntryRefund = calculateIncursionSuccessEntryRefund(
+        incursion.goldCost,
+      );
+      const failureEntryRefund = calculateIncursionFailureEntryRefund(
+        incursion.goldCost,
+      );
       const expectedEntryRefund =
-        (risk.successChance / 100) *
-        calculateIncursionSuccessEntryRefund(incursion.goldCost);
+        successRatio * successEntryRefund +
+        (1 - successRatio) * failureEntryRefund;
       const expectedGold = expectedLootGold + expectedEntryRefund;
+      const expectedWalletNetGold = expectedGold - incursion.goldCost;
+      const expectedFailureHpLoss =
+        recoveryProfile.averageMaxHp * (1 - successRatio) * risk.failureHpRatio;
+      const expectedRecoveryPotionGold =
+        recoveryProfile.averagePotionHealAmount > 0
+          ? (expectedFailureHpLoss / recoveryProfile.averagePotionHealAmount) *
+            recoveryProfile.potionBuyPrice
+          : 0;
+      const expectedNetGold =
+        expectedWalletNetGold - expectedRecoveryPotionGold;
       const durationHours =
         (incursion.durationSeconds * risk.durationMultiplier) / 3_600;
 
@@ -674,13 +751,15 @@ function buildIncursionEconomy(tier: EconomyTier) {
         durationMinutes: round(durationHours * 60),
         successChancePercent: risk.successChance,
         entryGold: incursion.goldCost,
+        successEntryRefund,
+        failureEntryRefund,
         expectedEntryRefund: round(expectedEntryRefund),
         expectedLootGold: round(expectedLootGold),
         expectedDirectGold: round(expectedGold),
-        expectedNetGold: round(expectedGold - incursion.goldCost),
-        expectedNetGoldPerHour: round(
-          (expectedGold - incursion.goldCost) / durationHours,
-        ),
+        expectedWalletNetGold: round(expectedWalletNetGold),
+        expectedRecoveryPotionGold: round(expectedRecoveryPotionGold),
+        expectedNetGold: round(expectedNetGold),
+        expectedNetGoldPerHour: round(expectedNetGold / durationHours),
       };
     });
 }
@@ -787,7 +866,7 @@ export function buildTierEconomyReport(
       autoCombat: { current, previous, twoBelow },
       gathering: buildGatheringEconomy(tier),
       crafting: buildCraftingEconomy(tier, drops.averageGoldPerDroppedUnit),
-      incursions: buildIncursionEconomy(tier),
+      incursions: buildIncursionEconomy(tier, rows),
       worldBoss: buildWorldBossEconomy(tier),
       sinks: buildTierSinks(tier),
     };

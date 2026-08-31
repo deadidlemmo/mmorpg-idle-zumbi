@@ -13,7 +13,9 @@ import { ConfiguredIoAdapter } from './common/websocket/configured-io.adapter';
 import { RedisIoAdapter } from './common/websocket/redis-io.adapter';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
   const configService = app.get(ConfigService);
   const nodeEnv = configService.get<string>('NODE_ENV');
   const production = nodeEnv?.trim().toLowerCase() === 'production';

@@ -1161,6 +1161,13 @@ describe('AutoCombatService hunting processing', () => {
     prisma.character.findFirst.mockResolvedValue({
       id: 'character-1',
       level: 12,
+      classId: 'class-lutador',
+      class: {
+        id: 'class-lutador',
+        name: 'Lutador',
+      },
+      equipment: null,
+      equippedPet: null,
       user: {
         premiumUntil: null,
       },
@@ -1180,6 +1187,7 @@ describe('AutoCombatService hunting processing', () => {
         map: {
           id: 'map-2',
           minLevel: 1,
+          tier: 2,
         },
         subMap: {
           id: 'submap-map-2',
@@ -1230,6 +1238,22 @@ describe('AutoCombatService hunting processing', () => {
           mapId: 'map-2',
           subMapId: 'submap-map-2',
           phase: AutoCombatSessionPhase.HUNTING,
+          characterLevelSnapshot: 12,
+          classIdSnapshot: 'class-lutador',
+          classNameSnapshot: 'Lutador',
+          equipmentSnapshot: expect.objectContaining({
+            equippedPieceCount: 0,
+          }),
+          huntingSnapshot: {
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            mapId: 'map-2',
+            mapTier: 2,
+          },
+          petSnapshot: { equipped: false },
+          premiumSnapshot: false,
+          premiumUntilSnapshot: null,
         }),
       }),
     );

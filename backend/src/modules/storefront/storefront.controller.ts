@@ -45,6 +45,14 @@ export class StorefrontController {
     return this.storefrontService.createCheckout(this.getUserId(request), dto);
   }
 
+  @Get('orders/:orderId')
+  getOrder(
+    @Req() request: AuthenticatedRequest,
+    @Param('orderId', UUID_V4_PIPE) orderId: string,
+  ) {
+    return this.storefrontService.getOrder(this.getUserId(request), orderId);
+  }
+
   private getUserId(request: AuthenticatedRequest) {
     const userId =
       request.user?.id ?? request.user?.userId ?? request.user?.sub;

@@ -9,6 +9,7 @@ import {
   BellRing,
   Biohazard,
   CheckCircle2,
+  Eye,
   LockKeyhole,
   X,
 } from "lucide-react";
@@ -270,12 +271,12 @@ export function WorldBossAlertProvider({
             <div className="world-boss-global-alert__content">
               <span className="world-boss-global-alert__eyebrow">
                 <BellRing size={14} />
-                Alerta de Ameaça Global
+                Ameaça global
               </span>
               <h2>{event.worldBoss.name}</h2>
               <p>{getWorldBossAlertCopy(activeAlert.milestone)}</p>
               <small>{WORLD_BOSS_REGISTRATION_NOTICE}</small>
-              {feedback ? (
+              {feedback && !isRegistered ? (
                 <div
                   className={`world-boss-global-alert__feedback${
                     isRegistered
@@ -331,6 +332,7 @@ export function WorldBossAlertProvider({
                   navigate(`/dashboard/${characterId}/world-bosses`)
                 }
               >
+                <Eye size={16} />
                 Ver ameaça
               </button>
             </div>

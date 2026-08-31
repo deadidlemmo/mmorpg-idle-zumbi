@@ -58,3 +58,44 @@ describe('VendorService potion tier lock', () => {
     expect(tx.character.updateMany).not.toHaveBeenCalled();
   });
 });
+
+describe('VendorService fragment restrictions', () => {
+  it('rejects a Fragmento de Ameaça as a direct NPC purchase', async () => {
+    const tx = {
+      character: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'character-1',
+          name: 'Teste',
+          level: 30,
+          gold: 10_000,
+          userId: 'user-1',
+        }),
+        updateMany: jest.fn(),
+      },
+      item: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: '00000000-0000-4000-8000-000000000110',
+          name: 'Fragmento de Ameaça T3',
+          slot: ItemSlot.MATERIAL,
+          isSellable: false,
+          isTradable: true,
+          minTier: null,
+        }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn(
+        (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
+      ),
+    };
+    const service = new VendorService(prisma as never);
+
+    await expect(
+      service.buy('user-1', 'character-1', {
+        itemId: '00000000-0000-4000-8000-000000000110',
+        quantity: 1,
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(tx.character.updateMany).not.toHaveBeenCalled();
+  });
+});

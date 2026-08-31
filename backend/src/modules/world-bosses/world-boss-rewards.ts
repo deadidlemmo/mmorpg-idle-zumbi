@@ -5,10 +5,15 @@ import {
   WorldBossEventStatus,
   WorldBossRewardType,
 } from '@prisma/client';
+import { WORLD_BOSS_FRAGMENT_ITEM_FAMILY } from '../../common/config/economy.config';
 
 type WorldBossRewardCandidate = {
   rewardType: WorldBossRewardType;
   itemId?: string | null;
+  itemName?: string | null;
+  item?: {
+    family?: string | null;
+  } | null;
   currency?: EconomyCurrency | null;
   minQuantity: number;
   maxQuantity: number;
@@ -32,6 +37,26 @@ type WorldBossRewardParticipant = {
   contributionPercent: number;
 };
 
+export type WorldBossDailyPetRewardState = {
+  eligibleVictory: boolean;
+  previousEligibleVictories: number;
+  cocoonsGranted: number;
+};
+
+type WorldBossDailyPetRewardPolicy = {
+  fullRewardVictoriesPerTier: number;
+  maxCocoonsPerTier: number;
+  subsequentCocoonChanceMultiplier: number;
+  subsequentFragmentQuantity: number;
+};
+
+type WorldBossDailyXpRewardPolicy = {
+  unrestrictedThroughTier: number;
+  fullRewardVictoriesPerTier: number;
+  secondVictoryMultiplier: number;
+  subsequentVictoryMultiplier: number;
+};
+
 export type SelectedWorldBossReward = {
   rewardType: WorldBossRewardType;
   itemId?: string | null;
@@ -39,6 +64,7 @@ export type SelectedWorldBossReward = {
   quantity: number;
   rarity?: Rarity | null;
   randomPetCocoon: boolean;
+  isWorldBossFragment: boolean;
 };
 
 type PetCocoonCandidate = {
@@ -49,6 +75,120 @@ type PetCocoonCandidate = {
 const PET_COCOON_SPECIALIZATIONS = Object.freeze(
   Object.values(PetSpecialization),
 );
+
+export function getUtcDailyResetWindow(now: Date) {
+  const startsAt = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+  const endsAt = new Date(startsAt);
+  endsAt.setUTCDate(endsAt.getUTCDate() + 1);
+  return { startsAt, endsAt };
+}
+
+export function isWorldBossFragmentReward(
+  reward: Pick<
+    WorldBossRewardCandidate,
+    'rewardType' | 'currency' | 'itemName' | 'item'
+  >,
+) {
+  return (
+    reward.rewardType === WorldBossRewardType.MATERIAL &&
+    (reward.item?.family === WORLD_BOSS_FRAGMENT_ITEM_FAMILY ||
+      /^Fragmento de Ameaça T(?:10|[1-9])$/.test(reward.itemName ?? ''))
+  );
+}
+
+export function applyWorldBossDailyPetRewardPolicy<
+  T extends WorldBossRewardCandidate,
+>(
+  rewards: readonly T[],
+  state: WorldBossDailyPetRewardState,
+  policy: WorldBossDailyPetRewardPolicy,
+) {
+  const receivesFullReward =
+    state.eligibleVictory &&
+    state.previousEligibleVictories < policy.fullRewardVictoriesPerTier;
+
+  return rewards.flatMap((reward) => {
+    const isPetFragment = isWorldBossFragmentReward(reward);
+    const isPetCocoon = reward.rewardType === WorldBossRewardType.PET_EGG;
+
+    if (!isPetFragment && !isPetCocoon) return [reward];
+    if (!state.eligibleVictory) return [];
+
+    if (isPetFragment) {
+      if (receivesFullReward) return [reward];
+
+      const quantity = Math.max(
+        1,
+        Math.floor(policy.subsequentFragmentQuantity),
+      );
+      return [
+        {
+          ...reward,
+          minQuantity: quantity,
+          maxQuantity: quantity,
+          chance: 100,
+          guaranteed: true,
+        },
+      ];
+    }
+
+    if (state.cocoonsGranted >= policy.maxCocoonsPerTier) return [];
+    if (receivesFullReward) return [reward];
+
+    return [
+      {
+        ...reward,
+        chance: reward.chance * policy.subsequentCocoonChanceMultiplier,
+      },
+    ];
+  });
+}
+
+export function getWorldBossDailyXpMultiplier(
+  tier: number,
+  previousEligibleVictories: number,
+  policy: WorldBossDailyXpRewardPolicy,
+) {
+  if (tier <= policy.unrestrictedThroughTier) return 1;
+  if (previousEligibleVictories < policy.fullRewardVictoriesPerTier) return 1;
+  if (previousEligibleVictories === policy.fullRewardVictoriesPerTier) {
+    return policy.secondVictoryMultiplier;
+  }
+  return policy.subsequentVictoryMultiplier;
+}
+
+export function applyWorldBossDailyXpRewardPolicy<
+  T extends WorldBossRewardCandidate,
+>(
+  rewards: readonly T[],
+  tier: number,
+  state: Pick<
+    WorldBossDailyPetRewardState,
+    'eligibleVictory' | 'previousEligibleVictories'
+  >,
+  policy: WorldBossDailyXpRewardPolicy,
+) {
+  if (!state.eligibleVictory) return [...rewards];
+
+  const multiplier = getWorldBossDailyXpMultiplier(
+    tier,
+    state.previousEligibleVictories,
+    policy,
+  );
+  if (multiplier === 1) return [...rewards];
+
+  return rewards.map((reward) => {
+    if (reward.rewardType !== WorldBossRewardType.XP) return reward;
+
+    return {
+      ...reward,
+      minQuantity: Math.max(1, Math.floor(reward.minQuantity * multiplier)),
+      maxQuantity: Math.max(1, Math.floor(reward.maxQuantity * multiplier)),
+    };
+  });
+}
 
 export function wasWorldBossDefeated(event: WorldBossRewardEvent) {
   return (
@@ -116,6 +256,7 @@ export function selectWorldBossRewards(params: {
         quantity,
         rarity: reward.rarity,
         randomPetCocoon: reward.randomPetCocoon ?? false,
+        isWorldBossFragment: isWorldBossFragmentReward(reward),
       });
       return selected;
     },

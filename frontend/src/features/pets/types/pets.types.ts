@@ -68,6 +68,15 @@ export interface PetDefinitionState extends PetSummary {
     rarity: string;
     family: string;
   };
+  fragmentItem: {
+    id: string;
+    name: string;
+    slug?: string | null;
+    description?: string | null;
+    tier: number;
+    rarity: string;
+    family: string;
+  };
   characterPet: CharacterPet | null;
   canEquip: boolean;
   canSell: boolean;

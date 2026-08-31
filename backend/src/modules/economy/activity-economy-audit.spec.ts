@@ -102,7 +102,39 @@ describe('complete T1-T5 activity economy audit', () => {
     }
   });
 
-  it('measures all incursion approaches, entry loss, failure and rewards', () => {
+  it('keeps T3-T5 NPC crafting liquidation inside the calibrated band', () => {
+    for (const tier of report.tiers.filter(
+      (candidate) => candidate.tier >= 3,
+    )) {
+      const autoCombat = tier.autoCombat.summary;
+      const crafting = tier.crafting.selfSupplySummary;
+
+      for (const recipe of tier.crafting.recipes) {
+        const recoveryRatio =
+          recipe.outputNpcSaleGold / recipe.inputNpcOpportunityGold;
+
+        expect(recoveryRatio).toBeGreaterThanOrEqual(0.25);
+        expect(recoveryRatio).toBeLessThanOrEqual(0.35);
+        expect(recipe.outputNpcSaleGold).toBeLessThan(
+          recipe.inputNpcOpportunityGold,
+        );
+      }
+
+      expect(crafting.netGoldEquivalentPerHour).toBeGreaterThan(0);
+      expect(
+        crafting.netGoldEquivalentPerHour / autoCombat.netGoldEquivalentPerHour,
+      ).toBeLessThanOrEqual(0.2);
+      expect(report.findings).toContainEqual(
+        expect.objectContaining({
+          severity: 'INFO',
+          code: 'CRAFTING_NPC_LIQUIDATION_CALIBRATED',
+          tier: tier.tier,
+        }),
+      );
+    }
+  });
+
+  it('keeps incursions viable without replacing auto-combat income', () => {
     for (const tier of report.tiers) {
       expect(tier.incursions).toHaveLength(6);
       expect(new Set(tier.incursions.map((row) => row.name)).size).toBe(2);
@@ -112,6 +144,10 @@ describe('complete T1-T5 activity economy audit', () => {
 
       for (const row of tier.incursions) {
         expect(row.entryGold).toBeGreaterThan(0);
+        expect(row.successEntryRefundGold).toBe(row.entryGold);
+        expect(row.failureEntryRefundGold).toBe(
+          Math.floor(row.entryGold * 0.9),
+        );
         expect(row.expectedEntryRefundGoldPerAttempt).toBeGreaterThan(0);
         expect(row.expectedDirectGoldPerAttempt).toBeGreaterThanOrEqual(
           row.expectedEntryRefundGoldPerAttempt,
@@ -122,11 +158,46 @@ describe('complete T1-T5 activity economy audit', () => {
         expect(row.expectedIncursionTokensPerAttempt).toBeGreaterThan(0);
         expect(row.expectedReinforcementFragmentsPerAttempt).toBeGreaterThan(0);
 
+        expect(row.expectedWalletNetGoldPerAttempt).toBeGreaterThan(0);
         if (row.approach === 'BALANCED') {
-          expect(row.expectedNetGoldPerAttempt).toBeGreaterThanOrEqual(
-            -row.entryGold * 0.35,
-          );
+          expect(row.expectedNetGoldPerAttempt).toBeGreaterThan(0);
         }
+      }
+
+      const autoCombat = tier.autoCombat.summary;
+      const balanced = tier.representativeActivities.find(
+        (row) => row.mode === 'BALANCED_MEDIA_DAS_2_INCURSOES',
+      );
+      expect(balanced).toBeDefined();
+      expect(
+        (balanced?.characterXpPerHour ?? 0) / autoCombat.characterXpPerHour,
+      ).toBeGreaterThanOrEqual(0.6);
+      expect(
+        (balanced?.characterXpPerHour ?? 0) / autoCombat.characterXpPerHour,
+      ).toBeLessThanOrEqual(0.7);
+      expect(balanced?.netGoldEquivalentPerHour).toBeGreaterThanOrEqual(0);
+      expect(
+        (balanced?.netGoldEquivalentPerHour ?? 0) /
+          autoCombat.netGoldEquivalentPerHour,
+      ).toBeLessThanOrEqual(0.1);
+
+      for (const target of [
+        { approach: 'CAUTIOUS', minimum: 0.43, maximum: 0.52 },
+        { approach: 'BALANCED', minimum: 0.6, maximum: 0.7 },
+        { approach: 'AGGRESSIVE', minimum: 0.85, maximum: 1 },
+      ] as const) {
+        const rows = tier.incursions.filter(
+          (row) => row.approach === target.approach,
+        );
+        const averageXpPerHour =
+          rows.reduce(
+            (total, row) => total + row.summary.characterXpPerHour,
+            0,
+          ) / rows.length;
+        const ratio = averageXpPerHour / autoCombat.characterXpPerHour;
+
+        expect(ratio).toBeGreaterThanOrEqual(target.minimum);
+        expect(ratio).toBeLessThanOrEqual(target.maximum);
       }
     }
   });
@@ -232,15 +303,16 @@ describe('complete T1-T5 activity economy audit', () => {
       expect(new Set(tier.affordability.map((row) => row.targetKey))).toEqual(
         new Set(['POTIONS_100', 'REINFORCEMENT_SET_PLUS_3', 'PET_INCUBATION']),
       );
-      expect(
-        tier.affordability.filter(
-          (row) => row.incomeSource === 'INCURSION_BALANCED',
-        ),
-      ).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ hours: null, days: null }),
-        ]),
+      const incursionAffordability = tier.affordability.filter(
+        (row) => row.incomeSource === 'INCURSION_BALANCED',
       );
+      expect(incursionAffordability).not.toHaveLength(0);
+      expect(
+        incursionAffordability.every(
+          (row) =>
+            typeof row.hours === 'number' && typeof row.days === 'number',
+        ),
+      ).toBe(true);
       expect(
         tier.affordability
           .filter((row) => row.incomeSource === 'AUTO_COMBAT_SELL_ALL')
@@ -249,7 +321,7 @@ describe('complete T1-T5 activity economy audit', () => {
     }
   });
 
-  it('reports unavailable scheduled pet inputs as N/D instead of zero hours', () => {
+  it('separates individual pet availability from empty global events', () => {
     const zeroActivation = createFallbackWorldBossSimulationCalibration({
       asOf: new Date('2026-08-29T00:00:00.000Z'),
     });
@@ -299,17 +371,30 @@ describe('complete T1-T5 activity economy audit', () => {
       database,
     });
 
-    for (const tier of databaseReport.tiers) {
-      expect(tier.progression.expectedCalendarHoursForPetFragments).toBeNull();
-      expect(tier.progression.expectedCalendarHoursForPetCocoon).toBeNull();
-      expect(tier.progression.expectedCalendarHoursUntilPetInputs).toBeNull();
+    const expectedPetInputHours = [133.33, 150, 171.43, 200, 240];
+
+    for (const [index, tier] of databaseReport.tiers.entries()) {
+      expect(
+        tier.worldBosses.every(
+          (boss) => boss.calendarSummary.grossGoldEquivalentPerHour === 0,
+        ),
+      ).toBe(true);
+      expect(tier.progression.expectedCalendarHoursForPetFragments).toBe(120);
+      expect(tier.progression.expectedCalendarHoursForPetCocoon).toBeCloseTo(
+        expectedPetInputHours[index],
+        2,
+      );
+      expect(tier.progression.expectedCalendarHoursUntilPetInputs).toBeCloseTo(
+        expectedPetInputHours[index],
+        2,
+      );
       expect(
         tier.affordability.find(
           (row) =>
             row.targetKey === 'PET_INCUBATION' &&
             row.incomeSource === 'AUTO_COMBAT_SELL_ALL',
         )?.additionalRequirement,
-      ).toContain('N/D de calendario');
+      ).toContain('1 vitoria elegivel/dia');
     }
   });
 });

@@ -69,6 +69,7 @@ export interface InventoryItemDetails {
   maxTier?: number | null;
   isSellable?: boolean | null;
   isTradable?: boolean | null;
+  exchangeCurrency?: "INCURSION_TOKEN" | "WORLD_BOSS_FRAGMENT" | null;
   isCraftable?: boolean | null;
   class?: InventoryItemClassSummary | null;
   map?: InventoryItemMapSummary | null;
@@ -100,7 +101,13 @@ export interface InventoryFilterOption {
 }
 
 export type InventoryItemActionKind =
-  "equip" | "consume" | "unequip" | "deposit" | "withdraw" | "blackMarket";
+  | "equip"
+  | "consume"
+  | "unequip"
+  | "deposit"
+  | "withdraw"
+  | "exchange"
+  | "blackMarket";
 
 export interface InventoryItemActionViewModel {
   kind: InventoryItemActionKind;

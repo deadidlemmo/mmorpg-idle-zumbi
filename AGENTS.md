@@ -321,10 +321,11 @@ Models atuais de alto impacto:
 
 Nao transforme a tela de membership em fonte de verdade. O backend decide se premium esta ativo.
 
-O catalogo comercial fica em `/storefront/characters/:characterId`. O contrato
-`POST /storefront/checkout` permanece desativado ate existirem precos,
-persistencia de pedidos, adaptadores e webhooks validados para Mercado Pago ou
-Stripe. Nunca aceite valor enviado pelo frontend como fonte de verdade.
+O catalogo comercial fica em `/storefront/characters/:characterId`. O checkout
+usa Mercado Pago ou Stripe quando as credenciais e os webhooks assinados estao
+configurados no backend. Pedidos, pagamentos e assinaturas sao persistidos e a
+entrega e idempotente. Nunca aceite valor enviado pelo frontend como fonte de
+verdade nem exponha segredos em variaveis `VITE_*`.
 
 ## Regras de atividades exclusivas
 
@@ -641,5 +642,5 @@ Realtime:
 - Dockerfile de aplicacao nao identificado.
 - `LICENSE` nao identificado; backend declara `UNLICENSED`.
 - Confirmar se `VITE_BACKEND_URL` deve continuar como fallback legado ou se deve ser consolidado em `VITE_API_URL`/`VITE_SOCKET_URL`.
-- Premium comercial depende de provedor, webhook e conciliacao ainda nao definidos.
+- Premium comercial exige homologacao sandbox e configuracao dos webhooks antes de ativar credenciais de producao.
 - T6-T10 permanecem fora do cap jogavel de lancamento.

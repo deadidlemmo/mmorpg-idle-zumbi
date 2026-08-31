@@ -72,6 +72,39 @@ enum CosmeticGrantSource {
   ADMIN
 }
 
+enum StorefrontPaymentProvider {
+  MERCADO_PAGO
+  STRIPE
+}
+
+enum StorefrontOrderStatus {
+  PENDING
+  CHECKOUT_CREATED
+  PAYMENT_PENDING
+  FULFILLED
+  CANCELLED
+  EXPIRED
+  FAILED
+  REFUNDED
+  CHARGEBACK_REVIEW
+}
+
+enum StorefrontPaymentStatus {
+  PENDING
+  APPROVED
+  FAILED
+  REFUNDED
+  CHARGEBACK_REVIEW
+}
+
+enum StorefrontSubscriptionStatus {
+  PENDING
+  ACTIVE
+  PAST_DUE
+  PAUSED
+  CANCELLED
+}
+
 enum ItemSlot {
   MAIN_HAND
   OFF_HAND
@@ -279,13 +312,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  characters             Character[]
-  passwordResetTokens    PasswordResetToken[]
-  auditLogs              AuditLog[]                @relation("AuditActor")
-  sentFriendRequests     Friendship[]              @relation("FriendRequester")
-  receivedFriendRequests Friendship[]              @relation("FriendAddressee")
-  chatMessages           ChatMessage[]
-  cosmeticEntitlements   UserCosmeticEntitlement[]
+  characters              Character[]
+  passwordResetTokens     PasswordResetToken[]
+  auditLogs               AuditLog[]                @relation("AuditActor")
+  sentFriendRequests      Friendship[]              @relation("FriendRequester")
+  receivedFriendRequests  Friendship[]              @relation("FriendAddressee")
+  chatMessages            ChatMessage[]
+  cosmeticEntitlements    UserCosmeticEntitlement[]
+  storefrontOrders        StorefrontOrder[]
+  storefrontSubscriptions StorefrontSubscription[]
 
   @@map("users")
 }
@@ -533,6 +568,7 @@ model Character {
   marketListings            MarketListing[]             @relation("MarketListingSeller")
   marketPurchases           MarketPurchase[]            @relation("MarketPurchaseBuyer")
   marketSales               MarketPurchase[]            @relation("MarketPurchaseSeller")
+  storefrontOrders          StorefrontOrder[]
 
   gatheringSkills CharacterGatheringSkill[]
   craftingSkill   CharacterCraftingSkill?
@@ -642,6 +678,89 @@ model UserCosmeticEntitlement {
   @@index([cosmeticId])
   @@index([source, sourceReference])
   @@map("user_cosmetic_entitlements")
+}
+
+model StorefrontOrder {
+  id             String                    @id @default(uuid())
+  idempotencyKey String                    @unique @db.VarChar(180)
+  userId         String
+  characterId    String
+  offerKey       String                    @db.VarChar(80)
+  offerKind      String                    @db.VarChar(32)
+  provider       StorefrontPaymentProvider
+  status         StorefrontOrderStatus     @default(PENDING)
+  amountCents    Int
+  currency       String                    @default("BRL") @db.VarChar(3)
+
+  providerCheckoutId String? @db.VarChar(180)
+  checkoutUrl        String?
+  providerStatus     String? @db.VarChar(80)
+  failureCode        String? @db.VarChar(120)
+
+  expiresAt   DateTime?
+  paidAt      DateTime?
+  fulfilledAt DateTime?
+  cancelledAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character    Character               @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  payments     StorefrontPayment[]
+  subscription StorefrontSubscription?
+
+  @@unique([provider, providerCheckoutId])
+  @@index([userId, createdAt])
+  @@index([characterId, createdAt])
+  @@index([status, createdAt])
+  @@map("storefront_orders")
+}
+
+model StorefrontPayment {
+  id                   String                    @id @default(uuid())
+  orderId              String
+  provider             StorefrontPaymentProvider
+  providerPaymentId    String                    @db.VarChar(180)
+  providerEventId      String?                   @db.VarChar(180)
+  status               StorefrontPaymentStatus
+  providerStatus       String?                   @db.VarChar(80)
+  amountCents          Int
+  currency             String                    @default("BRL") @db.VarChar(3)
+  paidAt               DateTime?
+  periodEndsAt         DateTime?
+  fulfillmentAppliedAt DateTime?
+  metadata             Json?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  order StorefrontOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerPaymentId])
+  @@index([orderId, createdAt])
+  @@index([status, createdAt])
+  @@map("storefront_payments")
+}
+
+model StorefrontSubscription {
+  id                     String                       @id @default(uuid())
+  orderId                String                       @unique
+  userId                 String
+  provider               StorefrontPaymentProvider
+  providerSubscriptionId String                       @db.VarChar(180)
+  providerCustomerId     String?                      @db.VarChar(180)
+  status                 StorefrontSubscriptionStatus @default(PENDING)
+  currentPeriodEndsAt    DateTime?
+  cancelAtPeriodEnd      Boolean                      @default(false)
+  cancelledAt            DateTime?
+  createdAt              DateTime                     @default(now())
+  updatedAt              DateTime                     @updatedAt
+
+  order StorefrontOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubscriptionId])
+  @@index([userId, status])
+  @@map("storefront_subscriptions")
 }
 
 model CharacterAppearance {
@@ -847,6 +966,7 @@ model Item {
   worldBossGrantedRewards WorldBossGrantedReward[]
   economyLedgerEntries    EconomyLedgerEntry[]
   petDefinition           PetDefinition?           @relation("PetCocoonItem")
+  petFragmentDefinitions  PetDefinition[]          @relation("PetFragmentItem")
   marketListings          MarketListing[]
   marketPurchases         MarketPurchase[]
 
@@ -1321,6 +1441,16 @@ model AutoCombatSession {
   huntStoppedAt           DateTime?
   lastHuntProcessedAt     DateTime?
   huntingLevelAtStart     Int       @default(1)
+  characterLevelSnapshot  Int?
+  classIdSnapshot         String?
+  classNameSnapshot       String?
+  equipmentSnapshot       Json?
+  huntingSnapshot         Json?
+  petSnapshot             Json?
+  premiumSnapshot         Boolean?
+  premiumUntilSnapshot    DateTime?
+  huntingDurationMs       Int       @default(0)
+  combatDurationMs        Int       @default(0)
   huntingXpGained         Int       @default(0)
   foundEnemiesCount       Int       @default(0)
   bonusEnemiesFound       Int       @default(0)
@@ -1379,6 +1509,7 @@ model AutoCombatSession {
   @@index([phase])
   @@index([characterId, status])
   @@index([characterId, status, phase])
+  @@index([characterLevelSnapshot, classNameSnapshot])
   @@index([startedAt])
   @@index([endsAt])
   @@map("auto_combat_sessions")
@@ -1962,6 +2093,7 @@ model WorldBossParticipant {
   @@index([eventId])
   @@index([eventId, confirmedAt, leftAt])
   @@index([characterId])
+  @@index([characterId, rewardGrantedAt])
   @@index([leftAt])
   @@index([rewardGranted])
   @@index([eligibleForReward])
@@ -2048,6 +2180,8 @@ model PetDefinition {
   fragmentCost      Int
   goldCost          Int
 
+  fragmentItemId String
+
   assetKey  String? @db.VarChar(120)
   isActive  Boolean @default(true)
   sortOrder Int     @default(0)
@@ -2056,9 +2190,11 @@ model PetDefinition {
   updatedAt DateTime @updatedAt
 
   cocoonItem    Item           @relation("PetCocoonItem", fields: [cocoonItemId], references: [id], onDelete: Restrict)
+  fragmentItem  Item           @relation("PetFragmentItem", fields: [fragmentItemId], references: [id], onDelete: Restrict)
   characterPets CharacterPet[]
 
   @@index([tier, isActive, sortOrder])
+  @@index([fragmentItemId])
   @@index([specialization, tier, isActive])
   @@index([effectType, tier, isActive])
   @@map("pet_definitions")

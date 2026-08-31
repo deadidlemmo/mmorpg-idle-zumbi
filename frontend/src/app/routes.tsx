@@ -141,11 +141,6 @@ const MarketplacePage = lazy(() =>
     default: module.MarketplacePage,
   })),
 );
-const ResourceCenterPage = lazy(() =>
-  import("../features/economy/pages/ResourceCenterPage").then((module) => ({
-    default: module.ResourceCenterPage,
-  })),
-);
 const PetsPage = lazy(() =>
   import("../features/pets/pages/PetsPage").then((module) => ({
     default: module.PetsPage,
@@ -159,6 +154,11 @@ const VendorPage = lazy(() =>
 const WorldBossesPage = lazy(() =>
   import("../features/world-bosses/pages/WorldBossesPage").then((module) => ({
     default: module.WorldBossesPage,
+  })),
+);
+const WikiApp = lazy(() =>
+  import("../features/wiki/WikiApp").then((module) => ({
+    default: module.WikiApp,
   })),
 );
 
@@ -272,6 +272,7 @@ export function AppRoutes() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/wiki/*" element={<WikiApp />} />
 
           <Route
             path="/admin"
@@ -335,7 +336,10 @@ export function AppRoutes() {
 
             <Route path="market" element={<MarketplacePage />} />
 
-            <Route path="resources" element={<ResourceCenterPage />} />
+            <Route
+              path="resources"
+              element={<Navigate to="../inventory" relative="path" replace />}
+            />
 
             <Route path="pets" element={<PetsPage />} />
 

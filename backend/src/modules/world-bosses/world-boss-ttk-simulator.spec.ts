@@ -56,7 +56,7 @@ describe('world boss TTK matrix T1-T10', () => {
       'RARE',
     ]);
     expect(rewards.map((row) => row.cocoonChancePercent)).toEqual([
-      7, 7, 5, 5, 4,
+      18, 16, 14, 12, 10,
     ]);
     expect(
       rewards.every(

@@ -4,6 +4,7 @@ import type {
   CreateStorefrontCheckoutPayload,
   CreateStorefrontCheckoutResponse,
   StorefrontCatalogResponse,
+  StorefrontOrderResponse,
 } from "../types/storefront.types";
 
 export async function getStorefrontCatalog(characterId: string) {
@@ -19,6 +20,13 @@ export async function createStorefrontCheckout(
   const response = await apiClient.post<CreateStorefrontCheckoutResponse>(
     API_ENDPOINTS.storefront.checkout,
     payload,
+  );
+  return response.data;
+}
+
+export async function getStorefrontOrder(orderId: string) {
+  const response = await apiClient.get<StorefrontOrderResponse>(
+    API_ENDPOINTS.storefront.order(orderId),
   );
   return response.data;
 }

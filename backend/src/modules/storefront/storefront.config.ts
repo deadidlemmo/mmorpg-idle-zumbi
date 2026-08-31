@@ -32,8 +32,11 @@ export interface StorefrontOfferDefinition {
   priceCents: number;
   cashAmount?: number;
   premiumDays?: number;
+  itemSlug?: string;
   tradeable?: boolean;
 }
+
+export const PREMIUM_PASS_ITEM_SLUG = 'passe-premium-30-dias';
 
 export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
   {
@@ -46,6 +49,7 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
     billingLabel: 'por mês',
     accentColor: '#8bd35c',
     priceCents: 1990,
+    premiumDays: 30,
     tradeable: false,
     benefits: [
       '+20% de EXP em gathering, batalha e caça',
@@ -62,8 +66,9 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
     description: 'Item que concede 30 dias de Premium quando utilizado.',
     billingLabel: 'pagamento único',
     accentColor: '#e1bd55',
-    priceCents: 2490,
+    priceCents: 1990,
     premiumDays: 30,
+    itemSlug: PREMIUM_PASS_ITEM_SLUG,
     tradeable: true,
     benefits: [
       '30 dias de Premium ao utilizar',
@@ -103,7 +108,7 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
     description: 'Economia de R$ 9,60 em relação ao pacote de 100.',
     billingLabel: 'pagamento único',
     accentColor: '#e1bd55',
-    priceCents: 3990,
+    priceCents: 1990,
     cashAmount: 500,
     benefits: [],
   },
@@ -117,7 +122,7 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
     collectionKey: 'premium-nucleo-helix',
     billingLabel: 'Pagamento único',
     accentColor: '#65d8e8',
-    priceCents: 3990,
+    priceCents: 1990,
     tradeable: true,
     benefits: [
       '8 avatares para cada classe',
@@ -136,7 +141,7 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
     collectionKey: 'premium-protocolo-carmesim',
     billingLabel: 'Pagamento único',
     accentColor: '#ef5a56',
-    priceCents: 3990,
+    priceCents: 1990,
     tradeable: true,
     benefits: [
       '8 avatares para cada classe',
@@ -147,15 +152,13 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
   },
 ] as const;
 
-export const STOREFRONT_PROVIDERS = [
+export const STOREFRONT_PROVIDER_DEFINITIONS = [
   {
     key: 'MERCADO_PAGO' as const,
     name: 'Mercado Pago',
-    state: 'PLANNED' as const,
   },
   {
     key: 'STRIPE' as const,
     name: 'Stripe',
-    state: 'PLANNED' as const,
   },
 ] as const;

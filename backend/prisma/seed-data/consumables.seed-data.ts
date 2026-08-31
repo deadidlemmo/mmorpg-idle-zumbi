@@ -8,6 +8,23 @@ import type { ConsumableSeedData } from '../seed-types';
  */
 export const consumableDefinitions: ConsumableSeedData[] = [
   {
+    name: 'Passe Premium de 30 dias',
+    slug: 'passe-premium-30-dias',
+    description:
+      'Ative pela mochila para adicionar 30 dias de Premium a toda a conta.',
+    tier: 1,
+    rarity: Rarity.LEGENDARY,
+    family: 'Passe Premium',
+    healFlat: 0,
+    healPercent: 0,
+    minTier: 1,
+    maxTier: 10,
+    isSellable: false,
+    isTradable: true,
+    usableInCombat: false,
+    usableOutOfCombat: true,
+  },
+  {
     name: 'Poção de Vida Menor de Aprendiz',
     description:
       'Poção inicial vinculada ao personagem. Recupera uma pequena quantidade de HP e não pode ser vendida.',

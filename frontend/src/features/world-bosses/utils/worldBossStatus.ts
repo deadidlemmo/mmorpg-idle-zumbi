@@ -39,6 +39,9 @@ export function mergeWorldBossStatusSnapshot(
     eligible:
       next.eligible ??
       (previousEventId === nextEventId ? previous?.eligible : undefined),
+    dailyXpReward:
+      next.dailyXpReward ??
+      (previousEventId === nextEventId ? previous?.dailyXpReward : undefined),
   } satisfies WorldBossStatusResponse;
 }
 

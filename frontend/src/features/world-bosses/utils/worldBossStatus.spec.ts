@@ -63,13 +63,21 @@ test('rejeita snapshot antigo que tentaria devolver HP ao boss', () => {
   assert.strictEqual(mergeWorldBossStatusSnapshot(current, stale), current);
 });
 
-test('aceita snapshot mais novo e preserva elegibilidade omitida no socket', () => {
+test('aceita snapshot mais novo e preserva dados individuais omitidos no socket', () => {
   const current = {
     ...buildStatus({
       currentHp: 700,
       updatedAt: '2026-08-26T12:00:05.000Z',
     }),
     eligible: { canJoin: true },
+    dailyXpReward: {
+      resetTimeZone: 'UTC',
+      eligibleVictoriesToday: 1,
+      nextVictoryMultiplier: 0.5,
+      nextVictoryPercent: 50,
+      unrestricted: false,
+      resetsAt: '2026-08-27T00:00:00.000Z',
+    },
   };
   const next = buildStatus({
     currentHp: 400,
@@ -79,6 +87,7 @@ test('aceita snapshot mais novo e preserva elegibilidade omitida no socket', () 
 
   assert.equal(merged.event?.currentHp, 400);
   assert.deepEqual(merged.eligible, { canJoin: true });
+  assert.equal(merged.dailyXpReward?.nextVictoryPercent, 50);
 });
 
 test('preserva o participante quando o evento coletivo envia apenas o estado público', () => {

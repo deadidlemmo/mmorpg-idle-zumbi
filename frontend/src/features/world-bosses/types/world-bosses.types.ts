@@ -45,7 +45,13 @@ export interface WorldBossGrantedReward {
   currency?: "INCURSION_TOKEN" | "WORLD_BOSS_FRAGMENT" | null;
   quantity: number;
   rarity?: string | null;
-  item?: { id: string; name: string } | null;
+  item?: {
+    id: string;
+    name: string;
+    tier?: number;
+    rarity?: string | null;
+    family?: string | null;
+  } | null;
 }
 
 export interface WorldBossSummary {
@@ -73,6 +79,20 @@ export interface WorldBossSummary {
     tier: number;
     minLevel?: number | null;
     maxLevel?: number | null;
+  };
+  petRewardPolicy?: {
+    resetTimeZone: string;
+    fullRewardVictoriesPerTier: number;
+    maxCocoonsPerTier: number;
+    subsequentCocoonChanceMultiplier: number;
+    subsequentFragmentQuantity: number;
+  };
+  xpRewardPolicy?: {
+    resetTimeZone: string;
+    unrestrictedThroughTier: number;
+    fullRewardVictoriesPerTier: number;
+    secondVictoryMultiplier: number;
+    subsequentVictoryMultiplier: number;
   };
   rewards: WorldBossRewardPreview[];
 }
@@ -135,6 +155,14 @@ export interface WorldBossStatusResponse {
   rewardsGranted?: WorldBossGrantedReward[] | null;
   stoppedActivities?: string[];
   eligible?: { canJoin: boolean; reason?: string | null };
+  dailyXpReward?: {
+    resetTimeZone: string;
+    eligibleVictoriesToday: number;
+    nextVictoryMultiplier: number;
+    nextVictoryPercent: number;
+    unrestricted: boolean;
+    resetsAt: string;
+  };
 }
 
 export interface WorldBossAvailableResponse {
