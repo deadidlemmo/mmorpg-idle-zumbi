@@ -175,10 +175,49 @@ function Ensure-BackendBuild {
     return Test-Path -LiteralPath $mainFile
 }
 
+function Stop-StaleBackendProcess {
+    if (-not (Test-Path -LiteralPath $mainFile)) {
+        return
+    }
+
+    try {
+        $buildLastWrite = (Get-Item -LiteralPath $mainFile).LastWriteTimeUtc
+        $listeners = Get-NetTCPConnection `
+            -LocalPort 3000 `
+            -State Listen `
+            -ErrorAction SilentlyContinue
+
+        foreach ($listener in $listeners) {
+            $process = Get-Process `
+                -Id $listener.OwningProcess `
+                -ErrorAction SilentlyContinue
+            if (-not $process -or $process.ProcessName -ne 'node') {
+                continue
+            }
+
+            if ($process.StartTime.ToUniversalTime() -ge $buildLastWrite) {
+                continue
+            }
+
+            Write-SupervisorLog (
+                "Backend PID $($process.Id) usa build anterior; reiniciando."
+            )
+            Stop-Process -Id $process.Id -Force
+            $process.WaitForExit(5000)
+        }
+    }
+    catch {
+        Write-SupervisorLog (
+            "Nao foi possivel verificar build obsoleto: $($_.Exception.Message)"
+        )
+    }
+}
+
 Rotate-Log -Path $supervisorLog
 Rotate-Log -Path $stdoutLog
 Rotate-Log -Path $stderrLog
 Write-SupervisorLog "Supervisor iniciado em $repoRoot."
+Stop-StaleBackendProcess
 
 while ($true) {
     if (Test-BackendHealth) {
