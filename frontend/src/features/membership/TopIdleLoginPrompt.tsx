@@ -56,17 +56,6 @@ export function TopIdleLoginPrompt() {
     };
   }, [isAuthenticated, loginEventId]);
 
-  useEffect(() => {
-    if (visibleForLogin === null) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setVisibleForLogin(null);
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [visibleForLogin]);
-
   if (
     !isAuthenticated ||
     !status ||
@@ -124,7 +113,6 @@ export function TopIdleLoginPrompt() {
           <TopIdleVoteBadge
             href={status.voteUrl}
             className="topidle-login-card__vote"
-            onClick={() => setVisibleForLogin(null)}
           />
         ) : (
           <span className="topidle-login-card__cooldown">
