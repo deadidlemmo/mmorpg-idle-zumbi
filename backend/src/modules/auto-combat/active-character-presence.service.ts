@@ -105,7 +105,6 @@ export class ActiveCharacterPresenceService {
           select: {
             phase: true,
             map: { select: { name: true } },
-            subMap: { select: { name: true } },
           },
         },
         gatheringSessions: {
@@ -264,7 +263,6 @@ export class ActiveCharacterPresenceService {
       autoCombatSessions?: Array<{
         phase: AutoCombatSessionPhase;
         map: { name: string };
-        subMap: { name: string };
       }>;
       gatheringSessions?: Array<{
         targetMaterial: { name: string };
@@ -304,7 +302,7 @@ export class ActiveCharacterPresenceService {
         label:
           autoCombat.phase === AutoCombatSessionPhase.HUNTING
             ? `Rastreando em ${autoCombat.map.name}`
-            : `Em combate em ${autoCombat.subMap.name}`,
+            : `Auto combate em ${autoCombat.map.name}`,
       };
     }
 

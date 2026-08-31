@@ -271,7 +271,7 @@ describe('ActiveCharacterPresenceService', () => {
       },
       combat: {
         type: 'AUTO_COMBAT',
-        label: 'Em combate em Galpão do Capataz',
+        label: 'Auto combate em Distrito da Ferrugem',
       },
       gathering: {
         type: 'GATHERING',
