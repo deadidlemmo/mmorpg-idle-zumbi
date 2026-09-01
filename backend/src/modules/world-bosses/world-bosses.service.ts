@@ -1226,6 +1226,25 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
           });
         }
 
+        const registeredCharacterIds = await tx.worldBossParticipant.findMany({
+          where: {
+            eventId,
+            leftAt: null,
+          },
+          select: { characterId: true },
+        });
+
+        const characterIds = registeredCharacterIds
+          .map((participant) => participant.characterId)
+          .sort();
+        if (characterIds.length > 0) {
+          await tx.$queryRaw(
+            Prisma.sql`SELECT "id" FROM "characters" WHERE "id" IN (${Prisma.join(
+              characterIds,
+            )}) ORDER BY "id" FOR UPDATE`,
+          );
+        }
+
         const registeredParticipants = await tx.worldBossParticipant.findMany({
           where: {
             eventId,
@@ -1243,27 +1262,18 @@ export class WorldBossesService implements OnModuleInit, OnModuleDestroy {
                 maxHp: true,
                 mapId: true,
                 deletedAt: true,
+                infirmaryEndsAt: true,
               },
             },
           },
         });
-
-        const characterIds = registeredParticipants
-          .map((participant) => participant.characterId)
-          .sort();
-        if (characterIds.length > 0) {
-          await tx.$queryRaw(
-            Prisma.sql`SELECT "id" FROM "characters" WHERE "id" IN (${Prisma.join(
-              characterIds,
-            )}) ORDER BY "id" FOR UPDATE`,
-          );
-        }
 
         for (const participant of registeredParticipants) {
           const character = participant.character;
           const currentHp = character.currentHp ?? character.maxHp ?? 0;
           const isEligible = Boolean(
             !character.deletedAt &&
+            !character.infirmaryEndsAt &&
             character.status === CharacterStatus.ACTIVE &&
             currentHp > 0 &&
             character.mapId === event.mapId &&

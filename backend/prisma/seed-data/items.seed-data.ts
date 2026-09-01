@@ -1113,7 +1113,11 @@ function createLaunchEquipmentDefinitions(): EquipmentSeedData[] {
 const rawEquipmentDefinitions = createLaunchEquipmentDefinitions();
 
 export const starterEquipmentDefinitions: EquipmentSeedData[] =
-  normalizeEquipmentStats(rawStarterEquipmentDefinitions);
+  normalizeEquipmentStats(rawStarterEquipmentDefinitions).map((item) => ({
+    ...item,
+    isSellable: false,
+    isTradable: false,
+  }));
 
 export const equipmentDefinitions: EquipmentSeedData[] =
   normalizeEquipmentStats(rawEquipmentDefinitions);

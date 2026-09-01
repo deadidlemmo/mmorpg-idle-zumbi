@@ -13,6 +13,7 @@ $repoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 $backendRoot = Join-Path $repoRoot 'backend'
 $composeFile = Join-Path $repoRoot 'infra\docker-compose.yml'
 $mainFile = Join-Path $backendRoot 'dist\main.js'
+$envFile = Join-Path $backendRoot '.env'
 if (-not $StateRoot) {
     $StateRoot = Join-Path $env:LOCALAPPDATA 'DeadIdle'
 }
@@ -181,7 +182,15 @@ function Stop-StaleBackendProcess {
     }
 
     try {
-        $buildLastWrite = (Get-Item -LiteralPath $mainFile).LastWriteTimeUtc
+        $requiredStartTime = (Get-Item -LiteralPath $mainFile).LastWriteTimeUtc
+        $restartReason = 'build anterior'
+        if (Test-Path -LiteralPath $envFile) {
+            $envLastWrite = (Get-Item -LiteralPath $envFile).LastWriteTimeUtc
+            if ($envLastWrite -gt $requiredStartTime) {
+                $requiredStartTime = $envLastWrite
+                $restartReason = 'configuracao anterior'
+            }
+        }
         $listeners = Get-NetTCPConnection `
             -LocalPort 3000 `
             -State Listen `
@@ -195,12 +204,12 @@ function Stop-StaleBackendProcess {
                 continue
             }
 
-            if ($process.StartTime.ToUniversalTime() -ge $buildLastWrite) {
+            if ($process.StartTime.ToUniversalTime() -ge $requiredStartTime) {
                 continue
             }
 
             Write-SupervisorLog (
-                "Backend PID $($process.Id) usa build anterior; reiniciando."
+                "Backend PID $($process.Id) usa $restartReason; reiniciando."
             )
             Stop-Process -Id $process.Id -Force
             $process.WaitForExit(5000)
@@ -208,7 +217,7 @@ function Stop-StaleBackendProcess {
     }
     catch {
         Write-SupervisorLog (
-            "Nao foi possivel verificar build obsoleto: $($_.Exception.Message)"
+            "Nao foi possivel verificar processo obsoleto: $($_.Exception.Message)"
         )
     }
 }

@@ -156,6 +156,11 @@ const VendorPage = lazy(() =>
     default: module.VendorPage,
   })),
 );
+const CosmeticVendorPage = lazy(() =>
+  import("../features/vendor/pages/CosmeticVendorPage").then((module) => ({
+    default: module.CosmeticVendorPage,
+  })),
+);
 const WorldBossesPage = lazy(() =>
   import("../features/world-bosses/pages/WorldBossesPage").then((module) => ({
     default: module.WorldBossesPage,
@@ -340,6 +345,8 @@ export function AppRoutes() {
             <Route path="appearance" element={<AppearancePage />} />
 
             <Route path="consumables" element={<MerchantHubPage />} />
+
+            <Route path="consumables/vera" element={<CosmeticVendorPage />} />
 
             <Route path="market" element={<MarketplacePage />} />
 

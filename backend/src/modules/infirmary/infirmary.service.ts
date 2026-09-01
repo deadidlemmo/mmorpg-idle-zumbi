@@ -11,6 +11,7 @@ import {
   CharacterStatus,
   EconomyDirection,
   EconomyResourceType,
+  Prisma,
 } from '@prisma/client';
 import { ActivityGuardService } from '../../common/activity-guard/activity-guard.service';
 import {
@@ -25,6 +26,8 @@ const FREE_TREATMENT_SECONDS = 30 * 60;
 const PRIVATE_DOCTOR_BASE_GOLD = 10;
 const PRIVATE_DOCTOR_LEVEL_GOLD = 3;
 const PRIVATE_DOCTOR_MISSING_HP_FACTOR = 0.15;
+
+type InfirmaryClient = PrismaService | Prisma.TransactionClient;
 
 @Injectable()
 export class InfirmaryService {
@@ -51,40 +54,60 @@ export class InfirmaryService {
   }
 
   async startTreatment(userId: string, characterId: string) {
-    const character = await this.findResolvedCharacter(userId, characterId);
+    await this.findResolvedCharacter(userId, characterId);
 
-    await this.activityGuard.ensureCanUseInfirmary({
-      characterId: character.id,
-      userId,
-    });
+    const treatedCharacterId = await this.prisma.$transaction(async (tx) => {
+      await this.activityGuard.ensureCanUseInfirmary({
+        characterId,
+        userId,
+        client: tx,
+        lockCharacter: true,
+      });
 
-    const maxHp = this.calculateCharacterMaxHp(character);
-    const currentHp = this.clampHp(character.currentHp ?? maxHp, maxHp);
-
-    if (this.hasActiveTreatment(character)) {
-      throw new ConflictException(
-        'Este personagem ja esta em atendimento na enfermaria.',
+      const character = await this.findCharacterWithStats(
+        userId,
+        characterId,
+        tx,
       );
-    }
+      const maxHp = this.calculateCharacterMaxHp(character);
+      const currentHp = this.clampHp(character.currentHp ?? maxHp, maxHp);
 
-    if (currentHp >= maxHp && character.status !== CharacterStatus.DEAD) {
-      throw new BadRequestException('Personagem ja esta com HP cheio.');
-    }
+      if (this.hasActiveTreatment(character)) {
+        throw new ConflictException(
+          'Este personagem ja esta em atendimento na enfermaria.',
+        );
+      }
 
-    const startedAt = new Date();
-    const endsAt = new Date(
-      startedAt.getTime() + FREE_TREATMENT_SECONDS * 1000,
-    );
+      if (currentHp >= maxHp && character.status !== CharacterStatus.DEAD) {
+        throw new BadRequestException('Personagem ja esta com HP cheio.');
+      }
 
-    await this.prisma.character.update({
-      where: { id: character.id },
-      data: {
-        infirmaryStartedAt: startedAt,
-        infirmaryEndsAt: endsAt,
-      },
+      const startedAt = new Date();
+      const endsAt = new Date(
+        startedAt.getTime() + FREE_TREATMENT_SECONDS * 1000,
+      );
+      const updateResult = await tx.character.updateMany({
+        where: {
+          id: character.id,
+          userId,
+          infirmaryEndsAt: null,
+        },
+        data: {
+          infirmaryStartedAt: startedAt,
+          infirmaryEndsAt: endsAt,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        throw new ConflictException(
+          'O atendimento mudou enquanto era iniciado. Atualize a enfermaria e tente novamente.',
+        );
+      }
+
+      return character.id;
     });
 
-    const response = await this.getStatus(userId, character.id);
+    const response = await this.getStatus(userId, treatedCharacterId);
 
     return {
       message:
@@ -94,29 +117,38 @@ export class InfirmaryService {
   }
 
   async claimTreatment(userId: string, characterId: string) {
-    const character = await this.findCharacterWithStats(userId, characterId);
+    const recoveredCharacterId = await this.prisma.$transaction(async (tx) => {
+      await this.activityGuard.ensureCanUseInfirmary({
+        characterId,
+        userId,
+        client: tx,
+        lockCharacter: true,
+      });
 
-    await this.activityGuard.ensureCanUseInfirmary({
-      characterId: character.id,
-      userId,
+      const character = await this.findCharacterWithStats(
+        userId,
+        characterId,
+        tx,
+      );
+
+      if (!character.infirmaryEndsAt) {
+        throw new BadRequestException(
+          'Este personagem nao possui atendimento em andamento.',
+        );
+      }
+
+      const remainingSeconds = this.getRemainingTreatmentSeconds(character);
+
+      if (remainingSeconds > 0) {
+        throw new BadRequestException(
+          `O atendimento ainda termina em ${remainingSeconds} segundos.`,
+        );
+      }
+
+      const recovered = await this.recoverCharacter(character, userId, tx);
+      return recovered.id;
     });
-
-    if (!character.infirmaryEndsAt) {
-      throw new BadRequestException(
-        'Este personagem nao possui atendimento em andamento.',
-      );
-    }
-
-    const remainingSeconds = this.getRemainingTreatmentSeconds(character);
-
-    if (remainingSeconds > 0) {
-      throw new BadRequestException(
-        `O atendimento ainda termina em ${remainingSeconds} segundos.`,
-      );
-    }
-
-    const recovered = await this.recoverCharacter(character, userId);
-    const response = await this.getStatus(userId, recovered.id);
+    const response = await this.getStatus(userId, recoveredCharacterId);
 
     return {
       message: 'Atendimento concluido. Personagem recuperado com sucesso.',
@@ -125,28 +157,38 @@ export class InfirmaryService {
   }
 
   async cancelTreatment(userId: string, characterId: string) {
-    const character = await this.findCharacterWithStats(userId, characterId);
+    const cancelledCharacterId = await this.prisma.$transaction(async (tx) => {
+      await this.activityGuard.ensureCanUseInfirmary({
+        characterId,
+        userId,
+        client: tx,
+        lockCharacter: true,
+      });
 
-    await this.activityGuard.ensureCanUseInfirmary({
-      characterId: character.id,
-      userId,
-    });
-
-    if (!character.infirmaryEndsAt) {
-      throw new BadRequestException(
-        'Este personagem nao possui atendimento gratuito em andamento.',
+      const character = await this.findCharacterWithStats(
+        userId,
+        characterId,
+        tx,
       );
-    }
 
-    await this.prisma.character.update({
-      where: { id: character.id },
-      data: {
-        infirmaryStartedAt: null,
-        infirmaryEndsAt: null,
-      },
+      if (!character.infirmaryEndsAt) {
+        throw new BadRequestException(
+          'Este personagem nao possui atendimento gratuito em andamento.',
+        );
+      }
+
+      await tx.character.update({
+        where: { id: character.id },
+        data: {
+          infirmaryStartedAt: null,
+          infirmaryEndsAt: null,
+        },
+      });
+
+      return character.id;
     });
 
-    const response = await this.getStatus(userId, character.id);
+    const response = await this.getStatus(userId, cancelledCharacterId);
 
     return {
       message:
@@ -157,30 +199,36 @@ export class InfirmaryService {
 
   async instantTreatment(userId: string, characterId: string) {
     const operationId = randomUUID();
-    const character = await this.findResolvedCharacter(userId, characterId);
-
-    await this.activityGuard.ensureCanUseInfirmary({
-      characterId: character.id,
-      userId,
-    });
-
-    const maxHp = this.calculateCharacterMaxHp(character);
-    const currentHp = this.clampHp(character.currentHp ?? maxHp, maxHp);
-    const missingHp = Math.max(0, maxHp - currentHp);
-
-    if (this.hasActiveTreatment(character)) {
-      throw new ConflictException(
-        'Cancele ou conclua o atendimento gratuito antes de pagar atendimento particular.',
-      );
-    }
-
-    if (missingHp <= 0 && character.status !== CharacterStatus.DEAD) {
-      throw new BadRequestException('Personagem ja esta com HP cheio.');
-    }
-
-    const cost = this.calculateInstantCost(character, missingHp);
+    await this.findResolvedCharacter(userId, characterId);
 
     const result = await this.prisma.$transaction(async (tx) => {
+      await this.activityGuard.ensureCanUseInfirmary({
+        characterId,
+        userId,
+        client: tx,
+        lockCharacter: true,
+      });
+
+      const character = await this.findCharacterWithStats(
+        userId,
+        characterId,
+        tx,
+      );
+      const maxHp = this.calculateCharacterMaxHp(character);
+      const currentHp = this.clampHp(character.currentHp ?? maxHp, maxHp);
+      const missingHp = Math.max(0, maxHp - currentHp);
+
+      if (this.hasActiveTreatment(character)) {
+        throw new ConflictException(
+          'Cancele ou conclua o atendimento gratuito antes de pagar atendimento particular.',
+        );
+      }
+
+      if (missingHp <= 0 && character.status !== CharacterStatus.DEAD) {
+        throw new BadRequestException('Personagem ja esta com HP cheio.');
+      }
+
+      const cost = this.calculateInstantCost(character, missingHp);
       const updateResult = await tx.character.updateMany({
         where: {
           id: character.id,
@@ -232,21 +280,21 @@ export class InfirmaryService {
         });
       }
 
-      return updatedCharacter;
+      return updatedCharacter ? { character: updatedCharacter, cost } : null;
     });
 
     if (!result) {
       throw new NotFoundException('Personagem nao encontrado.');
     }
 
-    const response = await this.getStatus(userId, result.id);
+    const response = await this.getStatus(userId, result.character.id);
 
     return {
-      message: `Atendimento particular realizado por ${cost} Gold.`,
+      message: `Atendimento particular realizado por ${result.cost} Gold.`,
       ...response,
       cost: {
         type: 'PRIVATE_DOCTOR',
-        amount: cost,
+        amount: result.cost,
         currency: 'GOLD',
       },
     };
@@ -267,13 +315,39 @@ export class InfirmaryService {
       return character;
     }
 
-    return this.recoverCharacter(character, userId);
+    return this.prisma.$transaction(async (tx) => {
+      const activityState = await this.activityGuard.getCharacterActivityState({
+        characterId,
+        userId,
+        client: tx,
+        lockCharacter: true,
+      });
+      const lockedCharacter = await this.findCharacterWithStats(
+        userId,
+        characterId,
+        tx,
+      );
+
+      if (
+        !lockedCharacter.infirmaryEndsAt ||
+        this.getRemainingTreatmentSeconds(lockedCharacter) > 0 ||
+        !this.canUseInfirmary(lockedCharacter, activityState)
+      ) {
+        return lockedCharacter;
+      }
+
+      return this.recoverCharacter(lockedCharacter, userId, tx);
+    });
   }
 
-  private async recoverCharacter(character: any, userId: string) {
+  private async recoverCharacter(
+    character: any,
+    userId: string,
+    client: InfirmaryClient = this.prisma,
+  ) {
     const maxHp = this.calculateCharacterMaxHp(character);
 
-    await this.prisma.character.update({
+    await client.character.update({
       where: { id: character.id },
       data: {
         currentHp: maxHp,
@@ -287,7 +361,7 @@ export class InfirmaryService {
       },
     });
 
-    return this.findCharacterWithStats(userId, character.id);
+    return this.findCharacterWithStats(userId, character.id, client);
   }
 
   private buildStatusResponse(
@@ -575,11 +649,16 @@ export class InfirmaryService {
     return Math.max(20, PRIVATE_DOCTOR_BASE_GOLD + levelCost + hpCost);
   }
 
-  private async findCharacterWithStats(userId: string, characterId: string) {
-    const character = await this.prisma.character.findFirst({
+  private async findCharacterWithStats(
+    userId: string,
+    characterId: string,
+    client: InfirmaryClient = this.prisma,
+  ) {
+    const character = await client.character.findFirst({
       where: {
         id: characterId,
         userId,
+        deletedAt: null,
       },
       include: {
         class: true,

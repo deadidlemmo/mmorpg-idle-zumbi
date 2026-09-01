@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Item } from '@prisma/client';
+import type { Item, Prisma } from '@prisma/client';
 import {
   ActivityStatus,
   AutoCombatSessionPhase,
@@ -57,6 +57,22 @@ import { CreateCharacterDto } from './dto/create-character.dto';
 const MAX_CHARACTERS_PER_USER = 2;
 const INITIAL_CHARACTER_GOLD = 250;
 const INITIAL_CHARACTER_CASH = 0;
+const CHARACTER_CREATION_TRANSACTION_MAX_WAIT_MS = 10_000;
+const CHARACTER_CREATION_TRANSACTION_TIMEOUT_MS = 15_000;
+
+type CharacterCreationAccountLock = {
+  id: string;
+  starterGoldGrantedAt: Date | null;
+};
+
+export function resolveInitialCharacterGold(
+  starterGoldGrantedAt: Date | null,
+  hasHistoricalCharacter = false,
+) {
+  return starterGoldGrantedAt || hasHistoricalCharacter
+    ? 0
+    : INITIAL_CHARACTER_GOLD;
+}
 
 const BLOCKING_AUTO_COMBAT_PHASES: AutoCombatSessionPhase[] = [
   AutoCombatSessionPhase.HUNTING,
@@ -203,6 +219,15 @@ export class CharactersService {
     private readonly auditService: AuditService,
   ) {}
 
+  private runCharacterCreationTransaction<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ) {
+    return this.prisma.$transaction(operation, {
+      maxWait: CHARACTER_CREATION_TRANSACTION_MAX_WAIT_MS,
+      timeout: CHARACTER_CREATION_TRANSACTION_TIMEOUT_MS,
+    });
+  }
+
   async create(userId: string, createCharacterDto: CreateCharacterDto) {
     const characterName = this.normalizeCharacterName(createCharacterDto.name);
     const className = this.normalizeClassName(createCharacterDto.className);
@@ -221,7 +246,18 @@ export class CharactersService {
       );
     }
 
-    const character = await this.prisma.$transaction(async (tx) => {
+    const character = await this.runCharacterCreationTransaction(async (tx) => {
+      const [account] = await tx.$queryRaw<CharacterCreationAccountLock[]>`
+          SELECT "id", "starterGoldGrantedAt"
+          FROM "users"
+          WHERE "id" = ${userId}
+          FOR UPDATE
+        `;
+
+      if (!account) {
+        throw new NotFoundException('Conta não encontrada.');
+      }
+
       const totalCharacters = await tx.character.count({
         where: {
           userId,
@@ -234,6 +270,11 @@ export class CharactersService {
           `Cada conta pode ter no máximo ${MAX_CHARACTERS_PER_USER} personagens.`,
         );
       }
+
+      const historicalCharacter = await tx.character.findFirst({
+        where: { userId },
+        select: { id: true },
+      });
 
       const existingCharacter = await tx.character.findFirst({
         where: {
@@ -346,6 +387,10 @@ export class CharactersService {
       );
 
       const initialMaxHp = stats.derivedCombatStats.maxHp;
+      const initialGold = resolveInitialCharacterGold(
+        account.starterGoldGrantedAt,
+        Boolean(historicalCharacter),
+      );
 
       const character = await tx.character.create({
         data: {
@@ -355,7 +400,7 @@ export class CharactersService {
           mapId: initialMap.id,
           status: CharacterStatus.ACTIVE,
           level: initialLevel,
-          gold: INITIAL_CHARACTER_GOLD,
+          gold: initialGold,
           cash: INITIAL_CHARACTER_CASH,
           currentHp: initialMaxHp,
           maxHp: initialMaxHp,
@@ -469,17 +514,33 @@ export class CharactersService {
         },
       });
 
-      await recordEconomyEntry(tx, {
-        characterId: character.id,
-        direction: EconomyDirection.CREDIT,
-        resourceType: EconomyResourceType.GOLD,
-        quantity: INITIAL_CHARACTER_GOLD,
-        balanceAfter: INITIAL_CHARACTER_GOLD,
-        reason: ECONOMY_REASONS.CHARACTER_INITIAL_GOLD,
-        referenceType: 'Character',
-        referenceId: character.id,
-        idempotencyKey: `character:${character.id}:initial:gold`,
-      });
+      if (!account.starterGoldGrantedAt) {
+        const markedAccount = await tx.$executeRaw`
+          UPDATE "users"
+          SET "starterGoldGrantedAt" = ${new Date()}
+          WHERE "id" = ${userId} AND "starterGoldGrantedAt" IS NULL
+        `;
+
+        if (markedAccount !== 1) {
+          throw new ConflictException(
+            'A concessão inicial desta conta mudou durante a criação. Tente novamente.',
+          );
+        }
+      }
+
+      if (initialGold > 0) {
+        await recordEconomyEntry(tx, {
+          characterId: character.id,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.GOLD,
+          quantity: initialGold,
+          balanceAfter: initialGold,
+          reason: ECONOMY_REASONS.CHARACTER_INITIAL_GOLD,
+          referenceType: 'Character',
+          referenceId: character.id,
+          idempotencyKey: `character:${character.id}:initial:gold`,
+        });
+      }
 
       for (const item of initialEquipmentItems) {
         await recordEconomyEntry(tx, {

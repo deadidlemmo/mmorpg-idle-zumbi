@@ -130,7 +130,7 @@ export class StorefrontFulfillmentService {
           await this.grantPremiumItem(tx, order);
           break;
         case 'CASH_PACKAGE':
-          await this.grantCash(tx, order, offer.cashAmount ?? 0);
+          await this.grantCash(tx, order, order.rewardQuantity);
           break;
         case 'PERMANENT_PACKAGE':
           await this.grantCosmeticCollection(tx, order, offer.collectionKey);

@@ -97,6 +97,11 @@ test.describe('recursos econômicos físicos na mochila', () => {
     await requireOk(characterResponse, 'Criar personagem da fixture');
     characterId = ((await characterResponse.json()) as { id: string }).id;
 
+    await prisma.character.update({
+      where: { id: characterId },
+      data: { level: 10 },
+    });
+
     await prisma.characterTutorialProgress.upsert({
       where: { characterId },
       create: {

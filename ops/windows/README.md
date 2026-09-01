@@ -79,6 +79,19 @@ Use `-SkipTests` ou `-SkipPagesDeploy` somente em contingencias conscientes. O
 script nunca restaura automaticamente o banco apos uma migration; uma reversao
 desse tipo deve ser decidida com base no dump criado no inicio do release.
 
+## Credenciais de pagamento
+
+Configure primeiro o Mercado Pago e depois a Stripe. Os campos sao mascarados e
+os segredos ficam somente em `backend/.env`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\ops\windows\Configure-DeadIdlePayments.ps1 -Provider MercadoPago
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\ops\windows\Configure-DeadIdlePayments.ps1 -Provider Stripe
+```
+
+O assistente nao cria cobranca. Depois de salvar, valide as credenciais e os
+webhooks antes de reiniciar o backend com chaves de producao.
+
 ## Diagnostico
 
 ```powershell

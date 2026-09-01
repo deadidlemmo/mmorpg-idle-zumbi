@@ -1,4 +1,7 @@
+import { BadRequestException } from '@nestjs/common';
 import {
+  EconomyDirection,
+  EconomyResourceType,
   InventoryItemType,
   StorefrontPaymentProvider,
   StorefrontPaymentStatus,
@@ -8,15 +11,20 @@ import type { PrismaService } from '../../prisma/prisma.service';
 import { PremiumEntitlementService } from '../membership/premium-entitlement.service';
 import { StorefrontFulfillmentService } from './storefront-fulfillment.service';
 
-function order(offerKey: string, offerKind: string) {
+function order(
+  offerKey: string,
+  offerKind: string,
+  options: { amountCents?: number; rewardQuantity?: number } = {},
+) {
   return {
     id: 'order-1',
     userId: 'user-1',
     characterId: 'character-1',
     offerKey,
     offerKind,
+    rewardQuantity: options.rewardQuantity ?? 1,
     provider: StorefrontPaymentProvider.STRIPE,
-    amountCents: 1990,
+    amountCents: options.amountCents ?? 1990,
     currency: 'BRL',
     providerCheckoutId: 'checkout-1',
     paidAt: null,
@@ -182,6 +190,62 @@ describe('StorefrontFulfillmentService', () => {
       ],
       skipDuplicates: true,
     });
+  });
+
+  it('entrega exatamente 27 Cash da quantidade congelada no pedido', async () => {
+    const tx = transaction(
+      order('cash-custom', 'CASH_PACKAGE', {
+        amountCents: 2700,
+        rewardQuantity: 27,
+      }),
+    );
+    const { service } = serviceWith(tx);
+
+    await expect(
+      service.applyPaymentUpdate({ ...paymentUpdate(), amountCents: 2700 }),
+    ).resolves.toMatchObject({
+      applied: true,
+      offerKind: 'CASH_PACKAGE',
+    });
+
+    expect(tx.character.update).toHaveBeenCalledWith({
+      where: { id: 'character-1' },
+      data: { cash: { increment: 27 } },
+      select: { cash: true },
+    });
+    expect(tx.economyLedgerEntry.create).toHaveBeenCalledWith({
+      data: {
+        characterId: 'character-1',
+        direction: EconomyDirection.CREDIT,
+        resourceType: EconomyResourceType.CASH,
+        quantity: 27,
+        reason: 'STOREFRONT_CASH_PURCHASED',
+        idempotencyKey: 'storefront:order-1:cash',
+        tier: null,
+        currency: null,
+        itemId: null,
+        balanceAfter: 500,
+        referenceType: 'StorefrontOrder',
+        referenceId: 'order-1',
+        metadata: undefined,
+      },
+    });
+  });
+
+  it('não entrega Cash quando o webhook confirma outro valor', async () => {
+    const tx = transaction(
+      order('cash-custom', 'CASH_PACKAGE', {
+        amountCents: 2700,
+        rewardQuantity: 27,
+      }),
+    );
+    const { service } = serviceWith(tx);
+
+    await expect(
+      service.applyPaymentUpdate({ ...paymentUpdate(), amountCents: 2600 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(tx.character.update).not.toHaveBeenCalled();
+    expect(tx.economyLedgerEntry.create).not.toHaveBeenCalled();
   });
 
   it('não entrega novamente quando o provedor repete o webhook', async () => {

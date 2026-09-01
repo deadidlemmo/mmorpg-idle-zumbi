@@ -104,6 +104,8 @@ export type EquipmentSeedData = {
   techniqueBonus?: number;
   willpowerBonus?: number;
   isCraftable?: boolean;
+  isSellable?: boolean;
+  isTradable?: boolean;
 };
 
 export type MaterialSeedData = {

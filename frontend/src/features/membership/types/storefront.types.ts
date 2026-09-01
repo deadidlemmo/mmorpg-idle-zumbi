@@ -15,9 +15,11 @@ export type StorefrontOfferKind =
 export type StorefrontOfferKey =
   | "premium-abrigo-monthly"
   | "premium-abrigo-30d-item"
+  | "cash-custom"
+  | "cash-25"
+  | "cash-50"
   | "cash-100"
   | "cash-200"
-  | "cash-500"
   | "pacote-nucleo-helix"
   | "pacote-protocolo-carmesim";
 
@@ -55,6 +57,11 @@ export interface StorefrontOffer {
   accentColor: string;
   benefits: string[];
   cashAmount?: number;
+  customQuantity?: {
+    min: number;
+    max: number;
+    unitPriceCents: number;
+  };
   premiumDays?: number;
   tradeable?: boolean;
   price: {
@@ -107,6 +114,7 @@ export interface CreateStorefrontCheckoutPayload {
   characterId: string;
   offerKey: StorefrontOfferKey;
   provider: StorefrontProviderKey;
+  cashAmount?: number;
 }
 
 export interface CreateStorefrontCheckoutResponse {
@@ -138,4 +146,5 @@ export interface StorefrontOrderResponse {
     formatted: string;
   };
   delivered: boolean;
+  cashAmount?: number | null;
 }

@@ -11,6 +11,12 @@ function optionalValue(configService: ConfigService, key: string) {
   return value || null;
 }
 
+function enabledValue(configService: ConfigService, key: string) {
+  return ['1', 'true', 'yes', 'on'].includes(
+    optionalValue(configService, key)?.toLowerCase() ?? '',
+  );
+}
+
 function validAbsoluteUrl(value: string | null) {
   if (!value) return null;
 
@@ -37,17 +43,34 @@ export function getStorefrontProviderState(
   const urls = getStorefrontPublicUrls(configService);
   if (!urls.frontendUrl || !urls.apiUrl) return 'UNAVAILABLE';
 
-  if (provider === 'MERCADO_PAGO') {
-    return optionalValue(configService, 'MERCADO_PAGO_ACCESS_TOKEN') &&
-      optionalValue(configService, 'MERCADO_PAGO_WEBHOOK_SECRET')
-      ? 'AVAILABLE'
-      : 'UNAVAILABLE';
+  if (!isStorefrontProviderConfigured(configService, provider)) {
+    return 'UNAVAILABLE';
   }
 
-  return optionalValue(configService, 'STRIPE_SECRET_KEY') &&
-    optionalValue(configService, 'STRIPE_WEBHOOK_SECRET')
+  if (provider === 'MERCADO_PAGO') {
+    return enabledValue(configService, 'MERCADO_PAGO_CHECKOUT_ENABLED')
+      ? 'AVAILABLE'
+      : 'PLANNED';
+  }
+
+  return enabledValue(configService, 'STRIPE_CHECKOUT_ENABLED')
     ? 'AVAILABLE'
-    : 'UNAVAILABLE';
+    : 'PLANNED';
+}
+
+export function isStorefrontProviderConfigured(
+  configService: ConfigService,
+  provider: StorefrontProviderKey,
+) {
+  return provider === 'MERCADO_PAGO'
+    ? Boolean(
+        optionalValue(configService, 'MERCADO_PAGO_ACCESS_TOKEN') &&
+        optionalValue(configService, 'MERCADO_PAGO_WEBHOOK_SECRET'),
+      )
+    : Boolean(
+        optionalValue(configService, 'STRIPE_SECRET_KEY') &&
+        optionalValue(configService, 'STRIPE_WEBHOOK_SECRET'),
+      );
 }
 
 export function getStorefrontProviders(configService: ConfigService) {
@@ -64,4 +87,14 @@ export function requireStorefrontSecret(
   const value = optionalValue(configService, key);
   if (!value) throw new Error(`Configuração ausente: ${key}.`);
   return value;
+}
+
+export function selectMercadoPagoCheckoutUrl(params: {
+  accessToken: string;
+  initPoint?: string | null;
+  sandboxInitPoint?: string | null;
+}) {
+  return params.accessToken.startsWith('TEST-')
+    ? (params.sandboxInitPoint ?? null)
+    : (params.initPoint ?? null);
 }

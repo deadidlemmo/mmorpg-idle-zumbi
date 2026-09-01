@@ -822,8 +822,209 @@
 
 .membership-cash-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+
+.membership-custom-cash {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid
+    color-mix(in srgb, var(--offer-accent) 38%, rgba(168, 202, 142, 0.16));
+  border-radius: 8px;
+  background: #0b1713;
+  box-shadow: inset 0 2px 0
+    color-mix(in srgb, var(--offer-accent) 62%, transparent);
+}
+
+.membership-custom-cash__header {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(168, 202, 142, 0.16);
+  padding: 15px 17px;
+  background: color-mix(in srgb, var(--offer-accent) 7%, #0b1713);
+}
+
+.membership-custom-cash__artwork {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--offer-accent) 34%, transparent);
+  border-radius: 7px;
+  background: rgba(4, 12, 10, 0.72);
+}
+
+.membership-custom-cash__artwork img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 7px 12px rgba(55, 117, 181, 0.28));
+}
+
+.membership-custom-cash__header > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.membership-custom-cash__header h2,
+.membership-cash-packages-heading h2 {
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.membership-custom-cash__header p {
+  margin: 0;
+  color: rgba(237, 235, 210, 0.62);
+  font-size: 0.73rem;
+}
+
+.membership-custom-cash__header > strong {
+  display: grid;
+  justify-items: end;
+  color: #fff0ad;
+  font-family: var(--font-title);
+  font-size: 1.02rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.membership-custom-cash__header > strong small {
+  color: rgba(237, 235, 210, 0.5);
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.membership-custom-cash__body {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1fr) minmax(190px, 0.7fr) minmax(120px, 0.5fr)
+    minmax(185px, 0.7fr);
+  align-items: end;
+  gap: 14px;
+  padding: 16px 17px;
+}
+
+.membership-custom-cash__shortcuts,
+.membership-custom-cash__quantity,
+.membership-custom-cash__summary {
+  display: grid;
+  gap: 7px;
+}
+
+.membership-custom-cash__shortcuts > span,
+.membership-custom-cash__quantity > span,
+.membership-custom-cash__summary > span {
+  color: rgba(237, 235, 210, 0.55);
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.membership-custom-cash__shortcuts > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(42px, 1fr));
+  gap: 6px;
+}
+
+.membership-custom-cash__shortcuts button,
+.membership-custom-cash__quantity button {
+  display: grid;
+  min-width: 40px;
+  min-height: 40px;
+  place-items: center;
+  border: 1px solid rgba(168, 202, 142, 0.18);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(246, 242, 216, 0.76);
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.membership-custom-cash__shortcuts button:hover,
+.membership-custom-cash__shortcuts button.is-active,
+.membership-custom-cash__quantity button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--offer-accent) 65%, transparent);
+  background: color-mix(in srgb, var(--offer-accent) 16%, #0b1713);
+  color: #fff7d7;
+}
+
+.membership-custom-cash__quantity > div {
+  display: grid;
+  grid-template-columns: 40px minmax(74px, 1fr) 40px;
+  gap: 6px;
+}
+
+.membership-custom-cash__quantity button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.membership-custom-cash__quantity input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--offer-accent) 34%, transparent);
+  border-radius: 6px;
+  outline: 0;
+  background: #07110e;
+  color: #fff8df;
+  font-family: var(--font-title);
+  font-size: 0.92rem;
+  font-weight: 950;
+  text-align: center;
+  appearance: textfield;
+}
+
+.membership-custom-cash__quantity input::-webkit-inner-spin-button,
+.membership-custom-cash__quantity input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.membership-custom-cash__quantity input:focus-visible {
+  border-color: var(--offer-accent);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--offer-accent) 18%, transparent);
+}
+
+.membership-custom-cash__summary {
+  align-content: end;
+  min-height: 62px;
+}
+
+.membership-custom-cash__summary strong {
+  color: #f7f0cf;
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  font-weight: 950;
+}
+
+.membership-custom-cash__summary small {
+  color: #9bc8ed;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.membership-custom-cash__checkout {
+  width: 100%;
+  min-height: 40px;
+}
+
+.membership-custom-cash__checkout > svg {
+  flex: 0 0 auto;
+}
+
+.membership-cash-packages-heading {
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid rgba(168, 202, 142, 0.14);
+  padding-bottom: 9px;
 }
 
 .membership-cash-card {
@@ -837,11 +1038,20 @@
   text-align: center;
 }
 
-.membership-cash-card--cash-200,
-.membership-cash-card--cash-500 {
+.membership-cash-card--bonus {
   box-shadow:
     inset 0 2px 0 color-mix(in srgb, var(--offer-accent) 68%, transparent),
     0 16px 34px rgba(0, 0, 0, 0.22);
+}
+
+.membership-cash-card__bonus {
+  border: 1px solid color-mix(in srgb, var(--offer-accent) 48%, transparent);
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: color-mix(in srgb, var(--offer-accent) 13%, #09130f);
+  color: color-mix(in srgb, var(--offer-accent) 78%, white);
+  font-size: 0.68rem;
+  font-weight: 950;
 }
 
 .membership-cash-card__eyebrow {
@@ -1271,6 +1481,10 @@
 }
 
 @media (max-width: 1020px) {
+  .membership-cash-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .membership-premium-benefits__grid,
   .membership-cash-uses > div {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1303,6 +1517,10 @@
 
   .membership-cosmetic-group > div {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .membership-custom-cash__body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1428,6 +1646,46 @@
 
   .membership-cash-card {
     min-height: 246px;
+  }
+
+  .membership-custom-cash__header {
+    grid-template-columns: 54px minmax(0, 1fr);
+    gap: 11px;
+    padding: 13px;
+  }
+
+  .membership-custom-cash__artwork {
+    width: 52px;
+    height: 52px;
+  }
+
+  .membership-custom-cash__artwork img {
+    width: 43px;
+    height: 43px;
+  }
+
+  .membership-custom-cash__header > strong {
+    grid-column: 2;
+    justify-items: start;
+  }
+
+  .membership-custom-cash__body {
+    grid-template-columns: 1fr;
+    padding: 13px;
+  }
+
+  .membership-custom-cash__summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: auto;
+  }
+
+  .membership-custom-cash__summary > span {
+    grid-column: 1 / -1;
+  }
+
+  .membership-custom-cash__summary small {
+    font-size: 0.8rem;
   }
 
   .membership-package-card {

@@ -2,7 +2,12 @@ import 'dotenv/config';
 
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
-import { expect, request as playwrightRequest, test } from '@playwright/test';
+import {
+  expect,
+  request as playwrightRequest,
+  test,
+  type Page,
+} from '@playwright/test';
 
 const apiUrl = process.env.E2E_API_URL ?? 'http://127.0.0.1:3100';
 const accessTokenKey = 'dead_idle_access_token';
@@ -14,6 +19,16 @@ type MerchantPlayer = {
   accessToken: string;
   characterId: string;
 };
+
+async function dismissBlockingGuidance(page: Page) {
+  for (const accessibleName of ['Ocultar tutorial', 'Fechar alerta']) {
+    const button = page.getByRole('button', { name: accessibleName }).first();
+    if ((await button.count()) === 0 || !(await button.isVisible())) continue;
+
+    await button.click();
+    await expect(button).toBeHidden();
+  }
+}
 
 async function createPlayer(): Promise<MerchantPlayer> {
   const api = await playwrightRequest.newContext({ baseURL: apiUrl });
@@ -97,6 +112,7 @@ test.describe('hub de mercadores', () => {
     await expect(
       page.getByRole('heading', { name: 'Mercadores do Abrigo' }),
     ).toBeVisible();
+    await dismissBlockingGuidance(page);
     const merchantList = page.getByLabel('Lista de mercadores');
     await expect(
       merchantList.getByText('Mercador', { exact: true }),
@@ -153,6 +169,32 @@ test.describe('hub de mercadores', () => {
               image.complete &&
               image.naturalWidth > 0,
           ),
+      )
+      .toBe(true);
+
+    const cosmeticMerchantCard = page.getByRole('link', {
+      name: 'Abrir Ateliê da Vera',
+    });
+    await expect(cosmeticMerchantCard).toBeVisible();
+    await expect(
+      cosmeticMerchantCard.locator('.merchant-card__offer-copy strong'),
+    ).toHaveText(['Aparência']);
+    await expect(cosmeticMerchantCard).toHaveAttribute(
+      'href',
+      `/dashboard/${player.characterId}/consumables/vera`,
+    );
+    const cosmeticMerchantPortrait = cosmeticMerchantCard.locator(
+      '.merchant-card__avatar img',
+    );
+    await expect(cosmeticMerchantPortrait).toBeVisible();
+    await expect
+      .poll(() =>
+        cosmeticMerchantPortrait.evaluate(
+          (image) =>
+            image instanceof HTMLImageElement &&
+            image.complete &&
+            image.naturalWidth > 0,
+        ),
       )
       .toBe(true);
 
@@ -224,8 +266,100 @@ test.describe('hub de mercadores', () => {
     await expect(
       page.getByRole('heading', { name: 'Mara, a Mercadora' }),
     ).toBeVisible();
+    await dismissBlockingGuidance(page);
+    const maraHero = page.getByLabel('Mara, a Mercadora');
+    await expect(maraHero).toHaveAttribute('data-merchant', 'mara');
+    await expect(maraHero.locator('.vendor-npc-fallback img')).toBeVisible();
     await expect(
       page.getByText('Passe Premium de 30 dias', { exact: true }),
     ).toHaveCount(0);
+    await page.screenshot({
+      path: testInfo.outputPath('merchant-mara-mobile.png'),
+      fullPage: true,
+    });
+  });
+
+  test('abre o Ateliê da Vera com as seis áreas de aparência', async ({
+    page,
+  }, testInfo) => {
+    await page.addInitScript(
+      ({ token, characterId, tokenKey, characterKey }) => {
+        window.localStorage.setItem(tokenKey, token);
+        window.localStorage.setItem(characterKey, characterId);
+      },
+      {
+        token: player.accessToken,
+        characterId: player.characterId,
+        tokenKey: accessTokenKey,
+        characterKey: selectedCharacterKey,
+      },
+    );
+
+    await page.goto(`/dashboard/${player.characterId}/consumables/vera`);
+    await expect(
+      page.getByRole('heading', { name: 'Vera, a Curadora' }),
+    ).toBeVisible();
+    await dismissBlockingGuidance(page);
+    const veraHero = page.getByLabel('Vera, a Curadora');
+    await expect(veraHero).toHaveClass(/vendor-lore-card/);
+    await expect(veraHero).toHaveAttribute('data-merchant', 'vera');
+    const veraPortrait = veraHero.locator('.vendor-npc-fallback img');
+    await expect(veraPortrait).toBeVisible();
+    await expect
+      .poll(() =>
+        veraPortrait.evaluate(
+          (image) =>
+            image instanceof HTMLImageElement &&
+            image.complete &&
+            image.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
+    await expect(page.getByLabel('Seus saldos')).toHaveCount(0);
+
+    const tabs = page.getByRole('tablist', {
+      name: 'Categorias de aparência',
+    });
+    for (const label of [
+      'Avatar',
+      'Moldura',
+      'Cartão',
+      'Visão geral',
+      'Efeito',
+      'Identidade',
+    ]) {
+      await expect(tabs.getByRole('tab', { name: label })).toBeVisible();
+    }
+
+    await tabs.getByRole('tab', { name: 'Identidade' }).click();
+    await expect(
+      page.getByRole('tabpanel').getByRole('heading', { name: 'Identidade' }),
+    ).toBeVisible();
+    await expect(page.getByText('Estoque em preparação')).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Minha aparência' }),
+    ).toHaveAttribute('href', `/dashboard/${player.characterId}/appearance`);
+
+    await page.screenshot({
+      path: testInfo.outputPath('cosmetic-merchant-desktop.png'),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await page.waitForTimeout(250);
+    await dismissBlockingGuidance(page);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      )
+      .toBe(true);
+    await expect(tabs.getByRole('tab', { name: 'Visão geral' })).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath('cosmetic-merchant-mobile.png'),
+      fullPage: true,
+    });
   });
 });

@@ -87,7 +87,7 @@ describe('Mercado do Abrigo (e2e)', () => {
     });
     classIds.push(gameClass.id);
 
-    const [sellerUser, buyerUser] = await Promise.all([
+    const [sellerUser, buyerUser, noviceUser] = await Promise.all([
       prisma.user.create({
         data: {
           email: `market-seller-${suffix}@example.test`,
@@ -102,16 +102,24 @@ describe('Mercado do Abrigo (e2e)', () => {
           role: UserRole.PLAYER,
         },
       }),
+      prisma.user.create({
+        data: {
+          email: `market-novice-${suffix}@example.test`,
+          passwordHash: 'not-used',
+          role: UserRole.PLAYER,
+        },
+      }),
     ]);
-    userIds.push(sellerUser.id, buyerUser.id);
+    userIds.push(sellerUser.id, buyerUser.id, noviceUser.id);
 
-    const [seller, buyer] = await Promise.all([
+    const [seller, buyer, novice] = await Promise.all([
       prisma.character.create({
         data: {
           name: `Vendedor ${suffix}`,
           status: CharacterStatus.ACTIVE,
           currentHp: 100,
           maxHp: 100,
+          level: 10,
           gold: 0,
           userId: sellerUser.id,
           classId: gameClass.id,
@@ -123,12 +131,29 @@ describe('Mercado do Abrigo (e2e)', () => {
           status: CharacterStatus.ACTIVE,
           currentHp: 100,
           maxHp: 100,
+          level: 1,
           gold: 1000,
           userId: buyerUser.id,
           classId: gameClass.id,
         },
       }),
+      prisma.character.create({
+        data: {
+          name: `Novato ${suffix}`,
+          status: CharacterStatus.ACTIVE,
+          currentHp: 100,
+          maxHp: 100,
+          level: 1,
+          gold: 1000,
+          userId: noviceUser.id,
+          classId: gameClass.id,
+        },
+      }),
     ]);
+
+    await prisma.characterCraftingSkill.create({
+      data: { characterId: buyer.id, level: 10 },
+    });
 
     const item = await prisma.item.create({
       data: {
@@ -164,6 +189,12 @@ describe('Mercado do Abrigo (e2e)', () => {
       email: buyerUser.email,
       role: buyerUser.role,
       tokenVersion: buyerUser.tokenVersion,
+    });
+    const noviceToken = await jwtService.signAsync({
+      sub: noviceUser.id,
+      email: noviceUser.email,
+      role: noviceUser.role,
+      tokenVersion: noviceUser.tokenVersion,
     });
     const listingRequestId = randomUUID();
     const listingPayload = {
@@ -202,6 +233,29 @@ describe('Mercado do Abrigo (e2e)', () => {
     expect(await prisma.marketListing.count({ where: { id: listingId } })).toBe(
       1,
     );
+
+    const blockedNovicePurchase = await request(app.getHttpServer())
+      .post(`/market/listings/${listingId}/buy`)
+      .set('Authorization', `Bearer ${noviceToken}`)
+      .send({
+        characterId: novice.id,
+        quantity: 1,
+        requestId: randomUUID(),
+      });
+
+    expect(blockedNovicePurchase.status).toBe(400);
+    const blockedNovicePurchaseBody = blockedNovicePurchase.body as unknown as {
+      message: string;
+    };
+    expect(blockedNovicePurchaseBody.message).toContain('exigem Nv. 10');
+    expect(
+      await prisma.character.findUniqueOrThrow({ where: { id: novice.id } }),
+    ).toMatchObject({ gold: 1000 });
+    expect(
+      await prisma.marketListing.findUniqueOrThrow({
+        where: { id: listingId },
+      }),
+    ).toMatchObject({ quantityRemaining: 6 });
 
     const firstPurchaseRequestId = randomUUID();
     const repeatedPurchaseResponses = await Promise.all(

@@ -1,3 +1,4 @@
+import { isAxiosError } from "axios";
 import {
   useEffect,
   useMemo,
@@ -19,9 +20,11 @@ import {
   Image as ImageIcon,
   LoaderCircle,
   LockKeyhole,
+  Minus,
   PackageOpen,
   PanelsTopLeft,
   Pickaxe,
+  Plus,
   Radar,
   ShieldCheck,
   Sparkles,
@@ -112,6 +115,16 @@ const COSMETIC_GROUPS: CosmeticGroupDefinition[] = [
 ];
 
 function getMembershipPageError(error: unknown) {
+  if (isAxiosError<{ message?: string | string[]; error?: string }>(error)) {
+    const message = error.response?.data?.message;
+    if (Array.isArray(message)) return message.join(" ");
+    if (typeof message === "string" && message.trim()) return message;
+
+    const responseError = error.response?.data?.error;
+    if (typeof responseError === "string" && responseError.trim()) {
+      return responseError;
+    }
+  }
   if (error instanceof Error) return error.message;
   return "Não foi possível carregar a loja do abrigo.";
 }
@@ -131,6 +144,13 @@ function formatTopIdleAvailability(value?: string | null) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
+}
+
+function formatBrl(amountCents: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(amountCents / 100);
 }
 
 function getOfferTone(offer: StorefrontOffer) {
@@ -467,17 +487,26 @@ function CashOfferCard({
   isCheckingOut: boolean;
   onCheckout: (offer: StorefrontOffer) => void;
 }) {
+  const cashAmount = offer.cashAmount ?? 0;
+  const regularCashAmount = Math.round(offer.price.amountCents / 100);
+  const bonusCash = Math.max(0, cashAmount - regularCashAmount);
+
   return (
     <article
-      className={`membership-cash-card membership-cash-card--${offer.key}`}
+      className={`membership-cash-card membership-cash-card--${offer.key}${bonusCash > 0 ? " membership-cash-card--bonus" : ""}`}
       style={{ "--offer-accent": offer.accentColor } as CSSProperties}
     >
       <span className="membership-cash-card__eyebrow">{offer.eyebrow}</span>
       <div className="membership-cash-card__amount">
         <img src={cashIcon} alt="" aria-hidden="true" />
-        <strong>{offer.cashAmount}</strong>
+        <strong>{cashAmount}</strong>
         <span>Cash</span>
       </div>
+      {bonusCash > 0 ? (
+        <span className="membership-cash-card__bonus">
+          +{bonusCash} Cash de bônus
+        </span>
+      ) : null}
       <div className="membership-cash-card__price">
         <strong>{offer.price.formatted}</strong>
         <span>{offer.billingLabel}</span>
@@ -488,9 +517,131 @@ function CashOfferCard({
         checkoutEnabled={checkoutEnabled}
         isCheckingOut={isCheckingOut}
         onCheckout={onCheckout}
-        activeLabel={`Comprar ${offer.cashAmount} Cash`}
+        activeLabel={`Comprar ${cashAmount} Cash`}
       />
     </article>
+  );
+}
+
+const CUSTOM_CASH_SHORTCUTS = [5, 10, 25, 50] as const;
+
+function CustomCashPurchase({
+  offer,
+  amount,
+  checkoutEnabled,
+  isCheckingOut,
+  onAmountChange,
+  onCheckout,
+}: {
+  offer: StorefrontOffer;
+  amount: number;
+  checkoutEnabled: boolean;
+  isCheckingOut: boolean;
+  onAmountChange: (amount: number) => void;
+  onCheckout: (offer: StorefrontOffer, amount: number) => void;
+}) {
+  const limits = offer.customQuantity;
+  if (!limits) return null;
+
+  const clampAmount = (value: number) =>
+    Math.min(limits.max, Math.max(limits.min, Math.trunc(value)));
+  const total = amount * limits.unitPriceCents;
+
+  return (
+    <section
+      className="membership-custom-cash"
+      style={{ "--offer-accent": offer.accentColor } as CSSProperties}
+      aria-labelledby="membership-custom-cash-title"
+    >
+      <header className="membership-custom-cash__header">
+        <span className="membership-custom-cash__artwork" aria-hidden="true">
+          <img src={cashIcon} alt="" />
+        </span>
+        <div>
+          <span className="membership-eyebrow">Cash sob medida</span>
+          <h2 id="membership-custom-cash-title">Digite quanto quer comprar</h2>
+          <p>Escolha qualquer quantidade de 1 a 1.000 Cash por compra.</p>
+        </div>
+        <strong>R$ 1,00 <small>por Cash</small></strong>
+      </header>
+
+      <div className="membership-custom-cash__body">
+        <div className="membership-custom-cash__shortcuts">
+          <span>Atalhos</span>
+          <div role="group" aria-label="Quantidades sugeridas">
+            {CUSTOM_CASH_SHORTCUTS.filter(
+              (value) => value >= limits.min && value <= limits.max,
+            ).map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={amount === value ? "is-active" : ""}
+                onClick={() => onAmountChange(value)}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className="membership-custom-cash__quantity">
+          <span>Cash desejado</span>
+          <div>
+            <button
+              type="button"
+              aria-label="Diminuir quantidade"
+              title="Diminuir"
+              disabled={amount <= limits.min}
+              onClick={() => onAmountChange(clampAmount(amount - 1))}
+            >
+              <Minus size={17} aria-hidden="true" />
+            </button>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={limits.min}
+              max={limits.max}
+              step={1}
+              value={amount}
+              aria-label="Quantidade de Cash"
+              onFocus={(event) => event.currentTarget.select()}
+              onChange={(event) =>
+                onAmountChange(clampAmount(Number(event.currentTarget.value)))
+              }
+            />
+            <button
+              type="button"
+              aria-label="Aumentar quantidade"
+              title="Aumentar"
+              disabled={amount >= limits.max}
+              onClick={() => onAmountChange(clampAmount(amount + 1))}
+            >
+              <Plus size={17} aria-hidden="true" />
+            </button>
+          </div>
+        </label>
+
+        <div className="membership-custom-cash__summary" aria-live="polite">
+          <span>Você recebe</span>
+          <strong>{amount} Cash</strong>
+          <small>{formatBrl(total)}</small>
+        </div>
+
+        <button
+          type="button"
+          className="membership-purchase-button membership-custom-cash__checkout"
+          disabled={!checkoutEnabled || isCheckingOut}
+          onClick={() => onCheckout(offer, amount)}
+        >
+          {isCheckingOut ? (
+            <LoaderCircle size={17} aria-hidden="true" />
+          ) : (
+            <CreditCard size={17} aria-hidden="true" />
+          )}
+          {isCheckingOut ? "Abrindo checkout" : `Comprar ${amount} Cash`}
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -752,6 +903,7 @@ export function MembershipPage() {
   const [checkingOutOfferKey, setCheckingOutOfferKey] = useState<string | null>(
     null,
   );
+  const [customCashAmount, setCustomCashAmount] = useState(10);
   const [selectedProviderKey, setSelectedProviderKey] =
     useState<StorefrontProviderKey | null>(null);
   const [returnedOrder, setReturnedOrder] =
@@ -929,6 +1081,12 @@ export function MembershipPage() {
       storefront?.offers.filter((offer) => offer.kind === "CASH_PACKAGE") ?? [],
     [storefront],
   );
+  const customCashOffer = cashOffers.find(
+    (offer) => offer.key === "cash-custom",
+  );
+  const fixedCashOffers = cashOffers.filter(
+    (offer) => offer.key !== "cash-custom",
+  );
   const packageOffers = useMemo(
     () =>
       storefront?.offers.filter(
@@ -945,7 +1103,7 @@ export function MembershipPage() {
   );
   const premiumCosmeticCount = premiumPlan?.collection?.items.length ?? 0;
 
-  async function handleCheckout(offer: StorefrontOffer) {
+  async function handleCheckout(offer: StorefrontOffer, cashAmount?: number) {
     if (!checkoutEnabled || !checkoutProvider) return;
     setCheckingOutOfferKey(offer.key);
     setErrorMessage(null);
@@ -955,6 +1113,7 @@ export function MembershipPage() {
         characterId: safeCharacterId,
         offerKey: offer.key,
         provider: checkoutProvider.key,
+        ...(cashAmount !== undefined ? { cashAmount } : {}),
       });
       window.location.assign(checkout.checkoutUrl);
     } catch (error) {
@@ -1162,11 +1321,29 @@ export function MembershipPage() {
                 <span className="membership-eyebrow">Comprar Cash</span>
                 <h2>Escolha sua recarga</h2>
               </div>
-              <p>Crédito aplicado diretamente à conta.</p>
+              <p>Crédito aplicado ao personagem selecionado.</p>
+            </header>
+
+            {customCashOffer ? (
+              <CustomCashPurchase
+                offer={customCashOffer}
+                amount={customCashAmount}
+                checkoutEnabled={checkoutEnabled}
+                isCheckingOut={checkingOutOfferKey === customCashOffer.key}
+                onAmountChange={setCustomCashAmount}
+                onCheckout={(selectedOffer, amount) =>
+                  void handleCheckout(selectedOffer, amount)
+                }
+              />
+            ) : null}
+
+            <header className="membership-cash-packages-heading">
+              <span className="membership-eyebrow">Pacotes com bônus</span>
+              <h2>Quanto maior o pacote, maior o bônus</h2>
             </header>
 
             <div className="membership-cash-grid">
-              {cashOffers.map((offer) => (
+              {fixedCashOffers.map((offer) => (
                 <CashOfferCard
                   key={offer.key}
                   offer={offer}

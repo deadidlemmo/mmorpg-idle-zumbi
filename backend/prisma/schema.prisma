@@ -306,6 +306,8 @@ model User {
 
   premiumUntil DateTime?
 
+  starterGoldGrantedAt DateTime?
+
   tokenVersion Int       @default(0)
   lastLoginAt  DateTime?
 
@@ -697,6 +699,7 @@ model StorefrontOrder {
   characterId    String
   offerKey       String                    @db.VarChar(80)
   offerKind      String                    @db.VarChar(32)
+  rewardQuantity Int                       @default(1)
   provider       StorefrontPaymentProvider
   status         StorefrontOrderStatus     @default(PENDING)
   amountCents    Int

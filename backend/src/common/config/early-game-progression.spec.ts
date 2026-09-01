@@ -12,6 +12,18 @@ function selectLoadout<T extends { slot: string }>(items: T[]) {
 }
 
 describe('early game equipment progression', () => {
+  it('mantem todos os equipamentos de aprendiz vinculados', () => {
+    expect(starterEquipmentDefinitions).not.toHaveLength(0);
+
+    for (const item of starterEquipmentDefinitions) {
+      expect(item).toMatchObject({
+        tier: 0,
+        isSellable: false,
+        isTradable: false,
+      });
+    }
+  });
+
   it.each(classDefinitions)(
     'makes a complete T1 loadout clearly stronger for $name',
     (gameClass) => {

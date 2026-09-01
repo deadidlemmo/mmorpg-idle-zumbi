@@ -249,6 +249,8 @@ async function upsertEquipmentItem(params: {
     maxTier: null,
 
     isCraftable: data.isCraftable ?? true,
+    isSellable: data.isSellable ?? true,
+    isTradable: data.isTradable ?? true,
     baseItemId: null,
     enhancementLevel: 0,
   });

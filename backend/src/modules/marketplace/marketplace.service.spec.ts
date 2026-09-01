@@ -8,7 +8,11 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MarketItemClassFilter } from './dto/market-listings-query.dto';
-import { MarketplaceService } from './marketplace.service';
+import {
+  getMarketplaceTradeProgressLevel,
+  MarketplaceService,
+  MARKETPLACE_TRADE_UNLOCK_LEVEL,
+} from './marketplace.service';
 
 const item = {
   id: '00000000-0000-4000-8000-000000000010',
@@ -120,6 +124,10 @@ describe('MarketplaceService', () => {
     tx.character.findFirst.mockResolvedValue({
       id: dto.characterId,
       gold: 1000,
+      level: MARKETPLACE_TRADE_UNLOCK_LEVEL,
+      craftingSkill: { level: 1 },
+      huntingSkill: { level: 1 },
+      gatheringSkills: [{ level: 1 }],
     });
     tx.marketListing.findUnique.mockResolvedValue(listing());
     tx.inventoryItem.findUnique.mockResolvedValue(null);
@@ -200,6 +208,24 @@ describe('MarketplaceService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(tx.marketListing.updateMany).not.toHaveBeenCalled();
+    expect(tx.character.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('bloqueia compra antes de qualquer progressão chegar ao nível 10', async () => {
+    tx.character.findFirst.mockResolvedValue({
+      id: dto.characterId,
+      gold: 1000,
+      level: 1,
+      craftingSkill: { level: 1 },
+      huntingSkill: { level: 1 },
+      gatheringSkills: [{ level: 1 }, { level: 9 }],
+    });
+
+    await expect(
+      service.buyListing('buyer-user', listing().id, dto),
+    ).rejects.toThrow('Negociações no Mercado do Abrigo exigem Nv. 10');
+
+    expect(tx.marketListing.findUnique).not.toHaveBeenCalled();
     expect(tx.character.updateMany).not.toHaveBeenCalled();
   });
 
@@ -343,7 +369,13 @@ describe('MarketplaceService - Fragmento de Ameaça', () => {
     jest.clearAllMocks();
     tx.marketListing.findUnique.mockResolvedValue(null);
     tx.marketListing.count.mockResolvedValue(0);
-    tx.character.findFirst.mockResolvedValue({ id: characterId });
+    tx.character.findFirst.mockResolvedValue({
+      id: characterId,
+      level: 1,
+      craftingSkill: { level: 1 },
+      huntingSkill: { level: 1 },
+      gatheringSkills: [{ level: MARKETPLACE_TRADE_UNLOCK_LEVEL }],
+    });
     tx.inventoryItem.findUnique.mockResolvedValue({
       id: inventoryItemId,
       characterId,
@@ -399,5 +431,29 @@ describe('MarketplaceService - Fragmento de Ameaça', () => {
       quantityInitial: 4,
       quantityRemaining: 4,
     });
+  });
+});
+
+describe('MarketplaceService - acesso por progressão', () => {
+  it('libera um coletor nível 1 quando uma profissão alcança o nível 10', () => {
+    expect(
+      getMarketplaceTradeProgressLevel({
+        level: 1,
+        craftingSkill: { level: 1 },
+        huntingSkill: { level: 1 },
+        gatheringSkills: [{ level: 4 }, { level: 10 }],
+      }),
+    ).toBe(MARKETPLACE_TRADE_UNLOCK_LEVEL);
+  });
+
+  it('considera também Caça e Criação sem exigir nível de combate', () => {
+    expect(
+      getMarketplaceTradeProgressLevel({
+        level: 1,
+        craftingSkill: { level: 30 },
+        huntingSkill: { level: 7 },
+        gatheringSkills: [],
+      }),
+    ).toBe(30);
   });
 });

@@ -1,5 +1,7 @@
-import { IsIn, IsUUID } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 import {
+  CUSTOM_CASH_MAX_AMOUNT,
+  CUSTOM_CASH_MIN_AMOUNT,
   STOREFRONT_OFFER_KEYS,
   STOREFRONT_PROVIDER_KEYS,
   type StorefrontOfferKey,
@@ -18,4 +20,10 @@ export class CreateStorefrontCheckoutDto {
 
   @IsIn(STOREFRONT_PROVIDER_KEYS)
   provider!: StorefrontProviderKey;
+
+  @IsOptional()
+  @IsInt()
+  @Min(CUSTOM_CASH_MIN_AMOUNT)
+  @Max(CUSTOM_CASH_MAX_AMOUNT)
+  cashAmount?: number;
 }

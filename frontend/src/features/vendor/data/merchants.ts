@@ -1,13 +1,17 @@
 import maraPortrait from '../../../assets/images/npcs/npc_mercadora_mara.webp';
+import veraPortrait from '../../../assets/images/npcs/npc_curadora_vera.webp';
 
 export interface MerchantOffer {
   label: string;
   description: string;
+  icon: "POTION" | "APPEARANCE";
 }
 
 export interface MerchantDefinition {
   id: string;
   routeSegment: string;
+  shopType: "SUPPLIES" | "COSMETICS";
+  tone: "supply" | "identity";
   marketName: string;
   npcName: string;
   role: string;
@@ -25,6 +29,8 @@ export const MERCHANTS: MerchantDefinition[] = [
   {
     id: 'mara',
     routeSegment: 'mara',
+    shopType: 'SUPPLIES',
+    tone: 'supply',
     marketName: 'Balcão da Mara',
     npcName: 'Mara',
     role: 'Mercadora geral',
@@ -40,6 +46,32 @@ export const MERCHANTS: MerchantDefinition[] = [
       {
         label: 'Poções',
         description: 'Cura e recuperação',
+        icon: 'POTION',
+      },
+    ],
+    available: true,
+  },
+  {
+    id: 'vera',
+    routeSegment: 'vera',
+    shopType: 'COSMETICS',
+    tone: 'identity',
+    marketName: 'Ateliê da Vera',
+    npcName: 'Vera',
+    role: 'Curadora de identidade',
+    title: 'Vera, a Curadora',
+    quote: 'Sobreviver mantém você de pé. Sua identidade mostra quem ficou.',
+    description:
+      'Arquivo visual do abrigo para personalizar a identidade dos sobreviventes.',
+    shopDescription:
+      'Encontre avatares, molduras, cartões, cenários, efeitos e itens de identidade por Gold ou Cash.',
+    portraitUrl: veraPortrait,
+    initials: 'VE',
+    offers: [
+      {
+        label: 'Aparência',
+        description: 'Avatares, molduras e efeitos',
+        icon: 'APPEARANCE',
       },
     ],
     available: true,

@@ -31,6 +31,26 @@ const MAX_TOTAL_PRICE = 2_000_000_000;
 const MAX_DATABASE_INT = 2_147_483_647;
 const TRANSACTION_RETRIES = 3;
 
+export const MARKETPLACE_TRADE_UNLOCK_LEVEL = 10;
+
+type MarketplaceTradeProgress = {
+  level: number;
+  craftingSkill: { level: number } | null;
+  huntingSkill: { level: number } | null;
+  gatheringSkills: Array<{ level: number }>;
+};
+
+export function getMarketplaceTradeProgressLevel(
+  character: MarketplaceTradeProgress,
+) {
+  return Math.max(
+    character.level,
+    character.craftingSkill?.level ?? 0,
+    character.huntingSkill?.level ?? 0,
+    ...character.gatheringSkills.map((skill) => skill.level),
+  );
+}
+
 const MARKET_ITEM_CLASS_NAMES: Record<
   Exclude<MarketItemClassFilter, MarketItemClassFilter.GENERAL>,
   string
@@ -256,12 +276,20 @@ export class MarketplaceService {
           status: CharacterStatus.ACTIVE,
           deletedAt: null,
         },
-        select: { id: true },
+        select: {
+          id: true,
+          level: true,
+          craftingSkill: { select: { level: true } },
+          huntingSkill: { select: { level: true } },
+          gatheringSkills: { select: { level: true } },
+        },
       });
 
       if (!character) {
         throw new NotFoundException('Personagem não encontrado.');
       }
+
+      this.assertMarketplaceTradeAccess(character);
 
       const activeListings = await tx.marketListing.count({
         where: {
@@ -373,12 +401,21 @@ export class MarketplaceService {
           status: CharacterStatus.ACTIVE,
           deletedAt: null,
         },
-        select: { id: true, gold: true },
+        select: {
+          id: true,
+          gold: true,
+          level: true,
+          craftingSkill: { select: { level: true } },
+          huntingSkill: { select: { level: true } },
+          gatheringSkills: { select: { level: true } },
+        },
       });
 
       if (!buyer) {
         throw new NotFoundException('Personagem não encontrado.');
       }
+
+      this.assertMarketplaceTradeAccess(buyer);
 
       const listing = await tx.marketListing.findUnique({
         where: { id: listingId },
@@ -769,6 +806,17 @@ export class MarketplaceService {
     if (!Number.isSafeInteger(totalPrice) || totalPrice > MAX_TOTAL_PRICE) {
       throw new BadRequestException(
         `O valor total do lote não pode ultrapassar ${MAX_TOTAL_PRICE.toLocaleString('pt-BR')} Gold.`,
+      );
+    }
+  }
+
+  private assertMarketplaceTradeAccess(character: MarketplaceTradeProgress) {
+    if (
+      getMarketplaceTradeProgressLevel(character) <
+      MARKETPLACE_TRADE_UNLOCK_LEVEL
+    ) {
+      throw new BadRequestException(
+        `Negociações no Mercado do Abrigo exigem Nv. ${MARKETPLACE_TRADE_UNLOCK_LEVEL} de personagem, Caça, Criação ou qualquer profissão de coleta.`,
       );
     }
   }

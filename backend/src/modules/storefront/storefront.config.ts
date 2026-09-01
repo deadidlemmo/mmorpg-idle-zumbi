@@ -5,9 +5,11 @@ export type StorefrontProviderKey = (typeof STOREFRONT_PROVIDER_KEYS)[number];
 export const STOREFRONT_OFFER_KEYS = [
   'premium-abrigo-monthly',
   'premium-abrigo-30d-item',
+  'cash-custom',
+  'cash-25',
+  'cash-50',
   'cash-100',
   'cash-200',
-  'cash-500',
   'pacote-nucleo-helix',
   'pacote-protocolo-carmesim',
 ] as const;
@@ -31,12 +33,20 @@ export interface StorefrontOfferDefinition {
   benefits: readonly string[];
   priceCents: number;
   cashAmount?: number;
+  customQuantity?: {
+    min: number;
+    max: number;
+    unitPriceCents: number;
+  };
   premiumDays?: number;
   itemSlug?: string;
   tradeable?: boolean;
 }
 
 export const PREMIUM_PASS_ITEM_SLUG = 'passe-premium-30-dias';
+export const CASH_UNIT_PRICE_CENTS = 100;
+export const CUSTOM_CASH_MIN_AMOUNT = 1;
+export const CUSTOM_CASH_MAX_AMOUNT = 1_000;
 
 export const PREMIUM_CORE_BENEFITS = [
   '+20% de EXP de Personagem',
@@ -78,39 +88,68 @@ export const STOREFRONT_OFFERS: readonly StorefrontOfferDefinition[] = [
     benefits: PREMIUM_CORE_BENEFITS,
   },
   {
+    key: 'cash-custom',
+    kind: 'CASH_PACKAGE',
+    name: 'Cash sob medida',
+    eyebrow: 'Escolha a quantidade',
+    description: 'Compre exatamente a quantidade de Cash que desejar.',
+    billingLabel: 'R$ 1,00 por Cash',
+    accentColor: '#78a9dc',
+    priceCents: CASH_UNIT_PRICE_CENTS,
+    cashAmount: 1,
+    customQuantity: {
+      min: CUSTOM_CASH_MIN_AMOUNT,
+      max: CUSTOM_CASH_MAX_AMOUNT,
+      unitPriceCents: CASH_UNIT_PRICE_CENTS,
+    },
+    benefits: [],
+  },
+  {
+    key: 'cash-25',
+    kind: 'CASH_PACKAGE',
+    name: '25 Cash',
+    eyebrow: 'Pacote de entrada',
+    description: '25 Cash pelo valor padrão.',
+    billingLabel: 'R$ 1,00 por Cash',
+    accentColor: '#78a9dc',
+    priceCents: 2_500,
+    cashAmount: 25,
+    benefits: [],
+  },
+  {
+    key: 'cash-50',
+    kind: 'CASH_PACKAGE',
+    name: '55 Cash',
+    eyebrow: '10% de bônus',
+    description: '50 Cash + 5 Cash de bônus.',
+    billingLabel: 'R$ 0,91 por Cash',
+    accentColor: '#6fc6bb',
+    priceCents: 5_000,
+    cashAmount: 55,
+    benefits: [],
+  },
+  {
     key: 'cash-100',
     kind: 'CASH_PACKAGE',
-    name: '100 Cash',
-    eyebrow: 'Recarga essencial',
-    description: 'Para uma compra pontual no catálogo.',
-    billingLabel: 'pagamento único',
-    accentColor: '#78a9dc',
-    priceCents: 990,
-    cashAmount: 100,
+    name: '115 Cash',
+    eyebrow: '15% de bônus',
+    description: '100 Cash + 15 Cash de bônus.',
+    billingLabel: 'R$ 0,87 por Cash',
+    accentColor: '#88d0d8',
+    priceCents: 10_000,
+    cashAmount: 115,
     benefits: [],
   },
   {
     key: 'cash-200',
     kind: 'CASH_PACKAGE',
-    name: '200 Cash',
-    eyebrow: 'Mais escolhido',
-    description: 'Economia de R$ 1,90 em relação ao pacote de 100.',
-    billingLabel: 'pagamento único',
-    accentColor: '#88d0d8',
-    priceCents: 1790,
-    cashAmount: 200,
-    benefits: [],
-  },
-  {
-    key: 'cash-500',
-    kind: 'CASH_PACKAGE',
-    name: '500 Cash',
-    eyebrow: 'Melhor valor',
-    description: 'Economia de R$ 9,60 em relação ao pacote de 100.',
-    billingLabel: 'pagamento único',
+    name: '240 Cash',
+    eyebrow: '20% de bônus',
+    description: '200 Cash + 40 Cash de bônus.',
+    billingLabel: 'R$ 0,83 por Cash',
     accentColor: '#e1bd55',
-    priceCents: 1990,
-    cashAmount: 500,
+    priceCents: 20_000,
+    cashAmount: 240,
     benefits: [],
   },
   {

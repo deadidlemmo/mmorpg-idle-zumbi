@@ -1173,32 +1173,12 @@ export class CraftingService {
     const completesAt = new Date(startedAt.getTime() + durationSeconds * 1000);
 
     const craftResult = await this.prisma.$transaction(async (tx) => {
-      await tx.character.update({
-        where: {
-          id: dto.characterId,
-        },
-        data: {
-          updatedAt: new Date(),
-        },
+      await this.activityGuard.ensureCanStartCrafting({
+        characterId: dto.characterId,
+        userId,
+        client: tx,
+        lockCharacter: true,
       });
-
-      const activeCraftingSession = await tx.craftingSession.findFirst({
-        where: {
-          characterId: dto.characterId,
-          status: ActivityStatus.ACTIVE,
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      if (activeCraftingSession) {
-        throw new ConflictException({
-          message:
-            'Este personagem já possui uma fabricação em andamento. Aguarde finalizar antes de iniciar outra.',
-          activeCraftingSession,
-        });
-      }
 
       const activeCraftingSkill = await this.getOrCreateCraftingSkill(
         dto.characterId,

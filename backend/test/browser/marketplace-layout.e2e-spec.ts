@@ -113,6 +113,11 @@ test.describe('layout do Mercado do Abrigo', () => {
       await publicApi.dispose();
     }
 
+    await prisma.character.updateMany({
+      where: { id: { in: [buyer.characterId, seller.characterId] } },
+      data: { level: 10 },
+    });
+
     await prisma.characterTutorialProgress.upsert({
       where: { characterId: buyer.characterId },
       create: {

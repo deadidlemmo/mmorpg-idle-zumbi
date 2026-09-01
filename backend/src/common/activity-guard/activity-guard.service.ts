@@ -31,6 +31,12 @@ type ActiveWorldBossParticipationSnapshot = {
   };
 };
 
+type ActiveInfirmaryTreatmentSnapshot = {
+  startedAt: Date | null;
+  endsAt: Date;
+  remainingSeconds: number;
+};
+
 type CharacterActivityState = {
   character: {
     id: string;
@@ -40,6 +46,8 @@ type CharacterActivityState = {
     mapId: string | null;
     currentHp: number | null;
     maxHp: number | null;
+    infirmaryStartedAt: Date | null;
+    infirmaryEndsAt: Date | null;
   };
   currentHp: number;
   activeAutoCombatSession: any | null;
@@ -47,11 +55,13 @@ type CharacterActivityState = {
   activeCraftingSession: any | null;
   activeIncursionSession: any | null;
   activeWorldBossParticipation: ActiveWorldBossParticipationSnapshot | null;
+  activeInfirmaryTreatment: ActiveInfirmaryTreatmentSnapshot | null;
   hasActiveAutoCombat: boolean;
   hasActiveGathering: boolean;
   hasActiveCrafting: boolean;
   hasActiveIncursion: boolean;
   hasActiveWorldBoss: boolean;
+  hasActiveInfirmary: boolean;
 };
 
 const ACTIVE_WORLD_BOSS_EVENT_STATUSES = [WorldBossEventStatus.ACTIVE];
@@ -70,10 +80,26 @@ export class ActivityGuardService {
   ): Promise<CharacterActivityState> {
     const client = params.client ?? this.prisma;
 
+    if (params.lockCharacter) {
+      const lockResult = await client.character.updateMany({
+        where: {
+          id: params.characterId,
+          ...(params.userId ? { userId: params.userId } : {}),
+          deletedAt: null,
+        },
+        data: { updatedAt: new Date() },
+      });
+
+      if (lockResult.count === 0) {
+        throw new NotFoundException('Personagem não encontrado.');
+      }
+    }
+
     const character = await client.character.findFirst({
       where: {
         id: params.characterId,
         ...(params.userId ? { userId: params.userId } : {}),
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -83,18 +109,13 @@ export class ActivityGuardService {
         mapId: true,
         currentHp: true,
         maxHp: true,
+        infirmaryStartedAt: true,
+        infirmaryEndsAt: true,
       },
     });
 
     if (!character) {
       throw new NotFoundException('Personagem não encontrado.');
-    }
-
-    if (params.lockCharacter) {
-      await client.character.update({
-        where: { id: character.id },
-        data: { updatedAt: new Date() },
-      });
     }
 
     const now = new Date();
@@ -216,6 +237,7 @@ export class ActivityGuardService {
         where: {
           characterId: character.id,
           status: IncursionSessionStatus.ACTIVE,
+          endsAt: { gt: now },
         },
         orderBy: {
           startedAt: 'desc',
@@ -284,6 +306,18 @@ export class ActivityGuardService {
     ]);
 
     const currentHp = this.resolveCurrentHp(character);
+    const activeInfirmaryTreatment = character.infirmaryEndsAt
+      ? {
+          startedAt: character.infirmaryStartedAt,
+          endsAt: character.infirmaryEndsAt,
+          remainingSeconds: Math.max(
+            0,
+            Math.ceil(
+              (character.infirmaryEndsAt.getTime() - now.getTime()) / 1000,
+            ),
+          ),
+        }
+      : null;
 
     return {
       character,
@@ -293,11 +327,13 @@ export class ActivityGuardService {
       activeCraftingSession,
       activeIncursionSession,
       activeWorldBossParticipation,
+      activeInfirmaryTreatment,
       hasActiveAutoCombat: Boolean(activeAutoCombatSession),
       hasActiveGathering: Boolean(activeGatheringSession),
       hasActiveCrafting: Boolean(activeCraftingSession),
       hasActiveIncursion: Boolean(activeIncursionSession),
       hasActiveWorldBoss: Boolean(activeWorldBossParticipation),
+      hasActiveInfirmary: Boolean(activeInfirmaryTreatment),
     };
   }
 
@@ -308,6 +344,8 @@ export class ActivityGuardService {
       state.character.status,
       'Apenas personagens ativos podem iniciar gathering.',
     );
+
+    this.ensureCharacterIsNotInInfirmary(state);
 
     this.ensureCharacterHasHp(
       state.currentHp,
@@ -364,6 +402,8 @@ export class ActivityGuardService {
       'Apenas personagens ativos podem coletar gathering.',
     );
 
+    this.ensureCharacterIsNotInInfirmary(state);
+
     this.ensureCharacterHasHp(
       state.currentHp,
       'Personagens derrotados ou com 0 de HP não podem coletar gathering. Cure o personagem antes.',
@@ -379,6 +419,8 @@ export class ActivityGuardService {
       state.character.status,
       'Apenas personagens ativos podem iniciar criação.',
     );
+
+    this.ensureCharacterIsNotInInfirmary(state);
 
     this.ensureCharacterHasHp(
       state.currentHp,
@@ -436,6 +478,8 @@ export class ActivityGuardService {
       'Apenas personagens ativos podem iniciar auto-combate.',
     );
 
+    this.ensureCharacterIsNotInInfirmary(state);
+
     this.ensureCharacterHasHp(
       state.currentHp,
       'Personagens derrotados ou com 0 de HP não podem iniciar auto-combate. Cure o personagem antes.',
@@ -492,6 +536,8 @@ export class ActivityGuardService {
       'Apenas personagens ativos podem iniciar incursões.',
     );
 
+    this.ensureCharacterIsNotInInfirmary(state);
+
     this.ensureCharacterHasHp(
       state.currentHp,
       'Personagens derrotados ou com 0 de HP não podem iniciar incursões. Cure o personagem antes.',
@@ -546,6 +592,8 @@ export class ActivityGuardService {
       state.character.status,
       'Apenas personagens ativos podem entrar em World Boss.',
     );
+
+    this.ensureCharacterIsNotInInfirmary(state);
 
     this.ensureCharacterHasHp(
       state.currentHp,
@@ -609,6 +657,8 @@ export class ActivityGuardService {
       'Apenas personagens ativos podem iniciar combate.',
     );
 
+    this.ensureCharacterIsNotInInfirmary(state);
+
     this.ensureCharacterHasHp(
       state.currentHp,
       'Personagens derrotados ou com 0 de HP não podem iniciar combate. Cure o personagem antes.',
@@ -664,6 +714,8 @@ export class ActivityGuardService {
       state.character.status,
       'Apenas personagens ativos podem trocar de mapa.',
     );
+
+    this.ensureCharacterIsNotInInfirmary(state);
 
     if (state.hasActiveAutoCombat) {
       throw new ConflictException({
@@ -790,6 +842,7 @@ export class ActivityGuardService {
       where: {
         characterId: params.characterId,
         status: IncursionSessionStatus.ACTIVE,
+        endsAt: { gt: now },
       },
       data: {
         status: IncursionSessionStatus.CANCELLED,
@@ -826,6 +879,18 @@ export class ActivityGuardService {
     if (currentHp <= 0) {
       throw new BadRequestException(message);
     }
+  }
+
+  private ensureCharacterIsNotInInfirmary(state: CharacterActivityState) {
+    if (!state.hasActiveInfirmary) {
+      return;
+    }
+
+    throw new ConflictException({
+      message:
+        'Este personagem está em atendimento na enfermaria. Conclua ou cancele o atendimento antes de iniciar outra atividade.',
+      activeInfirmaryTreatment: state.activeInfirmaryTreatment,
+    });
   }
 
   private resolveCurrentHp(character: {

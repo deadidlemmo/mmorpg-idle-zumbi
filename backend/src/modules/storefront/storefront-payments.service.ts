@@ -12,6 +12,7 @@ import {
   StorefrontSubscriptionStatus,
 } from '@prisma/client';
 import MercadoPagoConfig, {
+  Invoice,
   Payment,
   PreApproval,
   Preference,
@@ -23,7 +24,9 @@ import { StorefrontFulfillmentService } from './storefront-fulfillment.service';
 import {
   getStorefrontProviderState,
   getStorefrontPublicUrls,
+  isStorefrontProviderConfigured,
   requireStorefrontSecret,
+  selectMercadoPagoCheckoutUrl,
 } from './storefront-payment.config';
 import type {
   MercadoPagoWebhookInput,
@@ -144,9 +147,7 @@ export class StorefrontPaymentsService {
   }
 
   async handleStripeWebhook(rawBody: Buffer, signature?: string | null) {
-    if (
-      getStorefrontProviderState(this.configService, 'STRIPE') !== 'AVAILABLE'
-    ) {
+    if (!isStorefrontProviderConfigured(this.configService, 'STRIPE')) {
       throw new ServiceUnavailableException(
         'Webhook Stripe ainda não está configurado.',
       );
@@ -222,10 +223,7 @@ export class StorefrontPaymentsService {
   }
 
   async handleMercadoPagoWebhook(input: MercadoPagoWebhookInput) {
-    if (
-      getStorefrontProviderState(this.configService, 'MERCADO_PAGO') !==
-      'AVAILABLE'
-    ) {
+    if (!isStorefrontProviderConfigured(this.configService, 'MERCADO_PAGO')) {
       throw new ServiceUnavailableException(
         'Webhook Mercado Pago ainda não está configurado.',
       );
@@ -280,6 +278,14 @@ export class StorefrontPaymentsService {
       return { received: true, handled: true };
     }
 
+    if (type === 'subscription_authorized_payment') {
+      return this.handleMercadoPagoSubscriptionInvoice(
+        resourceId,
+        body,
+        input.xRequestId,
+      );
+    }
+
     return { received: true, handled: false };
   }
 
@@ -309,6 +315,7 @@ export class StorefrontPaymentsService {
       userId: order.userId,
       characterId: order.characterId,
       offerKey: order.offerKey,
+      rewardQuantity: String(order.rewardQuantity),
     };
     const subscription = offer.kind === 'SUBSCRIPTION';
 
@@ -442,6 +449,7 @@ export class StorefrontPaymentsService {
           user_id: order.userId,
           character_id: order.characterId,
           offer_key: order.offerKey,
+          reward_quantity: order.rewardQuantity,
         },
         items: [
           {
@@ -458,7 +466,14 @@ export class StorefrontPaymentsService {
       requestOptions: { idempotencyKey: `storefront:${order.id}` },
     });
 
-    const checkoutUrl = preference.init_point ?? preference.sandbox_init_point;
+    const checkoutUrl = selectMercadoPagoCheckoutUrl({
+      accessToken: requireStorefrontSecret(
+        this.configService,
+        'MERCADO_PAGO_ACCESS_TOKEN',
+      ),
+      initPoint: preference.init_point,
+      sandboxInitPoint: preference.sandbox_init_point,
+    });
     if (!preference.id || !checkoutUrl) {
       throw new ServiceUnavailableException(
         'O Mercado Pago não retornou a URL de checkout.',
@@ -610,6 +625,53 @@ export class StorefrontPaymentsService {
       subscriptionId,
       metadata: {
         statusDetail: payment.status_detail ?? null,
+      },
+    });
+
+    return { received: true, handled: true };
+  }
+
+  private async handleMercadoPagoSubscriptionInvoice(
+    invoiceId: string,
+    body: Record<string, unknown> | null,
+    requestId?: string | string[] | null,
+  ) {
+    const invoice = await new Invoice(this.mercadoPagoClient()).get({
+      id: invoiceId,
+    });
+    const orderId = invoice.external_reference;
+    const subscriptionId = invoice.preapproval_id;
+    if (!invoice.id || !orderId || !subscriptionId) {
+      return { received: true, handled: false };
+    }
+
+    const subscription = await new PreApproval(this.mercadoPagoClient()).get({
+      id: subscriptionId,
+    });
+    const paymentStatus = mercadoPagoStatus(invoice.payment?.status);
+
+    await this.fulfillment.applyPaymentUpdate({
+      provider: StorefrontPaymentProvider.MERCADO_PAGO,
+      orderId,
+      providerPaymentId: invoice.payment?.id
+        ? String(invoice.payment.id)
+        : `invoice:${invoice.id}`,
+      providerEventId:
+        (Array.isArray(requestId) ? requestId[0] : requestId) ??
+        asString(body?.id),
+      status: paymentStatus,
+      providerStatus: invoice.payment?.status ?? invoice.status ?? 'unknown',
+      amountCents: Math.round((invoice.transaction_amount ?? 0) * 100),
+      currency: invoice.currency_id?.toUpperCase() ?? 'BRL',
+      paidAt:
+        paymentStatus === StorefrontPaymentStatus.APPROVED
+          ? (asDate(invoice.last_modified) ?? new Date())
+          : null,
+      periodEndsAt: asDate(subscription.next_payment_date),
+      subscriptionId,
+      metadata: {
+        invoiceId: invoice.id,
+        statusDetail: invoice.payment?.status_detail ?? null,
       },
     });
 

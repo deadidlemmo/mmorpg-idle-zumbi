@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowRight, FlaskConical } from 'lucide-react';
+import { ArrowRight, FlaskConical, Palette } from 'lucide-react';
 import merchantHubArtwork from '../../../assets/images/ui/mercadores-abrigo.webp';
 import { getCharacterOverview } from '../../dashboard/api/dashboard.api';
 import { DashboardLayout } from '../../dashboard/components/DashboardLayout';
@@ -23,6 +23,7 @@ function MerchantCard({
       className="merchant-card"
       to={to}
       aria-label={`Abrir ${merchant.marketName}`}
+      data-tone={merchant.tone}
     >
       <div className="merchant-card__identity">
         <div className="merchant-card__avatar" aria-hidden="true">
@@ -46,7 +47,11 @@ function MerchantCard({
         {merchant.offers.map((offer) => (
           <div className="merchant-card__offer" key={offer.label}>
             <span className="merchant-card__offer-icon" aria-hidden="true">
-              <FlaskConical size={20} strokeWidth={1.8} />
+              {offer.icon === 'APPEARANCE' ? (
+                <Palette size={20} strokeWidth={1.8} />
+              ) : (
+                <FlaskConical size={20} strokeWidth={1.8} />
+              )}
             </span>
             <span className="merchant-card__offer-copy">
               <strong>{offer.label}</strong>

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -18,13 +19,74 @@ import {
   getStorefrontProviderState,
 } from './storefront-payment.config';
 import { StorefrontPaymentsService } from './storefront-payments.service';
-import { STOREFRONT_OFFERS } from './storefront.config';
+import {
+  STOREFRONT_OFFERS,
+  type StorefrontOfferDefinition,
+} from './storefront.config';
 
 function formatBrl(amountCents: number) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   }).format(amountCents / 100);
+}
+
+function resolveCheckoutOffer(
+  offer: StorefrontOfferDefinition,
+  requestedCashAmount?: number,
+) {
+  if (!offer.customQuantity) {
+    if (requestedCashAmount !== undefined) {
+      throw new BadRequestException(
+        'A quantidade personalizada só pode ser usada em Cash sob medida.',
+      );
+    }
+
+    const rewardQuantity = offer.kind === 'CASH_PACKAGE' ? offer.cashAmount : 1;
+    if (
+      !Number.isSafeInteger(rewardQuantity) ||
+      rewardQuantity === undefined ||
+      rewardQuantity <= 0
+    ) {
+      throw new BadRequestException('Quantidade de recompensa inválida.');
+    }
+
+    return {
+      amountCents: offer.priceCents,
+      rewardQuantity,
+      checkoutOffer: offer,
+    };
+  }
+
+  const { min, max, unitPriceCents } = offer.customQuantity;
+  const effectiveCashAmount = requestedCashAmount ?? offer.cashAmount;
+  if (
+    !Number.isSafeInteger(effectiveCashAmount) ||
+    effectiveCashAmount === undefined ||
+    effectiveCashAmount < min ||
+    effectiveCashAmount > max
+  ) {
+    throw new BadRequestException(
+      `Escolha uma quantidade de Cash entre ${min} e ${max}.`,
+    );
+  }
+
+  const amountCents = effectiveCashAmount * unitPriceCents;
+  if (!Number.isSafeInteger(amountCents) || amountCents <= 0) {
+    throw new BadRequestException('Valor da recarga inválido.');
+  }
+
+  return {
+    amountCents,
+    rewardQuantity: effectiveCashAmount,
+    checkoutOffer: {
+      ...offer,
+      name: `${effectiveCashAmount} Cash`,
+      description: `Recarga personalizada de ${effectiveCashAmount} Cash.`,
+      priceCents: amountCents,
+      cashAmount: effectiveCashAmount,
+    },
+  };
 }
 
 @Injectable()
@@ -217,6 +279,7 @@ export class StorefrontService {
       (candidate) => candidate.key === dto.offerKey,
     );
     if (!offer) throw new NotFoundException('Oferta não encontrada.');
+    const resolvedOffer = resolveCheckoutOffer(offer, dto.cashAmount);
 
     if (
       getStorefrontProviderState(this.configService, dto.provider) !==
@@ -255,7 +318,8 @@ export class StorefrontService {
       if (
         previousOrder.characterId !== dto.characterId ||
         previousOrder.offerKey !== dto.offerKey ||
-        previousOrder.provider !== dto.provider
+        previousOrder.provider !== dto.provider ||
+        previousOrder.rewardQuantity !== resolvedOffer.rewardQuantity
       ) {
         throw new ConflictException(
           'A identificação desta tentativa já foi usada em outra compra.',
@@ -272,8 +336,9 @@ export class StorefrontService {
         characterId: dto.characterId,
         offerKey: offer.key,
         offerKind: offer.kind,
+        rewardQuantity: resolvedOffer.rewardQuantity,
         provider: dto.provider,
-        amountCents: offer.priceCents,
+        amountCents: resolvedOffer.amountCents,
         currency: 'BRL',
       },
     });
@@ -281,7 +346,7 @@ export class StorefrontService {
     try {
       const checkout = await this.payments.createCheckout({
         order,
-        offer,
+        offer: resolvedOffer.checkoutOffer,
         payerEmail: character.user.email,
       });
       const updatedOrder = await this.prisma.storefrontOrder.update({
@@ -326,6 +391,7 @@ export class StorefrontService {
         id: true,
         offerKey: true,
         offerKind: true,
+        rewardQuantity: true,
         provider: true,
         status: true,
         amountCents: true,
@@ -348,6 +414,8 @@ export class StorefrontService {
         formatted: formatBrl(order.amountCents),
       },
       delivered: order.status === StorefrontOrderStatus.FULFILLED,
+      cashAmount:
+        order.offerKind === 'CASH_PACKAGE' ? order.rewardQuantity : null,
     };
   }
 

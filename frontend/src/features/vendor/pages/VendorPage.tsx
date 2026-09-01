@@ -545,7 +545,7 @@ export function VendorPage() {
     return <Navigate to="/characters" replace />;
   }
 
-  if (!activeMerchant) {
+  if (!activeMerchant || activeMerchant.shopType !== "SUPPLIES") {
     return <Navigate to={`/dashboard/${safeCharacterId}/consumables`} replace />;
   }
 
@@ -576,6 +576,7 @@ export function VendorPage() {
         <article
           className="gathering-origin-lore-card gathering-origin-lore-card--npc gathering-origin-npc vendor-lore-card"
           aria-label={activeMerchant.title}
+          data-merchant={activeMerchant.id}
         >
           <div className="gathering-origin-npc__stage" aria-hidden="true">
             <div className="gathering-origin-npc__portrait vendor-npc-fallback">

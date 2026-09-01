@@ -29,15 +29,6 @@
   height: 184px;
 }
 
-.merchant-hub-hero .gathering-origin-npc__meta {
-  margin-bottom: 4px;
-}
-
-.merchant-hub-hero .gathering-origin-npc__name,
-.merchant-hub-hero .gathering-origin-npc__role {
-  letter-spacing: 0;
-}
-
 .merchant-hub-hero h2 {
   font-size: clamp(1.6rem, 2.5vw, 2.05rem);
   letter-spacing: 0;
@@ -71,18 +62,6 @@
 
 .vendor-lore-card {
   min-height: 214px;
-}
-
-.vendor-npc-fallback {
-  display: grid;
-  place-items: center;
-}
-
-.vendor-npc-fallback img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center bottom;
 }
 
 .vendor-npc-fallback span {
@@ -166,6 +145,36 @@
   box-shadow:
     inset 3px 0 0 rgba(230, 209, 111, 0.72),
     inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.merchant-card[data-tone="identity"] {
+  background:
+    linear-gradient(90deg, rgba(29, 85, 71, 0.3), transparent 38%),
+    rgba(2, 10, 8, 0.2);
+  box-shadow: inset 3px 0 0 rgba(95, 211, 190, 0.48);
+}
+
+.merchant-card[data-tone="identity"]:hover {
+  background:
+    linear-gradient(90deg, rgba(38, 111, 91, 0.34), rgba(2, 10, 8, 0.18)),
+    rgba(2, 10, 8, 0.26);
+  box-shadow:
+    inset 3px 0 0 rgba(95, 211, 190, 0.84),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.merchant-card[data-tone="identity"] .merchant-card__avatar {
+  border-color: rgba(95, 211, 190, 0.42);
+  background:
+    linear-gradient(145deg, rgba(48, 115, 96, 0.4), rgba(7, 20, 16, 0.96)),
+    #0a1814;
+  color: #d4fff5;
+}
+
+.merchant-card[data-tone="identity"] .merchant-card__offer-icon {
+  border-left-color: rgba(95, 211, 190, 0.64);
+  background: linear-gradient(90deg, rgba(95, 211, 190, 0.12), transparent);
+  color: #78ddc8;
 }
 
 .merchant-card:focus-visible {
@@ -1545,10 +1554,40 @@
     gap: 10px;
   }
 
+  .merchant-hub-hero .gathering-origin-npc__stage {
+    padding: 0.38rem 0 0;
+  }
+
+  .merchant-hub-hero .gathering-origin-npc__meta {
+    margin-bottom: 0;
+  }
+
+  .merchant-hub-hero .gathering-origin-npc__name,
+  .merchant-hub-hero .gathering-origin-npc__role {
+    letter-spacing: 0.1em;
+  }
+
+  .merchant-hub-hero blockquote {
+    margin-top: 0;
+  }
+
   .merchant-hub-hero__portrait img {
-    width: 118% !important;
-    height: 118% !important;
-    transform: translateY(4px);
+    width: 100% !important;
+    height: 100% !important;
+    transform: none;
+  }
+
+  .vendor-lore-card[data-merchant="mara"] .vendor-npc-fallback img,
+  .vendor-lore-card[data-merchant="vera"] .vendor-npc-fallback img {
+    transform-origin: center bottom;
+  }
+
+  .vendor-lore-card[data-merchant="mara"] .vendor-npc-fallback img {
+    transform: scale(1.06);
+  }
+
+  .vendor-lore-card[data-merchant="vera"] .vendor-npc-fallback img {
+    transform: scale(1.18);
   }
 
   .merchant-list-panel__table-head {
