@@ -485,9 +485,11 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  padding: 2.35rem 0.8rem 0.25rem;
+  padding: 0.15rem 0.15rem 0;
   object-fit: contain;
   object-position: center bottom;
+  transform: scale(1.08);
+  transform-origin: center bottom;
 }
 
 .world-bosses-boss-card__glyph {
@@ -637,8 +639,11 @@
 .world-boss-global-alert__visual img {
   width: 100%;
   height: 100%;
-  padding: 0.3rem;
+  padding: 0.05rem;
   object-fit: contain;
+  object-position: center bottom;
+  transform: scale(1.08);
+  transform-origin: center bottom;
 }
 
 .world-boss-global-alert__lock {
@@ -992,8 +997,11 @@
 .world-bosses-activity-boss__icon img {
   width: 100%;
   height: 100%;
-  padding: 0.2rem;
+  padding: 0.05rem;
   object-fit: contain;
+  object-position: center bottom;
+  transform: scale(1.08);
+  transform-origin: center bottom;
 }
 
 .world-bosses-activity-boss h2 {
@@ -1342,8 +1350,11 @@
 .world-bosses-modal__portrait img {
   width: 100%;
   height: 100%;
-  padding: 0.35rem;
+  padding: 0.1rem;
   object-fit: contain;
+  object-position: center bottom;
+  transform: scale(1.06);
+  transform-origin: center bottom;
 }
 
 .world-bosses-modal__hero > div:last-child {

@@ -1,26 +1,26 @@
-import bossT1Primary from "../../../assets/images/mobs/full-body/mob12-t1.webp";
-import bossT1Secondary from "../../../assets/images/mobs/full-body/mob3-t1.webp";
-import bossT2Primary from "../../../assets/images/mobs/full-body/mob12-t2.webp";
-import bossT2Secondary from "../../../assets/images/mobs/full-body/mob3-t2.webp";
-import bossT3Primary from "../../../assets/images/mobs/full-body/mob12-t3.webp";
-import bossT3Secondary from "../../../assets/images/mobs/full-body/mob1-t3.webp";
-import bossT4Primary from "../../../assets/images/mobs/full-body/mob12-t4.webp";
-import bossT4Secondary from "../../../assets/images/mobs/full-body/mob10-t4.webp";
-import bossT5Primary from "../../../assets/images/mobs/full-body/mob12-t5.webp";
-import bossT5Secondary from "../../../assets/images/mobs/full-body/mob7-t5.webp";
+import caoAlfaImage from "../../../assets/images/world-bosses/tier-1/cao-alfa-da-rua-das-cercas.webp";
+import sindicoDevoradoImage from "../../../assets/images/world-bosses/tier-1/sindico-devorado.webp";
+import capatazEnferrujadoImage from "../../../assets/images/world-bosses/tier-2/capataz-enferrujado.webp";
+import empilhadeiraCarniceiraImage from "../../../assets/images/world-bosses/tier-2/empilhadeira-carniceira.webp";
+import cirurgiaoSemPulsoImage from "../../../assets/images/world-bosses/tier-3/cirurgiao-sem-pulso.webp";
+import pacienteZeroImage from "../../../assets/images/world-bosses/tier-3/paciente-zero-da-ala-norte.webp";
+import condutorSemRotaImage from "../../../assets/images/world-bosses/tier-4/condutor-sem-rota.webp";
+import fiscalDosMortosImage from "../../../assets/images/world-bosses/tier-4/fiscal-dos-mortos.webp";
+import bestaDescontaminacaoImage from "../../../assets/images/world-bosses/tier-5/besta-de-descontaminacao.webp";
+import comandanteLacradoImage from "../../../assets/images/world-bosses/tier-5/comandante-lacrado.webp";
 import type { WorldBossSummary } from "../types/world-bosses.types";
 
 const WORLD_BOSS_ASSETS: Record<string, string> = {
-  "sindico-devorado": bossT1Primary,
-  "cao-alfa-da-rua-das-cercas": bossT1Secondary,
-  "capataz-enferrujado": bossT2Primary,
-  "empilhadeira-carniceira": bossT2Secondary,
-  "cirurgiao-sem-pulso": bossT3Primary,
-  "paciente-zero-da-ala-norte": bossT3Secondary,
-  "fiscal-dos-mortos": bossT4Primary,
-  "condutor-sem-rota": bossT4Secondary,
-  "comandante-lacrado": bossT5Primary,
-  "besta-de-descontaminacao": bossT5Secondary,
+  "sindico-devorado": sindicoDevoradoImage,
+  "cao-alfa-da-rua-das-cercas": caoAlfaImage,
+  "capataz-enferrujado": capatazEnferrujadoImage,
+  "empilhadeira-carniceira": empilhadeiraCarniceiraImage,
+  "cirurgiao-sem-pulso": cirurgiaoSemPulsoImage,
+  "paciente-zero-da-ala-norte": pacienteZeroImage,
+  "fiscal-dos-mortos": fiscalDosMortosImage,
+  "condutor-sem-rota": condutorSemRotaImage,
+  "comandante-lacrado": comandanteLacradoImage,
+  "besta-de-descontaminacao": bestaDescontaminacaoImage,
 };
 
 function normalizeWorldBossAssetKey(value?: string | null) {
