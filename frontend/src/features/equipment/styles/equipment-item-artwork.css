@@ -1,7 +1,7 @@
 .equipment-item-artwork {
   --equipment-enhancement-rgb: 83, 218, 244;
   --equipment-enhancement-glow: 0.2;
-  --equipment-enhancement-ray-opacity: 0.2;
+  --equipment-enhancement-ray-layer-opacity: 0.7;
   --equipment-enhancement-speed: 18s;
 
   position: relative;
@@ -53,41 +53,91 @@
   inset: -38%;
   z-index: 0;
   pointer-events: none;
-  background: repeating-conic-gradient(
-    from 4deg,
-    transparent 0deg 12deg,
-    rgba(
-        var(--equipment-enhancement-rgb),
-        var(--equipment-enhancement-ray-opacity)
-      )
-      12deg 16deg,
-    transparent 16deg 29deg
-  );
-  opacity: 0.9;
+  opacity: var(--equipment-enhancement-ray-layer-opacity);
   mask-image: radial-gradient(circle, #000 8%, transparent 70%);
   animation: equipment-enhancement-rays var(--equipment-enhancement-speed) linear
     infinite;
 }
 
 .equipment-item-artwork--level-1 {
-  --equipment-enhancement-rgb: 75, 202, 232;
-  --equipment-enhancement-glow: 0.16;
-  --equipment-enhancement-ray-opacity: 0.17;
-  --equipment-enhancement-speed: 20s;
+  --equipment-enhancement-rgb: 68, 176, 198;
+  --equipment-enhancement-glow: 0.1;
+  --equipment-enhancement-ray-layer-opacity: 0.4;
+  --equipment-enhancement-speed: 28s;
+}
+
+.equipment-item-artwork--level-1 .equipment-item-artwork__rays {
+  background: repeating-conic-gradient(
+    from 4deg,
+    transparent 0deg 50deg,
+    rgba(var(--equipment-enhancement-rgb), 0.34) 50deg 54deg,
+    transparent 54deg 60deg
+  );
 }
 
 .equipment-item-artwork--level-2 {
-  --equipment-enhancement-rgb: 88, 222, 248;
-  --equipment-enhancement-glow: 0.23;
-  --equipment-enhancement-ray-opacity: 0.24;
-  --equipment-enhancement-speed: 16s;
+  --equipment-enhancement-rgb: 65, 218, 245;
+  --equipment-enhancement-glow: 0.25;
+  --equipment-enhancement-ray-layer-opacity: 0.82;
+  --equipment-enhancement-speed: 17s;
+  --equipment-enhancement-pulse-min: 0.12;
+  --equipment-enhancement-pulse-max: 0.32;
+  --equipment-enhancement-pulse-speed: 4.4s;
+}
+
+.equipment-item-artwork--level-2 .equipment-item-artwork__rays {
+  background: repeating-conic-gradient(
+    from 4deg,
+    transparent 0deg 22deg,
+    rgba(var(--equipment-enhancement-rgb), 0.34) 22deg 27deg,
+    transparent 27deg 30deg
+  );
 }
 
 .equipment-item-artwork--level-3 {
-  --equipment-enhancement-rgb: 125, 235, 255;
-  --equipment-enhancement-glow: 0.32;
-  --equipment-enhancement-ray-opacity: 0.32;
-  --equipment-enhancement-speed: 12s;
+  --equipment-enhancement-rgb: 166, 245, 255;
+  --equipment-enhancement-glow: 0.48;
+  --equipment-enhancement-ray-layer-opacity: 1;
+  --equipment-enhancement-speed: 9s;
+  --equipment-enhancement-pulse-min: 0.3;
+  --equipment-enhancement-pulse-max: 0.76;
+  --equipment-enhancement-pulse-speed: 2s;
+}
+
+.equipment-item-artwork--level-3 .equipment-item-artwork__rays {
+  background:
+    repeating-conic-gradient(
+      from 2deg,
+      transparent 0deg 8deg,
+      rgba(var(--equipment-enhancement-rgb), 0.4) 8deg 12deg,
+      transparent 12deg 18deg
+    ),
+    repeating-conic-gradient(
+      from 9deg,
+      transparent 0deg 24deg,
+      rgba(255, 255, 255, 0.2) 24deg 27deg,
+      transparent 27deg 36deg
+    );
+  filter: brightness(1.16)
+    drop-shadow(0 0 5px rgba(var(--equipment-enhancement-rgb), 0.48));
+}
+
+.equipment-item-artwork--level-2::before,
+.equipment-item-artwork--level-3::before {
+  position: absolute;
+  inset: 5%;
+  z-index: 1;
+  content: "";
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    transparent 34%,
+    rgba(var(--equipment-enhancement-rgb), 0.42) 49%,
+    transparent 68%
+  );
+  border-radius: 50%;
+  animation: equipment-enhancement-pulse
+    var(--equipment-enhancement-pulse-speed) ease-in-out infinite;
 }
 
 @keyframes equipment-enhancement-rays {
@@ -96,8 +146,23 @@
   }
 }
 
+@keyframes equipment-enhancement-pulse {
+  0%,
+  100% {
+    opacity: var(--equipment-enhancement-pulse-min);
+    transform: scale(0.84);
+  }
+
+  50% {
+    opacity: var(--equipment-enhancement-pulse-max);
+    transform: scale(1.08);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .equipment-item-artwork__rays {
+  .equipment-item-artwork__rays,
+  .equipment-item-artwork--level-2::before,
+  .equipment-item-artwork--level-3::before {
     animation: none;
   }
 }
