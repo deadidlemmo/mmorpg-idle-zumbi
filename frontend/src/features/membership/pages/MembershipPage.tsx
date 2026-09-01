@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import cashIcon from "../../../assets/images/coins/cash.webp";
+import passesPackagesIcon from "../../../assets/images/ui/passes-packages.webp";
 import { PremiumPlaceholderIcon } from "../../../components/PremiumPlaceholderIcon";
 import { getCosmeticImage } from "../../cosmetics/constants/cosmetic-assets";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
@@ -68,6 +69,7 @@ interface MembershipTabDefinition {
   label: string;
   description: string;
   icon: LucideIcon;
+  artwork?: string;
 }
 
 interface CosmeticGroupDefinition {
@@ -88,12 +90,14 @@ const MEMBERSHIP_TABS: MembershipTabDefinition[] = [
     label: "Cash",
     description: "Recargas",
     icon: Coins,
+    artwork: cashIcon,
   },
   {
     key: "packages",
     label: "Passes e pacotes",
     description: "Coleções",
     icon: PackageOpen,
+    artwork: passesPackagesIcon,
   },
 ];
 
@@ -1019,10 +1023,18 @@ export function MembershipPage() {
                 aria-selected={isActive}
                 aria-controls={`membership-panel-${tab.key}`}
                 className={isActive ? "is-active" : ""}
+                data-membership-tab={tab.key}
                 onClick={() => setActiveTab(tab.key)}
               >
                 {tab.key === "premium" ? (
                   <PremiumPlaceholderIcon className="membership-tab-premium-icon" />
+                ) : tab.artwork ? (
+                  <img
+                    className="membership-tab-artwork"
+                    src={tab.artwork}
+                    alt=""
+                    aria-hidden="true"
+                  />
                 ) : (
                   <Icon size={19} aria-hidden="true" />
                 )}

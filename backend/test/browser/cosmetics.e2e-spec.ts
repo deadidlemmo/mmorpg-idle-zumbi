@@ -356,6 +356,32 @@ test.describe('cosméticos e inspeção pública', () => {
       }),
     ).toBeVisible();
     await expect(page.getByRole('tab')).toHaveCount(3);
+    const cashTabArtwork = page.locator(
+      '[data-membership-tab="cash"] .membership-tab-artwork',
+    );
+    const packagesTabArtwork = page.locator(
+      '[data-membership-tab="packages"] .membership-tab-artwork',
+    );
+    await expect(cashTabArtwork).toBeVisible();
+    await expect(packagesTabArtwork).toBeVisible();
+    for (const artwork of [cashTabArtwork, packagesTabArtwork]) {
+      expect(
+        await artwork.evaluate((image: HTMLImageElement) => ({
+          isLoaded: image.complete && image.naturalWidth > 0,
+          isInsideTab: (() => {
+            const imageBox = image.getBoundingClientRect();
+            const tabBox = image.closest('button')?.getBoundingClientRect();
+            return Boolean(
+              tabBox &&
+              imageBox.left >= tabBox.left &&
+              imageBox.right <= tabBox.right &&
+              imageBox.top >= tabBox.top &&
+              imageBox.bottom <= tabBox.bottom,
+            );
+          })(),
+        })),
+      ).toEqual({ isLoaded: true, isInsideTab: true });
+    }
     await expect(
       page.getByRole('heading', {
         name: 'Escolha a forma de ativação',
@@ -391,7 +417,7 @@ test.describe('cosméticos e inspeção pública', () => {
     await expect(
       premiumItemCard.getByText('R$ 19,90', { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText('+20%', { exact: true })).toBeVisible();
+    await expect(page.getByText('+20%', { exact: true })).toHaveCount(4);
     await expect(page.getByText('12 horas', { exact: true })).toBeVisible();
     await expect(page.getByText('38', { exact: true })).toBeVisible();
     await expect(page.getByText('Pausadas durante os testes')).toHaveCount(0);
@@ -471,6 +497,24 @@ test.describe('cosméticos e inspeção pública', () => {
         exact: true,
       }),
     ).toBeVisible();
+    for (const artwork of [cashTabArtwork, packagesTabArtwork]) {
+      expect(
+        await artwork.evaluate((image: HTMLImageElement) => {
+          const imageBox = image.getBoundingClientRect();
+          const tabBox = image.closest('button')?.getBoundingClientRect();
+          return {
+            isLoaded: image.complete && image.naturalWidth > 0,
+            isInsideTab: Boolean(
+              tabBox &&
+              imageBox.left >= tabBox.left &&
+              imageBox.right <= tabBox.right &&
+              imageBox.top >= tabBox.top &&
+              imageBox.bottom <= tabBox.bottom,
+            ),
+          };
+        }),
+      ).toEqual({ isLoaded: true, isInsideTab: true });
+    }
     await page.getByRole('tab', { name: /^Cash/ }).click();
     await expect(
       page.getByRole('heading', { name: 'Escolha sua recarga', exact: true }),
