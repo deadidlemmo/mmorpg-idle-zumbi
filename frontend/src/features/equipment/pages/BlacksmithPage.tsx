@@ -5,7 +5,6 @@ import {
   Anvil,
   ArrowRight,
   Check,
-  Coins,
   Hammer,
   PackageOpen,
   RefreshCw,
@@ -13,10 +12,12 @@ import {
   X,
 } from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
+import goldIcon from "../../../assets/images/coins/gold.webp";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import { getEquipmentRarityFromItem } from "../../dashboard/constants/equipment-rarity";
 import "../../dashboard/dashboard.css";
+import { getGatheringMaterialImageUrl } from "../../gathering/utils/gatheringMaterialAssets";
 import {
   extractInventoryActionApiError,
   getCharacterEquipment,
@@ -49,6 +50,15 @@ const SLOT_LABELS: Record<string, string> = {
   BOOTS: "Botas",
 };
 
+const EQUIPPED_SLOT_ORDER: Record<string, number> = {
+  HEAD: 0,
+  MAIN_HAND: 1,
+  OFF_HAND: 2,
+  ARMOR: 3,
+  PANTS: 4,
+  BOOTS: 5,
+};
+
 function getLegacyCandidates(
   reinforcement?: EquipmentReinforcementState,
 ): EquipmentReinforcementCandidate[] {
@@ -74,7 +84,137 @@ function getLegacyCandidates(
 }
 
 function getCandidateSlot(candidate: EquipmentReinforcementCandidate) {
-  return SLOT_LABELS[candidate.item.slot ?? ""] ?? "Equipamento";
+  const slot =
+    candidate.target.type === "EQUIPPED"
+      ? candidate.target.slot
+      : candidate.item.slot;
+
+  return SLOT_LABELS[slot ?? ""] ?? "Equipamento";
+}
+
+function getCandidateDisplayName(candidate: EquipmentReinforcementCandidate) {
+  return candidate.item.name.replace(/\s+\+[1-3]\s*$/i, "");
+}
+
+function sortEquippedCandidates(
+  left: EquipmentReinforcementCandidate,
+  right: EquipmentReinforcementCandidate,
+) {
+  const leftSlot =
+    left.target.type === "EQUIPPED" ? left.target.slot : left.item.slot;
+  const rightSlot =
+    right.target.type === "EQUIPPED" ? right.target.slot : right.item.slot;
+
+  return (
+    (EQUIPPED_SLOT_ORDER[leftSlot ?? ""] ?? Number.MAX_SAFE_INTEGER) -
+      (EQUIPPED_SLOT_ORDER[rightSlot ?? ""] ?? Number.MAX_SAFE_INTEGER) ||
+    left.item.name.localeCompare(right.item.name, "pt-BR")
+  );
+}
+
+interface BlacksmithItemGridProps {
+  candidates: EquipmentReinforcementCandidate[];
+  selectedKey: string | null;
+  emptyTitle: string;
+  emptyDescription: string;
+  onSelect: (candidate: EquipmentReinforcementCandidate) => void;
+}
+
+function BlacksmithItemGrid({
+  candidates,
+  selectedKey,
+  emptyTitle,
+  emptyDescription,
+  onSelect,
+}: BlacksmithItemGridProps) {
+  if (!candidates.length) {
+    return (
+      <div className="blacksmith-empty blacksmith-empty--group">
+        <PackageOpen size={27} />
+        <strong>{emptyTitle}</strong>
+        <span>{emptyDescription}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="blacksmith-grid">
+      {candidates.map((candidate) => {
+        const rarity = getEquipmentRarityFromItem(candidate.item);
+        const imageUrl = getEquipmentItemImageUrl(candidate.item);
+        const level = Number(candidate.item.enhancementLevel) || 0;
+        const displayName = getCandidateDisplayName(candidate);
+        const isSelected = selectedKey === candidate.key;
+        const locationLabel =
+          candidate.location === "EQUIPPED" ? "Equipado" : "Mochila";
+        const readinessLabel = candidate.canReinforce
+          ? `Pronto para +${candidate.cost.level}`
+          : candidate.reason;
+        const accessibleLabel = [
+          displayName,
+          locationLabel,
+          `Tier ${candidate.item.tier}`,
+          getCandidateSlot(candidate),
+          `reforço atual +${level}`,
+          readinessLabel,
+        ]
+          .filter(Boolean)
+          .join(". ");
+
+        return (
+          <button
+            key={candidate.key}
+            type="button"
+            className={`blacksmith-item${isSelected ? " is-selected" : ""}${candidate.canReinforce ? " is-ready" : " is-missing-resources"}`}
+            data-target-key={candidate.key}
+            data-enhancement-level={level}
+            style={
+              { "--blacksmith-item-rgb": rarity.rgb } as CSSProperties
+            }
+            onClick={() => onSelect(candidate)}
+            aria-label={accessibleLabel}
+            aria-pressed={isSelected}
+            title={readinessLabel ?? undefined}
+          >
+            <span className="blacksmith-item__visual">
+              {imageUrl ? (
+                <img src={imageUrl} alt="" loading="lazy" />
+              ) : (
+                <Anvil size={31} strokeWidth={1.6} />
+              )}
+              <span className="blacksmith-item__tier">
+                T{candidate.item.tier}
+              </span>
+              {candidate.location === "INVENTORY" && candidate.quantity > 1 ? (
+                <span className="blacksmith-item__quantity">
+                  x{candidate.quantity.toLocaleString("pt-BR")}
+                </span>
+              ) : null}
+              <span className="blacksmith-item__state" aria-hidden="true">
+                {candidate.canReinforce ? (
+                  <Check size={11} />
+                ) : (
+                  <AlertCircle size={11} />
+                )}
+              </span>
+            </span>
+            {level > 0 ? (
+              <span
+                className="blacksmith-item__enhancement"
+                aria-hidden="true"
+              >
+                +{level}
+              </span>
+            ) : null}
+            <span className="blacksmith-item__copy">
+              <strong>{displayName}</strong>
+              <small>{getCandidateSlot(candidate)}</small>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function BlacksmithPage() {
@@ -165,6 +305,17 @@ export function BlacksmithPage() {
         left.item.name.localeCompare(right.item.name, "pt-BR"),
     );
   }, [reinforcement]);
+  const equippedCandidates = useMemo(
+    () =>
+      candidates
+        .filter((candidate) => candidate.location === "EQUIPPED")
+        .sort(sortEquippedCandidates),
+    [candidates],
+  );
+  const inventoryCandidates = useMemo(
+    () => candidates.filter((candidate) => candidate.location === "INVENTORY"),
+    [candidates],
+  );
   const selectedCandidate =
     candidates.find((candidate) => candidate.key === selectedKey) ??
     candidates[0] ??
@@ -173,6 +324,9 @@ export function BlacksmithPage() {
     selectedCandidate?.item,
     selectedCandidate?.nextItem,
   );
+  const selectedFragmentImageUrl = getGatheringMaterialImageUrl({
+    name: selectedCandidate?.cost.materialName,
+  });
   const readyCount = candidates.filter(
     (candidate) => candidate.canReinforce,
   ).length;
@@ -347,28 +501,6 @@ export function BlacksmithPage() {
           </div>
         ) : null}
 
-        <section
-          className="blacksmith-materials"
-          aria-label="Materiais de reforço disponíveis"
-        >
-          <div>
-            <Coins size={17} />
-            <span>
-              <small>Gold</small>
-              <strong>{(reinforcement?.gold ?? 0).toLocaleString("pt-BR")}</strong>
-            </span>
-          </div>
-          {(reinforcement?.materials ?? []).map((material) => (
-            <div key={material.tier}>
-              <Hammer size={16} />
-              <span>
-                <small>T{material.tier}</small>
-                <strong>{material.quantity}</strong>
-              </span>
-            </div>
-          ))}
-        </section>
-
         <div className="blacksmith-workspace">
           <section
             className="blacksmith-catalog"
@@ -379,77 +511,54 @@ export function BlacksmithPage() {
                 <span>PEÇAS DO PERSONAGEM</span>
                 <h2 id="blacksmith-catalog-title">Itens reforçáveis</h2>
               </div>
-              <small>Equipados e na mochila</small>
+              <small>{candidates.length} disponíveis</small>
             </div>
 
-            {candidates.length ? (
-              <div className="blacksmith-grid">
-                {candidates.map((candidate) => {
-                  const rarity = getEquipmentRarityFromItem(candidate.item);
-                  const imageUrl = getEquipmentItemImageUrl(candidate.item);
-                  const level = Number(candidate.item.enhancementLevel) || 0;
-                  const isSelected = selectedCandidate?.key === candidate.key;
-
-                  return (
-                    <button
-                      key={candidate.key}
-                      type="button"
-                      className={`blacksmith-item${isSelected ? " is-selected" : ""}${candidate.canReinforce ? " is-ready" : " is-missing-resources"}`}
-                      data-target-key={candidate.key}
-                      data-enhancement-level={level}
-                      style={
-                        { "--blacksmith-item-rgb": rarity.rgb } as CSSProperties
-                      }
-                      onClick={() => selectCandidate(candidate)}
-                      aria-pressed={isSelected}
-                    >
-                      <span className="blacksmith-item__visual">
-                        {imageUrl ? (
-                          <img src={imageUrl} alt="" loading="lazy" />
-                        ) : (
-                          <Anvil size={27} strokeWidth={1.6} />
-                        )}
-                      </span>
-                      <span className="blacksmith-item__copy">
-                        <small>
-                          {candidate.location === "EQUIPPED"
-                            ? "Equipado"
-                            : `Mochila · ${candidate.quantity}x`}
-                        </small>
-                        <strong>{candidate.item.name}</strong>
-                        <em>
-                          T{candidate.item.tier} · {getCandidateSlot(candidate)}
-                        </em>
-                      </span>
-                      <span
-                        className="blacksmith-item__levels"
-                        aria-label={`Reforço atual +${level}`}
-                      >
-                        {[1, 2, 3].map((step) => (
-                          <i key={step} className={step <= level ? "is-active" : ""}>
-                            +{step}
-                          </i>
-                        ))}
-                      </span>
-                      <span className="blacksmith-item__status">
-                        {candidate.canReinforce
-                          ? `Pronto para +${candidate.cost.level}`
-                          : candidate.reason}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="blacksmith-empty">
-                <PackageOpen size={34} />
-                <strong>Nenhuma peça disponível para reforço</strong>
-                <span>
-                  Peças no +3 e equipamentos fora dos tiers T1–T5 não aparecem
-                  aqui.
+            <section
+              className="blacksmith-item-group"
+              aria-labelledby="blacksmith-equipped-title"
+            >
+              <div className="blacksmith-item-group__heading">
+                <span className="blacksmith-item-group__icon" aria-hidden="true">
+                  <ShieldCheck size={17} />
                 </span>
+                <div>
+                  <span>EM USO</span>
+                  <h3 id="blacksmith-equipped-title">Equipados</h3>
+                </div>
+                <small>{equippedCandidates.length}</small>
               </div>
-            )}
+              <BlacksmithItemGrid
+                candidates={equippedCandidates}
+                selectedKey={selectedCandidate?.key ?? null}
+                emptyTitle="Nenhum equipado disponível"
+                emptyDescription="Equipe uma peça reforçável para vê-la aqui."
+                onSelect={selectCandidate}
+              />
+            </section>
+
+            <section
+              className="blacksmith-item-group"
+              aria-labelledby="blacksmith-inventory-title"
+            >
+              <div className="blacksmith-item-group__heading">
+                <span className="blacksmith-item-group__icon" aria-hidden="true">
+                  <PackageOpen size={17} />
+                </span>
+                <div>
+                  <span>GUARDADOS</span>
+                  <h3 id="blacksmith-inventory-title">Mochila</h3>
+                </div>
+                <small>{inventoryCandidates.length}</small>
+              </div>
+              <BlacksmithItemGrid
+                candidates={inventoryCandidates}
+                selectedKey={selectedCandidate?.key ?? null}
+                emptyTitle="Nenhuma peça na mochila"
+                emptyDescription="Peças reforçáveis guardadas aparecerão nesta grade."
+                onSelect={selectCandidate}
+              />
+            </section>
           </section>
 
           <div
@@ -519,7 +628,13 @@ export function BlacksmithPage() {
                           : "is-insufficient"
                       }
                     >
-                      <Hammer size={17} />
+                      <span className="blacksmith-detail__cost-icon">
+                        {selectedFragmentImageUrl ? (
+                          <img src={selectedFragmentImageUrl} alt="" />
+                        ) : (
+                          <Hammer size={19} />
+                        )}
+                      </span>
                       <span>
                         <small>{selectedCandidate.cost.materialName}</small>
                         <strong>
@@ -536,7 +651,9 @@ export function BlacksmithPage() {
                           : "is-insufficient"
                       }
                     >
-                      <Coins size={17} />
+                      <span className="blacksmith-detail__cost-icon">
+                        <img src={goldIcon} alt="" />
+                      </span>
                       <span>
                         <small>Gold</small>
                         <strong>
