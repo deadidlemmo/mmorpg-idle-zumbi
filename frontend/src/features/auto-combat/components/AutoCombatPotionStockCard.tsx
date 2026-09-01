@@ -127,12 +127,22 @@ export function AutoCombatPotionStockCard({
           <Settings2 size={17} strokeWidth={1.9} aria-hidden="true" />
         </button>
       }
+      iconAriaLabel="Configurar poção automática"
       icon={
-        imageUrl ? (
-          <img src={imageUrl} alt="" decoding="async" />
-        ) : (
-          <FlaskConical size={34} strokeWidth={1.7} aria-hidden="true" />
-        )
+        <button
+          type="button"
+          className="auto-combat-potion-stock-card__icon-button"
+          aria-label="Abrir configuração de poção automática"
+          disabled={disabled}
+          onClick={onConfigure}
+          title="Configurar poção automática"
+        >
+          {imageUrl ? (
+            <img src={imageUrl} alt="" decoding="async" />
+          ) : (
+            <FlaskConical size={34} strokeWidth={1.7} aria-hidden="true" />
+          )}
+        </button>
       }
       label={title}
       pills={pills}

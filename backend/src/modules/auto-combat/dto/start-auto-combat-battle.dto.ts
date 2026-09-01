@@ -1,7 +1,16 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsUUID, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsUUID, Min } from 'class-validator';
+
+export enum AutoCombatBattleMode {
+  SINGLE = 'SINGLE',
+  ALL = 'ALL',
+}
 
 export class StartAutoCombatBattleDto {
+  @IsOptional()
+  @IsEnum(AutoCombatBattleMode)
+  mode?: AutoCombatBattleMode;
+
   @IsOptional()
   @IsUUID()
   mobId?: string;

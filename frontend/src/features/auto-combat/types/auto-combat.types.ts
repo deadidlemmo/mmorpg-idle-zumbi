@@ -124,7 +124,10 @@ export type AutoCombatClientTelemetryPayload = {
 };
 
 export type AutoCombatTelemetryContext =
-  "combat-page" | "other-page" | "tab-hidden" | "reconnected";
+  | "combat-page"
+  | "other-page"
+  | "tab-hidden"
+  | "reconnected";
 
 export type AutoCombatTelemetryMetadata = {
   context: AutoCombatTelemetryContext;
@@ -614,7 +617,10 @@ export interface AutoCombatHuntingViewModel {
   skill?: AutoCombatHuntingSkillViewModel | null;
 }
 
+export type AutoCombatBattleMode = "SINGLE" | "ALL";
+
 export interface AutoCombatBattleSelectionViewModel {
+  mode?: AutoCombatBattleMode | null;
   mobId?: string | null;
   encounterId?: string | null;
   total?: number | null;
@@ -719,6 +725,7 @@ export interface AutoCombatSessionApiViewModel {
   bonusEnemiesFound?: number | null;
   selectedEncounterId?: string | null;
   selectedEncounterMobId?: string | null;
+  battleMode?: AutoCombatBattleMode | null;
   battleTargetMobId?: string | null;
   battleTargetEncounterId?: string | null;
   battleTargetTotal?: number | null;
@@ -1089,6 +1096,7 @@ export interface AutoCombatStatusResponse {
   hasActiveAutoCombat?: boolean;
   currentMapId?: string | null;
   currentSubMapId?: string | null;
+  battleMode?: AutoCombatBattleMode | null;
   canTravel?: boolean | null;
 
   message?: string;
@@ -1142,6 +1150,7 @@ export interface AutoCombatStatusResponse {
 export type StartAutoCombatResponse = AutoCombatStatusResponse;
 
 export type StartAutoCombatBattlePayload = {
+  mode?: AutoCombatBattleMode;
   mobId?: string;
   encounterId?: string;
   quantity?: number;

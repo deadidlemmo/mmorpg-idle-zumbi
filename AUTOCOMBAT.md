@@ -42,9 +42,9 @@ frontend/src/services/api/endpoints.ts
 3. Backend cria ou reaproveita uma sessao `AutoCombatSession` em fase `HUNTING`.
 4. Backend processa hunt, incrementa ameacas encontradas e XP de caca.
 5. Quando ha ameacas rastreadas, a sessao pode ir para `ENCOUNTER_READY`.
-6. Jogador inicia batalha por `POST /auto-combat/:characterId/battle/start`.
-7. Backend muda a fase para `COMBAT_ACTIVE`, define alvo e processa TTK/rodadas.
-8. Ao terminar o alvo, a sessao volta para `ENCOUNTER_READY` se ainda houver ameacas, ou para `HUNTING` para continuar rastreando.
+6. Jogador inicia uma selecao individual ou toda a fila por `POST /auto-combat/:characterId/battle/start`.
+7. Backend muda a fase para `COMBAT_ACTIVE`, define o modo e processa TTK/rodadas.
+8. No modo `SINGLE`, a sessao volta para `ENCOUNTER_READY` ao terminar o alvo. No modo `ALL`, avanca automaticamente pelos mobs rastreados ate consumir a fila.
 9. Sessao pode ser parada por hunt stop ou stop geral.
 10. Frontend reconcilia status e eventos recentes apos F5, reconnect, alt-tab longo ou retorno offline.
 
@@ -129,13 +129,14 @@ Arquivo: `backend/src/modules/auto-combat/dto/start-auto-combat-battle.dto.ts`.
 
 ```ts
 {
+  mode?: 'SINGLE' | 'ALL';
   mobId?: string;
   encounterId?: string;
   quantity?: number;
 }
 ```
 
-`quantity` e inteiro minimo `1`. `mobId` e `encounterId` sao opcionais e UUIDs.
+`quantity` e inteiro minimo `1`. `mobId` e `encounterId` sao opcionais e UUIDs. O modo padrao e `SINGLE`. O modo `ALL` usa toda a fila rastreada e nao aceita `mobId`, `encounterId` ou `quantity` no mesmo payload.
 
 ### PreviewAutoCombatDto
 

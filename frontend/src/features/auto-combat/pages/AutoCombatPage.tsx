@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
-import { RefreshCw, Trash2, X } from "lucide-react";
+import { RefreshCw, Swords, Trash2, X } from "lucide-react";
 import autoCombatActivityIcon from "../../../assets/images/auto-combat/auto-combat-activity-icon.webp";
 import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.webp";
 import { ActivityProgressCard } from "../../../components/game/ActivityProgressCard";
@@ -1081,6 +1081,12 @@ export function AutoCombatPage() {
     effectiveStatus?.battleSelection ??
     effectiveSession?.battleSelection ??
     null;
+  const activeBattleMode =
+    effectiveSession?.battleMode ??
+    effectiveStatus?.battleMode ??
+    activeBattleSelection?.mode ??
+    null;
+  const isAllTrackedBattleActive = activeBattleMode === "ALL";
   const activeBattleTargetMobId =
     effectiveSession?.battleTargetMobId ?? activeBattleSelection?.mobId ?? null;
   const activeBattleTargetEncounterId =
@@ -4843,7 +4849,11 @@ export function AutoCombatPage() {
                       aria-label="Batalha da caça em andamento"
                     >
                       <div className="auto-combat-inline-battle__header">
-                        <span>Alvo atual</span>
+                        <span>
+                          {isAllTrackedBattleActive
+                            ? "Fila automática"
+                            : "Alvo atual"}
+                        </span>
 
                         <div className="auto-combat-inline-battle__metrics">
                           {displayedBattleTargetTotal > 0 ? (
@@ -5159,17 +5169,53 @@ export function AutoCombatPage() {
                           <>
                             <button
                               type="button"
-                              className="auto-combat-primary-button"
+                              className={[
+                                "auto-combat-primary-button",
+                                isBackendEncounterReadyPhase
+                                  ? "auto-combat-battle-all-button"
+                                  : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
                               disabled={
-                                isBackendEncounterReadyPhase || !canStartCombat
+                                isBackendEncounterReadyPhase
+                                  ? availableEnemiesCount <= 0 ||
+                                    isActionLoading ||
+                                    !characterHasHp
+                                  : !canStartCombat
                               }
-                              onClick={() => handleStartAutoCombat()}
+                              onClick={() =>
+                                handleStartAutoCombat(
+                                  isBackendEncounterReadyPhase
+                                    ? { mode: "ALL" }
+                                    : undefined,
+                                )
+                              }
                             >
-                              {isBackendEncounterReadyPhase
-                                ? "Escolha um mob"
-                                : isActionLoading
-                                  ? "Processando..."
-                                  : "Iniciar combate"}
+                              {isActionLoading ? (
+                                "Processando..."
+                              ) : isBackendEncounterReadyPhase ? (
+                                <>
+                                  <Swords
+                                    size={17}
+                                    strokeWidth={2.2}
+                                    aria-hidden="true"
+                                  />
+                                  <span>
+                                    <strong>Batalhar todos</strong>
+                                    <small>
+                                      {availableEnemiesCount.toLocaleString(
+                                        "pt-BR",
+                                      )}{" "}
+                                      {availableEnemiesCount === 1
+                                        ? "ameaça"
+                                        : "ameaças"}
+                                    </small>
+                                  </span>
+                                </>
+                              ) : (
+                                "Iniciar combate"
+                              )}
                             </button>
 
                             {isBackendEncounterReadyPhase ? (
@@ -5454,8 +5500,23 @@ export function AutoCombatPage() {
                                 .join(" ")}
                               onClick={() => handleOpenPotionConfig(index)}
                             >
-                              <div className="auto-combat-potion-slot__icon">
-                                ✚
+                              <div
+                                className={[
+                                  "auto-combat-potion-slot__icon",
+                                  potionItem && configuredPotionImage
+                                    ? "has-image"
+                                    : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                              >
+                                {potionItem && configuredPotionImage ? (
+                                  <img
+                                    src={configuredPotionImage}
+                                    alt=""
+                                    decoding="async"
+                                  />
+                                ) : null}
                               </div>
 
                               <div className="auto-combat-consumable-slot__body">

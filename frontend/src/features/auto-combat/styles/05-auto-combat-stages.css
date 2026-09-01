@@ -26,6 +26,36 @@
   min-width: 180px;
 }
 
+.auto-combat-stage-actions .auto-combat-battle-all-button {
+  display: inline-flex;
+  min-width: 220px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.52rem;
+}
+
+.auto-combat-battle-all-button > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.08rem;
+  line-height: 1;
+  text-align: left;
+}
+
+.auto-combat-battle-all-button strong {
+  font: inherit;
+}
+
+.auto-combat-battle-all-button small {
+  color: rgba(235, 247, 214, 0.7);
+  font-family: var(--font-body);
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .auto-combat-stage-actions--session {
   margin-top: 0.15rem;
 }

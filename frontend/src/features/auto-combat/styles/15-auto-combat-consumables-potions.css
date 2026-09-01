@@ -472,6 +472,16 @@
   letter-spacing: 0.04em;
 }
 
+.auto-combat-potion-slot__icon.has-image::before {
+  display: none;
+}
+
+.auto-combat-potion-slot__icon img {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+}
+
 .auto-combat-potion-slot__button .auto-combat-consumable-slot__body {
   display: grid;
   justify-items: center;
@@ -588,6 +598,34 @@
   width: 88%;
   height: 88%;
   object-fit: contain;
+}
+
+.auto-combat-potion-stock-card__icon-button {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.auto-combat-potion-stock-card__icon-button:hover:not(:disabled),
+.auto-combat-potion-stock-card__icon-button:focus-visible {
+  background: rgba(224, 185, 72, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(224, 185, 72, 0.26);
+  outline: none;
+}
+
+.auto-combat-potion-stock-card__icon-button:disabled {
+  cursor: wait;
+  opacity: 0.56;
 }
 
 .auto-combat-potion-stock-card__body {
@@ -1277,6 +1315,12 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 0 14px rgba(110, 159, 67, 0.09);
+}
+
+.auto-combat-potion-option__icon img {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
 }
 
 .auto-combat-potion-option__content,

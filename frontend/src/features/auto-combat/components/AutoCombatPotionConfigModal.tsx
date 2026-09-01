@@ -1,3 +1,4 @@
+import { getConsumableItemImageUrl } from "../../consumables/utils/consumableItemAssets";
 import type { PotionInventoryOption } from "../types/auto-combat-page.types";
 
 type AutoCombatPotionConfigModalProps = {
@@ -86,6 +87,7 @@ export function AutoCombatPotionConfigModal({
                   );
                   const isSelected = selectedPotionItemId === potion.itemId;
                   const isUnavailable = potionQuantity <= 0;
+                  const potionImage = getConsumableItemImageUrl(potion);
 
                   return (
                     <button
@@ -101,7 +103,18 @@ export function AutoCombatPotionConfigModal({
                       disabled={isLoading || isUnavailable}
                       onClick={() => onSelect(potion.itemId)}
                     >
-                      <span className="auto-combat-potion-option__icon">+</span>
+                      <span className="auto-combat-potion-option__icon">
+                        {potionImage ? (
+                          <img
+                            src={potionImage}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span>+</span>
+                        )}
+                      </span>
 
                       <span className="auto-combat-potion-option__content">
                         <strong>{potion.name}</strong>

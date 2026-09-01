@@ -111,7 +111,10 @@ import {
   buildHuntCycleKey,
 } from './auto-combat-state-machine';
 import { getAutoCombatNextRealtimeTickDelayMs } from './auto-combat-realtime-scheduler';
-import { StartAutoCombatBattleDto } from './dto/start-auto-combat-battle.dto';
+import {
+  AutoCombatBattleMode,
+  StartAutoCombatBattleDto,
+} from './dto/start-auto-combat-battle.dto';
 import { PreviewAutoCombatDto } from './dto/preview-auto-combat.dto';
 import { StartAutoCombatDto } from './dto/start-auto-combat.dto';
 
@@ -2532,6 +2535,15 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
 
     const mob = encounter.mob;
     const battleQuantity = battleSelection.quantity;
+    const isAllTrackedBattle =
+      battleSelection.mode === AutoCombatBattleMode.ALL;
+    const persistedBattleTargetRemaining = isAllTrackedBattle
+      ? 0
+      : battleQuantity;
+    const persistedBattleTargetMobId = isAllTrackedBattle ? null : mob.id;
+    const persistedBattleTargetEncounterId = isAllTrackedBattle
+      ? null
+      : encounter.id;
     const now = new Date();
     const battleDurationSeconds = getIdleProgressLimitSeconds(
       isPremiumActive(loadedSession.character.user, now),
@@ -2596,8 +2608,8 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       killsPerHour: ttk.killsPerHour,
       difficultyLabel: ttk.difficultyLabel,
       mobIndex: ttk.mobIndex,
-      battleTargetMobId: mob.id,
-      battleTargetEncounterId: battleSelection.encounter?.id ?? null,
+      battleTargetMobId: persistedBattleTargetMobId,
+      battleTargetEncounterId: persistedBattleTargetEncounterId,
       battleTargetTotal: battleQuantity,
       battleTargetRemaining: battleQuantity,
       characterCurrentHp:
@@ -2671,10 +2683,10 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
               currentCombatIndex: combatIndex,
               selectedEncounterId: encounter.id,
               selectedEncounterMobId: mob.id,
-              battleTargetMobId: mob.id,
-              battleTargetEncounterId: encounter.id,
+              battleTargetMobId: persistedBattleTargetMobId,
+              battleTargetEncounterId: persistedBattleTargetEncounterId,
               battleTargetTotal: battleQuantity,
-              battleTargetRemaining: battleQuantity,
+              battleTargetRemaining: persistedBattleTargetRemaining,
             },
           );
 
@@ -2734,7 +2746,9 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     }
 
     const response = await this.buildSessionResponse(updatedSession.id, {
-      message: `Combate iniciado contra ${battleQuantity}x ${mob.name}.`,
+      message: isAllTrackedBattle
+        ? `Combate em sequência iniciado contra ${battleQuantity} ameaça(s) rastreada(s).`
+        : `Combate iniciado contra ${battleQuantity}x ${mob.name}.`,
       processing: this.buildEmptyProcessingSummary(),
     });
 
@@ -4417,6 +4431,10 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     }
 
     const mob = encounter.mob;
+    const isAllTrackedBattle = this.isAllTrackedBattle(session);
+    const battleDisplayRemaining = isAllTrackedBattle
+      ? this.getTrackedEnemiesRemaining(session)
+      : (session.battleTargetRemaining ?? null);
 
     const combatIndex = Math.max(1, session.currentCombatIndex ?? 1);
     const lastProcessedAt = options?.lastProcessedAt ?? new Date();
@@ -4488,10 +4506,14 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       killsPerHour: ttk.killsPerHour,
       difficultyLabel: ttk.difficultyLabel,
       mobIndex: ttk.mobIndex,
-      battleTargetMobId: session.battleTargetMobId ?? mob.id,
-      battleTargetEncounterId: session.battleTargetEncounterId ?? null,
+      battleTargetMobId: isAllTrackedBattle
+        ? null
+        : (session.battleTargetMobId ?? mob.id),
+      battleTargetEncounterId: isAllTrackedBattle
+        ? null
+        : (session.battleTargetEncounterId ?? null),
       battleTargetTotal: session.battleTargetTotal ?? null,
-      battleTargetRemaining: session.battleTargetRemaining ?? null,
+      battleTargetRemaining: battleDisplayRemaining,
       characterCurrentHp: session.character.currentHp ?? characterStats.maxHp,
       characterMaxHp: characterStats.maxHp,
       hpBefore: null,
@@ -4535,6 +4557,8 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
         currentMobIndex: ttk.mobIndex,
         currentRound: 0,
         currentCombatIndex: combatIndex,
+        selectedEncounterId: isAllTrackedBattle ? encounter.id : undefined,
+        selectedEncounterMobId: isAllTrackedBattle ? mob.id : undefined,
         lastProcessedAt,
       });
 
@@ -4561,6 +4585,12 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
         currentMobIndex: ttk.mobIndex,
         currentRound: 0,
         currentCombatIndex: combatIndex,
+        selectedEncounterId: isAllTrackedBattle
+          ? encounter.id
+          : session.selectedEncounterId,
+        selectedEncounterMobId: isAllTrackedBattle
+          ? mob.id
+          : session.selectedEncounterMobId,
         lastProcessedAt,
       };
     });
@@ -5723,6 +5753,7 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       0,
       Math.floor(Number(session.battleTargetRemaining) || 0),
     );
+    const isAllTrackedBattle = this.isAllTrackedBattle(session);
     const currentTrackedMob = (session.huntBatch?.mobs ?? []).find(
       (entry: any) => entry.mobId === currentMob.id,
     );
@@ -5921,14 +5952,24 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
           killsPerHour: ttk.killsPerHour,
           difficultyLabel: ttk.difficultyLabel,
           mobIndex: ttk.mobIndex,
-          battleTargetMobId: session.battleTargetMobId ?? currentMob.id,
-          battleTargetEncounterId: session.battleTargetEncounterId ?? null,
+          battleTargetMobId: isAllTrackedBattle
+            ? null
+            : (session.battleTargetMobId ?? currentMob.id),
+          battleTargetEncounterId: isAllTrackedBattle
+            ? null
+            : (session.battleTargetEncounterId ?? null),
           battleTargetTotal: session.battleTargetTotal ?? null,
-          battleTargetRemaining: Math.max(
-            0,
-            Math.floor(Number(session.battleTargetRemaining) || 0) -
-              killsResolved,
-          ),
+          battleTargetRemaining: isAllTrackedBattle
+            ? this.getTrackedEnemiesRemainingAfterKill(
+                session,
+                currentMob.id,
+                killsResolved,
+              )
+            : Math.max(
+                0,
+                Math.floor(Number(session.battleTargetRemaining) || 0) -
+                  killsResolved,
+              ),
           characterCurrentHp: playerHp,
           characterMaxHp: simulatedMaxHp,
           damage: 0,
@@ -6155,6 +6196,12 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     const shouldFinishTrackedQueue =
       trackedEnemiesRemainingAfterKill !== null &&
       trackedEnemiesRemainingAfterKill <= 0;
+    const shouldAdvanceAllTrackedBattle =
+      this.shouldAdvanceAllTrackedBattleAfterKills(
+        session,
+        currentMob.id,
+        killsResolved,
+      );
     const sessionShouldFinish =
       effectiveNow.getTime() >= session.endsAt.getTime();
     let finalStatus: AutoCombatSessionStatus = AutoCombatSessionStatus.ACTIVE;
@@ -6196,6 +6243,13 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       nextCurrentRound = 0;
       nextKillProgressSeconds = 0;
       nextKillProgressMs = 0;
+    } else if (shouldAdvanceAllTrackedBattle) {
+      nextCurrentMobId = null;
+      nextCurrentMobHp = null;
+      nextCurrentMobMaxHp = null;
+      nextCurrentRound = 0;
+      nextKillProgressSeconds = 0;
+      nextKillProgressMs = 0;
     }
 
     if (killsResolved > 0) {
@@ -6231,10 +6285,16 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
           killsPerHour: activeTtk.killsPerHour,
           difficultyLabel: activeTtk.difficultyLabel,
           mobIndex: activeTtk.mobIndex,
-          battleTargetMobId: session.battleTargetMobId ?? currentMob.id,
-          battleTargetEncounterId: session.battleTargetEncounterId ?? null,
+          battleTargetMobId: isAllTrackedBattle
+            ? null
+            : (session.battleTargetMobId ?? currentMob.id),
+          battleTargetEncounterId: isAllTrackedBattle
+            ? null
+            : (session.battleTargetEncounterId ?? null),
           battleTargetTotal: session.battleTargetTotal ?? null,
-          battleTargetRemaining: nextBattleTargetRemaining,
+          battleTargetRemaining: isAllTrackedBattle
+            ? trackedEnemiesRemainingAfterKill
+            : nextBattleTargetRemaining,
           characterCurrentHp: playerHp,
           characterMaxHp: simulatedMaxHp,
           damage: 0,
@@ -6251,7 +6311,8 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
           phase: 'MOB_DEFEATED',
           nextActor:
             finalStatus === AutoCombatSessionStatus.ACTIVE &&
-            nextPhase === AutoCombatSessionPhase.COMBAT_ACTIVE
+            nextPhase === AutoCombatSessionPhase.COMBAT_ACTIVE &&
+            !shouldAdvanceAllTrackedBattle
               ? 'PLAYER'
               : 'SYSTEM',
           nextActionAt:
@@ -8271,25 +8332,37 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       0,
       Math.floor(Number(session.battleTargetTotal) || 0),
     );
-    const battleTargetRemaining = Math.max(
+    const persistedBattleTargetRemaining = Math.max(
       0,
       Math.floor(Number(session.battleTargetRemaining) || 0),
     );
+    const battleMode =
+      battleTargetTotal > 0
+        ? this.isAllTrackedBattle(session)
+          ? AutoCombatBattleMode.ALL
+          : battleTargetMobId || battleTargetEncounterId
+            ? AutoCombatBattleMode.SINGLE
+            : null
+        : null;
+    const battleTargetRemaining =
+      battleMode === AutoCombatBattleMode.ALL
+        ? currentTrackedEnemiesRemaining
+        : persistedBattleTargetRemaining;
     const battleTargetMob =
       currentMobPayload ??
       trackedMonsters.find((entry) => entry.mobId === battleTargetMobId)?.mob ??
       null;
-    const battleSelection =
-      battleTargetMobId || battleTargetEncounterId
-        ? {
-            mobId: battleTargetMobId,
-            encounterId: battleTargetEncounterId,
-            total: battleTargetTotal,
-            remaining: battleTargetRemaining,
-            defeated: Math.max(0, battleTargetTotal - battleTargetRemaining),
-            mob: battleTargetMob,
-          }
-        : null;
+    const battleSelection = battleMode
+      ? {
+          mode: battleMode,
+          mobId: battleTargetMobId,
+          encounterId: battleTargetEncounterId,
+          total: battleTargetTotal,
+          remaining: battleTargetRemaining,
+          defeated: Math.max(0, battleTargetTotal - battleTargetRemaining),
+          mob: battleTargetMob,
+        }
+      : null;
 
     const timeline = this.buildSessionTimelinePayload(
       session,
@@ -8339,6 +8412,7 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       roundDurationSeconds: timeline.roundDurationSeconds,
       currentMapId: session.mapId,
       currentSubMapId: session.subMapId,
+      battleMode,
       canTravel: !hasRunningAutoCombat,
       huntCapacity,
       hasPreservedTrackedEnemies: autoCombatRecovery.hasPreservedTrackedEnemies,
@@ -8431,6 +8505,7 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
           huntBatch?.bonusEnemiesFound ?? session.bonusEnemiesFound,
         selectedEncounterId,
         selectedEncounterMobId,
+        battleMode,
         battleTargetMobId,
         battleTargetEncounterId,
         battleTargetTotal,
@@ -11512,11 +11587,65 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private getOrderedPendingHuntBatchMobs(
+    huntBatch: any,
+    encounters: any[] = [],
+  ) {
+    const encounterByMobId = new Map(
+      encounters.map((encounter) => [encounter.mobId, encounter]),
+    );
+
+    return [...(huntBatch?.mobs ?? [])]
+      .filter(
+        (entry: any) =>
+          Math.max(0, Math.floor(Number(entry.remainingCount) || 0)) > 0,
+      )
+      .sort((first: any, second: any) => {
+        const firstMob =
+          first.mob ?? encounterByMobId.get(first.mobId)?.mob ?? null;
+        const secondMob =
+          second.mob ?? encounterByMobId.get(second.mobId)?.mob ?? null;
+        const tierDifference =
+          Math.max(0, Math.floor(Number(firstMob?.tier) || 0)) -
+          Math.max(0, Math.floor(Number(secondMob?.tier) || 0));
+
+        if (tierDifference !== 0) {
+          return tierDifference;
+        }
+
+        const levelDifference =
+          Math.max(0, Math.floor(Number(firstMob?.level) || 0)) -
+          Math.max(0, Math.floor(Number(secondMob?.level) || 0));
+
+        if (levelDifference !== 0) {
+          return levelDifference;
+        }
+
+        const nameDifference = String(firstMob?.name ?? '').localeCompare(
+          String(secondMob?.name ?? ''),
+          'pt-BR',
+          {
+            numeric: true,
+            sensitivity: 'base',
+          },
+        );
+
+        if (nameDifference !== 0) {
+          return nameDifference;
+        }
+
+        return String(first.mobId ?? '').localeCompare(
+          String(second.mobId ?? ''),
+        );
+      });
+  }
+
   private resolveBattleSelection(
     session: any,
     startBattleDto?: StartAutoCombatBattleDto,
   ) {
     const encounters = this.getSessionHuntEncounters(session);
+    const requestedMode = startBattleDto?.mode ?? AutoCombatBattleMode.SINGLE;
     const requestedMobId = startBattleDto?.mobId?.trim() || null;
     const requestedEncounterId = startBattleDto?.encounterId?.trim() || null;
     const requestedQuantity =
@@ -11524,7 +11653,22 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
         ? Math.max(1, Math.floor(Number(startBattleDto.quantity) || 1))
         : null;
 
+    if (
+      requestedMode === AutoCombatBattleMode.ALL &&
+      (requestedMobId || requestedEncounterId || requestedQuantity !== null)
+    ) {
+      throw new BadRequestException(
+        'O modo de batalha em sequência não aceita mob, encontro ou quantidade específica.',
+      );
+    }
+
     if (!this.hasHuntBatchQueue(session)) {
+      if (requestedMode === AutoCombatBattleMode.ALL) {
+        throw new BadRequestException(
+          'Rastreie ameaças antes de iniciar uma batalha em sequência.',
+        );
+      }
+
       const encounter = requestedMobId
         ? encounters.find((item: any) => item.mobId === requestedMobId)
         : requestedEncounterId
@@ -11535,12 +11679,13 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
         encounter: encounter ?? null,
         quantity: requestedQuantity ?? 1,
         availableCount: null,
+        mode: AutoCombatBattleMode.SINGLE,
       };
     }
 
-    const pendingMobs = (session.huntBatch.mobs ?? []).filter(
-      (entry: any) =>
-        Math.max(0, Math.floor(Number(entry.remainingCount) || 0)) > 0,
+    const pendingMobs = this.getOrderedPendingHuntBatchMobs(
+      session.huntBatch,
+      encounters,
     );
 
     if (pendingMobs.length <= 0) {
@@ -11548,6 +11693,7 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
         encounter: null,
         quantity: 0,
         availableCount: 0,
+        mode: requestedMode,
       };
     }
 
@@ -11564,18 +11710,32 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       session.huntBatch.selectedEncounter?.id ??
       null;
     const battleTarget =
-      pendingMobs.find((entry: any) => {
-        return (
-          (selectedMobId && entry.mobId === selectedMobId) ||
-          (selectedEncounterId && entry.encounterId === selectedEncounterId)
-        );
-      }) ?? pendingMobs[0];
+      requestedMode === AutoCombatBattleMode.ALL
+        ? pendingMobs[0]
+        : (pendingMobs.find((entry: any) => {
+            return (
+              (selectedMobId && entry.mobId === selectedMobId) ||
+              (selectedEncounterId && entry.encounterId === selectedEncounterId)
+            );
+          }) ?? pendingMobs[0]);
 
-    const availableCount = Math.max(
+    const selectedAvailableCount = Math.max(
       0,
       Math.floor(Number(battleTarget.remainingCount) || 0),
     );
-    const quantity = requestedQuantity ?? availableCount;
+    const availableCount =
+      requestedMode === AutoCombatBattleMode.ALL
+        ? pendingMobs.reduce(
+            (total: number, entry: any) =>
+              total +
+              Math.max(0, Math.floor(Number(entry.remainingCount) || 0)),
+            0,
+          )
+        : selectedAvailableCount;
+    const quantity =
+      requestedMode === AutoCombatBattleMode.ALL
+        ? availableCount
+        : (requestedQuantity ?? selectedAvailableCount);
 
     if (quantity > availableCount) {
       throw new BadRequestException(
@@ -11604,14 +11764,12 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       encounter,
       quantity,
       availableCount,
+      mode: requestedMode,
     };
   }
 
   private getHuntBatchPendingMobSelection(huntBatch: any) {
-    const pendingMobs = (huntBatch?.mobs ?? []).filter(
-      (entry: any) =>
-        Math.max(0, Math.floor(Number(entry.remainingCount) || 0)) > 0,
-    );
+    const pendingMobs = this.getOrderedPendingHuntBatchMobs(huntBatch);
 
     if (pendingMobs.length <= 0) {
       return null;
@@ -11640,6 +11798,15 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
 
   private hasHuntBatchQueue(session: any) {
     return Boolean(session.huntBatch?.id && session.huntBatch?.mobs?.length);
+  }
+
+  private isAllTrackedBattle(session: any) {
+    return Boolean(
+      this.hasHuntBatchQueue(session) &&
+      Math.max(0, Math.floor(Number(session.battleTargetTotal) || 0)) > 0 &&
+      !session.battleTargetMobId &&
+      !session.battleTargetEncounterId,
+    );
   }
 
   private getTrackedEnemiesRemaining(session: any): number | null {
@@ -11681,6 +11848,33 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     );
 
     return Math.max(0, remaining - decrement);
+  }
+
+  private shouldAdvanceAllTrackedBattleAfterKills(
+    session: any,
+    mobId?: string | null,
+    kills = 1,
+  ) {
+    if (!this.isAllTrackedBattle(session) || !mobId || kills <= 0) {
+      return false;
+    }
+
+    const huntBatchMob = (session.huntBatch?.mobs ?? []).find(
+      (entry: any) => entry.mobId === mobId,
+    );
+    const currentMobRemaining = Math.max(
+      0,
+      Math.floor(Number(huntBatchMob?.remainingCount) || 0),
+    );
+    const safeKills = Math.max(0, Math.floor(Number(kills) || 0));
+    const trackedEnemiesRemainingAfterKill =
+      this.getTrackedEnemiesRemainingAfterKill(session, mobId, safeKills) ?? 0;
+
+    return (
+      currentMobRemaining > 0 &&
+      currentMobRemaining - safeKills <= 0 &&
+      trackedEnemiesRemainingAfterKill > 0
+    );
   }
 
   private getTrackedEnemiesRemainingAfterResult(
@@ -11800,9 +11994,11 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       return null;
     }
 
-    const remainingMobs = (session.huntBatch.mobs ?? []).filter(
+    const remainingMobs = this.getOrderedPendingHuntBatchMobs(
+      session.huntBatch,
+      encounters,
+    ).filter(
       (entry: any) =>
-        Math.max(0, Math.floor(Number(entry.remainingCount) || 0)) > 0 &&
         (!battleTargetMobId || entry.mobId === battleTargetMobId) &&
         (!battleTargetEncounterId ||
           entry.encounterId === battleTargetEncounterId),

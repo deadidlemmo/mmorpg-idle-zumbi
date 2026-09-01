@@ -6,6 +6,7 @@ import {
 
 import { getAutoCombatHuntingXpForEncounter } from '../../common/utils/auto-combat-hunting.util';
 import { AutoCombatService } from './auto-combat.service';
+import { AutoCombatBattleMode } from './dto/start-auto-combat-battle.dto';
 
 const HUNTING_XP_PER_ENEMY = 5;
 const HUNTING_MAX_EVENTS_PER_PROCESS = 500;
@@ -798,6 +799,66 @@ describe('AutoCombatService hunting processing', () => {
     expect(selection.encounter.mobId).toBe('mob-2');
     expect(selection.quantity).toBe(2);
     expect(selection.availableCount).toBe(3);
+    expect(selection.mode).toBe(AutoCombatBattleMode.SINGLE);
+  });
+
+  it('inicia a fila completa pelo mob de menor progressao', () => {
+    const { service } = createServiceHarness();
+    const session = createSession({
+      huntBatch: {
+        id: 'hunt-batch-1',
+        mobs: [
+          {
+            mobId: 'mob-2',
+            encounterId: 'encounter-2',
+            foundCount: 3,
+            remainingCount: 3,
+            weightSnapshot: 100,
+          },
+          {
+            mobId: 'mob-1',
+            encounterId: 'encounter-1',
+            foundCount: 2,
+            remainingCount: 2,
+            weightSnapshot: 100,
+          },
+        ],
+      },
+    });
+
+    const selection = (service as any).resolveBattleSelection(session, {
+      mode: AutoCombatBattleMode.ALL,
+    });
+
+    expect(selection.mode).toBe(AutoCombatBattleMode.ALL);
+    expect(selection.encounter.mobId).toBe('mob-1');
+    expect(selection.quantity).toBe(5);
+    expect(selection.availableCount).toBe(5);
+  });
+
+  it('nao mistura selecao individual com o modo de fila completa', () => {
+    const { service } = createServiceHarness();
+    const session = createSession({
+      huntBatch: {
+        id: 'hunt-batch-1',
+        mobs: [
+          {
+            mobId: 'mob-1',
+            encounterId: 'encounter-1',
+            foundCount: 2,
+            remainingCount: 2,
+            weightSnapshot: 100,
+          },
+        ],
+      },
+    });
+
+    expect(() =>
+      (service as any).resolveBattleSelection(session, {
+        mode: AutoCombatBattleMode.ALL,
+        mobId: 'mob-1',
+      }),
+    ).toThrow('não aceita mob, encontro ou quantidade específica');
   });
 
   it('bloqueia batalha com quantidade maior que a fila rastreada', () => {
@@ -857,6 +918,64 @@ describe('AutoCombatService hunting processing', () => {
     expect(
       (service as any).getTrackedEnemiesRemainingAfterKill(session, 'mob-1', 1),
     ).toBe(4);
+  });
+
+  it('avanca para o proximo tipo quando o atual acaba no modo em sequencia', () => {
+    const { service } = createServiceHarness();
+    const session = createSession({
+      phase: AutoCombatSessionPhase.COMBAT_ACTIVE,
+      battleTargetTotal: 4,
+      battleTargetRemaining: 0,
+      battleTargetMobId: null,
+      battleTargetEncounterId: null,
+      selectedEncounterMobId: 'mob-1',
+      huntBatch: {
+        id: 'hunt-batch-1',
+        selectedEncounterMobId: 'mob-1',
+        mobs: [
+          {
+            mobId: 'mob-1',
+            encounterId: 'encounter-1',
+            foundCount: 1,
+            remainingCount: 1,
+            weightSnapshot: 100,
+          },
+          {
+            mobId: 'mob-2',
+            encounterId: 'encounter-2',
+            foundCount: 3,
+            remainingCount: 3,
+            weightSnapshot: 100,
+          },
+        ],
+      },
+    });
+
+    expect(
+      (service as any).shouldAdvanceAllTrackedBattleAfterKills(
+        session,
+        'mob-1',
+        1,
+      ),
+    ).toBe(true);
+
+    const nextSession = {
+      ...session,
+      huntBatch: {
+        ...session.huntBatch,
+        mobs: [
+          {
+            ...session.huntBatch.mobs[0],
+            remainingCount: 0,
+          },
+          session.huntBatch.mobs[1],
+        ],
+      },
+    };
+
+    expect((service as any).getNextCombatEncounter(nextSession).mobId).toBe(
+      'mob-2',
+    );
   });
 
   it('preserva a fila rastreada restante quando o personagem morre', () => {
