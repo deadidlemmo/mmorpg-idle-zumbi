@@ -524,7 +524,7 @@ test.describe('ciclo jogável de equipamentos T1-T5', () => {
 
   test('4. valida arte, atributos, tier, nível e consumo das receitas', async ({
     page,
-  }) => {
+  }, testInfo) => {
     for (const character of qaCharacters) {
       const response = await character.api.get(
         `/crafting/character/${character.id}/recipes?tier=1`,
@@ -702,6 +702,72 @@ test.describe('ciclo jogável de equipamentos T1-T5', () => {
         )
         .toBe(true);
     }
+    await detailsModal.screenshot({
+      path: testInfo.outputPath('crafting-details-desktop.png'),
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await firstRecipeCard.locator('.crafting-recipe-card__select').click();
+
+    const mobileDetailsModal = page.getByRole('dialog');
+    await expect(mobileDetailsModal).toBeVisible();
+    await expect(
+      mobileDetailsModal.getByRole('button', { name: 'Fechar detalhes' }),
+    ).toBeInViewport();
+
+    for (const selector of [
+      '.crafting-bonus-grid',
+      '.crafting-craft-summary',
+    ]) {
+      const columns = await mobileDetailsModal
+        .locator(selector)
+        .evaluate((element) =>
+          getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/),
+        );
+      expect(columns).toHaveLength(2);
+    }
+
+    const firstIngredient = mobileDetailsModal
+      .locator('.crafting-ingredient')
+      .first();
+    expect(
+      await firstIngredient.evaluate((element) =>
+        getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/),
+      ),
+    ).toHaveLength(2);
+
+    for (const selector of [
+      '.crafting-impact-list',
+      '.crafting-kill-speed dl',
+      '.crafting-equipment-progression',
+    ]) {
+      const grid = mobileDetailsModal.locator(selector);
+      if ((await grid.count()) === 0) continue;
+      expect(
+        await grid.evaluate((element) =>
+          getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/),
+        ),
+      ).toHaveLength(2);
+    }
+
+    const modalDimensions = await mobileDetailsModal.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(modalDimensions.scrollWidth).toBeLessThanOrEqual(
+      modalDimensions.clientWidth + 1,
+    );
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(false);
+    await mobileDetailsModal.screenshot({
+      path: testInfo.outputPath('crafting-details-mobile.png'),
+    });
   });
 
   test('5. equipa, desequipa, vende e movimenta itens pelo banco', async () => {

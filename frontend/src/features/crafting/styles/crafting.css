@@ -1678,7 +1678,7 @@
 
 .crafting-details-modal {
   position: relative;
-  width: min(680px, 100%);
+  width: min(760px, 100%);
   max-height: min(88vh, 900px);
   overflow: auto;
   border-color: rgba(218, 195, 95, 0.28);
@@ -1753,14 +1753,7 @@
     align-self: start;
   }
 
-  .crafting-craft-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .crafting-impact-list,
-  .crafting-kill-speed,
-  .crafting-kill-speed dl,
-  .crafting-equipment-progression {
+  .crafting-kill-speed {
     grid-template-columns: 1fr;
   }
 }
@@ -1782,24 +1775,149 @@
     max-height: calc(100vh - 24px);
   }
 
-  .crafting-side-card__facts,
-  .crafting-bonus-grid {
+  .crafting-side-card__facts {
     grid-template-columns: 1fr;
+  }
+
+  .crafting-details-modal .crafting-side-card__header {
+    grid-template-columns: 50px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .crafting-details-modal .crafting-side-card__icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .crafting-details-modal .crafting-side-card__header p {
+    margin-top: 5px;
+    font-size: 0.78rem;
+    line-height: 1.32;
+  }
+
+  .crafting-details-modal .crafting-side-card__reward {
+    margin-top: 6px;
+  }
+
+  .crafting-details-modal .crafting-modal-section {
+    margin-top: 10px;
+    padding: 10px;
+  }
+
+  .crafting-details-modal .crafting-modal-section--stats {
+    margin-top: 12px;
+  }
+
+  .crafting-details-modal .crafting-modal-section__title {
+    gap: 7px;
+    font-size: 0.72rem;
+  }
+
+  .crafting-details-modal .crafting-modal-section__title em {
+    font-size: 0.68rem;
+  }
+
+  .crafting-details-modal .crafting-bonus-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .crafting-details-modal .crafting-bonus-card {
+    grid-template-columns: 30px minmax(0, 1fr);
+    min-height: 50px;
+    gap: 7px;
+    padding: 6px;
+  }
+
+  .crafting-details-modal .crafting-bonus-card img {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+  }
+
+  .crafting-details-modal .crafting-bonus-card em {
+    font-size: 0.82rem;
+  }
+
+  .crafting-details-modal .crafting-bonus-card strong {
+    font-size: 0.58rem;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .crafting-details-modal .crafting-impact-list {
+    gap: 0 8px;
+    margin-top: 8px;
+  }
+
+  .crafting-details-modal .crafting-impact-list > span {
+    grid-template-columns: 16px minmax(0, 1fr) auto;
+    min-height: 34px;
+    gap: 4px;
+  }
+
+  .crafting-details-modal .crafting-impact-list > span em {
+    font-size: 0.64rem;
+  }
+
+  .crafting-details-modal .crafting-impact-list > span strong {
+    font-size: 0.7rem;
+  }
+
+  .crafting-details-modal .crafting-kill-speed {
+    gap: 9px;
+    margin-top: 10px;
+    padding-top: 9px;
+  }
+
+  .crafting-details-modal .crafting-kill-speed dl {
+    gap: 8px;
+  }
+
+  .crafting-details-modal .crafting-equipment-progression {
+    grid-template-columns: minmax(0, 1fr) minmax(100px, 0.7fr);
+    gap: 8px;
+    margin-top: 9px;
+    padding-top: 9px;
+  }
+
+  .crafting-details-modal .crafting-ingredients-list,
+  .crafting-details-modal .crafting-next-actions {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .crafting-details-modal .crafting-ingredient {
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .crafting-details-modal .crafting-ingredient__main {
+    gap: 7px;
+  }
+
+  .crafting-details-modal .crafting-ingredient__icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .crafting-details-modal .crafting-craft-summary {
+    gap: 6px;
+  }
+
+  .crafting-details-modal .crafting-craft-summary span {
+    min-height: 38px;
+    gap: 5px;
+    padding: 7px 8px;
+    font-size: 0.62rem;
+  }
+
+  .crafting-details-modal .crafting-craft-summary strong {
+    font-size: 0.72rem;
   }
 
   .crafting-skill-card__metrics {
     grid-template-columns: 1fr;
-  }
-
-  .crafting-ingredient {
-    grid-template-columns: 1fr;
-  }
-
-  .crafting-ingredient__amount {
-    text-align: left;
-  }
-
-  .crafting-ingredient__source {
-    margin-left: 0;
   }
 }
