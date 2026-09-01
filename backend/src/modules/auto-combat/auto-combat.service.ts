@@ -3878,6 +3878,37 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
         if (roundResult.phase === AutoCombatSessionPhase.ENCOUNTER_READY) {
           break;
         }
+
+        if (
+          this.isAllTrackedBattle(currentSession) &&
+          this.sessionNeedsMobSpawn(currentSession) &&
+          (this.getTrackedEnemiesRemaining(currentSession) ?? 0) > 0
+        ) {
+          // A troca de tipo nao consome tempo de combate. Persistir o spawn
+          // agora evita esperar outro tick depois da animacao de derrota.
+          const spawnResult = await this.spawnNextMobForSession(
+            currentSession,
+            {
+              emitRealtimeEvent: false,
+              lastProcessedAt: currentSession.lastProcessedAt,
+            },
+          );
+
+          aggregateResult.events = this.appendRealtimeEventsWithLimit(
+            aggregateResult.events,
+            [spawnResult.event],
+          );
+          currentSession = this.applySpawnToSession(
+            currentSession,
+            spawnResult,
+            currentSession.lastProcessedAt,
+          );
+          aggregateResult = this.mergeProcessedWaitAction(
+            aggregateResult,
+            currentSession,
+            currentSession.lastProcessedAt,
+          );
+        }
       }
 
       if (

@@ -6,6 +6,7 @@ import type {
 } from '../types/auto-combat.types.ts';
 import {
   AUTO_COMBAT_REALTIME_DEFEATED_EVENT_DELAY_MS,
+  AUTO_COMBAT_REALTIME_QUEUED_DEFEATED_EVENT_DELAY_MS,
   buildMobSpawnedEventFromStatus,
   buildMobStateFromStatus,
   buildMobStateFromRealtimeEvent,
@@ -53,8 +54,12 @@ test('libera o proximo mob sem acumular a animacao de derrota', () => {
   });
 
   assert.equal(timing.impactDelay, 160);
-  assert.ok(timing.visibleAfterImpactDelay >= 1_000);
-  assert.equal(timing.totalDelay, AUTO_COMBAT_REALTIME_DEFEATED_EVENT_DELAY_MS);
+  assert.ok(timing.visibleAfterImpactDelay >= 600);
+  assert.ok(timing.visibleAfterImpactDelay < 1_000);
+  assert.equal(
+    timing.totalDelay,
+    AUTO_COMBAT_REALTIME_QUEUED_DEFEATED_EVENT_DELAY_MS,
+  );
 });
 
 test('preserva a leitura da derrota mesmo com hit e spawn enfileirados', () => {
@@ -71,8 +76,10 @@ test('preserva a leitura da derrota mesmo com hit e spawn enfileirados', () => {
     nextEvent: buildEvent('PLAYER_HIT'),
   });
 
-  assert.ok(defeat.visibleAfterImpactDelay >= 1_000);
-  assert.ok(killingHit.totalDelay + defeat.totalDelay + spawn.totalDelay < 2_000);
+  assert.ok(defeat.visibleAfterImpactDelay >= 600);
+  assert.ok(
+    killingHit.totalDelay + defeat.totalDelay + spawn.totalDelay < 1_300,
+  );
 });
 
 test('preserva o ritmo normal de impacto nos demais eventos', () => {

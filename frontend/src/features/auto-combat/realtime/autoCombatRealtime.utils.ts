@@ -116,12 +116,14 @@ type RealtimeEventLoose = AutoCombatRealtimeEvent & {
  * Ajuste atual:
  * - Spawn: 350ms, apenas para o jogador perceber que o mob nasceu.
  * - Eventos de ação: 950ms, ritmo ágil sem embolar os turnos.
- * - Derrota: 1300ms, inclusive quando o próximo alvo já está enfileirado.
+ * - Derrota: 1300ms quando encerra a fila; 800ms quando o próximo alvo já
+ *   está enfileirado.
  */
 export const AUTO_COMBAT_REALTIME_DEFAULT_EVENT_DELAY_MS = 950;
 export const AUTO_COMBAT_REALTIME_SPAWN_EVENT_DELAY_MS = 350;
 export const AUTO_COMBAT_REALTIME_DEFEATED_EVENT_DELAY_MS = 1300;
 export const AUTO_COMBAT_REALTIME_DEFEATED_IMPACT_DELAY_MS = 160;
+export const AUTO_COMBAT_REALTIME_QUEUED_DEFEATED_EVENT_DELAY_MS = 800;
 const AUTO_COMBAT_REALTIME_DEFAULT_IMPACT_RATIO = 0.55;
 const AUTO_COMBAT_REALTIME_MIN_TIMELINE_DELAY_MS = 650;
 const AUTO_COMBAT_REALTIME_MAX_TIMELINE_DELAY_MS = 1500;
@@ -355,13 +357,17 @@ export function getRealtimeEventPlaybackTiming(params: {
   const baseEventDelay = getRealtimeEventDelay(params.event);
   const isQueuedKillingHit =
     eventType === "PLAYER_HIT" && nextEventType === "MOB_DEFEATED";
+  const isQueuedDefeatFollowUp =
+    eventType === "MOB_DEFEATED" && nextEventType === "MOB_SPAWNED";
   const isQueuedSpawnFollowUp =
     eventType === "MOB_SPAWNED" && Boolean(nextEventType);
   const eventDelay = isQueuedKillingHit
     ? AUTO_COMBAT_REALTIME_QUEUED_KILLING_HIT_DELAY_MS
-    : isQueuedSpawnFollowUp
-      ? AUTO_COMBAT_REALTIME_QUEUED_SPAWN_DELAY_MS
-      : baseEventDelay;
+    : isQueuedDefeatFollowUp
+      ? AUTO_COMBAT_REALTIME_QUEUED_DEFEATED_EVENT_DELAY_MS
+      : isQueuedSpawnFollowUp
+        ? AUTO_COMBAT_REALTIME_QUEUED_SPAWN_DELAY_MS
+        : baseEventDelay;
   const defaultImpactDelay = getRealtimeEventImpactDelay(
     params.event,
     eventDelay,

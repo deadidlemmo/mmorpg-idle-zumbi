@@ -978,6 +978,140 @@ describe('AutoCombatService hunting processing', () => {
     );
   });
 
+  it('enfileira o spawn do proximo tipo no mesmo processamento da derrota', async () => {
+    const { service } = createServiceHarness();
+    const now = new Date('2026-06-02T12:00:00.000Z');
+    const mobOne = createEncounter('encounter-1', 'mob-1', 1).mob;
+    const mobTwo = createEncounter('encounter-2', 'mob-2', 3).mob;
+    const loadedSession = createSession({
+      phase: AutoCombatSessionPhase.COMBAT_ACTIVE,
+      lastProcessedAt: new Date(now.getTime() - 1_000),
+      roundDurationSeconds: 1,
+      currentMob: mobOne,
+      currentMobId: mobOne.id,
+      currentMobHp: mobOne.hp,
+      currentMobMaxHp: mobOne.hp,
+      currentCombatIndex: 1,
+      battleTargetTotal: 2,
+      battleTargetRemaining: 0,
+      battleTargetMobId: null,
+      battleTargetEncounterId: null,
+      huntBatch: {
+        id: 'hunt-batch-1',
+        mobs: [
+          {
+            mobId: mobOne.id,
+            encounterId: 'encounter-1',
+            remainingCount: 1,
+          },
+          {
+            mobId: mobTwo.id,
+            encounterId: 'encounter-2',
+            remainingCount: 1,
+          },
+        ],
+      },
+    });
+    const afterDefeatSession = {
+      ...loadedSession,
+      lastProcessedAt: now,
+      currentMob: null,
+      currentMobId: null,
+      currentMobHp: null,
+      currentMobMaxHp: null,
+      currentCombatIndex: 2,
+      huntBatch: {
+        ...loadedSession.huntBatch,
+        mobs: [
+          {
+            ...loadedSession.huntBatch.mobs[0],
+            remainingCount: 0,
+          },
+          loadedSession.huntBatch.mobs[1],
+        ],
+      },
+    };
+    const spawnedSession = {
+      ...afterDefeatSession,
+      currentMob: mobTwo,
+      currentMobId: mobTwo.id,
+      currentMobHp: mobTwo.hp,
+      currentMobMaxHp: mobTwo.hp,
+    };
+    const defeatEvent = {
+      type: 'MOB_DEFEATED',
+      eventKey: 'defeat-mob-1',
+    };
+    const spawnEvent = {
+      type: 'MOB_SPAWNED',
+      eventKey: 'spawn-mob-2',
+    };
+    const roundResult = {
+      finalStatus: AutoCombatSessionStatus.ACTIVE,
+      phase: AutoCombatSessionPhase.COMBAT_ACTIVE,
+    };
+    const aggregateResult = {
+      actionsAvailable: 1,
+      actionsProcessed: 0,
+      combatsResolved: 1,
+      processingLimited: false,
+      events: [defeatEvent],
+      eventsSuppressed: 0,
+      finalStatus: AutoCombatSessionStatus.ACTIVE,
+    };
+
+    jest
+      .spyOn(service as any, 'loadAutoCombatSession')
+      .mockResolvedValue(loadedSession);
+    jest
+      .spyOn(service as any, 'buildBaseRealtimeProcessingResult')
+      .mockReturnValue({ ...aggregateResult, combatsResolved: 0, events: [] });
+    jest
+      .spyOn(service as any, 'resolveTtkRealtimeRound')
+      .mockResolvedValue(roundResult);
+    jest
+      .spyOn(service as any, 'persistRealtimeRoundResult')
+      .mockResolvedValue(undefined);
+    jest
+      .spyOn(service as any, 'mergeRealtimeRoundResults')
+      .mockReturnValue(aggregateResult);
+    jest
+      .spyOn(service as any, 'applyRealtimeRoundResultToSession')
+      .mockReturnValue(afterDefeatSession);
+    const spawnNextMob = jest
+      .spyOn(service as any, 'spawnNextMobForSession')
+      .mockResolvedValue({
+        session: spawnedSession,
+        event: spawnEvent,
+        mob: mobTwo,
+      });
+    jest
+      .spyOn(service as any, 'applySpawnToSession')
+      .mockReturnValue(spawnedSession);
+    jest
+      .spyOn(service as any, 'mergeProcessedWaitAction')
+      .mockImplementation((result: unknown) => result);
+    jest
+      .spyOn(service as any, 'getProcessingResultMessage')
+      .mockReturnValue('Combate atualizado.');
+    jest.spyOn(service as any, 'buildProcessingSummary').mockReturnValue({});
+    const emitRealtimeEvents = jest
+      .spyOn(service as any, 'emitRealtimeEvents')
+      .mockImplementation(() => undefined);
+
+    await (service as any).processActiveSessionById('user-1', 'session-1');
+
+    expect(spawnNextMob).toHaveBeenCalledWith(afterDefeatSession, {
+      emitRealtimeEvent: false,
+      lastProcessedAt: now,
+    });
+    expect(emitRealtimeEvents).toHaveBeenCalledWith(
+      'character-1',
+      [defeatEvent, spawnEvent],
+      { persist: false },
+    );
+  });
+
   it('preserva a fila rastreada restante quando o personagem morre', () => {
     const { service } = createServiceHarness();
     const terminalAt = new Date('2026-06-02T12:01:00.000Z');
