@@ -1,4 +1,5 @@
 import { useEffect, type CSSProperties } from 'react';
+import { EquipmentItemArtwork } from '../../equipment/components/EquipmentItemArtwork';
 import type {
   InventoryEntry,
   InventoryItemActionFeedback,
@@ -174,21 +175,21 @@ export function InventoryItemDetailsModal({
             className="inventory-item-card__icon inventory-modal__icon"
             aria-hidden="true"
           >
-            {imageUrl ? (
-              <img
-                className="inventory-item-card__image"
-                src={imageUrl}
-                alt=""
-              />
-            ) : (
-              <>
+            <EquipmentItemArtwork
+              item={item}
+              imageUrl={imageUrl}
+              imageClassName="inventory-item-card__image"
+              size="large"
+              fallback={
+                <>
                 <span className="inventory-item-card__glyph">
                   {getInventoryItemIcon(entry)}
                 </span>
 
                 <strong>{getInventoryItemInitials(item)}</strong>
-              </>
-            )}
+                </>
+              }
+            />
           </div>
 
           <h2 id="inventory-modal-title">{itemName}</h2>

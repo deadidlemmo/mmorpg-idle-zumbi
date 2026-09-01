@@ -1,0 +1,151 @@
+.equipment-item-artwork {
+  --equipment-enhancement-rgb: 83, 218, 244;
+  --equipment-enhancement-glow: 0.2;
+  --equipment-enhancement-ray-opacity: 0.2;
+  --equipment-enhancement-speed: 18s;
+
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: inherit;
+}
+
+.equipment-item-artwork > img,
+.equipment-item-artwork__fallback {
+  position: relative;
+  z-index: 2;
+}
+
+.equipment-item-artwork > img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.equipment-item-artwork__fallback {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+}
+
+.equipment-item-artwork.is-enhanced::after {
+  position: absolute;
+  inset: 8%;
+  z-index: 1;
+  content: "";
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(var(--equipment-enhancement-rgb), var(--equipment-enhancement-glow)),
+    transparent 67%
+  );
+}
+
+.equipment-item-artwork__rays {
+  position: absolute;
+  inset: -38%;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-conic-gradient(
+    from 4deg,
+    transparent 0deg 12deg,
+    rgba(
+        var(--equipment-enhancement-rgb),
+        var(--equipment-enhancement-ray-opacity)
+      )
+      12deg 16deg,
+    transparent 16deg 29deg
+  );
+  opacity: 0.9;
+  mask-image: radial-gradient(circle, #000 8%, transparent 70%);
+  animation: equipment-enhancement-rays var(--equipment-enhancement-speed) linear
+    infinite;
+}
+
+.equipment-item-artwork--level-1 {
+  --equipment-enhancement-rgb: 75, 202, 232;
+  --equipment-enhancement-glow: 0.16;
+  --equipment-enhancement-ray-opacity: 0.17;
+  --equipment-enhancement-speed: 20s;
+}
+
+.equipment-item-artwork--level-2 {
+  --equipment-enhancement-rgb: 88, 222, 248;
+  --equipment-enhancement-glow: 0.23;
+  --equipment-enhancement-ray-opacity: 0.24;
+  --equipment-enhancement-speed: 16s;
+}
+
+.equipment-item-artwork--level-3 {
+  --equipment-enhancement-rgb: 125, 235, 255;
+  --equipment-enhancement-glow: 0.32;
+  --equipment-enhancement-ray-opacity: 0.32;
+  --equipment-enhancement-speed: 12s;
+}
+
+.equipment-item-artwork__badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 5;
+  display: inline-grid;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 5px;
+  place-items: center;
+  color: #eafdff;
+  font-family: var(--font-number);
+  font-size: 0.59rem;
+  font-weight: 950;
+  line-height: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent),
+    rgba(5, 32, 42, 0.96);
+  border: 1px solid rgba(var(--equipment-enhancement-rgb), 0.88);
+  border-radius: 4px;
+  box-shadow:
+    0 5px 12px rgba(0, 0, 0, 0.45),
+    0 0 10px rgba(var(--equipment-enhancement-rgb), 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-shadow: 0 0 6px rgba(var(--equipment-enhancement-rgb), 0.85);
+}
+
+.equipment-item-artwork--compact .equipment-item-artwork__badge {
+  top: 1px;
+  right: 1px;
+  min-width: 19px;
+  height: 16px;
+  padding: 0 3px;
+  font-size: 0.48rem;
+  border-radius: 3px;
+}
+
+.equipment-item-artwork--large .equipment-item-artwork__badge {
+  top: 7px;
+  right: 7px;
+  min-width: 34px;
+  height: 26px;
+  padding: 0 7px;
+  font-size: 0.72rem;
+  border-radius: 5px;
+}
+
+@keyframes equipment-enhancement-rays {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .equipment-item-artwork__rays {
+    animation: none;
+  }
+}

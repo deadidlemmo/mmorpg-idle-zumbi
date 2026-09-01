@@ -223,22 +223,11 @@
 
 .blacksmith-item-group__heading {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
-  gap: 9px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
   align-items: center;
   min-height: 36px;
   margin-bottom: 11px;
-}
-
-.blacksmith-item-group__icon {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  color: #c9a458;
-  background: rgba(90, 59, 22, 0.18);
-  border: 1px solid rgba(226, 185, 104, 0.24);
-  border-radius: 5px;
 }
 
 .blacksmith-item-group__heading > div {
@@ -398,7 +387,6 @@
 
 .blacksmith-item__tier,
 .blacksmith-item__quantity,
-.blacksmith-item__enhancement,
 .blacksmith-item__state {
   position: absolute;
   z-index: 4;
@@ -433,22 +421,6 @@
   background: rgba(20, 34, 27, 0.94);
   border: 1px solid rgba(178, 211, 151, 0.28);
   border-radius: 4px;
-}
-
-.blacksmith-item__enhancement {
-  top: 7px;
-  right: -7px;
-  min-width: 28px;
-  height: 24px;
-  padding: 0 5px;
-  color: #221706;
-  font-size: 0.65rem;
-  background: #e0b85f;
-  border: 1px solid #f2d184;
-  border-radius: 5px;
-  box-shadow:
-    0 6px 13px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .blacksmith-item__state {

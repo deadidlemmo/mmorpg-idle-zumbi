@@ -1,4 +1,5 @@
 import { useRef, useState, type CSSProperties } from 'react';
+import { EquipmentItemArtwork } from '../../equipment/components/EquipmentItemArtwork';
 import type { InventoryEntry } from '../types/inventory.types';
 import {
   formatInventoryType,
@@ -151,22 +152,21 @@ export function InventoryItemCard({ entry, onSelect }: InventoryItemCardProps) {
 
         <div className="inventory-item-card__content">
           <div className="inventory-item-card__icon" aria-hidden="true">
-            {imageUrl ? (
-              <img
-                className="inventory-item-card__image"
-                src={imageUrl}
-                alt=""
-                loading="lazy"
-              />
-            ) : (
-              <>
+            <EquipmentItemArtwork
+              item={item}
+              imageUrl={imageUrl}
+              imageClassName="inventory-item-card__image"
+              loading="lazy"
+              fallback={
+                <>
                 <span className="inventory-item-card__glyph">
                   {getInventoryItemIcon(entry)}
                 </span>
 
                 <strong>{getInventoryItemInitials(item)}</strong>
-              </>
-            )}
+                </>
+              }
+            />
           </div>
         </div>
 

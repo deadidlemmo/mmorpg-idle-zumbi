@@ -132,6 +132,7 @@ export class SocialService {
                 tier: true,
                 rarity: true,
                 slot: true,
+                enhancementLevel: true,
               },
             },
             offHand: {
@@ -141,6 +142,7 @@ export class SocialService {
                 tier: true,
                 rarity: true,
                 slot: true,
+                enhancementLevel: true,
               },
             },
             head: {
@@ -150,6 +152,7 @@ export class SocialService {
                 tier: true,
                 rarity: true,
                 slot: true,
+                enhancementLevel: true,
               },
             },
             armor: {
@@ -159,6 +162,7 @@ export class SocialService {
                 tier: true,
                 rarity: true,
                 slot: true,
+                enhancementLevel: true,
               },
             },
             pants: {
@@ -168,6 +172,7 @@ export class SocialService {
                 tier: true,
                 rarity: true,
                 slot: true,
+                enhancementLevel: true,
               },
             },
             boots: {
@@ -177,6 +182,7 @@ export class SocialService {
                 tier: true,
                 rarity: true,
                 slot: true,
+                enhancementLevel: true,
               },
             },
           },

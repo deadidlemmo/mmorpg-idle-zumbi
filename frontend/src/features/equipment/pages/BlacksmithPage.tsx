@@ -26,6 +26,7 @@ import {
   type EquipmentReinforcementCandidate,
   type EquipmentReinforcementState,
 } from "../../inventory/api/inventory.api";
+import { EquipmentItemArtwork } from "../components/EquipmentItemArtwork";
 import "../styles/blacksmith.css";
 import { getEquipmentItemImageUrl } from "../utils/equipmentItemAssets";
 import {
@@ -177,11 +178,12 @@ function BlacksmithItemGrid({
             title={readinessLabel ?? undefined}
           >
             <span className="blacksmith-item__visual">
-              {imageUrl ? (
-                <img src={imageUrl} alt="" loading="lazy" />
-              ) : (
-                <Anvil size={31} strokeWidth={1.6} />
-              )}
+              <EquipmentItemArtwork
+                item={candidate.item}
+                imageUrl={imageUrl}
+                loading="lazy"
+                fallback={<Anvil size={31} strokeWidth={1.6} />}
+              />
               <span className="blacksmith-item__tier">
                 T{candidate.item.tier}
               </span>
@@ -198,14 +200,6 @@ function BlacksmithItemGrid({
                 )}
               </span>
             </span>
-            {level > 0 ? (
-              <span
-                className="blacksmith-item__enhancement"
-                aria-hidden="true"
-              >
-                +{level}
-              </span>
-            ) : null}
             <span className="blacksmith-item__copy">
               <strong>{displayName}</strong>
               <small>{getCandidateSlot(candidate)}</small>
@@ -519,9 +513,6 @@ export function BlacksmithPage() {
               aria-labelledby="blacksmith-equipped-title"
             >
               <div className="blacksmith-item-group__heading">
-                <span className="blacksmith-item-group__icon" aria-hidden="true">
-                  <ShieldCheck size={17} />
-                </span>
                 <div>
                   <span>EM USO</span>
                   <h3 id="blacksmith-equipped-title">Equipados</h3>
@@ -542,9 +533,6 @@ export function BlacksmithPage() {
               aria-labelledby="blacksmith-inventory-title"
             >
               <div className="blacksmith-item-group__heading">
-                <span className="blacksmith-item-group__icon" aria-hidden="true">
-                  <PackageOpen size={17} />
-                </span>
                 <div>
                   <span>GUARDADOS</span>
                   <h3 id="blacksmith-inventory-title">Mochila</h3>

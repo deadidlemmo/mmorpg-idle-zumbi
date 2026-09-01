@@ -102,6 +102,7 @@ export interface PublicCharacterProfileResponse {
         tier: number;
         rarity: string;
         slot: string;
+        enhancementLevel?: number | null;
       } | null
     > | null;
   };

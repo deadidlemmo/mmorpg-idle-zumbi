@@ -22,6 +22,7 @@ import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
 import { getEquipmentRarityFromItem } from "../../dashboard/constants/equipment-rarity";
 import type { CharacterOverviewResponse } from "../../dashboard/types/dashboard.types";
 import { buildDashboardCharacter } from "../../dashboard/utils/buildDashboardCharacter";
+import { EquipmentItemArtwork } from "../../equipment/components/EquipmentItemArtwork";
 import { getEquipmentItemImageUrl } from "../../equipment/utils/equipmentItemAssets";
 import { getPublicCharacterProfile } from "../api/social.api";
 import "../styles/character-inspection.css";
@@ -80,11 +81,12 @@ function EquipmentSlot({
       style={style}
     >
       <div className="character-inspection__equipment-image">
-        {imageUrl && item ? (
-          <img src={imageUrl} alt={item.name} />
-        ) : (
-          <PackageOpen size={22} aria-hidden="true" />
-        )}
+        <EquipmentItemArtwork
+          item={item}
+          imageUrl={imageUrl}
+          alt={item?.name ?? ""}
+          fallback={<PackageOpen size={22} aria-hidden="true" />}
+        />
       </div>
       <div className="character-inspection__equipment-copy">
         <span>{label}</span>

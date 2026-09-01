@@ -47,7 +47,16 @@ describe('SocialService', () => {
         name: 'Lutador',
         description: 'Linha de frente.',
       },
-      equipment: {},
+      equipment: {
+        mainHand: {
+          id: 'item-1',
+          name: 'Machado Reforçado +2',
+          tier: 2,
+          rarity: 'COMMON',
+          slot: 'MAIN_HAND',
+          enhancementLevel: 2,
+        },
+      },
     });
     cosmeticsService.getResolvedAppearance.mockResolvedValue({
       avatarKey: 'avatar-premium-lutador-vanguarda',
@@ -63,6 +72,21 @@ describe('SocialService', () => {
     expect(result.appearance).toEqual({
       avatarKey: 'avatar-premium-lutador-vanguarda',
     });
+    expect(result.character.equipment.mainHand.enhancementLevel).toBe(2);
+
+    const profileCalls = prisma.character.findFirst.mock.calls as unknown[][];
+    const profileCall = profileCalls[0]?.[0] as {
+      select: {
+        equipment: {
+          select: Record<string, { select: Record<string, boolean> }>;
+        };
+      };
+    };
+    expect(
+      Object.values(profileCall.select.equipment.select).every(
+        (slot) => slot.select.enhancementLevel,
+      ),
+    ).toBe(true);
   });
 
   it('lista aliados sem expor e-mail e anexa a aparência pública', async () => {

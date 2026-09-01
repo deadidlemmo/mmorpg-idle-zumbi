@@ -1,4 +1,5 @@
 import { Package } from "lucide-react";
+import { EquipmentItemArtwork } from "../../equipment/components/EquipmentItemArtwork";
 import type {
   InventoryEntry,
   InventoryItemDetails,
@@ -35,11 +36,13 @@ export function MarketItemThumb({
       data-rarity={rarity.key}
       aria-hidden="true"
     >
-      {imageUrl ? (
-        <img src={imageUrl} alt="" draggable={false} />
-      ) : (
-        <Package size={23} strokeWidth={1.7} />
-      )}
+      <EquipmentItemArtwork
+        item={item}
+        imageUrl={imageUrl}
+        size="compact"
+        draggable={false}
+        fallback={<Package size={23} strokeWidth={1.7} />}
+      />
       <small>T{item.tier ?? 1}</small>
     </span>
   );

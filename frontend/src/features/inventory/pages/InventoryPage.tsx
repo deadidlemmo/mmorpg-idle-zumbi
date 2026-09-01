@@ -18,6 +18,7 @@ import type {
   DashboardEquipmentItem,
   DashboardEquipmentViewModel,
 } from "../../dashboard/types/dashboard.types";
+import { EquipmentItemArtwork } from "../../equipment/components/EquipmentItemArtwork";
 import { EmptyInventoryState } from "../components/EmptyInventoryState";
 import { InventoryFilters } from "../components/InventoryFilters";
 import { InventoryExchangeModal } from "../components/InventoryExchangeModal";
@@ -565,22 +566,22 @@ function InventoryDesktopDetailsPanel({
           className="inventory-item-card__icon inventory-details-panel__icon"
           aria-hidden="true"
         >
-          {imageUrl ? (
-            <img
-              className="inventory-item-card__image"
-              src={imageUrl}
-              alt=""
-              loading="lazy"
-            />
-          ) : (
-            <>
+          <EquipmentItemArtwork
+            item={item}
+            imageUrl={imageUrl}
+            imageClassName="inventory-item-card__image"
+            size="large"
+            loading="lazy"
+            fallback={
+              <>
               <span className="inventory-item-card__glyph">
                 {getInventoryItemIcon(entry)}
               </span>
 
               <strong>{getInventoryItemInitials(item)}</strong>
-            </>
-          )}
+              </>
+            }
+          />
         </div>
 
         <span className="inventory-details-panel__eyebrow">
@@ -761,21 +762,21 @@ function InventoryBlackMarketSaleModal({
             className="inventory-item-card__icon inventory-black-market-modal__icon"
             aria-hidden="true"
           >
-            {imageUrl ? (
-              <img
-                className="inventory-item-card__image"
-                src={imageUrl}
-                alt=""
-              />
-            ) : (
-              <>
+            <EquipmentItemArtwork
+              item={item}
+              imageUrl={imageUrl}
+              imageClassName="inventory-item-card__image"
+              size="large"
+              fallback={
+                <>
                 <span className="inventory-item-card__glyph">
                   {getInventoryItemIcon(entry)}
                 </span>
 
                 <strong>{getInventoryItemInitials(item)}</strong>
-              </>
-            )}
+                </>
+              }
+            />
           </div>
 
           <span>Mercado Negro</span>

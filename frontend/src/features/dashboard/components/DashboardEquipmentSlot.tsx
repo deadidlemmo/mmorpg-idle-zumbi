@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { EquipmentItemArtwork } from '../../equipment/components/EquipmentItemArtwork';
 import { getEquipmentItemImageUrl } from '../../equipment/utils/equipmentItemAssets';
 import { getEquipmentRarityFromItem } from '../constants/equipment-rarity';
 import type { DashboardEquipmentItem } from '../types/dashboard.types';
@@ -119,11 +120,13 @@ export function DashboardEquipmentSlot({
     <>
       <div className="equipment-summary-slot__slot" aria-hidden="true">
         <div className="equipment-summary-slot__icon">
-          {imageUrl ? (
-            <img src={imageUrl} alt="" loading="lazy" />
-          ) : (
-            <span>{SLOT_INITIALS[normalizedSlotKey]}</span>
-          )}
+          <EquipmentItemArtwork
+            item={item}
+            imageUrl={imageUrl}
+            size="compact"
+            loading="lazy"
+            fallback={<span>{SLOT_INITIALS[normalizedSlotKey]}</span>}
+          />
         </div>
       </div>
 

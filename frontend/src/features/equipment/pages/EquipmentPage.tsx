@@ -37,6 +37,7 @@ import type {
   InventoryItemDetails,
 } from "../../inventory/types/inventory.types";
 import { formatInventoryRarity } from "../../inventory/utils/inventory.utils";
+import { EquipmentItemArtwork } from "../components/EquipmentItemArtwork";
 import "../styles/equipment.css";
 import { getEquipmentItemImageUrl } from "../utils/equipmentItemAssets";
 
@@ -404,11 +405,14 @@ export function EquipmentPage() {
                       aria-pressed={isActive}
                     >
                       <span className="equipment-slot__visual">
-                        {imageUrl ? (
-                          <img src={imageUrl} alt="" loading="lazy" />
-                        ) : (
-                          <slotConfig.Icon size={27} strokeWidth={1.7} />
-                        )}
+                        <EquipmentItemArtwork
+                          item={item}
+                          imageUrl={imageUrl}
+                          loading="lazy"
+                          fallback={
+                            <slotConfig.Icon size={27} strokeWidth={1.7} />
+                          }
+                        />
                       </span>
                       <span className="equipment-slot__copy">
                         <small>{slotConfig.label}</small>
@@ -461,14 +465,17 @@ export function EquipmentPage() {
                         aria-pressed={isSelected}
                       >
                         <span className="equipment-candidate__visual">
-                          {imageUrl ? (
-                            <img src={imageUrl} alt="" loading="lazy" />
-                          ) : (
+                          <EquipmentItemArtwork
+                            item={item}
+                            imageUrl={imageUrl}
+                            loading="lazy"
+                            fallback={
                             <selectedSlotConfig.Icon
                               size={23}
                               strokeWidth={1.7}
                             />
-                          )}
+                            }
+                          />
                         </span>
                         <span className="equipment-candidate__copy">
                           <strong>{item.name}</strong>
