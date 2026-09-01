@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
-import { RefreshCw, X } from "lucide-react";
+import { RefreshCw, Trash2, X } from "lucide-react";
 import autoCombatActivityIcon from "../../../assets/images/auto-combat/auto-combat-activity-icon.webp";
 import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-activity-icon.webp";
 import { ActivityProgressCard } from "../../../components/game/ActivityProgressCard";
@@ -5801,13 +5801,15 @@ export function AutoCombatPage() {
                   <button
                     type="button"
                     className="auto-combat-threat-modal__potion-remove"
+                    aria-label="Remover poção equipada"
+                    title="Remover poção equipada"
                     disabled={isPotionConfigLoading}
                     onClick={() => {
                       setIsThreatPotionPickerOpen(false);
                       void handleClearPotionConfig();
                     }}
                   >
-                    Remover
+                    <Trash2 size={15} strokeWidth={2.2} aria-hidden="true" />
                   </button>
                 ) : null}
 
