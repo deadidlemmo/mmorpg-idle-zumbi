@@ -101,6 +101,11 @@ const EquipmentPage = lazy(() =>
     default: module.EquipmentPage,
   })),
 );
+const BlacksmithPage = lazy(() =>
+  import("../features/equipment/pages/BlacksmithPage").then((module) => ({
+    default: module.BlacksmithPage,
+  })),
+);
 const GatheringOriginPage = lazy(() =>
   import("../features/gathering/pages/GatheringOriginPage").then((module) => ({
     default: module.GatheringOriginPage,
@@ -329,6 +334,8 @@ export function AppRoutes() {
             <Route path="inventory" element={<InventoryPage />} />
 
             <Route path="equipment" element={<EquipmentPage />} />
+
+            <Route path="blacksmith" element={<BlacksmithPage />} />
 
             <Route path="appearance" element={<AppearancePage />} />
 

@@ -10,6 +10,7 @@ import { CharacterStatsPanel } from "../components/CharacterStatsPanel";
 import { DashboardCard } from "../components/DashboardCard";
 import { DashboardEquipmentBody } from "../components/DashboardEquipmentBody";
 import { DashboardLayout } from "../components/DashboardLayout";
+import { DashboardPremiumStatus } from "../components/DashboardPremiumStatus";
 import { GatheringSkillsPanel } from "../components/GatheringSkillsPanel";
 import {
   GATHERING_SKILLS_CONFIG,
@@ -504,6 +505,23 @@ export function DashboardOverviewPage() {
       </div>
 
       <div className="dashboard-overview-grid dashboard-overview-grid--summary">
+        <DashboardCard
+          title="Premium"
+          eyebrow="Conta"
+          className="dashboard-card--span-12 dashboard-card--premium-overview"
+          action={
+            <Link to={`/dashboard/${character.id}/membership`}>
+              Gerenciar Premium
+            </Link>
+          }
+        >
+          <DashboardPremiumStatus
+            premiumUntil={
+              character.premiumUntil ?? character.membership?.premiumUntil
+            }
+          />
+        </DashboardCard>
+
         <DashboardCard
           title="Equipamentos"
           eyebrow="Conjunto atual"

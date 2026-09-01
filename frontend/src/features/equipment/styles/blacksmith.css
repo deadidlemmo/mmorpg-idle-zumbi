@@ -1,0 +1,712 @@
+.blacksmith-page {
+  display: grid;
+  gap: 18px;
+  width: min(100%, 1480px);
+  margin: 0 auto;
+  padding: 24px clamp(16px, 3vw, 34px) 42px;
+  color: var(--text-primary);
+}
+
+.blacksmith-page__header {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  min-height: 78px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(226, 185, 104, 0.2);
+}
+
+.blacksmith-page__emblem,
+.blacksmith-icon-button,
+.blacksmith-detail__close {
+  display: grid;
+  place-items: center;
+}
+
+.blacksmith-page__emblem {
+  width: 52px;
+  height: 52px;
+  color: #f0c872;
+  background: rgba(90, 59, 22, 0.26);
+  border: 1px solid rgba(226, 185, 104, 0.38);
+  border-radius: 7px;
+}
+
+.blacksmith-page__header > div:nth-child(2),
+.blacksmith-page__summary,
+.blacksmith-section-heading > div,
+.blacksmith-confirmation > span,
+.blacksmith-materials span,
+.blacksmith-item__copy,
+.blacksmith-detail__transition span,
+.blacksmith-detail__costs span {
+  display: grid;
+  min-width: 0;
+}
+
+.blacksmith-page__header > div:nth-child(2) {
+  gap: 3px;
+}
+
+.blacksmith-page__header > div:nth-child(2) > span,
+.blacksmith-section-heading > div > span {
+  color: #c9a458;
+  font-size: 0.67rem;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.blacksmith-page__header h1,
+.blacksmith-section-heading h2 {
+  margin: 0;
+  color: #f5f0e3;
+  font-family: var(--font-title);
+  letter-spacing: 0;
+}
+
+.blacksmith-page__header h1 {
+  font-size: clamp(1.5rem, 2vw, 2rem);
+}
+
+.blacksmith-page__header p {
+  margin: 1px 0 0;
+  color: rgba(231, 227, 216, 0.58);
+  font-size: 0.76rem;
+}
+
+.blacksmith-page__summary {
+  grid-template-columns: auto auto 38px;
+  gap: 10px;
+  align-items: center;
+}
+
+.blacksmith-page__summary > span,
+.blacksmith-page__summary > strong {
+  padding: 5px 8px;
+  font-size: 0.67rem;
+  border: 1px solid rgba(231, 227, 216, 0.12);
+  border-radius: 4px;
+}
+
+.blacksmith-page__summary > span {
+  color: rgba(231, 227, 216, 0.62);
+}
+
+.blacksmith-page__summary > strong {
+  color: #bde68f;
+  border-color: rgba(143, 188, 88, 0.28);
+  background: rgba(70, 103, 39, 0.13);
+}
+
+.blacksmith-icon-button,
+.blacksmith-detail__close {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  color: #e7e3d8;
+  cursor: pointer;
+  background: #151c18;
+  border: 1px solid rgba(231, 227, 216, 0.16);
+  border-radius: 6px;
+}
+
+.blacksmith-icon-button:hover:not(:disabled),
+.blacksmith-detail__close:hover {
+  color: #f0c872;
+  border-color: rgba(226, 185, 104, 0.52);
+}
+
+.blacksmith-icon-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.blacksmith-icon-button .is-spinning {
+  animation: blacksmith-spin 800ms linear infinite;
+}
+
+.blacksmith-feedback,
+.blacksmith-confirmation {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  min-height: 42px;
+  padding: 10px 13px;
+  font-size: 0.8rem;
+  border: 1px solid;
+  border-radius: 6px;
+}
+
+.blacksmith-feedback--success,
+.blacksmith-confirmation {
+  color: #c9e8b0;
+  background: rgba(58, 111, 67, 0.2);
+  border-color: rgba(101, 194, 113, 0.36);
+}
+
+.blacksmith-feedback--error {
+  color: #f0b3a9;
+  background: rgba(120, 47, 42, 0.2);
+  border-color: rgba(218, 83, 73, 0.38);
+}
+
+.blacksmith-confirmation {
+  border-left: 3px solid #91c34e;
+}
+
+.blacksmith-confirmation > span {
+  gap: 2px;
+}
+
+.blacksmith-confirmation strong {
+  color: #eff7dc;
+  font-size: 0.75rem;
+}
+
+.blacksmith-confirmation small {
+  color: rgba(220, 237, 202, 0.64);
+  font-size: 0.65rem;
+}
+
+.blacksmith-materials {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(84px, 1fr));
+  border-top: 1px solid rgba(226, 185, 104, 0.13);
+  border-bottom: 1px solid rgba(226, 185, 104, 0.13);
+}
+
+.blacksmith-materials > div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  min-height: 52px;
+  padding: 8px 12px;
+  color: #d7b96e;
+}
+
+.blacksmith-materials > div + div {
+  border-left: 1px solid rgba(226, 185, 104, 0.11);
+}
+
+.blacksmith-materials span {
+  gap: 1px;
+}
+
+.blacksmith-materials small {
+  color: rgba(231, 227, 216, 0.47);
+  font-size: 0.61rem;
+}
+
+.blacksmith-materials strong {
+  color: #f2ead7;
+  font-family: var(--font-number);
+  font-size: 0.78rem;
+}
+
+.blacksmith-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(350px, 0.65fr);
+  gap: 18px;
+  min-width: 0;
+  align-items: start;
+}
+
+.blacksmith-catalog,
+.blacksmith-detail {
+  min-width: 0;
+  padding: 16px;
+  background: #101613;
+  border: 1px solid rgba(231, 227, 216, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+.blacksmith-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  margin-bottom: 14px;
+}
+
+.blacksmith-section-heading > div {
+  gap: 3px;
+}
+
+.blacksmith-section-heading h2 {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 1rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blacksmith-section-heading > small {
+  color: rgba(231, 227, 216, 0.52);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.blacksmith-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.blacksmith-item {
+  --blacksmith-item-rgb: 231, 227, 216;
+
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 9px 11px;
+  min-width: 0;
+  min-height: 138px;
+  padding: 11px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: #0b100e;
+  border: 1px solid rgba(var(--blacksmith-item-rgb), 0.21);
+  border-radius: 7px;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.blacksmith-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(var(--blacksmith-item-rgb), 0.5);
+}
+
+.blacksmith-item.is-selected {
+  background: rgba(var(--blacksmith-item-rgb), 0.07);
+  border-color: rgba(var(--blacksmith-item-rgb), 0.68);
+  box-shadow: inset 3px 0 0 rgb(var(--blacksmith-item-rgb));
+}
+
+.blacksmith-item__visual {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  overflow: hidden;
+  color: rgb(var(--blacksmith-item-rgb));
+  background: #070b09;
+  border: 1px solid rgba(var(--blacksmith-item-rgb), 0.28);
+  border-radius: 5px;
+}
+
+.blacksmith-item__visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.blacksmith-item__copy {
+  align-content: center;
+  gap: 2px;
+}
+
+.blacksmith-item__copy small {
+  color: #b69450;
+  font-size: 0.61rem;
+  font-weight: 800;
+}
+
+.blacksmith-item__copy strong {
+  overflow: hidden;
+  color: #f3eee1;
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blacksmith-item__copy em {
+  overflow: hidden;
+  color: rgba(231, 227, 216, 0.5);
+  font-size: 0.62rem;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blacksmith-item__levels {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.blacksmith-item__levels i {
+  display: grid;
+  min-height: 24px;
+  place-items: center;
+  color: rgba(231, 227, 216, 0.35);
+  background: rgba(3, 8, 6, 0.55);
+  border: 1px solid rgba(231, 227, 216, 0.08);
+  border-radius: 3px;
+  font-family: var(--font-number);
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.blacksmith-item__levels i.is-active {
+  color: #ffe5a7;
+  background: rgba(121, 81, 29, 0.3);
+  border-color: rgba(226, 185, 104, 0.42);
+}
+
+.blacksmith-item__status {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blacksmith-item.is-ready .blacksmith-item__status {
+  color: #a9d879;
+}
+
+.blacksmith-item.is-missing-resources .blacksmith-item__status {
+  color: #d99b76;
+}
+
+.blacksmith-detail-shell {
+  position: sticky;
+  top: 82px;
+  min-width: 0;
+}
+
+.blacksmith-detail {
+  position: relative;
+}
+
+.blacksmith-detail__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  display: none;
+}
+
+.blacksmith-detail__transition {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-height: 66px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(226, 185, 104, 0.13);
+  border-bottom: 1px solid rgba(226, 185, 104, 0.13);
+}
+
+.blacksmith-detail__transition > svg {
+  color: #cfa954;
+}
+
+.blacksmith-detail__transition span {
+  gap: 3px;
+}
+
+.blacksmith-detail__transition small {
+  color: rgba(231, 227, 216, 0.43);
+  font-size: 0.61rem;
+}
+
+.blacksmith-detail__transition strong {
+  color: #f4eddd;
+  font-family: var(--font-title);
+  font-size: 0.74rem;
+  line-height: 1.25;
+}
+
+.blacksmith-detail__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+  margin-top: 12px;
+}
+
+.blacksmith-detail__stats > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 5px;
+  align-items: center;
+  min-height: 34px;
+  border-bottom: 1px solid rgba(231, 227, 216, 0.08);
+}
+
+.blacksmith-detail__stats span {
+  overflow: hidden;
+  color: rgba(231, 227, 216, 0.58);
+  font-size: 0.66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blacksmith-detail__stats strong {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  color: #e7e3d8;
+  font-family: var(--font-number);
+  font-size: 0.65rem;
+}
+
+.blacksmith-detail__stats em {
+  color: #9ed176;
+  font-family: var(--font-number);
+  font-size: 0.65rem;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.blacksmith-detail__costs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.blacksmith-detail__costs > div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  min-height: 54px;
+  padding: 8px;
+  background: #0b100e;
+  border-left: 2px solid;
+}
+
+.blacksmith-detail__costs .is-sufficient {
+  color: #abd27f;
+  border-color: #7ead52;
+}
+
+.blacksmith-detail__costs .is-insufficient {
+  color: #e29b78;
+  border-color: #bd684d;
+}
+
+.blacksmith-detail__costs span {
+  gap: 2px;
+}
+
+.blacksmith-detail__costs small {
+  overflow: hidden;
+  color: rgba(231, 227, 216, 0.46);
+  font-size: 0.59rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blacksmith-detail__costs strong {
+  color: #f0eadc;
+  font-family: var(--font-number);
+  font-size: 0.68rem;
+}
+
+.blacksmith-detail__action {
+  display: inline-flex;
+  width: 100%;
+  min-height: 43px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 14px;
+  color: #171207;
+  cursor: pointer;
+  background: #cfa954;
+  border: 1px solid #e4c477;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.blacksmith-detail__action:hover:not(:disabled) {
+  background: #dfbe6d;
+}
+
+.blacksmith-detail__action:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+  opacity: 0.46;
+}
+
+.blacksmith-detail__reason {
+  margin: 8px 0 0;
+  color: #e1a083;
+  font-size: 0.65rem;
+  text-align: center;
+}
+
+.blacksmith-empty {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  color: rgba(231, 227, 216, 0.46);
+  text-align: center;
+}
+
+.blacksmith-empty strong {
+  color: rgba(231, 227, 216, 0.72);
+  font-size: 0.8rem;
+}
+
+.blacksmith-empty span {
+  max-width: 410px;
+  font-size: 0.69rem;
+  line-height: 1.45;
+}
+
+.blacksmith-empty--detail {
+  min-height: 220px;
+}
+
+@keyframes blacksmith-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1120px) {
+  .blacksmith-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.75fr);
+  }
+
+  .blacksmith-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  .blacksmith-page {
+    padding: 18px 14px 32px;
+  }
+
+  .blacksmith-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .blacksmith-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .blacksmith-detail-shell {
+    display: none;
+  }
+
+  .blacksmith-detail-shell.is-mobile-open {
+    position: fixed;
+    z-index: 1200;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: max(12px, env(safe-area-inset-top)) 10px
+      max(12px, env(safe-area-inset-bottom));
+    background: rgba(2, 6, 4, 0.82);
+    backdrop-filter: blur(5px);
+  }
+
+  .blacksmith-detail-shell.is-mobile-open .blacksmith-detail {
+    width: min(100%, 520px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    border-color: rgba(226, 185, 104, 0.42);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  }
+
+  .blacksmith-detail__close {
+    display: grid;
+  }
+
+  .blacksmith-detail .blacksmith-section-heading {
+    padding-right: 44px;
+  }
+
+  .blacksmith-materials {
+    grid-template-columns: repeat(3, minmax(84px, 1fr));
+  }
+
+  .blacksmith-materials > div:nth-child(4) {
+    border-left: 0;
+  }
+
+  .blacksmith-materials > div:nth-child(n + 4) {
+    border-top: 1px solid rgba(226, 185, 104, 0.11);
+  }
+}
+
+@media (max-width: 620px) {
+  .blacksmith-page__header {
+    grid-template-columns: 44px minmax(0, 1fr) 38px;
+  }
+
+  .blacksmith-page__emblem {
+    width: 44px;
+    height: 44px;
+  }
+
+  .blacksmith-page__summary {
+    display: contents;
+  }
+
+  .blacksmith-page__summary > span,
+  .blacksmith-page__summary > strong {
+    display: none;
+  }
+
+  .blacksmith-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .blacksmith-catalog,
+  .blacksmith-detail {
+    padding: 12px;
+  }
+
+  .blacksmith-materials {
+    grid-template-columns: repeat(2, minmax(84px, 1fr));
+  }
+
+  .blacksmith-materials > div:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .blacksmith-materials > div:nth-child(n + 3) {
+    border-top: 1px solid rgba(226, 185, 104, 0.11);
+  }
+
+  .blacksmith-materials > div:nth-child(4) {
+    border-left: 1px solid rgba(226, 185, 104, 0.11);
+  }
+
+  .blacksmith-detail__stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 390px) {
+  .blacksmith-page__header p {
+    display: none;
+  }
+
+  .blacksmith-detail__costs {
+    grid-template-columns: 1fr;
+  }
+}

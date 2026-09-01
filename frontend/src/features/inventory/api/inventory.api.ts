@@ -22,7 +22,8 @@ interface InventoryItemUnequipPayload {
 
 interface ReinforceEquipmentPayload {
   characterId: string;
-  slot: string;
+  slot?: string;
+  inventoryItemId?: string;
   requestId: string;
 }
 
@@ -47,6 +48,19 @@ export interface EquipmentReinforcementSlotState {
   reason?: string | null;
 }
 
+export interface EquipmentReinforcementCandidate
+  extends Omit<EquipmentReinforcementSlotState, "slot"> {
+  key: string;
+  location: "EQUIPPED" | "INVENTORY";
+  quantity: number;
+  target:
+    | { type: "EQUIPPED"; slot: string }
+    | { type: "INVENTORY"; inventoryItemId: string };
+  item: EquipmentReinforcementItem;
+  nextItem: EquipmentReinforcementItem;
+  cost: NonNullable<EquipmentReinforcementSlotState["cost"]>;
+}
+
 export interface EquipmentReinforcementState {
   maxLevel: number;
   gold: number;
@@ -57,6 +71,7 @@ export interface EquipmentReinforcementState {
     quantity: number;
   }>;
   slots: EquipmentReinforcementSlotState[];
+  items?: EquipmentReinforcementCandidate[];
 }
 
 export interface InventoryItemActionResponse {

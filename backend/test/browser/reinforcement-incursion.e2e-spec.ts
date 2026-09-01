@@ -673,14 +673,14 @@ test.describe('incursão e reforço de equipamentos', () => {
     });
 
     await authenticatePage(page);
-    await page.goto(`/dashboard/${characterId}/equipment`);
+    await page.goto(`/dashboard/${characterId}/blacksmith`);
     await expect(
-      page.getByRole('heading', { name: 'Reforço garantido' }),
+      page.getByRole('heading', { name: 'Ferreiro', exact: true }),
     ).toBeVisible();
-    await expect(page.getByText('Próximo resultado')).toBeVisible();
     await expect(
-      page.locator('.equipment-reinforcement__stat-deltas'),
-    ).not.toBeEmpty();
+      page.getByText('PRÓXIMO REFORÇO', { exact: true }),
+    ).toBeVisible();
+    await expect(page.locator('.blacksmith-detail__stats')).not.toBeEmpty();
 
     await page.getByRole('button', { name: 'Reforçar para +1' }).click();
     await expect(page.getByTestId('reinforcement-confirmation')).toContainText(
@@ -759,17 +759,17 @@ test.describe('incursão e reforço de equipamentos', () => {
     ).toBe(goldBeforePlusTwo - 60);
 
     await page.reload();
-    await expect(page.locator('.equipment-reinforcement__item')).toContainText(
-      'T1 · +2',
-    );
+    await expect(
+      page.locator('[data-target-key="equipped:MAIN_HAND"]'),
+    ).toHaveAttribute('data-enhancement-level', '2');
 
     await context.setOffline(true);
     await page.waitForTimeout(250);
     await context.setOffline(false);
     await page.reload();
-    await expect(page.locator('.equipment-reinforcement__item')).toContainText(
-      'T1 · +2',
-    );
+    await expect(
+      page.locator('[data-target-key="equipped:MAIN_HAND"]'),
+    ).toHaveAttribute('data-enhancement-level', '2');
 
     await page.getByRole('button', { name: 'Reforçar para +3' }).click();
     await expect(page.getByTestId('reinforcement-confirmation')).toContainText(

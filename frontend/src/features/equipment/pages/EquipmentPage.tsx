@@ -2,12 +2,9 @@ import type { ComponentType, CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
-  ArrowUp,
   Check,
-  Coins,
   Footprints,
   HardHat,
-  Hammer,
   PackageOpen,
   RefreshCw,
   Rows3,
@@ -15,6 +12,7 @@ import {
   Shirt,
   Sword,
   Unlink,
+  X,
 } from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
@@ -31,7 +29,6 @@ import {
   extractInventoryActionApiError,
   getCharacterEquipment,
   getCharacterInventory,
-  reinforceEquippedItem,
   unequipInventoryItem,
   type CharacterEquipmentResponse,
 } from "../../inventory/api/inventory.api";
@@ -42,15 +39,17 @@ import type {
 import { formatInventoryRarity } from "../../inventory/utils/inventory.utils";
 import "../styles/equipment.css";
 import { getEquipmentItemImageUrl } from "../utils/equipmentItemAssets";
-import {
-  getReinforcementStatChanges,
-  type ReinforcementStatChange,
-} from "../utils/reinforcementPresentation";
 
 type EquipmentSlot =
-  "MAIN_HAND" | "OFF_HAND" | "HEAD" | "ARMOR" | "PANTS" | "BOOTS";
+  | "MAIN_HAND"
+  | "OFF_HAND"
+  | "HEAD"
+  | "ARMOR"
+  | "PANTS"
+  | "BOOTS";
 
 type EquipmentViewKey = keyof DashboardEquipmentViewModel;
+type StatKey = keyof DashboardStats;
 
 interface SlotConfig {
   slot: EquipmentSlot;
@@ -58,16 +57,6 @@ interface SlotConfig {
   label: string;
   Icon: ComponentType<{ size?: number; strokeWidth?: number }>;
 }
-
-interface ReinforcementConfirmation {
-  itemName: string;
-  level: number;
-  statChanges: ReinforcementStatChange[];
-  materialRemaining: number;
-  goldRemaining: number;
-}
-
-type StatKey = keyof DashboardStats;
 
 const SLOT_CONFIGS: SlotConfig[] = [
   { slot: "HEAD", viewKey: "head", label: "Cabeça", Icon: HardHat },
@@ -116,7 +105,6 @@ function normalizeName(value?: string | null) {
 
 function getRequiredLevel(item: InventoryItemDetails) {
   const mapLevel = Number(item.map?.minLevel);
-
   if (Number.isFinite(mapLevel) && mapLevel > 0) return mapLevel;
 
   const tier = Math.max(1, Math.floor(Number(item.tier) || 1));
@@ -137,6 +125,7 @@ function isEquipmentEntry(entry: InventoryEntry) {
 
 export function EquipmentPage() {
   const { characterId } = useParams();
+  const comparisonShellRef = useRef<HTMLDivElement>(null);
   const [overview, setOverview] = useState<Awaited<
     ReturnType<typeof getCharacterOverview>
   > | null>(null);
@@ -147,6 +136,7 @@ export function EquipmentPage() {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
     null,
   );
+  const [isComparisonOpen, setIsComparisonOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [actionItemId, setActionItemId] = useState<string | null>(null);
@@ -155,9 +145,6 @@ export function EquipmentPage() {
     tone: "success" | "error";
     message: string;
   } | null>(null);
-  const [reinforcementConfirmation, setReinforcementConfirmation] =
-    useState<ReinforcementConfirmation | null>(null);
-  const reinforcementRequestIds = useRef<Record<string, string>>({});
 
   const loadPageData = useCallback(
     async (initialLoad = false) => {
@@ -200,17 +187,29 @@ export function EquipmentPage() {
     return () => window.clearTimeout(timeoutId);
   }, [loadPageData]);
 
+  useEffect(() => {
+    if (!isComparisonOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsComparisonOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isComparisonOpen]);
+
   const equipment = useMemo<DashboardEquipmentViewModel>(
     () => equipmentResponse?.equipment ?? overview?.equipment ?? {},
     [equipmentResponse?.equipment, overview?.equipment],
   );
   const character = useMemo(() => {
     if (!overview) return null;
-
-    return {
-      ...overview.character,
-      equipment,
-    };
+    return { ...overview.character, equipment };
   }, [equipment, overview]);
   const selectedSlotConfig =
     SLOT_CONFIGS.find((config) => config.slot === selectedSlot) ??
@@ -252,55 +251,21 @@ export function EquipmentPage() {
   const equippedCount = SLOT_CONFIGS.filter(
     (slot) => equipment[slot.viewKey],
   ).length;
-  const reinforcementSlot = equipmentResponse?.reinforcement?.slots.find(
-    (entry) => entry.slot === selectedSlot,
-  );
-  const reinforcementLevel = Math.max(
-    0,
-    Number(reinforcementSlot?.item?.enhancementLevel ?? 0),
-  );
-  const reinforcementActionId = `reinforce:${selectedSlot}`;
-  const reinforcementStatChanges = getReinforcementStatChanges(
-    reinforcementSlot?.item,
-    reinforcementSlot?.nextItem,
-  );
 
-  async function reinforceSelectedEquipment() {
-    if (
-      !characterId ||
-      !reinforcementSlot?.canReinforce ||
-      !reinforcementSlot.cost ||
-      !reinforcementSlot.nextItem
-    )
+  function revealComparison() {
+    if (window.matchMedia("(max-width: 780px)").matches) {
+      setIsComparisonOpen(true);
       return;
+    }
 
-    const cost = reinforcementSlot.cost;
-    const targetItem = reinforcementSlot.nextItem;
-    const statChanges = reinforcementStatChanges;
-
-    const requestId =
-      reinforcementRequestIds.current[selectedSlot] ?? crypto.randomUUID();
-    reinforcementRequestIds.current[selectedSlot] = requestId;
-
-    await runEquipmentAction(reinforcementActionId, async () => {
-      const response = await reinforceEquippedItem({
-        characterId,
-        slot: selectedSlot,
-        requestId,
+    if (window.matchMedia("(max-width: 1120px)").matches) {
+      window.requestAnimationFrame(() => {
+        comparisonShellRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
       });
-      delete reinforcementRequestIds.current[selectedSlot];
-      setReinforcementConfirmation({
-        itemName: response.reinforcedItem?.name ?? targetItem.name,
-        level: response.reinforcedItem?.enhancementLevel ?? cost.level,
-        statChanges,
-        materialRemaining: Math.max(
-          0,
-          cost.materialBalance - cost.fragmentCost,
-        ),
-        goldRemaining: Math.max(0, cost.goldBalance - cost.goldCost),
-      });
-      return response;
-    });
+    }
   }
 
   async function runEquipmentAction(
@@ -317,6 +282,7 @@ export function EquipmentPage() {
         message: result.message ?? "Equipamentos atualizados.",
       });
       setSelectedCandidateId(null);
+      setIsComparisonOpen(false);
       await loadPageData(false);
     } catch (actionError) {
       setFeedback({
@@ -400,495 +366,377 @@ export function EquipmentPage() {
           </div>
         ) : null}
 
-        <div className="equipment-overview-grid">
-          <section
-            className="equipment-loadout"
-            aria-labelledby="loadout-title"
-          >
-            <div className="equipment-section-heading">
-              <div>
-                <span>CONJUNTO ATUAL</span>
-                <h2 id="loadout-title">Loadout</h2>
-              </div>
-              <small>Nível {character.level}</small>
-            </div>
-
-            <div className="equipment-loadout__grid">
-              {SLOT_CONFIGS.map((slotConfig) => {
-                const item = equipment[slotConfig.viewKey] ?? null;
-                const rarity = getEquipmentRarityFromItem(item);
-                const imageUrl = getEquipmentItemImageUrl(item);
-                const isActive = selectedSlot === slotConfig.slot;
-
-                return (
-                  <button
-                    key={slotConfig.slot}
-                    type="button"
-                    className={`equipment-slot${isActive ? " is-active" : ""}${item ? " has-item" : " is-empty"}`}
-                    style={{ "--equipment-rgb": rarity.rgb } as CSSProperties}
-                    onClick={() => {
-                      setSelectedSlot(slotConfig.slot);
-                      setSelectedCandidateId(null);
-                      setFeedback(null);
-                      setReinforcementConfirmation(null);
-                    }}
-                    aria-pressed={isActive}
-                  >
-                    <span className="equipment-slot__visual">
-                      {imageUrl ? (
-                        <img src={imageUrl} alt="" loading="lazy" />
-                      ) : (
-                        <slotConfig.Icon size={27} strokeWidth={1.7} />
-                      )}
-                    </span>
-                    <span className="equipment-slot__copy">
-                      <small>{slotConfig.label}</small>
-                      <strong>{item?.name ?? "Slot vazio"}</strong>
-                      <em>
-                        {item
-                          ? `T${item.tier} · ${rarity.label}`
-                          : "Sem equipamento"}
-                      </em>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <aside
-            className="equipment-stats"
-            aria-labelledby="equipment-stats-title"
-          >
-            <div className="equipment-section-heading">
-              <div>
-                <span>ATRIBUTOS</span>
-                <h2 id="equipment-stats-title">Totais ativos</h2>
-              </div>
-            </div>
-
-            <dl className="equipment-stats__primary">
-              {STAT_CONFIGS.map((stat) => (
-                <div key={stat.key}>
-                  <dt>{stat.label}</dt>
-                  <dd>
-                    <strong>{totalStats?.[stat.key] ?? 0}</strong>
-                    <span>+{equipmentStats?.[stat.key] ?? 0}</span>
-                  </dd>
-                </div>
-              ))}
-            </dl>
-
-            <dl className="equipment-stats__combat">
-              <div>
-                <dt>Ataque</dt>
-                <dd>{derivedStats?.attack ?? 0}</dd>
-              </div>
-              <div>
-                <dt>Defesa</dt>
-                <dd>{derivedStats?.defense ?? 0}</dd>
-              </div>
-              <div>
-                <dt>Velocidade</dt>
-                <dd>{derivedStats?.speed ?? 0}</dd>
-              </div>
-              <div>
-                <dt>Vida máxima</dt>
-                <dd>{derivedStats?.maxHp ?? character.maxHp}</dd>
-              </div>
-            </dl>
-
-            {equipmentProgression ? (
-              <div className="equipment-progression">
-                <div>
-                  <span>SINERGIA DE EQUIPAMENTO</span>
-                  <strong>
-                    {equipmentProgression.coherentPieces ??
-                      equipmentProgression.craftedPieces}
-                    /6 peças
-                    {(equipmentProgression.coherentTier ?? 0) > 0
-                      ? ` T${equipmentProgression.coherentTier}`
-                      : ""}
-                  </strong>
-                </div>
-                <div
-                  className="equipment-progression__track"
-                  aria-hidden="true"
-                >
-                  {Array.from({ length: 6 }, (_, index) => (
-                    <i
-                      key={index}
-                      className={
-                        index <
-                        (equipmentProgression.coherentPieces ??
-                          equipmentProgression.craftedPieces)
-                          ? "is-active"
-                          : ""
-                      }
-                    />
-                  ))}
-                </div>
-                <small>
-                  +{equipmentProgression.bonusPercent}% nos atributos das peças
-                  {equipmentProgression.nextMilestone
-                    ? ` · próximo bônus com ${equipmentProgression.nextMilestone} peças`
-                    : " · bônus máximo ativo"}
-                </small>
-              </div>
-            ) : null}
-          </aside>
-        </div>
-
-        <section
-          className="equipment-reinforcement"
-          aria-labelledby="equipment-reinforcement-title"
-        >
-          <div className="equipment-section-heading">
-            <div>
-              <span>OFICINA DE INCURSÃO</span>
-              <h2 id="equipment-reinforcement-title">Reforço garantido</h2>
-            </div>
-            <small>
-              Máximo +{equipmentResponse?.reinforcement?.maxLevel ?? 3}
-            </small>
-          </div>
-
-          {reinforcementConfirmation ? (
-            <div
-              className="equipment-reinforcement__confirmation"
-              role="status"
-              data-testid="reinforcement-confirmation"
+        <div className="equipment-workspace">
+          <div className="equipment-workspace__catalog">
+            <section
+              className="equipment-loadout"
+              aria-labelledby="loadout-title"
             >
-              <Check size={18} />
-              <span>
-                <strong>
-                  {reinforcementConfirmation.itemName} agora está no +
-                  {reinforcementConfirmation.level}
-                </strong>
-                <small>
-                  {reinforcementConfirmation.statChanges
-                    .map(
-                      (stat) =>
-                        `${stat.short} +${stat.delta.toLocaleString("pt-BR")}`,
-                    )
-                    .join(" · ") || "Atributos atualizados"}
-                  {" · "}
-                  Saldo: {reinforcementConfirmation.materialRemaining} frag. e{" "}
-                  {reinforcementConfirmation.goldRemaining.toLocaleString(
-                    "pt-BR",
-                  )}{" "}
-                  Gold
-                </small>
-              </span>
-            </div>
-          ) : null}
-
-          {reinforcementSlot?.item ? (
-            <div className="equipment-reinforcement__body">
-              <div className="equipment-reinforcement__item">
-                <span className="equipment-reinforcement__visual">
-                  {getEquipmentItemImageUrl(reinforcementSlot.item) ? (
-                    <img
-                      src={
-                        getEquipmentItemImageUrl(reinforcementSlot.item) ?? ""
-                      }
-                      alt=""
-                    />
-                  ) : (
-                    <selectedSlotConfig.Icon size={30} strokeWidth={1.6} />
-                  )}
-                </span>
-                <span>
-                  <small>{selectedSlotConfig.label}</small>
-                  <strong>{reinforcementSlot.item.name}</strong>
-                  <em>
-                    T{reinforcementSlot.item.tier} · +{reinforcementLevel}
-                  </em>
-                </span>
+              <div className="equipment-section-heading">
+                <div>
+                  <span>CONJUNTO ATUAL</span>
+                  <h2 id="loadout-title">Escolha o slot</h2>
+                </div>
+                <small>Nível {character.level}</small>
               </div>
 
-              <div className="equipment-reinforcement__progress">
-                <span>Nível de reforço</span>
-                <div aria-label={`Reforço atual +${reinforcementLevel}`}>
-                  {[1, 2, 3].map((level) => (
-                    <i
-                      key={level}
-                      className={level <= reinforcementLevel ? "is-active" : ""}
-                    >
-                      +{level}
-                    </i>
-                  ))}
-                </div>
-                <small>
-                  +3 supera levemente o próximo tier base; o próximo tier +1
-                  volta a ser superior.
-                </small>
-              </div>
-
-              {reinforcementSlot.nextItem && reinforcementSlot.cost ? (
-                <div className="equipment-reinforcement__upgrade">
-                  <div className="equipment-reinforcement__target">
-                    <small>Próximo resultado</small>
-                    <strong>{reinforcementSlot.nextItem.name}</strong>
-                    <span className="equipment-reinforcement__stat-deltas">
-                      {reinforcementStatChanges.map((stat) => (
-                        <span key={stat.key} title={stat.label}>
-                          <b>{stat.short}</b>
-                          <em>
-                            {stat.current} → {stat.next}
-                          </em>
-                          <strong>+{stat.delta}</strong>
-                        </span>
-                      ))}
-                    </span>
-                  </div>
-                  <span className="equipment-reinforcement__costs">
-                    <em>
-                      <Hammer size={14} />
-                      {reinforcementSlot.cost.fragmentCost}x{" "}
-                      {reinforcementSlot.cost.materialName}
-                      <small>
-                        Saldo {reinforcementSlot.cost.materialBalance} →{" "}
-                        {Math.max(
-                          0,
-                          reinforcementSlot.cost.materialBalance -
-                            reinforcementSlot.cost.fragmentCost,
-                        )}
-                      </small>
-                    </em>
-                    <em>
-                      <Coins size={14} />
-                      {reinforcementSlot.cost.goldCost.toLocaleString(
-                        "pt-BR",
-                      )}{" "}
-                      Gold
-                      <small>
-                        Saldo{" "}
-                        {reinforcementSlot.cost.goldBalance.toLocaleString(
-                          "pt-BR",
-                        )}{" "}
-                        →{" "}
-                        {Math.max(
-                          0,
-                          reinforcementSlot.cost.goldBalance -
-                            reinforcementSlot.cost.goldCost,
-                        ).toLocaleString("pt-BR")}
-                      </small>
-                    </em>
-                  </span>
-                  <button
-                    type="button"
-                    className="equipment-reinforcement__button"
-                    disabled={
-                      !reinforcementSlot.canReinforce || Boolean(actionItemId)
-                    }
-                    onClick={() => void reinforceSelectedEquipment()}
-                    title={reinforcementSlot.reason ?? "Aplicar reforço"}
-                  >
-                    <ArrowUp size={17} />
-                    {actionItemId === reinforcementActionId
-                      ? "Reforçando..."
-                      : `Reforçar para +${reinforcementSlot.cost.level}`}
-                  </button>
-                  {!reinforcementSlot.canReinforce &&
-                  reinforcementSlot.reason ? (
-                    <small className="equipment-reinforcement__reason">
-                      {reinforcementSlot.reason}
-                    </small>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="equipment-reinforcement__maximum">
-                  <Check size={18} />
-                  <span>
-                    <strong>Reforço máximo alcançado</strong>
-                    <small>Esta peça já está no +3.</small>
-                  </span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="equipment-reinforcement__empty">
-              <Hammer size={23} />
-              <span>Equipe uma peça T1 a T5 neste slot para reforçá-la.</span>
-            </div>
-          )}
-        </section>
-
-        <div className="equipment-management-grid">
-          <section
-            className="equipment-candidates"
-            aria-labelledby="equipment-candidates-title"
-          >
-            <div className="equipment-section-heading">
-              <div>
-                <span>{selectedSlotConfig.label.toUpperCase()}</span>
-                <h2 id="equipment-candidates-title">Itens disponíveis</h2>
-              </div>
-              <small>{candidates.length} na mochila</small>
-            </div>
-
-            {candidates.length ? (
-              <div className="equipment-candidates__list">
-                {candidates.map((entry) => {
-                  const item = entry.item;
+              <div className="equipment-loadout__grid">
+                {SLOT_CONFIGS.map((slotConfig) => {
+                  const item = equipment[slotConfig.viewKey] ?? null;
                   const rarity = getEquipmentRarityFromItem(item);
                   const imageUrl = getEquipmentItemImageUrl(item);
-                  const isSelected = selectedCandidate?.item.id === item.id;
+                  const isActive = selectedSlot === slotConfig.slot;
 
                   return (
                     <button
-                      key={entry.inventoryItemId}
+                      key={slotConfig.slot}
                       type="button"
-                      className={`equipment-candidate${isSelected ? " is-selected" : ""}`}
-                      style={{ "--equipment-rgb": rarity.rgb } as CSSProperties}
+                      className={`equipment-slot${isActive ? " is-active" : ""}${item ? " has-item" : " is-empty"}`}
+                      style={
+                        { "--equipment-rgb": rarity.rgb } as CSSProperties
+                      }
                       onClick={() => {
-                        setSelectedCandidateId(item.id);
+                        setSelectedSlot(slotConfig.slot);
+                        setSelectedCandidateId(null);
                         setFeedback(null);
+                        setIsComparisonOpen(false);
                       }}
-                      aria-pressed={isSelected}
+                      aria-pressed={isActive}
                     >
-                      <span className="equipment-candidate__visual">
+                      <span className="equipment-slot__visual">
                         {imageUrl ? (
                           <img src={imageUrl} alt="" loading="lazy" />
                         ) : (
-                          <selectedSlotConfig.Icon
-                            size={23}
-                            strokeWidth={1.7}
-                          />
+                          <slotConfig.Icon size={27} strokeWidth={1.7} />
                         )}
                       </span>
-                      <span className="equipment-candidate__copy">
-                        <strong>{item.name}</strong>
-                        <small>
-                          T{item.tier ?? "?"} ·{" "}
-                          {formatInventoryRarity(item.rarity)}
-                        </small>
-                      </span>
-                      <span className="equipment-candidate__quantity">
-                        {entry.quantity}x
+                      <span className="equipment-slot__copy">
+                        <small>{slotConfig.label}</small>
+                        <strong>{item?.name ?? "Slot vazio"}</strong>
+                        <em>
+                          {item
+                            ? `T${item.tier} · ${rarity.label}`
+                            : "Sem equipamento"}
+                        </em>
                       </span>
                     </button>
                   );
                 })}
               </div>
-            ) : (
-              <div className="equipment-empty-state">
-                <PackageOpen size={28} />
-                <strong>Nenhum item compatível na mochila</strong>
-              </div>
-            )}
-          </section>
+            </section>
 
-          <section
-            className="equipment-comparison"
-            aria-labelledby="comparison-title"
-          >
-            <div className="equipment-section-heading">
-              <div>
-                <span>COMPARAÇÃO</span>
-                <h2 id="comparison-title">
-                  {selectedCandidate?.item.name ?? "Nenhum item selecionado"}
-                </h2>
-              </div>
-            </div>
-
-            {selectedCandidate ? (
-              <>
-                <div className="equipment-comparison__items">
-                  <div>
-                    <small>Equipado</small>
-                    <strong>{equippedItem?.name ?? "Slot vazio"}</strong>
-                  </div>
-                  <div>
-                    <small>Novo item</small>
-                    <strong>{selectedCandidate.item.name}</strong>
-                  </div>
+            <section
+              className="equipment-candidates"
+              aria-labelledby="equipment-candidates-title"
+            >
+              <div className="equipment-section-heading">
+                <div>
+                  <span>{selectedSlotConfig.label.toUpperCase()}</span>
+                  <h2 id="equipment-candidates-title">Itens disponíveis</h2>
                 </div>
+                <small>{candidates.length} na mochila</small>
+              </div>
 
-                <dl className="equipment-comparison__stats">
-                  {STAT_CONFIGS.map((stat) => {
-                    const currentValue = getItemStat(equippedItem, stat.key);
-                    const candidateValue = getItemStat(
-                      selectedCandidate.item,
-                      stat.key,
-                    );
-                    const difference = candidateValue - currentValue;
+              {candidates.length ? (
+                <div className="equipment-candidates__list">
+                  {candidates.map((entry) => {
+                    const item = entry.item;
+                    const rarity = getEquipmentRarityFromItem(item);
+                    const imageUrl = getEquipmentItemImageUrl(item);
+                    const isSelected = selectedCandidate?.item.id === item.id;
 
                     return (
-                      <div key={stat.key}>
-                        <dt>{stat.short}</dt>
-                        <dd>{candidateValue}</dd>
-                        <span
-                          className={
-                            difference > 0
-                              ? "is-positive"
-                              : difference < 0
-                                ? "is-negative"
-                                : ""
-                          }
-                        >
-                          {difference > 0 ? "+" : ""}
-                          {difference}
+                      <button
+                        key={entry.inventoryItemId}
+                        type="button"
+                        className={`equipment-candidate${isSelected ? " is-selected" : ""}`}
+                        style={
+                          { "--equipment-rgb": rarity.rgb } as CSSProperties
+                        }
+                        onClick={() => {
+                          setSelectedCandidateId(item.id);
+                          setFeedback(null);
+                          revealComparison();
+                        }}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="equipment-candidate__visual">
+                          {imageUrl ? (
+                            <img src={imageUrl} alt="" loading="lazy" />
+                          ) : (
+                            <selectedSlotConfig.Icon
+                              size={23}
+                              strokeWidth={1.7}
+                            />
+                          )}
                         </span>
-                      </div>
+                        <span className="equipment-candidate__copy">
+                          <strong>{item.name}</strong>
+                          <small>
+                            T{item.tier ?? "?"} ·{" "}
+                            {formatInventoryRarity(item.rarity)}
+                          </small>
+                        </span>
+                        <span className="equipment-candidate__quantity">
+                          {entry.quantity}x
+                        </span>
+                      </button>
                     );
                   })}
-                </dl>
-
-                <div className="equipment-requirements">
-                  <span className={levelCompatible ? "is-valid" : "is-invalid"}>
-                    Nível {requiredLevel}
-                  </span>
-                  <span className={classCompatible ? "is-valid" : "is-invalid"}>
-                    {selectedCandidateClass ?? "Todas as classes"}
-                  </span>
                 </div>
+              ) : (
+                <div className="equipment-empty-state">
+                  <PackageOpen size={28} />
+                  <strong>Nenhum item deste slot na mochila</strong>
+                </div>
+              )}
+            </section>
+          </div>
 
+          <div className="equipment-workspace__inspector">
+            <div
+              ref={comparisonShellRef}
+              className={`equipment-comparison-shell${isComparisonOpen ? " is-mobile-open" : ""}`}
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setIsComparisonOpen(false);
+                }
+              }}
+            >
+              <section
+                className="equipment-comparison"
+                aria-labelledby="comparison-title"
+                role={isComparisonOpen ? "dialog" : undefined}
+                aria-modal={isComparisonOpen ? true : undefined}
+              >
                 <button
                   type="button"
-                  className="equipment-primary-action"
-                  disabled={!canEquip}
-                  onClick={() =>
-                    void runEquipmentAction(selectedCandidate.item.id, () =>
-                      equipInventoryItem({
-                        characterId,
-                        itemId: selectedCandidate.item.id,
-                      }),
-                    )
-                  }
+                  className="equipment-comparison__close"
+                  onClick={() => setIsComparisonOpen(false)}
+                  aria-label="Fechar comparação"
+                  title="Fechar"
                 >
-                  <Sword size={18} />
-                  {actionItemId === selectedCandidate.item.id
-                    ? "Equipando..."
-                    : "Equipar item"}
+                  <X size={19} />
                 </button>
-              </>
-            ) : (
-              <div className="equipment-empty-state equipment-empty-state--comparison">
-                <PackageOpen size={28} />
-                <strong>Sem item para comparar</strong>
-              </div>
-            )}
 
-            {equippedItem ? (
-              <button
-                type="button"
-                className="equipment-secondary-action"
-                disabled={Boolean(actionItemId)}
-                onClick={() =>
-                  void runEquipmentAction(equippedItem.id, () =>
-                    unequipInventoryItem({ characterId, slot: selectedSlot }),
-                  )
-                }
-              >
-                <Unlink size={17} />
-                {actionItemId === equippedItem.id
-                  ? "Removendo..."
-                  : "Desequipar"}
-              </button>
-            ) : null}
-          </section>
+                <div className="equipment-section-heading">
+                  <div>
+                    <span>COMPARAÇÃO DIRETA</span>
+                    <h2 id="comparison-title">
+                      {selectedCandidate?.item.name ?? selectedSlotConfig.label}
+                    </h2>
+                  </div>
+                </div>
+
+                {selectedCandidate ? (
+                  <>
+                    <div className="equipment-comparison__items">
+                      <div>
+                        <small>Equipado</small>
+                        <strong>{equippedItem?.name ?? "Slot vazio"}</strong>
+                      </div>
+                      <div>
+                        <small>Selecionado</small>
+                        <strong>{selectedCandidate.item.name}</strong>
+                      </div>
+                    </div>
+
+                    <div
+                      className="equipment-comparison__table-heading"
+                      aria-hidden="true"
+                    >
+                      <span>Atributo</span>
+                      <span>Atual</span>
+                      <span>Novo</span>
+                      <span>Dif.</span>
+                    </div>
+                    <dl className="equipment-comparison__stats">
+                      {STAT_CONFIGS.map((stat) => {
+                        const currentValue = getItemStat(
+                          equippedItem,
+                          stat.key,
+                        );
+                        const candidateValue = getItemStat(
+                          selectedCandidate.item,
+                          stat.key,
+                        );
+                        const difference = candidateValue - currentValue;
+
+                        return (
+                          <div key={stat.key}>
+                            <dt title={stat.label}>{stat.short}</dt>
+                            <dd>{currentValue}</dd>
+                            <dd>{candidateValue}</dd>
+                            <span
+                              className={
+                                difference > 0
+                                  ? "is-positive"
+                                  : difference < 0
+                                    ? "is-negative"
+                                    : ""
+                              }
+                            >
+                              {difference > 0 ? "+" : ""}
+                              {difference}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </dl>
+
+                    <div className="equipment-requirements">
+                      <span
+                        className={levelCompatible ? "is-valid" : "is-invalid"}
+                      >
+                        Nível {requiredLevel}
+                      </span>
+                      <span
+                        className={classCompatible ? "is-valid" : "is-invalid"}
+                      >
+                        {selectedCandidateClass ?? "Todas as classes"}
+                      </span>
+                    </div>
+
+                  </>
+                ) : (
+                  <div className="equipment-empty-state equipment-empty-state--comparison">
+                    <PackageOpen size={28} />
+                    <strong>Escolha uma peça da mochila para comparar</strong>
+                  </div>
+                )}
+
+                {selectedCandidate || equippedItem ? (
+                  <div className="equipment-comparison__actions">
+                    {selectedCandidate ? (
+                      <button
+                        type="button"
+                        className="equipment-primary-action"
+                        disabled={!canEquip}
+                        onClick={() =>
+                          void runEquipmentAction(
+                            selectedCandidate.item.id,
+                            () =>
+                              equipInventoryItem({
+                                characterId,
+                                itemId: selectedCandidate.item.id,
+                              }),
+                          )
+                        }
+                      >
+                        <Sword size={18} />
+                        {actionItemId === selectedCandidate.item.id
+                          ? "Equipando..."
+                          : "Equipar item"}
+                      </button>
+                    ) : null}
+
+                    {equippedItem ? (
+                      <button
+                        type="button"
+                        className="equipment-secondary-action"
+                        disabled={Boolean(actionItemId)}
+                        onClick={() =>
+                          void runEquipmentAction(equippedItem.id, () =>
+                            unequipInventoryItem({
+                              characterId,
+                              slot: selectedSlot,
+                            }),
+                          )
+                        }
+                      >
+                        <Unlink size={17} />
+                        {actionItemId === equippedItem.id
+                          ? "Removendo..."
+                          : "Desequipar"}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </section>
+            </div>
+
+            <aside
+              className="equipment-stats"
+              aria-labelledby="equipment-stats-title"
+            >
+              <div className="equipment-section-heading">
+                <div>
+                  <span>RESULTADO DO CONJUNTO</span>
+                  <h2 id="equipment-stats-title">Atributos ativos</h2>
+                </div>
+              </div>
+
+              <dl className="equipment-stats__primary">
+                {STAT_CONFIGS.map((stat) => (
+                  <div key={stat.key}>
+                    <dt>{stat.label}</dt>
+                    <dd>
+                      <strong>{totalStats?.[stat.key] ?? 0}</strong>
+                      <span>+{equipmentStats?.[stat.key] ?? 0}</span>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+
+              <dl className="equipment-stats__combat">
+                <div>
+                  <dt>Ataque</dt>
+                  <dd>{derivedStats?.attack ?? 0}</dd>
+                </div>
+                <div>
+                  <dt>Defesa</dt>
+                  <dd>{derivedStats?.defense ?? 0}</dd>
+                </div>
+                <div>
+                  <dt>Velocidade</dt>
+                  <dd>{derivedStats?.speed ?? 0}</dd>
+                </div>
+                <div>
+                  <dt>Vida máxima</dt>
+                  <dd>{derivedStats?.maxHp ?? character.maxHp}</dd>
+                </div>
+              </dl>
+
+              {equipmentProgression ? (
+                <div className="equipment-progression">
+                  <div>
+                    <span>SINERGIA DE EQUIPAMENTO</span>
+                    <strong>
+                      {equipmentProgression.coherentPieces ??
+                        equipmentProgression.craftedPieces}
+                      /6 peças
+                      {(equipmentProgression.coherentTier ?? 0) > 0
+                        ? ` T${equipmentProgression.coherentTier}`
+                        : ""}
+                    </strong>
+                  </div>
+                  <div
+                    className="equipment-progression__track"
+                    aria-hidden="true"
+                  >
+                    {Array.from({ length: 6 }, (_, index) => (
+                      <i
+                        key={index}
+                        className={
+                          index <
+                          (equipmentProgression.coherentPieces ??
+                            equipmentProgression.craftedPieces)
+                            ? "is-active"
+                            : ""
+                        }
+                      />
+                    ))}
+                  </div>
+                  <small>
+                    +{equipmentProgression.bonusPercent}% nos atributos das peças
+                    {equipmentProgression.nextMilestone
+                      ? ` · próximo bônus com ${equipmentProgression.nextMilestone} peças`
+                      : " · bônus máximo ativo"}
+                  </small>
+                </div>
+              ) : null}
+            </aside>
+          </div>
         </div>
       </main>
     </DashboardLayout>

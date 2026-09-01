@@ -1277,16 +1277,26 @@ export function IncursionsPage() {
                               <ApproachIcon approach={profile.approach} />
                               <strong>{copy.label}</strong>
                             </span>
-                            <span>{copy.description}</span>
+                            <span className="incursions-approach-selector__description">
+                              {copy.description}
+                            </span>
                             <span className="incursions-approach-selector__stats">
-                              <strong>{profile.successChance}%</strong> sucesso
-                              <strong>
-                                {formatDuration(profile.durationSeconds)}
-                              </strong>
-                              <strong>
-                                {formatMultiplier(profile.rewardMultiplier)}
-                              </strong>{" "}
-                              loot
+                              <span>
+                                <small>Sucesso</small>
+                                <strong>{profile.successChance}%</strong>
+                              </span>
+                              <span>
+                                <small>Duração</small>
+                                <strong>
+                                  {formatDuration(profile.durationSeconds)}
+                                </strong>
+                              </span>
+                              <span>
+                                <small>Recompensa</small>
+                                <strong>
+                                  {formatMultiplier(profile.rewardMultiplier)}
+                                </strong>
+                              </span>
                             </span>
                           </button>
                         );
@@ -1309,9 +1319,20 @@ export function IncursionsPage() {
                 </section>
 
                 <section className="incursions-modal__rewards">
-                  <strong className="incursions-modal__rewards-title">
-                    <PackageOpen size={16} /> Loot possível
-                  </strong>
+                  <div className="incursions-modal__rewards-heading">
+                    <strong className="incursions-modal__rewards-title">
+                      <PackageOpen size={16} /> Recompensas possíveis
+                    </strong>
+                    {selectedApproachProfile ? (
+                      <span>
+                        {APPROACH_COPY[selectedApproachProfile.approach].label}: {" "}
+                        {formatMultiplier(
+                          selectedApproachProfile.rewardMultiplier,
+                        )}{" "}
+                        das recompensas
+                      </span>
+                    ) : null}
+                  </div>
 
                   <div className="incursions-modal__refund-note">
                     <CheckCircle2 size={17} />

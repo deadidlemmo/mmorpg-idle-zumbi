@@ -7,6 +7,7 @@ import {
 import {
   EconomyDirection,
   EconomyResourceType,
+  InventoryItemType,
   ItemSlot,
   Prisma,
 } from '@prisma/client';
@@ -78,19 +79,28 @@ export class EquipmentReinforcementService {
         equipment: { include: EQUIPMENT_INCLUDE },
         inventoryItems: {
           where: {
-            item: {
-              family: 'Material de Reforço',
-              tier: { in: Array.from(ECONOMY_LAUNCH_TIERS) },
-            },
+            OR: [
+              {
+                item: {
+                  family: 'Material de Reforço',
+                  tier: { in: Array.from(ECONOMY_LAUNCH_TIERS) },
+                },
+              },
+              {
+                type: InventoryItemType.EQUIPMENT,
+                item: {
+                  tier: { in: Array.from(ECONOMY_LAUNCH_TIERS) },
+                  slot: { in: Array.from(REINFORCEMENT_SLOTS) },
+                },
+              },
+            ],
           },
           select: {
+            id: true,
             quantity: true,
+            type: true,
             item: {
-              select: {
-                id: true,
-                name: true,
-                tier: true,
-              },
+              select: REINFORCEMENT_ITEM_SELECT,
             },
           },
         },
@@ -102,10 +112,17 @@ export class EquipmentReinforcementService {
     }
 
     const equippedEntries = this.getEquippedEntries(character.equipment);
+    const inventoryEquipmentEntries = character.inventoryItems.filter(
+      (entry) => entry.type === InventoryItemType.EQUIPMENT,
+    );
+    const ownedItems = [
+      ...equippedEntries.flatMap((entry) => (entry.item ? [entry.item] : [])),
+      ...inventoryEquipmentEntries.map((entry) => entry.item),
+    ];
     const baseItemIds = Array.from(
       new Set(
-        equippedEntries
-          .map((entry) => entry.item?.baseItemId ?? entry.item?.id)
+        ownedItems
+          .map((item) => item.baseItemId ?? item.id)
           .filter((id): id is string => Boolean(id)),
       ),
     );
@@ -128,8 +145,77 @@ export class EquipmentReinforcementService {
       ]),
     );
     const materialByTier = new Map(
-      character.inventoryItems.map((entry) => [entry.item.tier, entry]),
+      character.inventoryItems
+        .filter((entry) => entry.item.family === 'Material de Reforço')
+        .map((entry) => [entry.item.tier, entry]),
     );
+    const buildItemState = (item: (typeof ownedItems)[number]) => {
+      const currentLevel = Math.max(0, item.enhancementLevel ?? 0);
+      const nextLevel = currentLevel + 1;
+      const baseItemId = item.baseItemId ?? item.id;
+      const nextItem =
+        nextLevel <= EQUIPMENT_REINFORCEMENT_MAX_LEVEL
+          ? (variantByKey.get(`${baseItemId}:${nextLevel}`) ?? null)
+          : null;
+      const cost = getEquipmentReinforcementCost(item.tier, nextLevel);
+      const materialName = isEconomyLaunchTier(item.tier)
+        ? EQUIPMENT_REINFORCEMENT_CONFIG[item.tier].materialName
+        : null;
+      const materialBalance = materialByTier.get(item.tier)?.quantity ?? 0;
+      const canReinforce = Boolean(
+        nextItem &&
+        cost &&
+        materialBalance >= cost.fragmentCost &&
+        character.gold >= cost.goldCost,
+      );
+
+      return {
+        item: this.formatItem(item),
+        nextItem: nextItem ? this.formatItem(nextItem) : null,
+        cost:
+          cost && materialName
+            ? {
+                ...cost,
+                materialName,
+                materialBalance,
+                goldBalance: character.gold,
+              }
+            : null,
+        canReinforce,
+        reason: this.getUnavailableReason({
+          item,
+          nextItem,
+          cost,
+          materialBalance,
+          gold: character.gold,
+        }),
+      };
+    };
+
+    const reinforcementItems = [
+      ...equippedEntries.flatMap(({ slot, item }) => {
+        if (!item) return [];
+        return [
+          {
+            key: `equipped:${slot}`,
+            location: 'EQUIPPED' as const,
+            quantity: 1,
+            target: { type: 'EQUIPPED' as const, slot },
+            ...buildItemState(item),
+          },
+        ];
+      }),
+      ...inventoryEquipmentEntries.map((entry) => ({
+        key: `inventory:${entry.id}`,
+        location: 'INVENTORY' as const,
+        quantity: entry.quantity,
+        target: {
+          type: 'INVENTORY' as const,
+          inventoryItemId: entry.id,
+        },
+        ...buildItemState(entry.item),
+      })),
+    ].filter((entry) => Boolean(entry.nextItem && entry.cost));
 
     return {
       maxLevel: EQUIPMENT_REINFORCEMENT_MAX_LEVEL,
@@ -145,56 +231,17 @@ export class EquipmentReinforcementService {
           quantity: entry?.quantity ?? 0,
         };
       }),
-      slots: equippedEntries.map(({ slot, item }) => {
-        if (!item) return { slot, item: null, nextItem: null, cost: null };
-
-        const currentLevel = Math.max(0, item.enhancementLevel ?? 0);
-        const nextLevel = currentLevel + 1;
-        const baseItemId = item.baseItemId ?? item.id;
-        const nextItem =
-          nextLevel <= EQUIPMENT_REINFORCEMENT_MAX_LEVEL
-            ? (variantByKey.get(`${baseItemId}:${nextLevel}`) ?? null)
-            : null;
-        const cost = getEquipmentReinforcementCost(item.tier, nextLevel);
-        const materialName = isEconomyLaunchTier(item.tier)
-          ? EQUIPMENT_REINFORCEMENT_CONFIG[item.tier].materialName
-          : null;
-        const materialBalance = materialByTier.get(item.tier)?.quantity ?? 0;
-        const canReinforce = Boolean(
-          nextItem &&
-          cost &&
-          materialBalance >= cost.fragmentCost &&
-          character.gold >= cost.goldCost,
-        );
-
-        return {
-          slot,
-          item: this.formatItem(item),
-          nextItem: nextItem ? this.formatItem(nextItem) : null,
-          cost:
-            cost && materialName
-              ? {
-                  ...cost,
-                  materialName,
-                  materialBalance,
-                  goldBalance: character.gold,
-                }
-              : null,
-          canReinforce,
-          reason: this.getUnavailableReason({
-            item,
-            nextItem,
-            cost,
-            materialBalance,
-            gold: character.gold,
-          }),
-        };
-      }),
+      slots: equippedEntries.map(({ slot, item }) =>
+        item
+          ? { slot, ...buildItemState(item) }
+          : { slot, item: null, nextItem: null, cost: null },
+      ),
+      items: reinforcementItems,
     };
   }
 
   async reinforce(userId: string, dto: ReinforceEquipmentDto) {
-    const slot = dto.slot;
+    const target = this.getReinforcementTarget(dto);
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
@@ -226,7 +273,7 @@ export class EquipmentReinforcementService {
               include: { item: true },
             });
             if (existing) {
-              this.assertSameRequest(existing.metadata, slot);
+              this.assertSameRequest(existing.metadata, target.key);
               return {
                 applied: false,
                 message: 'Este reforço já havia sido concluído.',
@@ -236,16 +283,33 @@ export class EquipmentReinforcementService {
               };
             }
 
-            if (!character.equipment) {
-              throw new BadRequestException(
-                'Nenhum equipamento foi encontrado neste personagem.',
-              );
-            }
-
-            const currentItem = this.getItemBySlot(character.equipment, slot);
+            const inventorySource =
+              target.type === 'INVENTORY'
+                ? await tx.inventoryItem.findFirst({
+                    where: {
+                      id: target.inventoryItemId,
+                      characterId: character.id,
+                      type: InventoryItemType.EQUIPMENT,
+                    },
+                    include: { item: true },
+                  })
+                : null;
+            const currentItem =
+              target.type === 'EQUIPPED'
+                ? character.equipment
+                  ? this.getItemBySlot(character.equipment, target.slot)
+                  : null
+                : inventorySource?.item;
             if (!currentItem) {
               throw new BadRequestException(
-                'Não existe um item equipado neste slot.',
+                target.type === 'EQUIPPED'
+                  ? 'Não existe um item equipado neste slot.'
+                  : 'Este equipamento não está mais na mochila.',
+              );
+            }
+            if (!this.isReinforcementSlot(currentItem.slot)) {
+              throw new BadRequestException(
+                'Este item não ocupa um slot de equipamento reforçável.',
               );
             }
             if (!isEconomyLaunchTier(currentItem.tier)) {
@@ -315,49 +379,100 @@ export class EquipmentReinforcementService {
               );
             }
 
-            const oldEquipmentItems = this.getEquipmentItems(
-              character.equipment,
-            );
-            const gatheringBonus = calculateGatheringPrimaryBonus(
-              character.gatheringSkills,
-            );
-            const oldStats = calculateFullStats(
-              character.class,
-              oldEquipmentItems,
-              character.level,
-              gatheringBonus,
-            );
-            const oldMaxHp = oldStats.derivedCombatStats.maxHp;
-            const oldCurrentHp = this.clampHp(
-              character.currentHp ?? oldMaxHp,
-              oldMaxHp,
-            );
-            const updatedEquipment = await tx.equipment.update({
-              where: { characterId: character.id },
-              data: this.getSlotUpdateData(slot, nextItem.id),
-              include: EQUIPMENT_INCLUDE,
-            });
-            const newStats = calculateFullStats(
-              character.class,
-              this.getEquipmentItems(updatedEquipment),
-              character.level,
-              gatheringBonus,
-            );
-            const newMaxHp = newStats.derivedCombatStats.maxHp;
-            const newCurrentHp = this.calculateCurrentHpAfterChange({
-              oldCurrentHp,
-              oldMaxHp,
-              newMaxHp,
-            });
-            const updatedCharacter = await tx.character.update({
-              where: { id: character.id },
-              data: { maxHp: newMaxHp, currentHp: newCurrentHp },
-              select: { gold: true },
-            });
+            let updatedEquipment = character.equipment;
+            let newStats: ReturnType<typeof calculateFullStats> | undefined;
+            let updatedGold = character.gold - cost.goldCost;
+
+            if (target.type === 'EQUIPPED') {
+              if (!character.equipment) {
+                throw new BadRequestException(
+                  'Nenhum equipamento foi encontrado neste personagem.',
+                );
+              }
+
+              const oldEquipmentItems = this.getEquipmentItems(
+                character.equipment,
+              );
+              const gatheringBonus = calculateGatheringPrimaryBonus(
+                character.gatheringSkills,
+              );
+              const oldStats = calculateFullStats(
+                character.class,
+                oldEquipmentItems,
+                character.level,
+                gatheringBonus,
+              );
+              const oldMaxHp = oldStats.derivedCombatStats.maxHp;
+              const oldCurrentHp = this.clampHp(
+                character.currentHp ?? oldMaxHp,
+                oldMaxHp,
+              );
+              updatedEquipment = await tx.equipment.update({
+                where: { characterId: character.id },
+                data: this.getSlotUpdateData(target.slot, nextItem.id),
+                include: EQUIPMENT_INCLUDE,
+              });
+              newStats = calculateFullStats(
+                character.class,
+                this.getEquipmentItems(updatedEquipment),
+                character.level,
+                gatheringBonus,
+              );
+              const newMaxHp = newStats.derivedCombatStats.maxHp;
+              const newCurrentHp = this.calculateCurrentHpAfterChange({
+                oldCurrentHp,
+                oldMaxHp,
+                newMaxHp,
+              });
+              const updatedCharacter = await tx.character.update({
+                where: { id: character.id },
+                data: { maxHp: newMaxHp, currentHp: newCurrentHp },
+                select: { gold: true },
+              });
+              updatedGold = updatedCharacter.gold;
+            } else {
+              const sourceBalance = await tryConsumeInventoryStack(tx, {
+                characterId: character.id,
+                itemId: currentItem.id,
+                quantity: 1,
+              });
+              if (sourceBalance === null) {
+                throw new BadRequestException(
+                  'Este equipamento não está mais na mochila.',
+                );
+              }
+              await tx.inventoryItem.upsert({
+                where: {
+                  characterId_itemId: {
+                    characterId: character.id,
+                    itemId: nextItem.id,
+                  },
+                },
+                create: {
+                  characterId: character.id,
+                  itemId: nextItem.id,
+                  type: InventoryItemType.EQUIPMENT,
+                  quantity: 1,
+                },
+                update: {
+                  type: InventoryItemType.EQUIPMENT,
+                  quantity: { increment: 1 },
+                },
+              });
+              updatedGold = (
+                await tx.character.findUniqueOrThrow({
+                  where: { id: character.id },
+                  select: { gold: true },
+                })
+              ).gold;
+            }
 
             const commonMetadata = {
               requestId: dto.requestId,
-              slot,
+              targetType: target.type,
+              slot: target.type === 'EQUIPPED' ? target.slot : null,
+              inventoryItemId:
+                target.type === 'INVENTORY' ? target.inventoryItemId : null,
               fromItemId: currentItem.id,
               toItemId: nextItem.id,
               enhancementLevel: nextLevel,
@@ -394,7 +509,7 @@ export class EquipmentReinforcementService {
               resourceType: EconomyResourceType.GOLD,
               tier: currentItem.tier,
               quantity: cost.goldCost,
-              balanceAfter: updatedCharacter.gold,
+              balanceAfter: updatedGold,
               reason: ECONOMY_REASONS.EQUIPMENT_REINFORCEMENT_GOLD,
               idempotencyKey: `${idempotencyPrefix}:gold`,
               referenceType: 'EquipmentReinforcement',
@@ -419,9 +534,10 @@ export class EquipmentReinforcementService {
               applied: true,
               message: `${nextItem.name} reforçado com sucesso.`,
               reinforcedItem: this.formatItem(nextItem),
-              gold: updatedCharacter.gold,
-              equipment: updatedEquipment,
-              stats: newStats,
+              gold: updatedGold,
+              ...(target.type === 'EQUIPPED'
+                ? { equipment: updatedEquipment, stats: newStats }
+                : {}),
             };
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -453,6 +569,35 @@ export class EquipmentReinforcementService {
       slot,
       item: equipment ? this.getItemBySlot(equipment, slot) : null,
     }));
+  }
+
+  private getReinforcementTarget(dto: ReinforceEquipmentDto) {
+    const hasSlot = Boolean(dto.slot);
+    const hasInventoryItem = Boolean(dto.inventoryItemId);
+
+    if (hasSlot === hasInventoryItem) {
+      throw new BadRequestException(
+        'Informe uma peça equipada ou uma peça da mochila para reforçar.',
+      );
+    }
+
+    if (dto.slot) {
+      return {
+        type: 'EQUIPPED' as const,
+        slot: dto.slot,
+        key: `equipped:${dto.slot}`,
+      };
+    }
+
+    return {
+      type: 'INVENTORY' as const,
+      inventoryItemId: dto.inventoryItemId as string,
+      key: `inventory:${dto.inventoryItemId}`,
+    };
+  }
+
+  private isReinforcementSlot(slot: ItemSlot): slot is ReinforcementSlot {
+    return (REINFORCEMENT_SLOTS as readonly ItemSlot[]).includes(slot);
   }
 
   private getEquipmentItems(
@@ -547,17 +692,22 @@ export class EquipmentReinforcementService {
     return null;
   }
 
-  private assertSameRequest(metadata: Prisma.JsonValue | null, slot: string) {
-    const storedSlot =
-      metadata &&
-      typeof metadata === 'object' &&
-      !Array.isArray(metadata) &&
-      typeof metadata.slot === 'string'
-        ? metadata.slot
+  private assertSameRequest(
+    metadata: Prisma.JsonValue | null,
+    targetKey: string,
+  ) {
+    const storedTargetKey =
+      metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+        ? metadata.targetType === 'INVENTORY' &&
+          typeof metadata.inventoryItemId === 'string'
+          ? `inventory:${metadata.inventoryItemId}`
+          : typeof metadata.slot === 'string'
+            ? `equipped:${metadata.slot}`
+            : null
         : null;
-    if (storedSlot !== slot) {
+    if (storedTargetKey !== targetKey) {
       throw new ConflictException(
-        'Esta identificação de reforço já foi usada em outro slot.',
+        'Esta identificação de reforço já foi usada em outra peça.',
       );
     }
   }

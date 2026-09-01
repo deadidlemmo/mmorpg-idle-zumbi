@@ -692,20 +692,26 @@ export function MarketplacePage() {
                         </small>
                       </span>
                     </div>
-                    <div className="market-row__seller" data-label="Vendedor">
+                    <div className="market-row__seller">
+                      <span className="market-row__field-label">Vendedor</span>
                       <strong>{listing.seller.name}</strong>
                       <small>{formatDate(listing.createdAt)}</small>
                     </div>
-                    <div className="market-row__stock" data-label="Disponível">
+                    <div className="market-row__stock">
+                      <span className="market-row__field-label">
+                        Disponível
+                      </span>
                       <strong>{formatGold(listing.quantityRemaining)}</strong>
                       <small>{formatUnitLabel(listing.quantityRemaining)}</small>
                     </div>
-                    <div
-                      className="market-row__price"
-                      data-label="Preço unitário"
-                    >
-                      <img src={goldIcon} alt="" />
-                      <strong>{formatGold(listing.unitPrice)}</strong>
+                    <div className="market-row__price">
+                      <span className="market-row__field-label">
+                        Preço unitário
+                      </span>
+                      <span className="market-row__price-value">
+                        <img src={goldIcon} alt="" />
+                        <strong>{formatGold(listing.unitPrice)}</strong>
+                      </span>
                     </div>
                     <button
                       type="button"
@@ -780,7 +786,10 @@ export function MarketplacePage() {
                         </small>
                       </span>
                     </div>
-                    <div className="market-row__stock" data-label="Na mochila">
+                    <div className="market-row__stock">
+                      <span className="market-row__field-label">
+                        Na mochila
+                      </span>
                       <strong>{formatGold(entry.quantity)}</strong>
                       <small>{formatUnitLabel(entry.quantity)}</small>
                     </div>
@@ -870,12 +879,17 @@ export function MarketplacePage() {
                         </small>
                       </span>
                     </div>
-                    <div className="market-row__status" data-label="Status">
-                      <span data-status={listing.status}>
+                    <div className="market-row__status">
+                      <span className="market-row__field-label">Status</span>
+                      <span
+                        className="market-row__status-value"
+                        data-status={listing.status}
+                      >
                         {STATUS_LABELS[listing.status]}
                       </span>
                     </div>
-                    <div className="market-row__stock" data-label="Vendido">
+                    <div className="market-row__stock">
+                      <span className="market-row__field-label">Vendido</span>
                       <strong>
                         {formatGold(listing.quantitySold)} /{" "}
                         {formatGold(listing.quantityInitial)}
@@ -884,9 +898,12 @@ export function MarketplacePage() {
                         {formatGold(listing.quantityRemaining)} restantes
                       </small>
                     </div>
-                    <div className="market-row__price" data-label="Recebido">
-                      <img src={goldIcon} alt="" />
-                      <strong>{formatGold(listing.goldEarned)}</strong>
+                    <div className="market-row__price">
+                      <span className="market-row__field-label">Recebido</span>
+                      <span className="market-row__price-value">
+                        <img src={goldIcon} alt="" />
+                        <strong>{formatGold(listing.goldEarned)}</strong>
+                      </span>
                     </div>
                     {listing.status === "ACTIVE" ? (
                       <button

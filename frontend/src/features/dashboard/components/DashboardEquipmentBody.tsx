@@ -76,12 +76,18 @@ export function DashboardEquipmentBody({
     },
   ];
 
-  const equippedCount = slots.filter(({ item }) => Boolean(item)).length;
+  const hasPetSlot = Boolean(petHref);
+  const equippedCount =
+    slots.filter(({ item }) => Boolean(item)).length +
+    (hasPetSlot && equippedPet ? 1 : 0);
+  const totalSlots = slots.length + (hasPetSlot ? 1 : 0);
 
   return (
     <section className="equipment-summary" aria-label="Equipamentos atuais">
       <div className="equipment-summary__intro">
-        <strong>{equippedCount}/6 slots ocupados</strong>
+        <strong>
+          {equippedCount}/{totalSlots} slots ocupados
+        </strong>
         <span>Confira rapidamente o conjunto ativo do personagem.</span>
       </div>
 

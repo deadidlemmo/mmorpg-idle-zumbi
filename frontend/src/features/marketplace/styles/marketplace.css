@@ -478,20 +478,32 @@
 }
 
 .market-row__price {
+  display: grid;
+  min-width: 0;
+}
+
+.market-row__price-value {
   display: flex;
   min-width: 0;
   align-items: center;
   gap: 6px;
 }
 
-.market-row__price img {
+.market-row__price-value img {
+  flex: 0 0 auto;
   width: 19px;
   height: 19px;
   object-fit: contain;
 }
 
-.market-row__price strong {
+.market-row__price-value strong {
+  min-width: 0;
   color: #efd465;
+  font-variant-numeric: tabular-nums;
+}
+
+.market-row__field-label {
+  display: none;
 }
 
 .market-row__action,
@@ -535,7 +547,7 @@
   color: #db968d;
 }
 
-.market-row__status > span {
+.market-row__status-value {
   display: inline-flex;
   min-height: 26px;
   align-items: center;
@@ -548,19 +560,19 @@
   letter-spacing: 0;
 }
 
-.market-row__status > span[data-status="ACTIVE"] {
+.market-row__status-value[data-status="ACTIVE"] {
   border-color: #83b94f;
   background: rgba(82, 130, 49, 0.13);
   color: #aeda7d;
 }
 
-.market-row__status > span[data-status="SOLD_OUT"] {
+.market-row__status-value[data-status="SOLD_OUT"] {
   border-color: #d3b849;
   background: rgba(121, 99, 24, 0.14);
   color: #ead673;
 }
 
-.market-row__status > span[data-status="CANCELLED"] {
+.market-row__status-value[data-status="CANCELLED"] {
   border-color: #b75d53;
   background: rgba(113, 43, 36, 0.14);
   color: #d9938b;
@@ -1058,24 +1070,30 @@
   .market-row__stock,
   .market-row__price,
   .market-row__status {
-    position: relative;
-    padding-top: 12px;
+    display: grid;
+    min-width: 0;
+    align-content: start;
+    gap: 3px;
+    padding-top: 7px;
+    border-top: 1px solid rgba(160, 193, 134, 0.09);
   }
 
-  .market-row__seller::before,
-  .market-row__stock::before,
-  .market-row__price::before,
-  .market-row__status::before {
-    position: absolute;
-    top: 0;
-    left: 0;
+  .market-row__field-label {
+    display: block;
+    min-width: 0;
+    margin-bottom: 1px;
+    overflow-wrap: anywhere;
     color: rgba(199, 211, 182, 0.4);
-    content: attr(data-label);
     font-family: var(--font-body);
     font-size: 0.56rem;
     font-weight: 750;
+    line-height: 1.15;
     letter-spacing: 0;
     text-transform: uppercase;
+  }
+
+  .market-row__price-value {
+    gap: 5px;
   }
 
   .market-row__action,
@@ -1091,9 +1109,6 @@
 
   .market-row--sell .market-row__stock {
     grid-column: 1 / -1;
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
   }
 
   .market-row--catalog,
@@ -1172,8 +1187,8 @@
 
   .market-row--catalog {
     grid-template-columns:
-      minmax(0, 1.25fr) minmax(60px, 0.78fr)
-      minmax(58px, 0.65fr);
+      minmax(0, 1.24fr) minmax(60px, 0.62fr)
+      minmax(88px, 0.82fr);
     gap: 9px;
     padding-right: 11px;
   }
@@ -1182,11 +1197,7 @@
     padding-right: 11px;
   }
 
-  .market-row--catalog .market-row__price {
-    gap: 4px;
-  }
-
-  .market-row--catalog .market-row__price img {
+  .market-row--catalog .market-row__price-value img {
     width: 16px;
     height: 16px;
   }
@@ -1253,6 +1264,16 @@
     width: 100%;
     min-width: 0;
     padding: 8px 9px;
+  }
+}
+
+@media (max-width: 360px) {
+  .market-row--catalog {
+    grid-template-columns: minmax(0, 1fr) minmax(92px, 0.78fr);
+  }
+
+  .market-row--catalog .market-row__seller {
+    grid-column: 1 / -1;
   }
 }
 

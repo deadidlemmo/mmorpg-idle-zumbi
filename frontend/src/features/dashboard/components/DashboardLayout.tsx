@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
+  Anvil,
   Backpack,
   Biohazard,
   BookOpen,
@@ -358,6 +359,11 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: <Shield size={17} strokeWidth={1.9} />,
   },
   {
+    label: "Ferreiro",
+    path: "blacksmith",
+    icon: <Anvil size={17} strokeWidth={1.9} />,
+  },
+  {
     label: "Pets",
     path: "pets",
     icon: <PawPrint size={16} strokeWidth={2} />,
@@ -442,6 +448,7 @@ const DASHBOARD_ACTIVITY_NAV_ITEMS = [
 const DASHBOARD_CHARACTER_NAV_ITEMS = [
   "objectives",
   "equipment",
+  "blacksmith",
   "inventory",
   "pets",
   "appearance",

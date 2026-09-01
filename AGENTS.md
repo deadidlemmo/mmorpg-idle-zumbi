@@ -241,6 +241,7 @@ Rotas atuais:
 /dashboard/:characterId/crafting
 /dashboard/:characterId/inventory
 /dashboard/:characterId/equipment
+/dashboard/:characterId/blacksmith
 /dashboard/:characterId/consumables
 /dashboard/:characterId/consumables/:merchantId
 /dashboard/:characterId/market
