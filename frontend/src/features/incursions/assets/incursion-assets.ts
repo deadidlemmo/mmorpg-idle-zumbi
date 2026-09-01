@@ -2,12 +2,16 @@ import casasSeladasImage from "../../../assets/images/incursions/tier-1/casas-se
 import poraoInfectadosImage from "../../../assets/images/incursions/tier-1/porao-dos-infectados.webp";
 import galpaoCapatazImage from "../../../assets/images/incursions/tier-2/galpao-do-capataz.webp";
 import oficinaEnferrujadaImage from "../../../assets/images/incursions/tier-2/oficina-enferrujada.webp";
+import alaIsolamentoImage from "../../../assets/images/incursions/tier-3/ala-de-isolamento.webp";
+import necroterioLacradoImage from "../../../assets/images/incursions/tier-3/necroterio-lacrado.webp";
 
 const INCURSION_IMAGE_BY_SLUG: Record<string, string> = {
   "casas-seladas": casasSeladasImage,
   "porao-dos-infectados": poraoInfectadosImage,
   "galpao-do-capataz": galpaoCapatazImage,
   "oficina-enferrujada": oficinaEnferrujadaImage,
+  "ala-de-isolamento": alaIsolamentoImage,
+  "necroterio-lacrado": necroterioLacradoImage,
 };
 
 function normalizeIncursionImageKey(incursionName?: string | null) {
