@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { HeartPulse, Package, Search, ShoppingCart } from "lucide-react";
+import {
+  HeartPulse,
+  LockKeyhole,
+  Package,
+  Search,
+  ShieldCheck,
+  ShoppingCart,
+} from "lucide-react";
 import goldIcon from "../../../assets/images/coins/gold.webp";
 import { getConsumableItemImageUrl } from "../../consumables/utils/consumableItemAssets";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
@@ -101,6 +108,7 @@ function VendorShopItemCard({
   onInspect: () => void;
 }) {
   const imageUrl = getConsumableItemImageUrl(item);
+  const isLocked = !item.availability.isUnlocked;
 
   return (
     <button
@@ -108,9 +116,29 @@ function VendorShopItemCard({
       className={`vendor-shop-card vendor-shop-card--item rarity-${String(
         item.rarity,
       ).toLowerCase()}`}
-      aria-label={`Ver detalhes de ${item.name}`}
+      data-locked={isLocked ? "true" : "false"}
+      aria-label={
+        isLocked
+          ? `${item.name}, disponível no nível ${item.availability.requiredLevel}`
+          : `Ver detalhes de ${item.name}`
+      }
       onClick={onInspect}
     >
+      <span
+        className={`vendor-shop-card__access-badge ${
+          isLocked ? "is-locked" : "is-unlocked"
+        }`}
+      >
+        {isLocked ? (
+          <LockKeyhole size={12} aria-hidden="true" />
+        ) : (
+          <ShieldCheck size={12} aria-hidden="true" />
+        )}
+        {isLocked
+          ? `Nv. ${item.availability.requiredLevel}`
+          : "Liberado"}
+      </span>
+
       <div className="vendor-shop-card__visual">
         <span className="vendor-shop-card__icon" aria-hidden="true">
           {imageUrl ? (
@@ -129,15 +157,22 @@ function VendorShopItemCard({
           {item.name}
         </h3>
 
-        <span className="vendor-shop-card__compact-price">
-          <img
-            src={goldIcon}
-            alt=""
-            className="vendor-gold-icon"
-            aria-hidden="true"
-          />
-          {formatNumber(item.buyPrice)}
-        </span>
+        <p className="vendor-shop-card__effect">{getEffectLabel(item)}</p>
+
+        <div className="vendor-shop-card__footer">
+          <span className="vendor-shop-card__tier">
+            T{item.availability.requiredTier}
+          </span>
+          <span className="vendor-shop-card__compact-price">
+            <img
+              src={goldIcon}
+              alt=""
+              className="vendor-gold-icon"
+              aria-hidden="true"
+            />
+            {formatNumber(item.buyPrice)}
+          </span>
+        </div>
       </div>
     </button>
   );
@@ -163,7 +198,8 @@ function VendorItemPurchaseModal({
   onBuy: () => void;
 }) {
   const totalPrice = item.buyPrice * quantity;
-  const isUnavailable = maxQuantity <= 0;
+  const isLocked = !item.availability.isUnlocked;
+  const isUnavailable = isLocked || maxQuantity <= 0;
   const quickQuantities = [1, 5, 10];
   const imageUrl = getConsumableItemImageUrl(item);
 
@@ -211,6 +247,29 @@ function VendorItemPurchaseModal({
         </div>
 
         <div className="vendor-item-modal__body">
+          <div
+            className={`vendor-item-modal__access ${
+              isLocked ? "is-locked" : "is-unlocked"
+            }`}
+          >
+            <span aria-hidden="true">
+              {isLocked ? <LockKeyhole size={21} /> : <ShieldCheck size={21} />}
+            </span>
+            <div>
+              <small>{isLocked ? "Uso bloqueado" : "Liberado para compra"}</small>
+              <strong>
+                {isLocked
+                  ? `Disponível no nível ${item.availability.requiredLevel}`
+                  : "Compatível com seu personagem"}
+              </strong>
+              <p>
+                {isLocked
+                  ? `Este consumível pertence ao Tier ${item.availability.requiredTier}.`
+                  : "Você já possui o nível necessário para usar esta poção."}
+              </p>
+            </div>
+          </div>
+
           <div className="vendor-item-modal__description">
             <strong>{getEffectLabel(item)}</strong>
             {item.description ? <p>{item.description}</p> : null}
@@ -295,9 +354,9 @@ function VendorItemPurchaseModal({
           <button
             type="button"
             className="vendor-item-modal__secondary"
-            onClick={() => undefined}
+            onClick={onClose}
           >
-            Inspecionar item
+            Voltar ao estoque
           </button>
 
           <button
@@ -310,7 +369,9 @@ function VendorItemPurchaseModal({
             <ShoppingCart size={15} aria-hidden="true" />
             {isBusy
               ? "Comprando..."
-              : isUnavailable
+              : isLocked
+                ? `Disponível no Nv. ${item.availability.requiredLevel}`
+                : isUnavailable
                 ? "Gold insuficiente"
                 : `Comprar por ${formatNumber(totalPrice)}`}
           </button>
@@ -406,6 +467,10 @@ export function VendorPage() {
 
   const getMaxBuyQuantity = useCallback(
     (item: VendorItemSummary) => {
+      if (!item.availability.isUnlocked) {
+        return 0;
+      }
+
       if (!item.stackable) {
         return gold >= item.buyPrice ? 1 : 0;
       }
@@ -440,6 +505,14 @@ export function VendorPage() {
   );
 
   async function handleBuy(item: VendorItemSummary) {
+    if (!item.availability.isUnlocked) {
+      setFeedback({
+        tone: "error",
+        message: `${item.name} fica disponível no nível ${item.availability.requiredLevel}.`,
+      });
+      return;
+    }
+
     const maxQuantity = getMaxBuyQuantity(item);
     const quantity = getQuantity(item);
 
@@ -566,7 +639,7 @@ export function VendorPage() {
               <div>
                 <span className="vendor-eyebrow">Loja da Mara</span>
                 <h2>Estoque da Mara</h2>
-                <p>Compre consumíveis e suprimentos com Gold.</p>
+                <p>Poções disponíveis agora e nos próximos níveis.</p>
               </div>
 
               <label className="vendor-search">
@@ -584,6 +657,10 @@ export function VendorPage() {
               <span>
                 <strong>{filteredItems.length}</strong> de{" "}
                 <strong>{rawItems.length}</strong> itens
+              </span>
+              <span className="vendor-stock-legend">
+                <LockKeyhole size={13} aria-hidden="true" />
+                Bloqueados liberam no nível indicado
               </span>
             </div>
 

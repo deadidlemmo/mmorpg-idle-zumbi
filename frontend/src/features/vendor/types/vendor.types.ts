@@ -44,6 +44,11 @@ export interface VendorItemSummary {
   healPercent: number;
   minTier?: number | null;
   maxTier?: number | null;
+  availability: {
+    isUnlocked: boolean;
+    requiredTier: number;
+    requiredLevel: number;
+  };
   effects: VendorItemEffect[];
   class?: {
     id: string;

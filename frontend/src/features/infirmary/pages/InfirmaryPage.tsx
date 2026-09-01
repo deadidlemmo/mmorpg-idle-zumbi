@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ShieldCheck, Swords, Timer, WalletCards } from 'lucide-react';
+import {
+  Activity,
+  CheckCircle2,
+  Clock3,
+  HeartPulse,
+  LoaderCircle,
+  ShieldCheck,
+  Stethoscope,
+  Swords,
+  WalletCards,
+  X,
+  Zap,
+} from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import goldIcon from '../../../assets/images/coins/gold.webp';
 import npcInfirmaryCelia from '../../../assets/images/npcs/npc_coleta_dona_celia.webp';
@@ -10,7 +22,6 @@ import '../../dashboard/dashboard.css';
 import type { DashboardCharacterViewModel } from '../../dashboard/types/dashboard.types';
 import { useAutoCombatRealtime } from '../../auto-combat/realtime/useAutoCombatRealtime';
 import { buildGatheringDashboardCharacter } from '../../gathering/utils/gathering-dashboard-character';
-import '../../gathering/styles/gathering.css';
 import {
   cancelInfirmaryTreatment,
   claimInfirmaryTreatment,
@@ -229,17 +240,6 @@ export function InfirmaryPage() {
     return getLiveProgressPercent(status);
   }, [nowTick, status]);
 
-  const hpPercent = status
-    ? Math.max(
-        0,
-        Math.min(
-          100,
-          (status.infirmary.currentHp / Math.max(1, status.infirmary.maxHp)) *
-            100,
-        ),
-      )
-    : 0;
-
   const hasFinishedTreatment =
     Boolean(status?.infirmary.treatment.active) && remainingSeconds <= 0;
 
@@ -295,11 +295,6 @@ export function InfirmaryPage() {
     Boolean(status?.infirmary.canInstantTreatment) &&
     !hasActiveTreatment &&
     characterGold >= instantCost;
-  const privateDoctorHint = hasActiveTreatment
-    ? 'Cancele o SUS para usar atendimento particular.'
-    : instantCost <= 0
-      ? 'Nenhum atendimento necessario no momento.'
-      : 'Cura total na hora. Custa';
   const autoCombatRecovery =
     status?.infirmary.autoCombatRecovery ?? status?.autoCombatRecovery ?? null;
   const preservedTrackedEnemiesCount = Math.max(
@@ -325,221 +320,270 @@ export function InfirmaryPage() {
     hasPreservedTrackedEnemies &&
     !status?.infirmary.isDefeated &&
     !hasActiveTreatment;
+  const currentHp = status?.infirmary.currentHp ?? character.currentHp;
+  const maxHp = status?.infirmary.maxHp ?? character.maxHp;
+  const missingHp = Math.max(
+    0,
+    status?.infirmary.missingHp ?? maxHp - currentHp,
+  );
+  const hpPercent = Math.max(
+    0,
+    Math.min(100, (currentHp / Math.max(1, maxHp)) * 100),
+  );
+  const healthState = status?.infirmary.isDefeated
+    ? 'critical'
+    : hpPercent >= 100
+      ? 'healthy'
+      : 'injured';
+  const healthLabel =
+    healthState === 'critical'
+      ? 'Derrotado'
+      : healthState === 'healthy'
+        ? 'Saudável'
+        : 'Ferido';
+  const treatmentStatusLabel = hasActiveTreatment
+    ? hasFinishedTreatment
+      ? 'Pronto para alta'
+      : `Alta em ${formatSeconds(remainingSeconds)}`
+    : missingHp > 0
+      ? 'Aguardando atendimento'
+      : 'Nenhum tratamento necessário';
+
+  function renderActionIcon(defaultIcon: React.ReactNode) {
+    return isActionLoading ? (
+      <LoaderCircle className="infirmary-action-button__spinner" size={17} />
+    ) : (
+      defaultIcon
+    );
+  }
 
   return (
     <DashboardLayout character={character} hideHero>
-      <section className="infirmary-page gathering-page gathering-page--clean">
-        <article
-          className="gathering-origin-lore-card gathering-origin-lore-card--npc gathering-origin-npc infirmary-hero"
-          aria-label="Enfermaria do Abrigo"
-        >
-          <div className="gathering-origin-npc__stage" aria-hidden="true">
-            <div className="gathering-origin-npc__portrait infirmary-hero__portrait">
-              <img
-                src={npcInfirmaryCelia}
-                alt=""
-                className="infirmary-hero__image"
-              />
-            </div>
+      <section className="infirmary-page">
+        <header className="infirmary-intro" aria-labelledby="infirmary-title">
+          <div className="infirmary-intro__portrait" aria-hidden="true">
+            <img src={npcInfirmaryCelia} alt="" />
           </div>
 
-          <div className="gathering-origin-npc__content">
-            <div className="gathering-origin-npc__meta">
-              <strong className="gathering-origin-npc__name">
-                Dra. Celia, medica do abrigo
-              </strong>
-              <span className="gathering-origin-npc__role">
-                Servico de enfermaria
-              </span>
-            </div>
-
-            <h2>Enfermaria do Abrigo</h2>
+          <div className="infirmary-intro__content">
+            <span className="infirmary-eyebrow">
+              <Stethoscope size={15} />
+              Enfermaria do Abrigo
+            </span>
+            <h1 id="infirmary-title">Recupere seu sobrevivente</h1>
             <blockquote>
-              "Ninguem volta para a rua sangrando no meu plantao."
+              “Ninguém volta para a rua sangrando no meu plantão.”
             </blockquote>
-            <p>
-              Recupere sobreviventes feridos com atendimento gratuito do abrigo
-              ou pague uma consulta imediata quando cada minuto importar.
-            </p>
+            <p>Dra. Célia · Médica do Abrigo</p>
           </div>
-        </article>
+        </header>
 
-        <aside className="gathering-origin-premium-card infirmary-premium-card">
-          <div
-            className="gathering-origin-premium-card__badge"
-            aria-hidden="true"
+        {feedbackMessage ? (
+          <p
+            className="infirmary-feedback infirmary-feedback--success"
+            role="status"
           >
-            i
-          </div>
+            <CheckCircle2 size={18} />
+            {feedbackMessage}
+          </p>
+        ) : null}
 
-          <div>
-            <h2>Beneficios premium</h2>
-            <p>Fila, bonus e notificacoes avancadas para recuperacao.</p>
-          </div>
-
-          <button
-            type="button"
-            className="gathering-origin-premium-card__button"
+        {errorMessage ? (
+          <p
+            className="infirmary-feedback infirmary-feedback--error"
+            role="alert"
           >
-            Ver beneficios
-          </button>
-        </aside>
+            <Activity size={18} />
+            {errorMessage}
+          </p>
+        ) : null}
 
-        <section className="infirmary-grid">
-          <article className="infirmary-panel infirmary-status-card">
-            <div className="infirmary-panel__heading">
-              <span>Status clinico</span>
-              <strong>{status?.character.name ?? character.name}</strong>
-            </div>
-
-            <div className="infirmary-vitals">
-              <div>
-                <span>Vida atual</span>
-                <strong>
-                  {status?.infirmary.currentHp ?? character.currentHp} /{' '}
-                  {status?.infirmary.maxHp ?? character.maxHp}
-                </strong>
-              </div>
-
-              <span
-                className="infirmary-vitals__badge"
-                data-state={status?.infirmary.isDefeated ? 'critical' : 'stable'}
-              >
-                {status?.infirmary.isDefeated ? 'Derrotado' : 'Estavel'}
+        <article className="infirmary-status-card" data-health-state={healthState}>
+          <header className="infirmary-status-card__header">
+            <div className="infirmary-title-group">
+              <span className="infirmary-title-group__icon" aria-hidden="true">
+                <HeartPulse size={22} />
               </span>
-            </div>
-
-            <div
-              className="infirmary-progress"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.floor(hpPercent)}
-            >
-              <span style={{ width: `${hpPercent}%` }} />
-            </div>
-
-            <div className="infirmary-current-treatment">
-              <div className="infirmary-current-treatment__icon">
-                <Timer size={20} />
-              </div>
-
               <div>
-                <span>Atendimento gratuito</span>
-                <strong>
-                  {status?.infirmary.treatment.active
-                    ? hasFinishedTreatment
-                      ? 'Pronto para alta'
-                      : `Alta em ${formatSeconds(remainingSeconds)}`
-                    : 'Nenhum atendimento ativo'}
-                </strong>
+                <span className="infirmary-eyebrow">Estado clínico</span>
+                <h2>{status?.character.name ?? character.name}</h2>
               </div>
             </div>
 
-            {status?.infirmary.treatment.active ? (
+            <span className="infirmary-health-badge" data-state={healthState}>
+              {healthLabel}
+            </span>
+          </header>
+
+          <div className="infirmary-status-card__body">
+            <section className="infirmary-health" aria-label="Vida atual">
+              <div className="infirmary-health__value">
+                <div>
+                  <span>Vida atual</span>
+                  <strong>
+                    {formatGold(currentHp)}
+                    <small> / {formatGold(maxHp)} HP</small>
+                  </strong>
+                </div>
+                <span>{Math.floor(hpPercent)}%</span>
+              </div>
+
               <div
-                className="infirmary-progress infirmary-progress--treatment"
+                className="infirmary-progress"
                 role="progressbar"
+                aria-label="Vida do sobrevivente"
                 aria-valuemin={0}
                 aria-valuemax={100}
-                aria-valuenow={Math.floor(treatmentProgressPercent)}
+                aria-valuenow={Math.floor(hpPercent)}
               >
-                <span style={{ width: `${treatmentProgressPercent}%` }} />
+                <span style={{ width: `${hpPercent}%` }} />
               </div>
-            ) : null}
 
-            <p className="infirmary-reason">
-              {status?.infirmary.reason ?? 'Carregando situacao medica.'}
-            </p>
-
-            {hasPreservedTrackedEnemies ? (
-              <div
-                className="infirmary-auto-combat-recovery"
-                role="status"
-                aria-live="polite"
-              >
-                <div className="infirmary-auto-combat-recovery__icon">
-                  <Swords size={20} />
-                </div>
-
-                <div className="infirmary-auto-combat-recovery__body">
-                  <span>Combate interrompido</span>
-                  <strong data-testid="infirmary-preserved-enemies-count">
-                    {preservedTrackedEnemiesCount} ameaça
-                    {preservedTrackedEnemiesCount === 1 ? '' : 's'} preservada
-                    {preservedTrackedEnemiesCount === 1 ? '' : 's'}
-                  </strong>
-                  <p>
-                    {canReturnToPreservedCombat
-                      ? 'O sobrevivente já pode voltar e resolver os infectados que ficaram rastreados.'
-                      : 'Recupere o sobrevivente para voltar e continuar de onde a batalha parou.'}
-                  </p>
-                </div>
-
-                {canReturnToPreservedCombat ? (
-                  <Link
-                    to={autoCombatReturnUrl}
-                    className="infirmary-action-button infirmary-action-button--combat"
-                  >
-                    Voltar ao combate
-                  </Link>
-                ) : (
-                  <span className="infirmary-auto-combat-recovery__pending">
-                    Aguardando alta
-                  </span>
-                )}
-              </div>
-            ) : null}
-
-            {feedbackMessage ? (
-              <p className="infirmary-feedback infirmary-feedback--success">
-                {feedbackMessage}
+              <p>
+                {missingHp > 0
+                  ? `${formatGold(missingHp)} HP para recuperar.`
+                  : 'Vida completa. O sobrevivente está pronto.'}
               </p>
-            ) : null}
+            </section>
 
-            {errorMessage ? (
-              <p className="infirmary-feedback infirmary-feedback--error">
-                {errorMessage}
-              </p>
-            ) : null}
-          </article>
-
-          <div className="infirmary-actions">
-            <article className="infirmary-treatment-card">
-              <div className="infirmary-treatment-card__icon">
-                <ShieldCheck size={24} />
-              </div>
-
-              <div className="infirmary-treatment-card__body">
-                <span>Atendimento gratuito</span>
-                <h3>SUS do Abrigo</h3>
+            <section className="infirmary-treatment-state" aria-label="Tratamento atual">
+              <Clock3 size={22} aria-hidden="true" />
+              <div>
+                <span>Tratamento atual</span>
+                <strong>{treatmentStatusLabel}</strong>
                 <p>
-                  Recuperacao completa em {formatSeconds(freeDurationSeconds)}.
-                  Ideal para voltar depois sem gastar Gold.
+                  {hasActiveTreatment
+                    ? hasFinishedTreatment
+                      ? 'Conclua o atendimento para restaurar toda a Vida.'
+                      : 'A recuperação continua mesmo fora desta página.'
+                    : missingHp > 0
+                      ? 'Escolha abaixo entre esperar ou usar Gold.'
+                      : 'Nenhuma ação é necessária agora.'}
                 </p>
               </div>
+
+              {hasActiveTreatment ? (
+                <div
+                  className="infirmary-progress infirmary-progress--treatment"
+                  role="progressbar"
+                  aria-label="Progresso do tratamento"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.floor(treatmentProgressPercent)}
+                >
+                  <span style={{ width: `${treatmentProgressPercent}%` }} />
+                </div>
+              ) : null}
+            </section>
+          </div>
+
+          <p className="infirmary-reason">
+            <Activity size={17} aria-hidden="true" />
+            <span>
+              {status?.infirmary.reason ?? 'Carregando situação médica.'}
+            </span>
+          </p>
+
+          {hasPreservedTrackedEnemies ? (
+            <div
+              className="infirmary-auto-combat-recovery"
+              role="status"
+              aria-live="polite"
+            >
+              <Swords size={21} aria-hidden="true" />
+
+              <div className="infirmary-auto-combat-recovery__body">
+                <span>Combate interrompido</span>
+                <strong data-testid="infirmary-preserved-enemies-count">
+                  {preservedTrackedEnemiesCount} ameaça
+                  {preservedTrackedEnemiesCount === 1 ? '' : 's'} preservada
+                  {preservedTrackedEnemiesCount === 1 ? '' : 's'}
+                </strong>
+                <p>
+                  {canReturnToPreservedCombat
+                    ? 'Volte ao combate e continue de onde parou.'
+                    : 'Recupere-se para enfrentar os alvos já rastreados.'}
+                </p>
+              </div>
+
+              {canReturnToPreservedCombat ? (
+                <Link
+                  to={autoCombatReturnUrl}
+                  className="infirmary-action-button infirmary-action-button--combat"
+                >
+                  <Swords size={16} />
+                  Voltar ao combate
+                </Link>
+              ) : (
+                <span className="infirmary-auto-combat-recovery__pending">
+                  Aguardando alta
+                </span>
+              )}
+            </div>
+          ) : null}
+        </article>
+
+        <section className="infirmary-treatments" aria-labelledby="treatments-title">
+          <header className="infirmary-section-heading">
+            <div>
+              <span className="infirmary-eyebrow">Tratamentos</span>
+              <h2 id="treatments-title">Escolha como se recuperar</h2>
+            </div>
+            <p>As duas opções restauram toda a Vida do sobrevivente.</p>
+          </header>
+
+          <div className="infirmary-treatment-grid">
+            <article className="infirmary-treatment-card infirmary-treatment-card--free">
+              <header className="infirmary-treatment-card__header">
+                <span className="infirmary-treatment-card__icon" aria-hidden="true">
+                  <ShieldCheck size={23} />
+                </span>
+                <div>
+                  <span>Sem custo</span>
+                  <h3>SUS do Abrigo</h3>
+                </div>
+              </header>
+
+              <p className="infirmary-treatment-card__description">
+                Recupere toda a Vida enquanto o personagem descansa na enfermaria.
+              </p>
+
+              <dl className="infirmary-treatment-facts">
+                <div>
+                  <dt>Tempo</dt>
+                  <dd>{formatSeconds(freeDurationSeconds)}</dd>
+                </div>
+                <div>
+                  <dt>Custo</dt>
+                  <dd>Gratuito</dd>
+                </div>
+              </dl>
 
               {hasFinishedTreatment ? (
                 <button
                   type="button"
                   className="infirmary-action-button infirmary-action-button--primary"
                   disabled={isActionLoading}
+                  aria-busy={isActionLoading}
                   onClick={() =>
                     void runAction(() => claimInfirmaryTreatment(safeCharacterId))
                   }
                 >
-                  Concluir recuperacao
+                  {renderActionIcon(<CheckCircle2 size={17} />)}
+                  Concluir tratamento
                 </button>
               ) : status?.infirmary.treatment.active ? (
                 <button
                   type="button"
                   className="infirmary-action-button infirmary-action-button--secondary"
                   disabled={isActionLoading}
+                  aria-busy={isActionLoading}
                   onClick={() =>
                     void runAction(() => cancelInfirmaryTreatment(safeCharacterId))
                   }
                 >
-                  Cancelar SUS
+                  {renderActionIcon(<X size={17} />)}
+                  Cancelar tratamento
                 </button>
               ) : (
                 <button
@@ -550,50 +594,79 @@ export function InfirmaryPage() {
                     !status?.infirmary.canStartTreatment ||
                     status.infirmary.treatment.active
                   }
+                  aria-busy={isActionLoading}
                   onClick={() =>
                     void runAction(() => startInfirmaryTreatment(safeCharacterId))
                   }
                 >
-                  Iniciar recuperacao
+                  {renderActionIcon(<Clock3 size={17} />)}
+                  Iniciar tratamento
                 </button>
               )}
             </article>
 
             <article className="infirmary-treatment-card infirmary-treatment-card--private">
-              <div className="infirmary-treatment-card__icon">
-                <WalletCards size={24} />
-              </div>
+              <header className="infirmary-treatment-card__header">
+                <span className="infirmary-treatment-card__icon" aria-hidden="true">
+                  <WalletCards size={23} />
+                </span>
+                <div>
+                  <span>Recuperação imediata</span>
+                  <h3>Médico particular</h3>
+                </div>
+              </header>
 
-              <div className="infirmary-treatment-card__body">
-                <span>Atendimento imediato</span>
-                <h3>Medico particular</h3>
-                <p>
-                  {privateDoctorHint}{' '}
-                  {instantCost > 0 && !hasActiveTreatment ? (
-                    <strong className="infirmary-gold">
-                      <img src={goldIcon} alt="" aria-hidden="true" />
-                      {formatGold(instantCost)}
-                    </strong>
-                  ) : null}
-                  {instantCost > 0 && !hasActiveTreatment ? ' Gold.' : null}
+              <p className="infirmary-treatment-card__description">
+                {hasActiveTreatment
+                  ? 'Cancele o tratamento gratuito para usar o atendimento imediato.'
+                  : instantCost <= 0
+                    ? 'A Vida já está completa. Nenhum atendimento é necessário.'
+                    : 'Recupere toda a Vida agora e volte imediatamente às atividades.'}
+              </p>
+
+              <dl className="infirmary-treatment-facts">
+                <div>
+                  <dt>Tempo</dt>
+                  <dd>Imediato</dd>
+                </div>
+                <div>
+                  <dt>Custo</dt>
+                  <dd className="infirmary-gold">
+                    {instantCost > 0 ? (
+                      <>
+                        <img src={goldIcon} alt="" aria-hidden="true" />
+                        {formatGold(instantCost)} Gold
+                      </>
+                    ) : (
+                      'Nenhum'
+                    )}
+                  </dd>
+                </div>
+              </dl>
+
+              {instantCost > 0 ? (
+                <p className="infirmary-balance">
+                  Seu saldo: <strong>{formatGold(characterGold)} Gold</strong>
                 </p>
-              </div>
+              ) : null}
 
               <button
                 type="button"
                 className="infirmary-action-button infirmary-action-button--gold"
                 disabled={isActionLoading || !canPayInstant}
+                aria-busy={isActionLoading}
                 onClick={() =>
                   void runAction(() => instantInfirmaryTreatment(safeCharacterId))
                 }
               >
+                {renderActionIcon(<Zap size={17} />)}
                 {hasActiveTreatment
-                  ? 'SUS em andamento'
+                  ? 'Tratamento em andamento'
                   : instantCost <= 0
-                    ? 'HP cheio'
+                    ? 'Vida completa'
                     : characterGold < instantCost
                       ? 'Gold insuficiente'
-                      : 'Pagar e recuperar'}
+                      : 'Recuperar agora'}
               </button>
             </article>
           </div>

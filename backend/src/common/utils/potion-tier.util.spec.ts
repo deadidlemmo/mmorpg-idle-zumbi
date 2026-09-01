@@ -6,20 +6,49 @@ import {
 
 describe('potion tier access', () => {
   it.each([
-    { level: 1, minTier: 1, allowed: true, characterTier: 1 },
-    { level: 10, minTier: 1, allowed: true, characterTier: 1 },
-    { level: 20, minTier: 3, allowed: false, characterTier: 2 },
-    { level: 21, minTier: 3, allowed: true, characterTier: 3 },
-    { level: 50, minTier: 1, allowed: true, characterTier: 5 },
+    { level: 1, minTier: 1, allowed: true, characterTier: 1, requiredLevel: 1 },
+    {
+      level: 10,
+      minTier: 1,
+      allowed: true,
+      characterTier: 1,
+      requiredLevel: 1,
+    },
+    {
+      level: 20,
+      minTier: 3,
+      allowed: false,
+      characterTier: 2,
+      requiredLevel: 21,
+    },
+    {
+      level: 21,
+      minTier: 3,
+      allowed: true,
+      characterTier: 3,
+      requiredLevel: 21,
+    },
+    {
+      level: 50,
+      minTier: 1,
+      allowed: true,
+      characterTier: 5,
+      requiredLevel: 1,
+    },
   ])(
     'resolves level $level against minimum tier $minTier',
-    ({ level, minTier, allowed, characterTier }) => {
+    ({ level, minTier, allowed, characterTier, requiredLevel }) => {
       expect(
         getPotionTierAccess({
           characterLevel: level,
           potion: { minTier },
         }),
-      ).toEqual({ allowed, characterTier, requiredTier: minTier });
+      ).toEqual({
+        allowed,
+        characterTier,
+        requiredTier: minTier,
+        requiredLevel,
+      });
     },
   );
 

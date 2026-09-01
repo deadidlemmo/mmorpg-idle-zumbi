@@ -642,11 +642,15 @@ export class ProgressionService {
             periodKey: period.key,
           },
         },
-        update: {},
+        update:
+          definition.type === MissionType.STORY
+            ? {}
+            : { assignedAt: period.startsAt },
         create: {
           characterId,
           missionId: definition.id,
           periodKey: period.key,
+          assignedAt: period.startsAt,
           targetValue: definition.targetValue,
           rewardTier: reward.tier,
           rewardXp: reward.xp,
@@ -954,7 +958,9 @@ export class ProgressionService {
   }
 
   private getMissionPeriod(type: MissionType, now: Date) {
-    if (type === MissionType.STORY) return { key: 'story', expiresAt: null };
+    if (type === MissionType.STORY) {
+      return { key: 'story', startsAt: now, expiresAt: null };
+    }
 
     const utcDay = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
@@ -963,7 +969,25 @@ export class ProgressionService {
     if (type === MissionType.DAILY) {
       const expiresAt = new Date(utcDay);
       expiresAt.setUTCDate(expiresAt.getUTCDate() + 1);
-      return { key: utcDay.toISOString().slice(0, 10), expiresAt };
+      return {
+        key: utcDay.toISOString().slice(0, 10),
+        startsAt: utcDay,
+        expiresAt,
+      };
+    }
+
+    if (type === MissionType.MONTHLY) {
+      const month = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+      );
+      const expiresAt = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+      );
+      return {
+        key: `month-${month.toISOString().slice(0, 7)}`,
+        startsAt: month,
+        expiresAt,
+      };
     }
 
     const day = utcDay.getUTCDay() || 7;
@@ -971,7 +995,11 @@ export class ProgressionService {
     monday.setUTCDate(monday.getUTCDate() - day + 1);
     const expiresAt = new Date(monday);
     expiresAt.setUTCDate(expiresAt.getUTCDate() + 7);
-    return { key: `week-${monday.toISOString().slice(0, 10)}`, expiresAt };
+    return {
+      key: `week-${monday.toISOString().slice(0, 10)}`,
+      startsAt: monday,
+      expiresAt,
+    };
   }
 
   private async getCharacterOrThrow(userId: string, characterId: string) {

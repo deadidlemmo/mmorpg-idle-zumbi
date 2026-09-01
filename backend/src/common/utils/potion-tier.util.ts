@@ -1,3 +1,4 @@
+import { LEVELS_PER_TIER } from '../config/progression.config';
 import { getTierByLevel } from './level.util';
 
 type PotionTierRequirement = {
@@ -16,11 +17,13 @@ export function getPotionTierAccess(params: {
 }) {
   const characterTier = getTierByLevel(params.characterLevel);
   const requiredTier = normalizeRequiredTier(params.potion.minTier);
+  const requiredLevel = (requiredTier - 1) * LEVELS_PER_TIER + 1;
 
   return {
     allowed: characterTier >= requiredTier,
     characterTier,
     requiredTier,
+    requiredLevel,
   };
 }
 

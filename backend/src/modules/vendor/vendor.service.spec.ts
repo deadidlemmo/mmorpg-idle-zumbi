@@ -1,29 +1,58 @@
 import { BadRequestException } from '@nestjs/common';
-import { ItemSlot } from '@prisma/client';
+import { ItemSlot, Rarity } from '@prisma/client';
 import { VendorService } from './vendor.service';
 
 describe('VendorService potion tier lock', () => {
   const lockedPotion = {
     id: 'potion-tier-3',
     name: 'Poção de Vida Maior',
+    description: 'Recupera uma boa quantidade de HP.',
+    tier: 3,
+    rarity: Rarity.RARE,
     slot: ItemSlot.CONSUMABLE,
+    family: 'Poção de Vida',
+    strengthBonus: 0,
+    vitalityBonus: 0,
+    agilityBonus: 0,
+    precisionBonus: 0,
+    techniqueBonus: 0,
+    willpowerBonus: 0,
+    healFlat: 300,
+    healPercent: 18,
+    maxTier: 6,
+    isSellable: true,
     isTradable: true,
     minTier: 3,
+    materialOrigin: null,
+    class: null,
+    map: null,
   };
 
-  it('filters potions above the character tier from availability', () => {
-    type AvailabilityProbe = {
-      isAvailableForPurchase: (
-        item: typeof lockedPotion,
-        characterLevel: number,
-      ) => boolean;
+  it('keeps locked potions visible with the required level', async () => {
+    const prisma = {
+      character: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'character-1',
+          name: 'Teste',
+          level: 20,
+          gold: 10_000,
+          userId: 'user-1',
+        }),
+      },
+      item: {
+        findMany: jest.fn().mockResolvedValue([lockedPotion]),
+      },
     };
-    const service = new VendorService(
-      {} as never,
-    ) as unknown as AvailabilityProbe;
+    const service = new VendorService(prisma as never);
+    const shop = await service.getShop('user-1', 'character-1');
 
-    expect(service.isAvailableForPurchase(lockedPotion, 20)).toBe(false);
-    expect(service.isAvailableForPurchase(lockedPotion, 21)).toBe(true);
+    expect(shop.items).toHaveLength(1);
+    expect(shop.items[0].availability).toEqual({
+      isUnlocked: false,
+      requiredTier: 3,
+      requiredLevel: 21,
+    });
+    expect(shop.categories[0]).toMatchObject({ key: 'ALL', count: 1 });
   });
 
   it('rejects a direct purchase before charging Gold', async () => {

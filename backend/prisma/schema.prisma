@@ -237,6 +237,7 @@ enum IncursionSessionStatus {
 enum MissionType {
   DAILY
   WEEKLY
+  MONTHLY
   STORY
 }
 

@@ -23,7 +23,7 @@ describe('complete T1-T5 activity economy audit', () => {
       saleCatalogItems: 285,
       incursions: 30,
       worldBosses: 10,
-      missions: 25,
+      missions: 50,
     });
 
     for (const tier of report.tiers) {
@@ -220,10 +220,10 @@ describe('complete T1-T5 activity economy audit', () => {
   });
 
   it('keeps mission rates capped and does not count story rewards as recurring', () => {
-    const expectedRecurringGold = [351.43, 1362.86, 4164.29, 6742.86, 16050];
+    const expectedRecurringGold = [481.67, 1615.62, 4697.86, 7700.95, 17739.76];
 
     for (const [index, tier] of report.tiers.entries()) {
-      expect(tier.missions).toHaveLength(5);
+      expect(tier.missions).toHaveLength(10);
       expect(tier.recurringMissionGoldPerDay).toBeCloseTo(
         expectedRecurringGold[index],
         2,
@@ -241,6 +241,17 @@ describe('complete T1-T5 activity economy audit', () => {
       expect(
         storyMissions.every((mission) => mission.recurringGoldPerDay === 0),
       ).toBe(true);
+
+      const monthlyMissions = tier.missions.filter(
+        (mission) => mission.type === 'MONTHLY',
+      );
+      expect(monthlyMissions).toHaveLength(3);
+      for (const mission of monthlyMissions) {
+        expect(mission.recurringGoldPerDay).toBeCloseTo(
+          mission.missionGold / 30,
+          2,
+        );
+      }
 
       const missionSummary = tier.representativeActivities.find(
         (row) => row.activity === 'MISSIONS',

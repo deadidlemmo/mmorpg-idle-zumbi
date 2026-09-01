@@ -50,6 +50,41 @@ export const MISSION_REWARD_MATRIX: MissionRewardMatrix = {
     4: { gold: 3_800, xp: 6_300 },
     5: { gold: 7_000, xp: 9_900 },
   },
+  'weekly-clear-horde': {
+    1: { gold: 210, xp: 360 },
+    2: { gold: 420, xp: 720 },
+    3: { gold: 900, xp: 1_440 },
+    4: { gold: 1_650, xp: 2_520 },
+    5: { gold: 2_850, xp: 3_960 },
+  },
+  'weekly-incursion-patrol': {
+    1: { gold: 200, xp: 360 },
+    2: { gold: 360, xp: 720 },
+    3: { gold: 700, xp: 1_440 },
+    4: { gold: 1_300, xp: 2_520 },
+    5: { gold: 2_200, xp: 3_960 },
+  },
+  'monthly-stockpile': {
+    1: { gold: 1_500, xp: 2_700 },
+    2: { gold: 3_000, xp: 5_400 },
+    3: { gold: 6_600, xp: 10_800 },
+    4: { gold: 11_400, xp: 18_900 },
+    5: { gold: 21_000, xp: 29_700 },
+  },
+  'monthly-eradication': {
+    1: { gold: 350, xp: 600 },
+    2: { gold: 700, xp: 1_200 },
+    3: { gold: 1_500, xp: 2_400 },
+    4: { gold: 2_750, xp: 4_200 },
+    5: { gold: 4_750, xp: 6_600 },
+  },
+  'monthly-incursion-campaign': {
+    1: { gold: 300, xp: 540 },
+    2: { gold: 540, xp: 1_080 },
+    3: { gold: 1_050, xp: 2_160 },
+    4: { gold: 1_950, xp: 3_780 },
+    5: { gold: 3_300, xp: 5_940 },
+  },
 };
 
 const FALLBACK_GOLD_MULTIPLIER: Record<MissionBalanceTier, number> = {

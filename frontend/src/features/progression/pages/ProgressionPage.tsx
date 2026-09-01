@@ -1,6 +1,9 @@
 import { isAxiosError } from "axios";
 import {
+  BookOpen,
   CalendarClock,
+  CalendarDays,
+  CalendarRange,
   Check,
   CircleCheck,
   Clock3,
@@ -9,6 +12,7 @@ import {
   Sparkles,
   Target,
   Trophy,
+  type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
@@ -30,8 +34,44 @@ import type {
   CharacterMission,
   ProgressionDashboardResponse,
 } from "../types/progression.types";
+import {
+  filterRecurringMissions,
+  formatMissionRemaining,
+  getMissionTypeLabel,
+  type RecurringMissionType,
+} from "../utils/missionPeriods";
 
 type ProgressionTab = "missions" | "achievements";
+
+const MISSION_PERIOD_OPTIONS: Array<{
+  type: RecurringMissionType;
+  label: string;
+  title: string;
+  eyebrow: string;
+  Icon: LucideIcon;
+}> = [
+  {
+    type: "DAILY",
+    label: "Diárias",
+    title: "Objetivos diários",
+    eyebrow: "Ciclo de 24 horas",
+    Icon: CalendarDays,
+  },
+  {
+    type: "WEEKLY",
+    label: "Semanais",
+    title: "Objetivos semanais",
+    eyebrow: "Ciclo de 7 dias",
+    Icon: CalendarRange,
+  },
+  {
+    type: "MONTHLY",
+    label: "Mensais",
+    title: "Objetivos mensais",
+    eyebrow: "Ciclo mensal",
+    Icon: CalendarClock,
+  },
+];
 
 function buildCharacter(
   overview: CharacterOverviewResponse,
@@ -88,7 +128,8 @@ function MissionCard({
         <div className="progression-item__heading">
           <div>
             <span>
-              {mission.mission.type} · T{mission.rewardTier}
+              {getMissionTypeLabel(mission.mission.type)} · T
+              {mission.rewardTier}
             </span>
             <h3>{mission.mission.title}</h3>
           </div>
@@ -107,11 +148,6 @@ function MissionCard({
           <span>
             <Coins size={14} /> {mission.mission.rewardGold} gold
           </span>
-          {mission.expiresAt ? (
-            <span>
-              <Clock3 size={14} /> prazo ativo
-            </span>
-          ) : null}
           <button
             type="button"
             disabled={!canClaim || isBusy}
@@ -199,6 +235,8 @@ export function ProgressionPage() {
   const [progression, setProgression] =
     useState<ProgressionDashboardResponse | null>(null);
   const [activeTab, setActiveTab] = useState<ProgressionTab>("missions");
+  const [missionPeriod, setMissionPeriod] =
+    useState<RecurringMissionType>("DAILY");
   const [isLoading, setIsLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -287,14 +325,18 @@ export function ProgressionPage() {
           <div>
             <span>Diretivas do abrigo</span>
             <h1>Objetivos</h1>
-            <p>Missões renováveis e marcos permanentes do sobrevivente.</p>
+            <p>Metas de curto, médio e longo prazo para cada sobrevivente.</p>
           </div>
           <div className="progression-header__stats">
             <span>
-              <CalendarClock size={16} /> {readyMissions} missões para resgatar
+              <CalendarClock size={16} /> {readyMissions}{" "}
+              {readyMissions === 1
+                ? "missão para resgatar"
+                : "missões para resgatar"}
             </span>
             <span>
-              <Trophy size={16} /> {unlockedAchievements} conquistas
+              <Trophy size={16} /> {unlockedAchievements}{" "}
+              {unlockedAchievements === 1 ? "conquista" : "conquistas"}
             </span>
           </div>
         </header>
@@ -327,40 +369,156 @@ export function ProgressionPage() {
           </button>
         </div>
 
-        <section className="progression-list">
-          {activeTab === "missions"
-            ? progression.missions.map((mission) => (
-                <MissionCard
-                  key={mission.id}
-                  mission={mission}
-                  isBusy={actionId === mission.id}
-                  onClaim={() =>
-                    void runClaim(mission.id, () =>
-                      claimMission(characterId, mission.id),
-                    )
-                  }
-                />
-              ))
-            : progression.achievements.map((achievement) => (
-                <AchievementCard
-                  key={achievement.id}
-                  achievement={achievement}
-                  isBusy={actionId === achievement.id}
-                  onClaim={() =>
-                    void runClaim(achievement.id, () =>
-                      claimAchievement(characterId, achievement.id),
-                    )
-                  }
-                />
-              ))}
-        </section>
-
-        {activeTab === "missions" && progression.missions.length === 0 ? (
-          <div className="progression-empty">
-            <Check size={20} /> Nenhuma missão ativa.
-          </div>
-        ) : null}
+        {activeTab === "missions" ? (
+          <MissionList
+            progression={progression}
+            missionPeriod={missionPeriod}
+            actionId={actionId}
+            onPeriodChange={setMissionPeriod}
+            onClaim={(mission) =>
+              void runClaim(mission.id, () =>
+                claimMission(characterId, mission.id),
+              )
+            }
+          />
+        ) : (
+          <section className="progression-list">
+            {progression.achievements.map((achievement) => (
+              <AchievementCard
+                key={achievement.id}
+                achievement={achievement}
+                isBusy={actionId === achievement.id}
+                onClaim={() =>
+                  void runClaim(achievement.id, () =>
+                    claimAchievement(characterId, achievement.id),
+                  )
+                }
+              />
+            ))}
+          </section>
+        )}
       </main>
     </DashboardLayout>
+  );
+}
+
+function MissionList({
+  progression,
+  missionPeriod,
+  actionId,
+  onPeriodChange,
+  onClaim,
+}: {
+  progression: ProgressionDashboardResponse;
+  missionPeriod: RecurringMissionType;
+  actionId: string | null;
+  onPeriodChange: (period: RecurringMissionType) => void;
+  onClaim: (mission: CharacterMission) => void;
+}) {
+  const storyMissions = progression.missions.filter(
+    (mission) =>
+      mission.mission.type === "STORY" && mission.status !== "CLAIMED",
+  );
+  const visibleMissions = filterRecurringMissions(
+    progression.missions,
+    missionPeriod,
+  );
+  const selectedPeriod =
+    MISSION_PERIOD_OPTIONS.find((option) => option.type === missionPeriod) ??
+    MISSION_PERIOD_OPTIONS[0];
+  const renewal = formatMissionRemaining(
+    visibleMissions[0]?.expiresAt,
+    progression.serverNow,
+  );
+
+  const renderMission = (mission: CharacterMission) => (
+    <MissionCard
+      key={mission.id}
+      mission={mission}
+      isBusy={actionId === mission.id}
+      onClaim={() => onClaim(mission)}
+    />
+  );
+
+  return (
+    <div className="progression-missions">
+      {storyMissions.length > 0 ? (
+        <section className="progression-story" aria-label="Jornada inicial">
+          <header>
+            <BookOpen size={19} />
+            <div>
+              <span>Jornada inicial</span>
+              <h2>Primeiros objetivos</h2>
+            </div>
+          </header>
+          <div className="progression-list">
+            {storyMissions.map(renderMission)}
+          </div>
+        </section>
+      ) : null}
+
+      <div
+        className="progression-period-tabs"
+        role="tablist"
+        aria-label="Período das missões"
+      >
+        {MISSION_PERIOD_OPTIONS.map((option) => {
+          const periodMissions = filterRecurringMissions(
+            progression.missions,
+            option.type,
+          );
+          const ready = periodMissions.filter(
+            (mission) => mission.status === "COMPLETED",
+          ).length;
+          const selected = option.type === missionPeriod;
+
+          return (
+            <button
+              key={option.type}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              aria-controls={`mission-period-${option.type.toLowerCase()}`}
+              className={selected ? "is-active" : ""}
+              onClick={() => onPeriodChange(option.type)}
+            >
+              <option.Icon size={18} />
+              <span>
+                <strong>{option.label}</strong>
+                <small>{ready}/{periodMissions.length} prontas</small>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <section
+        id={`mission-period-${missionPeriod.toLowerCase()}`}
+        className="progression-period"
+        role="tabpanel"
+      >
+        <header className="progression-period__header">
+          <div>
+            <span>{selectedPeriod.eyebrow}</span>
+            <h2>{selectedPeriod.title}</h2>
+          </div>
+          {renewal ? (
+            <strong>
+              <Clock3 size={15} /> {renewal}
+            </strong>
+          ) : null}
+        </header>
+
+        {visibleMissions.length > 0 ? (
+          <div className="progression-list">
+            {visibleMissions.map(renderMission)}
+          </div>
+        ) : (
+          <div className="progression-empty">
+            <Check size={20} /> Nenhuma missão ativa neste ciclo.
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access */
 import { ConflictException } from '@nestjs/common';
-import { MissionStatus } from '@prisma/client';
+import { MissionStatus, MissionType } from '@prisma/client';
 import type { AuditService } from '../../common/audit/audit.service';
 import type { PrismaService } from '../../prisma/prisma.service';
 import { ProgressionService } from './progression.service';
@@ -270,4 +270,53 @@ describe('ProgressionService mission rewards', () => {
       }),
     );
   });
+
+  it('renews monthly missions on the first UTC day of the next month', () => {
+    const service = new ProgressionService(
+      {} as PrismaService,
+      {} as AuditService,
+    );
+    const internals = service as unknown as {
+      getMissionPeriod(
+        type: MissionType,
+        now: Date,
+      ): { key: string; startsAt: Date; expiresAt: Date | null };
+    };
+
+    const period = internals.getMissionPeriod(
+      MissionType.MONTHLY,
+      new Date('2026-12-31T23:59:59.000Z'),
+    );
+
+    expect(period.key).toBe('month-2026-12');
+    expect(period.startsAt.toISOString()).toBe('2026-12-01T00:00:00.000Z');
+    expect(period.expiresAt?.toISOString()).toBe('2027-01-01T00:00:00.000Z');
+  });
+
+  it.each([
+    ['DAILY', '2026-09-03T00:00:00.000Z', '2026-09-04T00:00:00.000Z'],
+    ['WEEKLY', '2026-08-31T00:00:00.000Z', '2026-09-07T00:00:00.000Z'],
+  ])(
+    'counts %s mission progress from the canonical period start',
+    (type, startsAt, expiresAt) => {
+      const service = new ProgressionService(
+        {} as PrismaService,
+        {} as AuditService,
+      );
+      const internals = service as unknown as {
+        getMissionPeriod(
+          missionType: MissionType,
+          now: Date,
+        ): { key: string; startsAt: Date; expiresAt: Date | null };
+      };
+
+      const period = internals.getMissionPeriod(
+        type as MissionType,
+        new Date('2026-09-03T18:42:00.000Z'),
+      );
+
+      expect(period.startsAt.toISOString()).toBe(startsAt);
+      expect(period.expiresAt?.toISOString()).toBe(expiresAt);
+    },
+  );
 });

@@ -804,6 +804,9 @@ function buildMissionEconomy() {
       const weeklyGold = rewards
         .filter(({ mission }) => mission.type === MissionType.WEEKLY)
         .reduce((total, { reward }) => total + reward.gold, 0);
+      const monthlyGold = rewards
+        .filter(({ mission }) => mission.type === MissionType.MONTHLY)
+        .reduce((total, { reward }) => total + reward.gold, 0);
       const storyGold = rewards
         .filter(({ mission }) => mission.type === MissionType.STORY)
         .reduce((total, { reward }) => total + reward.gold, 0);
@@ -813,7 +816,10 @@ function buildMissionEconomy() {
         storyGold,
         dailyGold,
         weeklyGold,
-        recurringGoldPerDay: round(dailyGold + weeklyGold / 7),
+        monthlyGold,
+        recurringGoldPerDay: round(
+          dailyGold + weeklyGold / 7 + monthlyGold / 30,
+        ),
       };
     }),
   };
@@ -1148,7 +1154,8 @@ function printReport(
     report.missions.byTier.map((missions) => ({
       Tier: `T${missions.tier}`,
       'Missoes diarias': missions.dailyGold,
-      'Missao semanal': missions.weeklyGold,
+      'Missoes semanais': missions.weeklyGold,
+      'Missoes mensais': missions.monthlyGold,
       'Gold recorrente/dia': missions.recurringGoldPerDay,
     })),
   );

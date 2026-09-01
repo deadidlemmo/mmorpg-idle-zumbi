@@ -1,4 +1,4 @@
-export type MissionType = "DAILY" | "WEEKLY" | "STORY";
+export type MissionType = "DAILY" | "WEEKLY" | "MONTHLY" | "STORY";
 export type MissionStatus = "ACTIVE" | "COMPLETED" | "CLAIMED" | "EXPIRED";
 
 export interface TutorialStep {

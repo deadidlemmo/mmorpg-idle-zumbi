@@ -17,6 +17,7 @@ import {
   VENDOR_FIXED_BUY_PRICE_BY_NAME,
 } from '../../common/config/vendor.config';
 import {
+  getPotionTierAccess,
   getPotionTierLockedMessage,
   isPotionTierUnlocked,
 } from '../../common/utils/potion-tier.util';
@@ -71,8 +72,8 @@ export class VendorService {
     });
 
     const shopItems = items
-      .filter((item) => this.isAvailableForPurchase(item, character.level))
-      .map((item) => this.mapShopItem(item));
+      .filter((item) => this.isVendorCatalogItem(item))
+      .map((item) => this.mapShopItem(item, character.level));
 
     return {
       npc: this.getNpc(),
@@ -237,8 +238,11 @@ export class VendorService {
         unitPrice: result.unitPrice,
         totalPrice: result.totalPrice,
       },
-      item: this.mapShopItem(result.item),
-      inventoryItem: this.mapInventoryEntry(result.inventoryItem),
+      item: this.mapShopItem(result.item, result.character.level),
+      inventoryItem: this.mapInventoryEntry(
+        result.inventoryItem,
+        result.character.level,
+      ),
     };
   }
 
@@ -283,8 +287,12 @@ export class VendorService {
     };
   }
 
-  private mapShopItem(item: VendorItemRecord) {
+  private mapShopItem(item: VendorItemRecord, characterLevel: number) {
     const buyPrice = this.calculateBuyPrice(item);
+    const access = getPotionTierAccess({
+      characterLevel,
+      potion: item,
+    });
 
     return {
       id: item.id,
@@ -302,6 +310,11 @@ export class VendorService {
       healPercent: item.healPercent,
       minTier: item.minTier,
       maxTier: item.maxTier,
+      availability: {
+        isUnlocked: access.allowed,
+        requiredTier: access.requiredTier,
+        requiredLevel: access.requiredLevel,
+      },
       isSellable: item.isSellable,
       isTradable: item.isTradable,
       class: item.class
@@ -320,12 +333,15 @@ export class VendorService {
     };
   }
 
-  private mapInventoryEntry(inventoryItem: VendorInventoryRecord) {
+  private mapInventoryEntry(
+    inventoryItem: VendorInventoryRecord,
+    characterLevel: number,
+  ) {
     return {
       inventoryItemId: inventoryItem.id,
       quantity: inventoryItem.quantity,
       type: inventoryItem.type,
-      item: this.mapShopItem(inventoryItem.item),
+      item: this.mapShopItem(inventoryItem.item, characterLevel),
       createdAt: inventoryItem.createdAt,
       updatedAt: inventoryItem.updatedAt,
     };
@@ -395,16 +411,6 @@ export class VendorService {
     return (
       item.slot === ItemSlot.CONSUMABLE &&
       getVendorFixedBuyPrice(item.name) !== null
-    );
-  }
-
-  private isAvailableForPurchase(
-    item: VendorItemRecord,
-    characterLevel: number,
-  ) {
-    return (
-      this.isVendorCatalogItem(item) &&
-      isPotionTierUnlocked({ characterLevel, potion: item })
     );
   }
 

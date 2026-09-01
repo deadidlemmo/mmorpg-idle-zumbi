@@ -1,8 +1,13 @@
 import { isAxiosError } from "axios";
 import {
+  AlertCircle,
   Check,
+  CheckCircle2,
   Clock3,
   Eye,
+  Handshake,
+  Inbox,
+  LoaderCircle,
   Search,
   Send,
   Trash2,
@@ -96,7 +101,7 @@ function FriendshipRow({
         : "Cancelar pedido";
 
   return (
-    <article className="social-row">
+    <article className="social-row" data-kind={kind}>
       <CharacterPortrait
         className="social-row__avatar"
         name={leadCharacter?.name ?? "Sobrevivente"}
@@ -194,7 +199,18 @@ function SearchResultRow({
     relationship?.status === "PENDING" && relationship.direction === "OUTGOING";
 
   return (
-    <article className="social-search-result">
+    <article
+      className="social-search-result"
+      data-state={
+        accepted
+          ? "accepted"
+          : incoming
+            ? "incoming"
+            : outgoing
+              ? "outgoing"
+              : "available"
+      }
+    >
       <CharacterPortrait
         className="social-search-result__avatar"
         name={character.name}
@@ -375,31 +391,70 @@ export function SocialPage() {
     },
   ];
   const activeSection = tabs.find(({ key }) => key === activeTab) ?? tabs[0];
+  const emptyState = {
+    friend: {
+      title: "Sua rede ainda está vazia",
+      description: "Encontre sobreviventes para formar sua lista de aliados.",
+      icon: <Users size={24} />,
+    },
+    incoming: {
+      title: "Nenhum pedido recebido",
+      description: "Novos convites aparecerão aqui.",
+      icon: <Inbox size={24} />,
+    },
+    outgoing: {
+      title: "Nenhum pedido enviado",
+      description: "Os convites que aguardam resposta aparecerão aqui.",
+      icon: <Send size={24} />,
+    },
+  }[activeSection.kind];
 
   return (
     <DashboardLayout character={character} hideHero>
       <main className="social-page">
         <header className="social-header">
-          <div>
-            <span>Rede de sobreviventes</span>
-            <h1>Aliados</h1>
-            <p>Conexões do seu abrigo.</p>
+          <div className="social-header__main">
+            <span className="social-header__icon" aria-hidden="true">
+              <Handshake size={26} />
+            </span>
+            <div>
+              <span className="social-eyebrow">Comunidade do Abrigo</span>
+              <h1>Aliados</h1>
+              <p>Sua rede de sobreviventes dentro do Abrigo.</p>
+            </div>
           </div>
-          <div className="social-header__summary">
-            <strong>
-              <Users size={17} /> {social.friends.length}
-            </strong>
-            <span>aliados</span>
-          </div>
+
+          <dl className="social-header__stats" aria-label="Resumo da rede">
+            <div>
+              <dt>
+                <Users size={15} /> Aliados
+              </dt>
+              <dd>{social.friends.length}</dd>
+            </div>
+            <div data-tone={social.incoming.length ? "pending" : "neutral"}>
+              <dt>
+                <Inbox size={15} /> Recebidos
+              </dt>
+              <dd>{social.incoming.length}</dd>
+            </div>
+            <div>
+              <dt>
+                <Send size={15} /> Enviados
+              </dt>
+              <dd>{social.outgoing.length}</dd>
+            </div>
+          </dl>
         </header>
 
         {message ? (
           <div className="social-notice is-success" role="status">
+            <CheckCircle2 size={18} />
             {message}
           </div>
         ) : null}
         {error ? (
           <div className="social-notice is-error" role="alert">
+            <AlertCircle size={18} />
             {error}
           </div>
         ) : null}
@@ -411,11 +466,15 @@ export function SocialPage() {
           >
             <div className="social-section-heading">
               <div>
-                <span>Minha rede</span>
-                <h2 id="social-list-title">Conexões</h2>
+                <span className="social-eyebrow">Minha rede</span>
+                <h2 id="social-list-title">Conexões ativas</h2>
               </div>
               {social.incoming.length ? (
-                <strong>{social.incoming.length} pendente</strong>
+                <strong className="social-section-heading__pending">
+                  <Inbox size={14} />
+                  {social.incoming.length}{" "}
+                  {social.incoming.length === 1 ? "pedido" : "pedidos"}
+                </strong>
               ) : null}
             </div>
 
@@ -433,8 +492,17 @@ export function SocialPage() {
                   className={activeTab === tab.key ? "is-active" : ""}
                   onClick={() => setActiveTab(tab.key)}
                 >
-                  {tab.title}
-                  <span>{tab.items.length}</span>
+                  {tab.key === "friends" ? (
+                    <Users size={16} />
+                  ) : tab.key === "incoming" ? (
+                    <Inbox size={16} />
+                  ) : (
+                    <Send size={16} />
+                  )}
+                  <span className="social-tabs__label">{tab.title}</span>
+                  <strong className="social-tabs__count">
+                    {tab.items.length}
+                  </strong>
                 </button>
               ))}
             </div>
@@ -473,9 +541,11 @@ export function SocialPage() {
               </div>
             ) : (
               <div className="social-empty">
-                <Users size={22} />
-                <strong>Nenhum registro</strong>
-                <span>{activeSection.title}</span>
+                <span className="social-empty__icon" aria-hidden="true">
+                  {emptyState.icon}
+                </span>
+                <strong>{emptyState.title}</strong>
+                <span>{emptyState.description}</span>
               </div>
             )}
           </section>
@@ -486,17 +556,19 @@ export function SocialPage() {
           >
             <div className="social-section-heading">
               <div>
-                <span>Recrutamento</span>
-                <h2 id="social-search-title">Encontrar aliado</h2>
+                <span className="social-eyebrow">Recrutamento</span>
+                <h2 id="social-search-title">Encontrar sobrevivente</h2>
               </div>
-              <UserPlus size={19} />
+              <span className="social-discovery__icon" aria-hidden="true">
+                <UserPlus size={20} />
+              </span>
             </div>
 
             <form
               className="social-search"
               onSubmit={(event) => void handleSearch(event)}
             >
-              <label htmlFor="friend-nickname">Apelido do personagem</label>
+              <label htmlFor="friend-nickname">Nome do personagem</label>
               <div>
                 <Search size={17} aria-hidden="true" />
                 <input
@@ -507,7 +579,7 @@ export function SocialPage() {
                   maxLength={24}
                   required
                   autoComplete="off"
-                  placeholder="Buscar apelido"
+                  placeholder="Ex.: Maniverso"
                   onChange={(event) => setNickname(event.target.value)}
                 />
                 <button type="submit" disabled={isSearching}>
@@ -519,7 +591,7 @@ export function SocialPage() {
             <div className="social-search-results" aria-live="polite">
               {isSearching ? (
                 <div className="social-search-state">
-                  <span className="loading-spinner" />
+                  <LoaderCircle className="social-search-state__spinner" />
                   Buscando sobreviventes
                 </div>
               ) : searchResponse?.results.length ? (
@@ -557,7 +629,7 @@ export function SocialPage() {
               ) : (
                 <div className="social-search-state is-idle">
                   <Search size={20} />
-                  Busca por apelido
+                  Encontre jogadores pelo nome do personagem
                 </div>
               )}
             </div>

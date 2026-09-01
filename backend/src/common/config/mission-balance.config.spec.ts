@@ -4,6 +4,7 @@ import {
   MISSION_BALANCE_TIERS,
   MISSION_REWARD_MATRIX,
 } from './mission-balance.config';
+import { missionDefinitions } from '../../../prisma/seed-data/progression.seed-data';
 
 describe('mission balance', () => {
   it.each([
@@ -29,6 +30,25 @@ describe('mission balance', () => {
         previousGold = reward.gold;
         previousXp = reward.xp;
       }
+    }
+  });
+
+  it('defines an explicit T1-T5 reward matrix for every canonical mission', () => {
+    expect(Object.keys(MISSION_REWARD_MATRIX).sort()).toEqual(
+      missionDefinitions.map((mission) => mission.key).sort(),
+    );
+  });
+
+  it('keeps stacked long-cycle rewards below a linear target multiplier', () => {
+    for (const tier of MISSION_BALANCE_TIERS) {
+      const dailyKills = MISSION_REWARD_MATRIX['daily-clear-threats'][tier];
+      const weeklyKills = MISSION_REWARD_MATRIX['weekly-clear-horde'][tier];
+      const monthlyKills = MISSION_REWARD_MATRIX['monthly-eradication'][tier];
+
+      expect(weeklyKills.gold).toBeLessThan(dailyKills.gold * 10);
+      expect(weeklyKills.xp).toBeLessThan(dailyKills.xp * 10);
+      expect(monthlyKills.gold).toBeLessThan(dailyKills.gold * 50);
+      expect(monthlyKills.xp).toBeLessThan(dailyKills.xp * 50);
     }
   });
 

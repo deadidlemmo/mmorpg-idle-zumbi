@@ -234,7 +234,7 @@ describe('real T1-T5 economy simulator', () => {
     expect(tierOne.worldBoss?.averageGold).toBe(240);
     expect(
       report.missions.byTier.map((tier) => tier.recurringGoldPerDay),
-    ).toEqual([351.43, 1362.86, 4164.29, 6742.86, 16050]);
+    ).toEqual([481.67, 1615.62, 4697.86, 7700.95, 17739.76]);
     expect(report.assumptions.marketplaceGoldEffect).toBe('TRANSFER_ONLY');
   });
 

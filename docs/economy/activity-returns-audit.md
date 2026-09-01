@@ -104,7 +104,7 @@ resultado serve como estimativa e nao como autorizacao para alterar recompensa.
 
 ### Missoes
 
-Todas as missoes diarias, semanais e de historia usam recompensa T1-T5
+Todas as missoes diarias, semanais, mensais e de historia usam recompensa T1-T5
 congelada no momento da atribuicao. Somente atividades do mesmo tier contam
 para o objetivo. Para a missao de criacao, a auditoria usa a receita elegivel
 de menor custo economico de cada classe, pois o jogador pode escolher qual item
@@ -114,17 +114,18 @@ historia nao entram na renda diaria recorrente.
 
 ### Recompensas recorrentes de missao
 
-| Tier | Derrotar mobs | Criar item | Concluir incursao | Coleta semanal | Gold recorrente/dia |
-| ---- | ------------: | ---------: | ----------------: | -------------: | ------------------: |
-| T1   |            70 |        110 |               100 |            500 |              351,43 |
-| T2   |           140 |        900 |               180 |          1.000 |            1.362,86 |
-| T3   |           300 |      3.200 |               350 |          2.200 |            4.164,29 |
-| T4   |           550 |      5.000 |               650 |          3.800 |            6.742,86 |
-| T5   |           950 |     13.000 |             1.100 |          7.000 |           16.050,00 |
+| Tier | Gold das diarias | Gold das semanais | Gold das mensais | Gold recorrente/dia |
+| ---- | ---------------: | -----------------: | ----------------: | ------------------: |
+| T1   |              280 |                910 |             2.150 |              481,67 |
+| T2   |            1.220 |              1.780 |             4.240 |            1.615,62 |
+| T3   |            3.850 |              3.800 |             9.150 |            4.697,86 |
+| T4   |            6.200 |              6.750 |            16.100 |            7.700,95 |
+| T5   |           15.050 |             12.050 |            29.050 |           17.739,76 |
 
-O total diario divide a coleta semanal por sete. XP tambem possui matriz
-escalonada e e persistido junto com Gold e tier na atribuicao, evitando alterar
-a recompensa quando o personagem sobe de nivel antes do resgate.
+O total diario soma as diarias, divide as semanais por sete e as mensais por
+trinta. XP tambem possui matriz escalonada e e persistido junto com Gold e tier
+na atribuicao, evitando alterar a recompensa quando o personagem sobe de nivel
+antes do resgate.
 
 ### Venda de itens
 
@@ -146,11 +147,11 @@ Valores abaixo usam as configuracoes do checkout, sem telemetria do banco:
 
 | Tier | Autocombate liquido/h | Gathering liquido/h | Crafting autossuficiente/h | Incursao balanceada/h | Ameaca no calendario/h | Missoes liquido/h dedicado |
 | ---- | --------------------: | ------------------: | -------------------------: | --------------------: | ---------------------: | -------------------------: |
-| T1   |                773,14 |              300,51 |                      58,73 |                 17,43 |                  54,61 |                     339,90 |
-| T2   |                853,88 |              536,29 |                      17,98 |                 36,77 |                 113,74 |                     337,19 |
-| T3   |                914,11 |            1.219,68 |                     116,36 |                 49,16 |                 177,60 |                     635,05 |
-| T4   |              1.429,00 |            1.821,49 |                     252,95 |                 55,46 |                 245,94 |                     975,70 |
-| T5   |              2.695,11 |            3.370,08 |                     232,89 |                 57,79 |                 319,20 |                   1.456,84 |
+| T1   |                773,14 |              300,51 |                      76,87 |                 17,43 |                  54,61 |                     376,41 |
+| T2   |                853,88 |              536,29 |                     130,57 |                 36,77 |                 113,74 |                     481,42 |
+| T3   |                969,44 |            1.219,68 |                     142,13 |                 49,16 |                 177,60 |                     734,67 |
+| T4   |              1.491,57 |            1.821,49 |                     275,11 |                 55,46 |                 245,94 |                   1.112,09 |
+| T5   |              2.823,30 |            3.370,08 |                     293,36 |                 57,79 |                 319,20 |                   1.708,86 |
 
 O retorno líquido da incursão já desconta a recuperação esperada de HP. Fichas
 e fragmentos continuam sem conversão arbitrária para Gold e suas quantidades
@@ -160,9 +161,9 @@ não foram aumentadas.
 | ---- | -----------------------: | ---------------: | -------------------------: | ---------------: |
 | T1   |                 1.184,90 |            65,1% |                      17,43 |             2,3% |
 | T2   |                   926,10 |            65,3% |                      36,77 |             4,3% |
-| T3   |                 1.109,15 |            64,9% |                      49,16 |             5,4% |
-| T4   |                 1.233,30 |            65,0% |                      55,46 |             3,9% |
-| T5   |                 1.732,12 |            65,0% |                      57,79 |             2,1% |
+| T3   |                 1.109,15 |            64,9% |                      49,16 |             5,1% |
+| T4   |                 1.233,30 |            65,0% |                      55,46 |             3,7% |
+| T5   |                 1.732,12 |            65,0% |                      57,79 |             2,0% |
 
 ## Tempo de progressao
 

@@ -143,7 +143,8 @@
 
 .tutorial-banner > button,
 .progression-item__footer button,
-.progression-tabs button {
+.progression-tabs button,
+.progression-period-tabs button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -383,6 +384,130 @@
   color: #10140d;
 }
 
+.progression-missions {
+  display: grid;
+  gap: 1rem;
+}
+
+.progression-story {
+  display: grid;
+  gap: 0.2rem;
+  border-left: 0.2rem solid #82994e;
+  padding-left: 0.85rem;
+}
+
+.progression-story > header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #a8cc6e;
+}
+
+.progression-story > header > div {
+  display: grid;
+  gap: 0.05rem;
+}
+
+.progression-story > header span,
+.progression-period__header span {
+  color: #9ca794;
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.progression-story > header h2,
+.progression-period__header h2 {
+  margin: 0;
+  color: #f2efdf;
+  font-size: 1.05rem;
+}
+
+.progression-period-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  border-block: 1px solid rgba(255, 255, 255, 0.09);
+  padding-block: 0.65rem;
+}
+
+.progression-period-tabs button {
+  min-width: 0;
+  min-height: 4rem;
+  justify-content: flex-start;
+  border-color: rgba(255, 255, 255, 0.09);
+  padding: 0.65rem 0.75rem;
+  color: #aeb6aa;
+  background: rgba(13, 19, 15, 0.78);
+  text-align: left;
+}
+
+.progression-period-tabs button > svg {
+  flex: 0 0 auto;
+}
+
+.progression-period-tabs button > span {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.progression-period-tabs button strong {
+  color: #e5e8dc;
+  font-size: 0.82rem;
+}
+
+.progression-period-tabs button small {
+  color: #858e84;
+  font-family: var(--font-body);
+  font-size: 0.67rem;
+  font-weight: 700;
+}
+
+.progression-period-tabs button.is-active {
+  border-color: rgba(155, 201, 93, 0.58);
+  color: #b8e474;
+  background: #24331c;
+  box-shadow: inset 0 -0.16rem #91bd55;
+}
+
+.progression-period-tabs button.is-active strong {
+  color: #f3f5e9;
+}
+
+.progression-period-tabs button.is-active small {
+  color: #b9cbaa;
+}
+
+.progression-period {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.progression-period__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.55rem;
+}
+
+.progression-period__header > div {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.progression-period__header > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  color: #d8bd66;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
 .progression-list {
   display: grid;
   gap: 0.65rem;
@@ -548,6 +673,31 @@
 
   .progression-tabs {
     width: 100%;
+  }
+
+  .progression-period-tabs button {
+    min-height: 4.8rem;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.55rem 0.35rem;
+    text-align: center;
+  }
+
+  .progression-period-tabs button > span {
+    justify-items: center;
+  }
+
+  .progression-period-tabs button strong {
+    font-size: 0.76rem;
+  }
+
+  .progression-period-tabs button small {
+    font-size: 0.6rem;
+  }
+
+  .progression-period__header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .progression-item__footer button {

@@ -1465,6 +1465,7 @@ function buildWorldBossEconomy(params: {
 function getRecurringFactorPerDay(type: MissionType) {
   if (type === MissionType.DAILY) return 1;
   if (type === MissionType.WEEKLY) return 1 / 7;
+  if (type === MissionType.MONTHLY) return 1 / 30;
   return 0;
 }
 
@@ -1737,7 +1738,7 @@ function buildMissionEconomy(params: {
         ) / recurringHoursPerDay,
       ),
       availability: 'CAPPED' as const,
-      note: 'Taxa por hora dedicada aos objetivos; recompensas continuam limitadas por reset diario/semanal e nao podem ser extrapoladas como farm continuo.',
+      note: 'Taxa por hora dedicada aos objetivos; recompensas continuam limitadas por reset diario, semanal ou mensal e nao podem ser extrapoladas como farm continuo.',
     },
   };
 }

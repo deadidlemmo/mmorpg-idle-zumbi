@@ -543,7 +543,7 @@ export const WIKI_SYSTEM_PAGES: WikiEditorialPage[] = [
       {
         title: "Missões",
         paragraphs: [
-          "Missões de história, diárias e semanais mostram objetivo, progresso e recompensa. O prêmio é liberado após a conclusão.",
+          "Missões de história, diárias, semanais e mensais mostram objetivo, progresso e recompensa. O prêmio é liberado após a conclusão.",
         ],
       },
       {
