@@ -357,6 +357,14 @@ test.describe('incursão e reforço de equipamentos', () => {
           ['Necrotério Lacrado', 'necroterio-lacrado'],
         ],
       },
+      {
+        tier: 4,
+        level: 31,
+        incursions: [
+          ['Plataforma Morta', 'plataforma-morta'],
+          ['Túneis de Embarque', 'tuneis-de-embarque'],
+        ],
+      },
     ] as const;
 
     for (const tierArtwork of higherTierArtwork) {

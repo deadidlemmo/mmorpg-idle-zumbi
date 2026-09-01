@@ -4,6 +4,8 @@ import galpaoCapatazImage from "../../../assets/images/incursions/tier-2/galpao-
 import oficinaEnferrujadaImage from "../../../assets/images/incursions/tier-2/oficina-enferrujada.webp";
 import alaIsolamentoImage from "../../../assets/images/incursions/tier-3/ala-de-isolamento.webp";
 import necroterioLacradoImage from "../../../assets/images/incursions/tier-3/necroterio-lacrado.webp";
+import plataformaMortaImage from "../../../assets/images/incursions/tier-4/plataforma-morta.webp";
+import tuneisEmbarqueImage from "../../../assets/images/incursions/tier-4/tuneis-de-embarque.webp";
 
 const INCURSION_IMAGE_BY_SLUG: Record<string, string> = {
   "casas-seladas": casasSeladasImage,
@@ -12,6 +14,8 @@ const INCURSION_IMAGE_BY_SLUG: Record<string, string> = {
   "oficina-enferrujada": oficinaEnferrujadaImage,
   "ala-de-isolamento": alaIsolamentoImage,
   "necroterio-lacrado": necroterioLacradoImage,
+  "plataforma-morta": plataformaMortaImage,
+  "tuneis-de-embarque": tuneisEmbarqueImage,
 };
 
 function normalizeIncursionImageKey(incursionName?: string | null) {
