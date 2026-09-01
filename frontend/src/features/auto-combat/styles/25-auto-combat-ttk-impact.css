@@ -1,0 +1,259 @@
+/* Visual combat cadence. The backend TTK remains the gameplay source of truth. */
+
+.auto-combat-mob-transition__layer--current {
+  position: relative;
+}
+
+.auto-combat-mob-damage-shake.is-ttk-engaged:not(.is-impacting):not(.is-critical-impact):not(.is-defeated) {
+  animation: autoCombatTtkMobReaction 1s linear infinite;
+}
+
+.auto-combat-ttk-impact {
+  position: absolute;
+  z-index: 5;
+  inset: -6%;
+  overflow: visible;
+  pointer-events: none;
+  transform: translateZ(0);
+}
+
+.auto-combat-ttk-impact__burst,
+.auto-combat-ttk-impact__slash,
+.auto-combat-ttk-impact__spark {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity, transform, filter;
+}
+
+.auto-combat-ttk-impact__burst {
+  top: 43%;
+  left: 50%;
+  width: clamp(4.8rem, 62%, 9.8rem);
+  aspect-ratio: 1.45;
+  border: 1px solid rgba(255, 118, 82, 0.26);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, rgba(255, 238, 180, 0.38), transparent 19%),
+    radial-gradient(circle at center, rgba(226, 74, 58, 0.3), transparent 62%);
+  box-shadow:
+    0 0 18px rgba(231, 72, 55, 0.28),
+    inset 0 0 16px rgba(255, 208, 107, 0.12);
+  mix-blend-mode: screen;
+  animation: autoCombatTtkImpactBurst 1s ease-out infinite;
+}
+
+.auto-combat-ttk-impact__slash {
+  top: 43%;
+  left: 50%;
+  width: clamp(4.4rem, 58%, 9rem);
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 239, 186, 0.96) 28%,
+    rgba(255, 116, 78, 0.9) 62%,
+    transparent
+  );
+  box-shadow:
+    0 0 8px rgba(255, 238, 178, 0.48),
+    0 0 16px rgba(222, 65, 52, 0.4);
+  mix-blend-mode: screen;
+}
+
+.auto-combat-ttk-impact__slash--primary {
+  animation: autoCombatTtkImpactSlashPrimary 1s ease-out infinite;
+}
+
+.auto-combat-ttk-impact__slash--secondary {
+  width: clamp(3.1rem, 42%, 6.6rem);
+  height: 2px;
+  animation: autoCombatTtkImpactSlashSecondary 1s ease-out infinite;
+}
+
+.auto-combat-ttk-impact__spark {
+  top: 43%;
+  left: 50%;
+  width: 5px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #ffe6a0;
+  box-shadow:
+    0 0 5px rgba(255, 231, 157, 0.9),
+    0 0 10px rgba(239, 93, 57, 0.72);
+}
+
+.auto-combat-ttk-impact__spark--one {
+  animation: autoCombatTtkImpactSparkOne 1s ease-out infinite;
+}
+
+.auto-combat-ttk-impact__spark--two {
+  animation: autoCombatTtkImpactSparkTwo 1s ease-out infinite;
+}
+
+.auto-combat-ttk-impact__spark--three {
+  animation: autoCombatTtkImpactSparkThree 1s ease-out infinite;
+}
+
+@keyframes autoCombatTtkMobReaction {
+  0%,
+  8%,
+  32%,
+  100% {
+    filter: brightness(1) saturate(1);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+
+  13% {
+    filter: brightness(1.28) saturate(1.12);
+    transform: translate3d(-5px, 1px, 0) rotate(-0.8deg) scale(0.982, 1.014);
+  }
+
+  20% {
+    filter: brightness(1.08) saturate(1.04);
+    transform: translate3d(3px, -1px, 0) rotate(0.46deg) scale(1.006, 0.994);
+  }
+
+  27% {
+    transform: translate3d(-1px, 0, 0) rotate(-0.14deg) scale(1);
+  }
+}
+
+@keyframes autoCombatTtkImpactBurst {
+  0%,
+  7%,
+  36%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+
+  13% {
+    opacity: 0.86;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+
+  27% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
+@keyframes autoCombatTtkImpactSlashPrimary {
+  0%,
+  8%,
+  33%,
+  100% {
+    opacity: 0;
+    transform: translate(-66%, -50%) rotate(-18deg) scaleX(0.16);
+  }
+
+  14% {
+    opacity: 1;
+    transform: translate(-52%, -50%) rotate(-18deg) scaleX(1);
+  }
+
+  27% {
+    opacity: 0;
+    transform: translate(-36%, -50%) rotate(-18deg) scaleX(0.7);
+  }
+}
+
+@keyframes autoCombatTtkImpactSlashSecondary {
+  0%,
+  12%,
+  37%,
+  100% {
+    opacity: 0;
+    transform: translate(-36%, -50%) rotate(24deg) scaleX(0.16);
+  }
+
+  18% {
+    opacity: 0.72;
+    transform: translate(-48%, -50%) rotate(24deg) scaleX(1);
+  }
+
+  30% {
+    opacity: 0;
+    transform: translate(-61%, -50%) rotate(24deg) scaleX(0.68);
+  }
+}
+
+@keyframes autoCombatTtkImpactSparkOne {
+  0%,
+  10%,
+  37%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+
+  16% {
+    opacity: 1;
+  }
+
+  31% {
+    opacity: 0;
+    transform: translate(calc(-50% + 34px), calc(-50% - 29px)) scale(0.15);
+  }
+}
+
+@keyframes autoCombatTtkImpactSparkTwo {
+  0%,
+  11%,
+  38%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+
+  17% {
+    opacity: 0.9;
+  }
+
+  32% {
+    opacity: 0;
+    transform: translate(calc(-50% - 39px), calc(-50% - 13px)) scale(0.12);
+  }
+}
+
+@keyframes autoCombatTtkImpactSparkThree {
+  0%,
+  13%,
+  40%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.45);
+  }
+
+  19% {
+    opacity: 0.82;
+  }
+
+  34% {
+    opacity: 0;
+    transform: translate(calc(-50% + 17px), calc(-50% + 31px)) scale(0.1);
+  }
+}
+
+@media (max-width: 700px) {
+  .auto-combat-ttk-impact {
+    inset: -3%;
+  }
+
+  .auto-combat-ttk-impact__burst {
+    width: clamp(4.2rem, 58%, 7.4rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auto-combat-mob-damage-shake.is-ttk-engaged:not(.is-impacting):not(.is-critical-impact):not(.is-defeated) {
+    animation: none;
+  }
+
+  .auto-combat-ttk-impact {
+    display: none;
+  }
+}

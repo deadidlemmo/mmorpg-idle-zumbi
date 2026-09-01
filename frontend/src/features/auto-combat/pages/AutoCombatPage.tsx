@@ -3860,6 +3860,18 @@ export function AutoCombatPage() {
     !isCombatViewSynchronizing &&
     (shouldShowMobDamage || shouldShowLethalMobImpact),
   );
+  const shouldShowTtkImpactMotion = Boolean(
+    showActiveSession &&
+    hasConfirmedActiveMob &&
+    activeMobFullBodyImage &&
+    hasTtkBattleProgress &&
+    !isCombatViewSynchronizing &&
+    !isPlayerDefeatedVisual &&
+    !isMobDefeatVisuallyConfirmed &&
+    !isBattleCycleVisuallyComplete &&
+    !shouldHoldBattleAtFullProgress &&
+    providerActiveEventType !== "MOB_DEFEATED",
+  );
   const mobBodyImpactKey = shouldShowMobBodyImpact
     ? [
         "mob-body-impact",
@@ -4910,6 +4922,7 @@ export function AutoCombatPage() {
                               instanceKey={activeBattleImpactTargetKey}
                               impactKey={mobBodyImpactKey}
                               bodyClassName={mobBodyImpactClassName}
+                              isTtkEngaged={shouldShowTtkImpactMotion}
                             />
                           ) : isCombatViewSynchronizing ? (
                             <span className="auto-combat-fighter-card__sync-placeholder">
@@ -5389,6 +5402,7 @@ export function AutoCombatPage() {
                                 instanceKey={activeBattleImpactTargetKey}
                                 impactKey={mobBodyImpactKey}
                                 bodyClassName={mobBodyImpactClassName}
+                                isTtkEngaged={shouldShowTtkImpactMotion}
                               />
                             ) : isCombatViewSynchronizing ? (
                               <span className="auto-combat-fighter-card__sync-placeholder">

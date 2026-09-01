@@ -9,6 +9,7 @@ type MobVisual = {
 type AutoCombatMobTransitionProps = MobVisual & {
   bodyClassName: string;
   impactKey: string;
+  isTtkEngaged?: boolean;
 };
 
 const MOB_HANDOFF_DURATION_MS = 420;
@@ -18,6 +19,7 @@ export function AutoCombatMobTransition({
   bodyClassName,
   imageUrl,
   impactKey,
+  isTtkEngaged = false,
   instanceKey,
 }: AutoCombatMobTransitionProps) {
   const previousVisualRef = useRef<MobVisual | null>(null);
@@ -74,7 +76,15 @@ export function AutoCombatMobTransition({
         className="auto-combat-mob-transition__layer auto-combat-mob-transition__layer--current"
         data-mob-instance-key={instanceKey}
       >
-        <span key={impactKey} className={bodyClassName}>
+        <span
+          key={impactKey}
+          className={[
+            bodyClassName,
+            isTtkEngaged ? "is-ttk-engaged" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <img
             src={imageUrl}
             alt={alt}
@@ -82,6 +92,17 @@ export function AutoCombatMobTransition({
             decoding="async"
           />
         </span>
+
+        {isTtkEngaged ? (
+          <span className="auto-combat-ttk-impact" aria-hidden="true">
+            <span className="auto-combat-ttk-impact__burst" />
+            <span className="auto-combat-ttk-impact__slash auto-combat-ttk-impact__slash--primary" />
+            <span className="auto-combat-ttk-impact__slash auto-combat-ttk-impact__slash--secondary" />
+            <span className="auto-combat-ttk-impact__spark auto-combat-ttk-impact__spark--one" />
+            <span className="auto-combat-ttk-impact__spark auto-combat-ttk-impact__spark--two" />
+            <span className="auto-combat-ttk-impact__spark auto-combat-ttk-impact__spark--three" />
+          </span>
+        ) : null}
       </span>
     </span>
   );

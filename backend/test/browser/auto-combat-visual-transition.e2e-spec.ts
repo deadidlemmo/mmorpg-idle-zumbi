@@ -534,6 +534,24 @@ test.describe('transicao visual entre monstros', () => {
       await expect(page.locator('.auto-combat-mob-transition')).toBeVisible({
         timeout: 15_000,
       });
+      const ttkImpact = page.locator('.auto-combat-ttk-impact').first();
+      await expect(ttkImpact).toBeVisible({ timeout: 15_000 });
+      await expect(ttkImpact).toHaveText('');
+
+      const ttkAnimationNames = await page
+        .locator('.auto-combat-mob-transition__layer--current')
+        .first()
+        .evaluate((layer) =>
+          Array.from(
+            layer.querySelectorAll<HTMLElement>(
+              '.is-ttk-engaged, .auto-combat-ttk-impact__burst, .auto-combat-ttk-impact__slash',
+            ),
+          ).map((element) => getComputedStyle(element).animationName),
+        );
+
+      expect(ttkAnimationNames).toContain('autoCombatTtkMobReaction');
+      expect(ttkAnimationNames).toContain('autoCombatTtkImpactBurst');
+      expect(ttkAnimationNames).toContain('autoCombatTtkImpactSlashPrimary');
       const defeatToast = page
         .locator('.loot-notification-card[data-kind="combat-result"]')
         .first();
