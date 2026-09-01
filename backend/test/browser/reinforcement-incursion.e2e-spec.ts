@@ -365,6 +365,14 @@ test.describe('incursão e reforço de equipamentos', () => {
           ['Túneis de Embarque', 'tuneis-de-embarque'],
         ],
       },
+      {
+        tier: 5,
+        level: 41,
+        incursions: [
+          ['Bloco de Contenção', 'bloco-de-contencao'],
+          ['Posto de Triagem Selado', 'posto-de-triagem-selado'],
+        ],
+      },
     ] as const;
 
     for (const tierArtwork of higherTierArtwork) {
