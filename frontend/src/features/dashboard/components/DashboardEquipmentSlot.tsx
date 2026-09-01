@@ -123,7 +123,6 @@ export function DashboardEquipmentSlot({
           <EquipmentItemArtwork
             item={item}
             imageUrl={imageUrl}
-            size="compact"
             loading="lazy"
             fallback={<span>{SLOT_INITIALS[normalizedSlotKey]}</span>}
           />

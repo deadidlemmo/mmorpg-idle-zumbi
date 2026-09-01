@@ -39,7 +39,6 @@ export function MarketItemThumb({
       <EquipmentItemArtwork
         item={item}
         imageUrl={imageUrl}
-        size="compact"
         draggable={false}
         fallback={<Package size={23} strokeWidth={1.7} />}
       />

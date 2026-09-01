@@ -570,7 +570,6 @@ function InventoryDesktopDetailsPanel({
             item={item}
             imageUrl={imageUrl}
             imageClassName="inventory-item-card__image"
-            size="large"
             loading="lazy"
             fallback={
               <>
@@ -766,7 +765,6 @@ function InventoryBlackMarketSaleModal({
               item={item}
               imageUrl={imageUrl}
               imageClassName="inventory-item-card__image"
-              size="large"
               fallback={
                 <>
                 <span className="inventory-item-card__glyph">

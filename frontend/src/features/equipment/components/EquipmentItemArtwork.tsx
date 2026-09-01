@@ -12,7 +12,6 @@ interface EquipmentItemArtworkProps {
   className?: string;
   imageClassName?: string;
   fallback?: ReactNode;
-  size?: "compact" | "regular" | "large";
   loading?: ImgHTMLAttributes<HTMLImageElement>["loading"];
   draggable?: boolean;
 }
@@ -24,14 +23,12 @@ export function EquipmentItemArtwork({
   className = "",
   imageClassName,
   fallback = null,
-  size = "regular",
   loading,
   draggable,
 }: EquipmentItemArtworkProps) {
   const enhancementLevel = getEquipmentEnhancementLevel(item);
   const classNames = [
     "equipment-item-artwork",
-    `equipment-item-artwork--${size}`,
     enhancementLevel > 0
       ? `is-enhanced equipment-item-artwork--level-${enhancementLevel}`
       : "",
@@ -60,15 +57,6 @@ export function EquipmentItemArtwork({
       ) : (
         <span className="equipment-item-artwork__fallback">{fallback}</span>
       )}
-
-      {enhancementLevel > 0 ? (
-        <span
-          className="equipment-item-artwork__badge"
-          aria-hidden="true"
-        >
-          +{enhancementLevel}
-        </span>
-      ) : null}
     </span>
   );
 }

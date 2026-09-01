@@ -81,6 +81,7 @@ interface DashboardNavItem {
   label: string;
   path: string;
   icon: ReactNode;
+  accent?: "premium";
 }
 
 type DashboardGatheringOrigin =
@@ -387,6 +388,7 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     label: "Premium",
     path: "membership",
     icon: <Crown size={17} strokeWidth={1.9} />,
+    accent: "premium",
   },
   {
     label: "Objetivos",
@@ -502,8 +504,15 @@ function DiscordMark() {
   );
 }
 
-function getDashboardNavLinkClassName(isActive: boolean) {
-  return ["dashboard-sidebar__link", isActive ? "is-active" : ""]
+function getDashboardNavLinkClassName(
+  isActive: boolean,
+  accent?: DashboardNavItem["accent"],
+) {
+  return [
+    "dashboard-sidebar__link",
+    accent ? `dashboard-sidebar__link--${accent}` : "",
+    isActive ? "is-active" : "",
+  ]
     .filter(Boolean)
     .join(" ");
 }
@@ -1487,7 +1496,9 @@ function DashboardLayoutContent({
         to={to}
         end={!item.path}
         onClick={closeSidebar}
-        className={({ isActive }) => getDashboardNavLinkClassName(isActive)}
+        className={({ isActive }) =>
+          getDashboardNavLinkClassName(isActive, item.accent)
+        }
       >
         <DashboardNavIcon item={item} />
         <strong>{item.label}</strong>
@@ -1731,7 +1742,7 @@ function DashboardLayoutContent({
             <span className="dashboard-sidebar__section-label">Comunidade</span>
             {DASHBOARD_COMMUNITY_NAV_ITEMS.map(renderSidebarNavItem)}
             <a
-              className="dashboard-sidebar__link"
+              className="dashboard-sidebar__link dashboard-sidebar__link--discord"
               href={DISCORD_INVITE_URL}
               target="_blank"
               rel="noreferrer"
