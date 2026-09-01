@@ -336,6 +336,77 @@ test.describe('incursão e reforço de equipamentos', () => {
       fullPage: true,
     });
 
+    const originalCharacter = await prisma.character.findUniqueOrThrow({
+      where: { id: characterId },
+      select: { level: true, mapId: true },
+    });
+    const tierTwoMap = await prisma.gameMap.findFirstOrThrow({
+      where: { tier: 2 },
+      select: { id: true },
+    });
+    await prisma.character.update({
+      where: { id: characterId },
+      data: { level: 11, mapId: tierTwoMap.id },
+    });
+    await page.reload();
+
+    for (const [name, assetSlug] of [
+      ['Galpão do Capataz', 'galpao-do-capataz'],
+      ['Oficina Enferrujada', 'oficina-enferrujada'],
+    ] as const) {
+      const tierTwoCard = page
+        .locator('.incursion-card')
+        .filter({ hasText: name });
+      await expect(tierTwoCard).toBeVisible();
+      const cardBackground = await tierTwoCard
+        .locator('.incursion-art')
+        .evaluate((element) => getComputedStyle(element).backgroundImage);
+      expect(cardBackground).toContain(assetSlug);
+
+      await tierTwoCard.click();
+      const artDialog = page.getByRole('dialog');
+      await expect(artDialog).toBeVisible();
+      const modalBackground = await artDialog
+        .locator('.incursions-modal__banner')
+        .evaluate((element) => getComputedStyle(element).backgroundImage);
+      expect(modalBackground).toContain(assetSlug);
+      await artDialog.getByRole('button', { name: 'Fechar' }).click();
+      await expect(artDialog).toHaveCount(0);
+    }
+
+    await page.screenshot({
+      path: testInfo.outputPath('incursions-tier-2-desktop.png'),
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page
+      .locator('.incursion-card')
+      .filter({ hasText: 'Galpão do Capataz' })
+      .click();
+    const tierTwoDialog = page.getByRole('dialog');
+    await expect(tierTwoDialog).toBeVisible();
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(false);
+    await tierTwoDialog.screenshot({
+      path: testInfo.outputPath('incursion-tier-2-modal-mobile.png'),
+    });
+    await tierTwoDialog.getByRole('button', { name: 'Fechar' }).click();
+    await page.setViewportSize({ width: 1280, height: 720 });
+
+    await prisma.character.update({
+      where: { id: characterId },
+      data: {
+        level: originalCharacter.level,
+        mapId: originalCharacter.mapId,
+      },
+    });
+    await page.reload();
+
     const incursionCard = page
       .locator('.incursion-card')
       .filter({ hasText: incursionName });
