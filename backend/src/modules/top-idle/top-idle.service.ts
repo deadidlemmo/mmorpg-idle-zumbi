@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -341,14 +342,36 @@ export class TopIdleService implements OnModuleInit {
     return normalized;
   }
 
-  private findUser(identifier: TopIdleIdentifier) {
-    return this.prisma.user.findUnique({
-      where:
-        identifier.type === 'PLAYER_IDENTIFIER'
-          ? { topIdleRewardCode: identifier.value }
-          : { email: identifier.value },
+  private async findUser(identifier: TopIdleIdentifier) {
+    if (identifier.type === 'EMAIL') {
+      return this.prisma.user.findUnique({
+        where: { email: identifier.value },
+        select: { id: true },
+      });
+    }
+
+    const userByRewardCode = await this.prisma.user.findUnique({
+      where: { topIdleRewardCode: identifier.value },
       select: { id: true },
     });
+    if (userByRewardCode) return userByRewardCode;
+
+    const characters = await this.prisma.character.findMany({
+      where: {
+        name: { equals: identifier.value, mode: 'insensitive' },
+        deletedAt: null,
+      },
+      select: { userId: true },
+      distinct: ['userId'],
+      take: 2,
+    });
+    if (characters.length > 1) {
+      throw new ConflictException(
+        'Este nome pertence a mais de uma conta. Use o ID de recompensa exibido no jogo.',
+      );
+    }
+
+    return characters[0] ? { id: characters[0].userId } : null;
   }
 
   private hashIdentifier(identifier: TopIdleIdentifier) {

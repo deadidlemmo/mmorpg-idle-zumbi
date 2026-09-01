@@ -1,4 +1,8 @@
-import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { TopIdleVoteRewardStatus } from '@prisma/client';
 import { createHash, createHmac } from 'node:crypto';
@@ -64,6 +68,9 @@ function fixture(options?: {
       findUnique: jest
         .fn()
         .mockResolvedValue(userExists ? { id: 'user-1' } : null),
+    },
+    character: {
+      findMany: jest.fn().mockResolvedValue([]),
     },
     topIdleVoteReward: {
       findUnique: jest.fn().mockResolvedValue(null),
@@ -184,6 +191,47 @@ describe('TopIdleService', () => {
     await expect(
       service.handleWebhook(rawBody, headers(rawBody)),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('identifica a conta pelo nome exato do personagem', async () => {
+    const rawBody = payload('vote-by-character-name', 'Maniverso');
+    const { prisma, service, tx } = fixture({ userExists: false });
+    prisma.character.findMany.mockResolvedValue([{ userId: 'user-1' }]);
+
+    await expect(
+      service.handleWebhook(
+        rawBody,
+        headers(rawBody, 'vote-by-character-name'),
+      ),
+    ).resolves.toMatchObject({
+      accepted: true,
+      rewarded: true,
+      status: TopIdleVoteRewardStatus.GRANTED,
+    });
+    expect(prisma.character.findMany).toHaveBeenCalledWith({
+      where: {
+        name: { equals: 'Maniverso', mode: 'insensitive' },
+        deletedAt: null,
+      },
+      select: { userId: true },
+      distinct: ['userId'],
+      take: 2,
+    });
+    expect(tx.user.update).toHaveBeenCalled();
+  });
+
+  it('não escolhe uma conta quando o nome do personagem é ambíguo', async () => {
+    const rawBody = payload('vote-ambiguous-name', 'Nilcruz');
+    const { prisma, service } = fixture({ userExists: false });
+    prisma.character.findMany.mockResolvedValue([
+      { userId: 'user-1' },
+      { userId: 'user-2' },
+    ]);
+
+    await expect(
+      service.handleWebhook(rawBody, headers(rawBody, 'vote-ambiguous-name')),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('não concede outro dia dentro do intervalo de 24 horas', async () => {
