@@ -296,7 +296,7 @@ test.describe('incursão e reforço de equipamentos', () => {
 
   test('exibe a prévia, entrega recursos e preserva o resultado após F5', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await authenticatePage(page);
     await page.goto(`/dashboard/${characterId}/incursions`);
     await expect(
@@ -306,6 +306,35 @@ test.describe('incursão e reforço de equipamentos', () => {
     await expect(
       page.getByText('Socket não autenticado.', { exact: true }),
     ).toHaveCount(0);
+
+    for (const [name, assetSlug] of [
+      ['Casas Seladas', 'casas-seladas'],
+      ['Porão dos Infectados', 'porao-dos-infectados'],
+    ] as const) {
+      const tierOneCard = page
+        .locator('.incursion-card')
+        .filter({ hasText: name });
+      await expect(tierOneCard).toBeVisible();
+      const cardBackground = await tierOneCard
+        .locator('.incursion-art')
+        .evaluate((element) => getComputedStyle(element).backgroundImage);
+      expect(cardBackground).toContain(assetSlug);
+
+      await tierOneCard.click();
+      const artDialog = page.getByRole('dialog');
+      await expect(artDialog).toBeVisible();
+      const modalBackground = await artDialog
+        .locator('.incursions-modal__banner')
+        .evaluate((element) => getComputedStyle(element).backgroundImage);
+      expect(modalBackground).toContain(assetSlug);
+      await artDialog.getByRole('button', { name: 'Fechar' }).click();
+      await expect(artDialog).toHaveCount(0);
+    }
+
+    await page.screenshot({
+      path: testInfo.outputPath('incursions-tier-1-desktop.png'),
+      fullPage: true,
+    });
 
     const incursionCard = page
       .locator('.incursion-card')
@@ -321,6 +350,18 @@ test.describe('incursão e reforço de equipamentos', () => {
     await expect(
       dialog.getByText('Progresso de equipamento garantido'),
     ).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(false);
+    await dialog.screenshot({
+      path: testInfo.outputPath('incursion-tier-1-modal-mobile.png'),
+    });
+    await page.setViewportSize({ width: 1280, height: 720 });
     await dialog.getByRole('button', { name: /Iniciar incursão/i }).click();
 
     await expect

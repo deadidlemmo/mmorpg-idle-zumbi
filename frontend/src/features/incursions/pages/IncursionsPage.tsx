@@ -41,6 +41,7 @@ import type {
   DashboardCharacterViewModel,
 } from "../../dashboard/types/dashboard.types";
 import { getAvailableIncursions } from "../api/incursions.api";
+import { getIncursionImageByName } from "../assets/incursion-assets";
 import { useIncursionsRealtime } from "../realtime/useIncursionsRealtime";
 import "../styles/incursions.css";
 import type {
@@ -474,16 +475,23 @@ function GoldAmount({ value }: { value: number }) {
   );
 }
 
+function getIncursionVisualImage(incursion: Incursion) {
+  return (
+    getIncursionImageByName(incursion.name) ??
+    getMapImageByName(incursion.map.name)
+  );
+}
+
 function IncursionModalHero({ incursion }: { incursion: Incursion }) {
-  const mapImage = getMapImageByName(incursion.map.name);
-  const mapVisualStyle = buildMapVisualStyle(mapImage);
+  const incursionImage = getIncursionVisualImage(incursion);
+  const incursionVisualStyle = buildMapVisualStyle(incursionImage);
 
   return (
     <div
       className={`incursions-modal__banner ${getIncursionTierClassName(incursion.tier)}`}
-      style={mapVisualStyle}
+      style={incursionVisualStyle}
     >
-      {!mapImage ? (
+      {!incursionImage ? (
         <span className="incursions-modal__banner-fallback" aria-hidden="true">
           {incursion.name.slice(0, 2).toUpperCase()}
         </span>
@@ -525,13 +533,13 @@ function IncursionArt({
   isLocked: boolean;
   statusLabel: string | null;
 }) {
-  const mapImage = getMapImageByName(incursion.map.name);
-  const mapVisualStyle = buildMapVisualStyle(mapImage);
+  const incursionImage = getIncursionVisualImage(incursion);
+  const incursionVisualStyle = buildMapVisualStyle(incursionImage);
 
   return (
     <span
       className={`incursion-art ${getIncursionTierClassName(incursion.tier)}`}
-      style={mapVisualStyle}
+      style={incursionVisualStyle}
       aria-hidden="true"
     >
       <span className="incursion-art__tier">Tier {incursion.tier}</span>
