@@ -186,7 +186,10 @@ test.describe('cosméticos e inspeção pública', () => {
     );
     await expect(
       page.locator('.appearance-collection-switcher button'),
-    ).toHaveCount(3);
+    ).toHaveCount(4);
+    await expect(
+      page.getByRole('tab', { name: /Acervo do Abrigo/ }),
+    ).toBeVisible();
     await expect(page.locator('.appearance-collection')).toHaveCount(1);
     const premiumCollection = page.locator('.appearance-collection');
     await expect(premiumCollection.locator('.appearance-item')).toHaveCount(4);
@@ -430,13 +433,14 @@ test.describe('cosméticos e inspeção pública', () => {
     await expect(
       page.getByRole('heading', { name: 'Escolha sua recarga', exact: true }),
     ).toBeVisible();
-    await expect(page.locator('.membership-cash-card')).toHaveCount(3);
-    for (const [amount, price] of [
-      ['100', 'R$ 9,90'],
-      ['200', 'R$ 17,90'],
-      ['500', 'R$ 19,90'],
+    await expect(page.locator('.membership-cash-card')).toHaveCount(4);
+    for (const [key, amount, price] of [
+      ['25', '25', 'R$ 25,00'],
+      ['50', '55', 'R$ 50,00'],
+      ['100', '115', 'R$ 100,00'],
+      ['200', '240', 'R$ 200,00'],
     ] as const) {
-      const card = page.locator(`.membership-cash-card--cash-${amount}`);
+      const card = page.locator(`.membership-cash-card--cash-${key}`);
       await expect(card).toHaveCount(1);
       await expect(card.getByText(amount, { exact: true })).toBeVisible();
       await expect(card.getByText(price, { exact: true })).toBeVisible();
@@ -464,8 +468,12 @@ test.describe('cosméticos e inspeção pública', () => {
     await expect(page.getByText('Market e trade entre jogadores')).toHaveCount(
       0,
     );
-    await expect(page.getByText('Mercado Pago')).toHaveCount(0);
-    await expect(page.getByText('Stripe')).toHaveCount(0);
+    await expect(
+      page.getByRole('radio', { name: 'Mercado Pago', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('radio', { name: 'Stripe', exact: true }),
+    ).toBeVisible();
 
     const helixCard = page.locator('.membership-package-card').filter({
       has: page.getByRole('heading', { name: 'Núcleo Helix', exact: true }),
