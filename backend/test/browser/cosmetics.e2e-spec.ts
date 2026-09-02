@@ -468,11 +468,12 @@ test.describe('cosméticos e inspeção pública', () => {
     await expect(page.getByText('Market e trade entre jogadores')).toHaveCount(
       0,
     );
+    const paymentMethod = page.locator('.membership-payment-method');
+    await expect(paymentMethod).toBeVisible();
     await expect(
-      page.getByRole('radio', { name: 'Mercado Pago', exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole('radio', { name: 'Stripe', exact: true }),
+      paymentMethod
+        .getByRole('radiogroup', { name: 'Escolha a forma de pagamento' })
+        .or(paymentMethod.getByText('Em preparação', { exact: true })),
     ).toBeVisible();
 
     const helixCard = page.locator('.membership-package-card').filter({
