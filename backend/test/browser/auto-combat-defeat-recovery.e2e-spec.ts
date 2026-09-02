@@ -370,7 +370,7 @@ test.describe('derrota global e recuperação do auto-combate', () => {
     await startLethalBattle(current);
     const preservedCount = await expectInfirmaryRecovery(page, current);
 
-    await page.getByRole('button', { name: 'Pagar e recuperar' }).click();
+    await page.getByRole('button', { name: 'Recuperar agora' }).click();
     await expect(
       page.getByRole('link', { name: 'Voltar ao combate' }),
     ).toBeVisible();

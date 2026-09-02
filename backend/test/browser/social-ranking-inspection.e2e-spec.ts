@@ -210,7 +210,7 @@ test.describe('aliados, ranking e inspeção', () => {
     await page.goto(`/dashboard/${requester.characterId}/allies`);
     await expect(page.getByRole('heading', { name: 'Aliados' })).toBeVisible();
 
-    await page.getByLabel('Apelido do personagem').fill(target.characterName);
+    await page.getByLabel('Nome do personagem').fill(target.characterName);
     await page.getByRole('button', { name: 'Buscar' }).click();
     const result = page
       .locator('.social-search-result')

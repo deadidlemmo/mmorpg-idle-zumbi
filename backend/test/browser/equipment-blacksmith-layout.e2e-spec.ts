@@ -245,7 +245,10 @@ test.describe('Equipamentos e Ferreiro responsivos', () => {
       `[data-target-key="inventory:${player.inventoryItemId}"]`,
     );
     await expect(item).toBeVisible();
-    await expect(item).toContainText('Fragmentos de reforço insuficientes');
+    await expect(item).toHaveAttribute(
+      'title',
+      'Fragmentos de reforço insuficientes.',
+    );
     await item.click();
     await expect(
       page.getByRole('button', { name: 'Reforçar para +1' }),
