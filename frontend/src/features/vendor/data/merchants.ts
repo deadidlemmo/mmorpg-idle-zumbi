@@ -64,7 +64,7 @@ export const MERCHANTS: MerchantDefinition[] = [
     description:
       'Arquivo visual do abrigo para personalizar a identidade dos sobreviventes.',
     shopDescription:
-      'Encontre avatares, molduras, cartões, cenários, efeitos e itens de identidade por Gold ou Cash.',
+      'Encontre avatares, molduras, cartões, cenários, efeitos e itens de identidade por Gold.',
     portraitUrl: veraPortrait,
     initials: 'VE',
     offers: [

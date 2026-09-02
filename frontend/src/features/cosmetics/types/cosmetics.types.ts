@@ -84,6 +84,44 @@ export interface UpdateCharacterAppearancePayload {
   badgeCosmeticKey?: string | null;
 }
 
+export type CosmeticVendorCategory =
+  | "avatar"
+  | "frame"
+  | "card"
+  | "overview"
+  | "effect"
+  | "identity";
+
+export interface CosmeticVendorProduct {
+  id: string;
+  category: CosmeticVendorCategory;
+  name: string;
+  description: string;
+  goldPrice: number;
+  sortOrder: number;
+  isOwned: boolean;
+  isPartiallyOwned: boolean;
+  cosmetics: CosmeticItem[];
+}
+
+export interface CosmeticVendorCatalogResponse {
+  character: {
+    id: string;
+    name: string;
+    gold: number;
+  };
+  currency: "GOLD";
+  products: CosmeticVendorProduct[];
+}
+
+export interface PurchaseCosmeticVendorProductResponse {
+  message: string;
+  productId: string;
+  gold: number;
+  grantedCosmeticKeys: string[];
+  alreadyProcessed: boolean;
+}
+
 export interface PublicCharacterProfileResponse {
   character: {
     id: string;

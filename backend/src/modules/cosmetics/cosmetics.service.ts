@@ -1,14 +1,30 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CosmeticAccessType, CosmeticType, Prisma } from '@prisma/client';
+import {
+  CosmeticAccessType,
+  CosmeticGrantSource,
+  CosmeticType,
+  EconomyDirection,
+  EconomyResourceType,
+  Prisma,
+} from '@prisma/client';
 import { AuditService } from '../../common/audit/audit.service';
+import {
+  COSMETIC_VENDOR_COSMETIC_KEYS,
+  COSMETIC_VENDOR_PRODUCTS,
+  getCosmeticVendorProduct,
+} from '../../common/config/cosmetic-vendor.config';
 import { isPremiumActive } from '../../common/utils/membership.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ECONOMY_REASONS } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
 import { GrantCosmeticsDto } from './dto/grant-cosmetics.dto';
+import { PurchaseCosmeticVendorProductDto } from './dto/purchase-cosmetic-vendor-product.dto';
 import { UpdateCharacterAppearanceDto } from './dto/update-character-appearance.dto';
 
 const cosmeticInclude = {
@@ -44,6 +60,7 @@ type AppearanceContext = {
   name: string;
   userId: string;
   classId: string;
+  gold: number;
   avatarKey: string | null;
   class: { id: string; name: string };
   user: { premiumUntil: Date | null };
@@ -217,6 +234,230 @@ export class CosmeticsService {
     };
   }
 
+  async getVendorCatalog(userId: string, characterId: string) {
+    const now = new Date();
+    const [character, cosmetics] = await Promise.all([
+      this.getCharacterContext(characterId, userId),
+      this.prisma.cosmetic.findMany({
+        where: {
+          key: { in: [...COSMETIC_VENDOR_COSMETIC_KEYS] },
+          isActive: true,
+        },
+        include: cosmeticInclude,
+      }),
+    ]);
+    const entitlementIds = await this.getActiveEntitlementIds(
+      character.userId,
+      cosmetics.map((cosmetic) => cosmetic.id),
+      now,
+    );
+
+    return {
+      character: {
+        id: character.id,
+        name: character.name,
+        gold: character.gold,
+      },
+      currency: 'GOLD',
+      products: this.formatVendorProducts(cosmetics, entitlementIds, now),
+    };
+  }
+
+  async purchaseVendorProduct(
+    userId: string,
+    characterId: string,
+    dto: PurchaseCosmeticVendorProductDto,
+  ) {
+    const product = getCosmeticVendorProduct(dto.productId);
+    if (!product) {
+      throw new NotFoundException('Produto cosmético não encontrado.');
+    }
+
+    const ledgerKey = `cosmetic-vendor:${characterId}:${dto.requestId}:gold`;
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const lockedUsers = await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "users" WHERE "id" = ${userId} FOR UPDATE`,
+        );
+        if (lockedUsers.length === 0) {
+          throw new NotFoundException('Usuário não encontrado.');
+        }
+
+        const previousEntry = await tx.economyLedgerEntry.findUnique({
+          where: { idempotencyKey: ledgerKey },
+          select: { metadata: true },
+        });
+        if (previousEntry) {
+          const previousProductId = this.getMetadataProductId(
+            previousEntry.metadata,
+          );
+          if (previousProductId !== product.id) {
+            throw new ConflictException(
+              'Esta solicitação já foi usada em outra compra.',
+            );
+          }
+
+          const character = await tx.character.findFirst({
+            where: { id: characterId, userId, deletedAt: null },
+            select: { id: true, gold: true },
+          });
+          if (!character) {
+            throw new NotFoundException('Personagem não encontrado.');
+          }
+
+          return {
+            gold: character.gold,
+            grantedCosmeticKeys: [...product.cosmeticKeys],
+            alreadyProcessed: true,
+          };
+        }
+
+        const character = await tx.character.findFirst({
+          where: { id: characterId, userId, deletedAt: null },
+          select: { id: true, userId: true, gold: true },
+        });
+        if (!character) {
+          throw new NotFoundException('Personagem não encontrado.');
+        }
+
+        const now = new Date();
+        const cosmetics = await tx.cosmetic.findMany({
+          where: {
+            key: { in: [...product.cosmeticKeys] },
+            isActive: true,
+            OR: [
+              { collectionId: null },
+              {
+                collection: {
+                  isActive: true,
+                  AND: [
+                    { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+                    { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+                  ],
+                },
+              },
+            ],
+          },
+          include: cosmeticInclude,
+        });
+        if (cosmetics.length !== product.cosmeticKeys.length) {
+          throw new BadRequestException(
+            'Este produto está temporariamente indisponível.',
+          );
+        }
+
+        const activeEntitlements = await tx.userCosmeticEntitlement.findMany({
+          where: {
+            userId,
+            cosmeticId: { in: cosmetics.map((cosmetic) => cosmetic.id) },
+            revokedAt: null,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+          select: { cosmeticId: true },
+        });
+        const ownedCosmeticIds = new Set(
+          activeEntitlements.map((entitlement) => entitlement.cosmeticId),
+        );
+        if (cosmetics.every((cosmetic) => ownedCosmeticIds.has(cosmetic.id))) {
+          throw new ConflictException(
+            'Esta aparência já pertence à sua conta.',
+          );
+        }
+
+        const debited = await tx.character.updateMany({
+          where: {
+            id: character.id,
+            userId,
+            gold: { gte: product.goldPrice },
+          },
+          data: { gold: { decrement: product.goldPrice } },
+        });
+        if (debited.count !== 1) {
+          throw new BadRequestException(
+            `São necessários ${product.goldPrice.toLocaleString('pt-BR')} Gold para esta compra.`,
+          );
+        }
+
+        const missingCosmetics = cosmetics.filter(
+          (cosmetic) => !ownedCosmeticIds.has(cosmetic.id),
+        );
+        for (const cosmetic of missingCosmetics) {
+          const grantKey = ['vera', userId, product.id, cosmetic.key].join(':');
+          await tx.userCosmeticEntitlement.upsert({
+            where: { grantKey },
+            update: {
+              source: CosmeticGrantSource.PURCHASE,
+              sourceReference: product.id,
+              expiresAt: null,
+              revokedAt: null,
+              grantedAt: now,
+            },
+            create: {
+              grantKey,
+              userId,
+              cosmeticId: cosmetic.id,
+              source: CosmeticGrantSource.PURCHASE,
+              sourceReference: product.id,
+              expiresAt: null,
+            },
+          });
+        }
+
+        const updatedCharacter = await tx.character.findUniqueOrThrow({
+          where: { id: character.id },
+          select: { gold: true },
+        });
+        await recordEconomyEntry(tx, {
+          characterId: character.id,
+          direction: EconomyDirection.DEBIT,
+          resourceType: EconomyResourceType.GOLD,
+          quantity: product.goldPrice,
+          balanceAfter: updatedCharacter.gold,
+          reason: ECONOMY_REASONS.COSMETIC_VENDOR_GOLD_SPENT,
+          idempotencyKey: ledgerKey,
+          referenceType: 'CosmeticVendorPurchase',
+          referenceId: dto.requestId,
+          metadata: {
+            productId: product.id,
+            cosmeticKeys: [...product.cosmeticKeys],
+          },
+        });
+
+        return {
+          gold: updatedCharacter.gold,
+          grantedCosmeticKeys: missingCosmetics.map((cosmetic) => cosmetic.key),
+          alreadyProcessed: false,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    if (!result.alreadyProcessed) {
+      this.auditService.recordSafely({
+        actorUserId: userId,
+        action: 'cosmetics.vendor.purchased',
+        entityType: 'Character',
+        entityId: characterId,
+        metadata: {
+          productId: product.id,
+          goldPrice: product.goldPrice,
+          cosmeticKeys: result.grantedCosmeticKeys,
+          requestId: dto.requestId,
+        },
+      });
+    }
+
+    return {
+      message: result.alreadyProcessed
+        ? 'Compra já processada.'
+        : `${product.name} foi adicionado à sua conta.`,
+      productId: product.id,
+      gold: result.gold,
+      grantedCosmeticKeys: result.grantedCosmeticKeys,
+      alreadyProcessed: result.alreadyProcessed,
+    };
+  }
+
   async updateAppearance(
     userId: string,
     characterId: string,
@@ -333,6 +574,7 @@ export class CosmeticsService {
         name: true,
         userId: true,
         classId: true,
+        gold: true,
         avatarKey: true,
         class: { select: { id: true, name: true } },
         user: { select: { premiumUntil: true } },
@@ -545,6 +787,7 @@ export class CosmeticsService {
         name: true,
         userId: true,
         classId: true,
+        gold: true,
         avatarKey: true,
         class: { select: { id: true, name: true } },
         user: { select: { premiumUntil: true } },
@@ -674,6 +917,56 @@ export class CosmeticsService {
     }
 
     return true;
+  }
+
+  private formatVendorProducts(
+    cosmetics: CosmeticWithRelations[],
+    entitlementIds: Set<string>,
+    now: Date,
+  ) {
+    const cosmeticsByKey = new Map(
+      cosmetics
+        .filter((cosmetic) => this.isCosmeticAvailable(cosmetic, now))
+        .map((cosmetic) => [cosmetic.key, cosmetic]),
+    );
+
+    return COSMETIC_VENDOR_PRODUCTS.flatMap((product) => {
+      const productCosmetics = product.cosmeticKeys
+        .map((key) => cosmeticsByKey.get(key))
+        .filter((cosmetic): cosmetic is CosmeticWithRelations =>
+          Boolean(cosmetic),
+        );
+      if (productCosmetics.length !== product.cosmeticKeys.length) return [];
+
+      const ownedCount = productCosmetics.filter((cosmetic) =>
+        entitlementIds.has(cosmetic.id),
+      ).length;
+
+      return [
+        {
+          id: product.id,
+          category: product.category,
+          name: product.name,
+          description: product.description,
+          goldPrice: product.goldPrice,
+          sortOrder: product.sortOrder,
+          isOwned: ownedCount === productCosmetics.length,
+          isPartiallyOwned:
+            ownedCount > 0 && ownedCount < productCosmetics.length,
+          cosmetics: productCosmetics.map((cosmetic) =>
+            this.formatCosmetic(cosmetic),
+          ),
+        },
+      ];
+    });
+  }
+
+  private getMetadataProductId(metadata: Prisma.JsonValue | null) {
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+      return null;
+    }
+
+    return typeof metadata.productId === 'string' ? metadata.productId : null;
   }
 
   private getSelectedCosmetics(appearance: AppearanceWithCosmetics | null) {

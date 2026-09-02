@@ -1,4 +1,8 @@
-import { ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import {
   AvatarPresentation,
   AvatarRepresentation,
@@ -93,6 +97,7 @@ describe('CosmeticsService', () => {
       name: 'Lutador',
       userId: 'user-1',
       classId: 'class-lutador',
+      gold: 250,
       avatarKey: 'lutador-01',
       class: { id: 'class-lutador', name: 'Lutador' },
       user: { premiumUntil },
@@ -293,5 +298,177 @@ describe('CosmeticsService', () => {
       }),
     );
     expect(result.message).toBe('1 cosmético(s) concedido(s).');
+  });
+
+  describe('compras no Ateliê da Vera', () => {
+    const requestId = '3d2a18cc-1dc9-4d49-9888-f67c22498e5a';
+    const vendorCosmetic = {
+      ...premiumAvatar,
+      id: 'cosmetic-gold-avatar',
+      key: 'avatar-acervo-vigia-oficina',
+      name: 'Vigia da Oficina',
+      accessType: CosmeticAccessType.ENTITLEMENT,
+      rarity: Rarity.UNCOMMON,
+      classId: null,
+      class: null,
+      collectionId: 'collection-gold',
+      collection: {
+        ...collection,
+        id: 'collection-gold',
+        key: 'acervo-do-abrigo',
+        name: 'Acervo do Abrigo',
+        sortOrder: 5,
+      },
+    };
+
+    function createTransactionMocks() {
+      return {
+        $queryRaw: jest.fn().mockResolvedValue([{ id: 'user-1' }]),
+        economyLedgerEntry: {
+          findUnique: jest.fn().mockResolvedValue(null),
+          create: jest.fn().mockResolvedValue({ id: 'ledger-1' }),
+        },
+        character: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: 'character-1',
+            userId: 'user-1',
+            gold: 1_000,
+          }),
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+          findUniqueOrThrow: jest.fn().mockResolvedValue({ gold: 100 }),
+        },
+        cosmetic: {
+          findMany: jest.fn().mockResolvedValue([vendorCosmetic]),
+        },
+        userCosmeticEntitlement: {
+          findMany: jest.fn().mockResolvedValue([]),
+          upsert: jest.fn().mockResolvedValue({ id: 'entitlement-gold' }),
+        },
+      };
+    }
+
+    type VendorTransactionMocks = ReturnType<typeof createTransactionMocks>;
+    type VendorTransactionCallback = (
+      transaction: VendorTransactionMocks,
+    ) => Promise<unknown>;
+
+    function useTransaction(transaction: VendorTransactionMocks) {
+      prisma.$transaction.mockImplementationOnce(
+        (callback: VendorTransactionCallback) => callback(transaction),
+      );
+    }
+
+    it('debita o preço do servidor, concede o direito e registra o ledger', async () => {
+      const tx = createTransactionMocks();
+      useTransaction(tx);
+
+      const result = await service.purchaseVendorProduct(
+        'user-1',
+        'character-1',
+        { productId: 'gold-avatar-vigia-oficina', requestId },
+      );
+
+      expect(tx.character.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'character-1',
+          userId: 'user-1',
+          gold: { gte: 900 },
+        },
+        data: { gold: { decrement: 900 } },
+      });
+      const [entitlementInput] = tx.userCosmeticEntitlement.upsert.mock
+        .calls[0] as [
+        {
+          create: {
+            userId: string;
+            cosmeticId: string;
+            source: CosmeticGrantSource;
+            expiresAt: Date | null;
+          };
+        },
+      ];
+      expect(entitlementInput.create).toMatchObject({
+        userId: 'user-1',
+        cosmeticId: vendorCosmetic.id,
+        source: CosmeticGrantSource.PURCHASE,
+        expiresAt: null,
+      });
+      const [ledgerInput] = tx.economyLedgerEntry.create.mock.calls[0] as [
+        {
+          data: {
+            characterId: string;
+            quantity: number;
+            balanceAfter: number;
+            reason: string;
+          };
+        },
+      ];
+      expect(ledgerInput.data).toMatchObject({
+        characterId: 'character-1',
+        quantity: 900,
+        balanceAfter: 100,
+        reason: 'COSMETIC_VENDOR_GOLD_SPENT',
+      });
+      expect(result).toMatchObject({
+        productId: 'gold-avatar-vigia-oficina',
+        gold: 100,
+        alreadyProcessed: false,
+      });
+    });
+
+    it('não concede a aparência quando o Gold é insuficiente', async () => {
+      const tx = createTransactionMocks();
+      tx.character.updateMany.mockResolvedValue({ count: 0 });
+      useTransaction(tx);
+
+      await expect(
+        service.purchaseVendorProduct('user-1', 'character-1', {
+          productId: 'gold-avatar-vigia-oficina',
+          requestId,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(tx.userCosmeticEntitlement.upsert).not.toHaveBeenCalled();
+      expect(tx.economyLedgerEntry.create).not.toHaveBeenCalled();
+    });
+
+    it('reutiliza uma compra já processada sem debitar novamente', async () => {
+      const tx = createTransactionMocks();
+      tx.economyLedgerEntry.findUnique.mockResolvedValue({
+        metadata: { productId: 'gold-avatar-vigia-oficina' },
+      });
+      useTransaction(tx);
+
+      const result = await service.purchaseVendorProduct(
+        'user-1',
+        'character-1',
+        { productId: 'gold-avatar-vigia-oficina', requestId },
+      );
+
+      expect(tx.character.updateMany).not.toHaveBeenCalled();
+      expect(tx.userCosmeticEntitlement.upsert).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        gold: 1_000,
+        alreadyProcessed: true,
+      });
+    });
+
+    it('impede comprar novamente um produto já pertencente à conta', async () => {
+      const tx = createTransactionMocks();
+      tx.userCosmeticEntitlement.findMany.mockResolvedValue([
+        { cosmeticId: vendorCosmetic.id },
+      ]);
+      useTransaction(tx);
+
+      await expect(
+        service.purchaseVendorProduct('user-1', 'character-1', {
+          productId: 'gold-avatar-vigia-oficina',
+          requestId,
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      expect(tx.character.updateMany).not.toHaveBeenCalled();
+      expect(tx.economyLedgerEntry.create).not.toHaveBeenCalled();
+    });
   });
 });

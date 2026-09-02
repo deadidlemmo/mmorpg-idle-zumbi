@@ -60,6 +60,10 @@ export const API_ENDPOINTS = {
     catalog: (characterId: string) => `/cosmetics/characters/${characterId}`,
     appearance: (characterId: string) =>
       `/cosmetics/characters/${characterId}/appearance`,
+    vendor: (characterId: string) =>
+      `/cosmetics/characters/${characterId}/vendor`,
+    vendorPurchase: (characterId: string) =>
+      `/cosmetics/characters/${characterId}/vendor/purchase`,
   },
 
   storefront: {

@@ -37,6 +37,8 @@ Jogador autenticado:
 
 - `GET /cosmetics/characters/:characterId`
 - `PATCH /cosmetics/characters/:characterId/appearance`
+- `GET /cosmetics/characters/:characterId/vendor`
+- `POST /cosmetics/characters/:characterId/vendor/purchase`
 - `GET /social/characters/:characterId/profile`
 - `GET /storefront/characters/:characterId`
 - `POST /storefront/checkout`
@@ -64,6 +66,18 @@ um webhook repetido não cria direitos duplicados.
 O painel administrativo concede e revoga direitos para suporte e testes. Ele não
 substitui a validação dos webhooks do Mercado Pago ou da Stripe.
 
+## Ateliê da Vera
+
+O Ateliê da Vera vende aparências permanentes por Gold. O backend mantém o
+produto, o preço e os cosméticos concedidos como fonte da verdade; o frontend
+envia somente `productId` e um `requestId` UUID para idempotência. A compra
+debita o personagem e libera os cosméticos para toda a conta na mesma transação.
+
+O catálogo `acervo-do-abrigo` oferece dois produtos em cada área: avatar,
+moldura, cartão, visão geral, efeito e identidade. Identidades concedem um título
+e um distintivo em conjunto. Todos são visuais comuns ou incomuns; itens mais
+elaborados e compras com Cash ficam fora deste catálogo inicial.
+
 ## Catálogo inicial
 
 O seed registra:
@@ -74,6 +88,8 @@ O seed registra:
   classe, moldura orbital, banner, fundo, efeito, título e distintivo.
 - `premium-protocolo-carmesim`: pacote permanente com oito avatares lendários
   por classe, moldura blindada, banner, fundo, efeito, título e distintivo.
+- `acervo-do-abrigo`: doze produtos permanentes do Ateliê da Vera, com duas
+  opções por área e pagamento exclusivo em Gold.
 
 `fundadores-alpha` e `temporada-01-quarentena` foram aposentados. O seed apenas
 os marca como inativos para preservar histórico e direitos antigos, sem
@@ -81,11 +97,14 @@ exibi-los no catálogo atual.
 
 ## Matriz de avatares
 
-Cada combinação de coleção e classe deve conter oito retratos: quatro de
-apresentação masculina e quatro de apresentação feminina. Cada grupo cobre as
-representações `WHITE`, `JAPANESE`, `BLACK` e `OTHER`. O campo
+Nas coleções Premium, cada combinação de coleção e classe deve conter oito
+retratos: quatro de apresentação masculina e quatro de apresentação feminina.
+Cada grupo cobre as representações `WHITE`, `JAPANESE`, `BLACK` e `OTHER`. O campo
 `representationLabel` documenta internamente a escolha usada em `OTHER`; essas
 categorias não são exibidas como rótulos de etnia para jogadores.
+
+O `acervo-do-abrigo` usa dois retratos sem restrição de classe, um masculino e
+um feminino, conforme o escopo enxuto do catálogo Gold da Vera.
 
 Os retratos precisam ser WebP de `1024x1024`, com fundo transparente real e
 silhueta legível em miniatura. O frontend inclui automaticamente arquivos

@@ -282,6 +282,11 @@ test.describe('hub de mercadores', () => {
   test('abre o Ateliê da Vera com as seis áreas de aparência', async ({
     page,
   }, testInfo) => {
+    await prisma.character.update({
+      where: { id: player.characterId },
+      data: { gold: 5_000 },
+    });
+
     await page.addInitScript(
       ({ token, characterId, tokenKey, characterKey }) => {
         window.localStorage.setItem(tokenKey, token);
@@ -316,29 +321,70 @@ test.describe('hub de mercadores', () => {
       )
       .toBe(true);
     await expect(page.getByLabel('Seus saldos')).toHaveCount(0);
+    await expect(page.getByText('Coleção regular')).toHaveCount(0);
+    await expect(page.getByText('Seleção especial')).toHaveCount(0);
+    await expect(page.getByText('Categoria selecionada')).toHaveCount(0);
 
     const tabs = page.getByRole('tablist', {
       name: 'Categorias de aparência',
     });
-    for (const label of [
+    const categoryLabels = [
       'Avatar',
       'Moldura',
       'Cartão',
       'Visão geral',
       'Efeito',
       'Identidade',
-    ]) {
+    ];
+    for (const label of categoryLabels) {
       await expect(tabs.getByRole('tab', { name: label })).toBeVisible();
     }
 
-    await tabs.getByRole('tab', { name: 'Identidade' }).click();
-    await expect(
-      page.getByRole('tabpanel').getByRole('heading', { name: 'Identidade' }),
-    ).toBeVisible();
-    await expect(page.getByText('Estoque em preparação')).toBeVisible();
+    for (const label of categoryLabels) {
+      await tabs.getByRole('tab', { name: label }).click();
+      await expect(page.locator('.cosmetic-vendor-product')).toHaveCount(2);
+    }
+
+    const stock = page.locator('.cosmetic-vendor-stock');
+    await expect
+      .poll(() =>
+        stock.evaluate(
+          (element) =>
+            getComputedStyle(element).gridTemplateColumns.split(' ').length,
+        ),
+      )
+      .toBe(2);
+    await expect(page.getByText('Estoque em preparação')).toHaveCount(0);
     await expect(
       page.getByRole('link', { name: 'Minha aparência' }),
     ).toHaveAttribute('href', `/dashboard/${player.characterId}/appearance`);
+
+    await tabs.getByRole('tab', { name: 'Avatar' }).click();
+    const avatarProducts = page.locator('.cosmetic-vendor-product');
+    await expect(avatarProducts).toHaveCount(2);
+    for (const product of await avatarProducts.all()) {
+      const artwork = product.locator('.cosmetic-vendor-preview img');
+      await expect(artwork).toBeVisible();
+      await expect
+        .poll(() =>
+          artwork.evaluate(
+            (image) =>
+              image instanceof HTMLImageElement &&
+              image.complete &&
+              image.naturalWidth > 0,
+          ),
+        )
+        .toBe(true);
+    }
+
+    const firstProduct = avatarProducts.first();
+    await firstProduct.getByRole('button', { name: 'Comprar' }).click();
+    await expect(
+      firstProduct.getByRole('button', { name: 'Adquirido' }),
+    ).toBeVisible();
+    await expect(
+      firstProduct.locator('.cosmetic-vendor-product__meta strong'),
+    ).toHaveText('Adquirido');
 
     await page.screenshot({
       path: testInfo.outputPath('cosmetic-merchant-desktop.png'),
@@ -357,6 +403,26 @@ test.describe('hub de mercadores', () => {
       )
       .toBe(true);
     await expect(tabs.getByRole('tab', { name: 'Visão geral' })).toBeVisible();
+    await expect
+      .poll(() =>
+        stock.evaluate(
+          (element) =>
+            getComputedStyle(element).gridTemplateColumns.split(' ').length,
+        ),
+      )
+      .toBe(2);
+    const mobileCards = await page.locator('.cosmetic-vendor-product').all();
+    expect(mobileCards).toHaveLength(2);
+    const [firstMobileCardBox, secondMobileCardBox] = await Promise.all([
+      mobileCards[0].boundingBox(),
+      mobileCards[1].boundingBox(),
+    ]);
+    expect(firstMobileCardBox).not.toBeNull();
+    expect(secondMobileCardBox).not.toBeNull();
+    expect(
+      Math.abs(firstMobileCardBox!.y - secondMobileCardBox!.y),
+    ).toBeLessThanOrEqual(2);
+    expect(secondMobileCardBox!.x).toBeGreaterThan(firstMobileCardBox!.x);
     await page.screenshot({
       path: testInfo.outputPath('cosmetic-merchant-mobile.png'),
       fullPage: true,

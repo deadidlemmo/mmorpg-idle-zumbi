@@ -4,11 +4,13 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CosmeticsService } from './cosmetics.service';
+import { PurchaseCosmeticVendorProductDto } from './dto/purchase-cosmetic-vendor-product.dto';
 import { UpdateCharacterAppearanceDto } from './dto/update-character-appearance.dto';
 
 type AuthenticatedRequest = {
@@ -26,6 +28,27 @@ export class CosmeticsController {
     @Param('characterId') characterId: string,
   ) {
     return this.cosmeticsService.getCatalog(request.user.id, characterId);
+  }
+
+  @Get('characters/:characterId/vendor')
+  getVendorCatalog(
+    @Req() request: AuthenticatedRequest,
+    @Param('characterId') characterId: string,
+  ) {
+    return this.cosmeticsService.getVendorCatalog(request.user.id, characterId);
+  }
+
+  @Post('characters/:characterId/vendor/purchase')
+  purchaseVendorProduct(
+    @Req() request: AuthenticatedRequest,
+    @Param('characterId') characterId: string,
+    @Body() dto: PurchaseCosmeticVendorProductDto,
+  ) {
+    return this.cosmeticsService.purchaseVendorProduct(
+      request.user.id,
+      characterId,
+      dto,
+    );
   }
 
   @Patch('characters/:characterId/appearance')
