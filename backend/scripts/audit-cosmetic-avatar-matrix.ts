@@ -20,6 +20,7 @@ const expectedAccessByCollection = new Map<string, CosmeticAccessType>([
   ['premium-ultimo-abrigo', CosmeticAccessType.PREMIUM],
   ['premium-nucleo-helix', CosmeticAccessType.ENTITLEMENT],
   ['premium-protocolo-carmesim', CosmeticAccessType.ENTITLEMENT],
+  ['acervo-do-abrigo', CosmeticAccessType.ENTITLEMENT],
 ]);
 
 const failures: string[] = [];
@@ -40,6 +41,20 @@ for (const collectionKey of expectedAccessByCollection.keys()) {
   }
 }
 
+for (const [collectionKey, expectedAccessType] of expectedAccessByCollection) {
+  const collectionItems = cosmeticDefinitions.filter(
+    (item) => item.collectionKey === collectionKey,
+  );
+
+  for (const item of collectionItems) {
+    if (item.accessType !== expectedAccessType) {
+      failures.push(
+        `${item.key}: acesso ${item.accessType}, esperado ${expectedAccessType}.`,
+      );
+    }
+  }
+}
+
 for (const collectionKey of retiredCosmeticCollectionKeys) {
   if (activeCollectionKeys.has(collectionKey)) {
     failures.push(`coleção aposentada continua ativa: ${collectionKey}.`);
@@ -57,15 +72,6 @@ for (const collectionKey of COMPLETE_AVATAR_COLLECTION_KEYS) {
   const collectionItems = cosmeticDefinitions.filter(
     (item) => item.collectionKey === collectionKey,
   );
-  const expectedAccessType = expectedAccessByCollection.get(collectionKey);
-
-  for (const item of collectionItems) {
-    if (item.accessType !== expectedAccessType) {
-      failures.push(
-        `${item.key}: acesso ${item.accessType}, esperado ${expectedAccessType}.`,
-      );
-    }
-  }
 
   for (const className of REQUIRED_CLASSES) {
     const avatars = collectionItems.filter(
