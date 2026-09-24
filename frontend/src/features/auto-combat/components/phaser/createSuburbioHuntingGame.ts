@@ -2722,8 +2722,6 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
             )
             .setOrigin(0.5, 1)
             .setDisplaySize(SURVIVOR_DISPLAY_WIDTH, SURVIVOR_DISPLAY_HEIGHT)
-            .setAlpha(0.84)
-            .setTint(0xb7c5bf)
             .setDepth(ACTOR_DEPTH_BASE + Math.round(spawn.y)),
           nameLabel: this.add
             .text(
@@ -2874,7 +2872,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     entity.nameLabel.setPosition(target.x, target.y - SURVIVOR_NAME_OFFSET_Y).setAlpha(0);
     entity.idleLabel.setPosition(target.x, target.y + 10).setAlpha(0);
     const duration = this.state.prefersReducedMotion ? 0 : 180;
-    this.tweens.add({ targets: entity.sprite, alpha: 0.84, duration });
+    this.tweens.add({ targets: entity.sprite, alpha: 1, duration });
     this.tweens.add({ targets: entity.shadow, alpha: 0.42, duration });
     this.tweens.add({ targets: entity.nameLabel, alpha: 1, duration });
     this.tweens.add({ targets: entity.idleLabel, alpha: 1, duration });
