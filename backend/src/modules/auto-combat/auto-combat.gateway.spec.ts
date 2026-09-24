@@ -189,9 +189,14 @@ describe('AutoCombatGateway realtime transport', () => {
         combatEventKey: 'event-death',
       }),
     );
-    expect(client.data).toMatchObject({
-      huntingVisualCombat: { active: false },
-    });
+    const terminalCombat = client.data.huntingVisualCombat as unknown as {
+      active: boolean;
+      lockedUntil: number;
+      anchor: { tileX: number; tileY: number };
+    };
+    expect(terminalCombat.active).toBe(false);
+    expect(typeof terminalCombat.lockedUntil).toBe('number');
+    expect(terminalCombat.anchor).toMatchObject({ tileX: 10, tileY: 12 });
   });
 
   describe('presenca visual autenticada', () => {
@@ -447,6 +452,50 @@ describe('AutoCombatGateway realtime transport', () => {
       ).toBe(true);
       await gateway.handleHuntingVisualLeave(client as never);
       expect((client.data.rooms as Set<string>).size).toBe(0);
+    });
+
+    it('congela a posição publicada enquanto o combate estiver ativo', async () => {
+      const { gateway, socket, pose } = setup();
+      const client = socket('first');
+      await gateway.handleHuntingVisualJoin(
+        client as never,
+        pose('first') as never,
+      );
+      client.data.huntingVisualCombat = {
+        active: true,
+        mobName: 'Mob mob-1',
+        cycleKey: 'session:1:mob-1',
+        eventType: 'PLAYER_HIT',
+        eventKey: 'event-1',
+        anchor: {
+          areaId: 'suburbio',
+          tileX: 12.5,
+          tileY: 14.5,
+          direction: 'down',
+        },
+        lockedUntil: null,
+      };
+      client.data.huntingVisualSentAt = 0;
+
+      await gateway.handleHuntingVisualPose(
+        client as never,
+        {
+          ...pose('first'),
+          tileX: 14,
+          tileY: 15,
+          direction: 'right',
+          moving: true,
+        } as never,
+      );
+
+      expect(client.data.huntingVisual).toMatchObject({
+        tileX: 12.5,
+        tileY: 14.5,
+        direction: 'down',
+        visualState: 'combat',
+        moving: false,
+        combatMobName: 'Mob mob-1',
+      });
     });
   });
 });

@@ -2048,7 +2048,7 @@ describe('AutoCombatService hunting processing', () => {
     );
   });
 
-  it('cancela batalha preservando os mobs rastreados restantes', async () => {
+  it('encerra a atividade e cancela os mobs restantes', async () => {
     const { service, prisma, tx, gateway } = createServiceHarness();
     const lastProcessedAt = new Date('2026-06-02T12:02:00.000Z');
     const loadedSession = createSession({
@@ -2086,7 +2086,7 @@ describe('AutoCombatService hunting processing', () => {
     expect(tx.autoCombatSession.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+          status: AutoCombatSessionStatus.STOPPED,
           currentMobId: null,
           battleTargetRemaining: 0,
         }),
@@ -2095,9 +2095,60 @@ describe('AutoCombatService hunting processing', () => {
     expect(tx.autoCombatHuntBatch.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          status: AutoCombatHuntBatchStatus.READY,
-          consumedAt: null,
-          cancelledAt: null,
+          status: AutoCombatHuntBatchStatus.CANCELLED,
+          cancelledAt: expect.any(Date),
+        }),
+      }),
+    );
+    expect(gateway.emitStopped).toHaveBeenCalled();
+  });
+
+  it.each([
+    AutoCombatSessionPhase.HUNTING,
+    AutoCombatSessionPhase.ENCOUNTER_READY,
+  ])('encerra por completo a sessão na fase %s', async (phase) => {
+    const { service, prisma, tx, gateway } = createServiceHarness();
+    const loadedSession = createSession({
+      phase,
+      huntBatch: {
+        id: 'hunt-batch-stop',
+        status:
+          phase === AutoCombatSessionPhase.HUNTING
+            ? AutoCombatHuntBatchStatus.HUNTING
+            : AutoCombatHuntBatchStatus.READY,
+        foundEnemiesCount: phase === AutoCombatSessionPhase.HUNTING ? 0 : 1,
+        mobs: [],
+      },
+    });
+
+    (prisma as any).character = {
+      findFirst: jest.fn().mockResolvedValue({ id: 'character-1' }),
+    };
+    (prisma as any).autoCombatSession = {
+      findFirst: jest.fn().mockResolvedValue({ id: 'session-1' }),
+    };
+    jest
+      .spyOn(service as any, 'loadAutoCombatSession')
+      .mockResolvedValue(loadedSession);
+
+    await service.stop('user-1', 'character-1');
+
+    expect(tx.autoCombatSession.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'session-1',
+          status: AutoCombatSessionStatus.ACTIVE,
+        }),
+        data: expect.objectContaining({
+          status: AutoCombatSessionStatus.STOPPED,
+          currentMobId: null,
+        }),
+      }),
+    );
+    expect(tx.autoCombatHuntBatch.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: AutoCombatHuntBatchStatus.CANCELLED,
         }),
       }),
     );

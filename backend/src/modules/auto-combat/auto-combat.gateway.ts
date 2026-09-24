@@ -89,6 +89,11 @@ type HuntingVisualCombatState = {
   cycleKey: string | null;
   eventType: HuntingVisualCombatEventType | null;
   eventKey: string | null;
+  anchor: Pick<
+    HuntingVisualPose,
+    'areaId' | 'tileX' | 'tileY' | 'direction'
+  > | null;
+  lockedUntil: number | null;
 };
 
 const HUNTING_VISUAL_BOUNDS: Record<HuntingVisualAreaId, [number, number]> = {
@@ -488,9 +493,13 @@ export class AutoCombatGateway
       return { ok: false };
     }
     await this.leaveHuntingVisual(client);
-    const combatState = this.getHuntingVisualCombatState(session);
+    const combatState = this.getHuntingVisualCombatState(session, pose);
+    const canonicalPose = this.applyCanonicalHuntingVisualCombat(
+      pose,
+      combatState,
+    );
     const presence: HuntingVisualPresence = {
-      ...this.applyCanonicalHuntingVisualCombat(pose, combatState),
+      ...canonicalPose,
       displayName: session.character.name,
       mapId: session.mapId,
       subMapId: session.subMapId,
@@ -502,7 +511,7 @@ export class AutoCombatGateway
     client.data.huntingVisualCheckedAt = Date.now();
     client.data.huntingVisualSentAt = 0;
     client.data.huntingVisualSavedAt = Date.now();
-    await this.huntingVisualPosition.save(session.id, pose);
+    await this.huntingVisualPosition.save(session.id, canonicalPose);
     const room = this.getHuntingVisualRoom(presence);
     await client.join(room);
     const sockets = await this.server.in(room).fetchSockets();
@@ -577,29 +586,37 @@ export class AutoCombatGateway
         await this.leaveHuntingVisual(client);
         return { ok: false };
       }
-      client.data.huntingVisualCombat =
-        this.getHuntingVisualCombatState(active);
+      client.data.huntingVisualCombat = this.getHuntingVisualCombatState(
+        active,
+        previous,
+        client.data.huntingVisualCombat,
+      );
       client.data.huntingVisualCheckedAt = now;
     }
+    const combatState = client.data.huntingVisualCombat ?? {
+      active: false,
+      mobName: null,
+      cycleKey: null,
+      eventType: null,
+      eventKey: null,
+      anchor: null,
+      lockedUntil: null,
+    };
+    const combatLocked = this.isHuntingVisualCombatLocked(combatState, now);
     const distance = Math.hypot(
       pose.tileX - previous.tileX,
       pose.tileY - previous.tileY,
     );
     if (
-      distance >
-      1.5 + (Math.min(now - previous.updatedAt, 3000) / 1000) * 3.5
+      !combatLocked &&
+      distance > 1.5 + (Math.min(now - previous.updatedAt, 3000) / 1000) * 3.5
     ) {
       return { ok: false };
     }
     const canonicalPose = this.applyCanonicalHuntingVisualCombat(
       pose,
-      client.data.huntingVisualCombat ?? {
-        active: false,
-        mobName: null,
-        cycleKey: null,
-        eventType: null,
-        eventKey: null,
-      },
+      combatState,
+      now,
     );
     const presence = { ...previous, ...canonicalPose, updatedAt: now };
     client.data.huntingVisual = presence;
@@ -611,7 +628,7 @@ export class AutoCombatGateway
       client.data.huntingVisualSavedAt = now;
       void this.huntingVisualPosition.save(
         client.data.huntingVisualSessionId,
-        pose,
+        canonicalPose,
       );
     }
     client
@@ -720,16 +737,24 @@ export class AutoCombatGateway
       : null;
   }
 
-  private getHuntingVisualCombatState(session: {
-    id: string;
-    phase: AutoCombatSessionPhase;
-    currentCombatIndex: number;
-    currentMobId: string | null;
-    currentMob: { name: string } | null;
-  }): HuntingVisualCombatState {
+  private getHuntingVisualCombatState(
+    session: {
+      id: string;
+      phase: AutoCombatSessionPhase;
+      currentCombatIndex: number;
+      currentMobId: string | null;
+      currentMob: { name: string } | null;
+    },
+    pose: HuntingVisualPose,
+    previous?: HuntingVisualCombatState,
+  ): HuntingVisualCombatState {
     const active =
       session.phase === AutoCombatSessionPhase.COMBAT_ACTIVE &&
       Boolean(session.currentMobId && session.currentMob);
+    const sameCycle =
+      active &&
+      previous?.cycleKey ===
+        `${session.id}:${session.currentCombatIndex}:${session.currentMobId}`;
     return {
       active,
       mobName: active ? (session.currentMob?.name ?? null) : null,
@@ -738,16 +763,41 @@ export class AutoCombatGateway
         : null,
       eventType: null,
       eventKey: null,
+      anchor: active
+        ? sameCycle && previous?.anchor
+          ? previous.anchor
+          : this.getHuntingVisualCombatAnchor(pose)
+        : null,
+      lockedUntil: null,
     };
+  }
+
+  private getHuntingVisualCombatAnchor(pose: HuntingVisualPose) {
+    return {
+      areaId: pose.areaId,
+      tileX: pose.tileX,
+      tileY: pose.tileY,
+      direction: pose.direction,
+    };
+  }
+
+  private isHuntingVisualCombatLocked(
+    combat: HuntingVisualCombatState,
+    now = Date.now(),
+  ) {
+    return combat.active || (combat.lockedUntil ?? 0) > now;
   }
 
   private applyCanonicalHuntingVisualCombat(
     pose: HuntingVisualPose,
     combat: HuntingVisualCombatState,
+    now = Date.now(),
   ): HuntingVisualPose {
-    if (combat.active) {
+    if (this.isHuntingVisualCombatLocked(combat, now)) {
+      const anchor = combat.anchor ?? this.getHuntingVisualCombatAnchor(pose);
       return {
         ...pose,
+        ...anchor,
         visualState: 'combat',
         moving: false,
         combatMobName: combat.mobName,
@@ -793,6 +843,7 @@ export class AutoCombatGateway
     );
     const terminal =
       eventType === 'MOB_DEFEATED' || eventType === 'PLAYER_DEFEATED';
+    const now = Date.now();
 
     for (const socket of sockets.values()) {
       const client = socket as AuthenticatedSocket;
@@ -801,7 +852,7 @@ export class AutoCombatGateway
 
       const previousCombat = client.data.huntingVisualCombat;
       const eventCombat: HuntingVisualCombatState = {
-        active: true,
+        active: !terminal,
         mobName:
           incomingMobName ??
           previousCombat?.mobName ??
@@ -814,24 +865,20 @@ export class AutoCombatGateway
           null,
         eventType,
         eventKey,
+        anchor:
+          previousCombat?.anchor ?? this.getHuntingVisualCombatAnchor(presence),
+        lockedUntil: terminal ? now + 1000 : null,
       };
       const nextPresence: HuntingVisualPresence = {
         ...this.applyCanonicalHuntingVisualCombat(presence, eventCombat),
         displayName: presence.displayName,
         mapId: presence.mapId,
         subMapId: presence.subMapId,
-        updatedAt: Date.now(),
+        updatedAt: now,
       };
       client.data.huntingVisual = nextPresence;
-      client.data.huntingVisualCombat = terminal
-        ? {
-            active: false,
-            mobName: null,
-            cycleKey: null,
-            eventType: null,
-            eventKey: null,
-          }
-        : eventCombat;
+      client.data.huntingVisualCombat = eventCombat;
+      client.data.huntingVisualCheckedAt = now;
       client
         .to(this.getHuntingVisualRoom(nextPresence))
         .emit('auto-combat:visual:pose', nextPresence);

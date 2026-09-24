@@ -1319,3 +1319,46 @@ test("sincroniza HP e poção imediatamente sem consumir a fila visual", () => {
   assert.deepEqual(potion.eventQueue, []);
   assert.equal(potion.lastAppliedEventSequence, null);
 });
+
+test("snapshot anterior ao último recurso não faz HP nem poção voltarem", () => {
+  const synchronized = autoCombatRealtimeReducer(makeState(), {
+    type: "SYNC_EVENT_RESOURCES",
+    characterId: "char-1",
+    event: {
+      characterId: "char-1",
+      sessionId: "session-1",
+      type: "POTION_USED",
+      sequence: 8,
+      characterCurrentHp: 72,
+      characterMaxHp: 100,
+      potionItemId: "potion-1",
+      potionQuantityBefore: 7,
+      potionQuantityAfter: 6,
+      potionQuantityRemaining: 6,
+    } as AutoCombatRealtimeEvent,
+  });
+
+  const stale = autoCombatRealtimeReducer(synchronized, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: {
+      active: true,
+      hasActiveAutoCombat: true,
+      snapshotSequence: 7,
+      latestEventSequence: 7,
+      character: { id: "char-1", currentHp: 54, maxHp: 100 },
+      session: {
+        id: "session-1",
+        characterId: "char-1",
+        status: "ACTIVE",
+        phase: "COMBAT_ACTIVE",
+        snapshotSequence: 7,
+        latestEventSequence: 7,
+      },
+    } as never,
+  });
+
+  assert.equal(stale.character?.currentHp, 72);
+  assert.equal(stale.potion?.quantityRemaining, 6);
+  assert.equal(stale.lastResourceEventSequence, 8);
+});

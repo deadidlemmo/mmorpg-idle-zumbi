@@ -3011,91 +3011,19 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException('Sessao de auto-combate nao encontrada.');
     }
 
-    if (loadedSession.phase === AutoCombatSessionPhase.HUNTING) {
-      return this.stopHunt(userId, character.id);
-    }
-
-    if (loadedSession.phase === AutoCombatSessionPhase.ENCOUNTER_READY) {
-      this.stopRealtimeProcessingLoop(character.id);
-
-      const response = await this.buildSessionResponse(loadedSession.id, {
-        message:
-          'Caca ja esta pronta para combate. Nenhuma batalha ativa para cancelar.',
-        processing: this.buildEmptyProcessingSummary(),
-      });
-
-      this.autoCombatGateway.emitStatus(character.id, response);
-
-      return response;
-    }
-
     const stoppedAt = new Date();
-    const trackedEnemiesRemaining =
-      this.getTrackedEnemiesRemaining(loadedSession) ?? 0;
-    const shouldPreserveTrackedEnemies =
-      loadedSession.phase === AutoCombatSessionPhase.COMBAT_ACTIVE &&
-      trackedEnemiesRemaining > 0;
     const stoppedSession = await this.prisma.$transaction(async (tx) => {
-      if (shouldPreserveTrackedEnemies) {
-        await this.claimAutoCombatPhaseTransition(
-          tx,
-          loadedSession,
-          AutoCombatSessionPhase.ENCOUNTER_READY,
-          {
-            huntStoppedAt: stoppedAt,
-            lastHuntProcessedAt: stoppedAt,
-            lastProcessedAt: stoppedAt,
-            currentMobId: null,
-            currentMobHp: null,
-            currentMobMaxHp: null,
-            killProgressSeconds: 0,
-            killProgressMs: 0,
-            estimatedKillTimeSeconds: null,
-            estimatedKillTimeMs: null,
-            unmodifiedKillTimeMs: null,
-            baseKillTimeSeconds: null,
-            appliedTtkPetDefinitionId: null,
-            appliedTtkPetEffectBasisPoints: 0,
-            playerOffensivePower: null,
-            monsterRecommendedPower: null,
-            currentMobIndex: null,
-            currentRound: 0,
-            battleTargetTotal: 0,
-            battleTargetRemaining: 0,
-            battleTargetMobId: null,
-            battleTargetEncounterId: null,
-          },
-        );
-
-        if (loadedSession.huntBatch?.id) {
-          await this.claimHuntBatchStatusTransition(
-            tx,
-            loadedSession.huntBatch,
-            AutoCombatHuntBatchStatus.READY,
-            {
-              consumedAt: null,
-              cancelledAt: null,
-              stoppedAt,
-              lastProcessedAt: stoppedAt,
-              cycleTargetEncounterId: null,
-            },
-          );
-        }
-
-        return tx.autoCombatSession.findUniqueOrThrow({
-          where: {
-            id: loadedSession.id,
-          },
-        });
-      }
-
-      const session = await tx.autoCombatSession.update({
+      await tx.autoCombatSession.updateMany({
         where: {
           id: loadedSession.id,
+          status: AutoCombatSessionStatus.ACTIVE,
         },
         data: {
           status: AutoCombatSessionStatus.STOPPED,
           finishedAt: stoppedAt,
+          huntStoppedAt: stoppedAt,
+          lastHuntProcessedAt: stoppedAt,
+          lastProcessedAt: stoppedAt,
           currentMobId: null,
           currentMobHp: null,
           currentMobMaxHp: null,
@@ -3107,6 +3035,9 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
           baseKillTimeSeconds: null,
           appliedTtkPetDefinitionId: null,
           appliedTtkPetEffectBasisPoints: 0,
+          playerOffensivePower: null,
+          monsterRecommendedPower: null,
+          currentMobIndex: null,
           currentRound: 0,
           battleTargetTotal: 0,
           battleTargetRemaining: 0,
@@ -3134,17 +3065,15 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      return session;
+      return tx.autoCombatSession.findUniqueOrThrow({
+        where: { id: loadedSession.id },
+      });
     });
 
     this.clearPotionUsageForSession(stoppedSession.id);
 
-    const stopMessage = shouldPreserveTrackedEnemies
-      ? 'Batalha cancelada. Os monstros rastreados restantes foram preservados.'
-      : 'Sessao de combate automatico encerrada.';
-
     const response = await this.buildSessionResponse(stoppedSession.id, {
-      message: stopMessage,
+      message: 'Sessão de combate automático encerrada.',
       processing: this.buildEmptyProcessingSummary(),
     });
 

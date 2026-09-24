@@ -11,7 +11,6 @@ import {
   PackageOpen,
   Radar,
   Skull,
-  Swords,
 } from "lucide-react";
 import suburbioInfected from "../../../assets/images/auto-combat/suburbio-silencioso-t1-infected-gba.png";
 import erranteAttack from "../../../assets/images/auto-combat/mobs/errante-suburbio-v1/errante-attack.png";
@@ -190,11 +189,9 @@ type AutoCombatHuntingSceneProps = {
   potionName?: string | null;
   potionQuantity: number;
   potionConfigDisabled?: boolean;
-  canStartBattle?: boolean;
   canStopHunt?: boolean;
   isBattleActionLoading?: boolean;
   onConfigurePotion: () => void;
-  onStartBattle: () => void;
   onRequestStopHunt: () => void;
 };
 
@@ -252,11 +249,9 @@ export function AutoCombatHuntingScene({
   potionName,
   potionQuantity,
   potionConfigDisabled,
-  canStartBattle,
   canStopHunt,
   isBattleActionLoading,
   onConfigurePotion,
-  onStartBattle,
   onRequestStopHunt,
 }: AutoCombatHuntingSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -282,6 +277,7 @@ export function AutoCombatHuntingScene({
   const currentMapIdRef = useRef(currentMapId);
   const joinedVisualAreaRef = useRef<string | null>(null);
   const lastJoinAttemptRef = useRef(0);
+  const livePlayerServerUpdatedAtRef = useRef(new Map<string, number>());
   const sendVisualPoseRef = useRef<(pose: LocalHuntingPose) => void>(() => {});
   const prefersReducedMotion = usePrefersReducedMotion();
   const performanceDiagnostics = getPerformanceDiagnostics();
@@ -376,22 +372,34 @@ export function AutoCombatHuntingScene({
     const handleSnapshot = ({ areaId, players }: { areaId: HuntingVisualPose["areaId"]; players: HuntingVisualPresence[] }) => {
       if (localPoseRef.current?.areaId !== areaId) return;
       joinedVisualAreaRef.current = areaId;
+      livePlayerServerUpdatedAtRef.current = new Map(
+        players.map((player) => [player.characterId, player.updatedAt]),
+      );
       setLivePlayers(players.filter((player) => player.characterId !== characterId)
         .map((player) => ({ ...player, updatedAt: Date.now() })));
     };
     const handlePose = (player: HuntingVisualPresence) => {
       if (player.characterId === characterId || player.areaId !== localPoseRef.current?.areaId) return;
+      const previousUpdatedAt =
+        livePlayerServerUpdatedAtRef.current.get(player.characterId) ?? 0;
+      if (player.updatedAt < previousUpdatedAt) return;
+      livePlayerServerUpdatedAtRef.current.set(
+        player.characterId,
+        player.updatedAt,
+      );
       setLivePlayers((current) => [
         ...current.filter((entry) => entry.characterId !== player.characterId),
         { ...player, updatedAt: Date.now() },
       ]);
     };
     const handleLeft = ({ characterId: leftId }: { characterId: string }) => {
+      livePlayerServerUpdatedAtRef.current.delete(leftId);
       setLivePlayers((current) => current.filter((player) => player.characterId !== leftId));
     };
     const handleDisconnect = () => {
       joinedVisualAreaRef.current = null;
       lastJoinAttemptRef.current = 0;
+      livePlayerServerUpdatedAtRef.current.clear();
       setLivePlayers([]);
     };
     sendVisualPoseRef.current = (pose) => {
@@ -425,6 +433,7 @@ export function AutoCombatHuntingScene({
       window.clearInterval(retry);
       window.clearInterval(pruneStale);
       joinedVisualAreaRef.current = null;
+      livePlayerServerUpdatedAtRef.current.clear();
       sendVisualPoseRef.current = () => {};
     };
   }, [characterId, currentMapId]);
@@ -877,18 +886,6 @@ export function AutoCombatHuntingScene({
               <Radar aria-hidden="true" /> {huntingCountdownLabel}
             </span>
             <div className="auto-combat-hunting-scene__player-actions">
-              {canStartBattle ? (
-                <button
-                  type="button"
-                  className="auto-combat-hunting-scene__battle-action"
-                  onClick={onStartBattle}
-                  disabled={isBattleActionLoading}
-                  title="Iniciar batalha"
-                >
-                  <Swords aria-hidden="true" />
-                  <span>{isBattleActionLoading ? "Iniciando" : "Batalhar"}</span>
-                </button>
-              ) : null}
               <button
                 type="button"
                 onClick={onConfigurePotion}

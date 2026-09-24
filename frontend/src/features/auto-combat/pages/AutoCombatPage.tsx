@@ -964,7 +964,6 @@ export function AutoCombatPage() {
   const [selectedBattleQuantity, setSelectedBattleQuantity] = useState(1);
   const [isThreatPotionPickerOpen, setIsThreatPotionPickerOpen] =
     useState(false);
-  const [isStopHuntConfirmOpen, setIsStopHuntConfirmOpen] = useState(false);
   const [availablePotions, setAvailablePotions] = useState<
     PotionInventoryOption[]
   >([]);
@@ -4383,7 +4382,6 @@ export function AutoCombatPage() {
       setLocalSessionTotals(responseTotals);
       setHasStartedHunt(true);
       setHuntingImmersiveRequestKey((current) => current + 1);
-      setIsStopHuntConfirmOpen(false);
       setActiveTab("battle");
 
       await loadAutoCombatData();
@@ -4400,50 +4398,6 @@ export function AutoCombatPage() {
     }
   }
 
-  async function handleStopHunt() {
-    if (!characterId || isActionLoading || !isBackendHuntingPhase) return;
-
-    try {
-      setIsActionLoading(true);
-      setErrorMessage("");
-
-      const response = realtimeActions.stopHunt
-        ? await realtimeActions.stopHunt()
-        : null;
-
-      if (!response) {
-        throw new Error(
-          "O AutoCombatRealtimeProvider não expôs uma função stopHunt.",
-        );
-      }
-
-      const responseSession = getSessionFromStatus(response);
-      const responseProgress = buildProgressFromStatus(
-        response,
-        responseSession,
-      );
-      const responseTotals = buildSessionTotalsFromStatus(
-        response,
-        responseSession,
-      );
-
-      setAutoCombatStatus(response);
-      setLocalCharacterProgress(responseProgress);
-      setLocalSessionTotals(responseTotals);
-      setHasStartedHunt(true);
-      setIsStopHuntConfirmOpen(false);
-      setActiveTab("battle");
-
-      await loadAutoCombatData();
-    } catch (error) {
-      setErrorMessage(
-        getApiErrorMessage(error, "Não foi possível parar a caça."),
-      );
-    } finally {
-      setIsActionLoading(false);
-    }
-  }
-
   async function handleRefreshHuntActivityPanel() {
     if (isActionLoading) return;
 
@@ -4452,12 +4406,6 @@ export function AutoCombatPage() {
 
   function handleStopHuntActivityPanel() {
     if (isActionLoading || !hasActiveSession) return;
-
-    if (isBackendHuntingPhase && !showInlineHuntBattle) {
-      setIsStopHuntConfirmOpen(true);
-      return;
-    }
-
     void handleStopAutoCombat();
   }
 
@@ -5067,19 +5015,11 @@ export function AutoCombatPage() {
                       }
                       potionQuantity={configuredPotionQuantity}
                       potionConfigDisabled={isPotionConfigLoading}
-                      canStartBattle={
-                        isBackendEncounterReadyPhase &&
-                        availableEnemiesCount > 0 &&
-                        characterHasHp
-                      }
                       canStopHunt={
                         hasActiveSession && !isActionLoading
                       }
                       isBattleActionLoading={isActionLoading}
                       onConfigurePotion={() => handleOpenPotionConfig(0)}
-                      onStartBattle={() =>
-                        handleStartAutoCombat({ mode: "ALL" })
-                      }
                       onRequestStopHunt={handleStopHuntActivityPanel}
                     />
                   ) : null}
@@ -5176,9 +5116,9 @@ export function AutoCombatPage() {
                             type="button"
                             className="auto-combat-hunt-tracker__stop"
                             disabled={isActionLoading}
-                            onClick={() => setIsStopHuntConfirmOpen(true)}
+                            onClick={handleStopHuntActivityPanel}
                           >
-                            {isActionLoading ? "Processando..." : "Parar Caça"}
+                            {isActionLoading ? "Encerrando..." : "Encerrar"}
                           </button>
                         </div>
                       </div>
@@ -6048,88 +5988,6 @@ export function AutoCombatPage() {
         optionsCountLabel={potionOptionsCountLabel}
         selectedPotionItemId={selectedPotionItemId}
       />
-
-      {isStopHuntConfirmOpen ? (
-        <div
-          className="auto-combat-hunt-stop-modal-backdrop"
-          role="presentation"
-          onClick={() => {
-            if (!isActionLoading) {
-              setIsStopHuntConfirmOpen(false);
-            }
-          }}
-        >
-          <article
-            className="auto-combat-hunt-stop-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="auto-combat-hunt-stop-modal-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <header className="auto-combat-hunt-stop-modal__header">
-              <div>
-                <span className="auto-combat-hunt-stop-modal__icon">
-                  <i />
-                  <i />
-                  <i />
-                </span>
-                <strong id="auto-combat-hunt-stop-modal-title">
-                  Parar caça
-                </strong>
-              </div>
-
-              <button
-                type="button"
-                className="auto-combat-hunt-stop-modal__close"
-                aria-label="Fechar confirmação"
-                disabled={isActionLoading}
-                onClick={() => setIsStopHuntConfirmOpen(false)}
-              >
-                ×
-              </button>
-            </header>
-
-            <div className="auto-combat-hunt-stop-modal__body">
-              <div className="auto-combat-hunt-stop-modal__notice">
-                <span aria-hidden="true">i</span>
-                <p>
-                  Os inimigos que você já rastreou ficarão prontos para batalha
-                  imediatamente.
-                </p>
-              </div>
-
-              <div className="auto-combat-hunt-stop-modal__notice">
-                <span aria-hidden="true">i</span>
-                <p>
-                  Você pode voltar para a caça quando quiser, desde que ainda
-                  não tenha atingido o limite. Novos inimigos encontrados serão
-                  somados aos que você já rastreou.
-                </p>
-              </div>
-            </div>
-
-            <footer className="auto-combat-hunt-stop-modal__actions">
-              <button
-                type="button"
-                className="auto-combat-hunt-stop-modal__button auto-combat-hunt-stop-modal__button--secondary"
-                disabled={isActionLoading}
-                onClick={() => setIsStopHuntConfirmOpen(false)}
-              >
-                Fechar
-              </button>
-
-              <button
-                type="button"
-                className="auto-combat-hunt-stop-modal__button auto-combat-hunt-stop-modal__button--danger"
-                disabled={isActionLoading}
-                onClick={handleStopHunt}
-              >
-                {isActionLoading ? "Parando..." : "Parar Caça"}
-              </button>
-            </footer>
-          </article>
-        </div>
-      ) : null}
 
       {selectedThreatDetails && selectedThreatMob ? (
         <div

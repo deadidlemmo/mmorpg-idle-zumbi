@@ -374,7 +374,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   private threatPortraitLoadToken = 0;
   private isCameraFollowingActor = false;
   private readonly remotePlayers = new Map<string, RemotePlayerEntity>();
-  private readonly transientXpFeedback = new Set<Phaser.GameObjects.Text>();
+  private readonly transientXpFeedback = new Set<Phaser.GameObjects.Container>();
+  private readonly xpFeedbackQueue: HuntingXpGain[] = [];
+  private xpFeedbackActive = false;
   private lastPoseSignature = "";
   private lastPoseSentAt = 0;
   private snapshotSynchronizing = false;
@@ -1569,40 +1571,101 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const amount = Math.max(0, Math.floor(Number(gain.amount) || 0));
     if (amount <= 0) return;
 
+    this.xpFeedbackQueue.push({ amount, kind: gain.kind });
+    this.presentNextXpGain();
+  }
+
+  private presentNextXpGain() {
+    if (this.xpFeedbackActive || !this.actorBody) return;
+
+    const gain = this.xpFeedbackQueue.shift();
+    if (!gain) return;
+
+    this.xpFeedbackActive = true;
+
     const isHuntingXp = gain.kind === "hunting";
-    const label = isHuntingXp ? `+${amount} EXP DE CAÇA` : `+${amount} EXP`;
-    const startY = this.actorBody.y - (isHuntingXp ? 112 : 90);
-    const feedback = this.add
-      .text(this.actorBody.x, startY, label, {
-        color: isHuntingXp ? "#d9e98b" : "#f0d48b",
+    const primaryColor = isHuntingXp ? "#d8e98e" : "#efc177";
+    const categoryLabel = isHuntingXp ? "CAÇA" : "COMBATE";
+    const amountLabel = `+${gain.amount.toLocaleString("pt-BR")} EXP`;
+    const camera = this.cameras.main;
+    const zoom = Math.max(0.01, camera.zoom);
+    const baseScale = Phaser.Math.Clamp(1 / zoom, 0.62, 1.45);
+    const x = Phaser.Math.Clamp(
+      this.actorBody.x,
+      camera.worldView.left + 48 / zoom,
+      camera.worldView.right - 48 / zoom,
+    );
+    const desiredY = this.actorBody.y - 84 / zoom;
+    const settledY = Math.max(
+      desiredY,
+      camera.worldView.top + 18 / zoom,
+    );
+    const entranceOffset = this.state.prefersReducedMotion ? 0 : 5 / zoom;
+    const drift = this.state.prefersReducedMotion ? 0 : 14 / zoom;
+
+    const category = this.add
+      .text(0, -7, categoryLabel, {
+        color: isHuntingXp ? "#bdce82" : "#d4ad72",
         fontFamily: '"Arial Black", Arial, sans-serif',
-        fontSize: isHuntingXp ? "12px" : "13px",
+        fontSize: "7px",
         fontStyle: "bold",
         stroke: "#07100d",
-        strokeThickness: 4,
+        strokeThickness: 2,
       })
-      .setOrigin(0.5)
+      .setOrigin(0.5);
+    const amount = this.add
+      .text(0, 6, amountLabel, {
+        color: primaryColor,
+        fontFamily: '"Arial Black", Arial, sans-serif',
+        fontSize: "11px",
+        fontStyle: "bold",
+        stroke: "#07100d",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5);
+
+    const feedback = this.add
+      .container(x, settledY + entranceOffset, [category, amount])
+      .setAlpha(this.state.prefersReducedMotion ? 1 : 0)
+      .setScale(this.state.prefersReducedMotion ? baseScale : baseScale * 0.86)
       .setDepth(WORLD_OVERLAY_DEPTH + 40);
 
     this.transientXpFeedback.add(feedback);
     this.tweens.add({
       targets: feedback,
-      y: this.state.prefersReducedMotion ? startY : startY - 24,
-      alpha: 0,
-      duration: this.state.prefersReducedMotion ? 850 : 1250,
-      delay: this.state.prefersReducedMotion ? 150 : 450,
-      ease: "Cubic.easeOut",
+      y: settledY,
+      alpha: 1,
+      scaleX: baseScale,
+      scaleY: baseScale,
+      duration: this.state.prefersReducedMotion ? 80 : 160,
+      ease: this.state.prefersReducedMotion ? "Linear" : "Back.easeOut",
       onComplete: () => {
-        this.transientXpFeedback.delete(feedback);
-        feedback.destroy();
+        this.tweens.add({
+          targets: feedback,
+          y: settledY - drift,
+          alpha: 0,
+          scaleX: this.state.prefersReducedMotion ? baseScale : baseScale * 0.97,
+          scaleY: this.state.prefersReducedMotion ? baseScale : baseScale * 0.97,
+          duration: this.state.prefersReducedMotion ? 240 : 360,
+          delay: this.state.prefersReducedMotion ? 420 : 560,
+          ease: "Cubic.easeIn",
+          onComplete: () => {
+            this.transientXpFeedback.delete(feedback);
+            feedback.destroy(true);
+            this.xpFeedbackActive = false;
+            this.presentNextXpGain();
+          },
+        });
       },
     });
   }
 
   private clearTransientXpFeedback() {
+    this.xpFeedbackQueue.length = 0;
+    this.xpFeedbackActive = false;
     for (const feedback of this.transientXpFeedback) {
       this.tweens.killTweensOf(feedback);
-      feedback.destroy();
+      feedback.destroy(true);
     }
     this.transientXpFeedback.clear();
   }
@@ -2731,9 +2794,15 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         entity.combatEventPresentationUntil = 0;
         this.rebaseRemotePlayerIfNeeded(entity, anchor, true);
       } else if (!player.idle && (sourceChanged || player.updatedAt >= entity.updatedAt)) {
+        const enteringCombat =
+          player.visualState === "combat" && entity.visualState !== "combat";
         entity.idle = false;
-        entity.anchor = anchor;
-        entity.targetPoint = anchor;
+        entity.anchor = enteringCombat
+          ? { x: entity.sprite.x, y: entity.sprite.y }
+          : anchor;
+        entity.targetPoint = enteringCombat
+          ? { x: entity.sprite.x, y: entity.sprite.y }
+          : anchor;
         entity.lastMovementDirection = player.direction;
         entity.visualState = player.visualState;
         entity.moving = player.moving;
@@ -2745,7 +2814,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         entity.combatEventKey = player.combatEventKey ?? null;
         if (combatCycleChanged) entity.lastCombatAnimationAt = 0;
         entity.updatedAt = player.updatedAt;
-        this.rebaseRemotePlayerIfNeeded(entity, anchor);
+        if (!enteringCombat && player.visualState !== "combat") {
+          this.rebaseRemotePlayerIfNeeded(entity, anchor);
+        }
       }
       entity.nameLabel
         .setText(player.displayName)
@@ -2809,6 +2880,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   }
 
   private walkRemotePlayer(entity: RemotePlayerEntity, delta: number) {
+    if (entity.visualState === "combat") return false;
     const target = entity.targetPoint;
     const area = this.getArea(entity.areaId);
     const dx = target.x - entity.sprite.x;
@@ -2846,20 +2918,17 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       entity.combatEventPresentationUntil > this.time.now &&
       !this.state.prefersReducedMotion
     ) {
-      entity.sprite.play(
-        this.survivorCombatAnimationKey(
-          "hurt",
-          entity.lastMovementDirection,
-        ),
-        true,
+      this.playRemoteAnimation(
+        entity.sprite,
+        this.survivorCombatAnimationKey("hurt", entity.lastMovementDirection),
       );
     } else if (visualPhase === "combat" && !this.state.prefersReducedMotion) {
-      entity.sprite.play(
+      this.playRemoteAnimation(
+        entity.sprite,
         this.survivorCombatAnimationKey(
           "attack",
           entity.lastMovementDirection,
         ),
-        true,
       );
     } else if (visualPhase === "combat") {
       entity.sprite
@@ -2867,9 +2936,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         .setTexture(SURVIVOR_ATTACK_TEXTURE)
         .setFrame(this.directionStart(entity.lastMovementDirection, 4) + 3);
     } else if (visualPhase === "investigating" && !this.state.prefersReducedMotion) {
-      entity.sprite.play(
+      this.playRemoteAnimation(
+        entity.sprite,
         this.investigateAnimationKey(entity.lastMovementDirection),
-        true,
       );
     } else if (visualPhase === "investigating") {
       entity.sprite
@@ -2882,9 +2951,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         .setTexture(SURVIVOR_INVESTIGATE_TEXTURE)
         .setFrame(directionStart + 3);
     } else if (isWalking && !this.state.prefersReducedMotion) {
-      entity.sprite.play(
+      this.playRemoteAnimation(
+        entity.sprite,
         this.animationKey(entity.lastMovementDirection),
-        true,
       );
     } else {
       entity.sprite
@@ -2902,6 +2971,19 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       entity.sprite.y - SURVIVOR_NAME_OFFSET_Y,
     );
     entity.idleLabel.setPosition(entity.sprite.x, entity.sprite.y + 10);
+  }
+
+  private playRemoteAnimation(
+    sprite: Phaser.GameObjects.Sprite,
+    animationKey: string,
+  ) {
+    if (
+      sprite.anims.currentAnim?.key === animationKey &&
+      sprite.anims.isPlaying
+    ) {
+      return;
+    }
+    sprite.play(animationKey);
   }
 
   private syncRemoteCombatVisual(entity: RemotePlayerEntity) {

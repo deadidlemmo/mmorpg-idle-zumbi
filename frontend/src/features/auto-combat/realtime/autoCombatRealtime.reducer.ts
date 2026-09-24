@@ -140,6 +140,9 @@ export type AutoCombatRealtimeState = {
    */
   lastAppliedEventSequence: number | null;
   lastAppliedEventTimestamp: number | null;
+  /** Último evento que atualizou HP ou estoque de poção imediatamente. */
+  lastResourceEventSequence: number | null;
+  lastResourceEventTimestamp: number | null;
 
   updatedAt: number;
 };
@@ -286,6 +289,8 @@ export const initialAutoCombatRealtimeState: AutoCombatRealtimeState = {
 
   lastAppliedEventSequence: null,
   lastAppliedEventTimestamp: null,
+  lastResourceEventSequence: null,
+  lastResourceEventTimestamp: null,
 
   updatedAt: 0,
 };
@@ -774,6 +779,15 @@ function shouldPreservePreviousCharacterHpAgainstOlderStatus(params: {
     return false;
   }
 
+  const statusSequence = getStatusSnapshotSequence(status);
+  if (
+    baseState.lastResourceEventSequence !== null &&
+    (statusSequence === null ||
+      statusSequence < baseState.lastResourceEventSequence)
+  ) {
+    return true;
+  }
+
   const currentHp = getOptionalStatusNumber(baseState.character?.currentHp);
   const nextHp = getStatusCharacterHp(status);
 
@@ -1074,6 +1088,12 @@ function clearRealtimeRuntimeState(
     lastAppliedEventTimestamp: clearEventCaches
       ? null
       : state.lastAppliedEventTimestamp,
+    lastResourceEventSequence: clearEventCaches
+      ? null
+      : state.lastResourceEventSequence,
+    lastResourceEventTimestamp: clearEventCaches
+      ? null
+      : state.lastResourceEventTimestamp,
 
     updatedAt: now(),
   };
@@ -2612,6 +2632,19 @@ function syncRealtimeEventResources(
     return state;
   }
 
+  const eventSequence = getStoredRealtimeEventSequence(event);
+  const eventTimestamp = getRealtimeEventAppliedTimestamp(event);
+  if (
+    (eventSequence !== null &&
+      state.lastResourceEventSequence !== null &&
+      eventSequence <= state.lastResourceEventSequence) ||
+    (eventSequence === null &&
+      state.lastResourceEventTimestamp !== null &&
+      eventTimestamp <= state.lastResourceEventTimestamp)
+  ) {
+    return state;
+  }
+
   const eventType = normalizeRealtimeEventType(event);
   const nextCharacter =
     eventType === "MOB_DEFEATED" ||
@@ -2626,7 +2659,11 @@ function syncRealtimeEventResources(
     ? buildPotionStateFromRealtimeEvent(event, state.potion)
     : state.potion;
 
-  if (nextCharacter === state.character && nextPotion === state.potion) {
+  if (
+    nextCharacter === state.character &&
+    nextPotion === state.potion &&
+    eventSequence === null
+  ) {
     return state;
   }
 
@@ -2635,6 +2672,14 @@ function syncRealtimeEventResources(
     characterId,
     character: nextCharacter,
     potion: nextPotion,
+    lastResourceEventSequence:
+      eventSequence !== null
+        ? Math.max(state.lastResourceEventSequence ?? 0, eventSequence)
+        : state.lastResourceEventSequence,
+    lastResourceEventTimestamp: Math.max(
+      state.lastResourceEventTimestamp ?? 0,
+      eventTimestamp,
+    ),
     status:
       state.status && nextCharacter && state.status.character
         ? {
