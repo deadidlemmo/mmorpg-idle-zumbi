@@ -1,6 +1,23 @@
 import type { HuntingVisualPresence } from "../../../services/websocket/socketClient";
 import type { HuntingVisualPlayer } from "../components/phaser/createSuburbioHuntingGame";
 
+const REMOTE_PLAYER_BASE_SPEED = 96;
+const REMOTE_POSE_INTERVAL_SECONDS = 0.2;
+const REMOTE_PLAYER_MAX_CATCH_UP_SPEED = 320;
+
+export function getRemotePlayerInterpolationSpeed(distance: number) {
+  const normalizedDistance = Math.max(0, Number(distance) || 0);
+  if (normalizedDistance <= 0) return 0;
+
+  return Math.min(
+    REMOTE_PLAYER_MAX_CATCH_UP_SPEED,
+    Math.max(
+      REMOTE_PLAYER_BASE_SPEED,
+      normalizedDistance / REMOTE_POSE_INTERVAL_SECONDS,
+    ),
+  );
+}
+
 export function mergeHuntingVisualPlayers(
   restPlayers: readonly HuntingVisualPresence[],
   livePlayers: readonly HuntingVisualPresence[],

@@ -2,12 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildLegacyHuntingPresenceResponse,
+  getRemotePlayerInterpolationSpeed,
   mergeHuntingVisualPlayers,
   type ActiveCharactersPresenceResponse,
 } from "../utils/hunting-presence";
 import type { HuntingVisualPresence } from "../../../services/websocket/socketClient";
 
 const now = new Date("2026-09-12T15:00:00.000Z");
+
+test("interpola poses remotas no ritmo do ator sem pausas entre pacotes", () => {
+  assert.equal(getRemotePlayerInterpolationSpeed(0), 0);
+  assert.equal(getRemotePlayerInterpolationSpeed(19.2), 96);
+  assert.equal(getRemotePlayerInterpolationSpeed(32), 160);
+  assert.equal(getRemotePlayerInterpolationSpeed(96), 320);
+});
 
 function entry({
   id,

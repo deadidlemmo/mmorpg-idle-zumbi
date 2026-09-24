@@ -37,6 +37,7 @@ import {
   shouldReplaceHuntingThreat,
   shouldPresentHuntingMobDeath,
 } from "../../utils/hunting-combat-visual";
+import { getRemotePlayerInterpolationSpeed } from "../../utils/hunting-presence";
 
 const HUNTING_STATE_EVENT = "hunting-scene:state";
 const HUNTING_XP_GAIN_EVENT = "hunting-scene:xp-gain";
@@ -2888,7 +2889,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const distance = Math.hypot(dx, dy);
     if (distance > HUNTING_TILE_SIZE * 8) return false;
     if (distance <= 0.5) return false;
-    const catchUpSpeed = Math.max(160, Math.min(420, distance * 4.5));
+    const catchUpSpeed = getRemotePlayerInterpolationSpeed(distance);
     const travelDistance = Math.min(
       distance,
       (catchUpSpeed * Math.min(delta, 80)) / 1000,
