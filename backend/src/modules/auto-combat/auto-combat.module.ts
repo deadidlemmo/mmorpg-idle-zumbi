@@ -7,6 +7,7 @@ import { ActiveCharacterPresenceService } from './active-character-presence.serv
 import { AutoCombatController } from './auto-combat.controller';
 import { AutoCombatGateway } from './auto-combat.gateway';
 import { AutoCombatService } from './auto-combat.service';
+import { HuntingVisualPositionService } from './hunting-visual-position.service';
 
 @Module({
   imports: [PrismaModule, ActivityGuardModule, AuthModule, CosmeticsModule],
@@ -15,6 +16,7 @@ import { AutoCombatService } from './auto-combat.service';
     AutoCombatService,
     AutoCombatGateway,
     ActiveCharacterPresenceService,
+    HuntingVisualPositionService,
   ],
   exports: [AutoCombatService],
 })

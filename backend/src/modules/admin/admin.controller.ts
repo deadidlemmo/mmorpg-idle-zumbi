@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AdminService } from './admin.service';
 import { GetProductMetricsDto } from './dto/get-product-metrics.dto';
+import { GrantCharacterCashDto } from './dto/grant-character-cash.dto';
 import { ListAdminUsersDto } from './dto/list-admin-users.dto';
 import { UpdateUserSuspensionDto } from './dto/update-user-suspension.dto';
 
@@ -56,6 +57,19 @@ export class AdminController {
     @Body() dto: UpdateUserSuspensionDto,
   ) {
     return this.adminService.updateSuspension(request.user.id, userId, dto);
+  }
+
+  @Post('characters/:id/cash/grant')
+  grantCharacterCash(
+    @Req() request: { user: { id: string } },
+    @Param('id') characterId: string,
+    @Body() dto: GrantCharacterCashDto,
+  ) {
+    return this.adminService.grantCharacterCash(
+      request.user.id,
+      characterId,
+      dto,
+    );
   }
 
   @Get('audit-logs')

@@ -212,6 +212,11 @@ export type AutoCombatRealtimeAction =
       event: AutoCombatRealtimeEvent;
     }
   | {
+      type: "SYNC_EVENT_RESOURCES";
+      characterId: string;
+      event: AutoCombatRealtimeEvent;
+    }
+  | {
       type: "PROCESS_NEXT_EVENT";
     }
   | {
@@ -2594,6 +2599,58 @@ function applyRealtimeEventSnapshot(
   };
 }
 
+function syncRealtimeEventResources(
+  state: AutoCombatRealtimeState,
+  characterId: string,
+  event: AutoCombatRealtimeEvent,
+): AutoCombatRealtimeState {
+  if (state.characterId && state.characterId !== characterId) {
+    return state;
+  }
+
+  if (shouldRejectOutOfOrderEvent(state, event)) {
+    return state;
+  }
+
+  const eventType = normalizeRealtimeEventType(event);
+  const nextCharacter =
+    eventType === "MOB_DEFEATED" ||
+    eventType === "PLAYER_DEFEATED" ||
+    eventType === "POTION_USED"
+      ? mergeCharacterKeepingHighestXp(
+          state.character,
+          buildCharacterStateFromRealtimeEvent(event, state.character),
+        )
+      : buildCharacterStateFromRealtimeEvent(event, state.character);
+  const nextPotion = isPotionUsedEvent(event)
+    ? buildPotionStateFromRealtimeEvent(event, state.potion)
+    : state.potion;
+
+  if (nextCharacter === state.character && nextPotion === state.potion) {
+    return state;
+  }
+
+  return {
+    ...state,
+    characterId,
+    character: nextCharacter,
+    potion: nextPotion,
+    status:
+      state.status && nextCharacter && state.status.character
+        ? {
+            ...state.status,
+            character: {
+              ...state.status.character,
+              currentHp:
+                nextCharacter.currentHp ?? state.status.character.currentHp,
+              maxHp: nextCharacter.maxHp ?? state.status.character.maxHp,
+            },
+          }
+        : state.status,
+    updatedAt: now(),
+  };
+}
+
 function flushEventQueueWithoutAnimation(
   state: AutoCombatRealtimeState,
 ): AutoCombatRealtimeState {
@@ -3308,6 +3365,14 @@ export function autoCombatRealtimeReducer(
 
     case "ENQUEUE_EVENT": {
       return enqueueRealtimeEvent(state, action.characterId, action.event);
+    }
+
+    case "SYNC_EVENT_RESOURCES": {
+      return syncRealtimeEventResources(
+        state,
+        action.characterId,
+        action.event,
+      );
     }
 
     case "PROCESS_NEXT_EVENT": {

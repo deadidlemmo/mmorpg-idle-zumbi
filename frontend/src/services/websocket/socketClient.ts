@@ -9,6 +9,40 @@ import type {
 } from "../../features/auto-combat/types/auto-combat.types";
 import type { WorldBossStatusResponse } from "../../features/world-bosses/types/world-bosses.types";
 import { getAuthToken } from "../api/authToken";
+import { normalizeSocketBaseUrl } from "./socketBaseUrl";
+import type { HuntingAreaId } from "../../features/auto-combat/utils/hunting-scene";
+import type { HuntingVisualPhase } from "../../features/auto-combat/utils/hunting-visual-state";
+
+export type HuntingVisualPresenceState = HuntingVisualPhase | "combat";
+export type HuntingVisualCombatEventType =
+  | "MOB_SPAWNED"
+  | "MOB_HIT"
+  | "PLAYER_HIT"
+  | "DODGE"
+  | "POTION_USED"
+  | "MOB_DEFEATED"
+  | "PLAYER_DEFEATED";
+
+export type HuntingVisualPose = {
+  characterId: string;
+  areaId: HuntingAreaId;
+  tileX: number;
+  tileY: number;
+  direction: "up" | "down" | "left" | "right";
+  visualState: HuntingVisualPresenceState;
+  moving: boolean;
+  combatMobName?: string | null;
+  combatCycleKey?: string | null;
+  combatEventType?: HuntingVisualCombatEventType | null;
+  combatEventKey?: string | null;
+};
+
+export type HuntingVisualPresence = HuntingVisualPose & {
+  displayName: string;
+  mapId: string;
+  subMapId: string | null;
+  updatedAt: number;
+};
 
 export type {
   AutoCombatRealtimeActor,
@@ -50,6 +84,9 @@ export type AutoCombatServerToClientEvents = {
   "auto-combat:joined": (payload: AutoCombatJoinedPayload) => void;
   "auto-combat:left": (payload: AutoCombatLeftPayload) => void;
   "auto-combat:error": (payload: AutoCombatSocketError) => void;
+  "auto-combat:visual:snapshot": (payload: { areaId: HuntingAreaId; players: HuntingVisualPresence[] }) => void;
+  "auto-combat:visual:pose": (payload: HuntingVisualPresence) => void;
+  "auto-combat:visual:left": (payload: { characterId: string }) => void;
 
   "auto-combat:status": (payload: AutoCombatStatusResponse) => void;
   "auto-combat:session-updated": (payload: AutoCombatStatusResponse) => void;
@@ -69,6 +106,9 @@ export type AutoCombatServerToClientEvents = {
 export type AutoCombatClientToServerEvents = {
   "auto-combat:join": (payload: { characterId: string }) => void;
   "auto-combat:leave": (payload: { characterId: string }) => void;
+  "auto-combat:visual:join": (payload: HuntingVisualPose) => void;
+  "auto-combat:visual:pose": (payload: HuntingVisualPose) => void;
+  "auto-combat:visual:leave": () => void;
   "auto-combat:telemetry": (payload: AutoCombatClientTelemetryPayload) => void;
 };
 
@@ -81,23 +121,14 @@ const DEFAULT_API_BASE_URL = "http://localhost:3000";
 const AUTO_COMBAT_NAMESPACE = "/auto-combat";
 const WORLD_BOSSES_NAMESPACE = "/world-bosses";
 
-function normalizeSocketBaseUrl(url: unknown) {
-  const rawUrl = String(url || DEFAULT_API_BASE_URL).trim();
-
-  const normalizedUrl = rawUrl
-    .replace(/\/+$/, "")
-    .replace(/\/api$/i, "")
-    .replace(/\/auto-combat$/i, "");
-
-  return normalizedUrl || DEFAULT_API_BASE_URL;
-}
-
 const apiBaseUrl = normalizeSocketBaseUrl(
-  import.meta.env.VITE_API_URL ?? DEFAULT_API_BASE_URL,
+  import.meta.env.VITE_API_URL,
+  DEFAULT_API_BASE_URL,
 );
 
 const socketBaseUrl = normalizeSocketBaseUrl(
-  import.meta.env.VITE_SOCKET_URL ?? apiBaseUrl,
+  import.meta.env.VITE_SOCKET_URL,
+  apiBaseUrl,
 );
 
 const autoCombatSocketUrl = `${socketBaseUrl}${AUTO_COMBAT_NAMESPACE}`;

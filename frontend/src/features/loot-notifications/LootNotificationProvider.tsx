@@ -1,11 +1,13 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import {
   LootNotificationContext,
@@ -13,6 +15,11 @@ import {
   type LootNotificationPayload,
 } from './lootNotificationContext';
 import { enqueueNotifications } from './lootNotificationQueue';
+import {
+  getPerformanceDiagnostics,
+  getPerformanceExperiment,
+  type PerformanceDiagnosticsSession,
+} from '../performance/performanceDiagnostics';
 import './loot-notifications.css';
 
 interface LootNotificationToast extends LootNotificationPayload {
@@ -74,12 +81,29 @@ function trimProcessedKeys(keys: Set<string>) {
   return new Set(Array.from(keys).slice(-Math.floor(MAX_PROCESSED_KEYS / 2)));
 }
 
+function recordToastAnimationStart(
+  diagnostics: PerformanceDiagnosticsSession,
+  id: string,
+  name: string,
+  element: HTMLElement,
+) {
+  const style = window.getComputedStyle(element);
+  const names = style.animationName.split(',').map((value) => value.trim());
+  const durations = style.animationDuration.split(',').map((value) => value.trim());
+  const index = names.indexOf(name);
+  const duration = durations[index % durations.length] ?? '0ms';
+  const expectedMs = parseFloat(duration) * (duration.endsWith('ms') ? 1 : 1000);
+  diagnostics.animationStarted(id, name, expectedMs, performance.now());
+}
+
 export function LootNotificationProvider({
   children,
 }: LootNotificationProviderProps) {
   const [notifications, setNotifications] = useState<LootNotificationToast[]>(
     [],
   );
+  const [autoCombatHudTarget, setAutoCombatHudTarget] =
+    useState<HTMLElement | null>(null);
   const processedKeysRef = useRef<Set<string>>(new Set());
 
   const removeNotification = useCallback((id: string) => {
@@ -156,6 +180,23 @@ export function LootNotificationProvider({
   );
 
   const activeNotificationId = notifications[0]?.id ?? null;
+  const activeNotificationKey = notifications[0]?.idempotencyKey ?? null;
+  const diagnostics = getPerformanceDiagnostics();
+  const performanceExperiment = getPerformanceExperiment();
+
+  useEffect(() => {
+    if (!diagnostics) return;
+    diagnostics.setToastCounts(activeNotificationId ? 1 : 0, Math.max(0, notifications.length - 1));
+  }, [diagnostics, activeNotificationId, notifications.length]);
+
+  useLayoutEffect(() => {
+    if (!diagnostics || !activeNotificationId) return;
+    const now = performance.now();
+    diagnostics.recordReactCommit('React aviso', now);
+    diagnostics.toastShown(activeNotificationId, now, activeNotificationKey ?? undefined);
+    return () => diagnostics.toastHidden(activeNotificationId, LOOT_NOTIFICATION_TTL_MS, performance.now());
+  }, [diagnostics, activeNotificationId, activeNotificationKey]);
+
 
   useEffect(() => {
     if (!activeNotificationId) {
@@ -170,8 +211,61 @@ export function LootNotificationProvider({
   }, [activeNotificationId, removeNotification]);
 
   const value = useMemo<LootNotificationContextValue>(
-    () => ({ notifyLoot, notifyLootBatch }),
+    () => ({ notifyLoot, notifyLootBatch, setAutoCombatHudTarget }),
     [notifyLoot, notifyLootBatch],
+  );
+
+  const activeNotification = notifications[0] ?? null;
+  const notificationCard = activeNotification ? (
+    <article
+      key={activeNotification.id}
+      className={`loot-notification-card${autoCombatHudTarget && activeNotification.source === 'auto-combat' ? ' loot-notification-card--hud' : ''}${diagnostics && !performanceExperiment.noticeEffects ? ' loot-notification-card--perf-no-animation' : ''}`}
+      onAnimationStart={diagnostics ? (event) => recordToastAnimationStart(diagnostics, activeNotification.id, event.animationName, event.currentTarget) : undefined}
+      onAnimationEnd={diagnostics ? (event) => diagnostics.animationEnded(activeNotification.id, event.animationName, performance.now()) : undefined}
+      data-rarity={String(activeNotification.rarity ?? 'COMMON').toLowerCase()}
+      data-source={String(activeNotification.source ?? 'system').toLowerCase()}
+      data-kind={String(activeNotification.kind ?? 'loot').toLowerCase()}
+      data-notification-key={activeNotification.idempotencyKey}
+    >
+      <span className="loot-notification-card__icon" aria-hidden="true">
+        {activeNotification.imageUrl ? (
+          <img src={activeNotification.imageUrl} alt="" loading="lazy" />
+        ) : (
+          <span>{getItemInitials(activeNotification.itemName)}</span>
+        )}
+      </span>
+
+      <span className="loot-notification-card__body">
+        <span className="loot-notification-card__eyebrow">
+          {activeNotification.eyebrow ?? getSourceLabel(activeNotification.source)}
+        </span>
+        <strong className="loot-notification-card__name">
+          {activeNotification.displayQuantity !== false && activeNotification.quantity > 1
+            ? `+${activeNotification.quantity} ${activeNotification.itemName}`
+            : activeNotification.itemName}
+        </strong>
+        {activeNotification.description ? (
+          <span className="loot-notification-card__description">
+            {activeNotification.description}
+          </span>
+        ) : null}
+      </span>
+
+      <button
+        type="button"
+        className="loot-notification-card__close"
+        aria-label={`Fechar notificação de ${activeNotification.itemName}`}
+        onClick={() => removeNotification(activeNotification.id)}
+      >
+        <X aria-hidden="true" />
+      </button>
+    </article>
+  ) : null;
+
+  const shouldUseAutoCombatHud = Boolean(
+    notificationCard &&
+      autoCombatHudTarget &&
+      activeNotification?.source === 'auto-combat',
   );
 
   return (
@@ -184,51 +278,11 @@ export function LootNotificationProvider({
         aria-atomic="true"
         aria-relevant="additions text"
       >
-        {notifications.slice(0, 1).map((notification) => (
-          <article
-            key={notification.id}
-            className="loot-notification-card"
-            data-rarity={String(notification.rarity ?? 'COMMON').toLowerCase()}
-            data-source={String(notification.source ?? 'system').toLowerCase()}
-            data-kind={String(notification.kind ?? 'loot').toLowerCase()}
-            data-notification-key={notification.idempotencyKey}
-          >
-            <span className="loot-notification-card__icon" aria-hidden="true">
-              {notification.imageUrl ? (
-                <img src={notification.imageUrl} alt="" loading="lazy" />
-              ) : (
-                <span>{getItemInitials(notification.itemName)}</span>
-              )}
-            </span>
-
-            <span className="loot-notification-card__body">
-              <span className="loot-notification-card__eyebrow">
-                {notification.eyebrow ?? getSourceLabel(notification.source)}
-              </span>
-              <strong className="loot-notification-card__name">
-                {notification.displayQuantity !== false &&
-                notification.quantity > 1
-                  ? `+${notification.quantity} ${notification.itemName}`
-                  : notification.itemName}
-              </strong>
-              {notification.description ? (
-                <span className="loot-notification-card__description">
-                  {notification.description}
-                </span>
-              ) : null}
-            </span>
-
-            <button
-              type="button"
-              className="loot-notification-card__close"
-              aria-label={`Fechar notificação de ${notification.itemName}`}
-              onClick={() => removeNotification(notification.id)}
-            >
-              <X aria-hidden="true" />
-            </button>
-          </article>
-        ))}
+        {shouldUseAutoCombatHud ? null : notificationCard}
       </div>
+      {shouldUseAutoCombatHud && autoCombatHudTarget
+        ? createPortal(notificationCard, autoCombatHudTarget)
+        : null}
     </LootNotificationContext.Provider>
   );
 }

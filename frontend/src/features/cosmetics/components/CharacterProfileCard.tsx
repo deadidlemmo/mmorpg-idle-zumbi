@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { MapPin } from "lucide-react";
+import { CosmeticEffectLayer } from "./CosmeticEffectLayer";
 import { CharacterPortrait } from "./CharacterPortrait";
 import {
   getCosmeticEffectClass,
@@ -50,7 +51,9 @@ export function CharacterProfileCard({
         .join(" ")}
       style={style}
     >
-      <span className="cosmetic-effect-layer" aria-hidden="true" />
+      <CosmeticEffectLayer
+        effectPreset={appearance?.profileEffect?.effectPreset}
+      />
       <CharacterPortrait
         className="cosmetic-profile-card__portrait"
         name={name}

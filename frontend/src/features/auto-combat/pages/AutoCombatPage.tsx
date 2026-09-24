@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { RefreshCw, Swords, Trash2, X } from "lucide-react";
@@ -12,6 +12,8 @@ import {
   type ActivityTimeline,
 } from "../../../components/game/activityTimeline";
 import { getConsumableItemImageUrl } from "../../consumables/utils/consumableItemAssets";
+import { getPerformanceDiagnostics } from "../../performance/performanceDiagnostics";
+import { getAutoCombatSocket } from "../../../services/websocket/socketClient";
 import {
   getCharacterOverview,
   updateCharacterCurrentMap,
@@ -22,7 +24,11 @@ import "../../dashboard/dashboard.css";
 import type { CharacterOverviewResponse } from "../../dashboard/types/dashboard.types";
 import {
   buildHuntingActivityQueue,
+  buildHuntingDefeatedQueue,
   countHuntingActivityQueue,
+  mergeHuntingDefeatedRealtimeEvents,
+  type HuntingActivityDefeatedSource,
+  type HuntingActivityQueueEntry,
   type HuntingActivityTrackedSource,
 } from "../../dashboard/utils/huntingActivityPresentation";
 import { getGameItemImageUrl } from "../../inventory/utils/itemImageAssets";
@@ -34,6 +40,10 @@ import {
 import "../auto-combat-mob-images.css";
 import "../auto-combat.css";
 import { AutoCombatBattleLog } from "../components/AutoCombatBattleLog";
+import {
+  AutoCombatHuntingScene,
+  type AutoCombatHuntingLootEntry,
+} from "../components/AutoCombatHuntingScene";
 import { AutoCombatMobTransition } from "../components/AutoCombatMobTransition";
 import { AutoCombatPotionConfigModal } from "../components/AutoCombatPotionConfigModal";
 import { AutoCombatPotionStockCard } from "../components/AutoCombatPotionStockCard";
@@ -64,6 +74,7 @@ import type {
   AutoCombatEncounterViewModel,
   AutoCombatMapViewModel,
   AutoCombatRealtimeEvent,
+  AutoCombatRewardLootViewModel,
   AutoCombatStatusResponse,
   AutoCombatTrackedMonsterViewModel,
   StartAutoCombatBattlePayload,
@@ -126,6 +137,7 @@ import {
   getHuntEmptyStageCopy,
   shouldShowAutoCombatSessionStage,
 } from "../utils/hunt-stage.helpers";
+import { isSuburbioSilenciosoTierOneScene } from "../utils/hunting-scene";
 import { mergeAutoCombatStatusDetails } from "../utils/auto-combat-status-merge";
 import {
   type BattleBatchCountdown,
@@ -689,6 +701,91 @@ function getLootRarityClassName(rarity?: string | null) {
   return "auto-combat-threat-loot-card--common";
 }
 
+function buildHuntingSessionLoot(
+  status?: AutoCombatStatusResponse | null,
+): AutoCombatHuntingLootEntry[] {
+  const processing = status?.processing as
+    | { loot?: { items?: AutoCombatRewardLootViewModel[] | null } | null }
+    | null
+    | undefined;
+  const sources = [
+    status?.sessionSummary?.loot?.items,
+    status?.rewards?.loots,
+    processing?.loot?.items,
+  ];
+  const grouped = new Map<string, AutoCombatRewardLootViewModel>();
+
+  for (const source of sources) {
+    for (const loot of source ?? []) {
+      const itemName = String(loot.itemName ?? loot.item?.name ?? "Item").trim();
+      const key = String(loot.itemId ?? itemName).trim();
+      const quantity = Math.max(0, Math.floor(toSafeNumber(loot.quantity, 0)));
+      if (!key || !itemName || quantity <= 0) continue;
+
+      const current = grouped.get(key);
+      if (!current || quantity > current.quantity) {
+        grouped.set(key, { ...loot, itemName, quantity });
+      }
+    }
+  }
+
+  return Array.from(grouped.values())
+    .map((loot) => ({
+      key: loot.itemId || loot.itemName,
+      itemName: loot.itemName,
+      quantity: loot.quantity,
+      rarity: String(loot.rarity ?? "COMMON"),
+      imageUrl: getGameItemImageUrl({
+        ...loot.item,
+        name: loot.itemName,
+        tier: loot.item?.tier ?? loot.tier,
+        slot: loot.item?.slot ?? loot.slot,
+      }),
+    }))
+    .sort((left, right) => left.itemName.localeCompare(right.itemName, "pt-BR"));
+}
+
+type HuntingDefeatedProjection = {
+  key: string;
+  baseline: HuntingActivityQueueEntry[];
+  liveEvents: AutoCombatRealtimeEvent[];
+};
+
+type HuntingDefeatedRealtimeLedger = {
+  sessionKey: string;
+  events: AutoCombatRealtimeEvent[];
+};
+
+function getHuntingDefeatedEventKey(event: AutoCombatRealtimeEvent) {
+  return String(
+    event.eventKey ?? event.eventId ?? event.id ?? event.sequence ?? "",
+  ).trim();
+}
+
+function projectLiveHuntingDefeats(
+  projection: HuntingDefeatedProjection,
+) {
+  let projectedTotal = countHuntingActivityQueue(projection.baseline);
+  const projectedEvents = projection.liveEvents.map((event) => {
+    const killsGained = Math.max(
+      1,
+      Math.floor(toSafeNumber(event.killsGained, 1)),
+    );
+    projectedTotal += killsGained;
+
+    return {
+      ...event,
+      totalKills: projectedTotal,
+      killsGained,
+    };
+  });
+
+  return mergeHuntingDefeatedRealtimeEvents(
+    projection.baseline,
+    projectedEvents,
+  );
+}
+
 function formatDropChance(chance?: number | null) {
   const safeChance = Number(chance);
 
@@ -828,6 +925,7 @@ export function AutoCombatPage() {
 
   const { characterId } = useParams();
   const [searchParams] = useSearchParams();
+  const performanceDiagnostics = getPerformanceDiagnostics();
   const requestedMapId = searchParams.get("mapId") ?? "";
   const requestedSubMapId = searchParams.get("subMapId") ?? "";
   const realtimeContext = useAutoCombatRealtime();
@@ -847,6 +945,12 @@ export function AutoCombatPage() {
 
   const [activeTab, setActiveTab] = useState<AutoCombatTab>("battle");
   const [hasStartedHunt, setHasStartedHunt] = useState(false);
+  const [huntingImmersiveRequestKey, setHuntingImmersiveRequestKey] =
+    useState(0);
+
+  useLayoutEffect(() => {
+    performanceDiagnostics?.recordReactCommit("React pagina", performance.now());
+  });
 
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
@@ -883,6 +987,8 @@ export function AutoCombatPage() {
   >([]);
   const [localActiveEvent, setLocalActiveEvent] =
     useState<AutoCombatRealtimeEvent | null>(null);
+  const [huntingDefeatedRealtimeLedger, setHuntingDefeatedRealtimeLedger] =
+    useState<HuntingDefeatedRealtimeLedger>({ sessionKey: "", events: [] });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -908,6 +1014,11 @@ export function AutoCombatPage() {
     counts: BattleTargetDisplayCounts;
   } | null>(null);
   const processedPotionEventKeysRef = useRef<Set<string>>(new Set());
+  const potionReconciliationRequestRef = useRef(0);
+  const potionReconciliationTimerRef = useRef<number | null>(null);
+  const wasRealtimeSynchronizingRef = useRef(false);
+  const huntingDefeatedProjectionRef =
+    useRef<HuntingDefeatedProjection | null>(null);
 
   useEffect(() => {
     autoPotionConfigRef.current = autoPotionConfig;
@@ -924,6 +1035,7 @@ export function AutoCombatPage() {
     setLocalSessionTotals(null);
     setLocalBattleLogEvents([]);
     setLocalActiveEvent(null);
+    setHuntingDefeatedRealtimeLedger({ sessionKey: "", events: [] });
     setIsStartingHunt(false);
     setIsPotionConfigPanelOpen(false);
     setPotionConfigMessage("");
@@ -931,6 +1043,7 @@ export function AutoCombatPage() {
     lastPositiveRemainingSecondsRef.current = null;
     stableBattleBatchCountdownRef.current = null;
     stableBattleTargetCountsRef.current = null;
+    huntingDefeatedProjectionRef.current = null;
   }, [characterId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -1093,6 +1206,14 @@ export function AutoCombatPage() {
     effectiveSession?.battleTargetEncounterId ??
     activeBattleSelection?.encounterId ??
     null;
+  const isSuburbioTierOneCombat =
+    isBackendCombatPhase &&
+    isSuburbioSilenciosoTierOneScene({
+      mapName:
+        effectiveStatus?.subMap?.map?.name ?? effectiveSession?.map?.name,
+      tier:
+        effectiveStatus?.subMap?.map?.tier ?? effectiveSession?.map?.tier,
+    });
   const activeBattleTargetTotal = Math.max(
     0,
     Math.floor(
@@ -1118,6 +1239,7 @@ export function AutoCombatPage() {
   const showInlineHuntBattle =
     showActiveSession &&
     Boolean(
+      isSuburbioTierOneCombat ||
       activeBattleTargetMobId ||
       activeBattleTargetEncounterId ||
       activeBattleTargetTotal > 0 ||
@@ -1165,6 +1287,48 @@ export function AutoCombatPage() {
     status: AutoCombatStatusResponse;
   } | null>(null);
   const effectiveSessionId = effectiveSession?.id ?? null;
+
+  useEffect(() => {
+    const socket = getAutoCombatSocket();
+    const handleDefeatedEvent = (event: AutoCombatRealtimeEvent) => {
+      if (
+        String(event.type ?? "").trim().toUpperCase() !== "MOB_DEFEATED" ||
+        (event.characterId && event.characterId !== characterId)
+      ) {
+        return;
+      }
+
+      const eventKey = getHuntingDefeatedEventKey(event);
+      if (!eventKey) return;
+
+      const sessionKey = String(
+        event.sessionId ?? effectiveSessionId ?? "no-session",
+      );
+      setHuntingDefeatedRealtimeLedger((current) => {
+        const currentEvents =
+          current.sessionKey === sessionKey ? current.events : [];
+        if (
+          currentEvents.some(
+            (currentEvent) =>
+              getHuntingDefeatedEventKey(currentEvent) === eventKey,
+          )
+        ) {
+          return current;
+        }
+
+        return {
+          sessionKey,
+          events: [...currentEvents, event].slice(-120),
+        };
+      });
+    };
+
+    socket.on("auto-combat:event", handleDefeatedEvent);
+    return () => {
+      socket.off("auto-combat:event", handleDefeatedEvent);
+    };
+  }, [characterId, effectiveSessionId]);
+
   const timerStatusCandidate = useMemo(
     () =>
       pickAutoCombatTimerStatus({
@@ -1477,6 +1641,83 @@ export function AutoCombatPage() {
           potionItem: nextPotion,
         };
       });
+    },
+    [],
+  );
+
+  const reconcilePotionState = useCallback(async () => {
+    if (!characterId) return;
+    const requestId = potionReconciliationRequestRef.current + 1;
+    potionReconciliationRequestRef.current = requestId;
+    const [inventoryData, potionConfigData] = await Promise.all([
+      getCharacterInventoryRaw(characterId).catch(() => null),
+      getCharacterPotionConfigRaw(characterId).catch(() => null),
+    ]);
+    if (potionReconciliationRequestRef.current !== requestId) return;
+
+    setAvailablePotions(normalizePotionInventoryResponse(inventoryData));
+    const normalizedConfig = normalizePotionConfigResponse(potionConfigData);
+    if (normalizedConfig) {
+      setAutoPotionConfig(normalizedConfig);
+      setSelectedPotionItemId(normalizedConfig.potionItemId ?? "");
+    }
+  }, [characterId]);
+
+  const schedulePotionReconciliation = useCallback(
+    (delayMs = 180) => {
+      if (potionReconciliationTimerRef.current !== null) {
+        window.clearTimeout(potionReconciliationTimerRef.current);
+      }
+      potionReconciliationTimerRef.current = window.setTimeout(() => {
+        potionReconciliationTimerRef.current = null;
+        void reconcilePotionState();
+      }, delayMs);
+    },
+    [reconcilePotionState],
+  );
+
+  useEffect(() => {
+    const socket = getAutoCombatSocket();
+    const handleResourceEvent = (event: AutoCombatRealtimeEvent) => {
+      if (event.characterId && event.characterId !== characterId) return;
+      const eventType = normalizeRealtimeEventType(event.type);
+      if (eventType === "POTION_USED") {
+        const eventKey = getPotionEventKey(event);
+        if (!processedPotionEventKeysRef.current.has(eventKey)) {
+          processedPotionEventKeysRef.current.add(eventKey);
+          applyPotionRealtimeQuantityUpdate(event);
+        }
+        schedulePotionReconciliation(80);
+      } else if (eventType === "MOB_DEFEATED") {
+        schedulePotionReconciliation();
+      }
+    };
+    const handleReconnect = () => schedulePotionReconciliation(0);
+    socket.on("auto-combat:event", handleResourceEvent);
+    socket.on("connect", handleReconnect);
+    return () => {
+      socket.off("auto-combat:event", handleResourceEvent);
+      socket.off("connect", handleReconnect);
+    };
+  }, [
+    applyPotionRealtimeQuantityUpdate,
+    characterId,
+    schedulePotionReconciliation,
+  ]);
+
+  useEffect(() => {
+    const wasSynchronizing = wasRealtimeSynchronizingRef.current;
+    wasRealtimeSynchronizingRef.current = isRealtimeSynchronizing;
+    if (wasSynchronizing && !isRealtimeSynchronizing) {
+      schedulePotionReconciliation(0);
+    }
+  }, [isRealtimeSynchronizing, schedulePotionReconciliation]);
+
+  useEffect(
+    () => () => {
+      if (potionReconciliationTimerRef.current !== null) {
+        window.clearTimeout(potionReconciliationTimerRef.current);
+      }
     },
     [],
   );
@@ -2054,10 +2295,23 @@ export function AutoCombatPage() {
       ? "1 opção no inventário"
       : `${potionOptions.length} opções no inventário`;
 
-  const configuredPotionQuantity = getPotionQuantity(
+  const inventoryConfiguredPotionQuantity = getPotionQuantity(
     currentPotionConfig,
     availablePotions,
   );
+  const realtimePotionItemId = String(
+    realtimeState.potion?.potionItemId ?? "",
+  ).trim();
+  const realtimePotionQuantity = Number(
+    realtimeState.potion?.quantityRemaining ??
+      realtimeState.potion?.quantityAfter,
+  );
+  const configuredPotionQuantity =
+    realtimePotionItemId &&
+    configuredPotionItem?.id === realtimePotionItemId &&
+    Number.isFinite(realtimePotionQuantity)
+      ? Math.max(0, Math.floor(realtimePotionQuantity))
+      : inventoryConfiguredPotionQuantity;
 
   const potionSlots = Array.from({ length: 1 }, () => {
     return currentPotionConfig;
@@ -3036,6 +3290,8 @@ export function AutoCombatPage() {
           : foundEnemiesCount,
     ),
   );
+  const shouldStartNewHuntFromReady =
+    isBackendEncounterReadyPhase && availableEnemiesCount <= 0;
   const effectiveRemainingHuntCapacity =
     maxTrackedEnemies > 0
       ? Math.max(0, maxTrackedEnemies - availableEnemiesCount)
@@ -3560,6 +3816,20 @@ export function AutoCombatPage() {
             0,
             100,
           );
+  const shouldShowSuburbioHuntingScene =
+    (isBackendHuntingPhase ||
+      isBackendEncounterReadyPhase ||
+      showInlineHuntBattle) &&
+    isSuburbioSilenciosoTierOneScene({
+      mapName:
+        effectiveStatus?.subMap?.map?.name ??
+        effectiveSession?.map?.name ??
+        selectedMapName,
+      tier:
+        effectiveStatus?.subMap?.map?.tier ??
+        effectiveSession?.map?.tier ??
+        selectedMap?.tier,
+    });
   const huntTotalElapsedSeconds = Math.max(
     0,
     Math.floor((syncedSessionNowMs - huntStartedAtMs) / 1000),
@@ -3685,6 +3955,55 @@ export function AutoCombatPage() {
   const topBarHuntingQueue = buildHuntingActivityQueue([
     trackedMonsterSnapshots as HuntingActivityTrackedSource[],
   ]);
+  const canonicalDefeatedHuntingQueue = buildHuntingDefeatedQueue([
+    effectiveStatus?.sessionSummary?.mobs
+      ?.kills as HuntingActivityDefeatedSource[] | undefined,
+    effectiveStatus?.rewards?.mobs as
+      | HuntingActivityDefeatedSource[]
+      | undefined,
+  ]);
+  const defeatedProjectionKey = `${characterId}:${statusScopeMapId ?? "no-map"}:${effectiveSessionId ?? "no-session"}`;
+  let defeatedProjection = huntingDefeatedProjectionRef.current;
+
+  if (!defeatedProjection || defeatedProjection.key !== defeatedProjectionKey) {
+    defeatedProjection = {
+      key: defeatedProjectionKey,
+      baseline: canonicalDefeatedHuntingQueue.map((entry) => ({ ...entry })),
+      liveEvents: [],
+    };
+    huntingDefeatedProjectionRef.current = defeatedProjection;
+  }
+
+  const projectedDefeatedHuntingQueue = projectLiveHuntingDefeats(
+    {
+      ...defeatedProjection,
+      liveEvents:
+        huntingDefeatedRealtimeLedger.sessionKey ===
+        String(effectiveSessionId ?? "no-session")
+          ? huntingDefeatedRealtimeLedger.events
+          : [],
+    },
+  );
+  const defeatedHuntingQueue =
+    countHuntingActivityQueue(canonicalDefeatedHuntingQueue) >=
+    countHuntingActivityQueue(projectedDefeatedHuntingQueue)
+      ? canonicalDefeatedHuntingQueue
+      : projectedDefeatedHuntingQueue;
+  const huntingSessionLoot = buildHuntingSessionLoot(effectiveStatus);
+  const huntingSceneCharacterXpLabel = isAtLevelCap
+    ? "Nível máximo"
+    : currentLevelXp !== undefined && xpToNextLevel !== undefined
+      ? `${Math.max(0, Math.floor(currentLevelXp)).toLocaleString("pt-BR")} / ${Math.max(0, Math.floor(xpToNextLevel)).toLocaleString("pt-BR")}`
+      : `${Math.max(0, Math.floor(currentCharacterXp)).toLocaleString("pt-BR")} XP`;
+  const huntingSceneCountdownLabel = showInlineHuntBattle
+    ? "Combate em andamento"
+    : isBackendEncounterReadyPhase
+      ? "Ameaça localizada"
+      : hasPendingHuntProcessing
+        ? "Confirmando rastreio"
+        : `Próximo rastreio ${formatAutoCombatHuntingCountdownClock(
+            Math.max(0, huntCycleEndsAtMs - syncedSessionNowMs),
+          )}`;
   const topBarHuntFoundCount = topBarHuntingQueue.length
     ? countHuntingActivityQueue(topBarHuntingQueue)
     : displayedFoundEnemiesCount;
@@ -3770,6 +4089,15 @@ export function AutoCombatPage() {
   const activeVisualEventType = normalizeRealtimeEventType(
     providerPublicActiveEvent?.type ?? visualRealtimeCombat?.lastEventType,
   );
+  const activeVisualEventKey = providerPublicActiveEvent
+    ? getRealtimeEventKey(providerPublicActiveEvent)
+    : [
+        effectiveSession?.id ?? "session:any",
+        activeMobEnemyInstanceId ?? "enemy:any",
+        activeVisualEventType || "idle",
+        activeMobCurrentHp,
+        currentCharacterHp,
+      ].join(":");
   const activeVisualEventScope = getMobFeedbackScopeFromEvent(
     providerPublicActiveEvent,
   );
@@ -3947,60 +4275,6 @@ export function AutoCombatPage() {
     setErrorMessage("");
   }
 
-  async function handleTravelToMap() {
-    if (!characterId || !overview || !selectedMap || isActionLoading) {
-      return;
-    }
-
-    if (overview?.activity?.hasActiveWorldBoss) {
-      setErrorMessage(
-        "Você está em uma batalha de Ameaça Global. Encerre a participação antes de viajar para outra rota de caça.",
-      );
-      return;
-    }
-
-    if (!canTravelToSelectedMap) {
-      setErrorMessage(
-        "Não foi possível viajar com a seleção atual. Verifique se já existe uma atividade ativa.",
-      );
-      return;
-    }
-
-    const currentMapId =
-      overview.character.currentMap?.id ??
-      overview.character.map?.id ??
-      overview.progression?.currentMap?.id ??
-      null;
-
-    try {
-      setIsActionLoading(true);
-      setErrorMessage("");
-
-      if (selectedMap.id !== currentMapId) {
-        const updatedOverview = await updateCharacterCurrentMap(
-          characterId,
-          selectedMap.id,
-        );
-
-        setOverview(updatedOverview);
-      }
-
-      setHasStartedHunt(true);
-      setActiveTab("battle");
-      setIsStopHuntConfirmOpen(false);
-    } catch (error) {
-      setIsStopHuntConfirmOpen(false);
-      setErrorMessage(
-        getApiErrorMessage(
-          error,
-          "Não foi possível viajar para este mapa agora.",
-        ),
-      );
-    } finally {
-      setIsActionLoading(false);
-    }
-  }
-
   async function handleStartHunt() {
     if (!characterId || !selectedMap?.id || isActionLoading) return;
 
@@ -4039,10 +4313,33 @@ export function AutoCombatPage() {
       return;
     }
 
+    const currentMapId =
+      overview?.character.currentMap?.id ??
+      overview?.character.map?.id ??
+      overview?.progression?.currentMap?.id ??
+      null;
+    const needsTravel = selectedMap.id !== currentMapId;
+
+    if (needsTravel && !canTravelToSelectedMap) {
+      setErrorMessage(
+        "Não foi possível viajar com a seleção atual. Verifique se já existe uma atividade ativa.",
+      );
+      return;
+    }
+
     try {
       setIsStartingHunt(true);
       setIsActionLoading(true);
       setErrorMessage("");
+
+      if (needsTravel) {
+        const updatedOverview = await updateCharacterCurrentMap(
+          characterId,
+          selectedMap.id,
+        );
+
+        setOverview(updatedOverview);
+      }
 
       setLocalRealtimeCombat(null);
       setLocalCharacterProgress(null);
@@ -4085,6 +4382,7 @@ export function AutoCombatPage() {
       setLocalCharacterProgress(responseProgress);
       setLocalSessionTotals(responseTotals);
       setHasStartedHunt(true);
+      setHuntingImmersiveRequestKey((current) => current + 1);
       setIsStopHuntConfirmOpen(false);
       setActiveTab("battle");
 
@@ -4378,6 +4676,7 @@ export function AutoCombatPage() {
       setLocalCharacterProgress(responseProgress);
       setLocalSessionTotals(responseTotals);
       setHasStartedHunt(true);
+      setHuntingImmersiveRequestKey((current) => current + 1);
       setActiveTab("battle");
       setIsThreatPotionPickerOpen(false);
       setSelectedThreat(null);
@@ -4651,15 +4950,15 @@ export function AutoCombatPage() {
                         <button
                           type="button"
                           className="auto-combat-primary-button"
-                          disabled={!canTravelToSelectedMap || isActionLoading}
+                          disabled={!canStartHunt || isActionLoading}
                           title={
                             overview?.activity?.hasActiveWorldBoss
                               ? "Você já está em um World Boss."
                               : undefined
                           }
-                          onClick={handleTravelToMap}
+                          onClick={handleStartHunt}
                         >
-                          {isActionLoading ? "Viajando..." : "Viajar"}
+                          {isActionLoading ? "Preparando..." : "Batalhar"}
                         </button>
                       </div>
                     </div>
@@ -4693,6 +4992,9 @@ export function AutoCombatPage() {
                   className={[
                     "auto-combat-stage-card",
                     "auto-combat-hunt-stage",
+                    shouldShowSuburbioHuntingScene
+                      ? "auto-combat-hunt-stage--scene-focused"
+                      : "",
                     showInlineHuntBattle
                       ? "auto-combat-hunt-stage--battle-focused"
                       : "",
@@ -4700,7 +5002,89 @@ export function AutoCombatPage() {
                     .filter(Boolean)
                     .join(" ")}
                 >
-                  {showHuntTrackerCard ? (
+                  {shouldShowSuburbioHuntingScene ? (
+                    <AutoCombatHuntingScene
+                      characterId={characterId}
+                      characterName={layoutCharacter.name}
+                      characterClassName={layoutCharacter.className}
+                      characterAvatarKey={layoutCharacter.avatarKey}
+                      characterAvatarUrl={layoutCharacter.avatarUrl}
+                      characterAppearance={layoutCharacter.appearance}
+                      autoOpenKey={huntingImmersiveRequestKey}
+                      currentMapId={resolvedActiveSessionMapId}
+                      isProcessing={hasPendingHuntProcessing}
+                      isThreatReady={
+                        isBackendEncounterReadyPhase || showInlineHuntBattle
+                      }
+                      isCombatActive={showInlineHuntBattle}
+                      isSynchronizing={isRealtimeSynchronizing}
+                      battleCycleKey={activeBattleProgressElementKey}
+                      battleDurationMs={
+                        activeDisplayBattleTimelineProgress?.cycleDurationMs ??
+                        activeEstimatedKillTimeSeconds * 1000
+                      }
+                      battleProgressPercent={
+                        activeDisplayBattleTimelineProgress?.progressPercent ?? 0
+                      }
+                      combatEventKey={activeVisualEventKey}
+                      combatEventType={activeVisualEventType}
+                      playerCurrentHp={currentCharacterHp}
+                      playerMaxHp={currentCharacterMaxHp}
+                      mobCurrentHp={activeMobCurrentHp}
+                      mobMaxHp={activeMobMaxHp}
+                      mobName={
+                        showInlineHuntBattle
+                          ? activeMobName
+                          : (trackedThreatMob?.name ?? null)
+                      }
+                      mobPortraitUrl={getMobPortraitImage(
+                        showInlineHuntBattle
+                          ? activeMobName
+                          : trackedThreatMob?.name,
+                      )}
+                      progressPercent={huntProgressPercent}
+                      defeatedMobs={defeatedHuntingQueue}
+                      sessionLoot={huntingSessionLoot}
+                      huntingXpGained={huntingXpGained}
+                      huntSessionKey={topBarHuntingQueueKey}
+                      characterLevel={currentCharacterLevel}
+                      characterXpGained={totalXpGained}
+                      characterXpSessionKey={
+                        effectiveSession?.id ?? "active-session"
+                      }
+                      characterXpLabel={huntingSceneCharacterXpLabel}
+                      characterXpProgressPercent={Math.max(
+                        0,
+                        Math.min(100, toSafeNumber(xpProgressPercent, 0)),
+                      )}
+                      huntingCountdownLabel={huntingSceneCountdownLabel}
+                      isPremiumActive={normalizedSessionXp.isPremiumActive}
+                      potionImageUrl={configuredPotionImage}
+                      potionName={
+                        configuredPotionItem
+                          ? getPotionName(currentPotionConfig)
+                          : null
+                      }
+                      potionQuantity={configuredPotionQuantity}
+                      potionConfigDisabled={isPotionConfigLoading}
+                      canStartBattle={
+                        isBackendEncounterReadyPhase &&
+                        availableEnemiesCount > 0 &&
+                        characterHasHp
+                      }
+                      canStopHunt={
+                        hasActiveSession && !isActionLoading
+                      }
+                      isBattleActionLoading={isActionLoading}
+                      onConfigurePotion={() => handleOpenPotionConfig(0)}
+                      onStartBattle={() =>
+                        handleStartAutoCombat({ mode: "ALL" })
+                      }
+                      onRequestStopHunt={handleStopHuntActivityPanel}
+                    />
+                  ) : null}
+
+                  {showHuntTrackerCard && !shouldShowSuburbioHuntingScene ? (
                     <div
                       className={[
                         "auto-combat-hunt-tracker",
@@ -4801,10 +5185,11 @@ export function AutoCombatPage() {
                     </div>
                   ) : null}
 
-                  <aside
-                    className="auto-combat-hunt-side auto-combat-hunt-side--stacked"
-                    aria-label="Resumo da caça"
-                  >
+                  {!shouldShowSuburbioHuntingScene ? (
+                    <aside
+                      className="auto-combat-hunt-side auto-combat-hunt-side--stacked"
+                      aria-label="Resumo da caça"
+                    >
                     <section className="auto-combat-hunt-side-section auto-combat-hunt-side-section--progress auto-combat-hunt-side-section--desktop-status-card">
                       <div className="auto-combat-hunt-side__section-title">
                         <span>Sua proficiência</span>
@@ -4853,9 +5238,10 @@ export function AutoCombatPage() {
                         totalXpGained={normalizedSessionXp.totalXpGained}
                       />
                     </section>
-                  </aside>
+                    </aside>
+                  ) : null}
 
-                  {showInlineHuntBattle ? (
+                  {showInlineHuntBattle && !shouldShowSuburbioHuntingScene ? (
                     <section
                       className="auto-combat-inline-battle"
                       aria-label="Batalha da caça em andamento"
@@ -5016,7 +5402,8 @@ export function AutoCombatPage() {
                     </section>
                   ) : null}
 
-                  <>
+                  {!shouldShowSuburbioHuntingScene ? (
+                    <>
                     <div className="auto-combat-section-title auto-combat-section-title--small">
                       <span>
                         {showInlineHuntBattle
@@ -5163,19 +5550,24 @@ export function AutoCombatPage() {
                         <strong>
                           {showInlineHuntBattle
                             ? "Nenhuma outra ameaça rastreada"
+                            : shouldStartNewHuntFromReady
+                              ? "Nenhum alvo pendente"
                             : "Nenhum inimigo encontrado"}
                         </strong>
 
                         <p>
                           {showInlineHuntBattle
                             ? "O alvo selecionado continua em batalha. Outras ameaças aparecerão aqui quando houver rastreios pendentes."
+                            : shouldStartNewHuntFromReady
+                              ? "Inicie uma nova caça neste mapa para rastrear o próximo encontro."
                             : "Este mapa está cadastrado, mas ainda não possui encontros ativos. Quando os mobs forem vinculados ao seed/backend, ele ficará disponível para combate."}
                         </p>
                       </div>
                     )}
-                  </>
+                    </>
+                  ) : null}
 
-                  {!showInlineHuntBattle ? (
+                  {!showInlineHuntBattle && !shouldShowSuburbioHuntingScene ? (
                     <>
                       <div className="auto-combat-stage-actions">
                         {!isBackendHuntingPhase ? (
@@ -5192,17 +5584,21 @@ export function AutoCombatPage() {
                                 .join(" ")}
                               disabled={
                                 isBackendEncounterReadyPhase
-                                  ? availableEnemiesCount <= 0 ||
-                                    isActionLoading ||
-                                    !characterHasHp
+                                  ? shouldStartNewHuntFromReady
+                                    ? !canStartHunt || isActionLoading
+                                    : availableEnemiesCount <= 0 ||
+                                      isActionLoading ||
+                                      !characterHasHp
                                   : !canStartCombat
                               }
                               onClick={() =>
-                                handleStartAutoCombat(
-                                  isBackendEncounterReadyPhase
-                                    ? { mode: "ALL" }
-                                    : undefined,
-                                )
+                                shouldStartNewHuntFromReady
+                                  ? handleStartHunt()
+                                  : handleStartAutoCombat(
+                                      isBackendEncounterReadyPhase
+                                        ? { mode: "ALL" }
+                                        : undefined,
+                                    )
                               }
                             >
                               {isActionLoading ? (
@@ -5215,36 +5611,13 @@ export function AutoCombatPage() {
                                     aria-hidden="true"
                                   />
                                   <span>
-                                    <strong>Batalhar todos</strong>
-                                    <small>
-                                      {availableEnemiesCount.toLocaleString(
-                                        "pt-BR",
-                                      )}{" "}
-                                      {availableEnemiesCount === 1
-                                        ? "ameaça"
-                                        : "ameaças"}
-                                    </small>
+                                    <strong>Batalhar</strong>
                                   </span>
                                 </>
                               ) : (
-                                "Iniciar combate"
+                                "Batalhar"
                               )}
                             </button>
-
-                            {isBackendEncounterReadyPhase ? (
-                              <button
-                                type="button"
-                                className="auto-combat-secondary-button"
-                                disabled={!canStartHunt || isActionLoading}
-                                onClick={handleStartHunt}
-                              >
-                                {isActionLoading
-                                  ? "Processando..."
-                                  : effectiveIsHuntLimitReached
-                                    ? "Limite atingido"
-                                    : "Continuar caçada"}
-                              </button>
-                            ) : null}
                           </>
                         ) : null}
                       </div>

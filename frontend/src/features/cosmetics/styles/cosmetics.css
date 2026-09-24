@@ -159,6 +159,69 @@
   filter: none;
 }
 
+.character-portrait.is-frame-after-law-star {
+  --portrait-accent: #d3a14a !important;
+}
+
+.character-portrait.is-frame-after-law-star .character-portrait__frame {
+  inset: 0 !important;
+  border: 0;
+  border-radius: inherit;
+  outline: none;
+  background: url("../../../assets/images/cosmetics/cash-depois-da-lei/frame-depois-da-lei-estrela-xerife.png")
+    center / 100% 100% no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 0 4px rgba(211, 161, 74, 0.46));
+  animation: cosmetic-frame-after-law-star 2.4s ease-in-out infinite;
+}
+
+.character-portrait.is-frame-after-law-star .character-portrait__frame::before,
+.character-portrait.is-frame-after-law-star .character-portrait__frame::after {
+  display: none;
+}
+
+.character-portrait.is-frame-after-law-siege {
+  --portrait-accent: #aab6b4 !important;
+}
+
+.character-portrait.is-frame-after-law-siege .character-portrait__frame {
+  inset: 0 !important;
+  border: 0;
+  border-radius: inherit;
+  outline: none;
+  background: url("../../../assets/images/cosmetics/cash-depois-da-lei/frame-depois-da-lei-arame-farpado.png")
+    center / 100% 100% no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 0 4px rgba(143, 157, 157, 0.42));
+  animation: cosmetic-frame-after-law-siege 1.8s steps(2, end) infinite;
+}
+
+.character-portrait.is-frame-after-law-siege .character-portrait__frame::before,
+.character-portrait.is-frame-after-law-siege .character-portrait__frame::after {
+  display: none;
+}
+
+.character-portrait.is-frame-quarantine-rpd {
+  --portrait-accent: #b7d9e8 !important;
+}
+
+.character-portrait.is-frame-quarantine-rpd .character-portrait__frame {
+  inset: 0 !important;
+  border: 0;
+  border-radius: inherit;
+  outline: none;
+  background: url("../../../assets/images/cosmetics/cash-chuva-quarentena/frame-chuva-quarentena-protocolo-rpd.png")
+    center / 100% 100% no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 0 4px rgba(190, 221, 234, 0.42))
+    drop-shadow(0 0 7px rgba(172, 31, 39, 0.22));
+}
+
+.character-portrait.is-frame-quarantine-rpd .character-portrait__frame::before,
+.character-portrait.is-frame-quarantine-rpd .character-portrait__frame::after {
+  display: none;
+}
+
 .cosmetic-surface {
   position: relative;
   isolation: isolate;
@@ -307,6 +370,21 @@
   overflow: hidden;
   border-radius: inherit;
   pointer-events: none;
+}
+
+.cosmetic-effect-layer picture {
+  display: contents;
+}
+
+.cosmetic-effect-layer__media {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
 }
 
 .is-effect-signal-scan .cosmetic-effect-layer::before {
@@ -490,6 +568,36 @@
       inset 0 0 24px rgba(239, 90, 86, 0.26),
       0 0 0 1px rgba(111, 24, 26, 0.8),
       0 0 20px rgba(239, 90, 86, 0.42);
+  }
+}
+
+@keyframes cosmetic-frame-after-law-star {
+  0%,
+  100% {
+    filter: brightness(0.92) saturate(1.05);
+  }
+  50% {
+    filter: brightness(1.22) saturate(1.25)
+      drop-shadow(0 0 7px rgba(217, 158, 64, 0.55));
+  }
+}
+
+@keyframes cosmetic-frame-after-law-siege {
+  0%,
+  70%,
+  100% {
+    filter: brightness(0.9) contrast(1.08);
+  }
+  76% {
+    filter: brightness(1.42) contrast(1.25)
+      drop-shadow(0 0 8px rgba(229, 65, 48, 0.58));
+  }
+  82% {
+    filter: brightness(0.76) contrast(1.32);
+  }
+  88% {
+    filter: brightness(1.28) contrast(1.16)
+      drop-shadow(0 0 8px rgba(63, 155, 236, 0.58));
   }
 }
 

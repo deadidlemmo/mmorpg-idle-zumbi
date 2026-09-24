@@ -11,6 +11,7 @@ const AUTO_COMBAT_ALLOWED_PHASE_TRANSITIONS: Record<
   ],
   [AutoCombatSessionPhase.COMBAT_ACTIVE]: [
     AutoCombatSessionPhase.ENCOUNTER_READY,
+    AutoCombatSessionPhase.HUNTING,
   ],
 };
 

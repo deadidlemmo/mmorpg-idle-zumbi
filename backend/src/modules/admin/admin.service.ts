@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -23,6 +24,8 @@ import {
   ECONOMY_REASONS,
   getEconomyReasonLabel,
 } from '../economy/economy.constants';
+import { recordEconomyEntry } from '../economy/economy-ledger';
+import { GrantCharacterCashDto } from './dto/grant-character-cash.dto';
 import { ListAdminUsersDto } from './dto/list-admin-users.dto';
 import { UpdateUserSuspensionDto } from './dto/update-user-suspension.dto';
 
@@ -45,6 +48,7 @@ const EQUIPMENT_SLOTS = new Set<ItemSlot>([
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * ONE_HOUR_MS;
+const POSTGRES_INTEGER_MAX = 2_147_483_647;
 
 function roundPercent(value: number) {
   return Number(value.toFixed(1));
@@ -796,12 +800,28 @@ export class AdminService {
   async listUsers(query: ListAdminUsersDto) {
     const page = Math.max(1, query.page || 1);
     const pageSize = Math.min(100, Math.max(1, query.pageSize || 25));
-    const where = query.search
+    const normalizedSearch = query.search?.trim();
+    const where = normalizedSearch
       ? {
-          email: {
-            contains: query.search.toLowerCase(),
-            mode: 'insensitive' as const,
-          },
+          OR: [
+            {
+              email: {
+                contains: normalizedSearch.toLowerCase(),
+                mode: 'insensitive' as const,
+              },
+            },
+            {
+              characters: {
+                some: {
+                  deletedAt: null,
+                  name: {
+                    contains: normalizedSearch,
+                    mode: 'insensitive' as const,
+                  },
+                },
+              },
+            },
+          ],
         }
       : {};
     const [total, users] = await Promise.all([
@@ -823,6 +843,19 @@ export class AdminService {
           termsVersion: true,
           privacyVersion: true,
           createdAt: true,
+          characters: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: 'asc' },
+            select: {
+              id: true,
+              name: true,
+              level: true,
+              status: true,
+              gold: true,
+              cash: true,
+              class: { select: { name: true } },
+            },
+          },
           _count: { select: { characters: true } },
         },
       }),
@@ -835,6 +868,163 @@ export class AdminService {
       pageSize,
       pageCount: Math.ceil(total / pageSize),
     };
+  }
+
+  async grantCharacterCash(
+    actorUserId: string,
+    characterId: string,
+    dto: GrantCharacterCashDto,
+  ) {
+    const reason = dto.reason.trim();
+    if (reason.length < 3) {
+      throw new BadRequestException(
+        'Informe um motivo com pelo menos 3 caracteres.',
+      );
+    }
+    const idempotencyKey = `admin:cash:${actorUserId}:${dto.requestId}`;
+
+    const result = await this.runSerializable(async (tx) => {
+      const previousEntry = await tx.economyLedgerEntry.findUnique({
+        where: { idempotencyKey },
+        select: {
+          characterId: true,
+          quantity: true,
+          balanceAfter: true,
+        },
+      });
+
+      if (previousEntry) {
+        if (
+          previousEntry.characterId !== characterId ||
+          previousEntry.quantity !== dto.amount
+        ) {
+          throw new ConflictException(
+            'Esta solicitação já foi usada em outra concessão.',
+          );
+        }
+
+        const character = await tx.character.findFirst({
+          where: { id: characterId, deletedAt: null },
+          select: {
+            id: true,
+            name: true,
+            cash: true,
+            user: { select: { id: true, email: true } },
+          },
+        });
+        if (!character) {
+          throw new NotFoundException('Personagem não encontrado.');
+        }
+
+        return {
+          character,
+          amount: previousEntry.quantity,
+          grantedBalanceAfter: previousEntry.balanceAfter,
+          alreadyProcessed: true,
+        };
+      }
+
+      const character = await tx.character.findFirst({
+        where: { id: characterId, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          cash: true,
+          user: { select: { id: true, email: true } },
+        },
+      });
+      if (!character) {
+        throw new NotFoundException('Personagem não encontrado.');
+      }
+
+      const credited = await tx.character.updateMany({
+        where: {
+          id: characterId,
+          deletedAt: null,
+          cash: { lte: POSTGRES_INTEGER_MAX - dto.amount },
+        },
+        data: { cash: { increment: dto.amount } },
+      });
+      if (credited.count !== 1) {
+        throw new BadRequestException(
+          'O saldo final ultrapassaria o limite permitido.',
+        );
+      }
+
+      const updatedCharacter = await tx.character.findUniqueOrThrow({
+        where: { id: characterId },
+        select: {
+          id: true,
+          name: true,
+          cash: true,
+          user: { select: { id: true, email: true } },
+        },
+      });
+
+      await recordEconomyEntry(tx, {
+        characterId,
+        direction: EconomyDirection.CREDIT,
+        resourceType: EconomyResourceType.CASH,
+        quantity: dto.amount,
+        balanceAfter: updatedCharacter.cash,
+        reason: ECONOMY_REASONS.ADMIN_CASH_GRANT,
+        referenceType: 'AdminCashGrant',
+        referenceId: dto.requestId,
+        idempotencyKey,
+        metadata: {
+          actorUserId,
+          reason,
+        },
+      });
+
+      return {
+        character: updatedCharacter,
+        amount: dto.amount,
+        grantedBalanceAfter: updatedCharacter.cash,
+        alreadyProcessed: false,
+      };
+    });
+
+    if (!result.alreadyProcessed) {
+      this.auditService.recordSafely({
+        actorUserId,
+        action: 'ADMIN_CHARACTER_CASH_GRANTED',
+        entityType: 'Character',
+        entityId: characterId,
+        metadata: {
+          targetUserId: result.character.user.id,
+          amount: result.amount,
+          balanceAfter: result.grantedBalanceAfter,
+          reason,
+          requestId: dto.requestId,
+        },
+      });
+    }
+
+    return result;
+  }
+
+  private async runSerializable<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (
+          attempt < 3 &&
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          (error.code === 'P2002' || error.code === 'P2034')
+        ) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new Error('A concessão de Cash não pôde ser concluída.');
   }
 
   async updateSuspension(

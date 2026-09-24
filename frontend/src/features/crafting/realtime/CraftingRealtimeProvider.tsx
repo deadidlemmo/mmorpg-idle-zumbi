@@ -21,6 +21,7 @@ import {
 } from "../../../components/game/activityTimeline";
 import { useActivityTimelineProviderState } from "../../../components/game/useActivityTimelineProviderState";
 import { getAuthToken } from "../../../services/api/authToken";
+import { normalizeSocketBaseUrl } from "../../../services/websocket/socketBaseUrl";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import { getEquipmentItemImageUrl } from "../../equipment/utils/equipmentItemAssets";
 import { useLootNotifications } from "../../loot-notifications/lootNotificationContext";
@@ -143,13 +144,6 @@ function getParsedDateMs(value?: string | null) {
   const parsed = Date.parse(value);
 
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function normalizeSocketBaseUrl(rawUrl: string): string {
-  return rawUrl
-    .trim()
-    .replace(/\/api\/?$/i, "")
-    .replace(/\/$/, "");
 }
 
 function getCraftingSocketUrl(): string {

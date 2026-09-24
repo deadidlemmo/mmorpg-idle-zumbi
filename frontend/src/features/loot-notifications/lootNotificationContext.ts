@@ -31,6 +31,7 @@ export interface LootNotificationPayload {
 export interface LootNotificationContextValue {
   notifyLoot: (payload: LootNotificationPayload) => void;
   notifyLootBatch: (payloads: LootNotificationPayload[]) => void;
+  setAutoCombatHudTarget: (target: HTMLElement | null) => void;
 }
 
 export const LootNotificationContext =

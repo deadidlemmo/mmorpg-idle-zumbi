@@ -25,6 +25,11 @@ type AdminRequest = {
 export class CosmeticsAdminController {
   constructor(private readonly cosmeticsService: CosmeticsService) {}
 
+  @Get('catalog')
+  getCatalog() {
+    return this.cosmeticsService.getAdminCatalog();
+  }
+
   @Get('users/:userId')
   listUserEntitlements(@Param('userId') userId: string) {
     return this.cosmeticsService.listUserEntitlements(userId);

@@ -940,7 +940,8 @@ describe('WorldBossesService TTK processing', () => {
         Promise<Array<typeof event>>,
         [{ where: { OR: Array<Record<string, unknown>> } }]
       >()
-      .mockResolvedValue([event]);
+      .mockResolvedValueOnce([event])
+      .mockResolvedValueOnce([]);
     const prisma = {
       worldBossEvent: { findMany },
     } as unknown as PrismaService;
@@ -963,5 +964,93 @@ describe('WorldBossesService TTK processing', () => {
       status: WorldBossEventStatus.ACTIVE,
     });
     expect(processActiveEvent).toHaveBeenCalledWith(event.id, expect.any(Date));
+  });
+
+  it('continua processando os demais eventos quando um boss falha', async () => {
+    const firstEvent = {
+      id: 'event-failing',
+      status: WorldBossEventStatus.SCHEDULED,
+    };
+    const secondEvent = {
+      id: 'event-healthy',
+      status: WorldBossEventStatus.SCHEDULED,
+    };
+    const findMany = jest
+      .fn()
+      .mockResolvedValueOnce([firstEvent, secondEvent])
+      .mockResolvedValueOnce([]);
+    const prisma = {
+      worldBossEvent: { findMany },
+    } as unknown as PrismaService;
+    const service = createService(prisma) as unknown as {
+      processOpenEventsWithLock(): Promise<void>;
+      advanceEventState: jest.Mock<Promise<typeof secondEvent>, [unknown]>;
+    };
+    const advanceEventState = jest
+      .fn<Promise<typeof secondEvent>, [unknown]>()
+      .mockRejectedValueOnce(new Error('transaction timeout'))
+      .mockResolvedValueOnce(secondEvent);
+    service.advanceEventState = advanceEventState;
+
+    await service.processOpenEventsWithLock();
+
+    expect(advanceEventState).toHaveBeenNthCalledWith(1, firstEvent);
+    expect(advanceEventState).toHaveBeenNthCalledWith(2, secondEvent);
+  });
+
+  it('recupera ciclo antigo agendando uma nova janela futura', async () => {
+    const now = new Date('2026-09-23T17:00:00.000Z');
+    type CreateEventArgs = {
+      data: {
+        status: WorldBossEventStatus;
+        startsAt: Date;
+        [key: string]: unknown;
+      };
+      include: unknown;
+    };
+    const create = jest
+      .fn<Promise<Record<string, unknown>>, [CreateEventArgs]>()
+      .mockResolvedValue({ id: 'new-event' });
+    const prisma = {
+      worldBossEvent: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create,
+      },
+    } as unknown as PrismaService;
+    const service = createService(prisma) as unknown as {
+      ensureNextCycleEvent(
+        event: unknown,
+        boss: unknown,
+        at: Date,
+      ): Promise<unknown>;
+    };
+    const boss = {
+      id: 'boss-1',
+      mapId: 'map-1',
+      tier: 1,
+      sortOrder: 0,
+      minLevel: 5,
+      durationSeconds: 10_800,
+      baseHp: 10_000,
+    };
+
+    await service.ensureNextCycleEvent(
+      {
+        id: 'old-event',
+        worldBossId: boss.id,
+        status: WorldBossEventStatus.EXPIRED,
+        defeatedAt: null,
+        endsAt: new Date('2026-09-01T00:00:00.000Z'),
+      },
+      boss,
+      now,
+    );
+
+    expect(create).toHaveBeenCalledTimes(1);
+    const createArgs = create.mock.calls[0]?.[0];
+    expect(createArgs?.data.status).toBe(WorldBossEventStatus.SCHEDULED);
+    expect(createArgs?.data.startsAt).toEqual(
+      new Date('2026-09-23T17:10:00.000Z'),
+    );
   });
 });

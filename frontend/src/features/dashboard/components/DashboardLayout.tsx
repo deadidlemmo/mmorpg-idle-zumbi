@@ -16,7 +16,6 @@ import {
   ListChecks,
   Map as MapIcon,
   PawPrint,
-  Pickaxe,
   ScanLine,
   Shield,
   ShieldAlert,
@@ -26,6 +25,7 @@ import {
   Store,
   Swords,
   Trophy,
+  UserRound,
   Users,
   Wrench,
 } from "lucide-react";
@@ -43,6 +43,7 @@ import {
   getCharacterInitials,
 } from "../../characters/types/character.types";
 import { CharacterPortrait } from "../../cosmetics/components/CharacterPortrait";
+import { CosmeticEffectLayer } from "../../cosmetics/components/CosmeticEffectLayer";
 import {
   getCosmeticEffectClass,
   getCosmeticImage,
@@ -51,6 +52,7 @@ import {
 import type { DashboardCharacterViewModel } from "../types/dashboard.types";
 import { TutorialBanner } from "../../progression/components/TutorialBanner";
 import { GeneralChatDock } from "../../chat/components/GeneralChatDock";
+import { PerformanceDiagnosticsPanel } from "../../performance/PerformanceDiagnosticsPanel";
 import {
   DashboardTopBar,
   type DashboardTopBarActivityOverride,
@@ -82,6 +84,8 @@ interface DashboardNavItem {
   path: string;
   icon: ReactNode;
   accent?: "premium";
+  gatheringOrigin?: DashboardGatheringOrigin;
+  selfProfile?: boolean;
 }
 
 type DashboardGatheringOrigin =
@@ -91,13 +95,6 @@ type DashboardGatheringOrigin =
   | "ARSENAL"
   | "TECNOVARREDURA"
   | "CONTENCAO";
-
-interface DashboardGatheringSidebarItem {
-  label: string;
-  slug: string;
-  origin: DashboardGatheringOrigin;
-  icon: ReactNode;
-}
 
 type GatheringSkillLoose = {
   id?: string | null;
@@ -325,9 +322,6 @@ type XpProgressResult = {
   progressPercent: number;
 };
 
-const GATHERING_SUBNAV_STORAGE_KEY =
-  "dead-idle.dashboard.gathering-subnav-open";
-
 const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   {
     label: "Visão geral",
@@ -335,19 +329,21 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: <LayoutDashboard size={17} strokeWidth={1.9} />,
   },
   {
-    label: "Combate automático",
-    path: "auto-combat",
-    icon: <Swords size={17} strokeWidth={1.9} />,
+    label: "Premium",
+    path: "membership",
+    icon: <Crown size={17} strokeWidth={1.9} />,
+    accent: "premium",
   },
   {
-    label: "Expedições",
-    path: "gathering",
-    icon: <Pickaxe size={17} strokeWidth={1.9} />,
+    label: "Perfil",
+    path: "inspect",
+    icon: <UserRound size={17} strokeWidth={1.9} />,
+    selfProfile: true,
   },
   {
-    label: "Criação",
-    path: "crafting",
-    icon: <Hammer size={17} strokeWidth={1.9} />,
+    label: "Aparência",
+    path: "appearance",
+    icon: <Sparkles size={17} strokeWidth={1.9} />,
   },
   {
     label: "Mochila",
@@ -360,35 +356,9 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: <Shield size={17} strokeWidth={1.9} />,
   },
   {
-    label: "Ferreiro",
-    path: "blacksmith",
-    icon: <Anvil size={17} strokeWidth={1.9} />,
-  },
-  {
     label: "Pets",
     path: "pets",
     icon: <PawPrint size={16} strokeWidth={2} />,
-  },
-  {
-    label: "Aparência",
-    path: "appearance",
-    icon: <Sparkles size={17} strokeWidth={1.9} />,
-  },
-  {
-    label: "Mercador",
-    path: "consumables",
-    icon: <ShoppingBag size={17} strokeWidth={1.9} />,
-  },
-  {
-    label: "Mercado do Abrigo",
-    path: "market",
-    icon: <Store size={17} strokeWidth={1.9} />,
-  },
-  {
-    label: "Premium",
-    path: "membership",
-    icon: <Crown size={17} strokeWidth={1.9} />,
-    accent: "premium",
   },
   {
     label: "Objetivos",
@@ -396,14 +366,50 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     icon: <ListChecks size={17} strokeWidth={1.9} />,
   },
   {
-    label: "Enfermaria",
-    path: "infirmary",
-    icon: <HeartPulse size={17} strokeWidth={1.9} />,
-  },
-  {
     label: "Mapas",
     path: "maps",
     icon: <MapIcon size={17} strokeWidth={1.9} />,
+  },
+  {
+    label: "Desmanche",
+    path: "gathering/desmanche",
+    icon: <Wrench size={17} strokeWidth={1.9} />,
+    gatheringOrigin: "DESMANCHE",
+  },
+  {
+    label: "Coleta",
+    path: "gathering/coleta",
+    icon: <Leaf size={17} strokeWidth={1.9} />,
+    gatheringOrigin: "COLETA",
+  },
+  {
+    label: "Patrulha",
+    path: "gathering/patrulha",
+    icon: <Footprints size={17} strokeWidth={1.9} />,
+    gatheringOrigin: "PATRULHA",
+  },
+  {
+    label: "Arsenal",
+    path: "gathering/arsenal",
+    icon: <Crosshair size={17} strokeWidth={1.9} />,
+    gatheringOrigin: "ARSENAL",
+  },
+  {
+    label: "Tecnovarredura",
+    path: "gathering/tecnovarredura",
+    icon: <ScanLine size={17} strokeWidth={1.9} />,
+    gatheringOrigin: "TECNOVARREDURA",
+  },
+  {
+    label: "Contenção",
+    path: "gathering/contencao",
+    icon: <ShieldCheck size={17} strokeWidth={1.9} />,
+    gatheringOrigin: "CONTENCAO",
+  },
+  {
+    label: "Combate Automático",
+    path: "auto-combat",
+    icon: <Swords size={17} strokeWidth={1.9} />,
   },
   {
     label: "Incursões",
@@ -414,6 +420,31 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     label: "Ameaças Globais",
     path: "world-bosses",
     icon: <Biohazard size={17} strokeWidth={1.9} />,
+  },
+  {
+    label: "Comerciantes",
+    path: "consumables",
+    icon: <ShoppingBag size={17} strokeWidth={1.9} />,
+  },
+  {
+    label: "Mercado",
+    path: "market",
+    icon: <Store size={17} strokeWidth={1.9} />,
+  },
+  {
+    label: "Enfermaria",
+    path: "infirmary",
+    icon: <HeartPulse size={17} strokeWidth={1.9} />,
+  },
+  {
+    label: "Ferreiro",
+    path: "blacksmith",
+    icon: <Anvil size={17} strokeWidth={1.9} />,
+  },
+  {
+    label: "Criação",
+    path: "crafting",
+    icon: <Hammer size={17} strokeWidth={1.9} />,
   },
   {
     label: "Ranking",
@@ -432,48 +463,71 @@ const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   },
 ];
 
-const DASHBOARD_OVERVIEW_NAV_ITEM = DASHBOARD_NAV_ITEMS.find(
-  (item) => item.path === "",
-);
+function getDashboardNavItems(paths: string[]) {
+  return paths
+    .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
+    .filter((item): item is DashboardNavItem => Boolean(item));
+}
 
-const DASHBOARD_ACTIVITY_NAV_ITEMS = [
-  "auto-combat",
-  "gathering",
-  "crafting",
-  "incursions",
-  "world-bosses",
-  "maps",
-]
-  .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
-  .filter((item): item is DashboardNavItem => Boolean(item));
-
-const DASHBOARD_CHARACTER_NAV_ITEMS = [
-  "objectives",
-  "equipment",
-  "blacksmith",
-  "inventory",
-  "pets",
-  "appearance",
-]
-  .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
-  .filter((item): item is DashboardNavItem => Boolean(item));
-
-const DASHBOARD_SHELTER_NAV_ITEMS = [
-  "infirmary",
-  "consumables",
-  "market",
-  "membership",
-]
-  .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
-  .filter((item): item is DashboardNavItem => Boolean(item));
-
-const DASHBOARD_COMMUNITY_NAV_ITEMS = ["rankings", "allies", "/wiki"]
-  .map((path) => DASHBOARD_NAV_ITEMS.find((item) => item.path === path))
-  .filter((item): item is DashboardNavItem => Boolean(item));
-
-const DASHBOARD_GATHERING_NAV_ITEM = DASHBOARD_NAV_ITEMS.find(
-  (item) => item.path === "gathering",
-);
+const DASHBOARD_NAV_SECTIONS = [
+  {
+    key: "overview",
+    label: "Visão geral",
+    ariaLabel: "Visão geral",
+    items: getDashboardNavItems(["", "membership"]),
+  },
+  {
+    key: "character",
+    label: "Personagem",
+    ariaLabel: "Perfil e inventário do personagem",
+    items: getDashboardNavItems([
+      "inspect",
+      "appearance",
+      "inventory",
+      "equipment",
+      "pets",
+      "objectives",
+      "maps",
+    ]),
+  },
+  {
+    key: "activities",
+    label: "Atividades",
+    ariaLabel: "Atividades de coleta e exploração",
+    items: getDashboardNavItems([
+      "gathering/desmanche",
+      "gathering/coleta",
+      "gathering/patrulha",
+      "gathering/arsenal",
+      "gathering/tecnovarredura",
+      "gathering/contencao",
+    ]),
+  },
+  {
+    key: "combat",
+    label: "Combate",
+    ariaLabel: "Atividades de combate",
+    items: getDashboardNavItems(["auto-combat", "incursions", "world-bosses"]),
+  },
+  {
+    key: "trades",
+    label: "Trocas",
+    ariaLabel: "Comércio e trocas",
+    items: getDashboardNavItems(["consumables", "market"]),
+  },
+  {
+    key: "shelter",
+    label: "Abrigo",
+    ariaLabel: "Serviços do abrigo",
+    items: getDashboardNavItems(["infirmary", "blacksmith", "crafting"]),
+  },
+  {
+    key: "community",
+    label: "Comunidade",
+    ariaLabel: "Recursos sociais",
+    items: getDashboardNavItems(["rankings", "allies", "/wiki"]),
+  },
+] as const;
 
 const ONLINE_PLAYERS_REFRESH_MS = 30_000;
 
@@ -523,65 +577,6 @@ function DashboardNavIcon({ item }: { item: DashboardNavItem }) {
       {item.icon}
     </span>
   );
-}
-
-const DASHBOARD_GATHERING_ITEMS: DashboardGatheringSidebarItem[] = [
-  {
-    label: "Desmanche",
-    slug: "desmanche",
-    origin: "DESMANCHE",
-    icon: <Wrench size={15} strokeWidth={1.9} />,
-  },
-  {
-    label: "Coleta",
-    slug: "coleta",
-    origin: "COLETA",
-    icon: <Leaf size={15} strokeWidth={1.9} />,
-  },
-  {
-    label: "Patrulha",
-    slug: "patrulha",
-    origin: "PATRULHA",
-    icon: <Footprints size={15} strokeWidth={1.9} />,
-  },
-  {
-    label: "Arsenal",
-    slug: "arsenal",
-    origin: "ARSENAL",
-    icon: <Crosshair size={15} strokeWidth={1.9} />,
-  },
-  {
-    label: "Tecnovarredura",
-    slug: "tecnovarredura",
-    origin: "TECNOVARREDURA",
-    icon: <ScanLine size={15} strokeWidth={1.9} />,
-  },
-  {
-    label: "Contenção",
-    slug: "contencao",
-    origin: "CONTENCAO",
-    icon: <ShieldCheck size={15} strokeWidth={1.9} />,
-  },
-];
-
-function getInitialGatheringSubnavState() {
-  if (typeof window === "undefined") {
-    return true;
-  }
-
-  try {
-    const storedValue = window.localStorage.getItem(
-      GATHERING_SUBNAV_STORAGE_KEY,
-    );
-
-    if (storedValue === null) {
-      return false;
-    }
-
-    return storedValue === "true";
-  } catch {
-    return true;
-  }
 }
 
 function toSafeNumber(value: unknown, fallback = 0) {
@@ -1299,9 +1294,6 @@ function DashboardLayoutContent({
   const realtimeState = useAutoCombatRealtimeState() as RealtimeStateLoose;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isGatheringMenuOpen, setIsGatheringMenuOpen] = useState(
-    getInitialGatheringSubnavState,
-  );
   const [activeCharacters, setActiveCharacters] = useState<number | null>(null);
   const [activeCharactersUpdatedAt, setActiveCharactersUpdatedAt] = useState<
     string | null
@@ -1346,19 +1338,6 @@ function DashboardLayoutContent({
     };
   }, []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    try {
-      window.localStorage.setItem(
-        GATHERING_SUBNAV_STORAGE_KEY,
-        String(isGatheringMenuOpen),
-      );
-    } catch {
-      // Mantém o estado apenas em memória se o navegador bloquear localStorage.
-    }
-  }, [isGatheringMenuOpen]);
-
   const heroCharacter = useMemo(() => {
     return buildHeroCharacterFromRealtimeState({
       character,
@@ -1368,9 +1347,6 @@ function DashboardLayoutContent({
 
   const characterId = getDashboardCharacterId(heroCharacter);
   const dashboardBasePath = `/dashboard/${characterId}`;
-  const gatheringBasePath = `${dashboardBasePath}/gathering`;
-  const isGatheringRoute = location.pathname.startsWith(gatheringBasePath);
-  const isGatheringSubnavVisible = isGatheringMenuOpen;
   const isOverviewRoute =
     location.pathname.replace(/\/+$/, "") === dashboardBasePath;
 
@@ -1479,16 +1455,15 @@ function DashboardLayoutContent({
     window.location.href = "/";
   }
 
-  function handleToggleGatheringMenu() {
-    setIsGatheringMenuOpen((currentValue) => !currentValue);
-  }
-
   function renderSidebarNavItem(item: DashboardNavItem) {
-    const to = item.path.startsWith("/")
-      ? item.path
-      : item.path
-      ? `${dashboardBasePath}/${item.path}`
-      : dashboardBasePath;
+    const relativePath = item.selfProfile
+      ? `inspect/${characterId}`
+      : item.path;
+    const to = relativePath.startsWith("/")
+      ? relativePath
+      : relativePath
+        ? `${dashboardBasePath}/${relativePath}`
+        : dashboardBasePath;
 
     return (
       <NavLink
@@ -1502,6 +1477,11 @@ function DashboardLayoutContent({
       >
         <DashboardNavIcon item={item} />
         <strong>{item.label}</strong>
+        {item.gatheringOrigin ? (
+          <span className="dashboard-sidebar__subitem-level">
+            {getGatheringSkillLevelLabel(heroCharacter, item.gatheringOrigin)}
+          </span>
+        ) : null}
       </NavLink>
     );
   }
@@ -1618,142 +1598,36 @@ function DashboardLayoutContent({
         </section>
 
         <nav className="dashboard-sidebar__nav" aria-label="Menu do painel">
-          {DASHBOARD_OVERVIEW_NAV_ITEM ? (
+          {DASHBOARD_NAV_SECTIONS.map((section) => (
             <section
-              className="dashboard-sidebar__nav-section dashboard-sidebar__nav-section--overview"
-              aria-label="Resumo do personagem"
-              data-nav-section="overview"
+              key={section.key}
+              className="dashboard-sidebar__nav-section"
+              aria-label={section.ariaLabel}
+              data-nav-section={section.key}
             >
-              {renderSidebarNavItem(DASHBOARD_OVERVIEW_NAV_ITEM)}
-            </section>
-          ) : null}
-
-          <section
-            className="dashboard-sidebar__nav-section"
-            aria-label="Atividades do jogo"
-            data-nav-section="activities"
-          >
-            <span className="dashboard-sidebar__section-label">Atividades</span>
-
-            {DASHBOARD_ACTIVITY_NAV_ITEMS.map((item) => {
-              if (item.path !== "gathering") {
-                return renderSidebarNavItem(item);
-              }
-
-              return DASHBOARD_GATHERING_NAV_ITEM ? (
-                <div
-                  key={item.path}
-                  className="dashboard-sidebar__nav-group dashboard-sidebar__nav-group--gathering"
-                >
-                  <button
-                    type="button"
-                    className={[
-                      "dashboard-sidebar__link",
-                      "dashboard-sidebar__link--toggle",
-                      isGatheringRoute ? "is-active" : "",
-                      isGatheringSubnavVisible ? "is-expanded" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    onClick={handleToggleGatheringMenu}
-                    aria-expanded={isGatheringSubnavVisible}
-                    aria-controls="dashboard-gathering-subnav"
-                  >
-                    <span
-                      className="dashboard-sidebar__link-icon"
-                      aria-hidden="true"
-                    >
-                      {DASHBOARD_GATHERING_NAV_ITEM.icon}
-                    </span>
-                    <strong>{DASHBOARD_GATHERING_NAV_ITEM.label}</strong>
-                    <em
-                      className="dashboard-sidebar__link-chevron"
-                      aria-hidden="true"
-                    />
-                  </button>
-
-                  {isGatheringSubnavVisible ? (
-                    <div
-                      id="dashboard-gathering-subnav"
-                      className="dashboard-sidebar__subnav"
-                    >
-                      {DASHBOARD_GATHERING_ITEMS.map((gatheringItem) => {
-                        const gatheringTo = `${gatheringBasePath}/${
-                          gatheringItem.slug
-                        }`;
-
-                        return (
-                          <NavLink
-                            key={gatheringItem.origin}
-                            to={gatheringTo}
-                            onClick={closeSidebar}
-                            className={({ isActive }) =>
-                              `dashboard-sidebar__subitem ${
-                                isActive ? "is-active" : ""
-                              }`
-                            }
-                          >
-                            <span
-                              className="dashboard-sidebar__subitem-icon"
-                              aria-hidden="true"
-                            >
-                              {gatheringItem.icon}
-                            </span>
-                            <strong>{gatheringItem.label}</strong>
-                            <span className="dashboard-sidebar__subitem-level">
-                              {getGatheringSkillLevelLabel(
-                                heroCharacter,
-                                gatheringItem.origin,
-                              )}
-                            </span>
-                          </NavLink>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null;
-            })}
-          </section>
-
-          <section
-            className="dashboard-sidebar__nav-section"
-            aria-label="Perfil e inventário do personagem"
-            data-nav-section="character"
-          >
-            <span className="dashboard-sidebar__section-label">Personagem</span>
-            {DASHBOARD_CHARACTER_NAV_ITEMS.map(renderSidebarNavItem)}
-          </section>
-
-          <section
-            className="dashboard-sidebar__nav-section"
-            aria-label="Serviços do abrigo"
-            data-nav-section="shelter"
-          >
-            <span className="dashboard-sidebar__section-label">Abrigo</span>
-            {DASHBOARD_SHELTER_NAV_ITEMS.map(renderSidebarNavItem)}
-          </section>
-
-          <section
-            className="dashboard-sidebar__nav-section"
-            aria-label="Recursos sociais"
-            data-nav-section="community"
-          >
-            <span className="dashboard-sidebar__section-label">Comunidade</span>
-            {DASHBOARD_COMMUNITY_NAV_ITEMS.map(renderSidebarNavItem)}
-            <a
-              className="dashboard-sidebar__link dashboard-sidebar__link--discord"
-              href={DISCORD_INVITE_URL}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Entrar no Discord"
-            >
-              <span className="dashboard-sidebar__link-icon" aria-hidden="true">
-                <DiscordMark />
+              <span className="dashboard-sidebar__section-label">
+                {section.label}
               </span>
-              <strong>Discord</strong>
-            </a>
-          </section>
+              {section.items.map(renderSidebarNavItem)}
+              {section.key === "community" ? (
+                <a
+                  className="dashboard-sidebar__link dashboard-sidebar__link--discord"
+                  href={DISCORD_INVITE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Entrar no Discord"
+                >
+                  <span
+                    className="dashboard-sidebar__link-icon"
+                    aria-hidden="true"
+                  >
+                    <DiscordMark />
+                  </span>
+                  <strong>Discord</strong>
+                </a>
+              ) : null}
+            </section>
+          ))}
         </nav>
 
         <div className="dashboard-sidebar__bottom">
@@ -1830,7 +1704,9 @@ function DashboardLayoutContent({
               .join(" ")}
             style={classStyle}
           >
-            <span className="cosmetic-effect-layer" aria-hidden="true" />
+            <CosmeticEffectLayer
+              effectPreset={appearance?.profileEffect?.effectPreset}
+            />
             <CharacterPortrait
               className="dashboard-hero__avatar"
               name={heroCharacter.name}
@@ -1977,6 +1853,7 @@ function DashboardLayoutContent({
         {children}
       </main>
       <GeneralChatDock characterId={characterId} />
+      {new URLSearchParams(location.search).get('perf') === '1' ? <PerformanceDiagnosticsPanel /> : null}
     </div>
   );
 }

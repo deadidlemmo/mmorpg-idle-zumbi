@@ -16,6 +16,8 @@ import {
 } from '../../../components/game/activityTimeline';
 import { useActivityTimelineProviderState } from '../../../components/game/useActivityTimelineProviderState';
 import { getAuthToken } from '../../../services/api/authToken';
+import { playGameSound } from '../../../services/audio/gameAudio';
+import { normalizeSocketBaseUrl } from '../../../services/websocket/socketBaseUrl';
 import { canRunNetworkRefresh } from '../../../utils/networkRefresh';
 import { useLootNotifications } from '../../loot-notifications/lootNotificationContext';
 import {
@@ -712,13 +714,6 @@ function buildState(params: {
   };
 }
 
-function normalizeSocketBaseUrl(rawUrl: string): string {
-  return rawUrl
-    .trim()
-    .replace(/\/api\/?$/i, '')
-    .replace(/\/$/, '');
-}
-
 function getGatheringSocketUrl(): string {
   const env = import.meta.env as Record<string, string | undefined>;
 
@@ -963,11 +958,28 @@ export function GatheringRealtimeProvider({
   const socketRef = useRef<Socket | null>(null);
   const isMountedRef = useRef(false);
   const processedLootNotificationKeysRef = useRef<Set<string>>(new Set());
+  const xpSoundBaselineRef = useRef<{ sessionId: string; amount: number } | null>(null);
   const { notifyLoot } = useLootNotifications();
   const isRefreshingRef = useRef(false);
   const statusRef = useRef<GatheringStatusResponse | null>(null);
   const statusSignatureRef = useRef<string>('null');
   const socketConnectedRef = useRef(false);
+
+  const updateXpSoundBaseline = useCallback((session?: GatheringSessionViewModel | null) => {
+    const rawAmount = (session as GatheringSessionLoose | null)?.collectedXp;
+    if (!session?.id || rawAmount === null || rawAmount === undefined) return;
+    const amount = getSessionCollectedXp(session);
+    const previous = xpSoundBaselineRef.current;
+    if (previous?.sessionId === session.id && amount <= previous.amount) return;
+    xpSoundBaselineRef.current = { sessionId: session.id, amount };
+    if (
+      previous?.sessionId === session.id &&
+      amount > previous.amount &&
+      window.location.pathname.includes('/gathering')
+    ) {
+      playGameSound('xp');
+    }
+  }, []);
 
   const publishGatheringLootNotification = useCallback(
     ({ collected, session, targetMaterial, inventoryItem }: GatheringLootNotificationSource) => {
@@ -1023,6 +1035,7 @@ export function GatheringRealtimeProvider({
       previous: previousStatus,
       next: nextStatus,
     });
+    updateXpSoundBaseline(getActiveSession(normalizedStatus));
     const timelineSnapshot = getGatheringTimelineSnapshot(normalizedStatus);
 
     if (timelineSnapshot) {
@@ -1056,6 +1069,7 @@ export function GatheringRealtimeProvider({
     applyTimelineSnapshot,
     clearTimeline,
     publishGatheringLootNotification,
+    updateXpSoundBaseline,
   ]);
 
   const applySocketPayload = useCallback(
@@ -1212,6 +1226,8 @@ export function GatheringRealtimeProvider({
     try {
       const response = await collectGatheringRequest(characterId);
 
+      updateXpSoundBaseline(response.session);
+
       publishGatheringLootNotification({
         collected: response.collected,
         session: response.session,
@@ -1245,6 +1261,7 @@ export function GatheringRealtimeProvider({
     publishGatheringLootNotification,
     refresh,
     requestSocketSnapshot,
+    updateXpSoundBaseline,
   ]);
 
   const stop = useCallback(async () => {
@@ -1257,6 +1274,8 @@ export function GatheringRealtimeProvider({
 
     try {
       const response = await stopGatheringRequest(characterId);
+
+      updateXpSoundBaseline(response.session);
 
       requestSocketSnapshot();
 
@@ -1276,7 +1295,7 @@ export function GatheringRealtimeProvider({
         setIsBusy((previous) => (previous ? false : previous));
       }
     }
-  }, [characterId, enabled, refresh, requestSocketSnapshot]);
+  }, [characterId, enabled, refresh, requestSocketSnapshot, updateXpSoundBaseline]);
 
   const clearError = useCallback(() => {
     setErrorMessage((previous) => (previous === null ? previous : null));

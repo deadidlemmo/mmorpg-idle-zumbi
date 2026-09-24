@@ -38,6 +38,22 @@
     loot-notification-leave 260ms ease-in 3.9s forwards;
 }
 
+.loot-notification-card--perf-no-animation {
+  animation: none;
+}
+
+.loot-notification-card--hud {
+  width: min(19rem, 100%);
+  max-width: 100%;
+  min-height: 3.25rem;
+  margin-left: auto;
+  border-radius: 4px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.36);
+  animation: loot-notification-hud-enter 180ms ease-out both,
+    loot-notification-hud-leave 220ms ease-in 3.94s forwards;
+  contain: layout paint;
+}
+
 .loot-notification-card::before {
   content: '';
   position: absolute;
@@ -283,6 +299,15 @@
   .loot-notification-card__description {
     font-size: 0.64rem;
   }
+}
+
+@keyframes loot-notification-hud-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes loot-notification-hud-leave {
+  to { opacity: 0; }
 }
 
 @media (min-width: 761px) {

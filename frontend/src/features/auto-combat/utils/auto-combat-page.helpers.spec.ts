@@ -104,6 +104,7 @@ test("transição de retomada não exibe estado vazio de rastreamento", () => {
     characterHasHp: true,
   });
 
-  assert.equal(copy.title, "Retomando caçada");
+  assert.equal(copy.title, "Preparando batalha");
   assert.notEqual(copy.title, "Nenhuma ameaça rastreada");
+  assert.equal(copy.actionLabel, "Preparando...");
 });

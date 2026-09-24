@@ -23,7 +23,10 @@ export const API_ENDPOINTS = {
     product: "/admin/product",
     users: "/admin/users",
     userSuspension: (userId: string) => `/admin/users/${userId}/suspension`,
+    characterCashGrant: (characterId: string) =>
+      `/admin/characters/${characterId}/cash/grant`,
     auditLogs: "/admin/audit-logs",
+    cosmeticsCatalog: "/admin/cosmetics/catalog",
     cosmeticsGrant: "/admin/cosmetics/grant",
     cosmeticsRevoke: "/admin/cosmetics/revoke",
     userCosmetics: (userId: string) => `/admin/cosmetics/users/${userId}`,
@@ -104,6 +107,12 @@ export const API_ENDPOINTS = {
     startHunt: "/auto-combat/hunt/start",
     preview: "/auto-combat/preview",
     status: (characterId: string) => `/auto-combat/${characterId}/status`,
+    huntingPresences: (characterId: string) =>
+      `/auto-combat/${characterId}/hunting-presences`,
+    huntingVisualPosition: (characterId: string) =>
+      `/auto-combat/${characterId}/hunting-visual-position`,
+    huntingVisualPeers: (characterId: string) =>
+      `/auto-combat/${characterId}/hunting-visual-peers`,
     activeAction: (characterId: string) =>
       `/auto-combat/${characterId}/active-action`,
     stop: (characterId: string) => `/auto-combat/${characterId}/stop`,

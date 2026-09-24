@@ -186,7 +186,7 @@ test.describe('cosméticos e inspeção pública', () => {
     );
     await expect(
       page.locator('.appearance-collection-switcher button'),
-    ).toHaveCount(4);
+    ).toHaveCount(5);
     await expect(
       page.getByRole('tab', { name: /Acervo do Abrigo/ }),
     ).toBeVisible();
@@ -243,6 +243,7 @@ test.describe('cosméticos e inspeção pública', () => {
 
       const profileCard = page.locator('.cosmetic-profile-card');
       const profilePortrait = page.locator('.cosmetic-profile-card__portrait');
+      const overviewSurface = page.locator('.appearance-preview__surface');
       await page
         .locator('.appearance-collection-switcher button')
         .filter({ hasText: 'Núcleo Helix' })
@@ -263,6 +264,14 @@ test.describe('cosméticos e inspeção pública', () => {
         'src',
         /avatar-helix-lutador-m-white/,
       );
+      await expect(overviewSurface).toHaveClass(/has-overview/);
+      await expect
+        .poll(() =>
+          overviewSurface.evaluate(
+            (surface) => getComputedStyle(surface).backgroundImage,
+          ),
+        )
+        .toContain('background-helix-observatorio');
       await expect(page.getByText('Guardião do Núcleo')).toBeVisible();
       await page.waitForTimeout(1_500);
       await page.screenshot({
@@ -290,6 +299,14 @@ test.describe('cosméticos e inspeção pública', () => {
         'src',
         /avatar-carmesim-lutador-egide/,
       );
+      await expect(overviewSurface).toHaveClass(/has-overview/);
+      await expect
+        .poll(() =>
+          overviewSurface.evaluate(
+            (surface) => getComputedStyle(surface).backgroundImage,
+          ),
+        )
+        .toContain('background-carmesim-fortaleza');
       await expect(page.getByText('Executor do Protocolo')).toBeVisible();
       await page.waitForTimeout(1_350);
       await page.screenshot({
@@ -341,6 +358,100 @@ test.describe('cosméticos e inspeção pública', () => {
         .click();
       await page.getByRole('button', { name: 'Salvar' }).click();
       await expect(page.getByText('Aparência atualizada.')).toBeVisible();
+    } finally {
+      await api.dispose();
+    }
+  });
+
+  test('salva e restaura uma combinação livre entre coleções', async ({
+    page,
+  }, testInfo) => {
+    const api = await playwrightRequest.newContext({ baseURL: apiUrl });
+
+    try {
+      const grant = await api.post('/admin/cosmetics/grant', {
+        headers: { Authorization: `Bearer ${owner.accessToken}` },
+        data: {
+          userId: owner.userId,
+          collectionKey: 'cash-depois-da-lei',
+          source: CosmeticGrantSource.BUNDLE,
+          sourceReference: 'e2e-cash-depois-da-lei',
+        },
+      });
+      expect(grant.ok()).toBe(true);
+
+      await authenticatePage(page, owner);
+      await page.goto(`/dashboard/${owner.characterId}/appearance`);
+
+      const profileCard = page.locator('.cosmetic-profile-card');
+      const profilePortrait = page.locator('.cosmetic-profile-card__portrait');
+
+      await page
+        .locator('.appearance-collection-switcher button')
+        .filter({ hasText: 'Depois da Lei' })
+        .click();
+      await page
+        .locator('.appearance-item')
+        .filter({ hasText: 'Rick Grimes' })
+        .click();
+
+      await page.getByRole('tab', { name: 'Moldura', exact: true }).click();
+      await page
+        .locator('.appearance-collection-switcher button')
+        .filter({ hasText: 'Núcleo Helix' })
+        .click();
+      await page
+        .locator('.appearance-item')
+        .filter({ hasText: 'Órbita Helix' })
+        .click();
+
+      await page.getByRole('tab', { name: 'Efeito', exact: true }).click();
+      await page
+        .locator('.appearance-collection-switcher button')
+        .filter({ hasText: 'Protocolo Carmesim' })
+        .click();
+      await page
+        .locator('.appearance-item')
+        .filter({ hasText: 'Ruptura Carmesim' })
+        .click();
+
+      const assertMixedPreview = async () => {
+        await expect(profilePortrait).toHaveClass(/is-frame-helix-orbit/);
+        await expect(profilePortrait.locator('img')).toHaveAttribute(
+          'src',
+          /avatar-depois-da-lei-xerife-asfalto/,
+        );
+        await expect(profileCard).toHaveClass(/is-effect-crimson-rift/);
+      };
+
+      await assertMixedPreview();
+      await page.getByRole('button', { name: 'Salvar' }).click();
+      await expect(page.getByText('Aparência atualizada.')).toBeVisible();
+      await page.reload();
+      await assertMixedPreview();
+
+      const catalogResponse = await api.get(
+        `/cosmetics/characters/${owner.characterId}`,
+        { headers: { Authorization: `Bearer ${owner.accessToken}` } },
+      );
+      expect(catalogResponse.ok()).toBe(true);
+      const catalog = (await catalogResponse.json()) as {
+        appearance: {
+          avatar: { key: string } | null;
+          avatarFrame: { key: string } | null;
+          profileEffect: { key: string } | null;
+        };
+      };
+      expect(catalog.appearance).toMatchObject({
+        avatar: { key: 'avatar-depois-da-lei-xerife-asfalto' },
+        avatarFrame: { key: 'moldura-helix-orbita' },
+        profileEffect: { key: 'efeito-carmesim-ruptura' },
+      });
+
+      await page.screenshot({
+        path: testInfo.outputPath('appearance-mixed-collections-desktop.png'),
+        fullPage: true,
+      });
     } finally {
       await api.dispose();
     }
@@ -420,7 +531,7 @@ test.describe('cosméticos e inspeção pública', () => {
     await expect(
       premiumItemCard.getByText('R$ 19,90', { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText('+20%', { exact: true })).toHaveCount(4);
+    await expect(page.getByText('+50%', { exact: true })).toHaveCount(4);
     await expect(page.getByText('12 horas', { exact: true })).toBeVisible();
     await expect(page.getByText('38', { exact: true })).toBeVisible();
     await expect(page.getByText('Pausadas durante os testes')).toHaveCount(0);

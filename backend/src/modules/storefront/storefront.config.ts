@@ -1,3 +1,5 @@
+import { PREMIUM_XP_BONUS_PERCENT } from '../../common/config/membership.config';
+
 export const STOREFRONT_PROVIDER_KEYS = ['MERCADO_PAGO', 'STRIPE'] as const;
 
 export type StorefrontProviderKey = (typeof STOREFRONT_PROVIDER_KEYS)[number];
@@ -49,10 +51,10 @@ export const CUSTOM_CASH_MIN_AMOUNT = 1;
 export const CUSTOM_CASH_MAX_AMOUNT = 1_000;
 
 export const PREMIUM_CORE_BENEFITS = [
-  '+20% de EXP de Personagem',
-  '+20% de EXP de Rastreio',
-  '+20% de EXP de Expedições',
-  '+20% de EXP de Criação',
+  `+${PREMIUM_XP_BONUS_PERCENT}% de EXP de Personagem`,
+  `+${PREMIUM_XP_BONUS_PERCENT}% de EXP de Rastreio`,
+  `+${PREMIUM_XP_BONUS_PERCENT}% de EXP de Expedições`,
+  `+${PREMIUM_XP_BONUS_PERCENT}% de EXP de Criação`,
   'Até 12 horas de progresso idle',
   'Coleção Último Abrigo enquanto Premium estiver ativo',
   'Benefícios válidos para toda a conta',

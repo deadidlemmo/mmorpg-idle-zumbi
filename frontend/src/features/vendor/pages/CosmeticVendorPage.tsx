@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type ComponentType,
+  type CSSProperties,
 } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import {
@@ -16,15 +17,19 @@ import {
   Image,
   LoaderCircle,
   Palette,
+  RotateCcw,
   ShoppingBag,
   Sparkles,
 } from "lucide-react";
 import goldIcon from "../../../assets/images/coins/gold.webp";
+import cashIcon from "../../../assets/images/coins/cash.webp";
 import {
   getCosmeticVendorCatalog,
   purchaseCosmeticVendorProduct,
 } from "../../cosmetics/api/cosmetics.api";
+import { CharacterProfileCard } from "../../cosmetics/components/CharacterProfileCard";
 import { CharacterPortrait } from "../../cosmetics/components/CharacterPortrait";
+import { CosmeticEffectLayer } from "../../cosmetics/components/CosmeticEffectLayer";
 import {
   getCosmeticEffectClass,
   getCosmeticImage,
@@ -52,6 +57,8 @@ type CosmeticCategoryDefinition = {
   icon: ComponentType<{ size?: number; strokeWidth?: number }>;
 };
 
+type PreviewProductSelection = Partial<Record<CosmeticVendorCategory, string>>;
+
 const COSMETIC_CATEGORIES: CosmeticCategoryDefinition[] = [
   { key: "avatar", label: "Avatar", icon: CircleUserRound },
   { key: "frame", label: "Moldura", icon: Frame },
@@ -61,14 +68,6 @@ const COSMETIC_CATEGORIES: CosmeticCategoryDefinition[] = [
   { key: "identity", label: "Identidade", icon: BadgeCheck },
 ];
 
-const RARITY_LABELS: Record<CosmeticItem["rarity"], string> = {
-  COMMON: "Comum",
-  UNCOMMON: "Incomum",
-  RARE: "Raro",
-  EPIC: "Épico",
-  LEGENDARY: "Lendário",
-};
-
 const RARITY_WEIGHT: Record<CosmeticItem["rarity"], number> = {
   COMMON: 0,
   UNCOMMON: 1,
@@ -77,7 +76,7 @@ const RARITY_WEIGHT: Record<CosmeticItem["rarity"], number> = {
   LEGENDARY: 4,
 };
 
-const GOLD_FORMATTER = new Intl.NumberFormat("pt-BR");
+const CURRENCY_FORMATTER = new Intl.NumberFormat("pt-BR");
 
 function getApiErrorMessage(error: unknown, fallback: string) {
   if (isAxiosError<{ message?: string | string[] }>(error)) {
@@ -110,14 +109,146 @@ function buildBaseAppearance(
   };
 }
 
+function applyCosmeticsToAppearance(
+  baseAppearance: ResolvedCharacterAppearance,
+  cosmetics: CosmeticItem[],
+): ResolvedCharacterAppearance {
+  const nextAppearance = { ...baseAppearance };
+
+  for (const cosmetic of cosmetics) {
+    switch (cosmetic.type) {
+      case "AVATAR":
+        nextAppearance.avatar = cosmetic;
+        nextAppearance.avatarKey =
+          cosmetic.assetKey ?? nextAppearance.baseAvatarKey ?? null;
+        break;
+      case "AVATAR_FRAME":
+        nextAppearance.avatarFrame = cosmetic;
+        break;
+      case "PROFILE_BANNER":
+        nextAppearance.profileBanner = cosmetic;
+        break;
+      case "OVERVIEW_BACKGROUND":
+        nextAppearance.overviewBackground = cosmetic;
+        break;
+      case "PROFILE_EFFECT":
+        nextAppearance.profileEffect = cosmetic;
+        break;
+      case "TITLE":
+        nextAppearance.title = cosmetic;
+        break;
+      case "BADGE":
+        nextAppearance.badge = cosmetic;
+        break;
+    }
+  }
+
+  nextAppearance.accentColor =
+    nextAppearance.profileBanner?.accentColor ??
+    nextAppearance.avatarFrame?.accentColor ??
+    nextAppearance.avatar?.accentColor ??
+    baseAppearance.accentColor ??
+    null;
+
+  return nextAppearance;
+}
+
+function getAppearanceCosmetic(
+  appearance: ResolvedCharacterAppearance,
+  type: CosmeticItem["type"],
+) {
+  switch (type) {
+    case "AVATAR":
+      return appearance.avatar;
+    case "AVATAR_FRAME":
+      return appearance.avatarFrame;
+    case "PROFILE_BANNER":
+      return appearance.profileBanner;
+    case "OVERVIEW_BACKGROUND":
+      return appearance.overviewBackground;
+    case "PROFILE_EFFECT":
+      return appearance.profileEffect;
+    case "TITLE":
+      return appearance.title;
+    case "BADGE":
+      return appearance.badge;
+  }
+}
+
+function isProductInUse(
+  product: CosmeticVendorProduct,
+  appearance: ResolvedCharacterAppearance,
+) {
+  return product.cosmetics.every(
+    (cosmetic) =>
+      cosmetic.isEquipped ||
+      getAppearanceCosmetic(appearance, cosmetic.type)?.key === cosmetic.key,
+  );
+}
+
+function CosmeticMiniProfile({
+  character,
+  appearance,
+}: {
+  character: DashboardCharacterViewModel;
+  appearance: ResolvedCharacterAppearance;
+}) {
+  const bannerImage = getCosmeticImage(appearance.profileBanner?.assetKey);
+  const effectClass = getCosmeticEffectClass(
+    appearance.profileEffect?.effectPreset,
+  );
+  const style = {
+    "--vendor-mini-accent": appearance.accentColor ?? "#84b85c",
+    ...(bannerImage ? { "--vendor-mini-banner": `url("${bannerImage}")` } : {}),
+  } as CSSProperties;
+
+  return (
+    <span
+      className={[
+        "cosmetic-vendor-mini-profile",
+        "cosmetic-surface",
+        bannerImage ? "has-banner" : "",
+        effectClass,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={style}
+      aria-hidden="true"
+    >
+      <CosmeticEffectLayer
+        effectPreset={appearance.profileEffect?.effectPreset}
+      />
+      <CharacterPortrait
+        className="cosmetic-vendor-mini-profile__portrait"
+        name={character.name}
+        avatarKey={character.avatarKey}
+        avatarUrl={character.avatarUrl}
+        appearance={appearance}
+        decorative
+      />
+      <span className="cosmetic-vendor-mini-profile__identity">
+        <small>{character.className ?? character.class?.name}</small>
+        <strong>{character.name}</strong>
+        {appearance.title?.displayText ? (
+          <em>{appearance.title.displayText}</em>
+        ) : null}
+      </span>
+      {appearance.badge?.displayText ? (
+        <b title={appearance.badge.name}>{appearance.badge.displayText}</b>
+      ) : null}
+    </span>
+  );
+}
+
 function CosmeticProductPreview({
   product,
   character,
+  appearance,
 }: {
   product: CosmeticVendorProduct;
   character: DashboardCharacterViewModel;
+  appearance: ResolvedCharacterAppearance;
 }) {
-  const baseAppearance = buildBaseAppearance(character);
   const avatar = product.cosmetics.find((item) => item.type === "AVATAR");
   const frame = product.cosmetics.find((item) => item.type === "AVATAR_FRAME");
   const banner = product.cosmetics.find(
@@ -149,7 +280,7 @@ function CosmeticProductPreview({
           name={character.name}
           avatarKey={character.avatarKey}
           avatarUrl={character.avatarUrl}
-          appearance={{ ...baseAppearance, avatarFrame: frame }}
+          appearance={appearance}
           decorative
         />
       </div>
@@ -157,24 +288,9 @@ function CosmeticProductPreview({
   }
 
   if (banner) {
-    const image = getCosmeticImage(banner.assetKey);
     return (
-      <div
-        className="cosmetic-vendor-preview cosmetic-vendor-preview--banner"
-        style={image ? { backgroundImage: `url("${image}")` } : undefined}
-      >
-        <CharacterPortrait
-          className="cosmetic-vendor-preview__card-portrait"
-          name={character.name}
-          avatarKey={character.avatarKey}
-          avatarUrl={character.avatarUrl}
-          appearance={baseAppearance}
-          decorative
-        />
-        <span>
-          <small>{character.className ?? character.class?.name}</small>
-          <strong>{character.name}</strong>
-        </span>
+      <div className="cosmetic-vendor-preview cosmetic-vendor-preview--banner">
+        <CosmeticMiniProfile character={character} appearance={appearance} />
       </div>
     );
   }
@@ -186,27 +302,15 @@ function CosmeticProductPreview({
         className="cosmetic-vendor-preview cosmetic-vendor-preview--overview"
         style={image ? { backgroundImage: `url("${image}")` } : undefined}
       >
-        <span>Visão geral</span>
+        <CosmeticMiniProfile character={character} appearance={appearance} />
       </div>
     );
   }
 
   if (effect) {
-    const effectClass = getCosmeticEffectClass(effect.effectPreset);
     return (
-      <div
-        className={`cosmetic-vendor-preview cosmetic-vendor-preview--effect cosmetic-surface ${effectClass}`}
-      >
-        <span className="cosmetic-effect-layer" aria-hidden="true" />
-        <CharacterPortrait
-          className="cosmetic-vendor-preview__effect-portrait"
-          name={character.name}
-          avatarKey={character.avatarKey}
-          avatarUrl={character.avatarUrl}
-          appearance={baseAppearance}
-          decorative
-        />
-        <strong>{character.name}</strong>
+      <div className="cosmetic-vendor-preview cosmetic-vendor-preview--effect">
+        <CosmeticMiniProfile character={character} appearance={appearance} />
       </div>
     );
   }
@@ -214,11 +318,7 @@ function CosmeticProductPreview({
   if (title || badge) {
     return (
       <div className="cosmetic-vendor-preview cosmetic-vendor-preview--identity">
-        {badge?.displayText ? <b>{badge.displayText}</b> : null}
-        <span>
-          <small>{title?.displayText}</small>
-          <strong>{character.name}</strong>
-        </span>
+        <CosmeticMiniProfile character={character} appearance={appearance} />
       </div>
     );
   }
@@ -241,6 +341,8 @@ export function CosmeticVendorPage() {
   );
   const [activeCategoryKey, setActiveCategoryKey] =
     useState<CosmeticVendorCategory>("avatar");
+  const [previewProductSelection, setPreviewProductSelection] =
+    useState<PreviewProductSelection>({});
   const [isLoading, setIsLoading] = useState(true);
   const [busyProductId, setBusyProductId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -265,8 +367,10 @@ export function CosmeticVendorPage() {
           setCharacter({
             ...buildGatheringDashboardCharacter(overview),
             gold: vendorCatalog.character.gold,
+            cash: vendorCatalog.character.cash,
           });
           setCatalog(vendorCatalog);
+          setPreviewProductSelection({});
         }
       } catch (error) {
         if (isMounted) {
@@ -303,6 +407,33 @@ export function CosmeticVendorPage() {
         .sort((left, right) => left.sortOrder - right.sortOrder) ?? [],
     [activeCategory.key, catalog?.products],
   );
+  const baseAppearance = useMemo(
+    () => (character ? buildBaseAppearance(character) : null),
+    [character],
+  );
+  const previewAppearance = useMemo(() => {
+    if (!baseAppearance || !catalog) return baseAppearance;
+
+    return COSMETIC_CATEGORIES.reduce((appearance, category) => {
+      const selectedProductId = previewProductSelection[category.key];
+      const selectedProduct = selectedProductId
+        ? catalog.products.find((product) => product.id === selectedProductId)
+        : null;
+
+      return selectedProduct
+        ? applyCosmeticsToAppearance(appearance, selectedProduct.cosmetics)
+        : appearance;
+    }, baseAppearance);
+  }, [baseAppearance, catalog, previewProductSelection]);
+  const previewSelectionCount = Object.keys(previewProductSelection).length;
+  const overviewPreviewImage = getCosmeticImage(
+    previewAppearance?.overviewBackground?.assetKey,
+  );
+  const overviewPreviewStyle = overviewPreviewImage
+    ? ({
+        "--vendor-overview-image": `url("${overviewPreviewImage}")`,
+      } as CSSProperties)
+    : undefined;
 
   async function handlePurchase(product: CosmeticVendorProduct) {
     if (!catalog || product.isOwned || busyProductId) return;
@@ -325,7 +456,11 @@ export function CosmeticVendorPage() {
         current
           ? {
               ...current,
-              character: { ...current.character, gold: result.gold },
+              character: {
+                ...current.character,
+                gold: result.gold,
+                cash: result.cash,
+              },
               products: current.products.map((item) =>
                 item.id === product.id
                   ? { ...item, isOwned: true, isPartiallyOwned: false }
@@ -339,11 +474,20 @@ export function CosmeticVendorPage() {
           ? {
               ...current,
               gold: result.gold,
+              cash: result.cash,
               wallet: current.wallet
-                ? { ...current.wallet, gold: result.gold }
+                ? {
+                    ...current.wallet,
+                    gold: result.gold,
+                    cash: result.cash,
+                  }
                 : current.wallet,
               currencies: current.currencies
-                ? { ...current.currencies, gold: result.gold }
+                ? {
+                    ...current.currencies,
+                    gold: result.gold,
+                    cash: result.cash,
+                  }
                 : current.currencies,
             }
           : current,
@@ -473,98 +617,187 @@ export function CosmeticVendorPage() {
             })}
           </div>
 
-          <div
-            id={`cosmetic-vendor-panel-${activeCategory.key}`}
-            className="cosmetic-vendor-category"
-            role="tabpanel"
-            aria-labelledby={`cosmetic-vendor-tab-${activeCategory.key}`}
-          >
-            {errorMessage || successMessage ? (
-              <p
-                className={`cosmetic-vendor-notice ${errorMessage ? "is-error" : "is-success"}`}
-                role={errorMessage ? "alert" : "status"}
-              >
-                {errorMessage ?? successMessage}
-              </p>
-            ) : null}
+          <div className="cosmetic-vendor-workspace">
+            <div
+              id={`cosmetic-vendor-panel-${activeCategory.key}`}
+              className="cosmetic-vendor-category"
+              role="tabpanel"
+              aria-labelledby={`cosmetic-vendor-tab-${activeCategory.key}`}
+            >
+              {errorMessage || successMessage ? (
+                <p
+                  className={`cosmetic-vendor-notice ${errorMessage ? "is-error" : "is-success"}`}
+                  role={errorMessage ? "alert" : "status"}
+                >
+                  {errorMessage ?? successMessage}
+                </p>
+              ) : null}
 
-            <div className="cosmetic-vendor-stock">
-              {activeProducts.map((product) => {
-                const isBusy = busyProductId === product.id;
-                const hasEnoughGold =
-                  catalog.character.gold >= product.goldPrice;
-                const rarity = getProductRarity(product);
+              <header className="cosmetic-vendor-category__summary">
+                <strong>{activeCategory.label}</strong>
+                <span>{activeProducts.length} opções</span>
+              </header>
 
-                return (
-                  <article
-                    key={product.id}
-                    className={`cosmetic-vendor-product rarity-${rarity.toLowerCase()} ${product.isOwned ? "is-owned" : ""}`}
-                  >
-                    <CosmeticProductPreview
-                      product={product}
-                      character={character}
-                    />
+              <div className="cosmetic-vendor-stock">
+                {activeProducts.map((product) => {
+                  const isBusy = busyProductId === product.id;
+                  const isCashProduct = product.currency === "CASH";
+                  const availableBalance = isCashProduct
+                    ? catalog.character.cash
+                    : catalog.character.gold;
+                  const hasEnoughCurrency = availableBalance >= product.price;
+                  const currencyIcon = isCashProduct ? cashIcon : goldIcon;
+                  const currencyLabel = isCashProduct ? "Cash" : "Gold";
+                  const rarity = getProductRarity(product);
+                  const isPreviewed =
+                    previewProductSelection[product.category] === product.id;
+                  const isInUse = baseAppearance
+                    ? isProductInUse(product, baseAppearance)
+                    : false;
+                  const productPreviewAppearance = previewAppearance
+                    ? applyCosmeticsToAppearance(
+                        previewAppearance,
+                        product.cosmetics,
+                      )
+                    : buildBaseAppearance(character);
 
-                    <div className="cosmetic-vendor-product__body">
-                      <div className="cosmetic-vendor-product__meta">
-                        <span>{RARITY_LABELS[rarity]}</span>
-                        {product.isOwned ? (
-                          <strong>
-                            <Check size={12} aria-hidden="true" /> Adquirido
-                          </strong>
-                        ) : null}
-                      </div>
-                      <h3>{product.name}</h3>
-                      <p>{product.description}</p>
-                      {product.cosmetics.length > 1 ? (
-                        <small className="cosmetic-vendor-product__bundle">
-                          Título + distintivo
-                        </small>
-                      ) : null}
-                    </div>
-
-                    <footer className="cosmetic-vendor-product__footer">
-                      <span className="cosmetic-vendor-product__price">
-                        <img src={goldIcon} alt="" aria-hidden="true" />
-                        <strong>
-                          {GOLD_FORMATTER.format(product.goldPrice)}
-                        </strong>
-                      </span>
+                  return (
+                    <article
+                      key={product.id}
+                      className={[
+                        "cosmetic-vendor-product",
+                        `rarity-${rarity.toLowerCase()}`,
+                        product.isOwned ? "is-owned" : "",
+                        isInUse ? "is-in-use" : "",
+                        isPreviewed ? "is-previewed" : "",
+                        isCashProduct ? "is-cash-product" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
                       <button
                         type="button"
-                        disabled={
-                          product.isOwned ||
-                          isBusy ||
-                          Boolean(busyProductId) ||
-                          !hasEnoughGold
-                        }
-                        title={
-                          product.isOwned
-                            ? "Esta aparência já pertence à sua conta"
-                            : !hasEnoughGold
-                              ? "Gold insuficiente"
-                              : `Comprar ${product.name}`
-                        }
-                        onClick={() => void handlePurchase(product)}
+                        className="cosmetic-vendor-product__selector"
+                        aria-label={`Visualizar ${product.name}`}
+                        aria-pressed={isPreviewed}
+                        onClick={() => {
+                          setPreviewProductSelection((current) => ({
+                            ...current,
+                            [product.category]: product.id,
+                          }));
+                          setErrorMessage(null);
+                          setSuccessMessage(null);
+                        }}
                       >
-                        {isBusy ? (
-                          <LoaderCircle
-                            className="is-spinning"
-                            size={15}
-                            aria-hidden="true"
-                          />
-                        ) : product.isOwned ? (
-                          <Check size={15} aria-hidden="true" />
-                        ) : (
-                          <ShoppingBag size={15} aria-hidden="true" />
-                        )}
-                        <span>{product.isOwned ? "Adquirido" : "Comprar"}</span>
+                        <CosmeticProductPreview
+                          product={product}
+                          character={character}
+                          appearance={productPreviewAppearance}
+                        />
+                        {isPreviewed ? (
+                          <span className="cosmetic-vendor-product__preview-state">
+                            <Check size={12} aria-hidden="true" /> Em prévia
+                          </span>
+                        ) : null}
+                        <strong className="cosmetic-vendor-product__name">
+                          {product.name}
+                        </strong>
                       </button>
-                    </footer>
-                  </article>
-                );
-              })}
+
+                      <footer className="cosmetic-vendor-product__footer">
+                        <span
+                          className={`cosmetic-vendor-product__price ${isCashProduct ? "is-cash" : "is-gold"}`}
+                          title={`${CURRENCY_FORMATTER.format(product.price)} ${currencyLabel}`}
+                        >
+                          <img src={currencyIcon} alt="" aria-hidden="true" />
+                          <strong>
+                            {CURRENCY_FORMATTER.format(product.price)}
+                          </strong>
+                        </span>
+                        <button
+                          type="button"
+                          disabled={
+                            product.isOwned ||
+                            isBusy ||
+                            Boolean(busyProductId) ||
+                            !hasEnoughCurrency
+                          }
+                          title={
+                            isInUse
+                              ? "Esta aparência está em uso"
+                              : product.isOwned
+                                ? "Esta aparência já pertence à sua conta"
+                                : !hasEnoughCurrency
+                                  ? `${currencyLabel} insuficiente`
+                                  : `Comprar ${product.name}`
+                          }
+                          onClick={() => void handlePurchase(product)}
+                        >
+                          {isBusy ? (
+                            <LoaderCircle
+                              className="is-spinning"
+                              size={15}
+                              aria-hidden="true"
+                            />
+                          ) : product.isOwned ? (
+                            <Check size={15} aria-hidden="true" />
+                          ) : (
+                            <ShoppingBag size={15} aria-hidden="true" />
+                          )}
+                          <span>
+                            {isInUse
+                              ? "Em uso"
+                              : product.isOwned
+                                ? "Adquirido"
+                                : "Comprar"}
+                          </span>
+                        </button>
+                      </footer>
+                    </article>
+                  );
+                })}
+              </div>
             </div>
+
+            <aside
+              className="cosmetic-vendor-live-preview"
+              aria-label="Prévia da aparência"
+              aria-live="polite"
+            >
+              <header>
+                <span>Prévia pública</span>
+                <small>
+                  {previewSelectionCount
+                    ? `${previewSelectionCount} em prévia`
+                    : "Visual atual"}
+                </small>
+              </header>
+              <div
+                className={`cosmetic-vendor-live-preview__surface ${overviewPreviewImage ? "has-overview" : ""}`}
+                style={overviewPreviewStyle}
+              >
+                <CharacterProfileCard
+                  name={character.name}
+                  className={
+                    character.className ??
+                    character.class?.name ??
+                    "Sobrevivente"
+                  }
+                  level={character.level}
+                  mapName={character.currentMapName}
+                  avatarKey={character.avatarKey}
+                  appearance={previewAppearance}
+                />
+              </div>
+              <button
+                type="button"
+                className="cosmetic-vendor-live-preview__reset"
+                disabled={previewSelectionCount === 0}
+                onClick={() => setPreviewProductSelection({})}
+              >
+                <RotateCcw size={15} aria-hidden="true" /> Restaurar visual
+              </button>
+            </aside>
           </div>
         </section>
       </section>

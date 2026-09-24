@@ -258,7 +258,6 @@ Storage conhecido:
 
 - `dead_idle_access_token`
 - `dead_idle_selected_character_id`
-- `dead-idle.dashboard.gathering-subnav-open`
 - prefixo `dead_idle_crafting_filters` em `sessionStorage`
 
 ## Regras de banco e migrations

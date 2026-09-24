@@ -37,18 +37,22 @@ export interface AdminUser {
   termsVersion: string | null;
   privacyVersion: string | null;
   createdAt: string;
+  characters: Array<{
+    id: string;
+    name: string;
+    level: number;
+    status: string;
+    gold: number;
+    cash: number;
+    class: { name: string };
+  }>;
   _count: { characters: number };
 }
 
 export interface AdminCosmeticEntitlement {
   id: string;
   source:
-    | "PURCHASE"
-    | "BUNDLE"
-    | "SEASON_PASS"
-    | "EVENT"
-    | "ACHIEVEMENT"
-    | "ADMIN";
+    "PURCHASE" | "BUNDLE" | "SEASON_PASS" | "EVENT" | "ACHIEVEMENT" | "ADMIN";
   sourceReference: string | null;
   grantedAt: string;
   expiresAt: string | null;
@@ -60,6 +64,37 @@ export interface AdminCosmeticEntitlement {
     type: string;
     collection: { key: string; name: string } | null;
   };
+}
+
+export interface AdminCosmeticCatalog {
+  collections: Array<{
+    key: string;
+    name: string;
+    description: string | null;
+    sortOrder: number;
+    cosmeticCount: number;
+  }>;
+  products: Array<{
+    id: string;
+    name: string;
+    category: "avatar" | "frame" | "card" | "overview" | "effect" | "identity";
+    currency: "GOLD" | "CASH";
+    price: number;
+    cosmeticKeys: string[];
+  }>;
+  cosmetics: Array<{
+    key: string;
+    name: string;
+    type: string;
+    rarity: string;
+    accessType: string;
+    collection: {
+      key: string;
+      name: string;
+      description: string | null;
+      sortOrder: number;
+    } | null;
+  }>;
 }
 
 interface PageResponse {
@@ -401,9 +436,18 @@ export async function getAdminUserCosmetics(userId: string) {
   return response.data;
 }
 
+export async function getAdminCosmeticCatalog() {
+  const response = await apiClient.get<AdminCosmeticCatalog>(
+    API_ENDPOINTS.admin.cosmeticsCatalog,
+  );
+  return response.data;
+}
+
 export async function grantAdminCosmetics(payload: {
   userId: string;
-  collectionKey: string;
+  collectionKey?: string;
+  cosmeticKey?: string;
+  productId?: string;
   source: AdminCosmeticEntitlement["source"];
   sourceReference?: string;
   expiresAt?: string;
@@ -412,6 +456,24 @@ export async function grantAdminCosmetics(payload: {
     API_ENDPOINTS.admin.cosmeticsGrant,
     payload,
   );
+  return response.data;
+}
+
+export async function grantAdminCharacterCash(
+  characterId: string,
+  payload: { amount: number; reason: string; requestId: string },
+) {
+  const response = await apiClient.post<{
+    character: {
+      id: string;
+      name: string;
+      cash: number;
+      user: { id: string; email: string };
+    };
+    amount: number;
+    grantedBalanceAfter: number | null;
+    alreadyProcessed: boolean;
+  }>(API_ENDPOINTS.admin.characterCashGrant(characterId), payload);
   return response.data;
 }
 

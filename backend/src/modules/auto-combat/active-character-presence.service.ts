@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   ActivityStatus,
   AutoCombatSessionPhase,
@@ -10,10 +10,17 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CosmeticsService } from '../cosmetics/cosmetics.service';
 
-const ACTIVE_AUTO_COMBAT_PHASES = [
+const HUNTING_PRESENCE_PHASES = [
   AutoCombatSessionPhase.HUNTING,
+  AutoCombatSessionPhase.ENCOUNTER_READY,
+];
+
+const ACTIVE_AUTO_COMBAT_PHASES = [
+  ...HUNTING_PRESENCE_PHASES,
   AutoCombatSessionPhase.COMBAT_ACTIVE,
 ];
+
+const MAX_HUNTING_PRESENCES = 24;
 
 const ACTIVE_WORLD_BOSS_STATUSES = [WorldBossEventStatus.ACTIVE];
 
@@ -197,6 +204,102 @@ export class ActiveCharacterPresenceService {
           },
         };
       }),
+    };
+  }
+
+  async getHuntingPresences(
+    userId: string,
+    characterId: string,
+    now = new Date(),
+  ) {
+    const character = await this.prisma.character.findFirst({
+      where: {
+        id: characterId,
+        userId,
+        status: CharacterStatus.ACTIVE,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+
+    if (!character) {
+      throw new NotFoundException('Personagem não encontrado.');
+    }
+
+    const activeSession = await this.prisma.autoCombatSession.findFirst({
+      where: {
+        characterId,
+        status: AutoCombatSessionStatus.ACTIVE,
+        phase: { in: HUNTING_PRESENCE_PHASES },
+        endsAt: { gt: now },
+      },
+      orderBy: { startedAt: 'desc' },
+      select: {
+        id: true,
+        mapId: true,
+        subMapId: true,
+      },
+    });
+
+    if (!activeSession) {
+      return {
+        mapId: null,
+        subMapId: null,
+        updatedAt: now.toISOString(),
+        characters: [],
+      };
+    }
+
+    const sessions = await this.prisma.autoCombatSession.findMany({
+      where: {
+        id: { not: activeSession.id },
+        characterId: { not: characterId },
+        mapId: activeSession.mapId,
+        subMapId: activeSession.subMapId,
+        status: AutoCombatSessionStatus.ACTIVE,
+        phase: { in: HUNTING_PRESENCE_PHASES },
+        endsAt: { gt: now },
+        character: {
+          status: CharacterStatus.ACTIVE,
+          deletedAt: null,
+        },
+      },
+      orderBy: [{ startedAt: 'desc' }, { id: 'asc' }],
+      distinct: ['characterId'],
+      take: MAX_HUNTING_PRESENCES,
+      select: {
+        phase: true,
+        startedAt: true,
+        huntBatch: {
+          select: {
+            cycleStartedAt: true,
+            cycleEndsAt: true,
+          },
+        },
+        character: {
+          select: {
+            id: true,
+            name: true,
+            avatarKey: true,
+          },
+        },
+      },
+    });
+
+    return {
+      mapId: activeSession.mapId,
+      subMapId: activeSession.subMapId,
+      updatedAt: now.toISOString(),
+      characters: sessions.map((session) => ({
+        id: session.character.id,
+        name: session.character.name,
+        avatarKey: session.character.avatarKey,
+        phase: session.phase,
+        startedAt: session.startedAt.toISOString(),
+        cycleStartedAt:
+          session.huntBatch?.cycleStartedAt?.toISOString() ?? null,
+        cycleEndsAt: session.huntBatch?.cycleEndsAt?.toISOString() ?? null,
+      })),
     };
   }
 

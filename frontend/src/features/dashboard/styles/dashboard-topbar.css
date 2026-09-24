@@ -1225,6 +1225,15 @@
   transform: scale(0.96);
 }
 
+.dashboard-topbar__sound svg {
+  width: 17px;
+  height: 17px;
+}
+
+.dashboard-topbar__sound[aria-pressed="false"] {
+  color: rgba(255, 248, 232, 0.48);
+}
+
 /* =========================================================
    ANIMAÇÕES
    ========================================================= */

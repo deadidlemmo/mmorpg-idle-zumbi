@@ -34,6 +34,12 @@ describe('auto-combat-state-machine', () => {
     ).toBe(true);
     expect(
       isAutoCombatPhaseTransitionAllowed(
+        AutoCombatSessionPhase.COMBAT_ACTIVE,
+        AutoCombatSessionPhase.HUNTING,
+      ),
+    ).toBe(true);
+    expect(
+      isAutoCombatPhaseTransitionAllowed(
         AutoCombatSessionPhase.HUNTING,
         AutoCombatSessionPhase.COMBAT_ACTIVE,
       ),
@@ -43,8 +49,8 @@ describe('auto-combat-state-machine', () => {
   it('falha de forma explicita para transicao invalida', () => {
     expect(() =>
       assertAutoCombatPhaseTransition(
-        AutoCombatSessionPhase.COMBAT_ACTIVE,
         AutoCombatSessionPhase.HUNTING,
+        AutoCombatSessionPhase.COMBAT_ACTIVE,
       ),
     ).toThrow('Transicao invalida de AutoCombat');
   });

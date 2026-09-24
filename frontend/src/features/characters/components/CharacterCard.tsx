@@ -1,14 +1,15 @@
-import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
-import { useEffect, useRef, useState } from 'react';
-import { CharacterPortrait } from '../../cosmetics/components/CharacterPortrait';
+import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CosmeticEffectLayer } from "../../cosmetics/components/CosmeticEffectLayer";
+import { CharacterPortrait } from "../../cosmetics/components/CharacterPortrait";
 import {
   getCosmeticEffectClass,
   getCosmeticImage,
-} from '../../cosmetics/constants/cosmetic-assets';
+} from "../../cosmetics/constants/cosmetic-assets";
 import {
   getCharacterClass,
   type CharacterSummary,
-} from '../types/character.types';
+} from "../types/character.types";
 
 interface CharacterCardProps {
   character: CharacterSummary;
@@ -42,10 +43,10 @@ export function CharacterCard({
   );
 
   const style = {
-    '--class-accent': accentColor,
-    '--hero-accent': accentColor,
+    "--class-accent": accentColor,
+    "--hero-accent": accentColor,
     ...(bannerImage
-      ? { '--character-card-banner-image': `url("${bannerImage}")` }
+      ? { "--character-card-banner-image": `url("${bannerImage}")` }
       : {}),
   } as CSSProperties;
 
@@ -59,11 +60,11 @@ export function CharacterCard({
     }
 
     if (isMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isMenuOpen]);
 
@@ -75,7 +76,7 @@ export function CharacterCard({
   }
 
   function handleKeyboardSelect(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
+    if (event.key !== "Enter" && event.key !== " ") return;
 
     event.preventDefault();
     handleSelect();
@@ -102,15 +103,15 @@ export function CharacterCard({
     <div
       ref={cardRef}
       className={[
-        'survivor-list-card',
-        'cosmetic-surface',
-        bannerImage ? 'has-cosmetic-banner' : '',
+        "survivor-list-card",
+        "cosmetic-surface",
+        bannerImage ? "has-cosmetic-banner" : "",
         effectClass,
-        selected ? 'is-selected' : '',
-        isDeleting ? 'is-disabled' : '',
+        selected ? "is-selected" : "",
+        isDeleting ? "is-disabled" : "",
       ]
         .filter(Boolean)
-        .join(' ')}
+        .join(" ")}
       style={style}
       role="button"
       tabIndex={0}
@@ -118,12 +119,14 @@ export function CharacterCard({
       onClick={handleSelect}
       onKeyDown={handleKeyboardSelect}
     >
-      <span className="cosmetic-effect-layer" aria-hidden="true" />
+      <CosmeticEffectLayer
+        effectPreset={appearance?.profileEffect?.effectPreset}
+      />
 
       <button
         type="button"
         className={`survivor-list-card__menu-button ${
-          isMenuOpen ? 'is-open' : ''
+          isMenuOpen ? "is-open" : ""
         }`}
         onClick={handleMenuClick}
         disabled={isDeleting}
@@ -149,7 +152,7 @@ export function CharacterCard({
               <path d="M6 9h12l-.8 11H6.8L6 9Zm4 2v7h1.7v-7H10Zm2.3 0v7H14v-7h-1.7Z" />
             </svg>
 
-            <span>{isDeleting ? 'Excluindo...' : 'Excluir personagem'}</span>
+            <span>{isDeleting ? "Excluindo..." : "Excluir personagem"}</span>
           </button>
         </div>
       ) : null}

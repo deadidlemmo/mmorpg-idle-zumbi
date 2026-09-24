@@ -40,25 +40,24 @@ export function getHuntEmptyStageCopy(params: {
         : 'Você foi derrotado, mas os infectados que ainda não foram abatidos continuam rastreados neste mapa.',
       actionLabel:
         isStartingHunt || isActionLoading
-          ? 'Retomando...'
-          : 'Continuar ameaças',
+          ? 'Preparando...'
+          : 'Batalhar',
     };
   }
 
   if (isStartingHunt) {
     return {
       eyebrow: 'Rastreamento da área',
-      title: 'Retomando caçada',
-      description: 'Preparando o próximo ciclo de rastreio neste mapa.',
-      actionLabel: 'Retomando...',
+      title: 'Preparando batalha',
+      description: 'Preparando o próximo encontro neste mapa.',
+      actionLabel: 'Preparando...',
     };
   }
 
   return {
     eyebrow: 'Rastreamento da área',
-    title: 'Nenhuma ameaça rastreada',
-    description:
-      'Rota selecionada. Inicie uma caçada para localizar infectados neste mapa.',
-    actionLabel: isActionLoading ? 'Iniciando...' : 'Iniciar Caçada',
+    title: 'Área pronta',
+    description: 'Seu próximo encontro começa pelo rastreio da área.',
+    actionLabel: isActionLoading ? 'Preparando...' : 'Batalhar',
   };
 }

@@ -1276,3 +1276,46 @@ test("snapshot ACTIVE antigo não reabre a sessão derrotada", () => {
   assert.equal(replacement.session?.status, "ACTIVE");
   assert.equal(replacement.terminalDefeat, null);
 });
+
+test("sincroniza HP e poção imediatamente sem consumir a fila visual", () => {
+  const hit = autoCombatRealtimeReducer(makeState(), {
+    type: "SYNC_EVENT_RESOURCES",
+    characterId: "char-1",
+    event: {
+      ...makeHit(2, 80),
+      type: "MOB_HIT",
+      actor: "MOB",
+      target: "PLAYER",
+      characterCurrentHp: 72,
+      characterMaxHp: 100,
+    } as AutoCombatRealtimeEvent,
+  });
+
+  assert.equal(hit.character?.currentHp, 72);
+  assert.deepEqual(hit.eventQueue, []);
+  assert.equal(hit.activeEvent, null);
+  assert.equal(hit.lastAppliedEventSequence, null);
+
+  const potion = autoCombatRealtimeReducer(hit, {
+    type: "SYNC_EVENT_RESOURCES",
+    characterId: "char-1",
+    event: {
+      characterId: "char-1",
+      sessionId: "session-1",
+      type: "POTION_USED",
+      sequence: 3,
+      characterCurrentHp: 92,
+      characterMaxHp: 100,
+      potionItemId: "potion-1",
+      potionQuantityBefore: 7,
+      potionQuantityAfter: 6,
+      potionQuantityRemaining: 6,
+      potionUsedQuantity: 1,
+    } as AutoCombatRealtimeEvent,
+  });
+
+  assert.equal(potion.character?.currentHp, 92);
+  assert.equal(potion.potion?.quantityRemaining, 6);
+  assert.deepEqual(potion.eventQueue, []);
+  assert.equal(potion.lastAppliedEventSequence, null);
+});

@@ -61,6 +61,7 @@ type AppearanceContext = {
   userId: string;
   classId: string;
   gold: number;
+  cash: number;
   avatarKey: string | null;
   class: { id: string; name: string };
   user: { premiumUntil: Date | null };
@@ -257,8 +258,9 @@ export class CosmeticsService {
         id: character.id,
         name: character.name,
         gold: character.gold,
+        cash: character.cash,
       },
-      currency: 'GOLD',
+      currencies: ['GOLD', 'CASH'] as const,
       products: this.formatVendorProducts(cosmetics, entitlementIds, now),
     };
   }
@@ -273,7 +275,8 @@ export class CosmeticsService {
       throw new NotFoundException('Produto cosmético não encontrado.');
     }
 
-    const ledgerKey = `cosmetic-vendor:${characterId}:${dto.requestId}:gold`;
+    const currencyKey = product.currency.toLowerCase();
+    const ledgerKey = `cosmetic-vendor:${characterId}:${dto.requestId}:${currencyKey}`;
     const result = await this.prisma.$transaction(
       async (tx) => {
         const lockedUsers = await tx.$queryRaw<Array<{ id: string }>>(
@@ -299,7 +302,7 @@ export class CosmeticsService {
 
           const character = await tx.character.findFirst({
             where: { id: characterId, userId, deletedAt: null },
-            select: { id: true, gold: true },
+            select: { id: true, gold: true, cash: true },
           });
           if (!character) {
             throw new NotFoundException('Personagem não encontrado.');
@@ -307,6 +310,7 @@ export class CosmeticsService {
 
           return {
             gold: character.gold,
+            cash: character.cash,
             grantedCosmeticKeys: [...product.cosmeticKeys],
             alreadyProcessed: true,
           };
@@ -314,7 +318,7 @@ export class CosmeticsService {
 
         const character = await tx.character.findFirst({
           where: { id: characterId, userId, deletedAt: null },
-          select: { id: true, userId: true, gold: true },
+          select: { id: true, userId: true, gold: true, cash: true },
         });
         if (!character) {
           throw new NotFoundException('Personagem não encontrado.');
@@ -364,17 +368,27 @@ export class CosmeticsService {
           );
         }
 
-        const debited = await tx.character.updateMany({
-          where: {
-            id: character.id,
-            userId,
-            gold: { gte: product.goldPrice },
-          },
-          data: { gold: { decrement: product.goldPrice } },
-        });
+        const debited =
+          product.currency === 'CASH'
+            ? await tx.character.updateMany({
+                where: {
+                  id: character.id,
+                  userId,
+                  cash: { gte: product.price },
+                },
+                data: { cash: { decrement: product.price } },
+              })
+            : await tx.character.updateMany({
+                where: {
+                  id: character.id,
+                  userId,
+                  gold: { gte: product.price },
+                },
+                data: { gold: { decrement: product.price } },
+              });
         if (debited.count !== 1) {
           throw new BadRequestException(
-            `São necessários ${product.goldPrice.toLocaleString('pt-BR')} Gold para esta compra.`,
+            `São necessários ${product.price.toLocaleString('pt-BR')} ${product.currency === 'CASH' ? 'Cash' : 'Gold'} para esta compra.`,
           );
         }
 
@@ -405,15 +419,25 @@ export class CosmeticsService {
 
         const updatedCharacter = await tx.character.findUniqueOrThrow({
           where: { id: character.id },
-          select: { gold: true },
+          select: { gold: true, cash: true },
         });
+        const balanceAfter =
+          product.currency === 'CASH'
+            ? updatedCharacter.cash
+            : updatedCharacter.gold;
         await recordEconomyEntry(tx, {
           characterId: character.id,
           direction: EconomyDirection.DEBIT,
-          resourceType: EconomyResourceType.GOLD,
-          quantity: product.goldPrice,
-          balanceAfter: updatedCharacter.gold,
-          reason: ECONOMY_REASONS.COSMETIC_VENDOR_GOLD_SPENT,
+          resourceType:
+            product.currency === 'CASH'
+              ? EconomyResourceType.CASH
+              : EconomyResourceType.GOLD,
+          quantity: product.price,
+          balanceAfter,
+          reason:
+            product.currency === 'CASH'
+              ? ECONOMY_REASONS.COSMETIC_VENDOR_CASH_SPENT
+              : ECONOMY_REASONS.COSMETIC_VENDOR_GOLD_SPENT,
           idempotencyKey: ledgerKey,
           referenceType: 'CosmeticVendorPurchase',
           referenceId: dto.requestId,
@@ -425,6 +449,7 @@ export class CosmeticsService {
 
         return {
           gold: updatedCharacter.gold,
+          cash: updatedCharacter.cash,
           grantedCosmeticKeys: missingCosmetics.map((cosmetic) => cosmetic.key),
           alreadyProcessed: false,
         };
@@ -440,7 +465,8 @@ export class CosmeticsService {
         entityId: characterId,
         metadata: {
           productId: product.id,
-          goldPrice: product.goldPrice,
+          currency: product.currency,
+          price: product.price,
           cosmeticKeys: result.grantedCosmeticKeys,
           requestId: dto.requestId,
         },
@@ -453,6 +479,9 @@ export class CosmeticsService {
         : `${product.name} foi adicionado à sua conta.`,
       productId: product.id,
       gold: result.gold,
+      cash: result.cash,
+      currency: product.currency,
+      price: product.price,
       grantedCosmeticKeys: result.grantedCosmeticKeys,
       alreadyProcessed: result.alreadyProcessed,
     };
@@ -575,6 +604,7 @@ export class CosmeticsService {
         userId: true,
         classId: true,
         gold: true,
+        cash: true,
         avatarKey: true,
         class: { select: { id: true, name: true } },
         user: { select: { premiumUntil: true } },
@@ -628,10 +658,23 @@ export class CosmeticsService {
   async grantCosmetics(actorUserId: string, dto: GrantCosmeticsDto) {
     const hasCosmeticTarget = Boolean(dto.cosmeticKey);
     const hasCollectionTarget = Boolean(dto.collectionKey);
-    if (hasCosmeticTarget === hasCollectionTarget) {
+    const hasProductTarget = Boolean(dto.productId);
+    if (
+      Number(hasCosmeticTarget) +
+        Number(hasCollectionTarget) +
+        Number(hasProductTarget) !==
+      1
+    ) {
       throw new BadRequestException(
-        'Informe exatamente um cosmeticKey ou collectionKey.',
+        'Informe exatamente um cosmeticKey, collectionKey ou productId.',
       );
+    }
+
+    const product = dto.productId
+      ? getCosmeticVendorProduct(dto.productId)
+      : undefined;
+    if (dto.productId && !product) {
+      throw new NotFoundException('Produto cosmético não encontrado.');
     }
 
     const user = await this.prisma.user.findUnique({
@@ -644,6 +687,7 @@ export class CosmeticsService {
       where: {
         isActive: true,
         ...(dto.cosmeticKey ? { key: dto.cosmeticKey } : {}),
+        ...(product ? { key: { in: [...product.cosmeticKeys] } } : {}),
         ...(dto.collectionKey
           ? { collection: { key: dto.collectionKey, isActive: true } }
           : {}),
@@ -653,11 +697,17 @@ export class CosmeticsService {
     if (cosmetics.length === 0) {
       throw new NotFoundException('Nenhum cosmético ativo foi encontrado.');
     }
+    if (product && cosmetics.length !== new Set(product.cosmeticKeys).size) {
+      throw new NotFoundException(
+        'O produto possui aparências ausentes ou inativas.',
+      );
+    }
 
     const sourceReference =
       dto.sourceReference?.trim() ||
       dto.collectionKey ||
       dto.cosmeticKey ||
+      dto.productId ||
       'direct';
     const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
 
@@ -708,6 +758,82 @@ export class CosmeticsService {
       message: `${entitlements.length} cosmético(s) concedido(s).`,
       entitlements,
     };
+  }
+
+  async getAdminCatalog() {
+    const cosmetics = await this.prisma.cosmetic.findMany({
+      where: {
+        isActive: true,
+        accessType: { not: CosmeticAccessType.FREE },
+      },
+      orderBy: [
+        { collection: { sortOrder: 'asc' } },
+        { type: 'asc' },
+        { sortOrder: 'asc' },
+        { name: 'asc' },
+      ],
+      select: {
+        key: true,
+        name: true,
+        type: true,
+        rarity: true,
+        accessType: true,
+        collection: {
+          select: {
+            key: true,
+            name: true,
+            description: true,
+            sortOrder: true,
+          },
+        },
+      },
+    });
+    const activeKeys = new Set(cosmetics.map((cosmetic) => cosmetic.key));
+    const collections = Array.from(
+      cosmetics
+        .reduce(
+          (result, cosmetic) => {
+            if (!cosmetic.collection) return result;
+            const existing = result.get(cosmetic.collection.key);
+            if (existing) {
+              existing.cosmeticCount += 1;
+            } else {
+              result.set(cosmetic.collection.key, {
+                ...cosmetic.collection,
+                cosmeticCount: 1,
+              });
+            }
+            return result;
+          },
+          new Map<
+            string,
+            {
+              key: string;
+              name: string;
+              description: string | null;
+              sortOrder: number;
+              cosmeticCount: number;
+            }
+          >(),
+        )
+        .values(),
+    ).sort(
+      (left, right) =>
+        left.sortOrder - right.sortOrder ||
+        left.name.localeCompare(right.name, 'pt-BR'),
+    );
+    const products = COSMETIC_VENDOR_PRODUCTS.filter((product) =>
+      product.cosmeticKeys.every((key) => activeKeys.has(key)),
+    ).map((product) => ({
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      currency: product.currency,
+      price: product.price,
+      cosmeticKeys: [...product.cosmeticKeys],
+    }));
+
+    return { collections, products, cosmetics };
   }
 
   async listUserEntitlements(userId: string) {
@@ -788,6 +914,7 @@ export class CosmeticsService {
         userId: true,
         classId: true,
         gold: true,
+        cash: true,
         avatarKey: true,
         class: { select: { id: true, name: true } },
         user: { select: { premiumUntil: true } },
@@ -948,7 +1075,8 @@ export class CosmeticsService {
           category: product.category,
           name: product.name,
           description: product.description,
-          goldPrice: product.goldPrice,
+          currency: product.currency,
+          price: product.price,
           sortOrder: product.sortOrder,
           isOwned: ownedCount === productCosmetics.length,
           isPartiallyOwned:

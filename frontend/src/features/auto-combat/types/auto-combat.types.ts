@@ -558,6 +558,7 @@ export interface AutoCombatHuntingSkillViewModel {
   secondsPerEnemy?: number | null;
   maxTrackedEnemies?: number | null;
   bonuses?: {
+    bonusEnemyChancePercent?: number | null;
     betterEncounterChancePercent?: number | null;
     speedPercent?: number | null;
   } | null;

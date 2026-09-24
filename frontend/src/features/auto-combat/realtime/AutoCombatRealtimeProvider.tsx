@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation } from "react-router-dom";
+import { getPerformanceDiagnostics } from "../../performance/performanceDiagnostics";
+import { playGameSound } from "../../../services/audio/gameAudio";
 import {
   createActivityTimelineClockSample,
   getActivityTimelineMonotonicNowMs,
@@ -704,6 +706,8 @@ export function AutoCombatRealtimeProvider({
   );
   const pendingReloadOptionsRef = useRef<ReloadOptions | null>(null);
   const recentEventsRequestRef = useRef(0);
+  const snapshotSynchronizationRef = useRef(false);
+  const snapshotSequenceFloorRef = useRef(0);
   const terminalDefeatSessionRef = useRef<string | null>(null);
   const wasBackgroundedRef = useRef(false);
   const hiddenStartedAtRef = useRef<number | null>(null);
@@ -765,6 +769,8 @@ export function AutoCombatRealtimeProvider({
     wasSocketJoinedRef.current = false;
     hiddenStartedAtRef.current = null;
     lastVisibilityReturnAtRef.current = null;
+    snapshotSynchronizationRef.current = false;
+    snapshotSequenceFloorRef.current = 0;
     notifiedDefeatEventKeysRef.current.clear();
     notifiedHuntEventKeysRef.current.clear();
     terminalDefeatSessionRef.current = null;
@@ -791,7 +797,7 @@ export function AutoCombatRealtimeProvider({
   }, []);
 
   const publishDefeatNotification = useCallback(
-    (event: AutoCombatRealtimeEvent) => {
+    (event: AutoCombatRealtimeEvent, live = false) => {
       if (
         !normalizedCharacterId ||
         String(event.type ?? "")
@@ -838,6 +844,14 @@ export function AutoCombatRealtimeProvider({
         description: getDefeatNotificationDescription(event),
         displayQuantity: false,
       });
+      if (
+        live &&
+        window.location.pathname.includes("/auto-combat") &&
+        (getConfirmedXpAmount(event.xpGained) > 0 ||
+          getConfirmedXpAmount(event.baseXpGained) > 0)
+      ) {
+        playGameSound("xp");
+      }
     },
     [normalizedCharacterId, notifyLoot],
   );
@@ -897,6 +911,7 @@ export function AutoCombatRealtimeProvider({
 
   const enterSnapshotSynchronization = useCallback(
     (options?: SnapshotSynchronizationOptions) => {
+      snapshotSynchronizationRef.current = true;
       flushVisualQueueWithoutAnimation();
 
       dispatch({
@@ -936,6 +951,7 @@ export function AutoCombatRealtimeProvider({
       recentEventsRequestRef.current += 1;
       isLoadingRef.current = false;
       pendingReloadOptionsRef.current = null;
+      snapshotSynchronizationRef.current = false;
       lastInactiveStatusSignatureRef.current = null;
       clearHuntingTimeline();
 
@@ -1023,6 +1039,20 @@ export function AutoCombatRealtimeProvider({
         terminalDefeatSessionRef.current = null;
       }
 
+      const session = getStatusSession(status);
+      const incomingSequenceFloor = Math.max(
+        Number(session?.latestEventSequence) || 0,
+        Number(session?.snapshotSequence) || 0,
+      );
+      snapshotSequenceFloorRef.current =
+        session?.id && session.id !== stateRef.current.session?.id
+          ? incomingSequenceFloor
+          : Math.max(
+              snapshotSequenceFloorRef.current,
+              incomingSequenceFloor,
+            );
+      snapshotSynchronizationRef.current = false;
+
       dispatch({
         type: "HYDRATE_STATUS",
         characterId: normalizedCharacterId,
@@ -1094,12 +1124,33 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
+      const eventSequence = getLooseEventSequence(event);
+      if (
+        snapshotSynchronizationRef.current ||
+        (eventSequence !== null &&
+          eventSequence <= snapshotSequenceFloorRef.current)
+      ) {
+        telemetryReporterRef.current({
+          kind: "EVENT_DISPOSITION",
+          eventType: String(event.type ?? "UNKNOWN").toUpperCase(),
+          disposition: "SUPPRESSED",
+          dispositionReason: "SNAPSHOT_SYNCHRONIZATION",
+        });
+        return;
+      }
+
       lastInactiveStatusSignatureRef.current = null;
 
       if (!isUiBackgrounded()) {
         publishDefeatNotification(event);
         publishHuntTargetFoundNotification(event);
       }
+
+      dispatch({
+        type: "SYNC_EVENT_RESOURCES",
+        characterId: normalizedCharacterId,
+        event,
+      });
 
       if (isHuntTargetFoundEvent(event)) {
         return;
@@ -1767,6 +1818,8 @@ export function AutoCombatRealtimeProvider({
   const handleStatusPayload = useCallback(
     (payload: AutoCombatStatusResponse) => {
       if (!normalizedCharacterId) return;
+      const diagnostics = getPerformanceDiagnostics();
+      const statusStartedAt = diagnostics ? performance.now() : 0;
 
       if (isAutoCombatDefeatStatus(payload)) {
         terminateDefeatedPresentation({
@@ -1802,6 +1855,7 @@ export function AutoCombatRealtimeProvider({
       }
 
       hydrateStatus(payload);
+      diagnostics?.recordVisualStage("Status recebido", performance.now() - statusStartedAt, performance.now());
     },
     [
       enterSnapshotSynchronization,
@@ -1856,6 +1910,8 @@ export function AutoCombatRealtimeProvider({
   const handleRealtimeEvent = useCallback(
     (payload: AutoCombatRealtimeEvent) => {
       if (!normalizedCharacterId) return;
+      const diagnostics = getPerformanceDiagnostics();
+      const eventStartedAt = diagnostics ? performance.now() : 0;
 
       const currentState = stateRef.current;
 
@@ -1888,6 +1944,22 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
+
+      const eventSequence = getLooseEventSequence(payload);
+      if (
+        snapshotSynchronizationRef.current ||
+        (eventSequence !== null &&
+          eventSequence <= snapshotSequenceFloorRef.current)
+      ) {
+        telemetryReporterRef.current({
+          kind: "EVENT_DISPOSITION",
+          eventType: String(payload.type ?? "UNKNOWN").toUpperCase(),
+          disposition: "SUPPRESSED",
+          dispositionReason: "SNAPSHOT_SYNCHRONIZATION",
+        });
+        return;
+      }
+
       if (isUiBackgrounded()) {
         telemetryReporterRef.current({
           kind: "EVENT_DISPOSITION",
@@ -1907,10 +1979,27 @@ export function AutoCombatRealtimeProvider({
       }
 
       lastInactiveStatusSignatureRef.current = null;
-      publishDefeatNotification(payload);
+      if (diagnostics && (isHuntTargetFoundEvent(payload) || String(payload.type ?? "").toUpperCase() === "MOB_DEFEATED")) {
+        const kind = isHuntTargetFoundEvent(payload) ? "rastreio" : "abate";
+        diagnostics.beginVisualEvent(
+          kind,
+          `auto-combat-${kind === "rastreio" ? "hunt" : "defeat"}|${normalizedCharacterId}|${getRealtimeEventKey(payload)}`,
+          eventStartedAt,
+        );
+      }
+      const notificationStartedAt = diagnostics ? performance.now() : 0;
+      publishDefeatNotification(payload, true);
       publishHuntTargetFoundNotification(payload);
+      diagnostics?.recordVisualStage("Enfileirar aviso", performance.now() - notificationStartedAt, performance.now());
+
+      dispatch({
+        type: "SYNC_EVENT_RESOURCES",
+        characterId: normalizedCharacterId,
+        event: payload,
+      });
 
       if (isHuntTargetFoundEvent(payload)) {
+        diagnostics?.recordVisualStage("Evento socket", performance.now() - eventStartedAt, performance.now());
         return;
       }
 
@@ -1919,6 +2008,7 @@ export function AutoCombatRealtimeProvider({
         characterId: normalizedCharacterId,
         event: payload,
       });
+      diagnostics?.recordVisualStage("Evento socket", performance.now() - eventStartedAt, performance.now());
     },
     [
       enterSnapshotSynchronization,
@@ -2304,6 +2394,7 @@ export function AutoCombatRealtimeProvider({
 
     if (isUiBackgrounded()) {
       if (state.activeEvent || state.eventQueue.length > 0) {
+        snapshotSynchronizationRef.current = true;
         dispatch({
           type: "SET_SYNCHRONIZING",
           isSynchronizing: true,

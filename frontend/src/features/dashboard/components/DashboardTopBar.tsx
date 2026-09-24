@@ -3,11 +3,12 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from 'react';
 import { flushSync } from 'react-dom';
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown, Volume2, VolumeX, X } from 'lucide-react';
 import autoCombatActivityIcon from '../../../assets/images/auto-combat/auto-combat-activity-icon.webp';
 import huntingActivityIcon from '../../../assets/images/auto-combat/hunting-activity-icon.webp';
 import { ActivityStateProgressFill } from '../../../components/game/ActivityStateProgressFill';
@@ -21,6 +22,12 @@ import {
   type WorldBossSocket,
 } from '../../../services/websocket/socketClient';
 import { canRunNetworkRefresh } from '../../../utils/networkRefresh';
+import {
+  isGameSoundEnabled,
+  primeGameSounds,
+  setGameSoundEnabled,
+  subscribeGameSound,
+} from '../../../services/audio/gameAudio';
 import {
   getBattleTargetDisplayCounts,
   getRepeatingBattleTimelineProgress,
@@ -1243,6 +1250,11 @@ export function DashboardTopBar({
   const incursionsState = incursionsRealtime.state;
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isStoppingActivity, setIsStoppingActivity] = useState(false);
+  const soundEnabled = useSyncExternalStore(
+    subscribeGameSound,
+    isGameSoundEnabled,
+    isGameSoundEnabled,
+  );
   const [expandedHuntingQueueKey, setExpandedHuntingQueueKey] = useState<
     string | null
   >(null);
@@ -1422,6 +1434,7 @@ export function DashboardTopBar({
       },
       WORLD_BOSS_TOPBAR_REFRESH_MS,
     );
+
     const refreshOnResume = () => {
       if (canRunNetworkRefresh()) void loadWorldBossStatus();
     };
@@ -1437,6 +1450,15 @@ export function DashboardTopBar({
       window.removeEventListener('online', refreshOnResume);
     };
   }, [characterId]);
+
+  useEffect(() => {
+    document.addEventListener('pointerdown', primeGameSounds, { capture: true });
+    document.addEventListener('keydown', primeGameSounds, { capture: true });
+    return () => {
+      document.removeEventListener('pointerdown', primeGameSounds, { capture: true });
+      document.removeEventListener('keydown', primeGameSounds, { capture: true });
+    };
+  }, []);
 
   const worldBossEventId = worldBossStatus?.event?.id ?? null;
   const worldBossId = worldBossStatus?.event?.worldBoss.id ?? null;
@@ -1902,6 +1924,17 @@ export function DashboardTopBar({
             </span>
           </span>
         ))}
+
+        <button
+          type="button"
+          className="dashboard-topbar__refresh dashboard-topbar__sound"
+          onClick={() => setGameSoundEnabled(!soundEnabled)}
+          aria-label={soundEnabled ? 'Desativar sons do jogo' : 'Ativar sons do jogo'}
+          aria-pressed={soundEnabled}
+          title={soundEnabled ? 'Desativar sons do jogo' : 'Ativar sons do jogo'}
+        >
+          {soundEnabled ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
+        </button>
 
         {onRefresh ? (
           <button

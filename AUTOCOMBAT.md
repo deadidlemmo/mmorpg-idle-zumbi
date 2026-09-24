@@ -6,7 +6,7 @@ Este documento descreve o sistema atual de auto-combate do projeto com base no c
 
 ## Resumo
 
-Auto-combate e uma atividade idle/realtime protegida por JWT. O jogador inicia uma caca em um mapa/submapa, o backend rastreia ameacas, persiste uma sessao, muda a fase para encontro pronto, e entao o jogador inicia a batalha contra uma ameaca escolhida ou selecionada pelo sistema. O frontend acompanha tudo por REST, Socket.IO, polling e reconciliacao por eventos recentes.
+Auto-combate e uma atividade idle/realtime protegida por JWT. O jogador inicia uma caca em um mapa/submapa e o backend alterna automaticamente entre rastrear um encontro, combater os mobs encontrados e iniciar o rastreio seguinte. O frontend acompanha tudo por REST, Socket.IO, polling e reconciliacao por eventos recentes.
 
 O sistema atual nao e apenas "iniciar combate direto em um submapa". Ele possui fase de caca, batches de hunt, selecao de alvo de batalha, eventos persistidos e reconciliacao visual.
 
@@ -40,11 +40,11 @@ frontend/src/services/api/endpoints.ts
 1. Frontend carrega mapas e status.
 2. Jogador inicia caca chamando `POST /auto-combat/hunt/start`.
 3. Backend cria ou reaproveita uma sessao `AutoCombatSession` em fase `HUNTING`.
-4. Backend processa hunt, incrementa ameacas encontradas e XP de caca.
-5. Quando ha ameacas rastreadas, a sessao pode ir para `ENCOUNTER_READY`.
-6. Jogador inicia uma selecao individual ou toda a fila por `POST /auto-combat/:characterId/battle/start`.
-7. Backend muda a fase para `COMBAT_ACTIVE`, define o modo e processa TTK/rodadas.
-8. No modo `SINGLE`, a sessao volta para `ENCOUNTER_READY` ao terminar o alvo. No modo `ALL`, avanca automaticamente pelos mobs rastreados ate consumir a fila.
+4. Backend conclui um ciclo de rastreio e encontra exatamente um mob.
+5. O mob encontrado concede XP de caca e o encontro e persistido antes da batalha.
+6. A sessao passa por `ENCOUNTER_READY` e inicia automaticamente o modo `ALL` para o mob do encontro.
+7. Backend muda para `COMBAT_ACTIVE`, persiste o spawn e processa TTK/rodadas.
+8. Depois do abate, a sessao volta para `HUNTING` e inicia o proximo cronometro.
 9. Sessao pode ser parada por hunt stop ou stop geral.
 10. Frontend reconcilia status e eventos recentes apos F5, reconnect, alt-tab longo ou retorno offline.
 
@@ -67,6 +67,7 @@ HUNTING -> ENCOUNTER_READY
 ENCOUNTER_READY -> HUNTING
 ENCOUNTER_READY -> COMBAT_ACTIVE
 COMBAT_ACTIVE -> ENCOUNTER_READY
+COMBAT_ACTIVE -> HUNTING
 ```
 
 A transicao para a mesma fase tambem e permitida. Qualquer outra transicao deve ser tratada como invalida.
@@ -228,18 +229,20 @@ Constantes identificadas em `auto-combat.service.ts`:
 AUTO_COMBAT_HUNTING_LEVEL_CAP = 50
 AUTO_COMBAT_HUNTING_BASE_SECONDS_PER_ENEMY = 15
 AUTO_COMBAT_HUNTING_MIN_SECONDS_PER_ENEMY = 6
-AUTO_COMBAT_HUNTING_SPEED_GAIN_PER_LEVEL = 0.024
+AUTO_COMBAT_HUNTING_SPEED_GAIN_PER_LEVEL = 0.03
 AUTO_COMBAT_HUNTING_XP_PER_ENEMY = 5
 AUTO_COMBAT_HUNTING_MAX_EVENTS_PER_PROCESS = 500
-AUTO_COMBAT_HUNTING_BASE_MAX_TRACKED_ENEMIES = 600
+AUTO_COMBAT_HUNTING_ENCOUNTERS_PER_BATCH = 1
 ```
 
 Interpretacao segura:
 
 - Caca tem progressao propria em `CharacterHuntingSkill`.
-- Nivel de caca reduz o tempo por ameaca ate o piso de 6 segundos.
+- Nivel de caca serve somente para reduzir o tempo por ameaca ate o piso de 6 segundos.
 - Cada ameaca encontrada concede XP de caca.
-- Ameacas encontradas ficam agregadas em batch/mobs e podem alimentar a selecao de batalha.
+- Cada ciclo encontra exatamente um mob, sorteado pelos pesos configurados no mapa sem bonus por nivel de caca.
+- O encontro e persistido antes do combate, e um novo rastreio so comeca depois que esse mob e resolvido.
+- Campos historicos de bonus continuam no contrato e na persistencia para compatibilidade, mas novos ciclos sempre os gravam como zero.
 - A UI deve mostrar hunt como estado derivado do backend, nao como contador local independente.
 
 ## Regras de combate/TTK
@@ -374,6 +377,43 @@ duplicacao em atualizacoes com HMR ou versoes anteriores.
 Snapshots WebSocket e o endpoint `active-action` usam a mesma projecao compacta.
 Ela preserva HP, EXP, loot, sequencias e timestamps da timeline, mas nao repete
 inventario, equipamento, drops completos e blobs de mapa em cada ciclo.
+
+### Presenca visual no mapa de rastreio
+
+Na cena do Suburbio, o cliente autenticado publica `auto-combat:visual:join`
+com `characterId`, `areaId`, `tileX`, `tileY`, `direction`, `visualState` e
+`moving`. O servidor verifica ownership da sala e sessao ativa em fase de
+rastreio, associa mapa/submapa do banco, responde com
+`auto-combat:visual:snapshot` e retransmite `auto-combat:visual:pose` somente
+aos jogadores da mesma area. `auto-combat:visual:left` remove o personagem ao
+sair, desconectar ou mudar de area. O cliente reentra apos reconexao e interpola
+poses recebidas.
+
+Posicao e animacao continuam visuais, sem efeito nas regras de caca. A ultima
+posicao aceita do personagem local fica no Redis por sessao ativa, com TTL de
+24 horas, e `GET /auto-combat/:characterId/hunting-visual-position` a devolve
+para restaurar o mapa antes de criar a cena apos F5. Sem sessao ativa, sem
+Redis ou com posicao bloqueada no tilemap, a cena usa o spawn. O backend
+continua sendo a fonte da verdade para sessao, fase, combate e premios;
+REST/recent-events reconciliam a caca. O gateway limita bounds do tilemap,
+frequencia e distancia de movimento por atualizacao.
+`GET /auto-combat/:characterId/hunting-visual-peers` lista apenas cacadas
+ativas no mesmo mapa/submapa que tenham pose salva. O cliente intercala essas
+poses com o Socket.IO, que prevalece para movimento e animacao em tempo real.
+Sem pose ao vivo, o personagem fica parado na ultima posicao salva e recebe
+o indicador visual `Idle`. Ao receber uma pose pelo Socket.IO, o indicador
+some e a cena volta a usar a posicao, direcao e animacao reais. `Idle` indica
+ausencia de pose ao vivo nesta cena, nao comprova que a conta esteja
+desconectada. Jogadores sem pose salva nao recebem posicao inventada.
+
+### Audio da apresentacao
+
+O rastreio reproduz o efeito de busca ao entrar na fase de investigacao, com
+intervalo minimo entre repeticoes. O som de EXP toca apenas para ganhos novos
+de caca, derrotas recebidas ao vivo e aumentos confirmados de EXP de coleta.
+Snapshots iniciais e historico apos F5 nao reproduzem ganhos passados. O
+controle de som da barra superior guarda a preferencia no navegador; o audio
+nao toca com a aba oculta e pode exigir a primeira interacao do jogador.
 
 ## Reconciliacao frontend
 

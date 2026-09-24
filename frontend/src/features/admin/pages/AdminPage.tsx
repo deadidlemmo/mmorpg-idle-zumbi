@@ -1,3 +1,4 @@
+import { isAxiosError } from "axios";
 import {
   Activity,
   AlertTriangle,
@@ -6,10 +7,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Coins,
   Database,
   Gauge,
   HardDrive,
   PackagePlus,
+  Palette,
   Play,
   RefreshCw,
   Search,
@@ -23,16 +26,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   getAdminAuditLogs,
+  getAdminCosmeticCatalog,
   getAdminOperations,
   getAdminProductMetrics,
   getAdminSummary,
   getAdminUserCosmetics,
   getAdminUsers,
+  grantAdminCharacterCash,
   grantAdminCosmetics,
   revokeAdminCosmetic,
   setAdminUserSuspension,
   startAdminAutoCombatCapture,
   type AdminCosmeticEntitlement,
+  type AdminCosmeticCatalog,
   type AdminAuditLog,
   type AdminMetricSeries,
   type AdminOperations,
@@ -113,6 +119,42 @@ function formatMetricPercentile(
   return `${formatMetricNumber(series[percentile])}${suffix}`;
 }
 
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (isAxiosError<{ message?: string | string[] }>(error)) {
+    const message = error.response?.data?.message;
+    if (Array.isArray(message)) return message[0] ?? fallback;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function formatCosmeticType(type: string) {
+  const labels: Record<string, string> = {
+    AVATAR: "Avatar",
+    AVATAR_FRAME: "Moldura",
+    PROFILE_BANNER: "Cartão",
+    OVERVIEW_BACKGROUND: "Visão geral",
+    PROFILE_EFFECT: "Efeito",
+    TITLE: "Título",
+    BADGE: "Distintivo",
+  };
+  return labels[type] ?? type;
+}
+
+function formatVendorCategory(
+  category: AdminCosmeticCatalog["products"][number]["category"],
+) {
+  const labels = {
+    avatar: "Avatar",
+    frame: "Moldura",
+    card: "Cartão",
+    overview: "Visão geral",
+    effect: "Efeito",
+    identity: "Identidade",
+  };
+  return labels[category];
+}
+
 function Pagination({
   page,
   pageCount,
@@ -166,14 +208,27 @@ export function AdminPage() {
   const [auditPage, setAuditPage] = useState(1);
   const [auditPageCount, setAuditPageCount] = useState(0);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [selectedCashUser, setSelectedCashUser] = useState<AdminUser | null>(
+    null,
+  );
+  const [cashCharacterId, setCashCharacterId] = useState("");
+  const [cashAmount, setCashAmount] = useState("5");
+  const [cashReason, setCashReason] = useState("");
+  const [cashMessage, setCashMessage] = useState<string | null>(null);
+  const [cashRequestId, setCashRequestId] = useState(() => crypto.randomUUID());
   const [selectedCosmeticUser, setSelectedCosmeticUser] =
     useState<AdminUser | null>(null);
+  const [cosmeticCatalog, setCosmeticCatalog] =
+    useState<AdminCosmeticCatalog | null>(null);
   const [cosmeticEntitlements, setCosmeticEntitlements] = useState<
     AdminCosmeticEntitlement[]
   >([]);
-  const [cosmeticCollectionKey, setCosmeticCollectionKey] = useState(
-    "premium-ultimo-abrigo",
-  );
+  const [cosmeticGrantMode, setCosmeticGrantMode] = useState<
+    "product" | "cosmetic" | "collection"
+  >("product");
+  const [cosmeticProductId, setCosmeticProductId] = useState("");
+  const [cosmeticKey, setCosmeticKey] = useState("");
+  const [cosmeticCollectionKey, setCosmeticCollectionKey] = useState("");
   const [cosmeticGrantSource, setCosmeticGrantSource] =
     useState<AdminCosmeticEntitlement["source"]>("ADMIN");
   const [cosmeticSourceReference, setCosmeticSourceReference] = useState("");
@@ -243,6 +298,23 @@ export function AdminPage() {
     ];
   }, [summary]);
 
+  const cosmeticGroups = useMemo(() => {
+    const groups = new Map<
+      string,
+      { label: string; items: AdminCosmeticCatalog["cosmetics"] }
+    >();
+    for (const cosmetic of cosmeticCatalog?.cosmetics ?? []) {
+      const key = cosmetic.collection?.key ?? "sem-colecao";
+      const group = groups.get(key) ?? {
+        label: cosmetic.collection?.name ?? "Sem coleção",
+        items: [],
+      };
+      group.items.push(cosmetic);
+      groups.set(key, group);
+    }
+    return Array.from(groups.entries());
+  }, [cosmeticCatalog]);
+
   async function saveSuspension() {
     if (!selectedUser) return;
     setIsSaving(true);
@@ -269,10 +341,36 @@ export function AdminPage() {
     setCosmeticMessage(null);
     setIsSaving(true);
     try {
-      const response = await getAdminUserCosmetics(user.id);
+      const [response, catalog] = await Promise.all([
+        getAdminUserCosmetics(user.id),
+        cosmeticCatalog
+          ? Promise.resolve(cosmeticCatalog)
+          : getAdminCosmeticCatalog(),
+      ]);
       setCosmeticEntitlements(response.entitlements);
-    } catch {
-      setError("Não foi possível carregar os cosméticos da conta.");
+      setCosmeticCatalog(catalog);
+      setCosmeticProductId((current) =>
+        catalog.products.some((product) => product.id === current)
+          ? current
+          : (catalog.products[0]?.id ?? ""),
+      );
+      setCosmeticKey((current) =>
+        catalog.cosmetics.some((cosmetic) => cosmetic.key === current)
+          ? current
+          : (catalog.cosmetics[0]?.key ?? ""),
+      );
+      setCosmeticCollectionKey((current) =>
+        catalog.collections.some((collection) => collection.key === current)
+          ? current
+          : (catalog.collections[0]?.key ?? ""),
+      );
+    } catch (requestError) {
+      setError(
+        getApiErrorMessage(
+          requestError,
+          "Não foi possível carregar as aparências da conta.",
+        ),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -280,13 +378,20 @@ export function AdminPage() {
 
   async function saveCosmeticGrant() {
     if (!selectedCosmeticUser) return;
+    const target =
+      cosmeticGrantMode === "product"
+        ? { productId: cosmeticProductId }
+        : cosmeticGrantMode === "cosmetic"
+          ? { cosmeticKey }
+          : { collectionKey: cosmeticCollectionKey };
+    if (!Object.values(target)[0]) return;
     setIsSaving(true);
     setError(null);
     setCosmeticMessage(null);
     try {
       const response = await grantAdminCosmetics({
         userId: selectedCosmeticUser.id,
-        collectionKey: cosmeticCollectionKey,
+        ...target,
         source: cosmeticGrantSource,
         sourceReference: cosmeticSourceReference.trim() || undefined,
         expiresAt: cosmeticExpiresAt
@@ -296,8 +401,68 @@ export function AdminPage() {
       setCosmeticMessage(response.message);
       const refreshed = await getAdminUserCosmetics(selectedCosmeticUser.id);
       setCosmeticEntitlements(refreshed.entitlements);
-    } catch {
-      setError("Não foi possível conceder o pacote cosmético.");
+    } catch (requestError) {
+      setError(
+        getApiErrorMessage(
+          requestError,
+          "Não foi possível conceder a aparência.",
+        ),
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function openCash(user: AdminUser) {
+    setSelectedCashUser(user);
+    setCashCharacterId(user.characters[0]?.id ?? "");
+    setCashAmount("5");
+    setCashReason("");
+    setCashMessage(null);
+    setCashRequestId(crypto.randomUUID());
+  }
+
+  async function saveCashGrant() {
+    if (!selectedCashUser || !cashCharacterId) return;
+    const amount = Number(cashAmount);
+    if (!Number.isSafeInteger(amount) || amount < 1) {
+      setError("Informe uma quantidade inteira e positiva de Cash.");
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+    setCashMessage(null);
+    try {
+      const result = await grantAdminCharacterCash(cashCharacterId, {
+        amount,
+        reason: cashReason.trim(),
+        requestId: cashRequestId,
+      });
+      setCashMessage(
+        `${result.amount.toLocaleString("pt-BR")} Cash adicionado. Saldo atual: ${result.character.cash.toLocaleString("pt-BR")}.`,
+      );
+      setSelectedCashUser((current) =>
+        current
+          ? {
+              ...current,
+              characters: current.characters.map((character) =>
+                character.id === result.character.id
+                  ? { ...character, cash: result.character.cash }
+                  : character,
+              ),
+            }
+          : current,
+      );
+      setCashRequestId(crypto.randomUUID());
+      await load();
+    } catch (requestError) {
+      setError(
+        getApiErrorMessage(
+          requestError,
+          "Não foi possível adicionar Cash ao personagem.",
+        ),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -341,6 +506,9 @@ export function AdminPage() {
   const autoCombatCoverage = autoCombatMetrics?.coverage;
   const autoCombatRates = autoCombatMetrics?.rates;
   const autoCombatContexts = autoCombatMetrics?.telemetryByContext;
+  const selectedCashCharacter = selectedCashUser?.characters.find(
+    (character) => character.id === cashCharacterId,
+  );
 
   return (
     <main className="admin-page" aria-busy={isLoading}>
@@ -1204,7 +1372,7 @@ export function AdminPage() {
         <div className="admin-section-heading">
           <div>
             <h2>Contas</h2>
-            <p>Suspensões revogam imediatamente os tokens ativos.</p>
+            <p>Gerencie saldos, aparências e acesso das contas.</p>
           </div>
           <form
             className="admin-search"
@@ -1217,8 +1385,8 @@ export function AdminPage() {
             <Search size={17} />
             <input
               value={search}
-              placeholder="Buscar e-mail"
-              aria-label="Buscar e-mail"
+              placeholder="Buscar e-mail ou personagem"
+              aria-label="Buscar e-mail ou personagem"
               onChange={(event) => setSearch(event.target.value)}
             />
           </form>
@@ -1242,7 +1410,14 @@ export function AdminPage() {
                     <strong>{user.email}</strong>
                     <span>{user.role}</span>
                   </td>
-                  <td>{user._count.characters}</td>
+                  <td>
+                    <strong>{user.characters.length}</strong>
+                    <span>
+                      {user.characters
+                        .map((character) => character.name)
+                        .join(", ") || "Sem personagem"}
+                    </span>
+                  </td>
                   <td>{formatDate(user.lastLoginAt)}</td>
                   <td>
                     <span
@@ -1260,9 +1435,22 @@ export function AdminPage() {
                       <button
                         className="admin-row-action"
                         type="button"
+                        disabled={user.characters.length === 0}
+                        title={
+                          user.characters.length === 0
+                            ? "A conta não possui personagem ativo"
+                            : "Adicionar Cash"
+                        }
+                        onClick={() => openCash(user)}
+                      >
+                        <Coins size={14} /> Cash
+                      </button>
+                      <button
+                        className="admin-row-action"
+                        type="button"
                         onClick={() => void openCosmetics(user)}
                       >
-                        <PackagePlus size={14} /> Cosméticos
+                        <Palette size={14} /> Aparências
                       </button>
                       <button
                         className="admin-row-action"
@@ -1359,6 +1547,109 @@ export function AdminPage() {
         </div>
       ) : null}
 
+      {selectedCashUser ? (
+        <div className="admin-modal-backdrop" role="presentation">
+          <section
+            className="admin-modal admin-modal--cash"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-cash-title"
+          >
+            <h2 id="admin-cash-title">Adicionar Cash</h2>
+            <p>{selectedCashUser.email}</p>
+
+            <div className="admin-cash-form">
+              <label>
+                Personagem
+                <select
+                  value={cashCharacterId}
+                  onChange={(event) => {
+                    setCashCharacterId(event.target.value);
+                    setCashMessage(null);
+                    setCashRequestId(crypto.randomUUID());
+                  }}
+                >
+                  {selectedCashUser.characters.map((character) => (
+                    <option key={character.id} value={character.id}>
+                      {character.name} · Nv. {character.level} ·{" "}
+                      {character.class.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {selectedCashCharacter ? (
+                <div className="admin-cash-balance">
+                  <span>Saldo atual</span>
+                  <strong>
+                    <Coins size={17} />{" "}
+                    {selectedCashCharacter.cash.toLocaleString("pt-BR")}
+                  </strong>
+                </div>
+              ) : null}
+
+              <label>
+                Quantidade
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={1_000_000}
+                  step={1}
+                  value={cashAmount}
+                  onChange={(event) => {
+                    setCashAmount(event.target.value);
+                    setCashMessage(null);
+                    setCashRequestId(crypto.randomUUID());
+                  }}
+                />
+              </label>
+              <label>
+                Motivo
+                <textarea
+                  value={cashReason}
+                  minLength={3}
+                  maxLength={180}
+                  placeholder="Ex.: compensação de suporte"
+                  onChange={(event) => {
+                    setCashReason(event.target.value);
+                    setCashMessage(null);
+                    setCashRequestId(crypto.randomUUID());
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="admin-primary-action"
+                disabled={
+                  isSaving ||
+                  !cashCharacterId ||
+                  !cashReason.trim() ||
+                  Number(cashAmount) < 1
+                }
+                onClick={() => void saveCashGrant()}
+              >
+                <Coins size={16} /> Adicionar Cash
+              </button>
+            </div>
+
+            {cashMessage ? (
+              <p className="admin-cosmetic-message">{cashMessage}</p>
+            ) : null}
+
+            <div className="admin-modal-actions">
+              <button
+                type="button"
+                onClick={() => setSelectedCashUser(null)}
+                disabled={isSaving}
+              >
+                Fechar
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
       {selectedCosmeticUser ? (
         <div className="admin-modal-backdrop" role="presentation">
           <section
@@ -1367,27 +1658,102 @@ export function AdminPage() {
             aria-modal="true"
             aria-labelledby="admin-cosmetics-title"
           >
-            <h2 id="admin-cosmetics-title">Cosméticos da conta</h2>
+            <h2 id="admin-cosmetics-title">Aparências da conta</h2>
             <p>{selectedCosmeticUser.email}</p>
 
             <div className="admin-cosmetic-grant">
-              <label>
-                Coleção
-                <select
-                  value={cosmeticCollectionKey}
-                  onChange={(event) =>
-                    setCosmeticCollectionKey(event.target.value)
-                  }
+              <div
+                className="admin-grant-mode"
+                role="group"
+                aria-label="Tipo de concessão"
+              >
+                <button
+                  type="button"
+                  className={cosmeticGrantMode === "product" ? "is-active" : ""}
+                  onClick={() => setCosmeticGrantMode("product")}
                 >
-                  <option value="premium-ultimo-abrigo">Último Abrigo</option>
-                  <option value="premium-nucleo-helix">
-                    Núcleo Helix (pacote)
-                  </option>
-                  <option value="premium-protocolo-carmesim">
-                    Protocolo Carmesim (pacote)
-                  </option>
-                </select>
-              </label>
+                  Produto da Vera
+                </button>
+                <button
+                  type="button"
+                  className={
+                    cosmeticGrantMode === "cosmetic" ? "is-active" : ""
+                  }
+                  onClick={() => setCosmeticGrantMode("cosmetic")}
+                >
+                  Peça individual
+                </button>
+                <button
+                  type="button"
+                  className={
+                    cosmeticGrantMode === "collection" ? "is-active" : ""
+                  }
+                  onClick={() => setCosmeticGrantMode("collection")}
+                >
+                  Coleção completa
+                </button>
+              </div>
+
+              {cosmeticGrantMode === "product" ? (
+                <label className="admin-cosmetic-target">
+                  Produto
+                  <select
+                    value={cosmeticProductId}
+                    onChange={(event) =>
+                      setCosmeticProductId(event.target.value)
+                    }
+                  >
+                    {cosmeticCatalog?.products.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name} ·{" "}
+                        {formatVendorCategory(product.category)} ·{" "}
+                        {product.price.toLocaleString("pt-BR")}{" "}
+                        {product.currency}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
+              {cosmeticGrantMode === "cosmetic" ? (
+                <label className="admin-cosmetic-target">
+                  Peça
+                  <select
+                    value={cosmeticKey}
+                    onChange={(event) => setCosmeticKey(event.target.value)}
+                  >
+                    {cosmeticGroups.map(([groupKey, group]) => (
+                      <optgroup key={groupKey} label={group.label}>
+                        {group.items.map((cosmetic) => (
+                          <option key={cosmetic.key} value={cosmetic.key}>
+                            {cosmetic.name} ·{" "}
+                            {formatCosmeticType(cosmetic.type)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
+              {cosmeticGrantMode === "collection" ? (
+                <label className="admin-cosmetic-target">
+                  Coleção
+                  <select
+                    value={cosmeticCollectionKey}
+                    onChange={(event) =>
+                      setCosmeticCollectionKey(event.target.value)
+                    }
+                  >
+                    {cosmeticCatalog?.collections.map((collection) => (
+                      <option key={collection.key} value={collection.key}>
+                        {collection.name} · {collection.cosmeticCount} peças
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
               <label>
                 Origem
                 <select
@@ -1428,9 +1794,14 @@ export function AdminPage() {
               <button
                 type="button"
                 onClick={() => void saveCosmeticGrant()}
-                disabled={isSaving}
+                disabled={
+                  isSaving ||
+                  (cosmeticGrantMode === "product" && !cosmeticProductId) ||
+                  (cosmeticGrantMode === "cosmetic" && !cosmeticKey) ||
+                  (cosmeticGrantMode === "collection" && !cosmeticCollectionKey)
+                }
               >
-                <PackagePlus size={15} /> Conceder coleção
+                <PackagePlus size={15} /> Conceder aparência
               </button>
             </div>
 

@@ -98,6 +98,7 @@ describe('CosmeticsService', () => {
       userId: 'user-1',
       classId: 'class-lutador',
       gold: 250,
+      cash: 25,
       avatarKey: 'lutador-01',
       class: { id: 'class-lutador', name: 'Lutador' },
       user: { premiumUntil },
@@ -248,6 +249,62 @@ describe('CosmeticsService', () => {
     );
   });
 
+  it('persiste uma combinação de cosméticos de coleções diferentes', async () => {
+    const frame = {
+      ...helixAvatar,
+      id: 'cosmetic-frame-helix',
+      key: 'moldura-helix-orbita',
+      name: 'Órbita Helix',
+      type: CosmeticType.AVATAR_FRAME,
+      assetKey: 'frame-helix-orbit',
+    };
+    const effect = {
+      ...helixAvatar,
+      id: 'cosmetic-effect-carmesim',
+      key: 'efeito-carmesim-ruptura',
+      name: 'Ruptura Carmesim',
+      type: CosmeticType.PROFILE_EFFECT,
+      assetKey: null,
+      effectPreset: 'crimson-rift',
+      collectionId: 'collection-carmesim',
+      collection: {
+        ...collection,
+        id: 'collection-carmesim',
+        key: 'premium-protocolo-carmesim',
+        name: 'Protocolo Carmesim',
+      },
+    };
+
+    prisma.character.findFirst.mockResolvedValue(
+      characterContext({ premiumUntil: null, selectedAvatar: null }),
+    );
+    prisma.cosmetic.findMany.mockResolvedValue([helixAvatar, frame, effect]);
+    prisma.userCosmeticEntitlement.findMany.mockResolvedValue(
+      [helixAvatar, frame, effect].map(({ id }) => ({ cosmeticId: id })),
+    );
+
+    await service.updateAppearance('user-1', 'character-1', {
+      avatarCosmeticKey: helixAvatar.key,
+      avatarFrameCosmeticKey: frame.key,
+      profileEffectCosmeticKey: effect.key,
+    });
+
+    expect(prisma.characterAppearance.upsert).toHaveBeenCalledWith({
+      where: { characterId: 'character-1' },
+      update: {
+        avatarCosmeticId: helixAvatar.id,
+        avatarFrameCosmeticId: frame.id,
+        profileEffectCosmeticId: effect.id,
+      },
+      create: {
+        characterId: 'character-1',
+        avatarCosmeticId: helixAvatar.id,
+        avatarFrameCosmeticId: frame.id,
+        profileEffectCosmeticId: effect.id,
+      },
+    });
+  });
+
   it('bloqueia avatar incompatível com a classe do personagem', async () => {
     prisma.character.findFirst.mockResolvedValue(
       characterContext({
@@ -300,6 +357,47 @@ describe('CosmeticsService', () => {
     expect(result.message).toBe('1 cosmético(s) concedido(s).');
   });
 
+  it('concede todas as peças vinculadas a um produto da Vera', async () => {
+    const title = {
+      ...premiumAvatar,
+      id: 'cosmetic-title-aq',
+      key: 'titulo-chuva-quarentena-agente-quarentena',
+      name: 'Agente da Quarentena',
+      type: CosmeticType.TITLE,
+    };
+    const badge = {
+      ...premiumAvatar,
+      id: 'cosmetic-badge-aq',
+      key: 'distintivo-chuva-quarentena-aq',
+      name: 'AQ',
+      type: CosmeticType.BADGE,
+    };
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
+    prisma.cosmetic.findMany.mockResolvedValue([title, badge]);
+    prisma.userCosmeticEntitlement.upsert.mockResolvedValue({
+      id: 'entitlement-1',
+    });
+    prisma.$transaction.mockImplementation((operations) =>
+      Promise.all(operations),
+    );
+
+    const result = await service.grantCosmetics('admin-1', {
+      userId: 'user-1',
+      productId: 'cash-identity-agente-quarentena',
+      source: CosmeticGrantSource.ADMIN,
+    });
+
+    expect(prisma.userCosmeticEntitlement.upsert).toHaveBeenCalledTimes(2);
+    expect(prisma.userCosmeticEntitlement.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          grantKey: `user-1:${title.id}:ADMIN:cash-identity-agente-quarentena`,
+        },
+      }),
+    );
+    expect(result.message).toBe('2 cosmético(s) concedido(s).');
+  });
+
   describe('compras no Ateliê da Vera', () => {
     const requestId = '3d2a18cc-1dc9-4d49-9888-f67c22498e5a';
     const vendorCosmetic = {
@@ -320,6 +418,20 @@ describe('CosmeticsService', () => {
         sortOrder: 5,
       },
     };
+    const vendorCashCosmetic = {
+      ...vendorCosmetic,
+      id: 'cosmetic-cash-avatar',
+      key: 'avatar-depois-da-lei-xerife-asfalto',
+      name: 'Rick Grimes',
+      collectionId: 'collection-cash',
+      collection: {
+        ...collection,
+        id: 'collection-cash',
+        key: 'cash-depois-da-lei',
+        name: 'Depois da Lei',
+        sortOrder: 6,
+      },
+    };
 
     function createTransactionMocks() {
       return {
@@ -333,9 +445,12 @@ describe('CosmeticsService', () => {
             id: 'character-1',
             userId: 'user-1',
             gold: 1_000,
+            cash: 25,
           }),
           updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-          findUniqueOrThrow: jest.fn().mockResolvedValue({ gold: 100 }),
+          findUniqueOrThrow: jest
+            .fn()
+            .mockResolvedValue({ gold: 100, cash: 20 }),
         },
         cosmetic: {
           findMany: jest.fn().mockResolvedValue([vendorCosmetic]),
@@ -412,6 +527,52 @@ describe('CosmeticsService', () => {
       expect(result).toMatchObject({
         productId: 'gold-avatar-vigia-oficina',
         gold: 100,
+        cash: 20,
+        alreadyProcessed: false,
+      });
+    });
+
+    it('debita Cash no servidor e registra a moeda correta no ledger', async () => {
+      const tx = createTransactionMocks();
+      tx.cosmetic.findMany.mockResolvedValue([vendorCashCosmetic]);
+      useTransaction(tx);
+
+      const result = await service.purchaseVendorProduct(
+        'user-1',
+        'character-1',
+        { productId: 'cash-avatar-xerife-asfalto', requestId },
+      );
+
+      expect(tx.character.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'character-1',
+          userId: 'user-1',
+          cash: { gte: 5 },
+        },
+        data: { cash: { decrement: 5 } },
+      });
+      const [ledgerInput] = tx.economyLedgerEntry.create.mock.calls[0] as [
+        {
+          data: {
+            resourceType: string;
+            quantity: number;
+            balanceAfter: number;
+            reason: string;
+          };
+        },
+      ];
+      expect(ledgerInput.data).toMatchObject({
+        resourceType: 'CASH',
+        quantity: 5,
+        balanceAfter: 20,
+        reason: 'COSMETIC_VENDOR_CASH_SPENT',
+      });
+      expect(result).toMatchObject({
+        productId: 'cash-avatar-xerife-asfalto',
+        currency: 'CASH',
+        price: 5,
+        gold: 100,
+        cash: 20,
         alreadyProcessed: false,
       });
     });

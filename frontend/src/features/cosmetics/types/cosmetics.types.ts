@@ -92,12 +92,15 @@ export type CosmeticVendorCategory =
   | "effect"
   | "identity";
 
+export type CosmeticVendorCurrency = "GOLD" | "CASH";
+
 export interface CosmeticVendorProduct {
   id: string;
   category: CosmeticVendorCategory;
   name: string;
   description: string;
-  goldPrice: number;
+  currency: CosmeticVendorCurrency;
+  price: number;
   sortOrder: number;
   isOwned: boolean;
   isPartiallyOwned: boolean;
@@ -109,8 +112,9 @@ export interface CosmeticVendorCatalogResponse {
     id: string;
     name: string;
     gold: number;
+    cash: number;
   };
-  currency: "GOLD";
+  currencies: readonly CosmeticVendorCurrency[];
   products: CosmeticVendorProduct[];
 }
 
@@ -118,6 +122,9 @@ export interface PurchaseCosmeticVendorProductResponse {
   message: string;
   productId: string;
   gold: number;
+  cash: number;
+  currency: CosmeticVendorCurrency;
+  price: number;
   grantedCosmeticKeys: string[];
   alreadyProcessed: boolean;
 }

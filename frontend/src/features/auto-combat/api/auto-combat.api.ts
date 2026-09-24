@@ -1,3 +1,4 @@
+import { isAxiosError } from "axios";
 import { apiClient } from "../../../services/api/apiClient";
 import { API_ENDPOINTS } from "../../../services/api/endpoints";
 import type {
@@ -11,6 +12,56 @@ import type {
   StartAutoCombatResponse,
   StopAutoCombatResponse,
 } from "../types/auto-combat.types";
+import {
+  buildLegacyHuntingPresenceResponse,
+  type ActiveCharactersPresenceResponse,
+  type AutoCombatHuntingPresenceResponse,
+} from "../utils/hunting-presence";
+import type { LocalHuntingPose } from "../components/phaser/createSuburbioHuntingGame";
+
+export type HuntingVisualPositionResponse = {
+  sessionId: string | null;
+  mapId: string | null;
+  subMapId: string | null;
+  pose: Pick<LocalHuntingPose, "areaId" | "tileX" | "tileY" | "direction"> | null;
+};
+
+export async function getAutoCombatHuntingVisualPosition(
+  characterId: string,
+): Promise<HuntingVisualPositionResponse> {
+  const response = await apiClient.get<HuntingVisualPositionResponse>(
+    API_ENDPOINTS.autoCombat.huntingVisualPosition(characterId),
+    getNoStoreRequestConfig(),
+  );
+  return response.data;
+}
+
+export type HuntingVisualPeersResponse = {
+  mapId: string | null;
+  subMapId: string | null;
+  players: Array<{
+    characterId: string;
+    displayName: string;
+    areaId: LocalHuntingPose["areaId"];
+    tileX: number;
+    tileY: number;
+    direction: LocalHuntingPose["direction"];
+    visualState: "walking" | "combat";
+    moving: boolean;
+    combatMobName?: string | null;
+    combatCycleKey?: string | null;
+  }>;
+};
+
+export async function getAutoCombatHuntingVisualPeers(
+  characterId: string,
+): Promise<HuntingVisualPeersResponse> {
+  const response = await apiClient.get<HuntingVisualPeersResponse>(
+    API_ENDPOINTS.autoCombat.huntingVisualPeers(characterId),
+    getNoStoreRequestConfig(),
+  );
+  return response.data;
+}
 
 export type AutoCombatRecentEvent = AutoCombatRealtimeEvent & {
   id?: string;
@@ -86,6 +137,31 @@ export async function getAutoCombatStatus(
   );
 
   return response.data;
+}
+
+export async function getAutoCombatHuntingPresences(
+  characterId: string,
+  currentMapId: string | null,
+): Promise<AutoCombatHuntingPresenceResponse> {
+  try {
+    const response = await apiClient.get<AutoCombatHuntingPresenceResponse>(
+      API_ENDPOINTS.autoCombat.huntingPresences(characterId),
+      getNoStoreRequestConfig(),
+    );
+
+    return response.data;
+  } catch (error) {
+    if (!isAxiosError(error) || error.response?.status !== 404) throw error;
+    const response = await apiClient.get<ActiveCharactersPresenceResponse>(
+      API_ENDPOINTS.autoCombat.activeCharacters,
+      getNoStoreRequestConfig(),
+    );
+    return buildLegacyHuntingPresenceResponse(
+      response.data,
+      characterId,
+      currentMapId,
+    );
+  }
 }
 
 export async function getAutoCombatActiveAction(

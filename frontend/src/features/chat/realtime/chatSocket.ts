@@ -1,5 +1,6 @@
 import { io, type Socket } from "socket.io-client";
 import { getAuthToken } from "../../../services/api/authToken";
+import { normalizeSocketBaseUrl } from "../../../services/websocket/socketBaseUrl";
 import type {
   ChatSendResponse,
   ChatSocketError,
@@ -38,21 +39,14 @@ export type GeneralChatSocket = Socket<
 
 const DEFAULT_API_BASE_URL = "http://localhost:3000";
 
-function normalizeSocketBaseUrl(value: unknown) {
-  const rawValue = String(value || DEFAULT_API_BASE_URL).trim();
-
-  return (
-    rawValue.replace(/\/+$/, "").replace(/\/api$/i, "") ||
-    DEFAULT_API_BASE_URL
-  );
-}
-
 export function createGeneralChatSocket(characterId: string) {
   const apiBaseUrl = normalizeSocketBaseUrl(
-    import.meta.env.VITE_API_URL ?? DEFAULT_API_BASE_URL,
+    import.meta.env.VITE_API_URL,
+    DEFAULT_API_BASE_URL,
   );
   const socketBaseUrl = normalizeSocketBaseUrl(
-    import.meta.env.VITE_SOCKET_URL ?? apiBaseUrl,
+    import.meta.env.VITE_SOCKET_URL,
+    apiBaseUrl,
   );
   const token = getAuthToken();
 

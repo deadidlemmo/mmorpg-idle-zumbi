@@ -284,4 +284,154 @@ describe('ActiveCharacterPresenceService', () => {
       infirmary: { type: 'INFIRMARY', label: 'Na enfermaria' },
     });
   });
+
+  it('lista somente rastreadores do mesmo mapa e submapa', async () => {
+    const findFirstCharacter = jest
+      .fn<Promise<{ id: string } | null>, [Prisma.CharacterFindFirstArgs]>()
+      .mockResolvedValue({ id: 'local' });
+    const findFirstSession = jest
+      .fn<
+        Promise<{
+          id: string;
+          mapId: string;
+          subMapId: string;
+        } | null>,
+        [Prisma.AutoCombatSessionFindFirstArgs]
+      >()
+      .mockResolvedValue({
+        id: 'session-local',
+        mapId: 'map-1',
+        subMapId: 'submap-1',
+      });
+    const findManySessions = jest
+      .fn<
+        Promise<
+          Array<{
+            phase: AutoCombatSessionPhase;
+            startedAt: Date;
+            huntBatch: {
+              cycleStartedAt: Date | null;
+              cycleEndsAt: Date | null;
+            } | null;
+            character: {
+              id: string;
+              name: string;
+              avatarKey: string | null;
+            };
+          }>
+        >,
+        [Prisma.AutoCombatSessionFindManyArgs]
+      >()
+      .mockResolvedValue([
+        {
+          phase: AutoCombatSessionPhase.HUNTING,
+          startedAt: new Date('2026-08-27T11:30:00.000Z'),
+          huntBatch: {
+            cycleStartedAt: new Date('2026-08-27T11:30:05.000Z'),
+            cycleEndsAt: new Date('2026-08-27T11:30:20.000Z'),
+          },
+          character: {
+            id: 'remote-1',
+            name: 'Helena',
+            avatarKey: 'helena',
+          },
+        },
+        {
+          phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+          startedAt: new Date('2026-08-27T11:00:00.000Z'),
+          huntBatch: null,
+          character: {
+            id: 'remote-2',
+            name: 'Carlos',
+            avatarKey: null,
+          },
+        },
+      ]);
+    const service = new ActiveCharacterPresenceService(
+      {
+        character: { findFirst: findFirstCharacter },
+        autoCombatSession: {
+          findFirst: findFirstSession,
+          findMany: findManySessions,
+        },
+      } as never,
+      { getResolvedAppearances: jest.fn() } as never,
+    );
+
+    const result = await service.getHuntingPresences('user-1', 'local', now);
+
+    expect(findFirstCharacter.mock.calls[0]?.[0]).toMatchObject({
+      where: { id: 'local', userId: 'user-1' },
+    });
+    expect(findManySessions.mock.calls[0]?.[0]).toMatchObject({
+      where: {
+        characterId: { not: 'local' },
+        mapId: 'map-1',
+        subMapId: 'submap-1',
+        phase: {
+          in: [
+            AutoCombatSessionPhase.HUNTING,
+            AutoCombatSessionPhase.ENCOUNTER_READY,
+          ],
+        },
+      },
+      distinct: ['characterId'],
+      take: 24,
+      select: {
+        huntBatch: {
+          select: {
+            cycleStartedAt: true,
+            cycleEndsAt: true,
+          },
+        },
+      },
+    });
+    expect(result).toEqual({
+      mapId: 'map-1',
+      subMapId: 'submap-1',
+      updatedAt: now.toISOString(),
+      characters: [
+        {
+          id: 'remote-1',
+          name: 'Helena',
+          avatarKey: 'helena',
+          phase: AutoCombatSessionPhase.HUNTING,
+          startedAt: '2026-08-27T11:30:00.000Z',
+          cycleStartedAt: '2026-08-27T11:30:05.000Z',
+          cycleEndsAt: '2026-08-27T11:30:20.000Z',
+        },
+        {
+          id: 'remote-2',
+          name: 'Carlos',
+          avatarKey: null,
+          phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+          startedAt: '2026-08-27T11:00:00.000Z',
+          cycleStartedAt: null,
+          cycleEndsAt: null,
+        },
+      ],
+    });
+  });
+
+  it('retorna a area vazia quando o personagem nao esta rastreando', async () => {
+    const service = new ActiveCharacterPresenceService(
+      {
+        character: { findFirst: jest.fn().mockResolvedValue({ id: 'local' }) },
+        autoCombatSession: {
+          findFirst: jest.fn().mockResolvedValue(null),
+          findMany: jest.fn(),
+        },
+      } as never,
+      { getResolvedAppearances: jest.fn() } as never,
+    );
+
+    await expect(
+      service.getHuntingPresences('user-1', 'local', now),
+    ).resolves.toEqual({
+      mapId: null,
+      subMapId: null,
+      updatedAt: now.toISOString(),
+      characters: [],
+    });
+  });
 });

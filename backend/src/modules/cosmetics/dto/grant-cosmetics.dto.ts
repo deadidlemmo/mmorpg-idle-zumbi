@@ -22,6 +22,11 @@ export class GrantCosmeticsDto {
   @MaxLength(80)
   collectionKey?: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  productId?: string;
+
   @IsEnum(CosmeticGrantSource)
   source!: CosmeticGrantSource;
 

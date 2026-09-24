@@ -4,7 +4,7 @@ import {
 } from './cosmetic-vendor.config';
 
 describe('COSMETIC_VENDOR_PRODUCTS', () => {
-  it('mantém duas opções de Gold em cada categoria', () => {
+  it('mantém duas opções de Gold e três de Cash em cada categoria', () => {
     const categories = [
       'avatar',
       'frame',
@@ -17,9 +17,16 @@ describe('COSMETIC_VENDOR_PRODUCTS', () => {
     for (const category of categories) {
       expect(
         COSMETIC_VENDOR_PRODUCTS.filter(
-          (product) => product.category === category,
+          (product) =>
+            product.category === category && product.currency === 'GOLD',
         ),
       ).toHaveLength(2);
+      expect(
+        COSMETIC_VENDOR_PRODUCTS.filter(
+          (product) =>
+            product.category === category && product.currency === 'CASH',
+        ),
+      ).toHaveLength(3);
     }
   });
 
@@ -32,9 +39,13 @@ describe('COSMETIC_VENDOR_PRODUCTS', () => {
     );
     expect(
       COSMETIC_VENDOR_PRODUCTS.every(
-        (product) =>
-          Number.isSafeInteger(product.goldPrice) && product.goldPrice > 0,
+        (product) => Number.isSafeInteger(product.price) && product.price > 0,
       ),
+    ).toBe(true);
+    expect(
+      COSMETIC_VENDOR_PRODUCTS.filter(
+        (product) => product.currency === 'CASH',
+      ).every((product) => product.price === 5),
     ).toBe(true);
   });
 });

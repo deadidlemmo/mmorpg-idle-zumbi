@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ActiveCharacterPresenceService } from './active-character-presence.service';
 import { AutoCombatGateway } from './auto-combat.gateway';
 import { AutoCombatService } from './auto-combat.service';
+import { HuntingVisualPositionService } from './hunting-visual-position.service';
 import { PreviewAutoCombatDto } from './dto/preview-auto-combat.dto';
 import { StartAutoCombatBattleDto } from './dto/start-auto-combat-battle.dto';
 import { StartAutoCombatDto } from './dto/start-auto-combat.dto';
@@ -24,6 +25,7 @@ export class AutoCombatController {
     private readonly autoCombatService: AutoCombatService,
     private readonly autoCombatGateway: AutoCombatGateway,
     private readonly activeCharacterPresence: ActiveCharacterPresenceService,
+    private readonly huntingVisualPosition: HuntingVisualPositionService,
   ) {}
 
   @Get('online-count')
@@ -33,10 +35,47 @@ export class AutoCombatController {
     );
   }
 
+  @Get(':characterId/hunting-visual-position')
+  @Header('Cache-Control', 'no-store')
+  getHuntingVisualPosition(
+    @Req() request: any,
+    @Param('characterId') characterId: string,
+  ) {
+    return this.huntingVisualPosition.getForCharacter(
+      request.user.id,
+      characterId,
+    );
+  }
+
+  @Get(':characterId/hunting-visual-peers')
+  @Header('Cache-Control', 'no-store')
+  getHuntingVisualPeers(
+    @Req() request: any,
+    @Param('characterId') characterId: string,
+  ) {
+    return this.huntingVisualPosition.getPeersForCharacter(
+      request.user.id,
+      characterId,
+      this.autoCombatGateway.getOnlineCharacterIds(),
+    );
+  }
+
   @Get('active-characters')
   getActiveCharacters() {
     return this.activeCharacterPresence.getActiveCharacters(
       this.autoCombatGateway.getOnlineCharacterIds(),
+    );
+  }
+
+  @Get(':characterId/hunting-presences')
+  @Header('Cache-Control', 'no-store')
+  getHuntingPresences(
+    @Req() request: any,
+    @Param('characterId') characterId: string,
+  ) {
+    return this.activeCharacterPresence.getHuntingPresences(
+      request.user.id,
+      characterId,
     );
   }
 

@@ -1,0 +1,133 @@
+.performance-diagnostics {
+  position: fixed;
+  z-index: 10020;
+  bottom: max(0.5rem, env(safe-area-inset-bottom));
+  left: max(0.5rem, env(safe-area-inset-left));
+  width: min(250px, calc(100vw - 1rem));
+  max-height: min(420px, 70dvh);
+  overflow: auto;
+  padding: 0.45rem 0.5rem;
+  color: #e8efde;
+  background: rgba(7, 17, 15, 0.91);
+  border: 1px solid #9cb276;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  font: 10px/1.32 ui-monospace, Consolas, monospace;
+  pointer-events: auto;
+}
+
+.auto-combat-hunting-scene .performance-diagnostics {
+  position: absolute;
+  z-index: 12;
+  max-height: calc(100% - 1rem);
+}
+
+.auto-combat-hunting-scene:not(.auto-combat-hunting-scene--immersive) .performance-diagnostics {
+  width: min(210px, 46%);
+  max-height: min(132px, calc(100% - 1rem));
+}
+
+.performance-diagnostics[data-alert="true"] {
+  border-color: #f08f60;
+  box-shadow: 0 0 0 2px rgba(240, 143, 96, 0.35);
+}
+
+.performance-diagnostics header,
+.performance-diagnostics__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.2rem 0.4rem;
+}
+
+.performance-diagnostics header {
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(185, 205, 112, 0.35);
+  color: #d8e6b0;
+}
+
+.performance-diagnostics__modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.performance-diagnostics__silent {
+  display: block;
+  margin-bottom: 0.4rem;
+  padding: 0.28rem 0.35rem;
+  color: #d8e6b0;
+  background: rgba(185, 205, 112, 0.08);
+  border: 1px solid rgba(185, 205, 112, 0.35);
+  border-radius: 3px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.performance-diagnostics__map-modes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.performance-diagnostics__modes a,
+.performance-diagnostics__map-modes a {
+  padding: 0.24rem 0.3rem;
+  color: #afbbaa;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(185, 205, 112, 0.2);
+  border-radius: 3px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.performance-diagnostics__modes a[data-active="true"],
+.performance-diagnostics__map-modes a[data-active="true"] {
+  color: #101715;
+  background: #c7d875;
+  border-color: #dce99c;
+  font-weight: 700;
+}
+
+.performance-diagnostics__grid span {
+  min-width: 0;
+  color: #afbbaa;
+}
+
+.performance-diagnostics__grid b {
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.performance-diagnostics__section {
+  margin: 0.4rem 0 0.25rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(185, 205, 112, 0.25);
+  color: #d8e6b0;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.performance-diagnostics__stage {
+  display: contents;
+}
+
+.performance-diagnostics__event,
+.performance-diagnostics__device {
+  margin-top: 0.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.performance-diagnostics__device { color: #afbbaa; }
+
+@media (max-width: 430px) {
+  .performance-diagnostics {
+    width: min(236px, 62vw);
+    font-size: 9px;
+  }
+}

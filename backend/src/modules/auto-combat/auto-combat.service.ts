@@ -22,13 +22,10 @@ import { ActivityGuardService } from '../../common/activity-guard/activity-guard
 import { DistributedLockService } from '../../common/redis/distributed-lock.service';
 import { ObservabilityService } from '../../common/observability/observability.service';
 import {
-  AUTO_COMBAT_HUNTING_BASE_MAX_TRACKED_ENEMIES,
+  AUTO_COMBAT_HUNTING_ENCOUNTERS_PER_BATCH,
   AUTO_COMBAT_HUNTING_BASE_SECONDS_PER_ENEMY,
   AUTO_COMBAT_HUNTING_LEVEL_CAP,
   AUTO_COMBAT_HUNTING_MAX_EVENTS_PER_PROCESS,
-  AUTO_COMBAT_HUNTING_MAX_TRACKED_LINEAR_GAIN,
-  AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_EXPONENT,
-  AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_SCALE,
   AUTO_COMBAT_MAX_COMBATS_PER_PROCESS,
   AUTO_COMBAT_ROUND_DURATION_SECONDS,
   AUTO_COMBAT_TTK_PROGRESS_UPDATES_PER_SECOND,
@@ -176,6 +173,12 @@ type AutoCombatMobTtkTiming = {
 };
 
 type CombatWinner = 'PLAYER' | 'MOB';
+
+type StartBattleInternalOptions = {
+  automatic?: boolean;
+  startedAt?: Date;
+  preserveSessionEnd?: boolean;
+};
 
 type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'LETHAL';
 
@@ -378,6 +381,7 @@ type AutoCombatRealtimeEvent = {
   targetMobId?: string | null;
   huntingXpGained?: number | null;
   foundEnemiesCount?: number | null;
+  bonusEnemiesFound?: number | null;
 
   round?: number;
   combatIndex?: number;
@@ -1328,172 +1332,60 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
           throw new NotFoundException('SessÃ£o de caÃ§a nÃ£o encontrada.');
         }
 
-        const huntingSkill = await this.getOrCreateHuntingSkill(character.id);
-        const totalFoundEnemiesCount = Math.max(
-          0,
-          Math.floor(
-            Number(
-              loadedSession.huntBatch?.foundEnemiesCount ??
-                loadedSession.foundEnemiesCount,
-            ) || 0,
-          ),
-        );
-        const trackedEnemiesRemaining =
-          this.getTrackedEnemiesRemaining(loadedSession) ??
-          totalFoundEnemiesCount;
-        const maxTrackedEnemies = this.getHuntingMaxTrackedEnemies(
-          huntingSkill.level,
-        );
+        const hasPendingTrackedEnemies =
+          !this.hasHuntBatchQueue(loadedSession) ||
+          (this.getTrackedEnemiesRemaining(loadedSession) ?? 0) > 0;
 
-        if (trackedEnemiesRemaining >= maxTrackedEnemies) {
-          const limitResponse = await this.buildSessionResponse(
-            activeSession.id,
-            {
-              message:
-                'Limite de rastreio atingido neste mapa. Inicie o combate para liberar a caÃ§a.',
-              processing: this.buildEmptyProcessingSummary(),
-            },
-          );
+        if (!hasPendingTrackedEnemies) {
+          const closed = await this.closeEmptyHuntSession({
+            userId,
+            characterId: character.id,
+            sessionId: loadedSession.id,
+            phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+          });
 
-          this.stopRealtimeProcessingLoop(character.id);
-          this.autoCombatGateway.emitStatus(character.id, limitResponse);
-
-          return limitResponse;
-        }
-
-        const now = new Date();
-        const sessionDurationSeconds = getIdleProgressLimitSeconds(
-          isPremiumActive(character.user, now),
-        );
-        const endsAt = new Date(now.getTime() + sessionDurationSeconds * 1000);
-        const initialHuntingCycle = await this.createHuntingCycleWithPetBonus({
-          characterId: character.id,
-          huntingLevel: huntingSkill.level,
-          startedAt: now,
-          version: Math.max(
-            1,
-            Math.floor(Number(loadedSession.huntBatch?.cycleVersion) || 0) + 1,
-            Math.floor(
-              Number(
-                loadedSession.huntBatch?.foundEnemiesCount ??
-                  loadedSession.foundEnemiesCount,
-              ) || 0,
-            ) + 1,
-          ),
-        });
-
-        try {
-          await this.prisma.$transaction(
-            async (tx) => {
-              await this.activityGuard.ensureCanStartAutoCombat({
-                userId,
-                characterId: character.id,
-                client: tx,
-                lockCharacter: true,
-              });
-
-              await this.claimAutoCombatPhaseTransition(
-                tx,
-                loadedSession,
-                AutoCombatSessionPhase.HUNTING,
-                {
-                  lastProcessedAt: now,
-                  lastHuntProcessedAt: now,
-                  huntStartedAt: now,
-                  endsAt,
-                  durationSeconds: sessionDurationSeconds,
-                  currentMobId: null,
-                  currentMobHp: null,
-                  currentMobMaxHp: null,
-                  killProgressSeconds: 0,
-                  killProgressMs: 0,
-                  estimatedKillTimeSeconds: null,
-                  estimatedKillTimeMs: null,
-                  unmodifiedKillTimeMs: null,
-                  appliedTtkPetDefinitionId: null,
-                  appliedTtkPetEffectBasisPoints: 0,
-                  currentRound: 0,
-                },
-              );
-
-              if (loadedSession.huntBatch?.id) {
-                await this.claimHuntBatchStatusTransition(
-                  tx,
-                  loadedSession.huntBatch,
-                  AutoCombatHuntBatchStatus.HUNTING,
-                  {
-                    startedAt: now,
-                    lastProcessedAt: now,
-                    stoppedAt: null,
-                    cancelledAt: null,
-                    cycleStartedAt: initialHuntingCycle.cycle.startedAt,
-                    cycleEndsAt: initialHuntingCycle.cycle.endsAt,
-                    cycleDurationMs: initialHuntingCycle.cycle.durationMs,
-                    cycleVersion: initialHuntingCycle.cycle.version,
-                    appliedPetDefinitionId:
-                      initialHuntingCycle.appliedPetBonus?.petDefinitionId ??
-                      null,
-                    appliedPetEffectBasisPoints:
-                      initialHuntingCycle.appliedPetBonus?.effectBasisPoints ??
-                      0,
-                  },
-                );
-              }
-            },
-            {
-              isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-            },
-          );
-        } catch (error) {
-          if (this.isTransactionConflictError(error)) {
-            throw new ConflictException(
-              'Voce ja esta realizando outra atividade. Encerre a atividade atual antes de iniciar uma nova.',
-            );
-          }
-
-          if (!(error instanceof AutoCombatSessionConcurrencyError)) {
-            throw error;
+          if (closed) {
+            activeSession = null;
           }
         }
 
-        await this.ensureResponsiveRoundDuration(activeSession.id);
-        this.startRealtimeProcessingLoop(userId, character.id);
-        this.scheduleImmediateSessionProcessing(
-          userId,
-          activeSession.id,
-          character.id,
-        );
+        if (activeSession) {
+          const now = new Date();
+          const canPreserveSessionEnd =
+            loadedSession.endsAt.getTime() > now.getTime();
 
-        const resumedResponse = await this.buildSessionResponse(
-          activeSession.id,
-          {
-            message: 'CaÃ§a retomada neste mapa.',
-            processing: this.buildEmptyProcessingSummary(),
-          },
-        );
-
-        this.autoCombatGateway.emitSessionUpdated(
-          character.id,
-          resumedResponse,
-        );
-        this.autoCombatGateway.emitStatus(character.id, resumedResponse);
-
-        return resumedResponse;
+          return this.startBattle(
+            userId,
+            character.id,
+            { mode: AutoCombatBattleMode.ALL },
+            {
+              automatic: true,
+              startedAt: canPreserveSessionEnd
+                ? (loadedSession.huntStoppedAt ??
+                  loadedSession.lastHuntProcessedAt ??
+                  loadedSession.lastProcessedAt)
+                : now,
+              preserveSessionEnd: canPreserveSessionEnd,
+            },
+          );
+        }
       }
 
-      await this.ensureResponsiveRoundDuration(activeSession.id);
-      this.startRealtimeProcessingLoop(userId, character.id);
+      if (activeSession) {
+        await this.ensureResponsiveRoundDuration(activeSession.id);
+        this.startRealtimeProcessingLoop(userId, character.id);
 
-      const response = await this.buildSessionResponse(activeSession.id, {
-        message:
-          'Este personagem já possui uma sessão de combate automático ativa.',
-        processing: this.buildEmptyProcessingSummary(),
-      });
+        const response = await this.buildSessionResponse(activeSession.id, {
+          message:
+            'Este personagem já possui uma sessão de combate automático ativa.',
+          processing: this.buildEmptyProcessingSummary(),
+        });
 
-      this.autoCombatGateway.emitSessionUpdated(character.id, response);
-      this.autoCombatGateway.emitStatus(character.id, response);
+        this.autoCombatGateway.emitSessionUpdated(character.id, response);
+        this.autoCombatGateway.emitStatus(character.id, response);
 
-      return response;
+        return response;
+      }
     }
 
     await this.activityGuard.ensureCanStartAutoCombat({
@@ -1818,6 +1710,80 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     }
 
     return wasParked;
+  }
+
+  private async closeEmptyHuntSession(params: {
+    userId: string;
+    characterId: string;
+    sessionId: string;
+    phase: AutoCombatSessionPhase;
+  }) {
+    const closedAt = new Date();
+    const wasClosed = await this.prisma.$transaction(
+      async (tx) => {
+        await this.activityGuard.ensureCanStartAutoCombat({
+          userId: params.userId,
+          characterId: params.characterId,
+          client: tx,
+          lockCharacter: true,
+        });
+
+        const updateResult = await tx.autoCombatSession.updateMany({
+          where: {
+            id: params.sessionId,
+            characterId: params.characterId,
+            status: AutoCombatSessionStatus.ACTIVE,
+            phase: params.phase,
+          },
+          data: {
+            status: AutoCombatSessionStatus.STOPPED,
+            finishedAt: closedAt,
+            huntStoppedAt: closedAt,
+            lastProcessedAt: closedAt,
+            currentMobId: null,
+            currentMobHp: null,
+            currentMobMaxHp: null,
+            battleTargetTotal: 0,
+            battleTargetRemaining: 0,
+            battleTargetMobId: null,
+            battleTargetEncounterId: null,
+          },
+        });
+
+        if (updateResult.count === 0) {
+          return false;
+        }
+
+        await tx.autoCombatHuntBatch.updateMany({
+          where: {
+            sessionId: params.sessionId,
+            status: {
+              in: [
+                AutoCombatHuntBatchStatus.HUNTING,
+                AutoCombatHuntBatchStatus.READY,
+              ],
+            },
+          },
+          data: {
+            status: AutoCombatHuntBatchStatus.CONSUMED,
+            consumedAt: closedAt,
+            lastProcessedAt: closedAt,
+            cycleTargetEncounterId: null,
+          },
+        });
+
+        return true;
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+
+    if (wasClosed) {
+      this.stopRealtimeProcessingLoop(params.characterId);
+    }
+
+    return wasClosed;
   }
 
   private async resumePreservedHuntBatchIfAvailable(params: {
@@ -2374,6 +2340,39 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       });
     }
 
+    if (session.phase === AutoCombatSessionPhase.HUNTING) {
+      const trackedEnemiesRemaining =
+        this.getTrackedEnemiesRemaining(session) ?? 0;
+      const foundEnemiesCount = Math.max(
+        0,
+        session.huntBatch?.foundEnemiesCount ?? session.foundEnemiesCount ?? 0,
+      );
+      const hasPendingTrackedEnemies = this.hasHuntBatchQueue(session)
+        ? trackedEnemiesRemaining > 0
+        : foundEnemiesCount > 0;
+
+      if (!hasPendingTrackedEnemies) {
+        const closed = await this.closeEmptyHuntSession({
+          userId,
+          characterId: character.id,
+          sessionId: session.id,
+          phase: AutoCombatSessionPhase.HUNTING,
+        });
+
+        if (closed) {
+          const response = await this.buildSessionResponse(session.id, {
+            message: 'Caça parada. Nenhum mob estava pendente.',
+            processing: this.buildEmptyProcessingSummary(),
+          });
+
+          this.autoCombatGateway.emitSessionUpdated(character.id, response);
+          this.autoCombatGateway.emitStatus(character.id, response);
+
+          return response;
+        }
+      }
+    }
+
     const huntingSkill = await this.getOrCreateHuntingSkill(character.id);
     const huntBatch = session.huntBatch ?? null;
     const encounter =
@@ -2482,6 +2481,7 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     userId: string,
     characterId: string,
     startBattleDto?: StartAutoCombatBattleDto,
+    internalOptions?: StartBattleInternalOptions,
   ) {
     const session = await this.prisma.autoCombatSession.findFirst({
       where: {
@@ -2529,7 +2529,7 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
 
     if (!encounter) {
       throw new BadRequestException(
-        'Todos os mobs rastreados neste mapa jÃ¡ foram resolvidos. Inicie uma nova caÃ§a.',
+        'Todos os mobs rastreados neste mapa j\u00e1 foram resolvidos. Inicie uma nova ca\u00e7a.',
       );
     }
 
@@ -2544,11 +2544,13 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     const persistedBattleTargetEncounterId = isAllTrackedBattle
       ? null
       : encounter.id;
-    const now = new Date();
+    const now = internalOptions?.startedAt ?? new Date();
     const battleDurationSeconds = getIdleProgressLimitSeconds(
       isPremiumActive(loadedSession.character.user, now),
     );
-    const battleEndsAt = this.addSeconds(now, battleDurationSeconds);
+    const battleEndsAt = internalOptions?.preserveSessionEnd
+      ? loadedSession.endsAt
+      : this.addSeconds(now, battleDurationSeconds);
     const characterStats = this.calculateCharacterFighterStats(
       loadedSession.character,
     );
@@ -2746,9 +2748,13 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     }
 
     const response = await this.buildSessionResponse(updatedSession.id, {
-      message: isAllTrackedBattle
-        ? `Combate em sequência iniciado contra ${battleQuantity} ameaça(s) rastreada(s).`
-        : `Combate iniciado contra ${battleQuantity}x ${mob.name}.`,
+      message: internalOptions?.automatic
+        ? battleQuantity > 1
+          ? `${battleQuantity} ameaças rastreadas. Combate em sequência iniciado automaticamente.`
+          : `${mob.name} rastreado. Combate iniciado automaticamente.`
+        : isAllTrackedBattle
+          ? `Combate em sequência iniciado contra ${battleQuantity} ameaça(s) rastreada(s).`
+          : `Combate iniciado contra ${battleQuantity}x ${mob.name}.`,
       processing: this.buildEmptyProcessingSummary(),
     });
 
@@ -3657,17 +3663,42 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       }
 
       if (session.phase === AutoCombatSessionPhase.ENCOUNTER_READY) {
-        this.stopRealtimeProcessingLoop(session.characterId);
+        if (
+          this.hasHuntBatchQueue(session) &&
+          (this.getTrackedEnemiesRemaining(session) ?? 0) <= 0
+        ) {
+          const closed = await this.closeEmptyHuntSession({
+            userId,
+            characterId: session.characterId,
+            sessionId: session.id,
+            phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+          });
 
-        const response = await this.buildSessionResponse(session.id, {
-          message:
-            'Caça pronta. Inicie o combate quando quiser enfrentar a ameaça encontrada.',
-          processing: this.buildEmptyProcessingSummary(),
-        });
+          if (closed) {
+            const response = await this.buildSessionResponse(session.id, {
+              message: 'Lote de caca encerrado sem ameacas pendentes.',
+              processing: this.buildEmptyProcessingSummary(),
+            });
 
-        this.autoCombatGateway.emitStatus(session.characterId, response);
+            this.autoCombatGateway.emitStatus(session.characterId, response);
 
-        return response;
+            return response;
+          }
+        }
+
+        return this.startBattle(
+          userId,
+          session.characterId,
+          { mode: AutoCombatBattleMode.ALL },
+          {
+            automatic: true,
+            startedAt:
+              session.huntStoppedAt ??
+              session.lastHuntProcessedAt ??
+              session.lastProcessedAt,
+            preserveSessionEnd: true,
+          },
+        );
       }
 
       const effectiveRoundDurationSeconds =
@@ -3879,6 +3910,10 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
           break;
         }
 
+        if (roundResult.phase === AutoCombatSessionPhase.HUNTING) {
+          break;
+        }
+
         if (
           this.isAllTrackedBattle(currentSession) &&
           this.sessionNeedsMobSpawn(currentSession) &&
@@ -4020,13 +4055,9 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     );
     const previousTrackedEnemiesRemaining =
       this.getTrackedEnemiesRemaining(session) ?? previousFoundEnemiesCount;
-    const maxTrackedEnemies = this.getHuntingMaxTrackedEnemies(
-      huntingSkill.level,
-    );
-    const remainingHuntCapacity = Math.max(
-      0,
-      maxTrackedEnemies - previousTrackedEnemiesRemaining,
-    );
+    // Cada ciclo encontra exatamente um mob. Qualquer fila pendente precisa
+    // ser resolvida antes de iniciar o proximo rastreio.
+    const remainingHuntCapacity = previousTrackedEnemiesRemaining > 0 ? 0 : 1;
     const baseSecondsPerEnemy = this.getHuntingSecondsPerEnemy(
       huntingSkill.level,
     );
@@ -4184,10 +4215,6 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
             safeLastHuntProcessedAt,
             (index + 1) * baseSecondsPerEnemy,
           );
-      const nextFindAt = huntingCycleContext
-        ? new Date(foundAt.getTime() + huntingCycleContext.nextCycleDurationMs)
-        : this.addSeconds(foundAt, baseSecondsPerEnemy);
-
       const trackedEncounter =
         currentCycleTargetEncounter ??
         this.rollEncounter(huntEncounters, {
@@ -4242,12 +4269,12 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
         serverTime: foundAt.toISOString(),
         createdAt: foundAt.toISOString(),
         actionStartedAt: foundAt.toISOString(),
-        nextActionAt: nextFindAt.toISOString(),
+        nextActionAt: foundAt.toISOString(),
         eventKey: buildHuntCycleKey(session.id, findIndex),
         huntCycleKey: buildHuntCycleKey(session.id, findIndex),
         huntSequence: findIndex,
         foundAt: foundAt.toISOString(),
-        nextFindAt: nextFindAt.toISOString(),
+        nextFindAt: null,
         secondsPerFind: huntingCycleContext
           ? huntingCycleContext.nextCycleDurationMs / 1_000
           : baseSecondsPerEnemy,
@@ -4264,27 +4291,24 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       currentCycleTargetEncounter = nextQueuedCycleTargetEncounter;
     }
 
+    const totalEnemiesFoundNow = enemiesFoundNow;
+
     const huntingProgress = this.calculateHuntingSkillProgress(
       huntingSkill,
       huntingXpGained,
     );
 
     const didReachSessionLimit =
-      !didReachHuntLimit && now.getTime() >= session.endsAt.getTime();
-    const shouldContinueHunting =
-      !didReachHuntLimit && !didReachSessionLimit && Boolean(huntBatch?.id);
-    const nextCycleTargetEncounter = shouldContinueHunting
-      ? this.rollEncounter(huntEncounters, {
-          huntingLevel: huntingSkill.level,
-          foundEnemiesCount: previousFoundEnemiesCount + enemiesFoundNow + 1,
-        })
-      : null;
+      processedAt.getTime() >= session.endsAt.getTime();
     const sessionUpdateData: Prisma.AutoCombatSessionUncheckedUpdateManyInput =
       {
         lastHuntProcessedAt: processedAt,
         lastProcessedAt: didReachSessionLimit ? session.endsAt : processedAt,
         foundEnemiesCount: {
-          increment: enemiesFoundNow,
+          increment: totalEnemiesFoundNow,
+        },
+        bonusEnemiesFound: {
+          increment: 0,
         },
         huntingXpGained: {
           increment: huntingXpGained,
@@ -4311,7 +4335,10 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
         ? {
             lastProcessedAt: processedAt,
             foundEnemiesCount: {
-              increment: enemiesFoundNow,
+              increment: totalEnemiesFoundNow,
+            },
+            bonusEnemiesFound: {
+              increment: 0,
             },
             huntingXpGained: {
               increment: huntingXpGained,
@@ -4320,8 +4347,8 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
               lastTrackedEncounter?.id ?? huntBatch.selectedEncounterId,
             selectedEncounterMobId:
               lastTrackedEncounter?.mobId ?? huntBatch.selectedEncounterMobId,
-            cycleTargetEncounterId: nextCycleTargetEncounter?.id ?? null,
-            huntSequence: previousFoundEnemiesCount + enemiesFoundNow,
+            cycleTargetEncounterId: null,
+            huntSequence: previousFoundEnemiesCount + totalEnemiesFoundNow,
             ...(huntingCycleContext
               ? {
                   cycleStartedAt:
@@ -4417,10 +4444,10 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
 
     const response = await this.buildSessionResponse(updatedSession.id, {
       message: didReachSessionLimit
-        ? `Limite de tempo da caça atingido. ${enemiesFoundNow} ameaça(s) rastreada(s) e preservada(s) para combate.`
+        ? `Limite de tempo da caça atingido. ${totalEnemiesFoundNow} ameaça(s) rastreada(s) e preservada(s) para combate.`
         : didReachHuntLimit
-          ? `Limite de rastreio atingido neste mapa. ${enemiesFoundNow} ameaça(s) rastreada(s).`
-          : `${enemiesFoundNow} ameaça(s) rastreada(s) durante a caça.`,
+          ? `${totalEnemiesFoundNow} ameaça(s) rastreada(s). Preparando o combate automático.`
+          : `${totalEnemiesFoundNow} ameaça(s) rastreada(s) durante a caça.`,
       processing: this.buildEmptyProcessingSummary(),
     });
 
@@ -4435,8 +4462,29 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     this.autoCombatGateway.emitSessionUpdated(session.characterId, response);
     this.autoCombatGateway.emitStatus(session.characterId, response);
 
-    if (didReachHuntLimit) {
-      this.stopRealtimeProcessingLoop(session.characterId);
+    if (didReachHuntLimit && !didReachSessionLimit) {
+      const ownerUserId = session.character?.userId;
+
+      // Sessões carregadas pelo serviço sempre possuem o owner. O fallback
+      // mantém os testes unitários de persistência desacoplados do endpoint.
+      if (!ownerUserId) {
+        return response;
+      }
+
+      return this.startBattle(
+        ownerUserId,
+        session.characterId,
+        {
+          mode: huntBatch?.id
+            ? AutoCombatBattleMode.ALL
+            : AutoCombatBattleMode.SINGLE,
+        },
+        {
+          automatic: true,
+          startedAt: processedAt,
+          preserveSessionEnd: true,
+        },
+      );
     }
 
     if (didReachSessionLimit) {
@@ -6233,8 +6281,20 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
         currentMob.id,
         killsResolved,
       );
+    const consumedCombatMs =
+      killsResolved > 0
+        ? Math.max(0, currentTtkTiming.estimatedKillTimeMs - progressBeforeMs) +
+          Math.max(0, killsResolved - 1) * nextTtk.estimatedKillTimeMs
+        : elapsedMs;
+    const combatTransitionAt = new Date(
+      Math.min(
+        effectiveNow.getTime(),
+        session.lastProcessedAt.getTime() + consumedCombatMs,
+      ),
+    );
     const sessionShouldFinish =
-      effectiveNow.getTime() >= session.endsAt.getTime();
+      (killsResolved > 0 ? combatTransitionAt : effectiveNow).getTime() >=
+      session.endsAt.getTime();
     let finalStatus: AutoCombatSessionStatus = AutoCombatSessionStatus.ACTIVE;
     let nextPhase: AutoCombatSessionPhase = session.phase;
     let finishedAt: Date | null = null;
@@ -6257,9 +6317,17 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       nextCurrentRound = 0;
       nextKillProgressSeconds = 0;
       nextKillProgressMs = 0;
-    } else if (sessionShouldFinish || shouldFinishTrackedQueue) {
+    } else if (sessionShouldFinish) {
       finalStatus = AutoCombatSessionStatus.FINISHED;
-      finishedAt = sessionShouldFinish ? session.endsAt : effectiveNow;
+      finishedAt = session.endsAt;
+      nextCurrentMobId = null;
+      nextCurrentMobHp = null;
+      nextCurrentMobMaxHp = null;
+      nextCurrentRound = 0;
+      nextKillProgressSeconds = 0;
+      nextKillProgressMs = 0;
+    } else if (shouldFinishTrackedQueue) {
+      nextPhase = AutoCombatSessionPhase.HUNTING;
       nextCurrentMobId = null;
       nextCurrentMobHp = null;
       nextCurrentMobMaxHp = null;
@@ -6506,7 +6574,9 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       newLastProcessedAt:
         finalStatus !== AutoCombatSessionStatus.ACTIVE
           ? (finishedAt ?? session.endsAt)
-          : effectiveNow,
+          : hitKillLimit || shouldFinishTrackedQueue
+            ? combatTransitionAt
+            : effectiveNow,
       finishedAt,
 
       currentMobId: nextCurrentMobId,
@@ -7290,11 +7360,16 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       nextBattleTargetRemaining =
         battleTargetRemainingAfterKill ?? nextBattleTargetRemaining;
 
-      if (sessionShouldFinish || shouldFinishTrackedQueue) {
+      if (sessionShouldFinish) {
         finalStatus = AutoCombatSessionStatus.FINISHED;
-        finishedAt = sessionShouldFinish
-          ? session.endsAt
-          : roundActionStartedAt;
+        finishedAt = session.endsAt;
+
+        nextCurrentMobId = null;
+        nextCurrentMobHp = null;
+        nextCurrentMobMaxHp = null;
+        nextCurrentRound = 0;
+      } else if (shouldFinishTrackedQueue) {
+        nextPhase = AutoCombatSessionPhase.HUNTING;
 
         nextCurrentMobId = null;
         nextCurrentMobHp = null;
@@ -7453,12 +7528,52 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     result: RealtimeRoundResult,
   ) {
     const resultPhase = result.phase ?? session.phase;
+    const shouldStartNextHunt =
+      result.finalStatus === AutoCombatSessionStatus.ACTIVE &&
+      resultPhase === AutoCombatSessionPhase.HUNTING;
+    const huntingLevel = Math.max(
+      1,
+      Math.floor(Number(session.character?.huntingSkill?.level) || 1),
+    );
+    const nextHuntCycle = shouldStartNextHunt
+      ? await this.createHuntingCycleWithPetBonus({
+          characterId: session.characterId,
+          huntingLevel,
+          startedAt: result.newLastProcessedAt,
+          version: Math.max(
+            1,
+            Math.floor(Number(session.huntBatch?.cycleVersion) || 0) + 1,
+          ),
+        })
+      : null;
+    const nextHuntEncounter = shouldStartNextHunt
+      ? this.rollEncounter(this.getSessionHuntEncounters(session), {
+          huntingLevel,
+          foundEnemiesCount:
+            Math.max(
+              0,
+              Math.floor(
+                Number(
+                  session.huntBatch?.foundEnemiesCount ??
+                    session.foundEnemiesCount,
+                ) || 0,
+              ),
+            ) + 1,
+        })
+      : null;
 
     await this.prisma.$transaction(async (tx) => {
       await this.claimSessionProcessingStep(tx, session, {
         status: result.finalStatus,
         phase: resultPhase,
         lastProcessedAt: result.newLastProcessedAt,
+        lastHuntProcessedAt: shouldStartNextHunt
+          ? result.newLastProcessedAt
+          : undefined,
+        huntStartedAt: shouldStartNextHunt
+          ? result.newLastProcessedAt
+          : undefined,
+        huntStoppedAt: shouldStartNextHunt ? null : undefined,
         finishedAt: result.finishedAt,
 
         currentMobId: result.currentMobId,
@@ -7500,14 +7615,16 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
           resultPhase === AutoCombatSessionPhase.COMBAT_ACTIVE
             ? undefined
             : null,
-        selectedEncounterId:
-          result.finalStatus === AutoCombatSessionStatus.ACTIVE &&
-          resultPhase === AutoCombatSessionPhase.COMBAT_ACTIVE
+        selectedEncounterId: shouldStartNextHunt
+          ? nextHuntEncounter?.id
+          : result.finalStatus === AutoCombatSessionStatus.ACTIVE &&
+              resultPhase === AutoCombatSessionPhase.COMBAT_ACTIVE
             ? undefined
             : null,
-        selectedEncounterMobId:
-          result.finalStatus === AutoCombatSessionStatus.ACTIVE &&
-          resultPhase === AutoCombatSessionPhase.COMBAT_ACTIVE
+        selectedEncounterMobId: shouldStartNextHunt
+          ? nextHuntEncounter?.mobId
+          : result.finalStatus === AutoCombatSessionStatus.ACTIVE &&
+              resultPhase === AutoCombatSessionPhase.COMBAT_ACTIVE
             ? undefined
             : null,
 
@@ -7690,6 +7807,33 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
             status: AutoCombatHuntBatchStatus.READY,
             consumedAt: null,
             lastProcessedAt: result.newLastProcessedAt,
+          },
+        });
+      }
+
+      if (shouldStartNextHunt && nextHuntCycle && nextHuntEncounter) {
+        await tx.autoCombatHuntBatch.updateMany({
+          where: {
+            sessionId: session.id,
+          },
+          data: {
+            status: AutoCombatHuntBatchStatus.HUNTING,
+            startedAt: result.newLastProcessedAt,
+            stoppedAt: null,
+            consumedAt: null,
+            cancelledAt: null,
+            lastProcessedAt: result.newLastProcessedAt,
+            cycleStartedAt: nextHuntCycle.cycle.startedAt,
+            cycleEndsAt: nextHuntCycle.cycle.endsAt,
+            cycleDurationMs: nextHuntCycle.cycle.durationMs,
+            cycleVersion: nextHuntCycle.cycle.version,
+            cycleTargetEncounterId: nextHuntEncounter.id,
+            selectedEncounterId: nextHuntEncounter.id,
+            selectedEncounterMobId: nextHuntEncounter.mobId,
+            appliedPetDefinitionId:
+              nextHuntCycle.appliedPetBonus?.petDefinitionId ?? null,
+            appliedPetEffectBasisPoints:
+              nextHuntCycle.appliedPetBonus?.effectBasisPoints ?? 0,
           },
         });
       }
@@ -11004,22 +11148,9 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     return getAutoCombatHuntingSecondsPerEnemy(level);
   }
 
-  private getHuntingMaxTrackedEnemies(level: number) {
-    const safeLevel = this.clampNumber(
-      Math.floor(Number(level) || 1),
-      1,
-      AUTO_COMBAT_HUNTING_LEVEL_CAP,
-    );
-    const levelOffset = safeLevel - 1;
-
-    return (
-      AUTO_COMBAT_HUNTING_BASE_MAX_TRACKED_ENEMIES +
-      levelOffset * AUTO_COMBAT_HUNTING_MAX_TRACKED_LINEAR_GAIN +
-      Math.floor(
-        Math.pow(levelOffset, AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_EXPONENT) *
-          AUTO_COMBAT_HUNTING_MAX_TRACKED_POWER_SCALE,
-      )
-    );
+  private getHuntingMaxTrackedEnemies(_level: number) {
+    void _level;
+    return AUTO_COMBAT_HUNTING_ENCOUNTERS_PER_BATCH;
   }
 
   private buildHuntingTimingViewModel(
@@ -11196,10 +11327,8 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       secondsPerEnemy,
       maxTrackedEnemies,
       bonuses: {
-        betterEncounterChancePercent: Math.min(
-          75,
-          Math.max(0, Math.floor((skill.level - 1) * 1.5)),
-        ),
+        bonusEnemyChancePercent: 0,
+        betterEncounterChancePercent: 0,
         speedPercent,
       },
     };
@@ -11632,6 +11761,19 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
           Math.max(0, Math.floor(Number(entry.remainingCount) || 0)) > 0,
       )
       .sort((first: any, second: any) => {
+        const firstFoundAt = first.lastFoundAt ?? first.firstFoundAt;
+        const secondFoundAt = second.lastFoundAt ?? second.firstFoundAt;
+        const firstFoundTimestamp = firstFoundAt
+          ? new Date(firstFoundAt).getTime()
+          : Number.POSITIVE_INFINITY;
+        const secondFoundTimestamp = secondFoundAt
+          ? new Date(secondFoundAt).getTime()
+          : Number.POSITIVE_INFINITY;
+
+        if (firstFoundTimestamp !== secondFoundTimestamp) {
+          return firstFoundTimestamp - secondFoundTimestamp;
+        }
+
         const firstMob =
           first.mob ?? encounterByMobId.get(first.mobId)?.mob ?? null;
         const secondMob =
@@ -12075,11 +12217,12 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
 
   private getWeightedHuntEncounters(
     encounters: any[],
-    options?: {
+    _options?: {
       huntingLevel?: number | null;
       foundEnemiesCount?: number | null;
     },
   ): WeightedHuntEncounter[] {
+    void _options;
     const activeEncounters = encounters.filter(
       (encounter) => encounter.isActive && encounter.weight > 0,
     );
@@ -12090,38 +12233,10 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    const huntingLevel = Math.max(
-      1,
-      Math.floor(Number(options?.huntingLevel) || 1),
-    );
-    const foundEnemiesCount = Math.max(
-      0,
-      Math.floor(Number(options?.foundEnemiesCount) || 0),
-    );
-    const huntingBias = Math.min(
-      1.75,
-      Math.max(0, (huntingLevel - 1) / AUTO_COMBAT_HUNTING_LEVEL_CAP) +
-        Math.min(0.5, foundEnemiesCount / 100),
-    );
-    const minMobLevel = Math.min(
-      ...activeEncounters.map((encounter) =>
-        Math.max(1, Number(encounter.mob?.level ?? 1)),
-      ),
-    );
-    const maxMobLevel = Math.max(
-      ...activeEncounters.map((encounter) =>
-        Math.max(1, Number(encounter.mob?.level ?? 1)),
-      ),
-    );
-    const levelRange = Math.max(1, maxMobLevel - minMobLevel);
     const weightedEncounters = activeEncounters.map((encounter) => {
-      const mobLevel = Math.max(1, Number(encounter.mob?.level ?? 1));
-      const relativeDifficulty = (mobLevel - minMobLevel) / levelRange;
-      const betterMobMultiplier = 1 + relativeDifficulty * huntingBias;
-
       return {
         encounter,
-        weight: Math.max(1, Math.round(encounter.weight * betterMobMultiplier)),
+        weight: Math.max(1, Math.round(encounter.weight)),
       };
     });
     const totalWeight = weightedEncounters.reduce(

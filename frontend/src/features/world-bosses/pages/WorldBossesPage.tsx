@@ -4,6 +4,7 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
+import { isAxiosError } from "axios";
 import {
   Biohazard,
   BellRing,
@@ -88,6 +89,16 @@ function formatRemaining(seconds: number) {
   const ss = String(s).padStart(2, "0");
   if (h > 0) return `${String(h).padStart(2, "0")}h ${mm}m ${ss}s`;
   return `${mm}m ${ss}s`;
+}
+
+function getWorldBossErrorMessage(error: unknown, fallback: string) {
+  if (isAxiosError<{ message?: string | string[] }>(error)) {
+    const message = error.response?.data?.message;
+    if (Array.isArray(message)) return message.join(" ");
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return fallback;
 }
 
 function buildCharacterViewModel(
@@ -757,9 +768,10 @@ export function WorldBossesPage() {
       } catch (err) {
         if (disposed) return;
         setError(
-          err instanceof Error
-            ? err.message
-            : "Não foi possível carregar as Ameaças Globais.",
+          getWorldBossErrorMessage(
+            err,
+            "Não foi possível carregar as Ameaças Globais.",
+          ),
         );
       } finally {
         if (!disposed) setIsLoading(false);
@@ -939,10 +951,16 @@ export function WorldBossesPage() {
     } catch (err) {
       setRegistrationFeedback(null);
       setError(
-        err instanceof Error
-          ? err.message
-          : "Não foi possível entrar no combate.",
+        getWorldBossErrorMessage(err, "Não foi possível entrar no combate."),
       );
+      try {
+        const refreshed = await getAvailableWorldBosses(characterId);
+        setBossStatuses((current) =>
+          reconcileWorldBossStatusSnapshots(current, refreshed.events),
+        );
+      } catch {
+        // Preserva o erro original da inscrição; o polling fará nova tentativa.
+      }
     } finally {
       setIsBusy(false);
     }
@@ -970,7 +988,7 @@ export function WorldBossesPage() {
       setError(null);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Não foi possível sair da sala.",
+        getWorldBossErrorMessage(err, "Não foi possível sair da sala."),
       );
     } finally {
       setIsBusy(false);

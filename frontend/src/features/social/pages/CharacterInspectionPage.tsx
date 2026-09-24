@@ -12,6 +12,7 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { CharacterPortrait } from "../../cosmetics/components/CharacterPortrait";
+import { CosmeticEffectLayer } from "../../cosmetics/components/CosmeticEffectLayer";
 import {
   getCosmeticEffectClass,
   getCosmeticImage,
@@ -44,9 +45,7 @@ const CHARACTER_STATUS_LABELS: Record<string, string> = {
 };
 
 type PublicEquipmentItem = NonNullable<
-  NonNullable<
-    PublicCharacterProfileResponse["character"]["equipment"]
-  >[string]
+  NonNullable<PublicCharacterProfileResponse["character"]["equipment"]>[string]
 >;
 
 function getErrorMessage(error: unknown) {
@@ -110,8 +109,9 @@ export function CharacterInspectionPage() {
   const [overview, setOverview] = useState<CharacterOverviewResponse | null>(
     null,
   );
-  const [profile, setProfile] =
-    useState<PublicCharacterProfileResponse | null>(null);
+  const [profile, setProfile] = useState<PublicCharacterProfileResponse | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,7 +154,9 @@ export function CharacterInspectionPage() {
     return <Navigate to="/characters" replace />;
   }
   if (isLoading && (!viewerCharacter || !profile)) {
-    return <main className="dashboard-loading">Inspecionando sobrevivente...</main>;
+    return (
+      <main className="dashboard-loading">Inspecionando sobrevivente...</main>
+    );
   }
   if (!viewerCharacter || !profile) {
     return (
@@ -212,7 +214,9 @@ export function CharacterInspectionPage() {
             .join(" ")}
           style={heroStyle}
         >
-          <span className="cosmetic-effect-layer" aria-hidden="true" />
+          <CosmeticEffectLayer
+            effectPreset={appearance.profileEffect?.effectPreset}
+          />
           <div className="character-inspection__identity">
             <CharacterPortrait
               className="character-inspection__portrait"
@@ -235,7 +239,8 @@ export function CharacterInspectionPage() {
               ) : null}
               <div className="character-inspection__meta">
                 <span>
-                  <ShieldCheck size={14} aria-hidden="true" /> Nv. {profile.character.level}
+                  <ShieldCheck size={14} aria-hidden="true" /> Nv.{" "}
+                  {profile.character.level}
                 </span>
                 {profile.character.map ? (
                   <span>
@@ -260,7 +265,8 @@ export function CharacterInspectionPage() {
             <div>
               <span>Histórico no abrigo</span>
               <strong>
-                <CalendarDays size={15} aria-hidden="true" /> Desde {registeredAt}
+                <CalendarDays size={15} aria-hidden="true" /> Desde{" "}
+                {registeredAt}
               </strong>
               <p>
                 {profile.character.map

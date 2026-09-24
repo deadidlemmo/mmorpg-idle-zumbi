@@ -816,6 +816,17 @@
   font-size: 0.75rem;
 }
 
+.admin-table td:nth-child(2) span {
+  display: block;
+  max-width: 220px;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #7e887f;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .admin-status {
   color: #9bc96f;
   font-weight: 700;
@@ -833,6 +844,12 @@
   background: transparent;
   border: 0;
   text-decoration: underline;
+}
+
+.admin-row-action:disabled {
+  color: #59615b;
+  cursor: not-allowed;
+  text-decoration: none;
 }
 
 .admin-row-actions {
@@ -940,6 +957,88 @@
   border: 1px solid #364038;
 }
 
+.admin-modal--cash {
+  width: min(520px, 100%);
+}
+
+.admin-cash-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px;
+  gap: 12px;
+  margin: 20px 0;
+  padding-block: 16px;
+  border-block: 1px solid #2c342e;
+}
+
+.admin-cash-form label {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  color: #9ca69e;
+  font-size: 0.75rem;
+}
+
+.admin-cash-form label:first-child,
+.admin-cash-form label:nth-of-type(3),
+.admin-cash-form > button {
+  grid-column: 1 / -1;
+}
+
+.admin-cash-form select,
+.admin-cash-form input {
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px;
+  color: #e4e9e5;
+  background: #0c100d;
+  border: 1px solid #364038;
+}
+
+.admin-cash-form textarea {
+  min-height: 76px;
+  margin: 0;
+}
+
+.admin-cash-balance {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-height: 66px;
+  padding: 10px 12px;
+  background: #101612;
+  border: 1px solid #344038;
+}
+
+.admin-cash-balance span {
+  color: #89938a;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.admin-cash-balance strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #efc84d;
+  font-size: 1.1rem;
+}
+
+.admin-primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  color: #eef7e8;
+  background: #365929;
+  border: 1px solid #527b3d;
+}
+
+.admin-primary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .admin-modal--cosmetics {
   width: min(760px, 100%);
   max-height: min(86vh, 760px);
@@ -953,6 +1052,35 @@
   margin: 20px 0;
   padding-block: 16px;
   border-block: 1px solid #2c342e;
+}
+
+.admin-grant-mode {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid #364038;
+}
+
+.admin-grant-mode button {
+  min-height: 38px;
+  padding: 7px 10px;
+  color: #9ca69e;
+  background: #0c100d;
+  border: 0;
+  border-right: 1px solid #364038;
+}
+
+.admin-grant-mode button:last-child {
+  border-right: 0;
+}
+
+.admin-grant-mode button.is-active {
+  color: #edf7e8;
+  background: #263d22;
+}
+
+.admin-cosmetic-grant .admin-cosmetic-target {
+  grid-column: 1 / -1;
 }
 
 .admin-cosmetic-grant label {
@@ -1195,6 +1323,29 @@
 
   .admin-cosmetic-grant {
     grid-template-columns: 1fr;
+  }
+
+  .admin-cash-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-cash-form label,
+  .admin-cash-balance,
+  .admin-cash-form > button {
+    grid-column: 1;
+  }
+
+  .admin-grant-mode {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-grant-mode button {
+    border-right: 0;
+    border-bottom: 1px solid #364038;
+  }
+
+  .admin-grant-mode button:last-child {
+    border-bottom: 0;
   }
 }
 

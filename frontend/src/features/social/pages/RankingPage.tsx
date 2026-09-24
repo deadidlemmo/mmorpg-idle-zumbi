@@ -17,6 +17,7 @@ import huntingActivityIcon from "../../../assets/images/auto-combat/hunting-acti
 import craftingActivityIcon from "../../../assets/images/crafting/skills/crafting.webp";
 import { normalizeClassName } from "../../characters/api/characters.api";
 import { CharacterPortrait } from "../../cosmetics/components/CharacterPortrait";
+import { CosmeticEffectLayer } from "../../cosmetics/components/CosmeticEffectLayer";
 import {
   getCosmeticEffectClass,
   getCosmeticImage,
@@ -288,7 +289,9 @@ function RankingRow({
       style={style}
       aria-label={`Abrir perfil de ${entry.character.name}`}
     >
-      <span className="cosmetic-effect-layer" aria-hidden="true" />
+      <CosmeticEffectLayer
+        effectPreset={appearance?.profileEffect?.effectPreset}
+      />
       <RankingPosition rank={entry.rank} />
       <CharacterPortrait
         className="ranking-row__avatar"
@@ -366,7 +369,9 @@ function RankingPodiumCard({
       aria-label={`${entry.rank}º lugar: ${entry.character.name}`}
     >
       <div className="ranking-podium-card__profile">
-        <span className="cosmetic-effect-layer" aria-hidden="true" />
+        <CosmeticEffectLayer
+          effectPreset={appearance?.profileEffect?.effectPreset}
+        />
         <CharacterPortrait
           className="ranking-podium-card__avatar"
           name={entry.character.name}

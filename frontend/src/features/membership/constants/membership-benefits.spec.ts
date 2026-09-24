@@ -6,7 +6,7 @@ import {
 } from "./membership-benefits";
 
 test("separa todos os bônus de EXP Premium em tópicos explícitos", () => {
-  assert.equal(MEMBERSHIP_BENEFIT_LABELS.xpBonus, "+20%");
+  assert.equal(MEMBERSHIP_BENEFIT_LABELS.xpBonus, "+50%");
   assert.deepEqual(
     MEMBERSHIP_XP_BENEFIT_TOPICS.map((benefit) => benefit.label),
     [

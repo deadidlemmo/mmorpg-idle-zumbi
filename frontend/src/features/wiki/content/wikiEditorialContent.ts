@@ -600,7 +600,7 @@ export const WIKI_SYSTEM_PAGES: WikiEditorialPage[] = [
         title: "Benefícios atuais",
         bullets: [
           "Limite ocioso de até 12 horas, em vez de 6 horas na conta gratuita.",
-          "Bônus de 20% de experiência nas atividades compatíveis.",
+          "Bônus de 50% de experiência nas atividades compatíveis.",
           "A validade pertence à conta e vale para seus personagens.",
         ],
       },
@@ -723,7 +723,7 @@ export const PROGRESSION_PAGE: WikiEditorialPage = {
     {
       title: "Experiência",
       paragraphs: [
-        "Combate automático, incursões, Ameaças Globais e missões concedem XP. Premium adiciona 20% nas atividades compatíveis.",
+        "Combate automático, incursões, Ameaças Globais e missões concedem XP. Premium adiciona 50% nas atividades compatíveis.",
       ],
     },
     {

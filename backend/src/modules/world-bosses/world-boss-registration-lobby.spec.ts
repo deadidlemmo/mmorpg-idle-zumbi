@@ -310,6 +310,61 @@ describe('WorldBossesService single registration lifecycle', () => {
     expect(service.activateEventWithSnapshot).not.toHaveBeenCalled();
   });
 
+  it('expira um evento agendado cuja janela já terminou', async () => {
+    const event = buildEvent(WorldBossEventStatus.SCHEDULED, BASE_NOW);
+    const expiredEvent = {
+      ...event,
+      status: WorldBossEventStatus.EXPIRED,
+    };
+    type EventUpdateArgs = {
+      where: { id: string };
+      data: {
+        status: WorldBossEventStatus;
+        endsAt: Date;
+        participantCount: number;
+        registrationCount: number;
+      };
+      include: unknown;
+    };
+    const eventUpdate = jest
+      .fn<Promise<typeof expiredEvent>, [EventUpdateArgs]>()
+      .mockResolvedValue(expiredEvent);
+    const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: EVENT_ID }]),
+      worldBossEvent: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue(event),
+        update: eventUpdate,
+      },
+      worldBossParticipant: {
+        count: jest.fn().mockResolvedValue(0),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    } as unknown as Prisma.TransactionClient;
+    const prisma = {
+      $transaction: jest.fn(
+        (
+          callback: (transaction: Prisma.TransactionClient) => Promise<unknown>,
+        ) => callback(tx),
+      ),
+    } as unknown as PrismaService;
+    const service = createService({ prisma }) as unknown as {
+      expireEmptyLobby(eventId: string, closedAt: Date): Promise<unknown>;
+    };
+    const closedAt = new Date(BASE_NOW.getTime() + 15 * 60 * 1000);
+
+    await service.expireEmptyLobby(EVENT_ID, closedAt);
+
+    expect(eventUpdate).toHaveBeenCalledTimes(1);
+    const updateArgs = eventUpdate.mock.calls[0]?.[0];
+    expect(updateArgs?.where).toEqual({ id: EVENT_ID });
+    expect(updateArgs?.data).toEqual({
+      status: WorldBossEventStatus.EXPIRED,
+      endsAt: closedAt,
+      participantCount: 0,
+      registrationCount: 0,
+    });
+  });
+
   it('encerra gathering, criação, incursão e autocombate na transação', async () => {
     const craftingUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
     const incursionUpdateMany = jest.fn().mockResolvedValue({ count: 1 });

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { getCharacterOverview } from "../../dashboard/api/dashboard.api";
 import { DashboardLayout } from "../../dashboard/components/DashboardLayout";
@@ -26,6 +27,7 @@ import {
   updateCharacterAppearance,
 } from "../api/cosmetics.api";
 import { CharacterProfileCard } from "../components/CharacterProfileCard";
+import { CosmeticEffectLayer } from "../components/CosmeticEffectLayer";
 import {
   getCosmeticEffectClass,
   getCosmeticFrameClass,
@@ -116,7 +118,7 @@ const COLLECTION_STYLE_TYPES: CosmeticType[] = [
 function selectionFromCatalog(
   catalog: CharacterCosmeticsCatalogResponse,
 ): Selection {
-  const selection: Selection = {
+  return {
     AVATAR: catalog.appearance.avatar?.key ?? null,
     AVATAR_FRAME: catalog.appearance.avatarFrame?.key ?? null,
     PROFILE_BANNER: catalog.appearance.profileBanner?.key ?? null,
@@ -125,40 +127,20 @@ function selectionFromCatalog(
     TITLE: catalog.appearance.title?.key ?? null,
     BADGE: catalog.appearance.badge?.key ?? null,
   };
-
-  for (const item of catalog.collections.flatMap(
-    (collection) => collection.items,
-  )) {
-    if (item.isSelected) selection[item.type] = item.key;
-  }
-
-  return selection;
 }
 
-function payloadFromSelection(selection: Selection, saved: Selection) {
-  const payload: UpdateCharacterAppearancePayload = {};
-  if (selection.AVATAR !== saved.AVATAR) {
-    payload.avatarCosmeticKey = selection.AVATAR;
-  }
-  if (selection.AVATAR_FRAME !== saved.AVATAR_FRAME) {
-    payload.avatarFrameCosmeticKey = selection.AVATAR_FRAME;
-  }
-  if (selection.PROFILE_BANNER !== saved.PROFILE_BANNER) {
-    payload.profileBannerCosmeticKey = selection.PROFILE_BANNER;
-  }
-  if (selection.OVERVIEW_BACKGROUND !== saved.OVERVIEW_BACKGROUND) {
-    payload.overviewBackgroundCosmeticKey = selection.OVERVIEW_BACKGROUND;
-  }
-  if (selection.PROFILE_EFFECT !== saved.PROFILE_EFFECT) {
-    payload.profileEffectCosmeticKey = selection.PROFILE_EFFECT;
-  }
-  if (selection.TITLE !== saved.TITLE) {
-    payload.titleCosmeticKey = selection.TITLE;
-  }
-  if (selection.BADGE !== saved.BADGE) {
-    payload.badgeCosmeticKey = selection.BADGE;
-  }
-  return payload;
+function payloadFromSelection(
+  selection: Selection,
+): UpdateCharacterAppearancePayload {
+  return {
+    avatarCosmeticKey: selection.AVATAR,
+    avatarFrameCosmeticKey: selection.AVATAR_FRAME,
+    profileBannerCosmeticKey: selection.PROFILE_BANNER,
+    overviewBackgroundCosmeticKey: selection.OVERVIEW_BACKGROUND,
+    profileEffectCosmeticKey: selection.PROFILE_EFFECT,
+    titleCosmeticKey: selection.TITLE,
+    badgeCosmeticKey: selection.BADGE,
+  };
 }
 
 function getErrorMessage(error: unknown) {
@@ -233,7 +215,7 @@ function CosmeticThumbnail({ item }: { item: CosmeticItem }) {
         className={`appearance-item__effect-preview cosmetic-surface ${effectClass}`}
         aria-hidden="true"
       >
-        <span className="cosmetic-effect-layer" />
+        <CosmeticEffectLayer effectPreset={item.effectPreset} />
         <Sparkles size={24} />
       </span>
     );
@@ -377,7 +359,9 @@ function CollectionSection({
           />
         </div>
       ) : (
-        <p className="appearance-empty">Nenhum item disponível nesta coleção.</p>
+        <p className="appearance-empty">
+          Nenhum item disponível nesta coleção.
+        </p>
       )}
 
       {lockedItems.length ? (
@@ -406,9 +390,7 @@ function CollectionSection({
             <strong>{focusedItem.name}</strong>
             <p>{focusedItem.description}</p>
           </div>
-          <em
-            className={focusedItem.isOwned ? "is-owned" : "is-locked"}
-          >
+          <em className={focusedItem.isOwned ? "is-owned" : "is-locked"}>
             {focusedItemIsSelected ? (
               <>
                 <Check size={13} aria-hidden="true" /> Selecionado
@@ -537,9 +519,7 @@ export function AppearancePage() {
     .filter((item): item is CosmeticItem => Boolean(item));
   const focusedItem =
     activeCollectionItems.find((item) => item.key === focusedItemKey) ??
-    activeCollectionItems.find(
-      (item) => selection[item.type] === item.key,
-    ) ??
+    activeCollectionItems.find((item) => selection[item.type] === item.key) ??
     activeCollectionItems.find((item) => item.isOwned) ??
     activeCollectionItems[0] ??
     null;
@@ -550,6 +530,14 @@ export function AppearancePage() {
   const previewAppearance = catalog
     ? buildPreviewAppearance(catalog, selection)
     : null;
+  const overviewPreviewImage = getCosmeticImage(
+    previewAppearance?.overviewBackground?.assetKey,
+  );
+  const previewSurfaceStyle = overviewPreviewImage
+    ? ({
+        "--appearance-overview-image": `url("${overviewPreviewImage}")`,
+      } as CSSProperties)
+    : undefined;
 
   if (!characterId) return <Navigate to="/characters" replace />;
   if (isLoading && (!character || !catalog)) {
@@ -571,7 +559,7 @@ export function AppearancePage() {
     try {
       const response = await updateCharacterAppearance(
         characterId,
-        payloadFromSelection(selection, savedSelection),
+        payloadFromSelection(selection),
       );
       setMessage(response.message);
       await load();
@@ -781,14 +769,19 @@ export function AppearancePage() {
             aria-label="Prévia da aparência"
           >
             <span>Prévia pública</span>
-            <CharacterProfileCard
-              name={character.name}
-              className={character.className ?? catalog.character.class.name}
-              level={character.level}
-              mapName={character.currentMapName}
-              avatarKey={character.avatarKey}
-              appearance={previewAppearance}
-            />
+            <div
+              className={`appearance-preview__surface${overviewPreviewImage ? " has-overview" : ""}`}
+              style={previewSurfaceStyle}
+            >
+              <CharacterProfileCard
+                name={character.name}
+                className={character.className ?? catalog.character.class.name}
+                level={character.level}
+                mapName={character.currentMapName}
+                avatarKey={character.avatarKey}
+                appearance={previewAppearance}
+              />
+            </div>
 
             {hasLockedSelection ? (
               <p className="appearance-preview__locked">

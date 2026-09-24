@@ -9,6 +9,7 @@ export default defineConfig([
   globalIgnores([
     'dist/**',
     'coverage/**',
+    'src/assets/maps/**/*.tsx',
     '_backup_gathering/**',
     '_backup_gathering_unused/**',
   ]),

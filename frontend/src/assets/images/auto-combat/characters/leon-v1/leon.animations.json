@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "actorKey": "avatar-chuva-quarentena-leon",
+  "frame": {
+    "width": 112,
+    "height": 96,
+    "originX": 0.5,
+    "originY": 1
+  },
+  "footHitbox": {
+    "width": 18,
+    "height": 12,
+    "offsetX": 47,
+    "offsetY": 81
+  },
+  "directionRows": {
+    "south": 0,
+    "west": 1,
+    "east": 2,
+    "north": 3
+  },
+  "animations": {
+    "walk": {
+      "sheet": "leon-walk.png",
+      "framesPerDirection": 4,
+      "frameRate": 8,
+      "repeat": -1
+    },
+    "investigate": {
+      "sheet": "leon-investigate.png",
+      "framesPerDirection": 4,
+      "frameRate": 7,
+      "repeat": 0,
+      "alertFrame": 3
+    },
+    "attack": {
+      "sheet": "leon-attack.png",
+      "framesPerDirection": 4,
+      "frameRate": 10,
+      "repeat": 0,
+      "impactFrame": 2
+    },
+    "hurt": {
+      "sheet": "leon-hurt.png",
+      "framesPerDirection": 2,
+      "frameRate": 8,
+      "repeat": 0
+    },
+    "death": {
+      "sheet": "leon-death.png",
+      "framesPerDirection": 6,
+      "frameRate": 8,
+      "repeat": 0,
+      "holdFinalFrame": true
+    }
+  }
+}

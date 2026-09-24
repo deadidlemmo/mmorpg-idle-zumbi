@@ -1,5 +1,5 @@
 export const MEMBERSHIP_BENEFIT_VALUES = {
-  xpBonusPercent: 20,
+  xpBonusPercent: 50,
   freeIdleHours: 6,
   premiumIdleHours: 12,
 } as const;

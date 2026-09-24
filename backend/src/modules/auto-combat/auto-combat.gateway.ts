@@ -9,6 +9,11 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
+import {
+  AutoCombatSessionPhase,
+  AutoCombatSessionStatus,
+  CharacterStatus,
+} from '@prisma/client';
 import { ObservabilityService } from '../../common/observability/observability.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SocketAuthService } from '../auth/socket-auth.service';
@@ -16,6 +21,7 @@ import {
   buildAutoCombatRealtimeStatusPayload,
   getSerializedPayloadBytes,
 } from './auto-combat-realtime-payload';
+import { HuntingVisualPositionService } from './hunting-visual-position.service';
 
 type AutoCombatJoinPayload = {
   characterId?: string;
@@ -32,7 +38,87 @@ type AutoCombatSocketData = {
   joinedCharacterIds?: Set<string>;
   telemetryWindowStartedAt?: number;
   telemetryReportsInWindow?: number;
+  huntingVisual?: HuntingVisualPresence;
+  huntingVisualCheckedAt?: number;
+  huntingVisualSentAt?: number;
+  huntingVisualSessionId?: string;
+  huntingVisualSavedAt?: number;
+  huntingVisualCombat?: HuntingVisualCombatState;
 };
+
+type HuntingVisualAreaId = 'suburbio' | 'casa-abandonada';
+type HuntingVisualDirection = 'up' | 'down' | 'left' | 'right';
+type HuntingVisualState =
+  | 'walking'
+  | 'approaching'
+  | 'investigating'
+  | 'alert'
+  | 'found'
+  | 'continuing'
+  | 'combat';
+type HuntingVisualPose = {
+  characterId: string;
+  areaId: HuntingVisualAreaId;
+  tileX: number;
+  tileY: number;
+  direction: HuntingVisualDirection;
+  visualState: HuntingVisualState;
+  moving: boolean;
+  combatMobName?: string | null;
+  combatCycleKey?: string | null;
+  combatEventType?: HuntingVisualCombatEventType | null;
+  combatEventKey?: string | null;
+};
+type HuntingVisualPresence = HuntingVisualPose & {
+  displayName: string;
+  mapId: string;
+  subMapId: string;
+  updatedAt: number;
+};
+type HuntingVisualCombatEventType =
+  | 'MOB_SPAWNED'
+  | 'MOB_HIT'
+  | 'PLAYER_HIT'
+  | 'DODGE'
+  | 'POTION_USED'
+  | 'MOB_DEFEATED'
+  | 'PLAYER_DEFEATED';
+type HuntingVisualCombatState = {
+  active: boolean;
+  mobName: string | null;
+  cycleKey: string | null;
+  eventType: HuntingVisualCombatEventType | null;
+  eventKey: string | null;
+};
+
+const HUNTING_VISUAL_BOUNDS: Record<HuntingVisualAreaId, [number, number]> = {
+  suburbio: [48, 32],
+  'casa-abandonada': [44, 28],
+};
+const HUNTING_VISUAL_STATES: HuntingVisualState[] = [
+  'walking',
+  'approaching',
+  'investigating',
+  'alert',
+  'found',
+  'continuing',
+  'combat',
+];
+const HUNTING_VISUAL_DIRECTIONS: HuntingVisualDirection[] = [
+  'up',
+  'down',
+  'left',
+  'right',
+];
+const HUNTING_VISUAL_COMBAT_EVENTS = new Set<HuntingVisualCombatEventType>([
+  'MOB_SPAWNED',
+  'MOB_HIT',
+  'PLAYER_HIT',
+  'DODGE',
+  'POTION_USED',
+  'MOB_DEFEATED',
+  'PLAYER_DEFEATED',
+]);
 
 type AuthenticatedSocket = Omit<Socket, 'data'> & {
   data: AutoCombatSocketData;
@@ -92,6 +178,7 @@ export class AutoCombatGateway
     private readonly socketAuth: SocketAuthService,
     private readonly prisma: PrismaService,
     private readonly observability: ObservabilityService,
+    private readonly huntingVisualPosition: HuntingVisualPositionService,
   ) {}
 
   async handleConnection(client: AuthenticatedSocket) {
@@ -136,7 +223,8 @@ export class AutoCombatGateway
     }
   }
 
-  handleDisconnect(client: AuthenticatedSocket) {
+  async handleDisconnect(client: AuthenticatedSocket) {
+    await this.leaveHuntingVisual(client);
     if (client.data.userId) {
       this.unregisterPresence(client.data.userId, client.id);
       this.observability.recordAutoCombatSocketConnection(false);
@@ -332,6 +420,9 @@ export class AutoCombatGateway
     client.data.joinedCharacterIds?.delete(characterId);
 
     if (wasJoined) {
+      if (client.data.huntingVisual?.characterId === characterId) {
+        await this.leaveHuntingVisual(client);
+      }
       this.unregisterCharacterPresence(characterId, client.id);
     }
 
@@ -347,6 +438,404 @@ export class AutoCombatGateway
       characterId,
       room,
     };
+  }
+
+  @SubscribeMessage('auto-combat:visual:join')
+  async handleHuntingVisualJoin(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: HuntingVisualPose,
+  ) {
+    const pose = this.parseHuntingVisualPose(payload);
+    if (
+      !pose ||
+      !client.data.userId ||
+      !client.data.joinedCharacterIds?.has(pose.characterId)
+    ) {
+      return { ok: false };
+    }
+    const session = await this.prisma.autoCombatSession.findFirst({
+      where: {
+        characterId: pose.characterId,
+        character: {
+          userId: client.data.userId,
+          status: CharacterStatus.ACTIVE,
+          deletedAt: null,
+        },
+        status: AutoCombatSessionStatus.ACTIVE,
+        phase: {
+          in: [
+            AutoCombatSessionPhase.HUNTING,
+            AutoCombatSessionPhase.ENCOUNTER_READY,
+            AutoCombatSessionPhase.COMBAT_ACTIVE,
+          ],
+        },
+        endsAt: { gt: new Date() },
+      },
+      orderBy: { startedAt: 'desc' },
+      select: {
+        id: true,
+        mapId: true,
+        subMapId: true,
+        phase: true,
+        currentCombatIndex: true,
+        currentMobId: true,
+        currentMob: { select: { name: true } },
+        character: { select: { name: true } },
+      },
+    });
+    if (!session) {
+      await this.leaveHuntingVisual(client);
+      return { ok: false };
+    }
+    await this.leaveHuntingVisual(client);
+    const combatState = this.getHuntingVisualCombatState(session);
+    const presence: HuntingVisualPresence = {
+      ...this.applyCanonicalHuntingVisualCombat(pose, combatState),
+      displayName: session.character.name,
+      mapId: session.mapId,
+      subMapId: session.subMapId,
+      updatedAt: Date.now(),
+    };
+    client.data.huntingVisual = presence;
+    client.data.huntingVisualCombat = combatState;
+    client.data.huntingVisualSessionId = session.id;
+    client.data.huntingVisualCheckedAt = Date.now();
+    client.data.huntingVisualSentAt = 0;
+    client.data.huntingVisualSavedAt = Date.now();
+    await this.huntingVisualPosition.save(session.id, pose);
+    const room = this.getHuntingVisualRoom(presence);
+    await client.join(room);
+    const sockets = await this.server.in(room).fetchSockets();
+    const players = new Map<string, HuntingVisualPresence>();
+    for (const socket of sockets) {
+      const other = socket.data.huntingVisual as
+        | HuntingVisualPresence
+        | undefined;
+      if (
+        other &&
+        other.characterId !== pose.characterId &&
+        Date.now() - other.updatedAt < 15_000 &&
+        (!players.has(other.characterId) ||
+          players.get(other.characterId)!.updatedAt < other.updatedAt)
+      ) {
+        players.set(other.characterId, other);
+      }
+    }
+    client.emit('auto-combat:visual:snapshot', {
+      areaId: pose.areaId,
+      players: [...players.values()].slice(0, 24),
+    });
+    client.to(room).emit('auto-combat:visual:pose', presence);
+    return { ok: true };
+  }
+
+  @SubscribeMessage('auto-combat:visual:pose')
+  async handleHuntingVisualPose(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: HuntingVisualPose,
+  ) {
+    const previous = client.data.huntingVisual;
+    const pose = this.parseHuntingVisualPose(payload);
+    if (
+      !previous ||
+      !pose ||
+      pose.characterId !== previous.characterId ||
+      pose.areaId !== previous.areaId ||
+      !client.data.joinedCharacterIds?.has(pose.characterId)
+    ) {
+      return { ok: false };
+    }
+    const now = Date.now();
+    if (now - (client.data.huntingVisualSentAt ?? 0) < 120) {
+      return { ok: false };
+    }
+    if (now - (client.data.huntingVisualCheckedAt ?? 0) > 10_000) {
+      const active = await this.prisma.autoCombatSession.findFirst({
+        where: {
+          characterId: pose.characterId,
+          mapId: previous.mapId,
+          subMapId: previous.subMapId,
+          status: AutoCombatSessionStatus.ACTIVE,
+          phase: {
+            in: [
+              AutoCombatSessionPhase.HUNTING,
+              AutoCombatSessionPhase.ENCOUNTER_READY,
+              AutoCombatSessionPhase.COMBAT_ACTIVE,
+            ],
+          },
+          endsAt: { gt: new Date() },
+        },
+        select: {
+          id: true,
+          phase: true,
+          currentCombatIndex: true,
+          currentMobId: true,
+          currentMob: { select: { name: true } },
+        },
+      });
+      if (!active) {
+        await this.leaveHuntingVisual(client);
+        return { ok: false };
+      }
+      client.data.huntingVisualCombat =
+        this.getHuntingVisualCombatState(active);
+      client.data.huntingVisualCheckedAt = now;
+    }
+    const distance = Math.hypot(
+      pose.tileX - previous.tileX,
+      pose.tileY - previous.tileY,
+    );
+    if (
+      distance >
+      1.5 + (Math.min(now - previous.updatedAt, 3000) / 1000) * 3.5
+    ) {
+      return { ok: false };
+    }
+    const canonicalPose = this.applyCanonicalHuntingVisualCombat(
+      pose,
+      client.data.huntingVisualCombat ?? {
+        active: false,
+        mobName: null,
+        cycleKey: null,
+        eventType: null,
+        eventKey: null,
+      },
+    );
+    const presence = { ...previous, ...canonicalPose, updatedAt: now };
+    client.data.huntingVisual = presence;
+    client.data.huntingVisualSentAt = now;
+    if (
+      client.data.huntingVisualSessionId &&
+      now - (client.data.huntingVisualSavedAt ?? 0) >= 1000
+    ) {
+      client.data.huntingVisualSavedAt = now;
+      void this.huntingVisualPosition.save(
+        client.data.huntingVisualSessionId,
+        pose,
+      );
+    }
+    client
+      .to(this.getHuntingVisualRoom(presence))
+      .emit('auto-combat:visual:pose', presence);
+    return { ok: true };
+  }
+
+  @SubscribeMessage('auto-combat:visual:leave')
+  async handleHuntingVisualLeave(
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ) {
+    await this.leaveHuntingVisual(client);
+    return { ok: true };
+  }
+
+  private async leaveHuntingVisual(client: AuthenticatedSocket) {
+    const presence = client.data.huntingVisual;
+    if (!presence) return;
+    if (client.data.huntingVisualSessionId) {
+      await this.huntingVisualPosition.save(
+        client.data.huntingVisualSessionId,
+        presence,
+      );
+    }
+    const room = this.getHuntingVisualRoom(presence);
+    client
+      .to(room)
+      .emit('auto-combat:visual:left', { characterId: presence.characterId });
+    await client.leave(room);
+    client.data.huntingVisual = undefined;
+    client.data.huntingVisualSessionId = undefined;
+    client.data.huntingVisualCombat = undefined;
+  }
+
+  private getHuntingVisualRoom(presence: HuntingVisualPresence) {
+    return `auto-combat:visual:${presence.mapId}:${presence.subMapId ?? ''}:${presence.areaId}`;
+  }
+
+  private parseHuntingVisualPose(
+    value: HuntingVisualPose | undefined,
+  ): HuntingVisualPose | null {
+    if (!value || typeof value !== 'object') return null;
+    const characterId = this.normalizeId(value.characterId);
+    const validArea =
+      value.areaId === 'suburbio' || value.areaId === 'casa-abandonada';
+    const bounds = validArea ? HUNTING_VISUAL_BOUNDS[value.areaId] : null;
+    if (
+      !characterId ||
+      !bounds ||
+      !HUNTING_VISUAL_DIRECTIONS.includes(value.direction) ||
+      !HUNTING_VISUAL_STATES.includes(value.visualState) ||
+      typeof value.moving !== 'boolean' ||
+      typeof value.tileX !== 'number' ||
+      typeof value.tileY !== 'number' ||
+      !Number.isFinite(value.tileX) ||
+      !Number.isFinite(value.tileY) ||
+      value.tileX < 0 ||
+      value.tileY < 0 ||
+      value.tileX >= bounds[0] ||
+      value.tileY >= bounds[1]
+    )
+      return null;
+    return {
+      characterId,
+      areaId: value.areaId,
+      tileX: Math.round(value.tileX * 100) / 100,
+      tileY: Math.round(value.tileY * 100) / 100,
+      direction: value.direction,
+      visualState: value.visualState,
+      moving: value.moving,
+      ...(value.visualState === 'combat'
+        ? {
+            combatMobName: this.normalizeVisualLabel(value.combatMobName, 100),
+            combatCycleKey: this.normalizeVisualLabel(
+              value.combatCycleKey,
+              160,
+            ),
+            combatEventType: this.normalizeHuntingVisualCombatEventType(
+              value.combatEventType,
+            ),
+            combatEventKey: this.normalizeVisualLabel(
+              value.combatEventKey,
+              180,
+            ),
+          }
+        : {}),
+    };
+  }
+
+  private normalizeVisualLabel(value: unknown, maxLength: number) {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim();
+    return normalized ? normalized.slice(0, maxLength) : null;
+  }
+
+  private normalizeHuntingVisualCombatEventType(
+    value: unknown,
+  ): HuntingVisualCombatEventType | null {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim().toUpperCase();
+    return HUNTING_VISUAL_COMBAT_EVENTS.has(
+      normalized as HuntingVisualCombatEventType,
+    )
+      ? (normalized as HuntingVisualCombatEventType)
+      : null;
+  }
+
+  private getHuntingVisualCombatState(session: {
+    id: string;
+    phase: AutoCombatSessionPhase;
+    currentCombatIndex: number;
+    currentMobId: string | null;
+    currentMob: { name: string } | null;
+  }): HuntingVisualCombatState {
+    const active =
+      session.phase === AutoCombatSessionPhase.COMBAT_ACTIVE &&
+      Boolean(session.currentMobId && session.currentMob);
+    return {
+      active,
+      mobName: active ? (session.currentMob?.name ?? null) : null,
+      cycleKey: active
+        ? `${session.id}:${session.currentCombatIndex}:${session.currentMobId}`
+        : null,
+      eventType: null,
+      eventKey: null,
+    };
+  }
+
+  private applyCanonicalHuntingVisualCombat(
+    pose: HuntingVisualPose,
+    combat: HuntingVisualCombatState,
+  ): HuntingVisualPose {
+    if (combat.active) {
+      return {
+        ...pose,
+        visualState: 'combat',
+        moving: false,
+        combatMobName: combat.mobName,
+        combatCycleKey: combat.cycleKey,
+        combatEventType: combat.eventType,
+        combatEventKey: combat.eventKey,
+      };
+    }
+
+    const canonical: HuntingVisualPose = {
+      ...pose,
+      visualState: pose.visualState === 'combat' ? 'walking' : pose.visualState,
+      moving: pose.visualState === 'combat' ? false : pose.moving,
+    };
+    delete canonical.combatMobName;
+    delete canonical.combatCycleKey;
+    delete canonical.combatEventType;
+    delete canonical.combatEventKey;
+    return canonical;
+  }
+
+  private emitHuntingVisualCombatEvent(characterId: string, payload: unknown) {
+    const sockets = this.server?.sockets?.sockets;
+    if (!sockets) return;
+    const record =
+      payload && typeof payload === 'object'
+        ? (payload as Record<string, unknown>)
+        : null;
+    const eventType = this.normalizeHuntingVisualCombatEventType(record?.type);
+    if (!eventType) return;
+
+    const rawEventKey =
+      record?.eventKey ?? record?.eventId ?? record?.id ?? record?.sequence;
+    const normalizedRawEventKey =
+      typeof rawEventKey === 'string' || typeof rawEventKey === 'number'
+        ? String(rawEventKey)
+        : null;
+    const eventKey = this.normalizeVisualLabel(normalizedRawEventKey, 180);
+    const incomingMobName = this.normalizeVisualLabel(record?.mobName, 100);
+    const incomingCycleKey = this.normalizeVisualLabel(
+      record?.enemyInstanceId ?? record?.combatCycleKey,
+      160,
+    );
+    const terminal =
+      eventType === 'MOB_DEFEATED' || eventType === 'PLAYER_DEFEATED';
+
+    for (const socket of sockets.values()) {
+      const client = socket as AuthenticatedSocket;
+      const presence = client.data.huntingVisual;
+      if (!presence || presence.characterId !== characterId) continue;
+
+      const previousCombat = client.data.huntingVisualCombat;
+      const eventCombat: HuntingVisualCombatState = {
+        active: true,
+        mobName:
+          incomingMobName ??
+          previousCombat?.mobName ??
+          presence.combatMobName ??
+          null,
+        cycleKey:
+          incomingCycleKey ??
+          previousCombat?.cycleKey ??
+          presence.combatCycleKey ??
+          null,
+        eventType,
+        eventKey,
+      };
+      const nextPresence: HuntingVisualPresence = {
+        ...this.applyCanonicalHuntingVisualCombat(presence, eventCombat),
+        displayName: presence.displayName,
+        mapId: presence.mapId,
+        subMapId: presence.subMapId,
+        updatedAt: Date.now(),
+      };
+      client.data.huntingVisual = nextPresence;
+      client.data.huntingVisualCombat = terminal
+        ? {
+            active: false,
+            mobName: null,
+            cycleKey: null,
+            eventType: null,
+            eventKey: null,
+          }
+        : eventCombat;
+      client
+        .to(this.getHuntingVisualRoom(nextPresence))
+        .emit('auto-combat:visual:pose', nextPresence);
+    }
   }
 
   @SubscribeMessage('auto-combat:telemetry')
@@ -578,6 +1067,7 @@ export class AutoCombatGateway
     _event: string,
     payload: unknown,
   ) {
+    this.emitHuntingVisualCombatEvent(characterId, payload);
     this.emitToCharacter(characterId, 'auto-combat:event', payload);
   }
 

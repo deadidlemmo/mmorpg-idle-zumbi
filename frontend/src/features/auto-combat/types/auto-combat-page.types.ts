@@ -309,6 +309,18 @@ export type AutoCombatRealtimeStateLoose = {
     updatedAt?: number | null;
   } | null;
 
+  potion?: {
+    potionItemId?: string | null;
+    potionItemName?: string | null;
+    quantityBefore?: number | null;
+    quantityAfter?: number | null;
+    quantityRemaining?: number | null;
+    usedQuantity?: number | null;
+    healedAmount?: number | null;
+    triggerPercent?: number | null;
+    updatedAt?: number | null;
+  } | null;
+
   combat?: RealtimeCombatState | null;
   realtimeCombat?: RealtimeCombatState | null;
 

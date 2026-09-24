@@ -14,6 +14,7 @@ import {
 } from "../../../components/game/activityTimeline";
 import { useActivityTimelineProviderState } from "../../../components/game/useActivityTimelineProviderState";
 import { getAuthToken } from "../../../services/api/authToken";
+import { normalizeSocketBaseUrl } from "../../../services/websocket/socketBaseUrl";
 import { canRunNetworkRefresh } from "../../../utils/networkRefresh";
 import {
   cancelIncursion,
@@ -85,23 +86,14 @@ const INCURSION_STATUS_EVENTS = [
   "incursion:cancelled",
 ] as const;
 
-function normalizeSocketBaseUrl(url: unknown) {
-  const rawUrl = String(url || DEFAULT_API_BASE_URL).trim();
-
-  const normalizedUrl = rawUrl
-    .replace(/\/+$/, "")
-    .replace(/\/api$/i, "")
-    .replace(/\/incursions$/i, "");
-
-  return normalizedUrl || DEFAULT_API_BASE_URL;
-}
-
 function getIncursionsSocketUrl() {
   const apiBaseUrl = normalizeSocketBaseUrl(
-    import.meta.env.VITE_API_URL ?? DEFAULT_API_BASE_URL,
+    import.meta.env.VITE_API_URL,
+    DEFAULT_API_BASE_URL,
   );
   const socketBaseUrl = normalizeSocketBaseUrl(
-    import.meta.env.VITE_SOCKET_URL ?? apiBaseUrl,
+    import.meta.env.VITE_SOCKET_URL,
+    apiBaseUrl,
   );
 
   return `${socketBaseUrl}${INCURSIONS_NAMESPACE}`;

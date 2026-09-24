@@ -2,9 +2,42 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildHuntingActivityQueue,
+  buildHuntingDefeatedQueue,
   countHuntingActivityQueue,
+  mergeHuntingDefeatedRealtimeEvents,
   resolveHuntingActivityTarget,
 } from "./huntingActivityPresentation";
+
+test("resume somente mobs derrotados sem misturar rastreados pendentes", () => {
+  const queue = buildHuntingDefeatedQueue([
+    [
+      {
+        mobId: "mob-bat",
+        mobName: "Morcego de Caixa d’Água",
+        mobLevel: 5,
+        mobTier: 1,
+        kills: 2,
+      },
+      {
+        mobId: "mob-bat",
+        mobName: "Morcego de Caixa d’Água",
+        mobLevel: 5,
+        mobTier: 1,
+        kills: 1,
+      },
+      {
+        mobId: "mob-cat",
+        mobName: "Gato de Telhado Contaminado",
+        kills: 0,
+      },
+    ],
+  ]);
+
+  assert.deepEqual(
+    queue.map(({ name, count }) => ({ name, count })),
+    [{ name: "Morcego de Caixa d’Água", count: 3 }],
+  );
+});
 
 test("resolve o alvo atual sem somá-lo à fila concluída", () => {
   const target = resolveHuntingActivityTarget([
@@ -84,4 +117,53 @@ test("agrupa o mesmo monstro e remove entradas já consumidas", () => {
     queue.map(({ name, count }) => ({ name, count })),
     [{ name: "Rato de Lixeira Infectado", count: 6 }],
   );
+});
+
+test("incorpora abates realtime sem esperar um novo snapshot REST", () => {
+  const canonical = buildHuntingDefeatedQueue([
+    [{ mobId: "errante", mobName: "Errante", kills: 4 }],
+  ]);
+  const merged = mergeHuntingDefeatedRealtimeEvents(canonical, [
+    {
+      eventKey: "kill-5",
+      type: "MOB_DEFEATED",
+      mobId: "errante",
+      mobName: "Errante",
+      totalKills: 5,
+      killsGained: 1,
+    },
+    {
+      eventKey: "kill-6",
+      type: "MOB_DEFEATED",
+      mobId: "gato",
+      mobName: "Gato contaminado",
+      totalKills: 6,
+      killsGained: 1,
+    },
+  ]);
+
+  assert.equal(countHuntingActivityQueue(merged), 6);
+  assert.equal(merged.find((entry) => entry.mobId === "errante")?.count, 5);
+  assert.equal(merged.find((entry) => entry.mobId === "gato")?.count, 1);
+});
+
+test("nao duplica evento realtime ja absorvido pelo resumo canonico", () => {
+  const canonical = buildHuntingDefeatedQueue([
+    [
+      { mobId: "errante", mobName: "Errante", kills: 5 },
+      { mobId: "gato", mobName: "Gato contaminado", kills: 1 },
+    ],
+  ]);
+  const merged = mergeHuntingDefeatedRealtimeEvents(canonical, [
+    {
+      eventKey: "kill-6",
+      type: "MOB_DEFEATED",
+      mobId: "gato",
+      mobName: "Gato contaminado",
+      totalKills: 6,
+      killsGained: 1,
+    },
+  ]);
+
+  assert.deepEqual(merged, canonical);
 });

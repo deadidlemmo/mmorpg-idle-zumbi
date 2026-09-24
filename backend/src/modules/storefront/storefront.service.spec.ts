@@ -158,10 +158,10 @@ describe('StorefrontService', () => {
     expect(premiumPass?.benefits).toEqual(premiumPlan?.benefits);
     expect(premiumPlan?.benefits).toEqual(
       expect.arrayContaining([
-        '+20% de EXP de Personagem',
-        '+20% de EXP de Rastreio',
-        '+20% de EXP de Expedições',
-        '+20% de EXP de Criação',
+        '+50% de EXP de Personagem',
+        '+50% de EXP de Rastreio',
+        '+50% de EXP de Expedições',
+        '+50% de EXP de Criação',
       ]),
     );
 

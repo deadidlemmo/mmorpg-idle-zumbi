@@ -867,7 +867,7 @@
 .auto-combat-potion-config-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: 12000;
   display: grid;
   align-items: center;
   justify-items: center;

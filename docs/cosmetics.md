@@ -68,15 +68,15 @@ substitui a validação dos webhooks do Mercado Pago ou da Stripe.
 
 ## Ateliê da Vera
 
-O Ateliê da Vera vende aparências permanentes por Gold. O backend mantém o
-produto, o preço e os cosméticos concedidos como fonte da verdade; o frontend
+O Ateliê da Vera vende aparências permanentes por Gold e Cash. O backend mantém
+o produto, o preço e os cosméticos concedidos como fonte da verdade; o frontend
 envia somente `productId` e um `requestId` UUID para idempotência. A compra
 debita o personagem e libera os cosméticos para toda a conta na mesma transação.
 
-O catálogo `acervo-do-abrigo` oferece dois produtos em cada área: avatar,
-moldura, cartão, visão geral, efeito e identidade. Identidades concedem um título
-e um distintivo em conjunto. Todos são visuais comuns ou incomuns; itens mais
-elaborados e compras com Cash ficam fora deste catálogo inicial.
+O catálogo `acervo-do-abrigo` oferece duas opções por Gold em cada área: avatar,
+moldura, cartão, visão geral, efeito e identidade. As coleções permanentes de
+Cash complementam essas mesmas seis áreas. Identidades concedem um título e um
+distintivo em conjunto.
 
 ## Catálogo inicial
 
@@ -90,6 +90,10 @@ O seed registra:
   por classe, moldura blindada, banner, fundo, efeito, título e distintivo.
 - `acervo-do-abrigo`: doze produtos permanentes do Ateliê da Vera, com duas
   opções por área e pagamento exclusivo em Gold.
+- `cash-depois-da-lei`: doze produtos permanentes, com duas opções por área e
+  preço de 5 Cash por produto.
+- `cash-chuva-quarentena`: seis produtos permanentes, com uma opção por área e
+  preço de 5 Cash por produto.
 
 `fundadores-alpha` e `temporada-01-quarentena` foram aposentados. O seed apenas
 os marca como inativos para preservar histórico e direitos antigos, sem

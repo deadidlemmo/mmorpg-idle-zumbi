@@ -63,9 +63,15 @@
 
 .dashboard-sidebar__nav-section .dashboard-sidebar__link strong,
 .dashboard-sidebar__bottom .dashboard-sidebar__link strong {
+  flex: 1 1 auto;
   font-size: 0.83rem;
   line-height: 1.12;
   letter-spacing: 0;
+}
+
+.dashboard-sidebar__nav-section .dashboard-sidebar__link > .dashboard-sidebar__subitem-level {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .dashboard-sidebar__nav-section .dashboard-sidebar__link:hover {

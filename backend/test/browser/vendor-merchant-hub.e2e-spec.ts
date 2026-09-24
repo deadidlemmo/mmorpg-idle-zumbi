@@ -1,5 +1,6 @@
 import 'dotenv/config';
 
+import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import {
@@ -284,7 +285,7 @@ test.describe('hub de mercadores', () => {
   }, testInfo) => {
     await prisma.character.update({
       where: { id: player.characterId },
-      data: { gold: 5_000 },
+      data: { gold: 5_000, cash: 20 },
     });
 
     await page.addInitScript(
@@ -342,7 +343,7 @@ test.describe('hub de mercadores', () => {
 
     for (const label of categoryLabels) {
       await tabs.getByRole('tab', { name: label }).click();
-      await expect(page.locator('.cosmetic-vendor-product')).toHaveCount(2);
+      await expect(page.locator('.cosmetic-vendor-product')).toHaveCount(5);
     }
 
     const stock = page.locator('.cosmetic-vendor-stock');
@@ -353,7 +354,7 @@ test.describe('hub de mercadores', () => {
             getComputedStyle(element).gridTemplateColumns.split(' ').length,
         ),
       )
-      .toBe(2);
+      .toBeGreaterThanOrEqual(3);
     await expect(page.getByText('Estoque em preparação')).toHaveCount(0);
     await expect(
       page.getByRole('link', { name: 'Minha aparência' }),
@@ -361,7 +362,14 @@ test.describe('hub de mercadores', () => {
 
     await tabs.getByRole('tab', { name: 'Avatar' }).click();
     const avatarProducts = page.locator('.cosmetic-vendor-product');
-    await expect(avatarProducts).toHaveCount(2);
+    await expect(avatarProducts).toHaveCount(5);
+    const cashAvatarProducts = avatarProducts.filter({
+      has: page.locator('.cosmetic-vendor-product__price.is-cash'),
+    });
+    await expect(cashAvatarProducts).toHaveCount(3);
+    await expect(
+      cashAvatarProducts.locator('.cosmetic-vendor-product__price strong'),
+    ).toHaveText(['5', '5', '5']);
     for (const product of await avatarProducts.all()) {
       const artwork = product.locator('.cosmetic-vendor-preview img');
       await expect(artwork).toBeVisible();
@@ -378,13 +386,247 @@ test.describe('hub de mercadores', () => {
     }
 
     const firstProduct = avatarProducts.first();
+    const leonProduct = cashAvatarProducts.last();
+    const livePreview = page.getByLabel('Prévia da aparência');
+    const initialPreviewAvatar = await livePreview
+      .locator('.cosmetic-profile-card__portrait img')
+      .getAttribute('src');
+
+    await leonProduct.getByRole('button', { name: /Visualizar/ }).click();
+    await expect(leonProduct).toHaveClass(/is-previewed/);
+    await expect(livePreview.getByText('1 em prévia')).toBeVisible();
+    await expect
+      .poll(() =>
+        livePreview
+          .locator('.cosmetic-profile-card__portrait img')
+          .getAttribute('src'),
+      )
+      .not.toBe(initialPreviewAvatar);
+    await expect(
+      livePreview.locator('.cosmetic-profile-card__portrait img'),
+    ).toHaveAttribute('src', /avatar-chuva-quarentena-leon/);
+
+    await tabs.getByRole('tab', { name: 'Moldura' }).click();
+    const cashFrames = page.locator('.cosmetic-vendor-product.is-cash-product');
+    await expect(cashFrames).toHaveCount(3);
+    const frameBackgrounds = await cashFrames
+      .locator('.character-portrait__frame')
+      .evaluateAll((frames) =>
+        frames.map((frame) => getComputedStyle(frame).backgroundImage),
+      );
+    expect(frameBackgrounds.join(' ')).toContain(
+      'frame-depois-da-lei-estrela-xerife',
+    );
+    expect(frameBackgrounds.join(' ')).toContain(
+      'frame-depois-da-lei-arame-farpado',
+    );
+    expect(frameBackgrounds.join(' ')).toContain(
+      'frame-chuva-quarentena-protocolo-rpd',
+    );
+    const cashFrame = cashFrames.last();
+    await cashFrame.getByRole('button', { name: /Visualizar/ }).click();
+    await expect(livePreview.getByText('2 em prévia')).toBeVisible();
+    await expect(
+      livePreview.locator('.cosmetic-profile-card__portrait'),
+    ).toHaveClass(/is-frame-quarantine-rpd/);
+    await expect
+      .poll(() =>
+        livePreview
+          .locator('.character-portrait__frame')
+          .evaluate((frame) => getComputedStyle(frame).backgroundImage),
+      )
+      .toContain('frame-chuva-quarentena-protocolo-rpd');
+    await page.waitForTimeout(700);
+    await page.screenshot({
+      path: testInfo.outputPath('cosmetic-merchant-cash-frame-desktop.png'),
+      fullPage: true,
+    });
+
+    await tabs.getByRole('tab', { name: 'Visão geral' }).click();
+    const rainBackground = page
+      .locator('.cosmetic-vendor-product.is-cash-product')
+      .last();
+    await rainBackground.getByRole('button', { name: /Visualizar/ }).click();
+    await expect(livePreview.getByText('3 em prévia')).toBeVisible();
+    await expect(
+      livePreview.locator('.cosmetic-vendor-live-preview__surface'),
+    ).toHaveClass(/has-overview/);
+    await expect
+      .poll(() =>
+        livePreview
+          .locator('.cosmetic-vendor-live-preview__surface')
+          .evaluate((element) => getComputedStyle(element).backgroundImage),
+      )
+      .toContain('background-chuva-quarentena-cidade-encharcada');
+
+    await tabs.getByRole('tab', { name: 'Cartão' }).click();
+    await page
+      .locator('.cosmetic-vendor-product.is-cash-product')
+      .last()
+      .getByRole('button', { name: /Visualizar/ })
+      .click();
+    await expect(livePreview.getByText('4 em prévia')).toBeVisible();
+    await expect(livePreview.locator('.cosmetic-profile-card')).toHaveClass(
+      /has-cosmetic-banner/,
+    );
+    await expect
+      .poll(() =>
+        livePreview
+          .locator('.cosmetic-profile-card')
+          .evaluate((element) => getComputedStyle(element).backgroundImage),
+      )
+      .toContain('banner-chuva-quarentena-posto-emergencia');
+
+    await tabs.getByRole('tab', { name: 'Efeito' }).click();
+    const cashEffects = page.locator(
+      '.cosmetic-vendor-product.is-cash-product',
+    );
+    await expect(cashEffects).toHaveCount(3);
+    await expect(
+      cashEffects.locator('.cosmetic-effect-layer__media'),
+    ).toHaveCount(3);
+    const effectSources = await cashEffects
+      .locator('.cosmetic-effect-layer__media')
+      .evaluateAll((images) =>
+        images.map((image) => (image as HTMLImageElement).src),
+      );
+    expect(effectSources.join(' ')).toContain('efeito-cinzas-da-lei');
+    expect(effectSources.join(' ')).toContain('efeito-pulso-de-cerco');
+    expect(effectSources.join(' ')).toContain('efeito-chuva-quarentena');
+    const cashEffect = cashEffects.first();
+    await cashEffect.getByRole('button', { name: /Visualizar/ }).click();
+    await expect(livePreview.getByText('5 em prévia')).toBeVisible();
+    await expect(livePreview.locator('.cosmetic-profile-card')).toHaveClass(
+      /is-effect-law-ashes/,
+    );
+    const liveEffectMedia = livePreview.locator(
+      '.cosmetic-effect-layer__media',
+    );
+    await expect(liveEffectMedia).toHaveAttribute(
+      'src',
+      /efeito-cinzas-da-lei/,
+    );
+    await expect
+      .poll(() =>
+        liveEffectMedia.evaluate(
+          (image) =>
+            image instanceof HTMLImageElement &&
+            image.complete &&
+            image.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
+    const firstEffectFrame = await liveEffectMedia.screenshot();
+    await page.waitForTimeout(900);
+    const secondEffectFrame = await liveEffectMedia.screenshot();
+    expect(Buffer.compare(firstEffectFrame, secondEffectFrame)).not.toBe(0);
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect
+      .poll(() =>
+        liveEffectMedia.evaluate(
+          (image) => (image as HTMLImageElement).currentSrc,
+        ),
+      )
+      .toContain('efeito-cinzas-da-lei-poster');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.screenshot({
+      path: testInfo.outputPath('cosmetic-merchant-cash-effect-desktop.png'),
+      fullPage: true,
+    });
+
+    const siegeEffect = cashEffects.nth(1);
+    await siegeEffect.getByRole('button', { name: /Visualizar/ }).click();
+    await expect(livePreview.locator('.cosmetic-profile-card')).toHaveClass(
+      /is-effect-siege-pulse/,
+    );
+    await expect(liveEffectMedia).toHaveAttribute(
+      'src',
+      /efeito-pulso-de-cerco/,
+    );
+    const firstSiegeFrame = await liveEffectMedia.screenshot();
+    await page.waitForTimeout(900);
+    const secondSiegeFrame = await liveEffectMedia.screenshot();
+    expect(Buffer.compare(firstSiegeFrame, secondSiegeFrame)).not.toBe(0);
+    await page.screenshot({
+      path: testInfo.outputPath(
+        'cosmetic-merchant-cash-effect-siege-desktop.png',
+      ),
+      fullPage: true,
+    });
+
+    const rainEffect = cashEffects.nth(2);
+    await rainEffect.getByRole('button', { name: /Visualizar/ }).click();
+    await expect(livePreview.locator('.cosmetic-profile-card')).toHaveClass(
+      /is-effect-quarantine-rain/,
+    );
+    await expect(liveEffectMedia).toHaveAttribute(
+      'src',
+      /efeito-chuva-quarentena/,
+    );
+    const firstRainFrame = await liveEffectMedia.screenshot();
+    await page.waitForTimeout(900);
+    const secondRainFrame = await liveEffectMedia.screenshot();
+    expect(Buffer.compare(firstRainFrame, secondRainFrame)).not.toBe(0);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect
+      .poll(() =>
+        liveEffectMedia.evaluate(
+          (image) => (image as HTMLImageElement).currentSrc,
+        ),
+      )
+      .toContain('efeito-chuva-quarentena-poster');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.screenshot({
+      path: testInfo.outputPath('cosmetic-merchant-leon-set-desktop.png'),
+      fullPage: true,
+    });
+
+    await tabs.getByRole('tab', { name: 'Identidade' }).click();
+    await page
+      .locator('.cosmetic-vendor-product.is-cash-product')
+      .last()
+      .getByRole('button', { name: /Visualizar/ })
+      .click();
+    await expect(livePreview.getByText('6 em prévia')).toBeVisible();
+    await expect(
+      livePreview.locator('.cosmetic-profile-card__kicker strong'),
+    ).toBeVisible();
+    await expect(
+      livePreview.locator('.cosmetic-profile-card__identity > p'),
+    ).toHaveText('Agente da Quarentena');
+    await expect(
+      livePreview.locator('.cosmetic-profile-card__kicker strong'),
+    ).toHaveText('AQ');
+    await page.screenshot({
+      path: testInfo.outputPath('cosmetic-merchant-combination-desktop.png'),
+      fullPage: true,
+    });
+
+    await livePreview.getByRole('button', { name: 'Restaurar visual' }).click();
+    await expect(livePreview.getByText('Visual atual')).toBeVisible();
+    await expect(
+      page.locator('.cosmetic-vendor-product.is-previewed'),
+    ).toHaveCount(0);
+
+    await tabs.getByRole('tab', { name: 'Avatar' }).click();
     await firstProduct.getByRole('button', { name: 'Comprar' }).click();
     await expect(
       firstProduct.getByRole('button', { name: 'Adquirido' }),
     ).toBeVisible();
+    await expect(firstProduct.locator('p')).toHaveCount(0);
+
+    const firstCashProduct = cashAvatarProducts.first();
+    await firstCashProduct.getByRole('button', { name: 'Comprar' }).click();
     await expect(
-      firstProduct.locator('.cosmetic-vendor-product__meta strong'),
-    ).toHaveText('Adquirido');
+      firstCashProduct.getByRole('button', { name: 'Adquirido' }),
+    ).toBeVisible();
+
+    const desktopPreviewBox = await livePreview.boundingBox();
+    const desktopStockBox = await stock.boundingBox();
+    expect(desktopPreviewBox).not.toBeNull();
+    expect(desktopStockBox).not.toBeNull();
+    expect(desktopPreviewBox!.x).toBeGreaterThan(desktopStockBox!.x);
 
     await page.screenshot({
       path: testInfo.outputPath('cosmetic-merchant-desktop.png'),
@@ -412,7 +654,7 @@ test.describe('hub de mercadores', () => {
       )
       .toBe(2);
     const mobileCards = await page.locator('.cosmetic-vendor-product').all();
-    expect(mobileCards).toHaveLength(2);
+    expect(mobileCards).toHaveLength(5);
     const [firstMobileCardBox, secondMobileCardBox] = await Promise.all([
       mobileCards[0].boundingBox(),
       mobileCards[1].boundingBox(),
@@ -423,6 +665,70 @@ test.describe('hub de mercadores', () => {
       Math.abs(firstMobileCardBox!.y - secondMobileCardBox!.y),
     ).toBeLessThanOrEqual(2);
     expect(secondMobileCardBox!.x).toBeGreaterThan(firstMobileCardBox!.x);
+    expect(firstMobileCardBox!.height / firstMobileCardBox!.width).toBeLessThan(
+      1.6,
+    );
+    const mobilePreviewBox = await livePreview.boundingBox();
+    const mobileStockBox = await stock.boundingBox();
+    expect(mobilePreviewBox).not.toBeNull();
+    expect(mobileStockBox).not.toBeNull();
+    expect(mobilePreviewBox!.y).toBeLessThan(mobileStockBox!.y);
+
+    await tabs.getByRole('tab', { name: 'Moldura' }).click();
+    const mobileFrameCard = page
+      .locator('.cosmetic-vendor-product.is-cash-product')
+      .last();
+    const [mobileFrameCardBox, mobileFramePortraitBox] = await Promise.all([
+      mobileFrameCard.boundingBox(),
+      mobileFrameCard
+        .locator('.cosmetic-vendor-preview__portrait')
+        .boundingBox(),
+    ]);
+    expect(mobileFrameCardBox).not.toBeNull();
+    expect(mobileFramePortraitBox).not.toBeNull();
+    expect(mobileFramePortraitBox!.width).toBeGreaterThan(
+      mobileFrameCardBox!.width * 0.55,
+    );
+    await expect(
+      mobileFrameCard.locator('.cosmetic-vendor-preview__portrait'),
+    ).toHaveClass(/is-frame-quarantine-rpd/);
+    await page.screenshot({
+      path: testInfo.outputPath('cosmetic-merchant-cash-frame-mobile.png'),
+      fullPage: true,
+    });
+
+    await tabs.getByRole('tab', { name: 'Efeito' }).click();
+    const mobileEffectCard = page
+      .locator('.cosmetic-vendor-product.is-cash-product')
+      .last();
+    await expect(
+      mobileEffectCard.locator('.cosmetic-vendor-mini-profile'),
+    ).toHaveClass(/is-effect-quarantine-rain/);
+    await expect(
+      mobileEffectCard.locator('.cosmetic-effect-layer__media'),
+    ).toHaveAttribute('src', /efeito-chuva-quarentena/);
+    await page.waitForTimeout(900);
+    await page.screenshot({
+      path: testInfo.outputPath('cosmetic-merchant-cash-effect-mobile.png'),
+      fullPage: true,
+    });
+
+    await tabs.getByRole('tab', { name: 'Visão geral' }).click();
+    const mobileRainBackground = page
+      .locator('.cosmetic-vendor-product.is-cash-product')
+      .last()
+      .locator('.cosmetic-vendor-preview--overview');
+    await expect
+      .poll(() =>
+        mobileRainBackground.evaluate(
+          (element) => getComputedStyle(element).backgroundImage,
+        ),
+      )
+      .toContain('background-chuva-quarentena-cidade-encharcada');
+    await page.screenshot({
+      path: testInfo.outputPath('cosmetic-merchant-background-mobile.png'),
+      fullPage: true,
+    });
     await page.screenshot({
       path: testInfo.outputPath('cosmetic-merchant-mobile.png'),
       fullPage: true,
