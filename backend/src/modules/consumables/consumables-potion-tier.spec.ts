@@ -107,7 +107,7 @@ describe('ConsumablesService potion tier lock', () => {
       minTier: 1,
       maxTier: 10,
     };
-    const previousPremium = new Date('2026-09-10T12:00:00.000Z');
+    const previousPremium = new Date('2099-09-10T12:00:00.000Z');
     const tx = {
       inventoryItem: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),

@@ -129,7 +129,7 @@ describe('StorefrontFulfillmentService', () => {
 
   it('ativa Premium na conta quando a assinatura é paga', async () => {
     const tx = transaction(order('premium-abrigo-monthly', 'SUBSCRIPTION'));
-    const previousPremium = new Date('2026-09-10T12:00:00.000Z');
+    const previousPremium = new Date('2099-09-10T12:00:00.000Z');
     const expectedPremiumUntil = new Date(
       previousPremium.getTime() + 30 * 24 * 60 * 60 * 1000,
     );
