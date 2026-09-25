@@ -15,6 +15,8 @@ import {
   isHuntingSegmentWalkable,
   isHuntingTileWalkable,
   resolveHuntingStartingPoint,
+  isAnimatedHuntingSceneMap,
+  isDistritoFerrugemTierTwoScene,
   isSuburbioSilenciosoTierOneScene,
   validateHuntingArea,
   worldToHuntingTile,
@@ -35,6 +37,27 @@ function loadTiledArea(fileName: string) {
 
 const exterior = loadTiledArea("suburbio-silencioso-pilot.tmj");
 const interior = loadTiledArea("suburbio-silencioso-t1-interior.tmj");
+const ferrugemExterior = loadTiledArea("distrito-ferrugem-t2-exterior.tmj");
+const ferrugemInterior = loadTiledArea("distrito-ferrugem-t2-interior.tmj");
+
+test("habilita a cena animada para os mapas tier 1 e tier 2 suportados", () => {
+  assert.equal(
+    isSuburbioSilenciosoTierOneScene({ mapName: "Subúrbio Silencioso", tier: 1 }),
+    true,
+  );
+  assert.equal(
+    isDistritoFerrugemTierTwoScene({ mapName: "Distrito da Ferrugem", tier: 2 }),
+    true,
+  );
+  assert.equal(
+    isAnimatedHuntingSceneMap({ mapName: "Distrito da Ferrugem", tier: 2 }),
+    true,
+  );
+  assert.equal(
+    isAnimatedHuntingSceneMap({ mapName: "Distrito da Ferrugem", tier: 3 }),
+    false,
+  );
+});
 
 test("retoma a posicao valida na casa e recusa tile bloqueado ou area trocada", () => {
   const point = interior.area.navigationPoints.find((entry) => entry.isDestination);
@@ -327,4 +350,28 @@ test("conecta exterior e interior por portais reciprocos", () => {
   assert.equal(enter?.toNodeId, "entrada");
   assert.equal(exit?.toAreaId, HUNTING_AREA_IDS.outdoor);
   assert.equal(exit?.toNodeId, exterior.area.portalNodeId);
+});
+
+test("valida as duas areas industriais e seus portais reciprocos", () => {
+  for (const area of [ferrugemExterior.area, ferrugemInterior.area]) {
+    assert.deepEqual(validateHuntingArea(area), []);
+    const spawn = getHuntingNavigationPoint(area, area.spawnNodeId);
+    assert.ok(spawn);
+    for (const destination of area.navigationPoints) {
+      if (destination.id === spawn.id) continue;
+      assertPathIsWalkable(area, findHuntingPath(area, spawn, destination));
+    }
+  }
+  const enter = getHuntingPortal(
+    ferrugemExterior.area,
+    ferrugemExterior.area.portalNodeId,
+  );
+  const exit = getHuntingPortal(
+    ferrugemInterior.area,
+    ferrugemInterior.area.portalNodeId,
+  );
+  assert.equal(enter?.toAreaId, HUNTING_AREA_IDS.rustWarehouse);
+  assert.equal(enter?.toNodeId, "saida");
+  assert.equal(exit?.toAreaId, HUNTING_AREA_IDS.rustDistrict);
+  assert.equal(exit?.toNodeId, "galpao-entrada");
 });

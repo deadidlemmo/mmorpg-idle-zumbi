@@ -168,4 +168,28 @@ describe('HuntingVisualPositionService', () => {
     await service.save('session-1', { ...pose, tileX: 44 });
     expect(set).toHaveBeenCalledTimes(1);
   });
+
+  it('aceita e limita as duas areas visuais do Distrito da Ferrugem', () => {
+    expect(
+      parseStoredHuntingVisualPose({
+        areaId: 'distrito-ferrugem',
+        tileX: 47.99,
+        tileY: 31.99,
+        direction: 'right',
+      }),
+    ).toEqual({
+      areaId: 'distrito-ferrugem',
+      tileX: 47.99,
+      tileY: 31.99,
+      direction: 'right',
+    });
+    expect(
+      parseStoredHuntingVisualPose({
+        areaId: 'galpao-ferrugem',
+        tileX: 48,
+        tileY: 10,
+        direction: 'up',
+      }),
+    ).toBeNull();
+  });
 });

@@ -140,10 +140,6 @@ export type AutoCombatRealtimeState = {
    */
   lastAppliedEventSequence: number | null;
   lastAppliedEventTimestamp: number | null;
-  /** Último evento que atualizou HP ou estoque de poção imediatamente. */
-  lastResourceEventSequence: number | null;
-  lastResourceEventTimestamp: number | null;
-
   updatedAt: number;
 };
 
@@ -211,11 +207,6 @@ export type AutoCombatRealtimeAction =
     }
   | {
       type: "ENQUEUE_EVENT";
-      characterId: string;
-      event: AutoCombatRealtimeEvent;
-    }
-  | {
-      type: "SYNC_EVENT_RESOURCES";
       characterId: string;
       event: AutoCombatRealtimeEvent;
     }
@@ -289,9 +280,6 @@ export const initialAutoCombatRealtimeState: AutoCombatRealtimeState = {
 
   lastAppliedEventSequence: null,
   lastAppliedEventTimestamp: null,
-  lastResourceEventSequence: null,
-  lastResourceEventTimestamp: null,
-
   updatedAt: 0,
 };
 
@@ -779,15 +767,6 @@ function shouldPreservePreviousCharacterHpAgainstOlderStatus(params: {
     return false;
   }
 
-  const statusSequence = getStatusSnapshotSequence(status);
-  if (
-    baseState.lastResourceEventSequence !== null &&
-    (statusSequence === null ||
-      statusSequence < baseState.lastResourceEventSequence)
-  ) {
-    return true;
-  }
-
   const currentHp = getOptionalStatusNumber(baseState.character?.currentHp);
   const nextHp = getStatusCharacterHp(status);
 
@@ -1088,13 +1067,6 @@ function clearRealtimeRuntimeState(
     lastAppliedEventTimestamp: clearEventCaches
       ? null
       : state.lastAppliedEventTimestamp,
-    lastResourceEventSequence: clearEventCaches
-      ? null
-      : state.lastResourceEventSequence,
-    lastResourceEventTimestamp: clearEventCaches
-      ? null
-      : state.lastResourceEventTimestamp,
-
     updatedAt: now(),
   };
 }
@@ -1650,6 +1622,33 @@ function canRealtimeEventIncreaseCharacterHp(eventType: string | null) {
   return eventType === "POTION_USED";
 }
 
+function shouldApplyCharacterHpAtVisualImpact(eventType: string | null) {
+  return (
+    eventType === "MOB_DEFEATED" ||
+    eventType === "PLAYER_DEFEATED" ||
+    eventType === "POTION_USED"
+  );
+}
+
+function isPendingCombatResolutionEvent(
+  event?: AutoCombatRealtimeEvent | null,
+) {
+  const eventType = normalizeRealtimeEventType(event);
+
+  return (
+    eventType === "MOB_DEFEATED" ||
+    eventType === "PLAYER_DEFEATED" ||
+    eventType === "POTION_USED"
+  );
+}
+
+function hasPendingCombatResolution(state: AutoCombatRealtimeState) {
+  return Boolean(
+    isPendingCombatResolutionEvent(state.activeEvent) ||
+      state.eventQueue.some(isPendingCombatResolutionEvent),
+  );
+}
+
 function shouldRejectRollbackRealtimeEvent(
   state: AutoCombatRealtimeState,
   event: AutoCombatRealtimeEvent,
@@ -2164,7 +2163,17 @@ function hydrateFromStatus(
         clearBattleLog: true,
       })
     : state;
-  const baseState = statusIsHuntFlow
+  const deferAheadCombatStatus = shouldDeferAheadCombatStatus({
+    baseState: sessionBaseState,
+    status,
+    statusIsActive,
+    statusIsTerminal,
+    sessionChanged,
+  });
+  const preservePendingCombatResolution =
+    statusIsHuntFlow &&
+    (hasPendingCombatResolution(sessionBaseState) || deferAheadCombatStatus);
+  const baseState = statusIsHuntFlow && !preservePendingCombatResolution
     ? clearRealtimeRuntimeState(sessionBaseState, {
         clearStatus: false,
         clearSession: false,
@@ -2210,13 +2219,6 @@ function hydrateFromStatus(
 
   const nextTotals = buildTotalsStateFromStatus(status, null);
 
-  const deferAheadCombatStatus = shouldDeferAheadCombatStatus({
-    baseState,
-    status,
-    statusIsActive,
-    statusIsTerminal,
-    sessionChanged,
-  });
   const deferCombatVisualState =
     !sessionChanged &&
     !statusIsTerminal &&
@@ -2282,7 +2284,7 @@ function hydrateFromStatus(
         sessionChanged,
       }));
 
-  const nextMob = statusIsHuntFlow
+  const nextMob = statusIsHuntFlow && !preservePendingCombatResolution
     ? null
     : shouldPreservePreviousMob
       ? baseState.mob
@@ -2411,7 +2413,7 @@ function applyRealtimeEventSnapshot(
 
   const eventType = normalizeRealtimeEventType(event);
 
-  const nextCharacter =
+  const eventCharacter =
     eventType === "MOB_DEFEATED" ||
     eventType === "PLAYER_DEFEATED" ||
     eventType === "POTION_USED"
@@ -2420,6 +2422,9 @@ function applyRealtimeEventSnapshot(
           buildCharacterStateFromRealtimeEvent(event, state.character),
         )
       : buildCharacterStateFromRealtimeEvent(event, state.character);
+  const nextCharacter = shouldApplyCharacterHpAtVisualImpact(eventType)
+    ? eventCharacter
+    : preserveCharacterHpFromRealtimeState(state.character, eventCharacter);
 
   const nextMob = buildMobStateFromRealtimeEvent(event, state.mob);
   const eventEnemyInstanceId = normalizeScopeString(event.enemyInstanceId);
@@ -2615,83 +2620,6 @@ function applyRealtimeEventSnapshot(
     ...updateAppliedEventClock(state, event),
 
     hasLoadedOnce: true,
-    updatedAt: now(),
-  };
-}
-
-function syncRealtimeEventResources(
-  state: AutoCombatRealtimeState,
-  characterId: string,
-  event: AutoCombatRealtimeEvent,
-): AutoCombatRealtimeState {
-  if (state.characterId && state.characterId !== characterId) {
-    return state;
-  }
-
-  if (shouldRejectOutOfOrderEvent(state, event)) {
-    return state;
-  }
-
-  const eventSequence = getStoredRealtimeEventSequence(event);
-  const eventTimestamp = getRealtimeEventAppliedTimestamp(event);
-  if (
-    (eventSequence !== null &&
-      state.lastResourceEventSequence !== null &&
-      eventSequence <= state.lastResourceEventSequence) ||
-    (eventSequence === null &&
-      state.lastResourceEventTimestamp !== null &&
-      eventTimestamp <= state.lastResourceEventTimestamp)
-  ) {
-    return state;
-  }
-
-  const eventType = normalizeRealtimeEventType(event);
-  const nextCharacter =
-    eventType === "MOB_DEFEATED" ||
-    eventType === "PLAYER_DEFEATED" ||
-    eventType === "POTION_USED"
-      ? mergeCharacterKeepingHighestXp(
-          state.character,
-          buildCharacterStateFromRealtimeEvent(event, state.character),
-        )
-      : buildCharacterStateFromRealtimeEvent(event, state.character);
-  const nextPotion = isPotionUsedEvent(event)
-    ? buildPotionStateFromRealtimeEvent(event, state.potion)
-    : state.potion;
-
-  if (
-    nextCharacter === state.character &&
-    nextPotion === state.potion &&
-    eventSequence === null
-  ) {
-    return state;
-  }
-
-  return {
-    ...state,
-    characterId,
-    character: nextCharacter,
-    potion: nextPotion,
-    lastResourceEventSequence:
-      eventSequence !== null
-        ? Math.max(state.lastResourceEventSequence ?? 0, eventSequence)
-        : state.lastResourceEventSequence,
-    lastResourceEventTimestamp: Math.max(
-      state.lastResourceEventTimestamp ?? 0,
-      eventTimestamp,
-    ),
-    status:
-      state.status && nextCharacter && state.status.character
-        ? {
-            ...state.status,
-            character: {
-              ...state.status.character,
-              currentHp:
-                nextCharacter.currentHp ?? state.status.character.currentHp,
-              maxHp: nextCharacter.maxHp ?? state.status.character.maxHp,
-            },
-          }
-        : state.status,
     updatedAt: now(),
   };
 }
@@ -2949,7 +2877,8 @@ function enqueueRealtimeEvent(
 
   if (
     isAutoCombatHuntFlowPhase(state.session?.phase) &&
-    isCombatPresentationEvent(event)
+    isCombatPresentationEvent(event) &&
+    !isPendingCombatResolutionEvent(event)
   ) {
     return state;
   }
@@ -3145,7 +3074,11 @@ function processRealtimeEvent(
     activeEvent: event,
     activeEventImpactApplied: false,
     eventQueue: nextQueue,
-    character: buildCharacterStateBeforeRealtimeImpact(event, state.character),
+    character: shouldApplyCharacterHpAtVisualImpact(
+      normalizeRealtimeEventType(event),
+    )
+      ? buildCharacterStateBeforeRealtimeImpact(event, state.character)
+      : state.character,
     mob: buildMobStateBeforeRealtimeImpact(event, state.mob),
 
     ...processedMarkers,
@@ -3410,14 +3343,6 @@ export function autoCombatRealtimeReducer(
 
     case "ENQUEUE_EVENT": {
       return enqueueRealtimeEvent(state, action.characterId, action.event);
-    }
-
-    case "SYNC_EVENT_RESOURCES": {
-      return syncRealtimeEventResources(
-        state,
-        action.characterId,
-        action.event,
-      );
     }
 
     case "PROCESS_NEXT_EVENT": {

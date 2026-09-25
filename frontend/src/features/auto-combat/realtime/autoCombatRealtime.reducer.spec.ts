@@ -1277,67 +1277,157 @@ test("snapshot ACTIVE antigo não reabre a sessão derrotada", () => {
   assert.equal(replacement.terminalDefeat, null);
 });
 
-test("sincroniza HP e poção imediatamente sem consumir a fila visual", () => {
-  const hit = autoCombatRealtimeReducer(makeState(), {
-    type: "SYNC_EVENT_RESOURCES",
-    characterId: "char-1",
-    event: {
-      ...makeHit(2, 80),
-      type: "MOB_HIT",
-      actor: "MOB",
-      target: "PLAYER",
-      characterCurrentHp: 72,
-      characterMaxHp: 100,
-    } as AutoCombatRealtimeEvent,
+test("mantém o HP durante os golpes e aplica o dano acumulado no abate", () => {
+  const mobHit = {
+    ...makeHit(2, 100),
+    type: "MOB_HIT",
+    actor: "MOB",
+    target: "PLAYER",
+    characterHpBefore: 100,
+    characterHpAfter: 72,
+    characterCurrentHp: 72,
+    characterMaxHp: 100,
+  } as AutoCombatRealtimeEvent;
+  const hitStarted = enqueueAndProcess(makeState(), mobHit);
+  const hitImpacted = autoCombatRealtimeReducer(hitStarted, {
+    type: "APPLY_ACTIVE_EVENT_IMPACT",
   });
 
-  assert.equal(hit.character?.currentHp, 72);
-  assert.deepEqual(hit.eventQueue, []);
-  assert.equal(hit.activeEvent, null);
-  assert.equal(hit.lastAppliedEventSequence, null);
+  assert.equal(hitStarted.character?.currentHp, 100);
+  assert.equal(hitImpacted.character?.currentHp, 100);
 
-  const potion = autoCombatRealtimeReducer(hit, {
-    type: "SYNC_EVENT_RESOURCES",
-    characterId: "char-1",
-    event: {
-      characterId: "char-1",
-      sessionId: "session-1",
-      type: "POTION_USED",
-      sequence: 3,
-      characterCurrentHp: 92,
-      characterMaxHp: 100,
-      potionItemId: "potion-1",
-      potionQuantityBefore: 7,
-      potionQuantityAfter: 6,
-      potionQuantityRemaining: 6,
-      potionUsedQuantity: 1,
-    } as AutoCombatRealtimeEvent,
+  const afterHit = autoCombatRealtimeReducer(hitImpacted, {
+    type: "CLEAR_ACTIVE_EVENT",
+  });
+  const defeated = {
+    ...makeHit(3, 0),
+    type: "MOB_DEFEATED",
+    actor: "PLAYER",
+    target: "MOB",
+    characterHpAfter: 72,
+    characterCurrentHp: 72,
+    characterMaxHp: 100,
+  } as AutoCombatRealtimeEvent;
+  const defeatStarted = enqueueAndProcess(afterHit, defeated);
+  const defeatImpacted = autoCombatRealtimeReducer(defeatStarted, {
+    type: "APPLY_ACTIVE_EVENT_IMPACT",
   });
 
-  assert.equal(potion.character?.currentHp, 92);
-  assert.equal(potion.potion?.quantityRemaining, 6);
-  assert.deepEqual(potion.eventQueue, []);
-  assert.equal(potion.lastAppliedEventSequence, null);
+  assert.equal(defeatStarted.character?.currentHp, 100);
+  assert.equal(defeatImpacted.character?.currentHp, 72);
+  assert.equal(defeatImpacted.lastAppliedEventSequence, 3);
 });
 
-test("snapshot anterior ao último recurso não faz HP nem poção voltarem", () => {
-  const synchronized = autoCombatRealtimeReducer(makeState(), {
-    type: "SYNC_EVENT_RESOURCES",
-    characterId: "char-1",
-    event: {
+test("snapshot do próximo rastreio aguarda o abate antes de reduzir o HP", () => {
+  const combatState: AutoCombatRealtimeState = {
+    ...makeState(),
+    snapshotSequence: 2,
+    lastAppliedEventSequence: 2,
+    session: {
+      ...makeState().session,
+      phase: "COMBAT_ACTIVE",
+      snapshotSequence: 2,
+      latestEventSequence: 2,
+    },
+  };
+  const huntingStatus = {
+    active: true,
+    hasActiveAutoCombat: true,
+    snapshotSequence: 3,
+    latestEventSequence: 3,
+    character: { id: "char-1", currentHp: 72, maxHp: 100 },
+    session: {
+      id: "session-1",
       characterId: "char-1",
-      sessionId: "session-1",
-      type: "POTION_USED",
-      sequence: 8,
-      characterCurrentHp: 72,
-      characterMaxHp: 100,
-      potionItemId: "potion-1",
-      potionQuantityBefore: 7,
-      potionQuantityAfter: 6,
-      potionQuantityRemaining: 6,
-    } as AutoCombatRealtimeEvent,
+      status: "ACTIVE",
+      phase: "HUNTING",
+      snapshotSequence: 3,
+      latestEventSequence: 3,
+    },
+    currentMob: null,
+  } as never;
+
+  const awaitingDefeat = autoCombatRealtimeReducer(combatState, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: huntingStatus,
   });
 
+  assert.equal(awaitingDefeat.character?.currentHp, 100);
+  assert.equal(awaitingDefeat.session?.phase, "COMBAT_ACTIVE");
+  assert.equal(awaitingDefeat.mob?.id, "mob-1");
+
+  const defeatEvent = {
+    ...makeHit(3, 0),
+    type: "MOB_DEFEATED",
+    actor: "PLAYER",
+    target: "MOB",
+    characterHpAfter: 72,
+    characterCurrentHp: 72,
+    characterMaxHp: 100,
+  } as AutoCombatRealtimeEvent;
+  const defeatStarted = enqueueAndProcess(awaitingDefeat, defeatEvent);
+  const defeatImpacted = autoCombatRealtimeReducer(defeatStarted, {
+    type: "APPLY_ACTIVE_EVENT_IMPACT",
+  });
+
+  assert.equal(defeatStarted.character?.currentHp, 100);
+  assert.equal(defeatImpacted.character?.currentHp, 72);
+
+  const nextHunt = autoCombatRealtimeReducer(defeatImpacted, {
+    type: "CLEAR_ACTIVE_EVENT",
+  });
+
+  assert.equal(nextHunt.character?.currentHp, 72);
+  assert.equal(nextHunt.session?.phase, "HUNTING");
+  assert.equal(nextHunt.mob, null);
+});
+
+test("poção atualiza HP e estoque no impacto visual", () => {
+  const event = {
+    characterId: "char-1",
+    sessionId: "session-1",
+    type: "POTION_USED",
+    sequence: 3,
+    characterHpBefore: 72,
+    characterHpAfter: 92,
+    characterCurrentHp: 92,
+    characterMaxHp: 100,
+    potionItemId: "potion-1",
+    potionQuantityBefore: 7,
+    potionQuantityAfter: 6,
+    potionQuantityRemaining: 6,
+    potionUsedQuantity: 1,
+  } as AutoCombatRealtimeEvent;
+  const started = enqueueAndProcess(
+    {
+      ...makeState(),
+      character: { ...makeState().character, currentHp: 72 },
+    },
+    event,
+  );
+  const impacted = autoCombatRealtimeReducer(started, {
+    type: "APPLY_ACTIVE_EVENT_IMPACT",
+  });
+
+  assert.equal(started.character?.currentHp, 72);
+  assert.equal(impacted.character?.currentHp, 92);
+  assert.equal(impacted.potion?.quantityRemaining, 6);
+});
+
+test("snapshot anterior ao abate não faz o HP voltar", () => {
+  const defeatEvent = {
+    ...makeHit(8, 0),
+    type: "MOB_DEFEATED",
+    actor: "PLAYER",
+    target: "MOB",
+    characterCurrentHp: 72,
+    characterMaxHp: 100,
+  } as AutoCombatRealtimeEvent;
+  const synchronized = autoCombatRealtimeReducer(
+    enqueueAndProcess(makeState(), defeatEvent),
+    { type: "APPLY_ACTIVE_EVENT_IMPACT" },
+  );
   const stale = autoCombatRealtimeReducer(synchronized, {
     type: "HYDRATE_STATUS",
     characterId: "char-1",
@@ -1359,6 +1449,5 @@ test("snapshot anterior ao último recurso não faz HP nem poção voltarem", ()
   });
 
   assert.equal(stale.character?.currentHp, 72);
-  assert.equal(stale.potion?.quantityRemaining, 6);
-  assert.equal(stale.lastResourceEventSequence, 8);
+  assert.equal(stale.lastAppliedEventSequence, 8);
 });

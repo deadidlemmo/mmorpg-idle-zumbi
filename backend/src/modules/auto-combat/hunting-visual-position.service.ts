@@ -9,7 +9,11 @@ import { REDIS_COORDINATION_CLIENT } from '../../common/redis/redis.constants';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export type StoredHuntingVisualPose = {
-  areaId: 'suburbio' | 'casa-abandonada';
+  areaId:
+    | 'suburbio'
+    | 'casa-abandonada'
+    | 'distrito-ferrugem'
+    | 'galpao-ferrugem';
   tileX: number;
   tileY: number;
   direction: 'up' | 'down' | 'left' | 'right';
@@ -19,6 +23,8 @@ const VISUAL_POSITION_TTL_SECONDS = 24 * 60 * 60;
 const AREA_BOUNDS = {
   suburbio: [48, 32],
   'casa-abandonada': [44, 28],
+  'distrito-ferrugem': [48, 32],
+  'galpao-ferrugem': [48, 32],
 } as const;
 
 export function parseStoredHuntingVisualPose(
@@ -26,7 +32,12 @@ export function parseStoredHuntingVisualPose(
 ): StoredHuntingVisualPose | null {
   if (!value || typeof value !== 'object') return null;
   const pose = value as Partial<StoredHuntingVisualPose>;
-  if (pose.areaId !== 'suburbio' && pose.areaId !== 'casa-abandonada')
+  if (
+    pose.areaId !== 'suburbio' &&
+    pose.areaId !== 'casa-abandonada' &&
+    pose.areaId !== 'distrito-ferrugem' &&
+    pose.areaId !== 'galpao-ferrugem'
+  )
     return null;
   const [width, height] = AREA_BOUNDS[pose.areaId];
   if (

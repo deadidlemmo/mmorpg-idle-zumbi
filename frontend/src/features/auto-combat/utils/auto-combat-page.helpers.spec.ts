@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   getHuntEmptyStageCopy,
+  selectAutoCombatCharacterResourceValue,
   shouldShowAutoCombatSessionStage,
 } from "./hunt-stage.helpers";
 import { selectVisibleCharacterProgress } from "./visible-progress";
@@ -55,6 +56,28 @@ test("dashboard mostra EXP confirmada após a timeline visual liberar o progress
 
   assert.equal(visible?.xp, 150);
   assert.equal(visible?.currentLevelXp, 150);
+});
+
+test("HUD usa o HP realtime também durante o rastreio de uma sessão ativa", () => {
+  const hp = selectAutoCombatCharacterResourceValue({
+    hasActiveSession: true,
+    realtimeValue: 1371,
+    statusValue: 1311,
+    overviewValue: 1311,
+  });
+
+  assert.equal(hp, 1371);
+});
+
+test("HUD volta ao HP do overview quando não existe sessão ativa", () => {
+  const hp = selectAutoCombatCharacterResourceValue({
+    hasActiveSession: false,
+    realtimeValue: 1371,
+    statusValue: 1311,
+    overviewValue: 1388,
+  });
+
+  assert.equal(hp, 1388);
 });
 
 test("retomada da caça bloqueia o card antigo mesmo com snapshot de combate pendente", () => {

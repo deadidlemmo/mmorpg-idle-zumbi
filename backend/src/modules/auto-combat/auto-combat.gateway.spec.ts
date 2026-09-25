@@ -454,6 +454,40 @@ describe('AutoCombatGateway realtime transport', () => {
       expect((client.data.rooms as Set<string>).size).toBe(0);
     });
 
+    it('aceita as duas areas visuais do Distrito da Ferrugem', async () => {
+      const { gateway, socket, pose } = setup();
+      const client = socket('first');
+      await gateway.handleHuntingVisualJoin(
+        client as never,
+        {
+          ...pose('first'),
+          areaId: 'distrito-ferrugem',
+          tileX: 24,
+          tileY: 28,
+        } as never,
+      );
+      expect(
+        (client.data.rooms as Set<string>).has(
+          'auto-combat:visual:map-1:submap-1:distrito-ferrugem',
+        ),
+      ).toBe(true);
+      await gateway.handleHuntingVisualJoin(
+        client as never,
+        {
+          ...pose('first'),
+          areaId: 'galpao-ferrugem',
+          tileX: 25,
+          tileY: 28,
+        } as never,
+      );
+      expect(
+        (client.data.rooms as Set<string>).has(
+          'auto-combat:visual:map-1:submap-1:galpao-ferrugem',
+        ),
+      ).toBe(true);
+      expect((client.data.rooms as Set<string>).size).toBe(1);
+    });
+
     it('congela a posição publicada enquanto o combate estiver ativo', async () => {
       const { gateway, socket, pose } = setup();
       const client = socket('first');

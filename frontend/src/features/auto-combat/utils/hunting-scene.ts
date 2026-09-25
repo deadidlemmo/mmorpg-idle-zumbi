@@ -17,9 +17,31 @@ export function isSuburbioSilenciosoTierOneScene(params: {
   );
 }
 
+export function isDistritoFerrugemTierTwoScene(params: {
+  mapName?: string | null;
+  tier?: number | null;
+}) {
+  return (
+    normalizeSceneMapName(params.mapName) === "distrito-da-ferrugem" &&
+    Number(params.tier) === 2
+  );
+}
+
+export function isAnimatedHuntingSceneMap(params: {
+  mapName?: string | null;
+  tier?: number | null;
+}) {
+  return (
+    isSuburbioSilenciosoTierOneScene(params) ||
+    isDistritoFerrugemTierTwoScene(params)
+  );
+}
+
 export const HUNTING_AREA_IDS = {
   outdoor: "suburbio",
   abandonedHouse: "casa-abandonada",
+  rustDistrict: "distrito-ferrugem",
+  rustWarehouse: "galpao-ferrugem",
 } as const;
 
 export type HuntingAreaId =

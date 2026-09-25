@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "mobKey": "arrastador-de-correntes",
+  "frame": {
+    "width": 112,
+    "height": 96,
+    "originX": 0.5,
+    "originY": 1
+  },
+  "directionRows": {
+    "south": 0,
+    "west": 1,
+    "east": 2,
+    "north": 3
+  },
+  "animations": {
+    "walk": {
+      "sheet": "arrastador-walk.png",
+      "framesPerDirection": 4,
+      "frameRate": 7,
+      "repeat": -1
+    },
+    "attack": {
+      "sheet": "arrastador-attack.png",
+      "framesPerDirection": 4,
+      "frameRate": 9,
+      "repeat": 0,
+      "impactFrame": 2
+    },
+    "hurt": {
+      "sheet": "arrastador-hurt.png",
+      "framesPerDirection": 2,
+      "frameRate": 8,
+      "repeat": 0
+    },
+    "death": {
+      "sheet": "arrastador-death.png",
+      "framesPerDirection": 6,
+      "frameRate": 8,
+      "repeat": 0,
+      "holdFinalFrame": true
+    }
+  }
+}

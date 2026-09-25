@@ -55,6 +55,13 @@ import suburbioExteriorTilemapRaw from "../../../assets/maps/auto-combat/suburbi
 import suburbioExteriorTilemapUrl from "../../../assets/maps/auto-combat/suburbio-silencioso-pilot.tmj?url";
 import suburbioInteriorTilemapRaw from "../../../assets/maps/auto-combat/suburbio-silencioso-t1-interior.tmj?raw";
 import suburbioInteriorTilemapUrl from "../../../assets/maps/auto-combat/suburbio-silencioso-t1-interior.tmj?url";
+import ferrugemExteriorBackground from "../../../assets/images/auto-combat/ferrugem/distrito-ferrugem-exterior.webp";
+import ferrugemInteriorBackground from "../../../assets/images/auto-combat/ferrugem/distrito-ferrugem-interior.webp";
+import ferrugemNavigationMask from "../../../assets/images/auto-combat/ferrugem/ferrugem-navigation-mask.png";
+import ferrugemExteriorTilemapRaw from "../../../assets/maps/auto-combat/distrito-ferrugem-t2-exterior.tmj?raw";
+import ferrugemExteriorTilemapUrl from "../../../assets/maps/auto-combat/distrito-ferrugem-t2-exterior.tmj?url";
+import ferrugemInteriorTilemapRaw from "../../../assets/maps/auto-combat/distrito-ferrugem-t2-interior.tmj?raw";
+import ferrugemInteriorTilemapUrl from "../../../assets/maps/auto-combat/distrito-ferrugem-t2-interior.tmj?url";
 import { getAutoCombatSocket, type HuntingVisualPose, type HuntingVisualPresence } from "../../../services/websocket/socketClient";
 import { playGameSound } from "../../../services/audio/gameAudio";
 import { CharacterPortrait } from "../../cosmetics/components/CharacterPortrait";
@@ -69,7 +76,11 @@ import {
 } from "../../performance/performanceDiagnostics";
 import { mergeHuntingVisualPlayers } from "../utils/hunting-presence";
 import { resolveHuntingXpFeedback, type HuntingXpBaseline } from "../utils/hunting-xp-feedback";
-import type { HuntingTiledMapSource } from "../utils/hunting-scene";
+import {
+  HUNTING_AREA_IDS,
+  isDistritoFerrugemTierTwoScene,
+  type HuntingTiledMapSource,
+} from "../utils/hunting-scene";
 import {
   getHuntingVisualPhaseLabel,
   type HuntingVisualPhase,
@@ -78,16 +89,25 @@ import type {
   HuntingVisualPlayer,
   LocalHuntingPose,
   MobCombatSpriteAssets,
+  HuntingSceneAssets,
   SuburbioHuntingController,
   SuburbioHuntingState,
 } from "./phaser/createSuburbioHuntingGame";
+import { DISTRITO_FERRUGEM_MOB_SPRITES } from "./distritoFerrugemMobSprites";
 
-const DEFAULT_AREA_LABEL = "Subúrbio Silencioso · Distrito aberto";
+const SUBURBIO_DEFAULT_AREA_LABEL = "Subúrbio Silencioso · Distrito aberto";
+const FERRUGEM_DEFAULT_AREA_LABEL = "Distrito da Ferrugem · Pátio de Carga";
 const SUBURBIO_EXTERIOR_TILEMAP = JSON.parse(
   suburbioExteriorTilemapRaw,
 ) as HuntingTiledMapSource;
 const SUBURBIO_INTERIOR_TILEMAP = JSON.parse(
   suburbioInteriorTilemapRaw,
+) as HuntingTiledMapSource;
+const FERRUGEM_EXTERIOR_TILEMAP = JSON.parse(
+  ferrugemExteriorTilemapRaw,
+) as HuntingTiledMapSource;
+const FERRUGEM_INTERIOR_TILEMAP = JSON.parse(
+  ferrugemInteriorTilemapRaw,
 ) as HuntingTiledMapSource;
 
 const SUBURBIO_MOB_SPRITES: readonly MobCombatSpriteAssets[] = [
@@ -141,6 +161,123 @@ const SUBURBIO_MOB_SPRITES: readonly MobCombatSpriteAssets[] = [
   },
 ];
 
+const COMMON_CHARACTER_ASSETS = {
+  survivor: leonWalk,
+  survivorAttack: leonAttack,
+  survivorDeath: leonDeath,
+  survivorHurt: leonHurt,
+  survivorInvestigate: leonInvestigate,
+  infected: suburbioInfected,
+} as const;
+
+const SUBURBIO_SCENE_ASSETS: HuntingSceneAssets = {
+  ...COMMON_CHARACTER_ASSETS,
+  mobs: SUBURBIO_MOB_SPRITES,
+  initialAreaId: HUNTING_AREA_IDS.outdoor,
+  secondaryAreaId: HUNTING_AREA_IDS.abandonedHouse,
+  areas: [
+    {
+      id: HUNTING_AREA_IDS.outdoor,
+      tilemapKey: "suburbio-hunting-exterior-tiled",
+      tilemapUrl: suburbioExteriorTilemapUrl,
+      tilemapSource: SUBURBIO_EXTERIOR_TILEMAP,
+      tilesets: [
+        {
+          textureKey: "suburbio-pilot-terrain-texture",
+          tiledName: "suburbio-pilot-terrain",
+          url: suburbioPilotTerrain,
+        },
+        {
+          textureKey: "suburbio-pilot-props-texture",
+          tiledName: "suburbio-pilot-props",
+          url: suburbioPilotProps,
+        },
+        {
+          textureKey: "suburbio-pilot-environment-texture",
+          tiledName: "suburbio-pilot-environment",
+          url: suburbioPilotEnvironment,
+        },
+        {
+          textureKey: "suburbio-pilot-house-one-texture",
+          tiledName: "suburbio-pilot-house-one",
+          url: suburbioPilotHouseOne,
+        },
+        {
+          textureKey: "suburbio-pilot-house-two-texture",
+          tiledName: "suburbio-pilot-house-two",
+          url: suburbioPilotHouseTwo,
+        },
+      ],
+    },
+    {
+      id: HUNTING_AREA_IDS.abandonedHouse,
+      tilemapKey: "suburbio-hunting-interior-tiled",
+      tilemapUrl: suburbioInteriorTilemapUrl,
+      tilemapSource: SUBURBIO_INTERIOR_TILEMAP,
+      tilesets: [
+        {
+          textureKey: "suburbio-interior-terrain-texture",
+          tiledName: "suburbio-interior-terrain",
+          url: suburbioInteriorTerrain,
+        },
+        {
+          textureKey: "suburbio-interior-walls-texture",
+          tiledName: "suburbio-interior-walls",
+          url: suburbioInteriorWalls,
+        },
+      ],
+      depthAtlas: {
+        textureKey: "suburbio-hunting-interior-props",
+        atlasUrl: suburbioInteriorPropsAtlasUrl,
+        texture: suburbioInteriorProps,
+      },
+    },
+  ],
+};
+
+const FERRUGEM_SCENE_ASSETS: HuntingSceneAssets = {
+  ...COMMON_CHARACTER_ASSETS,
+  mobs: DISTRITO_FERRUGEM_MOB_SPRITES,
+  initialAreaId: HUNTING_AREA_IDS.rustDistrict,
+  secondaryAreaId: HUNTING_AREA_IDS.rustWarehouse,
+  areas: [
+    {
+      id: HUNTING_AREA_IDS.rustDistrict,
+      tilemapKey: "ferrugem-hunting-exterior-tiled",
+      tilemapUrl: ferrugemExteriorTilemapUrl,
+      tilemapSource: FERRUGEM_EXTERIOR_TILEMAP,
+      tilesets: [
+        {
+          textureKey: "ferrugem-navigation-mask-texture",
+          tiledName: "ferrugem-navigation-mask",
+          url: ferrugemNavigationMask,
+        },
+      ],
+      background: {
+        textureKey: "ferrugem-exterior-background",
+        url: ferrugemExteriorBackground,
+      },
+    },
+    {
+      id: HUNTING_AREA_IDS.rustWarehouse,
+      tilemapKey: "ferrugem-hunting-interior-tiled",
+      tilemapUrl: ferrugemInteriorTilemapUrl,
+      tilemapSource: FERRUGEM_INTERIOR_TILEMAP,
+      tilesets: [
+        {
+          textureKey: "ferrugem-navigation-mask-texture",
+          tiledName: "ferrugem-navigation-mask",
+          url: ferrugemNavigationMask,
+        },
+      ],
+      background: {
+        textureKey: "ferrugem-interior-background",
+        url: ferrugemInteriorBackground,
+      },
+    },
+  ],
+};
+
 export type AutoCombatHuntingLootEntry = Readonly<{
   key: string;
   itemName: string;
@@ -153,6 +290,8 @@ type AutoCombatHuntingSceneProps = {
   characterId: string;
   characterName: string;
   characterClassName: string;
+  mapName?: string | null;
+  mapTier?: number | null;
   characterAvatarKey?: string | null;
   characterAvatarUrl?: string | null;
   characterAppearance?: ResolvedCharacterAppearance | null;
@@ -213,6 +352,8 @@ export function AutoCombatHuntingScene({
   characterId,
   characterName,
   characterClassName,
+  mapName,
+  mapTier,
   characterAvatarKey,
   characterAvatarUrl,
   characterAppearance,
@@ -254,13 +395,23 @@ export function AutoCombatHuntingScene({
   onConfigurePotion,
   onRequestStopHunt,
 }: AutoCombatHuntingSceneProps) {
+  const usesFerrugemScene = isDistritoFerrugemTierTwoScene({
+    mapName,
+    tier: mapTier,
+  });
+  const sceneAssets = usesFerrugemScene
+    ? FERRUGEM_SCENE_ASSETS
+    : SUBURBIO_SCENE_ASSETS;
+  const defaultAreaLabel = usesFerrugemScene
+    ? FERRUGEM_DEFAULT_AREA_LABEL
+    : SUBURBIO_DEFAULT_AREA_LABEL;
   const hostRef = useRef<HTMLDivElement>(null);
   const lootHudRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<SuburbioHuntingController | null>(null);
   const [engineStatus, setEngineStatus] = useState<
     "loading" | "ready" | "error"
   >("loading");
-  const [areaLabel, setAreaLabel] = useState(DEFAULT_AREA_LABEL);
+  const [areaLabel, setAreaLabel] = useState(defaultAreaLabel);
   const [visualPhase, setVisualPhase] =
     useState<HuntingVisualPhase>("walking");
   const [isImmersive, setIsImmersive] = useState(autoOpenKey > 0);
@@ -522,6 +673,7 @@ export function AutoCombatHuntingScene({
 
     let disposed = false;
     let previousPhase: HuntingVisualPhase | null = null;
+    setAreaLabel(defaultAreaLabel);
     setEngineStatus("loading");
 
     void getAutoCombatHuntingVisualPosition(characterId)
@@ -531,34 +683,7 @@ export function AutoCombatHuntingScene({
         if (disposed) return;
         const controller = createSuburbioHuntingGame({
           parent: host,
-          assets: {
-            interiorProps: {
-              atlasUrl: suburbioInteriorPropsAtlasUrl,
-              texture: suburbioInteriorProps,
-            },
-            interiorTilesets: {
-              terrain: suburbioInteriorTerrain,
-              walls: suburbioInteriorWalls,
-            },
-            outdoorTilesets: {
-              environment: suburbioPilotEnvironment,
-              houseOne: suburbioPilotHouseOne,
-              houseTwo: suburbioPilotHouseTwo,
-              props: suburbioPilotProps,
-              terrain: suburbioPilotTerrain,
-            },
-            outdoorTilemapUrl: suburbioExteriorTilemapUrl,
-            outdoorTilemapSource: SUBURBIO_EXTERIOR_TILEMAP,
-            interiorTilemapUrl: suburbioInteriorTilemapUrl,
-            interiorTilemapSource: SUBURBIO_INTERIOR_TILEMAP,
-            survivor: leonWalk,
-            survivorAttack: leonAttack,
-            survivorDeath: leonDeath,
-            survivorHurt: leonHurt,
-            survivorInvestigate: leonInvestigate,
-            infected: suburbioInfected,
-            mobs: SUBURBIO_MOB_SPRITES,
-          },
+          assets: sceneAssets,
           initialState: latestStateRef.current,
           initialPose: savedPosition && (!currentMapIdRef.current || savedPosition.mapId === currentMapIdRef.current)
             ? savedPosition.pose
@@ -610,7 +735,7 @@ export function AutoCombatHuntingScene({
       controllerRef.current = null;
       host.replaceChildren();
     };
-  }, [characterId]);
+  }, [characterId, defaultAreaLabel, sceneAssets]);
 
   useEffect(() => {
     latestStateRef.current = sceneState;
@@ -705,7 +830,9 @@ export function AutoCombatHuntingScene({
   return (
     <section
       className={`auto-combat-hunting-scene auto-combat-hunting-scene--${stateClassName} auto-combat-hunting-scene--phase-${visualPhase}${isImmersive ? " auto-combat-hunting-scene--immersive" : ""}${isCompact ? " auto-combat-hunting-scene--compact" : ""}${performanceDiagnostics && !performanceExperiment.noticeEffects ? " auto-combat-hunting-scene--perf-no-notice-fx" : ""}${performanceDiagnostics && performanceExperiment.mapMode === "hidden" ? " auto-combat-hunting-scene--perf-canvas-hidden" : ""}`}
-      aria-label="Rastreio no Subúrbio Silencioso"
+      aria-label={`Rastreio em ${
+        usesFerrugemScene ? "Distrito da Ferrugem" : "Subúrbio Silencioso"
+      }`}
       aria-busy={engineStatus === "loading"}
     >
       <div

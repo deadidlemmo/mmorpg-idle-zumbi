@@ -1146,12 +1146,6 @@ export function AutoCombatRealtimeProvider({
         publishHuntTargetFoundNotification(event);
       }
 
-      dispatch({
-        type: "SYNC_EVENT_RESOURCES",
-        characterId: normalizedCharacterId,
-        event,
-      });
-
       if (isHuntTargetFoundEvent(event)) {
         return;
       }
@@ -1991,12 +1985,6 @@ export function AutoCombatRealtimeProvider({
       publishDefeatNotification(payload, true);
       publishHuntTargetFoundNotification(payload);
       diagnostics?.recordVisualStage("Enfileirar aviso", performance.now() - notificationStartedAt, performance.now());
-
-      dispatch({
-        type: "SYNC_EVENT_RESOURCES",
-        characterId: normalizedCharacterId,
-        event: payload,
-      });
 
       if (isHuntTargetFoundEvent(payload)) {
         diagnostics?.recordVisualStage("Evento socket", performance.now() - eventStartedAt, performance.now());

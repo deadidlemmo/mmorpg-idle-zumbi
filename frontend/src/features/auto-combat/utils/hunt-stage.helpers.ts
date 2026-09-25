@@ -11,6 +11,20 @@ export function shouldShowAutoCombatSessionStage(params: {
   );
 }
 
+export function selectAutoCombatCharacterResourceValue(params: {
+  hasActiveSession: boolean;
+  realtimeValue?: number | null;
+  statusValue?: number | null;
+  overviewValue?: number | null;
+}) {
+  const { hasActiveSession, realtimeValue, statusValue, overviewValue } =
+    params;
+
+  return hasActiveSession
+    ? (realtimeValue ?? statusValue ?? overviewValue)
+    : (overviewValue ?? statusValue ?? realtimeValue);
+}
+
 export function getHuntEmptyStageCopy(params: {
   isStartingHunt: boolean;
   isActionLoading: boolean;

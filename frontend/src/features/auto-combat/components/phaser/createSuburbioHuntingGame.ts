@@ -7,7 +7,6 @@ import {
   getHuntingNavigationPoint,
   getHuntingPortal,
   huntingTileCenter,
-  HUNTING_AREA_IDS,
   HUNTING_TILED_LAYER_NAMES,
   HUNTING_TILE_LAYER_NAMES,
   isHuntingPointWalkable,
@@ -43,9 +42,6 @@ const HUNTING_STATE_EVENT = "hunting-scene:state";
 const HUNTING_XP_GAIN_EVENT = "hunting-scene:xp-gain";
 const HUNTING_SNAPSHOT_BEGIN_EVENT = "hunting-scene:snapshot-begin";
 const HUNTING_SNAPSHOT_APPLY_EVENT = "hunting-scene:snapshot-apply";
-const INTERIOR_PROPS_TEXTURE = "suburbio-hunting-interior-props";
-const OUTDOOR_TILEMAP = "suburbio-hunting-exterior-tiled";
-const INTERIOR_TILEMAP = "suburbio-hunting-interior-tiled";
 const SURVIVOR_TEXTURE = "suburbio-hunting-leon";
 const SURVIVOR_INVESTIGATE_TEXTURE = "suburbio-hunting-leon-investigate";
 const SURVIVOR_ATTACK_TEXTURE = "suburbio-hunting-leon-attack";
@@ -87,47 +83,6 @@ const STATIC_BASE_LAYER_NAMES = new Set<string>([
   HUNTING_TILED_LAYER_NAMES.ground,
   HUNTING_TILED_LAYER_NAMES.groundDetails,
 ]);
-
-const OUTDOOR_TILESET_DEFINITIONS = [
-  {
-    assetKey: "terrain",
-    textureKey: "suburbio-pilot-terrain-texture",
-    tiledName: "suburbio-pilot-terrain",
-  },
-  {
-    assetKey: "props",
-    textureKey: "suburbio-pilot-props-texture",
-    tiledName: "suburbio-pilot-props",
-  },
-  {
-    assetKey: "environment",
-    textureKey: "suburbio-pilot-environment-texture",
-    tiledName: "suburbio-pilot-environment",
-  },
-  {
-    assetKey: "houseOne",
-    textureKey: "suburbio-pilot-house-one-texture",
-    tiledName: "suburbio-pilot-house-one",
-  },
-  {
-    assetKey: "houseTwo",
-    textureKey: "suburbio-pilot-house-two-texture",
-    tiledName: "suburbio-pilot-house-two",
-  },
-] as const;
-
-const INTERIOR_TILESET_DEFINITIONS = [
-  {
-    assetKey: "terrain",
-    textureKey: "suburbio-interior-terrain-texture",
-    tiledName: "suburbio-interior-terrain",
-  },
-  {
-    assetKey: "walls",
-    textureKey: "suburbio-interior-walls-texture",
-    tiledName: "suburbio-interior-walls",
-  },
-] as const;
 
 type MovementDirection = "down" | "left" | "right" | "up";
 type MobCombatAnimation = "walk" | "attack" | "hurt" | "death";
@@ -207,26 +162,31 @@ export type HuntingXpGain = Readonly<{
   kind: "character" | "hunting";
 }>;
 
-type SuburbioHuntingAssets = Readonly<{
-  interiorProps: Readonly<{
+export type HuntingSceneAreaAssets = Readonly<{
+  id: HuntingAreaId;
+  tilemapKey: string;
+  tilemapUrl: string;
+  tilemapSource: HuntingTiledMapSource;
+  tilesets: readonly Readonly<{
+    textureKey: string;
+    tiledName: string;
+    url: string;
+  }>[];
+  background?: Readonly<{
+    textureKey: string;
+    url: string;
+  }>;
+  depthAtlas?: Readonly<{
+    textureKey: string;
     atlasUrl: string;
     texture: string;
   }>;
-  interiorTilesets: Readonly<{
-    terrain: string;
-    walls: string;
-  }>;
-  outdoorTilesets: Readonly<{
-    environment: string;
-    houseOne: string;
-    houseTwo: string;
-    props: string;
-    terrain: string;
-  }>;
-  outdoorTilemapUrl: string;
-  outdoorTilemapSource: HuntingTiledMapSource;
-  interiorTilemapUrl: string;
-  interiorTilemapSource: HuntingTiledMapSource;
+}>;
+
+export type HuntingSceneAssets = Readonly<{
+  initialAreaId: HuntingAreaId;
+  secondaryAreaId: HuntingAreaId;
+  areas: readonly [HuntingSceneAreaAssets, HuntingSceneAreaAssets];
   survivor: string;
   survivorAttack: string;
   survivorDeath: string;
@@ -312,7 +272,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   private renderStartedAt = 0;
   private scanEffectCleared = false;
   private state: SuburbioHuntingState;
-  private readonly assets: SuburbioHuntingAssets;
+  private readonly assets: HuntingSceneAssets;
   private readonly onReady: () => void;
   private readonly onAreaChange: (areaLabel: string) => void;
   private readonly onVisualPhaseChange: (phase: HuntingVisualPhase) => void;
@@ -320,7 +280,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   private readonly initialPose: Pick<LocalHuntingPose, "areaId" | "tileX" | "tileY" | "direction"> | null;
   private visualMachineState: HuntingVisualMachineState;
   private reportedVisualPhase: HuntingVisualPhase | null = null;
-  private activeAreaId: HuntingAreaId = HUNTING_AREA_IDS.outdoor;
+  private activeAreaId: HuntingAreaId;
   private readonly areas = new Map<HuntingAreaId, HuntingWorldArea>();
   private readonly areaVisuals = new Map<HuntingAreaId, AreaVisual>();
   private actorBody: Phaser.GameObjects.Zone | null = null;
@@ -384,7 +344,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
 
   constructor(
     state: SuburbioHuntingState,
-    assets: SuburbioHuntingAssets,
+    assets: HuntingSceneAssets,
     onReady: () => void,
     onAreaChange: (areaLabel: string) => void,
     onVisualPhaseChange: (phase: HuntingVisualPhase) => void,
@@ -395,13 +355,13 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     this.state = state;
     this.snapshotSynchronizing = state.isSynchronizing;
     this.assets = assets;
+    this.activeAreaId = assets.initialAreaId;
     this.onReady = onReady;
     this.onAreaChange = onAreaChange;
     this.onVisualPhaseChange = onVisualPhaseChange;
     this.onPoseChange = onPoseChange;
     this.initialPose = initialPose;
-    if (initialPose && (initialPose.areaId === HUNTING_AREA_IDS.outdoor ||
-      initialPose.areaId === HUNTING_AREA_IDS.abandonedHouse)) {
+    if (initialPose && this.assets.areas.some((area) => area.id === initialPose.areaId)) {
       this.activeAreaId = initialPose.areaId;
       this.lastMovementDirection = initialPose.direction;
     }
@@ -415,35 +375,29 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     );
     if (
       import.meta.env.DEV &&
-      requestedArea === HUNTING_AREA_IDS.abandonedHouse
+      requestedArea === this.assets.secondaryAreaId
     ) {
-      this.activeAreaId = HUNTING_AREA_IDS.abandonedHouse;
+      this.activeAreaId = this.assets.secondaryAreaId;
     }
   }
 
   preload() {
-    for (const definition of OUTDOOR_TILESET_DEFINITIONS) {
-      this.load.image(
-        definition.textureKey,
-        this.assets.outdoorTilesets[definition.assetKey],
-      );
+    for (const area of this.assets.areas) {
+      for (const tileset of area.tilesets) {
+        this.load.image(tileset.textureKey, tileset.url);
+      }
+      if (area.background) {
+        this.load.image(area.background.textureKey, area.background.url);
+      }
+      if (area.depthAtlas) {
+        this.load.atlas(
+          area.depthAtlas.textureKey,
+          area.depthAtlas.texture,
+          area.depthAtlas.atlasUrl,
+        );
+      }
+      this.load.tilemapTiledJSON(area.tilemapKey, area.tilemapUrl);
     }
-    for (const definition of INTERIOR_TILESET_DEFINITIONS) {
-      this.load.image(
-        definition.textureKey,
-        this.assets.interiorTilesets[definition.assetKey],
-      );
-    }
-    this.load.atlas(
-      INTERIOR_PROPS_TEXTURE,
-      this.assets.interiorProps.texture,
-      this.assets.interiorProps.atlasUrl,
-    );
-    this.load.tilemapTiledJSON(OUTDOOR_TILEMAP, this.assets.outdoorTilemapUrl);
-    this.load.tilemapTiledJSON(
-      INTERIOR_TILEMAP,
-      this.assets.interiorTilemapUrl,
-    );
     this.load.spritesheet(SURVIVOR_TEXTURE, this.assets.survivor, {
       frameWidth: SURVIVOR_FRAME_WIDTH,
       frameHeight: SURVIVOR_FRAME_HEIGHT,
@@ -503,30 +457,10 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   }
 
   create() {
-    this.areas.set(
-      HUNTING_AREA_IDS.outdoor,
-      createHuntingAreaFromTiledMap(this.assets.outdoorTilemapSource),
-    );
-    this.areas.set(
-      HUNTING_AREA_IDS.abandonedHouse,
-      createHuntingAreaFromTiledMap(this.assets.interiorTilemapSource),
-    );
-    this.areaVisuals.set(
-      HUNTING_AREA_IDS.outdoor,
-      this.createAreaVisual(
-        OUTDOOR_TILEMAP,
-        HUNTING_AREA_IDS.outdoor,
-        this.assets.outdoorTilemapSource,
-      ),
-    );
-    this.areaVisuals.set(
-      HUNTING_AREA_IDS.abandonedHouse,
-      this.createAreaVisual(
-        INTERIOR_TILEMAP,
-        HUNTING_AREA_IDS.abandonedHouse,
-        this.assets.interiorTilemapSource,
-      ),
-    );
+    for (const area of this.assets.areas) {
+      this.areas.set(area.id, createHuntingAreaFromTiledMap(area.tilemapSource));
+      this.areaVisuals.set(area.id, this.createAreaVisual(area));
+    }
     this.createAnimations();
 
     const area = this.getArea();
@@ -767,16 +701,10 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     this.onPoseChange(pose);
   }
 
-  private createAreaVisual(
-    tilemapKey: string,
-    areaId: HuntingAreaId,
-    source: HuntingTiledMapSource,
-  ) {
-    const tilemap = this.make.tilemap({ key: tilemapKey });
-    const definitions =
-      areaId === HUNTING_AREA_IDS.outdoor
-        ? OUTDOOR_TILESET_DEFINITIONS
-        : INTERIOR_TILESET_DEFINITIONS;
+  private createAreaVisual(area: HuntingSceneAreaAssets) {
+    const { id: areaId, tilemapSource: source } = area;
+    const tilemap = this.make.tilemap({ key: area.tilemapKey });
+    const definitions = area.tilesets;
     const tilesets = definitions.map(({ textureKey, tiledName }) => {
       const tileset = tilemap.addTilesetImage(tiledName, textureKey);
       if (!tileset) {
@@ -784,7 +712,17 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       }
       return tileset;
     });
-    const staticBase = this.createStaticBase(areaId, source, definitions);
+    const staticBase = area.background
+      ? this.add
+          .image(0, 0, area.background.textureKey)
+          .setOrigin(0)
+          .setDisplaySize(
+            source.width * source.tilewidth,
+            source.height * source.tileheight,
+          )
+          .setDepth(layerDepths[HUNTING_TILED_LAYER_NAMES.groundDetails])
+          .setVisible(areaId === this.activeAreaId)
+      : this.createStaticBase(areaId, source, definitions);
     const layers = new Map<string, HuntingTilemapLayer>();
     for (const name of HUNTING_TILE_LAYER_NAMES) {
       const sourceLayer = source.layers.find(
@@ -810,10 +748,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       if (name === HUNTING_TILED_LAYER_NAMES.collision) layer.setAlpha(0.55);
       layers.set(name, layer);
     }
-    const depthObjects =
-      areaId === HUNTING_AREA_IDS.abandonedHouse
-        ? this.createDepthObjects(tilemap, areaId)
-        : [];
+    const depthObjects = area.depthAtlas
+      ? this.createDepthObjects(tilemap, areaId, area.depthAtlas.textureKey)
+      : [];
     return {
       tilemap,
       layers,
@@ -898,6 +835,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   private createDepthObjects(
     tilemap: Phaser.Tilemaps.Tilemap,
     areaId: HuntingAreaId,
+    textureKey: string,
   ) {
     const objectLayer = tilemap.getObjectLayer("depth-objects");
     if (!objectLayer) return [];
@@ -908,7 +846,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       const readProperty = (name: string) =>
         properties.find((property) => property.name === name)?.value;
       const frame = String(readProperty("frame") ?? "");
-      if (!frame || !this.textures.get(INTERIOR_PROPS_TEXTURE).has(frame)) {
+      if (!frame || !this.textures.get(textureKey).has(frame)) {
         return [];
       }
       const x = Number(object.x) || 0;
@@ -917,7 +855,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       const height = Number(object.height) || HUNTING_TILE_SIZE;
       const depthMode = String(readProperty("depthMode") ?? "y");
       const image = this.add
-        .image(x, y, INTERIOR_PROPS_TEXTURE, frame)
+        .image(x, y, textureKey, frame)
         .setName(object.name ?? frame)
         .setOrigin(0.5, 1)
         .setDisplaySize(width, height)
@@ -1129,7 +1067,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       if (this.routeQueue.length === 0) {
         const area = this.getArea();
         const routesBeforePortal =
-          this.activeAreaId === HUNTING_AREA_IDS.outdoor ? 4 : 5;
+          this.activeAreaId === this.assets.initialAreaId ? 4 : 5;
         const destination =
           this.completedRoutesInArea >= routesBeforePortal
             ? getHuntingNavigationPoint(area, area.portalNodeId)
@@ -2268,7 +2206,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       : null;
     const minimumDistance = this.state.isCombatActive
       ? 72
-      : this.activeAreaId === HUNTING_AREA_IDS.outdoor
+      : this.activeAreaId === this.assets.initialAreaId
         ? 300
         : 120;
     const maximumDistance = this.state.isCombatActive ? 190 : Infinity;
@@ -3154,7 +3092,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
 
 export function createSuburbioHuntingGame(params: {
   parent: HTMLElement;
-  assets: SuburbioHuntingAssets;
+  assets: HuntingSceneAssets;
   initialState: SuburbioHuntingState;
   onReady: () => void;
   onAreaChange: (areaLabel: string) => void;

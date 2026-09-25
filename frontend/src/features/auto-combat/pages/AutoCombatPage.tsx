@@ -135,9 +135,10 @@ import {
 } from "../utils/potion-stock";
 import {
   getHuntEmptyStageCopy,
+  selectAutoCombatCharacterResourceValue,
   shouldShowAutoCombatSessionStage,
 } from "../utils/hunt-stage.helpers";
-import { isSuburbioSilenciosoTierOneScene } from "../utils/hunting-scene";
+import { isAnimatedHuntingSceneMap } from "../utils/hunting-scene";
 import { mergeAutoCombatStatusDetails } from "../utils/auto-combat-status-merge";
 import {
   type BattleBatchCountdown,
@@ -1205,9 +1206,9 @@ export function AutoCombatPage() {
     effectiveSession?.battleTargetEncounterId ??
     activeBattleSelection?.encounterId ??
     null;
-  const isSuburbioTierOneCombat =
+  const isAnimatedHuntingSceneCombat =
     isBackendCombatPhase &&
-    isSuburbioSilenciosoTierOneScene({
+    isAnimatedHuntingSceneMap({
       mapName:
         effectiveStatus?.subMap?.map?.name ?? effectiveSession?.map?.name,
       tier:
@@ -1238,7 +1239,7 @@ export function AutoCombatPage() {
   const showInlineHuntBattle =
     showActiveSession &&
     Boolean(
-      isSuburbioTierOneCombat ||
+      isAnimatedHuntingSceneCombat ||
       activeBattleTargetMobId ||
       activeBattleTargetEncounterId ||
       activeBattleTargetTotal > 0 ||
@@ -2355,28 +2356,28 @@ export function AutoCombatPage() {
     lastPositiveRemainingSecondsRef.current = null;
   }
 
-  const rawCharacterMaxHp =
-    showActiveSession && visualRealtimeCombat?.characterMaxHp !== undefined
-      ? visualRealtimeCombat.characterMaxHp
-      : showActiveSession
-        ? (effectiveStatus?.character?.maxHp ??
-          effectiveStatus?.sessionSummary?.hp?.max ??
-          character.maxHp)
-        : character.maxHp;
+  const rawCharacterMaxHp = selectAutoCombatCharacterResourceValue({
+    hasActiveSession,
+    realtimeValue: visualRealtimeCombat?.characterMaxHp,
+    statusValue:
+      effectiveStatus?.character?.maxHp ??
+      effectiveStatus?.sessionSummary?.hp?.max,
+    overviewValue: character.maxHp,
+  });
 
   const currentCharacterMaxHp = Math.max(
     1,
     toSafeNumber(rawCharacterMaxHp, character.maxHp ?? 1),
   );
 
-  const rawCharacterHp =
-    showActiveSession && visualRealtimeCombat?.characterCurrentHp !== undefined
-      ? visualRealtimeCombat.characterCurrentHp
-      : showActiveSession
-        ? (effectiveStatus?.character?.currentHp ??
-          effectiveStatus?.sessionSummary?.hp?.current ??
-          character.currentHp)
-        : character.currentHp;
+  const rawCharacterHp = selectAutoCombatCharacterResourceValue({
+    hasActiveSession,
+    realtimeValue: visualRealtimeCombat?.characterCurrentHp,
+    statusValue:
+      effectiveStatus?.character?.currentHp ??
+      effectiveStatus?.sessionSummary?.hp?.current,
+    overviewValue: character.currentHp,
+  });
 
   const currentCharacterHp = clampNumber(
     rawCharacterHp,
@@ -3819,7 +3820,7 @@ export function AutoCombatPage() {
     (isBackendHuntingPhase ||
       isBackendEncounterReadyPhase ||
       showInlineHuntBattle) &&
-    isSuburbioSilenciosoTierOneScene({
+    isAnimatedHuntingSceneMap({
       mapName:
         effectiveStatus?.subMap?.map?.name ??
         effectiveSession?.map?.name ??
@@ -4955,6 +4956,17 @@ export function AutoCombatPage() {
                       characterId={characterId}
                       characterName={layoutCharacter.name}
                       characterClassName={layoutCharacter.className}
+                      mapName={
+                        effectiveStatus?.subMap?.map?.name ??
+                        effectiveSession?.map?.name ??
+                        selectedMapName
+                      }
+                      mapTier={
+                        effectiveStatus?.subMap?.map?.tier ??
+                        effectiveSession?.map?.tier ??
+                        selectedMap?.tier ??
+                        null
+                      }
                       characterAvatarKey={layoutCharacter.avatarKey}
                       characterAvatarUrl={layoutCharacter.avatarUrl}
                       characterAppearance={layoutCharacter.appearance}

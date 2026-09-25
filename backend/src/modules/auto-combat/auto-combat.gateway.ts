@@ -46,7 +46,11 @@ type AutoCombatSocketData = {
   huntingVisualCombat?: HuntingVisualCombatState;
 };
 
-type HuntingVisualAreaId = 'suburbio' | 'casa-abandonada';
+type HuntingVisualAreaId =
+  | 'suburbio'
+  | 'casa-abandonada'
+  | 'distrito-ferrugem'
+  | 'galpao-ferrugem';
 type HuntingVisualDirection = 'up' | 'down' | 'left' | 'right';
 type HuntingVisualState =
   | 'walking'
@@ -99,6 +103,8 @@ type HuntingVisualCombatState = {
 const HUNTING_VISUAL_BOUNDS: Record<HuntingVisualAreaId, [number, number]> = {
   suburbio: [48, 32],
   'casa-abandonada': [44, 28],
+  'distrito-ferrugem': [48, 32],
+  'galpao-ferrugem': [48, 32],
 };
 const HUNTING_VISUAL_STATES: HuntingVisualState[] = [
   'walking',
@@ -673,8 +679,10 @@ export class AutoCombatGateway
   ): HuntingVisualPose | null {
     if (!value || typeof value !== 'object') return null;
     const characterId = this.normalizeId(value.characterId);
-    const validArea =
-      value.areaId === 'suburbio' || value.areaId === 'casa-abandonada';
+    const validArea = Object.prototype.hasOwnProperty.call(
+      HUNTING_VISUAL_BOUNDS,
+      value.areaId,
+    );
     const bounds = validArea ? HUNTING_VISUAL_BOUNDS[value.areaId] : null;
     if (
       !characterId ||
