@@ -21,6 +21,8 @@ const expectedAccessByCollection = new Map<string, CosmeticAccessType>([
   ['premium-nucleo-helix', CosmeticAccessType.ENTITLEMENT],
   ['premium-protocolo-carmesim', CosmeticAccessType.ENTITLEMENT],
   ['acervo-do-abrigo', CosmeticAccessType.ENTITLEMENT],
+  ['cash-depois-da-lei', CosmeticAccessType.ENTITLEMENT],
+  ['cash-chuva-quarentena', CosmeticAccessType.ENTITLEMENT],
 ]);
 
 const failures: string[] = [];

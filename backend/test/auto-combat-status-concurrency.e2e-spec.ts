@@ -116,7 +116,7 @@ describe('AutoCombat status concurrency (e2e)', () => {
       },
     });
 
-    expect(session.phase).toBe(AutoCombatSessionPhase.HUNTING);
+    expect(session.phase).toBe(AutoCombatSessionPhase.COMBAT_ACTIVE);
     expect(session.status).toBe(AutoCombatSessionStatus.ACTIVE);
     expect(session.foundEnemiesCount).toBe(1);
     expect(session.huntingXpGained).toBe(HUNTING_XP_PER_ENEMY);
@@ -127,7 +127,7 @@ describe('AutoCombat status concurrency (e2e)', () => {
     expect(huntEvents[0].sequence).toBe(1);
     expect(huntSummary.foundCount).toBe(1);
     expect(huntSummary.kills).toBe(0);
-    expect(huntBatch.status).toBe(AutoCombatHuntBatchStatus.HUNTING);
+    expect(huntBatch.status).toBe(AutoCombatHuntBatchStatus.CONSUMED);
     expect(huntBatch.mapId).toBe(fixture.gameMap.id);
     expect(huntBatch.foundEnemiesCount).toBe(1);
     expect(huntBatch.huntSequence).toBe(1);
@@ -139,7 +139,7 @@ describe('AutoCombat status concurrency (e2e)', () => {
     expect(huntBatch.events[0].cycleKey).toBe(`${fixture.session.id}:hunt:1`);
   });
 
-  it('renova o prazo ao iniciar batalha com monstros que aguardaram alem da sessao', async () => {
+  it('renova o prazo ao iniciar batalha de encontro persistido', async () => {
     const fixture = await createActiveHuntingSessionFixture();
     const accessToken = await jwtService.signAsync({
       sub: fixture.user.id,
@@ -149,35 +149,48 @@ describe('AutoCombat status concurrency (e2e)', () => {
     });
     const authorization = `Bearer ${accessToken}`;
 
-    const statusResponse = await request(app.getHttpServer())
-      .get(`/auto-combat/${fixture.character.id}/status`)
-      .set('Authorization', authorization);
-
-    expect(statusResponse.status).toBe(200);
-
-    const stopHuntResponse = await request(app.getHttpServer())
-      .post(`/auto-combat/${fixture.character.id}/hunt/stop`)
-      .set('Authorization', authorization);
-    const stopHuntBody = stopHuntResponse.body as unknown as {
-      session: {
-        phase: AutoCombatSessionPhase;
-      };
-    };
-
-    expect([200, 201]).toContain(stopHuntResponse.status);
-    expect(stopHuntBody.session.phase).toBe(
-      AutoCombatSessionPhase.ENCOUNTER_READY,
-    );
-
-    const expiredAt = new Date(Date.now() - 60_000);
-    await prisma.autoCombatSession.update({
+    const huntBatch = await prisma.autoCombatHuntBatch.findUniqueOrThrow({
       where: {
-        id: fixture.session.id,
-      },
-      data: {
-        endsAt: expiredAt,
+        sessionId: fixture.session.id,
       },
     });
+    const expiredAt = new Date(Date.now() - 60_000);
+    await prisma.$transaction([
+      prisma.autoCombatSession.update({
+        where: {
+          id: fixture.session.id,
+        },
+        data: {
+          phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+          endsAt: expiredAt,
+          foundEnemiesCount: 1,
+          huntingXpGained: HUNTING_XP_PER_ENEMY,
+        },
+      }),
+      prisma.autoCombatHuntBatch.update({
+        where: {
+          id: huntBatch.id,
+        },
+        data: {
+          status: AutoCombatHuntBatchStatus.READY,
+          stoppedAt: expiredAt,
+          foundEnemiesCount: 1,
+          huntingXpGained: HUNTING_XP_PER_ENEMY,
+          huntSequence: 1,
+        },
+      }),
+      prisma.autoCombatHuntBatchMob.create({
+        data: {
+          batchId: huntBatch.id,
+          mobId: fixture.mob.id,
+          encounterId: fixture.encounter.id,
+          foundCount: 1,
+          remainingCount: 1,
+          firstFoundAt: expiredAt,
+          lastFoundAt: expiredAt,
+        },
+      }),
+    ]);
 
     const battleStartedAt = Date.now();
     const startBattleResponse = await request(app.getHttpServer())
@@ -390,6 +403,7 @@ describe('AutoCombat status concurrency (e2e)', () => {
       character,
       gameMap,
       mob,
+      encounter,
       session,
     };
   }
