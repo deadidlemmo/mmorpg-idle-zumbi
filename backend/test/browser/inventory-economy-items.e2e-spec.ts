@@ -49,12 +49,21 @@ async function authenticatePage(page: Page) {
 }
 
 async function openExchangeModal(page: Page) {
-  await page
-    .getByRole('button', {
-      name: /Ver detalhes de Fragmento de Ameaça T1/i,
-    })
-    .click({ force: true });
-  await page.getByRole('button', { name: 'Trocar', exact: true }).click();
+  const exchangeButton = page.getByRole('button', {
+    name: 'Trocar',
+    exact: true,
+  });
+
+  if (!(await exchangeButton.isVisible().catch(() => false))) {
+    await page
+      .getByRole('button', {
+        name: /Ver detalhes de Fragmento de Ameaça T1/i,
+      })
+      .click();
+  }
+
+  await expect(exchangeButton).toBeVisible();
+  await exchangeButton.click();
   await expect(
     page.getByRole('dialog', { name: 'Fragmento de Ameaça T1' }),
   ).toBeVisible();

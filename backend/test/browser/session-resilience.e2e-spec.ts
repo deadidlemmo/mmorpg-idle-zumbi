@@ -245,7 +245,7 @@ test.describe('resiliencia da sessao e tutorial', () => {
         page.getByText('Token de autenticação não enviado no WebSocket.'),
       ).toHaveCount(0);
     } finally {
-      await api.post(`/auto-combat/${characterId}/hunt/stop`, {
+      await api.post(`/auto-combat/${characterId}/stop`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       await api.dispose();

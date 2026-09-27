@@ -186,10 +186,14 @@ test.describe('cosméticos e inspeção pública', () => {
     );
     await expect(
       page.locator('.appearance-collection-switcher button'),
-    ).toHaveCount(5);
+    ).toHaveCount(6);
     await expect(
       page.getByRole('tab', { name: /Acervo do Abrigo/ }),
     ).toBeVisible();
+    await page
+      .locator('.appearance-collection-switcher button')
+      .filter({ hasText: 'Último Abrigo' })
+      .click();
     await expect(page.locator('.appearance-collection')).toHaveCount(1);
     const premiumCollection = page.locator('.appearance-collection');
     await expect(premiumCollection.locator('.appearance-item')).toHaveCount(4);
@@ -199,7 +203,7 @@ test.describe('cosméticos e inspeção pública', () => {
       page.getByRole('button', { name: 'Todos', exact: true }),
     ).toHaveCount(0);
     await page.getByRole('button', { name: 'Masculinos', exact: true }).click();
-    await premiumCollection.locator('.appearance-item').first().click();
+    await premiumCollection.locator('.appearance-item:visible').first().click();
     await premiumCollection
       .getByRole('button', { name: 'Aplicar estilo' })
       .click();

@@ -185,13 +185,17 @@ test.describe('chat geral', () => {
       .fill(message);
     await firstChat.getByRole('button', { name: 'Enviar mensagem' }).click();
 
-    await expect(firstChat.getByText(message, { exact: true })).toBeVisible();
-    await expect(secondChat.getByText(message, { exact: true })).toBeVisible();
+    await expect(
+      firstChat.getByRole('paragraph').filter({ hasText: message }),
+    ).toBeVisible();
+    await expect(
+      secondChat.getByRole('paragraph').filter({ hasText: message }),
+    ).toBeVisible();
 
     await second.page.reload();
     const reloadedChat = await openChat(second.page);
     await expect(
-      reloadedChat.getByText(message, { exact: true }),
+      reloadedChat.getByRole('paragraph').filter({ hasText: message }),
     ).toBeVisible();
     await expectChatInsideViewport(second.page, testInfo);
   });

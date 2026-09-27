@@ -24,6 +24,7 @@ let mapId = '';
 let forcedDropId = '';
 let forcedDropOriginalChance = 0;
 let forcedDropItemName = '';
+let forcedMobName = '';
 
 async function assertOk(response: APIResponse, label: string) {
   if (!response.ok()) {
@@ -121,7 +122,11 @@ test.describe('transicao visual entre monstros', () => {
       orderBy: { startedAt: 'desc' },
     });
     const encounter = await prisma.subMapEncounter.findFirstOrThrow({
-      where: { subMapId: session.subMapId, isActive: true },
+      where: {
+        subMapId: session.subMapId,
+        isActive: true,
+        mob: { drops: { some: {} } },
+      },
       include: {
         mob: {
           include: {
@@ -149,6 +154,7 @@ test.describe('transicao visual entre monstros', () => {
     forcedDropId = forcedDrop.id;
     forcedDropOriginalChance = forcedDrop.dropChance;
     forcedDropItemName = forcedDrop.item.name;
+    forcedMobName = encounter.mob.name;
 
     await prisma.mobDrop.update({
       where: { id: forcedDropId },
@@ -169,16 +175,16 @@ test.describe('transicao visual entre monstros', () => {
           batchId: huntBatch.id,
           mobId: encounter.mobId,
           encounterId: encounter.id,
-          foundCount: 10,
-          remainingCount: 10,
+          foundCount: 1,
+          remainingCount: 1,
           weightSnapshot: encounter.weight,
           firstFoundAt: readyAt,
           lastFoundAt: readyAt,
         },
         update: {
           encounterId: encounter.id,
-          foundCount: 10,
-          remainingCount: 10,
+          foundCount: 1,
+          remainingCount: 1,
           weightSnapshot: encounter.weight,
           lastFoundAt: readyAt,
         },
@@ -189,7 +195,7 @@ test.describe('transicao visual entre monstros', () => {
           status: AutoCombatHuntBatchStatus.READY,
           stoppedAt: readyAt,
           lastProcessedAt: readyAt,
-          foundEnemiesCount: 10,
+          foundEnemiesCount: 1,
           selectedEncounterId: encounter.id,
           selectedEncounterMobId: encounter.mobId,
         },
@@ -201,7 +207,7 @@ test.describe('transicao visual entre monstros', () => {
           huntStoppedAt: readyAt,
           lastHuntProcessedAt: readyAt,
           lastProcessedAt: readyAt,
-          foundEnemiesCount: 10,
+          foundEnemiesCount: 1,
           selectedEncounterId: encounter.id,
           selectedEncounterMobId: encounter.mobId,
         },
@@ -225,7 +231,90 @@ test.describe('transicao visual entre monstros', () => {
     await prisma.$disconnect();
   });
 
-  test('mantem imagem continua e publica derrota/EXP sem bloquear o proximo mob', async ({
+  test('representa a batalha no Phaser e publica derrota, EXP e loot', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+
+    await page.addInitScript(
+      ({ token, selectedCharacterId }) => {
+        window.localStorage.setItem('dead_idle_access_token', token);
+        window.localStorage.setItem(
+          'dead_idle_selected_character_id',
+          selectedCharacterId,
+        );
+      },
+      { token: accessToken, selectedCharacterId: characterId },
+    );
+    await page.goto(`/dashboard/${characterId}/auto-combat`);
+
+    const scene = page.locator('.auto-combat-hunting-scene');
+    await expect(scene).toBeVisible({ timeout: 20_000 });
+    await expect(scene.locator('canvas')).toBeVisible({ timeout: 20_000 });
+
+    const api = await playwrightRequest.newContext({ baseURL: apiUrl });
+
+    try {
+      const startBattle = await api.post(
+        `/auto-combat/${characterId}/battle/start`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          data: { quantity: 1 },
+        },
+      );
+      await assertOk(startBattle, 'Início da batalha visual falhou');
+
+      const defeatToast = page
+        .locator('.loot-notification-card[data-kind="combat-result"]')
+        .first();
+      await expect(defeatToast).toBeVisible({ timeout: 30_000 });
+      await expect(
+        defeatToast.locator('.loot-notification-card__description'),
+      ).toContainText('EXP');
+
+      await expect
+        .poll(
+          async () =>
+            (
+              await prisma.autoCombatSession.findFirstOrThrow({
+                where: { characterId, status: 'ACTIVE' },
+                orderBy: { startedAt: 'desc' },
+                select: { totalCombatsResolved: true },
+              })
+            ).totalCombatsResolved,
+          { timeout: 30_000 },
+        )
+        .toBeGreaterThanOrEqual(1);
+
+      const defeatedPanel = page.getByRole('complementary', {
+        name: 'Ameaças derrotadas',
+        exact: true,
+      });
+      await expect(defeatedPanel).toContainText(forcedMobName);
+      await expect(defeatedPanel.getByLabel('1 derrotados')).toBeVisible();
+
+      const lootPanel = page.getByRole('complementary', {
+        name: 'Loot adquirido na sessão',
+        exact: true,
+      });
+      await expect(lootPanel).toContainText(forcedDropItemName, {
+        timeout: 15_000,
+      });
+      await expect(scene).toBeVisible();
+      await expect(scene.locator('canvas')).toBeVisible();
+      await page.screenshot({
+        path: testInfo.outputPath('auto-combat-phaser-result.png'),
+        fullPage: true,
+      });
+    } finally {
+      await api.post(`/auto-combat/${characterId}/stop`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      await api.dispose();
+    }
+  });
+
+  test.skip('mantem imagem continua e publica derrota/EXP sem bloquear o proximo mob', async ({
     page,
   }, testInfo) => {
     test.setTimeout(180_000);

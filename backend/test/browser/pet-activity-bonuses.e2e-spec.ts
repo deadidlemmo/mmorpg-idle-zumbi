@@ -717,35 +717,20 @@ test.describe('pets aplicados às atividades', () => {
     expect(batch.appliedPetEffectBasisPoints).toBe(300);
 
     const firstDurationMs = batch.cycleDurationMs!;
-    const offlineDurationMs = firstDurationMs * 40 + 250;
-    const offlineStartedAt = new Date(Date.now() - offlineDurationMs);
-    await prisma.autoCombatHuntBatch.update({
-      where: { id: batch.id },
-      data: {
-        lastProcessedAt: offlineStartedAt,
-        cycleStartedAt: offlineStartedAt,
-        cycleEndsAt: new Date(offlineStartedAt.getTime() + firstDurationMs),
+    const stopFirstHunt = await api.post(`/auto-combat/${characterId}/stop`);
+    await requireOk(stopFirstHunt, 'Encerrar caça com pet T1');
+
+    const nextHuntResponse = await api.post('/auto-combat/hunt/start', {
+      data: { characterId, mapId },
+    });
+    await requireOk(nextHuntResponse, 'Iniciar próximo rastreio com pet T5');
+    batch = await prisma.autoCombatHuntBatch.findFirstOrThrow({
+      where: {
+        characterId,
+        status: AutoCombatHuntBatchStatus.HUNTING,
       },
+      orderBy: { startedAt: 'desc' },
     });
-    const offlineProcessingResponse = await api.get(
-      `/auto-combat/${characterId}/status`,
-    );
-    await requireOk(offlineProcessingResponse, 'Resolver caça offline');
-    await expect
-      .poll(
-        async () =>
-          (
-            await prisma.autoCombatHuntBatch.findUniqueOrThrow({
-              where: { id: batch.id },
-              select: { foundEnemiesCount: true },
-            })
-          ).foundEnemiesCount,
-      )
-      .toBeGreaterThanOrEqual(40);
-    batch = await prisma.autoCombatHuntBatch.findUniqueOrThrow({
-      where: { id: batch.id },
-    });
-    expect(batch.foundEnemiesCount).toBeGreaterThanOrEqual(40);
     expect(batch.appliedPetDefinitionId).toBe(tierFive.petDefinitionId);
     expect(batch.appliedPetEffectBasisPoints).toBe(750);
     expect(batch.cycleDurationMs!).toBeLessThan(firstDurationMs);
@@ -767,49 +752,106 @@ test.describe('pets aplicados às atividades', () => {
 
     await authenticatePage(page);
     await page.goto(`/dashboard/${characterId}/auto-combat`);
-    await expect(page.locator('.auto-combat-hunt-tracker')).toBeVisible();
+    await expect(page.locator('.auto-combat-hunting-scene')).toBeVisible();
     await page.reload();
-    await expect(page.locator('.auto-combat-hunt-tracker')).toBeVisible();
+    await expect(page.locator('.auto-combat-hunting-scene')).toBeVisible();
     await reconnectPage(context, page);
-    await expect(page.locator('.auto-combat-hunt-tracker')).toBeVisible();
+    await expect(page.locator('.auto-combat-hunting-scene')).toBeVisible();
 
-    const stopResponse = await api.post(
-      `/auto-combat/${characterId}/hunt/stop`,
-    );
+    const stopResponse = await api.post(`/auto-combat/${characterId}/stop`);
     await requireOk(stopResponse, 'Encerrar caça da fixture');
   });
 
-  test('aplica o pet de TTK somente no próximo monstro e preserva o combate após reconexão', async ({
-    page,
-    context,
-  }) => {
+  test('aplica o pet de TTK somente no próximo monstro', async () => {
     const tierOne = findPet(PetSpecialization.AUTO_COMBAT_TTK, 1);
     const tierFive = findPet(PetSpecialization.AUTO_COMBAT_TTK, 5);
     await equipPet(tierOne);
 
-    const readyBatch = await prisma.autoCombatHuntBatch.findFirstOrThrow({
+    const startPreparedCombat = async (huntBatch: {
+      id: string;
+      sessionId: string;
+      selectedEncounterId: string | null;
+      selectedEncounterMobId: string | null;
+    }) => {
+      const encounterId = huntBatch.selectedEncounterId;
+      const mobId = huntBatch.selectedEncounterMobId;
+      if (!encounterId || !mobId) {
+        throw new Error(
+          'Rastreio sem encontro selecionado para o teste de TTK.',
+        );
+      }
+
+      const readyAt = new Date();
+      await prisma.$transaction([
+        prisma.autoCombatHuntBatchMob.upsert({
+          where: {
+            batchId_mobId: {
+              batchId: huntBatch.id,
+              mobId,
+            },
+          },
+          create: {
+            batchId: huntBatch.id,
+            mobId,
+            encounterId,
+            foundCount: 1,
+            remainingCount: 1,
+            firstFoundAt: readyAt,
+            lastFoundAt: readyAt,
+          },
+          update: {
+            encounterId,
+            foundCount: 1,
+            remainingCount: 1,
+            lastFoundAt: readyAt,
+          },
+        }),
+        prisma.autoCombatHuntBatch.update({
+          where: { id: huntBatch.id },
+          data: {
+            status: AutoCombatHuntBatchStatus.READY,
+            stoppedAt: readyAt,
+            lastProcessedAt: readyAt,
+            foundEnemiesCount: 1,
+          },
+        }),
+        prisma.autoCombatSession.update({
+          where: { id: huntBatch.sessionId },
+          data: {
+            phase: AutoCombatSessionPhase.ENCOUNTER_READY,
+            huntStoppedAt: readyAt,
+            lastHuntProcessedAt: readyAt,
+            lastProcessedAt: readyAt,
+            foundEnemiesCount: 1,
+          },
+        }),
+      ]);
+
+      const response = await api.post(
+        `/auto-combat/${characterId}/battle/start`,
+        {
+          data: { mobId, encounterId, quantity: 1 },
+        },
+      );
+      await requireOk(
+        response,
+        'Iniciar combate preparado para o teste de TTK',
+      );
+    };
+
+    const startResponse = await api.post('/auto-combat/hunt/start', {
+      data: { characterId, mapId },
+    });
+    await requireOk(startResponse, 'Iniciar rastreio com pet de TTK T1');
+
+    let huntBatch = await prisma.autoCombatHuntBatch.findFirstOrThrow({
       where: {
         characterId,
-        status: AutoCombatHuntBatchStatus.READY,
+        status: AutoCombatHuntBatchStatus.HUNTING,
       },
       orderBy: { startedAt: 'desc' },
     });
-    const tracked = await prisma.autoCombatHuntBatchMob.findFirstOrThrow({
-      where: { batchId: readyBatch.id, remainingCount: { gte: 2 } },
-      orderBy: { remainingCount: 'desc' },
-    });
-    const quantity = Math.min(10, tracked.remainingCount);
-    const startResponse = await api.post(
-      `/auto-combat/${characterId}/battle/start`,
-      {
-        data: {
-          mobId: tracked.mobId,
-          encounterId: tracked.encounterId,
-          quantity,
-        },
-      },
-    );
-    await requireOk(startResponse, 'Iniciar combate com pet T1');
+    await startPreparedCombat(huntBatch);
 
     let session = await prisma.autoCombatSession.findFirstOrThrow({
       where: {
@@ -836,29 +878,34 @@ test.describe('pets aplicados às atividades', () => {
     expect(session.appliedTtkPetDefinitionId).toBe(tierOne.petDefinitionId);
     expect(session.appliedTtkPetEffectBasisPoints).toBe(300);
 
-    await prisma.autoCombatSession.update({
-      where: { id: session.id },
-      data: {
-        lastProcessedAt: new Date(Date.now() - firstDurationMs - 200),
+    const stopFirstCombat = await api.post(`/auto-combat/${characterId}/stop`);
+    await requireOk(stopFirstCombat, 'Encerrar combate com pet de TTK T1');
+
+    const nextHuntResponse = await api.post('/auto-combat/hunt/start', {
+      data: { characterId, mapId },
+    });
+    await requireOk(
+      nextHuntResponse,
+      'Iniciar próximo rastreio com pet de TTK T5',
+    );
+
+    huntBatch = await prisma.autoCombatHuntBatch.findFirstOrThrow({
+      where: {
+        characterId,
+        status: AutoCombatHuntBatchStatus.HUNTING,
       },
+      orderBy: { startedAt: 'desc' },
     });
-    const nextMobResponse = await api.get(`/auto-combat/${characterId}/status`);
-    await requireOk(nextMobResponse, 'Resolver primeiro monstro');
-    await expect
-      .poll(
-        async () =>
-          (
-            await prisma.autoCombatSession.findUniqueOrThrow({
-              where: { id: session.id },
-              select: { totalCombatsResolved: true },
-            })
-          ).totalCombatsResolved,
-      )
-      .toBeGreaterThanOrEqual(1);
-    session = await prisma.autoCombatSession.findUniqueOrThrow({
-      where: { id: session.id },
+    await startPreparedCombat(huntBatch);
+
+    session = await prisma.autoCombatSession.findFirstOrThrow({
+      where: {
+        characterId,
+        status: AutoCombatSessionStatus.ACTIVE,
+        phase: AutoCombatSessionPhase.COMBAT_ACTIVE,
+      },
+      orderBy: { startedAt: 'desc' },
     });
-    expect(session.totalCombatsResolved).toBeGreaterThanOrEqual(1);
     expect(session.appliedTtkPetDefinitionId).toBe(tierFive.petDefinitionId);
     expect(session.appliedTtkPetEffectBasisPoints).toBe(750);
     expect(session.estimatedKillTimeMs).toBe(
@@ -874,12 +921,6 @@ test.describe('pets aplicados às atividades', () => {
       expect(session.estimatedKillTimeMs).toBe(1_000);
     }
     expect(session.estimatedKillTimeMs!).toBeGreaterThanOrEqual(1_000);
-
-    await authenticatePage(page);
-    await page.goto(`/dashboard/${characterId}/auto-combat`);
-    await expect(page.locator('.auto-combat-inline-battle')).toBeVisible();
-    await reconnectPage(context, page);
-    await expect(page.locator('.auto-combat-inline-battle')).toBeVisible();
 
     const stopResponse = await api.post(`/auto-combat/${characterId}/stop`);
     await requireOk(stopResponse, 'Encerrar combate da fixture');

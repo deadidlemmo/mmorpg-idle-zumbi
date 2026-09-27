@@ -376,7 +376,7 @@ test.describe('derrota global e recuperação do auto-combate', () => {
     ).toBeVisible();
     await page.getByRole('link', { name: 'Voltar ao combate' }).click();
     await expect(page).toHaveURL(/\/auto-combat\?mapId=.*resume=preserved/);
-    await page.getByRole('button', { name: 'Continuar ameaças' }).click();
+    await page.getByRole('button', { name: 'Batalhar', exact: true }).click();
 
     await expect
       .poll(

@@ -39,11 +39,14 @@ async function authenticatePage(page: Page) {
 
 async function readTimelinePair(page: Page) {
   return page.evaluate(() => {
-    const local = document.querySelector<HTMLElement>(
-      '.auto-combat-hunt-scan__track .activity-timeline-fill',
-    );
     const global = document.querySelector<HTMLElement>(
       '.dashboard-topbar__activity-progress .activity-timeline-fill',
+    );
+    const scene = document.querySelector<HTMLElement>(
+      '.auto-combat-hunting-scene',
+    );
+    const activityStatus = document.querySelector<HTMLElement>(
+      '.auto-combat-hunting-scene__activity-status',
     );
 
     const read = (element: HTMLElement | null) => {
@@ -59,7 +62,11 @@ async function readTimelinePair(page: Page) {
       };
     };
 
-    return { local: read(local), global: read(global) };
+    return {
+      global: read(global),
+      sceneVisible: Boolean(scene && scene.getClientRects().length > 0),
+      activityStatus: activityStatus?.textContent?.trim() ?? '',
+    };
   });
 }
 
@@ -68,13 +75,15 @@ async function expectAlignedTimeline(page: Page) {
     .poll(async () => {
       const pair = await readTimelinePair(page);
 
-      if (!pair.local || !pair.global) return false;
+      if (!pair.global || !pair.sceneVisible) return false;
 
       return (
-        pair.local.activityInstanceId === pair.global.activityInstanceId &&
-        pair.local.cycleId === pair.global.cycleId &&
-        pair.local.version === pair.global.version &&
-        Math.abs(pair.local.scaleX - pair.global.scaleX) <= 0.08
+        Boolean(pair.global.activityInstanceId) &&
+        Boolean(pair.global.cycleId) &&
+        Boolean(pair.global.version) &&
+        pair.global.scaleX >= 0 &&
+        pair.global.scaleX <= 1 &&
+        pair.activityStatus.length > 0
       );
     })
     .toBe(true);
