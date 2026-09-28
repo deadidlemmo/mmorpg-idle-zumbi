@@ -116,8 +116,9 @@ async function createDefeatFixture(): Promise<DefeatFixture> {
 
     const mob = await prisma.mob.create({
       data: {
-        name: `Ameaça E2E ${suffix}`,
-        description: 'Mob isolado para validar derrota e recuperação.',
+        name: `Alvo letal isolado ${suffix}`,
+        description:
+          'Mob sem encontro global, usado apenas pela fila do teste de derrota.',
         level: 1,
         tier: 1,
         hp: 1_000_000,
@@ -129,14 +130,6 @@ async function createDefeatFixture(): Promise<DefeatFixture> {
       },
     });
     createdMobId = mob.id;
-    const encounter = await prisma.subMapEncounter.create({
-      data: {
-        subMapId: session.subMapId,
-        mobId: mob.id,
-        weight: 1_000_000,
-        isActive: true,
-      },
-    });
     const readyAt = new Date();
 
     await prisma.$transaction([
@@ -154,18 +147,18 @@ async function createDefeatFixture(): Promise<DefeatFixture> {
         create: {
           batchId: session.huntBatch.id,
           mobId: mob.id,
-          encounterId: encounter.id,
+          encounterId: null,
           foundCount: trackedEnemiesTotal,
           remainingCount: trackedEnemiesTotal,
-          weightSnapshot: encounter.weight,
+          weightSnapshot: 1,
           firstFoundAt: readyAt,
           lastFoundAt: readyAt,
         },
         update: {
-          encounterId: encounter.id,
+          encounterId: null,
           foundCount: trackedEnemiesTotal,
           remainingCount: trackedEnemiesTotal,
-          weightSnapshot: encounter.weight,
+          weightSnapshot: 1,
           lastFoundAt: readyAt,
         },
       }),
@@ -178,7 +171,7 @@ async function createDefeatFixture(): Promise<DefeatFixture> {
           cancelledAt: null,
           lastProcessedAt: readyAt,
           foundEnemiesCount: trackedEnemiesTotal,
-          selectedEncounterId: encounter.id,
+          selectedEncounterId: null,
           selectedEncounterMobId: mob.id,
         },
       }),
@@ -190,7 +183,7 @@ async function createDefeatFixture(): Promise<DefeatFixture> {
           lastHuntProcessedAt: readyAt,
           lastProcessedAt: readyAt,
           foundEnemiesCount: trackedEnemiesTotal,
-          selectedEncounterId: encounter.id,
+          selectedEncounterId: null,
           selectedEncounterMobId: mob.id,
           battleTargetTotal: 0,
           battleTargetRemaining: 0,

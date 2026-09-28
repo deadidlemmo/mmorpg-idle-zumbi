@@ -5,6 +5,7 @@ import {
 } from '@prisma/client';
 
 import { getAutoCombatHuntingXpForEncounter } from '../../common/utils/auto-combat-hunting.util';
+import { LEGACY_AUTO_COMBAT_E2E_MOB_NAME_PREFIX } from './auto-combat-encounter-eligibility';
 import { AutoCombatService } from './auto-combat.service';
 import { AutoCombatBattleMode } from './dto/start-auto-combat-battle.dto';
 
@@ -235,6 +236,38 @@ describe('AutoCombatService hunting processing', () => {
       );
 
     expect(foundCountIncrements).toBe(expectedFoundEnemies);
+  });
+
+  it('ignora fixture E2E antiga ao contar mobs preservados', () => {
+    const { service } = createServiceHarness();
+    const session = createSession({
+      huntBatch: {
+        id: 'hunt-batch-contaminated',
+        mobs: [
+          {
+            mobId: 'mob-e2e',
+            remainingCount: 8,
+            mob: {
+              id: 'mob-e2e',
+              name: `${LEGACY_AUTO_COMBAT_E2E_MOB_NAME_PREFIX} fixture-antiga`,
+            },
+          },
+          {
+            mobId: 'mob-real',
+            remainingCount: 2,
+            mob: {
+              id: 'mob-real',
+              name: 'Errante do Subúrbio',
+            },
+          },
+        ],
+      },
+    });
+
+    expect((service as any).getTrackedEnemiesRemaining(session)).toBe(2);
+    expect(
+      (service as any).getHuntBatchPendingMobSelection(session.huntBatch),
+    ).toEqual({ encounterId: null, mobId: 'mob-real' });
   });
 
   it('inicia automaticamente o combate com toda a fila encontrada', async () => {

@@ -99,6 +99,7 @@ import {
 } from './auto-combat-ttk-cycle';
 import { buildAutoCombatHuntingTimeline } from './auto-combat-hunting-timeline';
 import { buildAutoCombatRealtimeStatusPayload } from './auto-combat-realtime-payload';
+import { isAutoCombatGameplayMob } from './auto-combat-encounter-eligibility';
 import {
   buildAutoCombatSessionTelemetrySnapshot,
   withAutoCombatPhaseDurationIncrement,
@@ -1072,7 +1073,11 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
 
     for (const subMap of subMaps ?? []) {
       for (const encounter of subMap?.encounters ?? []) {
-        if (!encounter?.mobId || encounter.isActive === false) {
+        if (
+          !encounter?.mobId ||
+          encounter.isActive === false ||
+          !isAutoCombatGameplayMob(encounter.mob)
+        ) {
           continue;
         }
 
@@ -11685,10 +11690,14 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
     );
 
     return [...(huntBatch?.mobs ?? [])]
-      .filter(
-        (entry: any) =>
-          Math.max(0, Math.floor(Number(entry.remainingCount) || 0)) > 0,
-      )
+      .filter((entry: any) => {
+        const mob = entry.mob ?? encounterByMobId.get(entry.mobId)?.mob ?? null;
+
+        return (
+          Math.max(0, Math.floor(Number(entry.remainingCount) || 0)) > 0 &&
+          isAutoCombatGameplayMob(mob)
+        );
+      })
       .sort((first: any, second: any) => {
         const firstFoundAt = first.lastFoundAt ?? first.firstFoundAt;
         const secondFoundAt = second.lastFoundAt ?? second.firstFoundAt;
@@ -11916,7 +11925,7 @@ export class AutoCombatService implements OnModuleInit, OnModuleDestroy {
       return null;
     }
 
-    return (session.huntBatch.mobs ?? []).reduce(
+    return this.getOrderedPendingHuntBatchMobs(session.huntBatch).reduce(
       (total: number, huntBatchMob: any) =>
         total +
         Math.max(0, Math.floor(Number(huntBatchMob.remainingCount) || 0)),

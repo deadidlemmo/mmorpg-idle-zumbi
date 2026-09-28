@@ -1,8 +1,29 @@
+import 'dotenv/config';
+
 import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
 
 const frontendUrl = process.env.E2E_FRONTEND_URL ?? 'http://127.0.0.1:4173';
 const apiUrl = process.env.E2E_API_URL ?? 'http://127.0.0.1:3100';
+
+const loopbackHosts = new Set(['127.0.0.1', 'localhost', '::1']);
+
+function assertLocalE2eTarget(label: string, value: string) {
+  const hostname = new URL(value).hostname;
+
+  if (!loopbackHosts.has(hostname)) {
+    throw new Error(
+      `${label} precisa apontar para um ambiente local isolado; recebido ${hostname}.`,
+    );
+  }
+}
+
+assertLocalE2eTarget('E2E_FRONTEND_URL', frontendUrl);
+assertLocalE2eTarget('E2E_API_URL', apiUrl);
+
+if (process.env.DATABASE_URL) {
+  assertLocalE2eTarget('DATABASE_URL', process.env.DATABASE_URL);
+}
 
 export default defineConfig({
   testDir: __dirname,

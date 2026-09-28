@@ -21,6 +21,10 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { ECONOMY_REASONS } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
+import {
+  isAutoCombatGameplayMob,
+  LEGACY_AUTO_COMBAT_E2E_MOB_NAME_PREFIX,
+} from '../auto-combat/auto-combat-encounter-eligibility';
 
 const FREE_TREATMENT_SECONDS = 30 * 60;
 const PRIVATE_DOCTOR_BASE_GOLD = 10;
@@ -472,6 +476,13 @@ export class InfirmaryService {
             remainingCount: {
               gt: 0,
             },
+            mob: {
+              name: {
+                not: {
+                  startsWith: LEGACY_AUTO_COMBAT_E2E_MOB_NAME_PREFIX,
+                },
+              },
+            },
           },
         },
         session: {
@@ -504,9 +515,21 @@ export class InfirmaryService {
             remainingCount: {
               gt: 0,
             },
+            mob: {
+              name: {
+                not: {
+                  startsWith: LEGACY_AUTO_COMBAT_E2E_MOB_NAME_PREFIX,
+                },
+              },
+            },
           },
           select: {
             remainingCount: true,
+            mob: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
       },
@@ -517,8 +540,11 @@ export class InfirmaryService {
 
     const preservedTrackedEnemiesCount =
       huntBatch?.mobs.reduce(
-        (total, mob) =>
-          total + Math.max(0, Math.floor(Number(mob.remainingCount) || 0)),
+        (total, huntBatchMob) =>
+          total +
+          (isAutoCombatGameplayMob(huntBatchMob.mob)
+            ? Math.max(0, Math.floor(Number(huntBatchMob.remainingCount) || 0))
+            : 0),
         0,
       ) ?? 0;
     const hasPreservedTrackedEnemies = preservedTrackedEnemiesCount > 0;
