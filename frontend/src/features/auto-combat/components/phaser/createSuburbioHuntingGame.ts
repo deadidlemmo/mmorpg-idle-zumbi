@@ -60,6 +60,9 @@ const MOB_DISPLAY_WIDTH = 112;
 const MOB_DISPLAY_HEIGHT = 102;
 const FALLBACK_MOB_DISPLAY_WIDTH = 76;
 const FALLBACK_MOB_DISPLAY_HEIGHT = 108;
+const MOB_SHADOW_WIDTH = 54;
+const MOB_SHADOW_HEIGHT = 13;
+const MOB_SHADOW_ALPHA = 0.38;
 const SURVIVOR_SHADOW_WIDTH = 26;
 const SURVIVOR_SHADOW_HEIGHT = 7;
 const SURVIVOR_NAME_OFFSET_Y = 78;
@@ -224,6 +227,7 @@ type RemotePlayerEntity = {
   nameLabel: Phaser.GameObjects.Text;
   idleLabel: Phaser.GameObjects.Text;
   combatMobSprite: Phaser.GameObjects.Sprite | null;
+  combatMobShadow: Phaser.GameObjects.Ellipse | null;
   combatMobAsset: MobCombatSpriteAssets | null;
   combatMobName: string | null;
   combatCycleKey: string | null;
@@ -312,6 +316,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   private isChangingArea = false;
   private isDoorTraversal = false;
   private threatSprite: Phaser.GameObjects.Sprite | null = null;
+  private threatShadow: Phaser.GameObjects.Ellipse | null = null;
   private threatMarker: Phaser.GameObjects.Rectangle | null = null;
   private threatNameLabel: Phaser.GameObjects.Text | null = null;
   private combatHudGraphics: Phaser.GameObjects.Graphics | null = null;
@@ -472,6 +477,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       this.areas.set(area.id, createHuntingAreaFromTiledMap(area.tilemapSource));
       this.areaVisuals.set(area.id, this.createAreaVisual(area));
     }
+    this.configureMobTextureFiltering();
     this.createAnimations();
 
     const area = this.getArea();
@@ -581,6 +587,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   update(time: number, delta: number) {
     if (!this.actorBody || !this.actorSprite || !this.actorShadow) return;
     const updateStartedAt = this.diagnostics ? performance.now() : 0;
+    this.syncThreatShadow();
     if (this.diagnostics && time - this.lastDiagnosticsAt >= 500) {
       this.lastDiagnosticsAt = time;
       const renderer = this.game.renderer;
@@ -901,6 +908,35 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         .setDepth(ACTOR_DEPTH_BASE + Math.round(region.depthY))
         .setVisible(area.id === this.activeAreaId),
     );
+  }
+
+  private configureMobTextureFiltering() {
+    const textureKeys = [
+      INFECTED_TEXTURE,
+      ...this.assets.mobs.flatMap((mob) => [
+        this.mobTextureKey(mob, "walk"),
+        this.mobTextureKey(mob, "attack"),
+        this.mobTextureKey(mob, "hurt"),
+        this.mobTextureKey(mob, "death"),
+      ]),
+    ];
+
+    for (const textureKey of textureKeys) {
+      this.textures.get(textureKey).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
+  }
+
+  private createMobShadow(x: number, y: number) {
+    return this.add
+      .ellipse(
+        x,
+        y + 3,
+        MOB_SHADOW_WIDTH,
+        MOB_SHADOW_HEIGHT,
+        0x030705,
+        MOB_SHADOW_ALPHA,
+      )
+      .setBlendMode(Phaser.BlendModes.MULTIPLY);
   }
 
   private createAnimations() {
@@ -2054,7 +2090,10 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       if (isDeath) {
         this.threatDefeated = true;
         this.tweens.add({
-          targets: this.threatSprite,
+          targets: [
+            this.threatSprite,
+            ...(this.threatShadow ? [this.threatShadow] : []),
+          ],
           alpha: 0,
           duration: this.state.prefersReducedMotion ? 0 : 320,
         });
@@ -2074,6 +2113,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       this.threatHitTween = null;
       this.threatHitFeedbackActive = false;
       this.threatSprite.clearTint().setAlpha(1).setAngle(0);
+      this.threatShadow?.setAlpha(
+        this.state.prefersReducedMotion ? 0.12 : MOB_SHADOW_ALPHA,
+      );
       this.threatDefeated = true;
       this.beginThreatDeathPresentation();
     }
@@ -2108,7 +2150,10 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       if (animationToken !== this.threatCombatAnimationToken) return;
       if (isDeath) {
         this.threatDeathFadeTween = this.tweens.add({
-          targets: this.threatSprite,
+          targets: [
+            this.threatSprite,
+            ...(this.threatShadow ? [this.threatShadow] : []),
+          ],
           alpha: 0,
           duration: 260,
           ease: "Sine.easeIn",
@@ -2227,6 +2272,18 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     );
   }
 
+  private syncThreatShadow() {
+    if (!this.threatSprite || !this.threatShadow) return;
+
+    this.threatShadow
+      .setPosition(this.threatSprite.x, this.threatSprite.y + 3)
+      .setDepth(this.threatSprite.depth - 2)
+      .setVisible(this.threatSprite.visible);
+    if (!this.threatDefeated) {
+      this.threatShadow.setAlpha(MOB_SHADOW_ALPHA);
+    }
+  }
+
   private revealThreat(presentCombatEvent = true) {
     if (!this.actorBody || !this.actorSprite) return;
     const area = this.getArea();
@@ -2293,6 +2350,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const threatDisplayHeight = mobSpriteAsset
       ? MOB_DISPLAY_HEIGHT
       : FALLBACK_MOB_DISPLAY_HEIGHT;
+    const shadow = this.createMobShadow(threatNode.x, threatNode.y)
+      .setAlpha(0)
+      .setDepth(ACTOR_DEPTH_BASE + Math.round(threatNode.y) - 2);
     const threat = this.add
       .sprite(threatNode.x, threatNode.y, threatTexture, threatFrame)
       .setOrigin(0.5, 1)
@@ -2330,6 +2390,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       .setAlpha(0)
       .setDepth(WORLD_OVERLAY_DEPTH + 20);
     this.threatSprite = threat;
+    this.threatShadow = shadow;
     this.threatMobSpriteAsset = mobSpriteAsset;
     this.threatMobName = this.state.mobName ?? null;
     this.threatMarker = marker;
@@ -2337,6 +2398,11 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     this.tweens.add({
       targets: [threat, marker, nameLabel],
       alpha: 1,
+      duration: this.state.prefersReducedMotion ? 0 : 220,
+    });
+    this.tweens.add({
+      targets: shadow,
+      alpha: MOB_SHADOW_ALPHA,
       duration: this.state.prefersReducedMotion ? 0 : 220,
     });
     if (presentCombatEvent) this.applyCombatEvent(true);
@@ -2350,9 +2416,11 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     this.threatDeathFadeTween?.stop();
     this.threatDeathFadeTween = null;
     this.threatSprite?.destroy();
+    this.threatShadow?.destroy();
     this.threatMarker?.destroy();
     this.threatNameLabel?.destroy();
     this.threatSprite = null;
+    this.threatShadow = null;
     this.threatMobSpriteAsset = null;
     this.threatMobName = null;
     this.threatMarker = null;
@@ -2679,6 +2747,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       entity.nameLabel.destroy();
       entity.idleLabel.destroy();
       entity.combatMobSprite?.destroy();
+      entity.combatMobShadow?.destroy();
       this.remotePlayers.delete(playerId);
     }
     const area = this.getArea();
@@ -2741,6 +2810,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
             .setDepth(WORLD_OVERLAY_DEPTH + 20)
             .setVisible(player.idle),
           combatMobSprite: null,
+          combatMobShadow: null,
           combatMobAsset: null,
           combatMobName: null,
           combatCycleKey: null,
@@ -2986,12 +3056,16 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     ) {
       entity.combatDeathPresentationUntil = 0;
       entity.combatMobSprite?.destroy();
+      entity.combatMobShadow?.destroy();
       entity.combatMobSprite = null;
+      entity.combatMobShadow = null;
       entity.combatMobAsset = null;
     }
     if (entity.visualState !== "combat" || !entity.combatMobName || entity.idle) {
       entity.combatMobSprite?.destroy();
+      entity.combatMobShadow?.destroy();
       entity.combatMobSprite = null;
+      entity.combatMobShadow = null;
       entity.combatMobAsset = null;
       entity.lastCombatAnimationAt = 0;
       return;
@@ -3017,6 +3091,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
 
     if (!entity.combatMobSprite || entity.combatMobAsset?.key !== mobAsset.key) {
       entity.combatMobSprite?.destroy();
+      entity.combatMobShadow?.destroy();
+      entity.combatMobShadow = this.createMobShadow(mobPoint.x, mobPoint.y);
       entity.combatMobSprite = this.add
         .sprite(
           mobPoint.x,
@@ -3026,13 +3102,15 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         )
         .setOrigin(0.5, 1)
         .setDisplaySize(MOB_DISPLAY_WIDTH, MOB_DISPLAY_HEIGHT)
-        .setAlpha(0.82)
-        .setTint(0xc3bbb2);
+        .setAlpha(1);
       entity.combatMobAsset = mobAsset;
       entity.lastCombatAnimationAt = 0;
     }
 
     const mobSprite = entity.combatMobSprite;
+    entity.combatMobShadow
+      ?.setPosition(mobPoint.x, mobPoint.y + 3)
+      .setDepth(ACTOR_DEPTH_BASE + Math.round(mobPoint.y) - 2);
     mobSprite
       .setPosition(mobPoint.x, mobPoint.y)
       .setDepth(ACTOR_DEPTH_BASE + Math.round(mobPoint.y));
@@ -3044,8 +3122,18 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       entity.lastPresentedCombatEventKey = entity.combatEventKey;
       if (entity.combatEventType === "MOB_DEFEATED") {
         entity.combatDeathPresentationUntil = now + 950;
-        mobSprite.clearTint().setAlpha(0.82);
+        mobSprite.clearTint().setAlpha(1);
         mobSprite.play(this.mobAnimationKey(mobAsset, "death", direction), true);
+        this.tweens.add({
+          targets: [
+            mobSprite,
+            ...(entity.combatMobShadow ? [entity.combatMobShadow] : []),
+          ],
+          alpha: 0,
+          duration: this.state.prefersReducedMotion ? 0 : 760,
+          delay: this.state.prefersReducedMotion ? 0 : 150,
+          ease: "Sine.easeIn",
+        });
         return;
       }
       if (entity.combatEventType === "PLAYER_HIT") {
