@@ -21,6 +21,7 @@ let userEmail = '';
 let accessToken = '';
 let characterId = '';
 let mapId = '';
+let subMapId = '';
 let forcedDropId = '';
 let forcedDropOriginalChance = 0;
 let forcedDropItemName = '';
@@ -89,6 +90,15 @@ test.describe('transicao visual entre monstros', () => {
     await assertOk(characterResponse, 'Criação do personagem visual falhou');
     characterId = ((await characterResponse.json()) as { id: string }).id;
 
+    await prisma.character.update({
+      where: { id: characterId },
+      data: {
+        level: 20,
+        currentHp: 50_000,
+        maxHp: 50_000,
+      },
+    });
+
     await prisma.characterTutorialProgress.upsert({
       where: { characterId },
       create: { characterId, step: 5, completed: true },
@@ -97,9 +107,22 @@ test.describe('transicao visual entre monstros', () => {
 
     const mapsResponse = await api.get('/maps');
     await assertOk(mapsResponse, 'Consulta de mapas falhou');
-    const maps = (await mapsResponse.json()) as Array<{ id: string }>;
-    mapId = maps[0]?.id ?? '';
+    const maps = (await mapsResponse.json()) as Array<{
+      id: string;
+      name: string;
+      tier: number;
+    }>;
+    mapId =
+      maps.find((map) => map.name === 'Distrito da Ferrugem' && map.tier === 2)
+        ?.id ?? '';
     expect(mapId).not.toBe('');
+
+    subMapId = (
+      await prisma.subMap.findFirstOrThrow({
+        where: { mapId, name: 'Pátio de Carga' },
+        select: { id: true },
+      })
+    ).id;
 
     const mapSelection = await api.patch(
       `/characters/${characterId}/current-map`,
@@ -112,7 +135,7 @@ test.describe('transicao visual entre monstros', () => {
 
     const huntResponse = await api.post('/auto-combat/hunt/start', {
       headers: { Authorization: `Bearer ${accessToken}` },
-      data: { characterId, mapId },
+      data: { characterId, mapId, subMapId },
     });
     await assertOk(huntResponse, 'Início da caça falhou');
 
@@ -123,7 +146,7 @@ test.describe('transicao visual entre monstros', () => {
     });
     const encounter = await prisma.subMapEncounter.findFirstOrThrow({
       where: {
-        subMapId: session.subMapId,
+        subMapId,
         isActive: true,
         mob: { drops: { some: {} } },
       },
@@ -137,7 +160,7 @@ test.describe('transicao visual entre monstros', () => {
           },
         },
       },
-      orderBy: { weight: 'desc' },
+      orderBy: { mob: { hp: 'asc' } },
     });
     const huntBatch = session.huntBatch;
 
@@ -264,10 +287,15 @@ test.describe('transicao visual entre monstros', () => {
       );
       await assertOk(startBattle, 'Início da batalha visual falhou');
 
+      await expect(scene).toContainText('Combatendo', { timeout: 10_000 });
+      await scene.screenshot({
+        path: testInfo.outputPath('distrito-ferrugem-combat-scale.png'),
+      });
+
       const defeatToast = page
         .locator('.loot-notification-card[data-kind="combat-result"]')
         .first();
-      await expect(defeatToast).toBeVisible({ timeout: 30_000 });
+      await expect(defeatToast).toBeVisible({ timeout: 60_000 });
       await expect(
         defeatToast.locator('.loot-notification-card__description'),
       ).toContainText('EXP');
@@ -302,9 +330,8 @@ test.describe('transicao visual entre monstros', () => {
       });
       await expect(scene).toBeVisible();
       await expect(scene.locator('canvas')).toBeVisible();
-      await page.screenshot({
-        path: testInfo.outputPath('auto-combat-phaser-result.png'),
-        fullPage: true,
+      await scene.screenshot({
+        path: testInfo.outputPath('distrito-ferrugem-phaser-result.png'),
       });
     } finally {
       await api.post(`/auto-combat/${characterId}/stop`, {

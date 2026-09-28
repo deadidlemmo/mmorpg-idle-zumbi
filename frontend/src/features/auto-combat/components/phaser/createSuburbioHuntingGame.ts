@@ -56,6 +56,10 @@ const INFECTED_FRAME_HEIGHT = 48;
 const HUNTING_TILE_SIZE = 32;
 const SURVIVOR_DISPLAY_WIDTH = 88;
 const SURVIVOR_DISPLAY_HEIGHT = 80;
+const MOB_DISPLAY_WIDTH = 112;
+const MOB_DISPLAY_HEIGHT = 102;
+const FALLBACK_MOB_DISPLAY_WIDTH = 76;
+const FALLBACK_MOB_DISPLAY_HEIGHT = 108;
 const SURVIVOR_SHADOW_WIDTH = 26;
 const SURVIVOR_SHADOW_HEIGHT = 7;
 const SURVIVOR_NAME_OFFSET_Y = 78;
@@ -75,8 +79,8 @@ const NAVIGATION_DEBUG_DEPTH = 9000;
 const DEBUG_QUERY = "huntingNavDebug";
 const VISUAL_MACHINE_INTERVAL_MS = 50;
 const SCAN_DRAW_INTERVAL_MS = 1000 / 30;
-const COMBAT_DISTANCE = 62;
-const COMBAT_APPROACH_DISTANCE = 126;
+const COMBAT_DISTANCE = 72;
+const COMBAT_APPROACH_DISTANCE = 140;
 const TILED_GID_MASK = 0x1fffffff;
 const TILED_FLIP_MASK = 0xe0000000;
 const STATIC_BASE_LAYER_NAMES = new Set<string>([
@@ -176,6 +180,13 @@ export type HuntingSceneAreaAssets = Readonly<{
     textureKey: string;
     url: string;
   }>;
+  depthRegions?: readonly Readonly<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    depthY: number;
+  }>[];
   depthAtlas?: Readonly<{
     textureKey: string;
     atlasUrl: string;
@@ -748,9 +759,14 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       if (name === HUNTING_TILED_LAYER_NAMES.collision) layer.setAlpha(0.55);
       layers.set(name, layer);
     }
-    const depthObjects = area.depthAtlas
-      ? this.createDepthObjects(tilemap, areaId, area.depthAtlas.textureKey)
-      : [];
+    const depthObjects = [
+      ...(area.depthAtlas
+        ? this.createDepthObjects(tilemap, areaId, area.depthAtlas.textureKey)
+        : []),
+      ...(area.background && area.depthRegions
+        ? this.createBackgroundDepthRegions(area)
+        : []),
+    ];
     return {
       tilemap,
       layers,
@@ -867,6 +883,24 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         .setVisible(areaId === this.activeAreaId);
       return [image];
     });
+  }
+
+  private createBackgroundDepthRegions(area: HuntingSceneAreaAssets) {
+    if (!area.background || !area.depthRegions) return [];
+
+    const mapWidth = area.tilemapSource.width * area.tilemapSource.tilewidth;
+    const mapHeight = area.tilemapSource.height * area.tilemapSource.tileheight;
+
+    return area.depthRegions.map((region, index) =>
+      this.add
+        .image(0, 0, area.background!.textureKey)
+        .setName(`background-depth-${index}`)
+        .setOrigin(0)
+        .setDisplaySize(mapWidth, mapHeight)
+        .setCrop(region.x, region.y, region.width, region.height)
+        .setDepth(ACTOR_DEPTH_BASE + Math.round(region.depthY))
+        .setVisible(area.id === this.activeAreaId),
+    );
   }
 
   private createAnimations() {
@@ -2253,30 +2287,45 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const threatFrame = mobSpriteAsset
       ? this.directionStart(this.threatDirection, 4)
       : 0;
+    const threatDisplayWidth = mobSpriteAsset
+      ? MOB_DISPLAY_WIDTH
+      : FALLBACK_MOB_DISPLAY_WIDTH;
+    const threatDisplayHeight = mobSpriteAsset
+      ? MOB_DISPLAY_HEIGHT
+      : FALLBACK_MOB_DISPLAY_HEIGHT;
     const threat = this.add
       .sprite(threatNode.x, threatNode.y, threatTexture, threatFrame)
       .setOrigin(0.5, 1)
-      .setDisplaySize(
-        mobSpriteAsset ? SURVIVOR_DISPLAY_WIDTH : 64,
-        mobSpriteAsset ? SURVIVOR_DISPLAY_HEIGHT : 96,
-      )
+      .setDisplaySize(threatDisplayWidth, threatDisplayHeight)
       .setAlpha(0)
       .setDepth(ACTOR_DEPTH_BASE + Math.round(threatNode.y));
     const marker = this.add
-      .rectangle(threatNode.x, threatNode.y - 82, 16, 16, 0xc84e43, 0.96)
+      .rectangle(
+        threatNode.x,
+        threatNode.y - threatDisplayHeight - 2,
+        16,
+        16,
+        0xc84e43,
+        0.96,
+      )
       .setAngle(45)
       .setAlpha(0)
       .setDepth(WORLD_OVERLAY_DEPTH + 5);
     const nameLabel = this.add
-      .text(threatNode.x, threatNode.y - 72, this.state.mobName ?? "Ameaça", {
-        color: "#f0d48b",
-        fontFamily: '"Courier New", monospace',
-        fontSize: "10px",
-        fontStyle: "bold",
-        stroke: "#07100d",
-        strokeThickness: 3,
-        resolution: Math.min(window.devicePixelRatio || 1, 2),
-      })
+      .text(
+        threatNode.x,
+        threatNode.y - threatDisplayHeight + 8,
+        this.state.mobName ?? "Ameaça",
+        {
+          color: "#f0d48b",
+          fontFamily: '"Courier New", monospace',
+          fontSize: "10px",
+          fontStyle: "bold",
+          stroke: "#07100d",
+          strokeThickness: 3,
+          resolution: Math.min(window.devicePixelRatio || 1, 2),
+        },
+      )
       .setOrigin(0.5, 1)
       .setAlpha(0)
       .setDepth(WORLD_OVERLAY_DEPTH + 20);
@@ -2952,10 +3001,10 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     if (!mobAsset) return;
     const direction = this.oppositeDirection(entity.lastMovementDirection);
     const directionVector = {
-      down: { x: 0, y: 42 },
-      left: { x: -42, y: 0 },
-      right: { x: 42, y: 0 },
-      up: { x: 0, y: -42 },
+      down: { x: 0, y: 54 },
+      left: { x: -54, y: 0 },
+      right: { x: 54, y: 0 },
+      up: { x: 0, y: -54 },
     }[entity.lastMovementDirection];
     const requestedPoint = {
       x: entity.sprite.x + directionVector.x,
@@ -2976,7 +3025,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           this.directionStart(direction, 4),
         )
         .setOrigin(0.5, 1)
-        .setDisplaySize(SURVIVOR_DISPLAY_WIDTH, SURVIVOR_DISPLAY_HEIGHT)
+        .setDisplaySize(MOB_DISPLAY_WIDTH, MOB_DISPLAY_HEIGHT)
         .setAlpha(0.82)
         .setTint(0xc3bbb2);
       entity.combatMobAsset = mobAsset;

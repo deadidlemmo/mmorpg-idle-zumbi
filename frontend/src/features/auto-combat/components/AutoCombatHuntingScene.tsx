@@ -55,8 +55,8 @@ import suburbioExteriorTilemapRaw from "../../../assets/maps/auto-combat/suburbi
 import suburbioExteriorTilemapUrl from "../../../assets/maps/auto-combat/suburbio-silencioso-pilot.tmj?url";
 import suburbioInteriorTilemapRaw from "../../../assets/maps/auto-combat/suburbio-silencioso-t1-interior.tmj?raw";
 import suburbioInteriorTilemapUrl from "../../../assets/maps/auto-combat/suburbio-silencioso-t1-interior.tmj?url";
-import ferrugemExteriorBackground from "../../../assets/images/auto-combat/ferrugem/distrito-ferrugem-exterior.webp";
-import ferrugemInteriorBackground from "../../../assets/images/auto-combat/ferrugem/distrito-ferrugem-interior.webp";
+import ferrugemExteriorBackground from "../../../assets/images/auto-combat/ferrugem/distrito-ferrugem-exterior-v2.webp";
+import ferrugemInteriorBackground from "../../../assets/images/auto-combat/ferrugem/distrito-ferrugem-interior-v2.webp";
 import ferrugemNavigationMask from "../../../assets/images/auto-combat/ferrugem/ferrugem-navigation-mask.png";
 import ferrugemExteriorTilemapRaw from "../../../assets/maps/auto-combat/distrito-ferrugem-t2-exterior.tmj?raw";
 import ferrugemExteriorTilemapUrl from "../../../assets/maps/auto-combat/distrito-ferrugem-t2-exterior.tmj?url";
@@ -257,6 +257,15 @@ const FERRUGEM_SCENE_ASSETS: HuntingSceneAssets = {
         textureKey: "ferrugem-exterior-background",
         url: ferrugemExteriorBackground,
       },
+      depthRegions: [
+        { x: 376, y: 0, width: 900, height: 246, depthY: 222 },
+        { x: 0, y: 0, width: 370, height: 650, depthY: 605 },
+        { x: 458, y: 342, width: 336, height: 190, depthY: 510 },
+        { x: 974, y: 428, width: 350, height: 226, depthY: 626 },
+        { x: 0, y: 676, width: 374, height: 348, depthY: 944 },
+        { x: 414, y: 812, width: 620, height: 212, depthY: 994 },
+        { x: 1160, y: 700, width: 376, height: 324, depthY: 956 },
+      ],
     },
     {
       id: HUNTING_AREA_IDS.rustWarehouse,
@@ -274,6 +283,16 @@ const FERRUGEM_SCENE_ASSETS: HuntingSceneAssets = {
         textureKey: "ferrugem-interior-background",
         url: ferrugemInteriorBackground,
       },
+      depthRegions: [
+        { x: 0, y: 0, width: 334, height: 322, depthY: 302 },
+        { x: 418, y: 34, width: 250, height: 372, depthY: 382 },
+        { x: 684, y: 34, width: 228, height: 372, depthY: 382 },
+        { x: 924, y: 34, width: 238, height: 372, depthY: 382 },
+        { x: 1190, y: 116, width: 300, height: 318, depthY: 408 },
+        { x: 242, y: 430, width: 248, height: 286, depthY: 690 },
+        { x: 506, y: 416, width: 514, height: 324, depthY: 712 },
+        { x: 1080, y: 390, width: 322, height: 334, depthY: 698 },
+      ],
     },
   ],
 };
