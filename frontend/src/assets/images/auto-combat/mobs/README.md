@@ -21,11 +21,18 @@ Todos preservam o mesmo contrato:
 - folhas separadas para caminhada, ataque, dano e morte;
 - fundo com alpha real e sem sombra incorporada.
 
+Os conjuntos `v2` sao derivados deterministicamente dos respectivos `v1` por
+`npm run sprites:build:mobs-v2`. Eles preservam a silhueta, o enquadramento e a
+sequencia de cada animacao, acrescentando microcontraste, nitidez, saturacao
+controlada, contorno externo e uma luz de recorte discreta. A sombra de contato
+continua sendo renderizada pelo Phaser para permanecer alinhada ao piso durante
+movimento, ataque e morte.
+
 Novos monstros devem preservar o mesmo enquadramento para que a cena Phaser
 possa trocar os assets sem alterar posição, profundidade ou hitbox visual.
 
-Os cinco conjuntos adicionais usam uma base direcional criada a partir da arte
-canonica do mob. A caminhada parte dessa base; ataque, dano e morte usam poses
+Os conjuntos usam uma base direcional criada a partir da arte canonica de cada
+mob. A caminhada parte dessa base; ataque, dano e morte usam poses
 proprias geradas para cada direcao e normalizadas por
 `scripts/prepare-generated-combat-sprite.mjs`. A morte possui seis quadros ate
 o corpo no chao, sem rotacionar a imagem estatica como substituto de animacao.

@@ -60,9 +60,12 @@ const MOB_DISPLAY_WIDTH = 112;
 const MOB_DISPLAY_HEIGHT = 102;
 const FALLBACK_MOB_DISPLAY_WIDTH = 76;
 const FALLBACK_MOB_DISPLAY_HEIGHT = 108;
+const MOB_SHADOW_TEXTURE = "auto-combat-mob-contact-shadow-v2";
+const MOB_SHADOW_TEXTURE_WIDTH = 72;
+const MOB_SHADOW_TEXTURE_HEIGHT = 24;
 const MOB_SHADOW_WIDTH = 54;
 const MOB_SHADOW_HEIGHT = 13;
-const MOB_SHADOW_ALPHA = 0.38;
+const MOB_SHADOW_ALPHA = 0.88;
 const SURVIVOR_SHADOW_WIDTH = 26;
 const SURVIVOR_SHADOW_HEIGHT = 7;
 const SURVIVOR_NAME_OFFSET_Y = 78;
@@ -227,7 +230,7 @@ type RemotePlayerEntity = {
   nameLabel: Phaser.GameObjects.Text;
   idleLabel: Phaser.GameObjects.Text;
   combatMobSprite: Phaser.GameObjects.Sprite | null;
-  combatMobShadow: Phaser.GameObjects.Ellipse | null;
+  combatMobShadow: Phaser.GameObjects.Image | null;
   combatMobAsset: MobCombatSpriteAssets | null;
   combatMobName: string | null;
   combatCycleKey: string | null;
@@ -316,7 +319,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   private isChangingArea = false;
   private isDoorTraversal = false;
   private threatSprite: Phaser.GameObjects.Sprite | null = null;
-  private threatShadow: Phaser.GameObjects.Ellipse | null = null;
+  private threatShadow: Phaser.GameObjects.Image | null = null;
   private threatMarker: Phaser.GameObjects.Rectangle | null = null;
   private threatNameLabel: Phaser.GameObjects.Text | null = null;
   private combatHudGraphics: Phaser.GameObjects.Graphics | null = null;
@@ -473,6 +476,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   }
 
   create() {
+    this.createMobShadowTexture();
     for (const area of this.assets.areas) {
       this.areas.set(area.id, createHuntingAreaFromTiledMap(area.tilemapSource));
       this.areaVisuals.set(area.id, this.createAreaVisual(area));
@@ -926,16 +930,41 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     }
   }
 
+  private createMobShadowTexture() {
+    if (this.textures.exists(MOB_SHADOW_TEXTURE)) return;
+    const texture = this.textures.createCanvas(
+      MOB_SHADOW_TEXTURE,
+      MOB_SHADOW_TEXTURE_WIDTH,
+      MOB_SHADOW_TEXTURE_HEIGHT,
+    );
+    if (!texture) return;
+
+    const context = texture.context;
+    context.clearRect(0, 0, MOB_SHADOW_TEXTURE_WIDTH, MOB_SHADOW_TEXTURE_HEIGHT);
+    context.save();
+    context.translate(
+      MOB_SHADOW_TEXTURE_WIDTH / 2,
+      MOB_SHADOW_TEXTURE_HEIGHT / 2,
+    );
+    context.scale(1, 0.34);
+    const gradient = context.createRadialGradient(0, 0, 2, 0, 0, 32);
+    gradient.addColorStop(0, "rgba(1, 4, 2, 0.72)");
+    gradient.addColorStop(0.42, "rgba(2, 5, 3, 0.42)");
+    gradient.addColorStop(0.75, "rgba(3, 6, 4, 0.16)");
+    gradient.addColorStop(1, "rgba(3, 6, 4, 0)");
+    context.fillStyle = gradient;
+    context.beginPath();
+    context.arc(0, 0, 32, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+    texture.refresh();
+  }
+
   private createMobShadow(x: number, y: number) {
     return this.add
-      .ellipse(
-        x,
-        y + 3,
-        MOB_SHADOW_WIDTH,
-        MOB_SHADOW_HEIGHT,
-        0x030705,
-        MOB_SHADOW_ALPHA,
-      )
+      .image(x, y + 3, MOB_SHADOW_TEXTURE)
+      .setDisplaySize(MOB_SHADOW_WIDTH, MOB_SHADOW_HEIGHT)
+      .setAlpha(MOB_SHADOW_ALPHA)
       .setBlendMode(Phaser.BlendModes.MULTIPLY);
   }
 

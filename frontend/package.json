@@ -15,6 +15,7 @@
     "sprites:clean:leon": "node scripts/clean-leon-sprites.mjs",
     "sprites:prepare:combat": "node scripts/prepare-generated-combat-sprite.mjs",
     "sprites:build:mob-set": "node scripts/build-combat-mob-sprite-set.mjs",
+    "sprites:build:mobs-v2": "node scripts/build-enhanced-mob-sprites.mjs",
     "sprites:audit:characters": "node scripts/audit-character-sprites.mjs",
     "sprites:audit:mobs": "node scripts/audit-mob-sprites.mjs",
     "images:optimize": "node scripts/optimize-images.mjs --format=webp",
