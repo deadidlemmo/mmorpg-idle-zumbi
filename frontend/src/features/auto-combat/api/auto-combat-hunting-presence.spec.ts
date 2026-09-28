@@ -177,6 +177,8 @@ test("preserva o alvo e o ciclo da batalha na presenca ao vivo", () => {
       moving: false,
       combatMobName: "Síndico Devorado",
       combatCycleKey: "session-1:round-4",
+      combatProgressMs: null,
+      combatDurationMs: null,
       updatedAt: 4321,
       idle: false,
     },
@@ -212,7 +214,61 @@ test("mantem o combate do snapshot REST ativo enquanto o socket reconcilia", () 
       moving: false,
       combatMobName: "Errante do Subúrbio",
       combatCycleKey: "session-1:2:mob-1",
+      combatProgressMs: null,
+      combatDurationMs: null,
       updatedAt: 0,
+      idle: true,
+    },
+  ]);
+});
+
+test("usa o ciclo REST para estabilizar o mob sem atrasar o evento ao vivo", () => {
+  const fallback: HuntingVisualPresence = {
+    characterId: "remote-combat",
+    displayName: "Combatente",
+    mapId: "map-1",
+    subMapId: "submap-1",
+    areaId: "suburbio",
+    tileX: 12,
+    tileY: 7,
+    direction: "left",
+    visualState: "combat",
+    moving: false,
+    combatMobName: "Errante do Subúrbio",
+    combatCycleKey: "session-1:2:mob-1",
+    combatProgressMs: 1_200,
+    combatDurationMs: 4_000,
+    online: true,
+    updatedAt: 4_000,
+  };
+  const live: HuntingVisualPresence = {
+    ...fallback,
+    tileX: 13,
+    combatMobName: "Nome transitório incorreto",
+    combatProgressMs: null,
+    combatDurationMs: null,
+    combatEventType: "PLAYER_HIT",
+    combatEventKey: "event-8",
+    updatedAt: 4_200,
+  };
+
+  assert.deepEqual(mergeHuntingVisualPlayers([fallback], [live]), [
+    {
+      id: "remote-combat",
+      displayName: "Combatente",
+      areaId: "suburbio",
+      worldX: 416,
+      worldY: 224,
+      direction: "left",
+      visualState: "combat",
+      moving: false,
+      combatMobName: "Errante do Subúrbio",
+      combatCycleKey: "session-1:2:mob-1",
+      combatProgressMs: 1_200,
+      combatDurationMs: 4_000,
+      combatEventType: "PLAYER_HIT",
+      combatEventKey: "event-8",
+      updatedAt: 4_200,
       idle: false,
     },
   ]);

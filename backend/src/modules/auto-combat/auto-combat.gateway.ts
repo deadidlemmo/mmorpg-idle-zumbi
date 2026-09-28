@@ -79,6 +79,8 @@ type HuntingVisualPresence = HuntingVisualPose & {
   mapId: string;
   subMapId: string;
   updatedAt: number;
+  combatProgressMs?: number | null;
+  combatDurationMs?: number | null;
 };
 type HuntingVisualCombatEventType =
   | 'MOB_SPAWNED'
@@ -99,6 +101,8 @@ type HuntingVisualCombatState = {
     'areaId' | 'tileX' | 'tileY' | 'direction'
   > | null;
   lockedUntil: number | null;
+  progressMs: number | null;
+  durationMs: number | null;
 };
 
 const HUNTING_VISUAL_BOUNDS: Record<HuntingVisualAreaId, [number, number]> = {
@@ -511,6 +515,9 @@ export class AutoCombatGateway
         phase: true,
         currentCombatIndex: true,
         currentMobId: true,
+        killProgressMs: true,
+        estimatedKillTimeMs: true,
+        estimatedKillTimeSeconds: true,
         currentMob: { select: { name: true } },
         character: { select: { name: true } },
       },
@@ -527,6 +534,7 @@ export class AutoCombatGateway
     );
     const presence: HuntingVisualPresence = {
       ...canonicalPose,
+      ...this.getHuntingVisualCombatTiming(combatState),
       displayName: session.character.name,
       mapId: session.mapId,
       subMapId: session.subMapId,
@@ -619,6 +627,9 @@ export class AutoCombatGateway
           phase: true,
           currentCombatIndex: true,
           currentMobId: true,
+          killProgressMs: true,
+          estimatedKillTimeMs: true,
+          estimatedKillTimeSeconds: true,
           currentMob: { select: { name: true } },
         },
       });
@@ -641,6 +652,8 @@ export class AutoCombatGateway
       eventKey: null,
       anchor: null,
       lockedUntil: null,
+      progressMs: null,
+      durationMs: null,
     };
     const combatLocked = this.isHuntingVisualCombatLocked(combatState, now);
     const distance = Math.hypot(
@@ -658,7 +671,12 @@ export class AutoCombatGateway
       combatState,
       now,
     );
-    const presence = { ...previous, ...canonicalPose, updatedAt: now };
+    const presence = {
+      ...previous,
+      ...canonicalPose,
+      ...this.getHuntingVisualCombatTiming(combatState),
+      updatedAt: now,
+    };
     client.data.huntingVisual = presence;
     client.data.huntingVisualSentAt = now;
     if (
@@ -785,6 +803,9 @@ export class AutoCombatGateway
       phase: AutoCombatSessionPhase;
       currentCombatIndex: number;
       currentMobId: string | null;
+      killProgressMs?: number | null;
+      estimatedKillTimeMs?: number | null;
+      estimatedKillTimeSeconds?: number | null;
       currentMob: { name: string } | null;
     },
     pose: HuntingVisualPose,
@@ -811,7 +832,30 @@ export class AutoCombatGateway
           : this.getHuntingVisualCombatAnchor(pose)
         : null,
       lockedUntil: null,
+      progressMs: active ? Math.max(0, session.killProgressMs ?? 0) : null,
+      durationMs: active
+        ? this.resolveHuntingVisualCombatDurationMs(session)
+        : null,
     };
+  }
+
+  private resolveHuntingVisualCombatDurationMs(session: {
+    estimatedKillTimeMs?: number | null;
+    estimatedKillTimeSeconds?: number | null;
+  }) {
+    const durationMs =
+      Number(session.estimatedKillTimeMs) ||
+      Number(session.estimatedKillTimeSeconds) * 1_000;
+    return durationMs > 0 ? Math.round(durationMs) : null;
+  }
+
+  private getHuntingVisualCombatTiming(combat: HuntingVisualCombatState) {
+    return combat.active
+      ? {
+          combatProgressMs: combat.progressMs,
+          combatDurationMs: combat.durationMs,
+        }
+      : {};
   }
 
   private getHuntingVisualCombatAnchor(pose: HuntingVisualPose) {
@@ -944,9 +988,24 @@ export class AutoCombatGateway
         anchor:
           previousCombat?.anchor ?? this.getHuntingVisualCombatAnchor(presence),
         lockedUntil: terminal ? now + HUNTING_VISUAL_TERMINAL_LOCK_MS : null,
+        progressMs: previousCombat?.progressMs ?? null,
+        durationMs:
+          this.resolveHuntingVisualCombatDurationMs({
+            estimatedKillTimeMs:
+              typeof record?.estimatedKillTimeMs === 'number'
+                ? record.estimatedKillTimeMs
+                : null,
+            estimatedKillTimeSeconds:
+              typeof record?.estimatedKillTimeSeconds === 'number'
+                ? record.estimatedKillTimeSeconds
+                : null,
+          }) ??
+          previousCombat?.durationMs ??
+          null,
       };
       const nextPresence: HuntingVisualPresence = {
         ...this.applyCanonicalHuntingVisualCombat(presence, eventCombat),
+        ...this.getHuntingVisualCombatTiming(eventCombat),
         displayName: presence.displayName,
         mapId: presence.mapId,
         subMapId: presence.subMapId,

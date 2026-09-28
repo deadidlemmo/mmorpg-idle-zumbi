@@ -42,6 +42,9 @@ export type HuntingVisualPresence = HuntingVisualPose & {
   mapId: string;
   subMapId: string | null;
   updatedAt: number;
+  online?: boolean;
+  combatProgressMs?: number | null;
+  combatDurationMs?: number | null;
 };
 
 export type {

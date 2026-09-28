@@ -53,6 +53,23 @@ test("alterna golpes em batalhas longas sem alterar o resultado do combate", () 
   assert.equal(getHuntingCombatAnimationTimeScale(12_000), 1);
 });
 
+test("continua alternando golpes enquanto o backend mantem o combate ativo", () => {
+  const firstOvertime = getHuntingCombatVisualStep({
+    durationMs: 3_000,
+    progressPercent: 100,
+    elapsedMs: 3_050,
+  });
+  const secondOvertime = getHuntingCombatVisualStep({
+    durationMs: 3_000,
+    progressPercent: 100,
+    elapsedMs: 3_550,
+  });
+
+  assert.equal(firstOvertime.cue, "mob-attack");
+  assert.equal(secondOvertime.cue, "player-attack");
+  assert.notEqual(firstOvertime.key, secondOvertime.key);
+});
+
 test("morte confirmada sempre prevalece sobre a etapa calculada", () => {
   assert.deepEqual(
     getHuntingCombatVisualStep({

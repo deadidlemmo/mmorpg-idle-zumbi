@@ -29,19 +29,32 @@ export function getHuntingCombatVisualStep(params: {
   durationMs: number;
   progressPercent: number;
   isDefeated?: boolean;
+  elapsedMs?: number;
 }): HuntingCombatVisualStep {
   if (params.isDefeated) return { cue: "defeated", key: "defeated" };
 
   const durationMs = Math.max(1, Number(params.durationMs) || 1);
   const progress = clamp((Number(params.progressPercent) || 0) / 100, 0, 1);
-  const elapsedMs = progress * durationMs;
+  const elapsedMs = Math.max(
+    0,
+    Number.isFinite(params.elapsedMs)
+      ? Number(params.elapsedMs)
+      : progress * durationMs,
+  );
   const approachMs = Math.min(320, durationMs * 0.18);
   const finisherMs = Math.max(approachMs, durationMs - Math.min(480, durationMs * 0.2));
 
   if (elapsedMs < approachMs) return { cue: "approach", key: "approach" };
+  const cadenceMs = clamp(durationMs / 6, 150, 850);
+  if (elapsedMs >= durationMs) {
+    const sequence = Math.floor((elapsedMs - durationMs) / cadenceMs);
+    return {
+      cue: sequence % 2 === 0 ? "mob-attack" : "player-attack",
+      key: `overtime-${sequence}`,
+    };
+  }
   if (elapsedMs >= finisherMs) return { cue: "finisher", key: "finisher" };
 
-  const cadenceMs = clamp(durationMs / 6, 150, 850);
   const sequence = Math.floor((elapsedMs - approachMs) / cadenceMs);
   return {
     cue: sequence % 2 === 0 ? "player-attack" : "mob-attack",

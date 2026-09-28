@@ -106,16 +106,11 @@ export class HuntingVisualPositionService {
     if (!own.sessionId || !own.mapId) {
       return { mapId: null, subMapId: null, players: [] };
     }
-    const onlinePeerIds = [...new Set(onlineCharacterIds)].filter(
-      (id) => id !== characterId,
-    );
-    if (onlinePeerIds.length <= 0) {
-      return { mapId: own.mapId, subMapId: own.subMapId, players: [] };
-    }
+    const onlineIds = new Set(onlineCharacterIds);
     const sessions = await this.prisma.autoCombatSession.findMany({
       where: {
         id: { not: own.sessionId },
-        characterId: { not: characterId, in: onlinePeerIds },
+        characterId: { not: characterId },
         mapId: own.mapId,
         subMapId: own.subMapId,
         status: AutoCombatSessionStatus.ACTIVE,
@@ -137,6 +132,9 @@ export class HuntingVisualPositionService {
         phase: true,
         currentCombatIndex: true,
         currentMobId: true,
+        killProgressMs: true,
+        estimatedKillTimeMs: true,
+        estimatedKillTimeSeconds: true,
         currentMob: { select: { name: true } },
         character: { select: { id: true, name: true } },
       },
@@ -145,22 +143,34 @@ export class HuntingVisualPositionService {
       sessions.map(async (session) => {
         const pose = await this.load(session.id);
         if (!pose) return null;
+        const combatDurationMs = Math.max(
+          0,
+          session.estimatedKillTimeMs ??
+            Math.round(Number(session.estimatedKillTimeSeconds ?? 0) * 1_000),
+        );
+        const combatProgressMs = Math.max(0, session.killProgressMs ?? 0);
+        const isCombatActive =
+          session.phase === AutoCombatSessionPhase.COMBAT_ACTIVE &&
+          Boolean(session.currentMobId && session.currentMob);
         return {
           characterId: session.character.id,
           displayName: session.character.name,
           ...pose,
-          visualState:
-            session.phase === AutoCombatSessionPhase.COMBAT_ACTIVE &&
-            session.currentMob
-              ? ('combat' as const)
-              : ('walking' as const),
+          online: onlineIds.has(session.character.id),
+          visualState: isCombatActive
+            ? ('combat' as const)
+            : ('walking' as const),
           moving: false,
-          combatMobName: session.currentMob?.name ?? null,
+          combatMobName: isCombatActive
+            ? (session.currentMob?.name ?? null)
+            : null,
           combatCycleKey:
-            session.phase === AutoCombatSessionPhase.COMBAT_ACTIVE &&
-            session.currentMobId
+            isCombatActive && session.currentMobId
               ? `${session.id}:${session.currentCombatIndex}:${session.currentMobId}`
               : null,
+          combatProgressMs: isCombatActive ? combatProgressMs : null,
+          combatDurationMs:
+            isCombatActive && combatDurationMs > 0 ? combatDurationMs : null,
         };
       }),
     );

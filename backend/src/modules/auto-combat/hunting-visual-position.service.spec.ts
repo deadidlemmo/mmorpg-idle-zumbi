@@ -60,13 +60,16 @@ describe('HuntingVisualPositionService', () => {
     expect(get).not.toHaveBeenCalled();
   });
 
-  it('lista apenas pares ativos do mesmo submapa com pose valida', async () => {
+  it('mantem pares idle ativos no mesmo submapa mesmo sem socket conectado', async () => {
     const findMany = jest.fn().mockResolvedValue([
       {
         id: 'peer-1',
         phase: 'COMBAT_ACTIVE',
         currentCombatIndex: 4,
         currentMobId: 'mob-1',
+        killProgressMs: 1_200,
+        estimatedKillTimeMs: 4_000,
+        estimatedKillTimeSeconds: 4,
         currentMob: { name: 'Errante do Subúrbio' },
         character: { id: 'character-2', name: 'Aliado' },
       },
@@ -75,6 +78,9 @@ describe('HuntingVisualPositionService', () => {
         phase: 'HUNTING',
         currentCombatIndex: 1,
         currentMobId: null,
+        killProgressMs: 0,
+        estimatedKillTimeMs: null,
+        estimatedKillTimeSeconds: null,
         currentMob: null,
         character: { id: 'character-3', name: 'Sem pose' },
       },
@@ -99,8 +105,6 @@ describe('HuntingVisualPositionService', () => {
     );
     const result = await service.getPeersForCharacter('user-1', 'character-1', [
       'character-1',
-      'character-2',
-      'character-3',
     ]);
     expect(result).toEqual({
       mapId: 'map-1',
@@ -110,20 +114,20 @@ describe('HuntingVisualPositionService', () => {
           characterId: 'character-2',
           displayName: 'Aliado',
           ...pose,
+          online: false,
           visualState: 'combat',
           moving: false,
           combatMobName: 'Errante do Subúrbio',
           combatCycleKey: 'peer-1:4:mob-1',
+          combatProgressMs: 1_200,
+          combatDurationMs: 4_000,
         },
       ],
     });
     expect(findMany).toHaveBeenCalledWith({
       where: {
         id: { not: 'session-1' },
-        characterId: {
-          not: 'character-1',
-          in: ['character-2', 'character-3'],
-        },
+        characterId: { not: 'character-1' },
         mapId: 'map-1',
         subMapId: 'sub-1',
         status: 'ACTIVE',
@@ -139,6 +143,9 @@ describe('HuntingVisualPositionService', () => {
         phase: true,
         currentCombatIndex: true,
         currentMobId: true,
+        killProgressMs: true,
+        estimatedKillTimeMs: true,
+        estimatedKillTimeSeconds: true,
         currentMob: { select: { name: true } },
         character: { select: { id: true, name: true } },
       },

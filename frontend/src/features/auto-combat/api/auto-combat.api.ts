@@ -50,6 +50,9 @@ export type HuntingVisualPeersResponse = {
     moving: boolean;
     combatMobName?: string | null;
     combatCycleKey?: string | null;
+    online?: boolean;
+    combatProgressMs?: number | null;
+    combatDurationMs?: number | null;
   }>;
 };
 

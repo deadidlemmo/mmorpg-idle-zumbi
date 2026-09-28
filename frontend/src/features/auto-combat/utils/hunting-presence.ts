@@ -22,9 +22,33 @@ export function mergeHuntingVisualPlayers(
   restPlayers: readonly HuntingVisualPresence[],
   livePlayers: readonly HuntingVisualPresence[],
 ): HuntingVisualPlayer[] {
-  const merged = new Map(restPlayers.map((player) => [player.characterId, player]));
+  const restById = new Map(
+    restPlayers.map((player) => [player.characterId, player]),
+  );
+  const merged = new Map(restById);
   const liveIds = new Set(livePlayers.map((player) => player.characterId));
-  for (const player of livePlayers) merged.set(player.characterId, player);
+  for (const live of livePlayers) {
+    const rest = restById.get(live.characterId);
+    const sameCombat =
+      rest?.visualState === "combat" &&
+      live.visualState === "combat" &&
+      Boolean(rest.combatCycleKey) &&
+      rest.combatCycleKey === live.combatCycleKey;
+    merged.set(
+      live.characterId,
+      sameCombat
+        ? {
+            ...live,
+            combatMobName: rest.combatMobName ?? live.combatMobName ?? null,
+            combatCycleKey: rest.combatCycleKey,
+            combatProgressMs:
+              rest.combatProgressMs ?? live.combatProgressMs ?? null,
+            combatDurationMs:
+              rest.combatDurationMs ?? live.combatDurationMs ?? null,
+          }
+        : live,
+    );
+  }
   return [...merged.values()].map((player) => ({
     id: player.characterId,
     displayName: player.displayName,
@@ -33,11 +57,13 @@ export function mergeHuntingVisualPlayers(
     worldY: player.tileY * 32,
     direction: player.direction,
     visualState: player.visualState,
-    moving: player.moving,
+    moving: player.visualState === "combat" ? false : player.moving,
     ...(player.visualState === "combat"
       ? {
           combatMobName: player.combatMobName ?? null,
           combatCycleKey: player.combatCycleKey ?? null,
+          combatProgressMs: player.combatProgressMs ?? null,
+          combatDurationMs: player.combatDurationMs ?? null,
           ...(player.combatEventType || player.combatEventKey
             ? {
                 combatEventType: player.combatEventType ?? null,
@@ -47,7 +73,9 @@ export function mergeHuntingVisualPlayers(
         }
       : {}),
     updatedAt: player.updatedAt,
-    idle: player.visualState === "combat" ? false : !liveIds.has(player.characterId),
+    idle:
+      player.online === false ||
+      (!liveIds.has(player.characterId) && player.online !== true),
   }));
 }
 

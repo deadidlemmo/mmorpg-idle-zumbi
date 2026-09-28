@@ -128,6 +128,8 @@ export type HuntingVisualPlayer = Readonly<{
   idle: boolean;
   combatMobName?: string | null;
   combatCycleKey?: string | null;
+  combatProgressMs?: number | null;
+  combatDurationMs?: number | null;
   combatEventType?: HuntingVisualCombatEventType | null;
   combatEventKey?: string | null;
 }>;
@@ -234,12 +236,16 @@ type RemotePlayerEntity = {
   combatMobAsset: MobCombatSpriteAssets | null;
   combatMobName: string | null;
   combatCycleKey: string | null;
+  combatProgressMs: number;
+  combatDurationMs: number;
+  combatTimelineStartedAt: number;
+  lastCombatVisualStepKey: string;
   combatEventType: HuntingVisualCombatEventType | null;
   combatEventKey: string | null;
   lastPresentedCombatEventKey: string | null;
   combatDeathPresentationUntil: number;
+  combatMobDefeated: boolean;
   combatEventPresentationUntil: number;
-  lastCombatAnimationAt: number;
   targetPoint: HuntingCoordinate;
   lastMovementDirection: MovementDirection;
   visualState: HuntingVisualPresenceState;
@@ -1804,8 +1810,12 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       0,
       100,
     );
+    const elapsedMs = Math.max(
+      (snapshotProgress / 100) * durationMs,
+      time - this.combatCycleStartedAt,
+    );
     const localProgress = Phaser.Math.Clamp(
-      ((time - this.combatCycleStartedAt) / durationMs) * 100,
+      (elapsedMs / durationMs) * 100,
       0,
       100,
     );
@@ -1813,6 +1823,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const step = getHuntingCombatVisualStep({
       durationMs,
       progressPercent,
+      elapsedMs,
       isDefeated: this.state.mobCurrentHp <= 0 || this.threatDefeated,
     });
     const stepKey = `${this.combatCycleKey}:${step.key}`;
@@ -2843,15 +2854,19 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           combatMobAsset: null,
           combatMobName: null,
           combatCycleKey: null,
+          combatProgressMs: 0,
+          combatDurationMs: 0,
+          combatTimelineStartedAt: this.time.now,
+          lastCombatVisualStepKey: "",
           combatEventType: null,
           combatEventKey: null,
           lastPresentedCombatEventKey: null,
           combatDeathPresentationUntil: 0,
+          combatMobDefeated: false,
           combatEventPresentationUntil: 0,
-          lastCombatAnimationAt: 0,
           targetPoint: spawn,
           lastMovementDirection: initialDirection,
-          visualState: player.idle ? "walking" : player.visualState,
+          visualState: player.visualState,
           moving: player.idle ? false : player.moving,
           updatedAt: player.updatedAt,
           idle: player.idle,
@@ -2862,44 +2877,65 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       const anchor = this.getRemotePlayerSpawn(area, player);
       const sourceChanged = entity.idle !== player.idle;
       const anchorChanged = entity.anchor.x !== anchor.x || entity.anchor.y !== anchor.y;
-      if (player.idle && (sourceChanged || anchorChanged)) {
-        entity.idle = true;
-        entity.anchor = anchor;
-        entity.updatedAt = 0;
-        entity.targetPoint = anchor;
-        entity.lastMovementDirection = player.direction;
-        entity.visualState = "walking";
-        entity.moving = false;
-        entity.combatMobName = null;
-        entity.combatCycleKey = null;
-        entity.combatEventType = null;
-        entity.combatEventKey = null;
-        entity.lastPresentedCombatEventKey = null;
-        entity.combatDeathPresentationUntil = 0;
-        entity.combatEventPresentationUntil = 0;
-        this.rebaseRemotePlayerIfNeeded(entity, anchor, true);
-      } else if (!player.idle && (sourceChanged || player.updatedAt >= entity.updatedAt)) {
+      if (sourceChanged || player.updatedAt >= entity.updatedAt) {
         const enteringCombat =
           player.visualState === "combat" && entity.visualState !== "combat";
-        entity.idle = false;
+        const combatCycleChanged =
+          entity.combatCycleKey !== (player.combatCycleKey ?? null);
+        const combatProgressMs = Math.max(
+          0,
+          Number(player.combatProgressMs) || 0,
+        );
+        entity.idle = player.idle;
         entity.anchor = enteringCombat
           ? { x: entity.sprite.x, y: entity.sprite.y }
           : anchor;
-        entity.targetPoint = enteringCombat
+        entity.targetPoint = enteringCombat || player.idle
           ? { x: entity.sprite.x, y: entity.sprite.y }
           : anchor;
         entity.lastMovementDirection = player.direction;
         entity.visualState = player.visualState;
-        entity.moving = player.moving;
-        const combatCycleChanged =
-          entity.combatCycleKey !== (player.combatCycleKey ?? null);
-        entity.combatMobName = player.combatMobName ?? null;
+        entity.moving = player.idle ? false : player.moving;
+        if (
+          player.visualState === "combat" &&
+          (combatCycleChanged || !entity.combatMobName)
+        ) {
+          entity.combatMobName = player.combatMobName ?? null;
+        } else if (player.visualState !== "combat") {
+          entity.combatMobName = null;
+        }
         entity.combatCycleKey = player.combatCycleKey ?? null;
+        entity.combatProgressMs = combatProgressMs;
+        entity.combatDurationMs = Math.max(
+          0,
+          Number(player.combatDurationMs) || 0,
+        );
+        if (combatCycleChanged || enteringCombat) {
+          entity.combatTimelineStartedAt = this.time.now - combatProgressMs;
+          entity.lastCombatVisualStepKey = "";
+          entity.lastPresentedCombatEventKey = null;
+          entity.combatDeathPresentationUntil = 0;
+          entity.combatMobDefeated = false;
+        } else if (
+          player.visualState === "combat" &&
+          combatProgressMs >
+            this.time.now - entity.combatTimelineStartedAt + 150
+        ) {
+          entity.combatTimelineStartedAt = this.time.now - combatProgressMs;
+        }
         entity.combatEventType = player.combatEventType ?? null;
         entity.combatEventKey = player.combatEventKey ?? null;
-        if (combatCycleChanged) entity.lastCombatAnimationAt = 0;
         entity.updatedAt = player.updatedAt;
-        if (!enteringCombat && player.visualState !== "combat") {
+        if (player.visualState !== "combat") {
+          entity.combatProgressMs = 0;
+          entity.combatDurationMs = 0;
+          entity.lastCombatVisualStepKey = "";
+          entity.combatEventPresentationUntil = 0;
+          entity.combatMobDefeated = false;
+        }
+        if (player.idle && (sourceChanged || anchorChanged)) {
+          this.rebaseRemotePlayerIfNeeded(entity, anchor, true);
+        } else if (!enteringCombat && player.visualState !== "combat") {
           this.rebaseRemotePlayerIfNeeded(entity, anchor);
         }
       }
@@ -2997,29 +3033,20 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const directionStart = { down: 0, left: 4, right: 8, up: 12 }[
       entity.lastMovementDirection
     ];
-    if (
-      visualPhase === "combat" &&
-      entity.combatEventType === "MOB_HIT" &&
-      entity.combatEventPresentationUntil > this.time.now &&
-      !this.state.prefersReducedMotion
-    ) {
-      this.playRemoteAnimation(
-        entity.sprite,
-        this.survivorCombatAnimationKey("hurt", entity.lastMovementDirection),
-      );
-    } else if (visualPhase === "combat" && !this.state.prefersReducedMotion) {
-      this.playRemoteAnimation(
-        entity.sprite,
-        this.survivorCombatAnimationKey(
-          "attack",
-          entity.lastMovementDirection,
-        ),
-      );
+    const activeAnimationKey = entity.sprite.anims.currentAnim?.key ?? "";
+    const hasActiveCombatAnimation =
+      entity.sprite.anims.isPlaying &&
+      (activeAnimationKey.startsWith("suburbio-survivor-attack-") ||
+        activeAnimationKey.startsWith("suburbio-survivor-hurt-") ||
+        activeAnimationKey.startsWith("suburbio-survivor-death-"));
+    if (!hasActiveCombatAnimation) entity.sprite.anims.timeScale = 1;
+    if (visualPhase === "combat" && hasActiveCombatAnimation) {
+      // A linha do tempo de combate controla a animacao ate o golpe terminar.
     } else if (visualPhase === "combat") {
       entity.sprite
         .stop()
-        .setTexture(SURVIVOR_ATTACK_TEXTURE)
-        .setFrame(this.directionStart(entity.lastMovementDirection, 4) + 3);
+        .setTexture(SURVIVOR_TEXTURE)
+        .setFrame(directionStart);
     } else if (visualPhase === "investigating" && !this.state.prefersReducedMotion) {
       this.playRemoteAnimation(
         entity.sprite,
@@ -3061,14 +3088,16 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   private playRemoteAnimation(
     sprite: Phaser.GameObjects.Sprite,
     animationKey: string,
+    restart = false,
   ) {
     if (
+      !restart &&
       sprite.anims.currentAnim?.key === animationKey &&
       sprite.anims.isPlaying
     ) {
       return;
     }
-    sprite.play(animationKey);
+    sprite.play(animationKey, !restart);
   }
 
   private syncRemoteCombatVisual(entity: RemotePlayerEntity) {
@@ -3090,15 +3119,15 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       entity.combatMobShadow = null;
       entity.combatMobAsset = null;
     }
-    if (entity.visualState !== "combat" || !entity.combatMobName || entity.idle) {
+    if (entity.visualState !== "combat" || !entity.combatMobName) {
       entity.combatMobSprite?.destroy();
       entity.combatMobShadow?.destroy();
       entity.combatMobSprite = null;
       entity.combatMobShadow = null;
       entity.combatMobAsset = null;
-      entity.lastCombatAnimationAt = 0;
       return;
     }
+    if (entity.combatMobDefeated) return;
 
     const mobAsset = this.resolveMobSpriteAsset(entity.combatMobName);
     if (!mobAsset) return;
@@ -3133,7 +3162,6 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         .setDisplaySize(MOB_DISPLAY_WIDTH, MOB_DISPLAY_HEIGHT)
         .setAlpha(1);
       entity.combatMobAsset = mobAsset;
-      entity.lastCombatAnimationAt = 0;
     }
 
     const mobSprite = entity.combatMobSprite;
@@ -3150,6 +3178,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     if (isFreshCombatEvent) {
       entity.lastPresentedCombatEventKey = entity.combatEventKey;
       if (entity.combatEventType === "MOB_DEFEATED") {
+        entity.combatMobDefeated = true;
         entity.combatDeathPresentationUntil = now + 950;
         mobSprite.clearTint().setAlpha(1);
         mobSprite.play(this.mobAnimationKey(mobAsset, "death", direction), true);
@@ -3166,38 +3195,160 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         return;
       }
       if (entity.combatEventType === "PLAYER_HIT") {
-        entity.combatEventPresentationUntil = now + 240;
-        mobSprite.play(this.mobAnimationKey(mobAsset, "hurt", direction), true);
-        this.tweens.add({
-          targets: mobSprite,
-          alpha: 0.45,
-          yoyo: true,
-          duration: 90,
-        });
+        entity.combatEventPresentationUntil = now + 360;
+        this.presentRemoteCombatCue(
+          entity,
+          mobSprite,
+          mobAsset,
+          direction,
+          "player-attack",
+        );
+        this.rememberRemoteCombatTimelineStep(entity, now);
         return;
       }
       if (entity.combatEventType === "MOB_HIT") {
-        entity.combatEventPresentationUntil = now + 280;
-        mobSprite.play(this.mobAnimationKey(mobAsset, "attack", direction), true);
-        this.tweens.add({
-          targets: entity.sprite,
-          alpha: 0.42,
-          yoyo: true,
-          duration: 90,
-        });
+        entity.combatEventPresentationUntil = now + 360;
+        this.presentRemoteCombatCue(
+          entity,
+          mobSprite,
+          mobAsset,
+          direction,
+          "mob-attack",
+        );
+        this.rememberRemoteCombatTimelineStep(entity, now);
         return;
       }
+      if (entity.combatEventType === "PLAYER_DEFEATED") {
+        entity.combatEventPresentationUntil = now + 950;
+        this.playRemoteAnimation(
+          entity.sprite,
+          this.survivorCombatAnimationKey(
+            "death",
+            entity.lastMovementDirection,
+          ),
+          true,
+        );
+        return;
+      }
+      if (entity.combatEventType === "MOB_SPAWNED") {
+        entity.lastCombatVisualStepKey = "";
+      }
     }
-    if (this.state.prefersReducedMotion) {
+    if (entity.combatEventPresentationUntil > now) return;
+
+    const durationMs = Math.max(900, entity.combatDurationMs || 3_000);
+    const elapsedMs = Math.max(
+      entity.combatProgressMs,
+      now - entity.combatTimelineStartedAt,
+    );
+    const step = getHuntingCombatVisualStep({
+      durationMs,
+      progressPercent: Math.min(100, (elapsedMs / durationMs) * 100),
+      elapsedMs,
+    });
+    const stepKey = `${entity.combatCycleKey ?? entity.combatMobName}:${step.key}`;
+    if (stepKey === entity.lastCombatVisualStepKey) {
+      this.setRemoteCombatIdle(mobSprite, mobAsset, direction);
+      return;
+    }
+    entity.lastCombatVisualStepKey = stepKey;
+    this.presentRemoteCombatCue(
+      entity,
+      mobSprite,
+      mobAsset,
+      direction,
+      step.cue,
+    );
+  }
+
+  private rememberRemoteCombatTimelineStep(
+    entity: RemotePlayerEntity,
+    now: number,
+  ) {
+    const durationMs = Math.max(900, entity.combatDurationMs || 3_000);
+    const elapsedMs = Math.max(
+      entity.combatProgressMs,
+      now - entity.combatTimelineStartedAt,
+    );
+    const step = getHuntingCombatVisualStep({
+      durationMs,
+      progressPercent: Math.min(100, (elapsedMs / durationMs) * 100),
+      elapsedMs,
+    });
+    entity.lastCombatVisualStepKey = `${entity.combatCycleKey ?? entity.combatMobName}:${step.key}`;
+  }
+
+  private presentRemoteCombatCue(
+    entity: RemotePlayerEntity,
+    mobSprite: Phaser.GameObjects.Sprite,
+    mobAsset: MobCombatSpriteAssets,
+    mobDirection: MovementDirection,
+    cue: ReturnType<typeof getHuntingCombatVisualStep>["cue"],
+  ) {
+    if (cue === "approach") {
+      this.setRemoteCombatIdle(mobSprite, mobAsset, mobDirection);
+      return;
+    }
+    if (cue === "defeated") return;
+
+    const animationTimeScale = getHuntingCombatAnimationTimeScale(
+      Math.max(900, entity.combatDurationMs || 3_000),
+    );
+    if (cue === "player-attack" || cue === "finisher") {
+      this.playRemoteAnimation(
+        entity.sprite,
+        this.survivorCombatAnimationKey(
+          "attack",
+          entity.lastMovementDirection,
+        ),
+        true,
+      );
+      entity.sprite.anims.timeScale = animationTimeScale;
+      mobSprite.play(this.mobAnimationKey(mobAsset, "hurt", mobDirection), true);
+      mobSprite.anims.timeScale = animationTimeScale;
+      this.tweens.add({
+        targets: mobSprite,
+        alpha: 0.58,
+        yoyo: true,
+        duration: 90,
+      });
+      return;
+    }
+
+    mobSprite.play(this.mobAnimationKey(mobAsset, "attack", mobDirection), true);
+    mobSprite.anims.timeScale = animationTimeScale;
+    this.playRemoteAnimation(
+      entity.sprite,
+      this.survivorCombatAnimationKey("hurt", entity.lastMovementDirection),
+      true,
+    );
+    entity.sprite.anims.timeScale = animationTimeScale;
+    this.tweens.add({
+      targets: entity.sprite,
+      alpha: 0.58,
+      yoyo: true,
+      duration: 90,
+    });
+  }
+
+  private setRemoteCombatIdle(
+    mobSprite: Phaser.GameObjects.Sprite,
+    mobAsset: MobCombatSpriteAssets,
+    direction: MovementDirection,
+  ) {
+    const mobAnimationKey = mobSprite.anims.currentAnim?.key ?? "";
+    const mobAnimationActive =
+      mobSprite.anims.isPlaying &&
+      (mobAnimationKey.includes("-attack-") ||
+        mobAnimationKey.includes("-hurt-") ||
+        mobAnimationKey.includes("-death-"));
+    if (!mobAnimationActive) {
       mobSprite
         .stop()
         .setTexture(this.mobTextureKey(mobAsset, "walk"))
-        .setFrame(this.directionStart(direction, 4));
-      return;
-    }
-    if (now - entity.lastCombatAnimationAt >= 650) {
-      entity.lastCombatAnimationAt = now;
-      mobSprite.play(this.mobAnimationKey(mobAsset, "attack", direction), true);
+        .setFrame(this.directionStart(direction, 4))
+        .setAlpha(1);
+      mobSprite.anims.timeScale = 1;
     }
   }
 
