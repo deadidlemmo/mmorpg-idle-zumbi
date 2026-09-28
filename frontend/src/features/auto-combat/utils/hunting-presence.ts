@@ -47,7 +47,7 @@ export function mergeHuntingVisualPlayers(
         }
       : {}),
     updatedAt: player.updatedAt,
-    idle: !liveIds.has(player.characterId),
+    idle: player.visualState === "combat" ? false : !liveIds.has(player.characterId),
   }));
 }
 
@@ -59,7 +59,7 @@ export type AutoCombatHuntingPresenceResponse = {
     id: string;
     name: string;
     avatarKey: string | null;
-    phase: "HUNTING" | "ENCOUNTER_READY";
+    phase: "HUNTING" | "ENCOUNTER_READY" | "COMBAT_ACTIVE";
     startedAt: string;
     cycleStartedAt?: string | null;
     cycleEndsAt?: string | null;

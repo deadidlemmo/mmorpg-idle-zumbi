@@ -148,7 +148,7 @@ describe('AutoCombatGateway realtime transport', () => {
       { save: jest.fn() } as never,
     );
     gateway.server = {
-      sockets: { sockets: new Map([['socket-1', client]]) },
+      sockets: new Map([['socket-1', client]]),
       to: jest.fn(() => ({ emit: characterEmit })),
     } as never;
 
@@ -176,6 +176,20 @@ describe('AutoCombatGateway realtime transport', () => {
       expect.objectContaining({ eventId: 'event-spawn' }),
     );
 
+    gateway.emitHit('character-1', {
+      type: 'PLAYER_HIT',
+      actionId: 'session-1:1:1:PLAYER_HIT',
+      enemyInstanceId: 'enemy-1',
+      mobName: 'Errante do Subúrbio',
+    });
+    expect(visualEmit).toHaveBeenLastCalledWith(
+      'auto-combat:visual:pose',
+      expect.objectContaining({
+        combatEventType: 'PLAYER_HIT',
+        combatEventKey: 'session-1:1:1:PLAYER_HIT',
+      }),
+    );
+
     gateway.emitMobDefeated('character-1', {
       type: 'MOB_DEFEATED',
       eventId: 'event-death',
@@ -197,6 +211,35 @@ describe('AutoCombatGateway realtime transport', () => {
     expect(terminalCombat.active).toBe(false);
     expect(typeof terminalCombat.lockedUntil).toBe('number');
     expect(terminalCombat.anchor).toMatchObject({ tileX: 10, tileY: 12 });
+  });
+
+  it('repassa o evento visual entre instancias com adapter distribuido', () => {
+    const serverSideEmit = jest.fn();
+    const gateway = new AutoCombatGateway(
+      {} as never,
+      {} as never,
+      { recordAutoCombatSocketEmission: jest.fn() } as never,
+      { save: jest.fn() } as never,
+    );
+    gateway.server = {
+      adapter: { constructor: { name: 'RedisAdapter' } },
+      serverSideEmit,
+      sockets: new Map(),
+      to: jest.fn(() => ({ emit: jest.fn() })),
+    } as never;
+
+    const event = {
+      type: 'MOB_SPAWNED',
+      actionId: 'spawn-1',
+      enemyInstanceId: 'enemy-1',
+    };
+    gateway.emitMobSpawned('character-1', event);
+
+    expect(serverSideEmit).toHaveBeenCalledWith(
+      'auto-combat:visual:combat-event:internal',
+      'character-1',
+      event,
+    );
   });
 
   describe('presenca visual autenticada', () => {
@@ -529,6 +572,43 @@ describe('AutoCombatGateway realtime transport', () => {
         visualState: 'combat',
         moving: false,
         combatMobName: 'Mob mob-1',
+      });
+    });
+
+    it('reconcilia imediatamente quando o visual entra em combate', async () => {
+      const { gateway, socket, pose, findFirst } = setup();
+      const client = socket('first');
+      await gateway.handleHuntingVisualJoin(
+        client as never,
+        pose('first') as never,
+      );
+      findFirst.mockResolvedValueOnce({
+        id: 'session',
+        mapId: 'map-1',
+        subMapId: 'submap-1',
+        phase: 'COMBAT_ACTIVE',
+        currentCombatIndex: 2,
+        currentMobId: 'mob-1',
+        currentMob: { name: 'Errante do Subúrbio' },
+      });
+      client.data.huntingVisualCheckedAt = Date.now() - 600;
+      client.data.huntingVisualSentAt = 0;
+
+      await gateway.handleHuntingVisualPose(
+        client as never,
+        {
+          ...pose('first'),
+          visualState: 'combat',
+          combatMobName: 'valor ignorado',
+          combatCycleKey: 'valor ignorado',
+        } as never,
+      );
+
+      expect(client.data.huntingVisual).toMatchObject({
+        visualState: 'combat',
+        moving: false,
+        combatMobName: 'Errante do Subúrbio',
+        combatCycleKey: 'session:2:mob-1',
       });
     });
   });

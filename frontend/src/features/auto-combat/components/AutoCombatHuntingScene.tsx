@@ -353,6 +353,43 @@ type AutoCombatHuntingSceneProps = {
   onRequestStopHunt: () => void;
 };
 
+type RemoteCombatPlayback = {
+  queue: HuntingVisualPresence[];
+  pendingPose: HuntingVisualPresence | null;
+  timer: number | null;
+  presenting: boolean;
+  seenEventKeys: string[];
+};
+
+const MAX_REMOTE_COMBAT_PRESENTATION_QUEUE = 5;
+const MAX_REMOTE_COMBAT_EVENT_KEYS = 64;
+
+function getRemoteCombatPresentationDuration(
+  eventType: HuntingVisualPresence["combatEventType"],
+) {
+  switch (eventType) {
+    case "MOB_SPAWNED":
+      return 420;
+    case "MOB_DEFEATED":
+    case "PLAYER_DEFEATED":
+      return 1_050;
+    case "MOB_HIT":
+    case "PLAYER_HIT":
+      return 280;
+    case "DODGE":
+    case "POTION_USED":
+      return 220;
+    default:
+      return 180;
+  }
+}
+
+function isTerminalRemoteCombatEvent(
+  eventType: HuntingVisualPresence["combatEventType"],
+) {
+  return eventType === "MOB_DEFEATED" || eventType === "PLAYER_DEFEATED";
+}
+
 function usePrefersReducedMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -529,6 +566,91 @@ export function AutoCombatHuntingScene({
 
   useEffect(() => {
     const socket = getAutoCombatSocket();
+    const remoteCombatPlaybacks = new Map<string, RemoteCombatPlayback>();
+    const upsertLivePlayer = (player: HuntingVisualPresence) => {
+      setLivePlayers((current) => [
+        ...current.filter((entry) => entry.characterId !== player.characterId),
+        player,
+      ]);
+    };
+    const touchLivePlayer = (characterId: string) => {
+      const updatedAt = Date.now();
+      setLivePlayers((current) => current.map((entry) =>
+        entry.characterId === characterId ? { ...entry, updatedAt } : entry,
+      ));
+    };
+    const clearRemoteCombatPlayback = (characterId?: string) => {
+      if (characterId) {
+        const playback = remoteCombatPlaybacks.get(characterId);
+        if (playback?.timer != null) window.clearTimeout(playback.timer);
+        remoteCombatPlaybacks.delete(characterId);
+        return;
+      }
+      for (const playback of remoteCombatPlaybacks.values()) {
+        if (playback.timer !== null) window.clearTimeout(playback.timer);
+      }
+      remoteCombatPlaybacks.clear();
+    };
+    const presentNextRemoteCombatEvent = (characterId: string) => {
+      const playback = remoteCombatPlaybacks.get(characterId);
+      if (!playback || playback.presenting) return;
+      const next = playback.queue.shift();
+      if (!next) {
+        if (playback.pendingPose) {
+          upsertLivePlayer(playback.pendingPose);
+          playback.pendingPose = null;
+        }
+        return;
+      }
+
+      playback.presenting = true;
+      upsertLivePlayer(next);
+      playback.timer = window.setTimeout(() => {
+        playback.timer = null;
+        playback.presenting = false;
+        if (playback.queue.length > 0) {
+          presentNextRemoteCombatEvent(characterId);
+          return;
+        }
+        if (playback.pendingPose) {
+          upsertLivePlayer(playback.pendingPose);
+          playback.pendingPose = null;
+        }
+      }, getRemoteCombatPresentationDuration(next.combatEventType));
+    };
+    const queueRemoteCombatEvent = (player: HuntingVisualPresence) => {
+      const eventKey = player.combatEventKey;
+      if (!eventKey) {
+        upsertLivePlayer(player);
+        return;
+      }
+      const playback = remoteCombatPlaybacks.get(player.characterId) ?? {
+        queue: [],
+        pendingPose: null,
+        timer: null,
+        presenting: false,
+        seenEventKeys: [],
+      };
+      remoteCombatPlaybacks.set(player.characterId, playback);
+      if (playback.seenEventKeys.includes(eventKey)) {
+        touchLivePlayer(player.characterId);
+        return;
+      }
+      playback.seenEventKeys.push(eventKey);
+      if (playback.seenEventKeys.length > MAX_REMOTE_COMBAT_EVENT_KEYS) {
+        playback.seenEventKeys.splice(
+          0,
+          playback.seenEventKeys.length - MAX_REMOTE_COMBAT_EVENT_KEYS,
+        );
+      }
+      if (playback.queue.length >= MAX_REMOTE_COMBAT_PRESENTATION_QUEUE) {
+        playback.queue = isTerminalRemoteCombatEvent(player.combatEventType)
+          ? playback.queue.slice(-2)
+          : playback.queue.slice(-3);
+      }
+      playback.queue.push(player);
+      presentNextRemoteCombatEvent(player.characterId);
+    };
     const sendJoin = () => {
       const pose = localPoseRef.current;
       if (!pose || !socket.connected || joinedVisualAreaRef.current === pose.areaId ||
@@ -541,6 +663,7 @@ export function AutoCombatHuntingScene({
     };
     const handleSnapshot = ({ areaId, players }: { areaId: HuntingVisualPose["areaId"]; players: HuntingVisualPresence[] }) => {
       if (localPoseRef.current?.areaId !== areaId) return;
+      clearRemoteCombatPlayback();
       joinedVisualAreaRef.current = areaId;
       livePlayerServerUpdatedAtRef.current = new Map(
         players.map((player) => [player.characterId, player.updatedAt]),
@@ -557,16 +680,30 @@ export function AutoCombatHuntingScene({
         player.characterId,
         player.updatedAt,
       );
-      setLivePlayers((current) => [
-        ...current.filter((entry) => entry.characterId !== player.characterId),
-        { ...player, updatedAt: Date.now() },
-      ]);
+      const received = { ...player, updatedAt: Date.now() };
+      const playback = remoteCombatPlaybacks.get(player.characterId);
+      if (
+        received.visualState === "combat" &&
+        received.combatEventType &&
+        received.combatEventKey
+      ) {
+        queueRemoteCombatEvent(received);
+        return;
+      }
+      if (playback?.presenting || playback?.queue.length) {
+        playback.pendingPose = received;
+        touchLivePlayer(player.characterId);
+        return;
+      }
+      upsertLivePlayer(received);
     };
     const handleLeft = ({ characterId: leftId }: { characterId: string }) => {
+      clearRemoteCombatPlayback(leftId);
       livePlayerServerUpdatedAtRef.current.delete(leftId);
       setLivePlayers((current) => current.filter((player) => player.characterId !== leftId));
     };
     const handleDisconnect = () => {
+      clearRemoteCombatPlayback();
       joinedVisualAreaRef.current = null;
       lastJoinAttemptRef.current = 0;
       livePlayerServerUpdatedAtRef.current.clear();
@@ -602,6 +739,7 @@ export function AutoCombatHuntingScene({
       socket.off("disconnect", handleDisconnect);
       window.clearInterval(retry);
       window.clearInterval(pruneStale);
+      clearRemoteCombatPlayback();
       joinedVisualAreaRef.current = null;
       livePlayerServerUpdatedAtRef.current.clear();
       sendVisualPoseRef.current = () => {};

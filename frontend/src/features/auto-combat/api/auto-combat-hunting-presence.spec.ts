@@ -182,3 +182,38 @@ test("preserva o alvo e o ciclo da batalha na presenca ao vivo", () => {
     },
   ]);
 });
+
+test("mantem o combate do snapshot REST ativo enquanto o socket reconcilia", () => {
+  const combatPresence: HuntingVisualPresence = {
+    characterId: "remote-combat",
+    displayName: "Combatente",
+    mapId: "map-1",
+    subMapId: "submap-1",
+    areaId: "suburbio",
+    tileX: 12,
+    tileY: 7,
+    direction: "left",
+    visualState: "combat",
+    moving: false,
+    combatMobName: "Errante do Subúrbio",
+    combatCycleKey: "session-1:2:mob-1",
+    updatedAt: 0,
+  };
+
+  assert.deepEqual(mergeHuntingVisualPlayers([combatPresence], []), [
+    {
+      id: "remote-combat",
+      displayName: "Combatente",
+      areaId: "suburbio",
+      worldX: 384,
+      worldY: 224,
+      direction: "left",
+      visualState: "combat",
+      moving: false,
+      combatMobName: "Errante do Subúrbio",
+      combatCycleKey: "session-1:2:mob-1",
+      updatedAt: 0,
+      idle: false,
+    },
+  ]);
+});

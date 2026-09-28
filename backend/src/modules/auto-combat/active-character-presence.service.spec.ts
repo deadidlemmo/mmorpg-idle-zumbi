@@ -346,6 +346,16 @@ describe('ActiveCharacterPresenceService', () => {
             avatarKey: null,
           },
         },
+        {
+          phase: AutoCombatSessionPhase.COMBAT_ACTIVE,
+          startedAt: new Date('2026-08-27T10:45:00.000Z'),
+          huntBatch: null,
+          character: {
+            id: 'remote-3',
+            name: 'Joana',
+            avatarKey: 'joana',
+          },
+        },
       ]);
     const service = new ActiveCharacterPresenceService(
       {
@@ -372,6 +382,7 @@ describe('ActiveCharacterPresenceService', () => {
           in: [
             AutoCombatSessionPhase.HUNTING,
             AutoCombatSessionPhase.ENCOUNTER_READY,
+            AutoCombatSessionPhase.COMBAT_ACTIVE,
           ],
         },
       },
@@ -406,6 +417,15 @@ describe('ActiveCharacterPresenceService', () => {
           avatarKey: null,
           phase: AutoCombatSessionPhase.ENCOUNTER_READY,
           startedAt: '2026-08-27T11:00:00.000Z',
+          cycleStartedAt: null,
+          cycleEndsAt: null,
+        },
+        {
+          id: 'remote-3',
+          name: 'Joana',
+          avatarKey: 'joana',
+          phase: AutoCombatSessionPhase.COMBAT_ACTIVE,
+          startedAt: '2026-08-27T10:45:00.000Z',
           cycleStartedAt: null,
           cycleEndsAt: null,
         },

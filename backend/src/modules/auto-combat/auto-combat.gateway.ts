@@ -4,11 +4,12 @@ import {
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import type { Server, Socket } from 'socket.io';
+import type { Namespace, Socket } from 'socket.io';
 import {
   AutoCombatSessionPhase,
   AutoCombatSessionStatus,
@@ -166,15 +167,19 @@ type AutoCombatTelemetryPayload = {
 
 const AUTO_COMBAT_TELEMETRY_WINDOW_MS = 60_000;
 const AUTO_COMBAT_TELEMETRY_MAX_REPORTS_PER_WINDOW = 600;
+const HUNTING_VISUAL_COMBAT_RECONCILIATION_MS = 500;
+const HUNTING_VISUAL_COMBAT_STATE_REFRESH_MS = 10_000;
+const HUNTING_VISUAL_TERMINAL_LOCK_MS = 1_200;
+const HUNTING_VISUAL_CLUSTER_EVENT = 'auto-combat:visual:combat-event:internal';
 
 @WebSocketGateway({
   namespace: '/auto-combat',
 })
 export class AutoCombatGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
 {
   @WebSocketServer()
-  server!: Server;
+  server!: Namespace;
 
   private readonly logger = new Logger(AutoCombatGateway.name);
 
@@ -191,6 +196,22 @@ export class AutoCombatGateway
     private readonly observability: ObservabilityService,
     private readonly huntingVisualPosition: HuntingVisualPositionService,
   ) {}
+
+  afterInit(server: Namespace) {
+    server.on(
+      HUNTING_VISUAL_CLUSTER_EVENT,
+      (characterId: unknown, payload: unknown) => {
+        if (typeof characterId !== 'string') return;
+        const normalizedCharacterId = this.normalizeId(characterId);
+        if (!normalizedCharacterId) return;
+        this.emitHuntingVisualCombatEvent(
+          normalizedCharacterId,
+          payload,
+          false,
+        );
+      },
+    );
+  }
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
@@ -564,7 +585,20 @@ export class AutoCombatGateway
     if (now - (client.data.huntingVisualSentAt ?? 0) < 120) {
       return { ok: false };
     }
-    if (now - (client.data.huntingVisualCheckedAt ?? 0) > 10_000) {
+    const previousCombatState = client.data.huntingVisualCombat;
+    const visualCombatMismatch =
+      (pose.visualState === 'combat') !==
+      Boolean(
+        previousCombatState &&
+        this.isHuntingVisualCombatLocked(previousCombatState, now),
+      );
+    const timeSinceCanonicalCheck =
+      now - (client.data.huntingVisualCheckedAt ?? 0);
+    if (
+      timeSinceCanonicalCheck > HUNTING_VISUAL_COMBAT_STATE_REFRESH_MS ||
+      (visualCombatMismatch &&
+        timeSinceCanonicalCheck > HUNTING_VISUAL_COMBAT_RECONCILIATION_MS)
+    ) {
       const active = await this.prisma.autoCombatSession.findFirst({
         where: {
           characterId: pose.characterId,
@@ -827,8 +861,19 @@ export class AutoCombatGateway
     return canonical;
   }
 
-  private emitHuntingVisualCombatEvent(characterId: string, payload: unknown) {
-    const sockets = this.server?.sockets?.sockets;
+  private emitHuntingVisualCombatEvent(
+    characterId: string,
+    payload: unknown,
+    relayToCluster = true,
+  ) {
+    if (relayToCluster && this.canRelayHuntingVisualEventToCluster()) {
+      this.server.serverSideEmit(
+        HUNTING_VISUAL_CLUSTER_EVENT,
+        characterId,
+        payload,
+      );
+    }
+    const sockets = this.server?.sockets;
     if (!sockets) return;
     const record =
       payload && typeof payload === 'object'
@@ -838,17 +883,40 @@ export class AutoCombatGateway
     if (!eventType) return;
 
     const rawEventKey =
-      record?.eventKey ?? record?.eventId ?? record?.id ?? record?.sequence;
+      record?.eventKey ??
+      record?.eventId ??
+      record?.id ??
+      record?.sequence ??
+      record?.actionId ??
+      record?.turnId;
     const normalizedRawEventKey =
       typeof rawEventKey === 'string' || typeof rawEventKey === 'number'
         ? String(rawEventKey)
         : null;
-    const eventKey = this.normalizeVisualLabel(normalizedRawEventKey, 180);
     const incomingMobName = this.normalizeVisualLabel(record?.mobName, 100);
     const incomingCycleKey = this.normalizeVisualLabel(
       record?.enemyInstanceId ?? record?.combatCycleKey,
       160,
     );
+    const actionOrder =
+      typeof record?.actionOrder === 'string' ||
+      typeof record?.actionOrder === 'number'
+        ? String(record.actionOrder)
+        : '';
+    const fallbackEventKey = [
+      incomingCycleKey ?? characterId,
+      eventType,
+      actionOrder,
+      this.normalizeVisualLabel(
+        record?.actionStartedAt ?? record?.serverTime ?? record?.createdAt,
+        48,
+      ) ?? '',
+    ].join(':');
+    const eventKey =
+      this.normalizeVisualLabel(
+        normalizedRawEventKey ?? fallbackEventKey,
+        180,
+      ) ?? `${characterId}:${eventType}`;
     const terminal =
       eventType === 'MOB_DEFEATED' || eventType === 'PLAYER_DEFEATED';
     const now = Date.now();
@@ -875,7 +943,7 @@ export class AutoCombatGateway
         eventKey,
         anchor:
           previousCombat?.anchor ?? this.getHuntingVisualCombatAnchor(presence),
-        lockedUntil: terminal ? now + 1000 : null,
+        lockedUntil: terminal ? now + HUNTING_VISUAL_TERMINAL_LOCK_MS : null,
       };
       const nextPresence: HuntingVisualPresence = {
         ...this.applyCanonicalHuntingVisualCombat(presence, eventCombat),
@@ -891,6 +959,20 @@ export class AutoCombatGateway
         .to(this.getHuntingVisualRoom(nextPresence))
         .emit('auto-combat:visual:pose', nextPresence);
     }
+  }
+
+  private canRelayHuntingVisualEventToCluster() {
+    const socketServer = this.server as unknown as {
+      adapter?: { constructor?: { name?: string } };
+      of?: (namespace: string) => {
+        adapter?: { constructor?: { name?: string } };
+      };
+    };
+    const adapterName =
+      socketServer.adapter?.constructor?.name ??
+      socketServer.of?.('/auto-combat').adapter?.constructor?.name;
+
+    return Boolean(adapterName && adapterName !== 'Adapter');
   }
 
   @SubscribeMessage('auto-combat:telemetry')

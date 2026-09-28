@@ -230,7 +230,7 @@ export class ActiveCharacterPresenceService {
       where: {
         characterId,
         status: AutoCombatSessionStatus.ACTIVE,
-        phase: { in: HUNTING_PRESENCE_PHASES },
+        phase: { in: ACTIVE_AUTO_COMBAT_PHASES },
         endsAt: { gt: now },
       },
       orderBy: { startedAt: 'desc' },
@@ -257,7 +257,7 @@ export class ActiveCharacterPresenceService {
         mapId: activeSession.mapId,
         subMapId: activeSession.subMapId,
         status: AutoCombatSessionStatus.ACTIVE,
-        phase: { in: HUNTING_PRESENCE_PHASES },
+        phase: { in: ACTIVE_AUTO_COMBAT_PHASES },
         endsAt: { gt: now },
         character: {
           status: CharacterStatus.ACTIVE,
