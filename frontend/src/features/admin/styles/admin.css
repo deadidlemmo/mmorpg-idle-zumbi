@@ -999,6 +999,42 @@
   margin: 0;
 }
 
+.admin-materials-form label:nth-of-type(3) {
+  grid-column: auto;
+}
+
+.admin-materials-form label:last-of-type {
+  grid-column: 1 / -1;
+}
+
+.admin-materials-result {
+  display: grid;
+  gap: 7px;
+  margin: 0 0 18px;
+  padding: 12px;
+  color: #b8c4ba;
+  font-size: 0.78rem;
+  background: #101612;
+  border: 1px solid #3f5940;
+}
+
+.admin-materials-result strong {
+  color: #dce8d3;
+}
+
+.admin-materials-result span {
+  color: #94a398;
+}
+
+.admin-materials-result ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
 .admin-cash-balance {
   display: grid;
   align-content: center;

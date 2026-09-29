@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AdminService } from './admin.service';
 import { GetProductMetricsDto } from './dto/get-product-metrics.dto';
+import { GrantCraftingMaterialsDto } from './dto/grant-crafting-materials.dto';
 import { GrantCharacterCashDto } from './dto/grant-character-cash.dto';
 import { ListAdminUsersDto } from './dto/list-admin-users.dto';
 import { UpdateUserSuspensionDto } from './dto/update-user-suspension.dto';
@@ -66,6 +67,19 @@ export class AdminController {
     @Body() dto: GrantCharacterCashDto,
   ) {
     return this.adminService.grantCharacterCash(
+      request.user.id,
+      characterId,
+      dto,
+    );
+  }
+
+  @Post('characters/:id/crafting-materials/grant')
+  grantCraftingMaterials(
+    @Req() request: { user: { id: string } },
+    @Param('id') characterId: string,
+    @Body() dto: GrantCraftingMaterialsDto,
+  ) {
+    return this.adminService.grantCraftingMaterials(
       request.user.id,
       characterId,
       dto,

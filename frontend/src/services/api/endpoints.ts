@@ -25,6 +25,8 @@ export const API_ENDPOINTS = {
     userSuspension: (userId: string) => `/admin/users/${userId}/suspension`,
     characterCashGrant: (characterId: string) =>
       `/admin/characters/${characterId}/cash/grant`,
+    characterCraftingMaterialsGrant: (characterId: string) =>
+      `/admin/characters/${characterId}/crafting-materials/grant`,
     auditLogs: "/admin/audit-logs",
     cosmeticsCatalog: "/admin/cosmetics/catalog",
     cosmeticsGrant: "/admin/cosmetics/grant",

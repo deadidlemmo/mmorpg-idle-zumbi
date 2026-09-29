@@ -477,6 +477,40 @@ export async function grantAdminCharacterCash(
   return response.data;
 }
 
+export interface AdminCraftingMaterialsGrant {
+  character: {
+    id: string;
+    name: string;
+    user: { id: string; email: string };
+  };
+  totalCrafts: number;
+  recipeNames: string[];
+  materials: Array<{
+    itemId: string;
+    name: string;
+    tier: number;
+    quantity: number;
+    balanceAfter: number | null;
+  }>;
+  alreadyProcessed: boolean;
+}
+
+export async function grantAdminCraftingMaterials(
+  characterId: string,
+  payload: {
+    recipeCount: number;
+    craftsPerRecipe: number;
+    reason: string;
+    requestId: string;
+  },
+) {
+  const response = await apiClient.post<AdminCraftingMaterialsGrant>(
+    API_ENDPOINTS.admin.characterCraftingMaterialsGrant(characterId),
+    payload,
+  );
+  return response.data;
+}
+
 export async function revokeAdminCosmetic(entitlementId: string) {
   const response = await apiClient.post<{ message: string }>(
     API_ENDPOINTS.admin.cosmeticsRevoke,

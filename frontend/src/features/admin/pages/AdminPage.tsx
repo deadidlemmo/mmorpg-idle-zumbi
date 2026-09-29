@@ -33,12 +33,14 @@ import {
   getAdminUserCosmetics,
   getAdminUsers,
   grantAdminCharacterCash,
+  grantAdminCraftingMaterials,
   grantAdminCosmetics,
   revokeAdminCosmetic,
   setAdminUserSuspension,
   startAdminAutoCombatCapture,
   type AdminCosmeticEntitlement,
   type AdminCosmeticCatalog,
+  type AdminCraftingMaterialsGrant,
   type AdminAuditLog,
   type AdminMetricSeries,
   type AdminOperations,
@@ -216,6 +218,19 @@ export function AdminPage() {
   const [cashReason, setCashReason] = useState("");
   const [cashMessage, setCashMessage] = useState<string | null>(null);
   const [cashRequestId, setCashRequestId] = useState(() => crypto.randomUUID());
+  const [selectedMaterialsUser, setSelectedMaterialsUser] =
+    useState<AdminUser | null>(null);
+  const [materialsCharacterId, setMaterialsCharacterId] = useState("");
+  const [materialsRecipeCount, setMaterialsRecipeCount] = useState("4");
+  const [materialsCraftsPerRecipe, setMaterialsCraftsPerRecipe] = useState("5");
+  const [materialsReason, setMaterialsReason] = useState(
+    "Kit de teste da fila de criação",
+  );
+  const [materialsGrant, setMaterialsGrant] =
+    useState<AdminCraftingMaterialsGrant | null>(null);
+  const [materialsRequestId, setMaterialsRequestId] = useState(() =>
+    crypto.randomUUID(),
+  );
   const [selectedCosmeticUser, setSelectedCosmeticUser] =
     useState<AdminUser | null>(null);
   const [cosmeticCatalog, setCosmeticCatalog] =
@@ -461,6 +476,60 @@ export function AdminPage() {
         getApiErrorMessage(
           requestError,
           "Não foi possível adicionar Cash ao personagem.",
+        ),
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function openCraftingMaterials(user: AdminUser) {
+    setSelectedMaterialsUser(user);
+    setMaterialsCharacterId(user.characters[0]?.id ?? "");
+    setMaterialsRecipeCount("4");
+    setMaterialsCraftsPerRecipe("5");
+    setMaterialsReason("Kit de teste da fila de criação");
+    setMaterialsGrant(null);
+    setMaterialsRequestId(crypto.randomUUID());
+  }
+
+  function resetMaterialsRequest() {
+    setMaterialsGrant(null);
+    setMaterialsRequestId(crypto.randomUUID());
+  }
+
+  async function saveCraftingMaterialsGrant() {
+    if (!selectedMaterialsUser || !materialsCharacterId) return;
+    const recipeCount = Number(materialsRecipeCount);
+    const craftsPerRecipe = Number(materialsCraftsPerRecipe);
+    if (
+      !Number.isSafeInteger(recipeCount) ||
+      !Number.isSafeInteger(craftsPerRecipe) ||
+      recipeCount < 1 ||
+      craftsPerRecipe < 1 ||
+      recipeCount * craftsPerRecipe > 20
+    ) {
+      setError("O kit deve cobrir entre 1 e 20 criações.");
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+    setMaterialsGrant(null);
+    try {
+      const result = await grantAdminCraftingMaterials(materialsCharacterId, {
+        recipeCount,
+        craftsPerRecipe,
+        reason: materialsReason.trim(),
+        requestId: materialsRequestId,
+      });
+      setMaterialsGrant(result);
+      await load();
+    } catch (requestError) {
+      setError(
+        getApiErrorMessage(
+          requestError,
+          "Não foi possível conceder os materiais de criação.",
         ),
       );
     } finally {
@@ -1448,6 +1517,19 @@ export function AdminPage() {
                       <button
                         className="admin-row-action"
                         type="button"
+                        disabled={user.characters.length === 0}
+                        title={
+                          user.characters.length === 0
+                            ? "A conta não possui personagem ativo"
+                            : "Conceder kit de materiais de criação"
+                        }
+                        onClick={() => openCraftingMaterials(user)}
+                      >
+                        <PackagePlus size={14} /> Materiais
+                      </button>
+                      <button
+                        className="admin-row-action"
+                        type="button"
                         onClick={() => void openCosmetics(user)}
                       >
                         <Palette size={14} /> Aparências
@@ -1641,6 +1723,130 @@ export function AdminPage() {
               <button
                 type="button"
                 onClick={() => setSelectedCashUser(null)}
+                disabled={isSaving}
+              >
+                Fechar
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {selectedMaterialsUser ? (
+        <div className="admin-modal-backdrop" role="presentation">
+          <section
+            className="admin-modal admin-modal--cash"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-materials-title"
+          >
+            <h2 id="admin-materials-title">Kit de materiais de criação</h2>
+            <p>{selectedMaterialsUser.email}</p>
+
+            <div className="admin-cash-form admin-materials-form">
+              <label>
+                Personagem
+                <select
+                  value={materialsCharacterId}
+                  onChange={(event) => {
+                    setMaterialsCharacterId(event.target.value);
+                    resetMaterialsRequest();
+                  }}
+                >
+                  {selectedMaterialsUser.characters.map((character) => (
+                    <option key={character.id} value={character.id}>
+                      {character.name} · Nv. {character.level} ·{" "}
+                      {character.class.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Receitas diferentes
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={6}
+                  step={1}
+                  value={materialsRecipeCount}
+                  onChange={(event) => {
+                    setMaterialsRecipeCount(event.target.value);
+                    resetMaterialsRequest();
+                  }}
+                />
+              </label>
+              <label>
+                Unidades por receita
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={20}
+                  step={1}
+                  value={materialsCraftsPerRecipe}
+                  onChange={(event) => {
+                    setMaterialsCraftsPerRecipe(event.target.value);
+                    resetMaterialsRequest();
+                  }}
+                />
+              </label>
+              <label>
+                Motivo
+                <textarea
+                  value={materialsReason}
+                  minLength={3}
+                  maxLength={180}
+                  onChange={(event) => {
+                    setMaterialsReason(event.target.value);
+                    resetMaterialsRequest();
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="admin-primary-action"
+                disabled={
+                  isSaving ||
+                  Boolean(materialsGrant) ||
+                  !materialsCharacterId ||
+                  !materialsReason.trim() ||
+                  Number(materialsRecipeCount) < 1 ||
+                  Number(materialsCraftsPerRecipe) < 1 ||
+                  Number(materialsRecipeCount) *
+                    Number(materialsCraftsPerRecipe) >
+                    20
+                }
+                onClick={() => void saveCraftingMaterialsGrant()}
+              >
+                <PackagePlus size={16} /> Conceder materiais
+              </button>
+            </div>
+
+            {materialsGrant ? (
+              <div className="admin-materials-result" role="status">
+                <strong>
+                  Kit para {materialsGrant.totalCrafts} criações concedido a{" "}
+                  {materialsGrant.character.name}.
+                </strong>
+                {materialsGrant.recipeNames.length > 0 ? (
+                  <span>{materialsGrant.recipeNames.join(", ")}</span>
+                ) : null}
+                <ul>
+                  {materialsGrant.materials.map((material) => (
+                    <li key={material.itemId}>
+                      {material.name}: +
+                      {material.quantity.toLocaleString("pt-BR")}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="admin-modal-actions">
+              <button
+                type="button"
+                onClick={() => setSelectedMaterialsUser(null)}
                 disabled={isSaving}
               >
                 Fechar

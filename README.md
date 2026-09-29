@@ -556,6 +556,7 @@ Campos/eventos como `eventKey`, `sequence`, `snapshotSequence`, `latestEventSequ
 - Socket.IO em `/crafting`.
 - Usa `CraftingRecipe`, `CraftingIngredient`, `CraftingSession` e `CharacterCraftingSkill`.
 - A fila de criação persiste até 20 lotes sequenciais, reserva materiais ao enfileirar e reconcilia conclusões após F5 ou retorno offline.
+- O painel administrativo pode conceder um kit idempotente e auditado para até 20 criações por `POST /admin/characters/:id/crafting-materials/grant`.
 - Cap identificado em config: 100.
 - Crafting e atividade exclusiva.
 

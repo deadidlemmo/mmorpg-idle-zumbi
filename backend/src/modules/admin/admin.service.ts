@@ -9,11 +9,13 @@ import {
   EconomyCurrency,
   EconomyDirection,
   EconomyResourceType,
+  InventoryItemType,
   ItemSlot,
   Prisma,
 } from '@prisma/client';
 import { AuditService } from '../../common/audit/audit.service';
 import { PRODUCT_EVENT_ACTIONS } from '../../common/audit/product-events.constants';
+import { getUnlockedCraftingTier } from '../../common/config/crafting.config';
 import {
   INCURSION_TOKEN_ITEMS,
   WORLD_BOSS_FRAGMENT_ITEMS,
@@ -25,6 +27,7 @@ import {
   getEconomyReasonLabel,
 } from '../economy/economy.constants';
 import { recordEconomyEntry } from '../economy/economy-ledger';
+import { GrantCraftingMaterialsDto } from './dto/grant-crafting-materials.dto';
 import { GrantCharacterCashDto } from './dto/grant-character-cash.dto';
 import { ListAdminUsersDto } from './dto/list-admin-users.dto';
 import { UpdateUserSuspensionDto } from './dto/update-user-suspension.dto';
@@ -49,6 +52,8 @@ const EQUIPMENT_SLOTS = new Set<ItemSlot>([
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 const POSTGRES_INTEGER_MAX = 2_147_483_647;
+const ADMIN_CRAFTING_MATERIALS_REFERENCE = 'AdminCraftingMaterialsGrant';
+const ADMIN_CRAFTING_MATERIALS_MAX_CRAFTS = 20;
 
 function roundPercent(value: number) {
   return Number(value.toFixed(1));
@@ -1004,6 +1009,241 @@ export class AdminService {
     return result;
   }
 
+  async grantCraftingMaterials(
+    actorUserId: string,
+    characterId: string,
+    dto: GrantCraftingMaterialsDto,
+  ) {
+    const reason = dto.reason.trim();
+    if (reason.length < 3) {
+      throw new BadRequestException(
+        'Informe um motivo com pelo menos 3 caracteres.',
+      );
+    }
+
+    const totalCrafts = dto.recipeCount * dto.craftsPerRecipe;
+    if (totalCrafts > ADMIN_CRAFTING_MATERIALS_MAX_CRAFTS) {
+      throw new BadRequestException(
+        `O kit pode cobrir no máximo ${ADMIN_CRAFTING_MATERIALS_MAX_CRAFTS} criações.`,
+      );
+    }
+
+    const result = await this.runSerializable(async (tx) => {
+      const character = await tx.character.findFirst({
+        where: { id: characterId, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          classId: true,
+          craftingSkill: { select: { level: true } },
+          user: { select: { id: true, email: true } },
+        },
+      });
+      if (!character) {
+        throw new NotFoundException('Personagem não encontrado.');
+      }
+
+      const previousEntries = await tx.economyLedgerEntry.findMany({
+        where: {
+          referenceType: ADMIN_CRAFTING_MATERIALS_REFERENCE,
+          referenceId: dto.requestId,
+        },
+        select: {
+          characterId: true,
+          quantity: true,
+          balanceAfter: true,
+          item: {
+            select: { id: true, name: true, tier: true },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (previousEntries.length > 0) {
+        if (
+          previousEntries.some((entry) => entry.characterId !== characterId)
+        ) {
+          throw new ConflictException(
+            'Esta solicitação já foi usada em outra concessão.',
+          );
+        }
+
+        return {
+          character,
+          totalCrafts,
+          recipeNames: [] as string[],
+          materials: previousEntries.flatMap((entry) =>
+            entry.item
+              ? [
+                  {
+                    itemId: entry.item.id,
+                    name: entry.item.name,
+                    tier: entry.item.tier,
+                    quantity: entry.quantity,
+                    balanceAfter: entry.balanceAfter,
+                  },
+                ]
+              : [],
+          ),
+          alreadyProcessed: true,
+        };
+      }
+
+      const craftingLevel = character.craftingSkill?.level ?? 1;
+      const unlockedTier = getUnlockedCraftingTier(craftingLevel);
+      const recipes = await tx.craftingRecipe.findMany({
+        where: {
+          isActive: true,
+          tier: { lte: unlockedTier },
+          outputItem: {
+            isCraftable: true,
+            slot: { not: ItemSlot.MATERIAL },
+            OR: [{ classId: null }, { classId: character.classId }],
+          },
+        },
+        select: {
+          id: true,
+          tier: true,
+          outputItem: { select: { id: true, name: true } },
+          ingredients: {
+            select: {
+              quantity: true,
+              item: {
+                select: { id: true, name: true, tier: true, slot: true },
+              },
+            },
+          },
+        },
+        orderBy: [{ tier: 'desc' }, { createdAt: 'asc' }],
+        take: dto.recipeCount,
+      });
+
+      if (recipes.length === 0) {
+        throw new BadRequestException(
+          'O personagem ainda não possui receitas compatíveis para o kit.',
+        );
+      }
+
+      const materialTotals = new Map<
+        string,
+        { itemId: string; name: string; tier: number; quantity: number }
+      >();
+      for (const recipe of recipes) {
+        for (const ingredient of recipe.ingredients) {
+          if (ingredient.item.slot !== ItemSlot.MATERIAL) {
+            throw new BadRequestException(
+              `A receita ${recipe.outputItem.name} possui um ingrediente inválido.`,
+            );
+          }
+
+          const quantity = ingredient.quantity * dto.craftsPerRecipe;
+          const current = materialTotals.get(ingredient.item.id);
+          if (current) {
+            current.quantity += quantity;
+          } else {
+            materialTotals.set(ingredient.item.id, {
+              itemId: ingredient.item.id,
+              name: ingredient.item.name,
+              tier: ingredient.item.tier,
+              quantity,
+            });
+          }
+        }
+      }
+
+      const recipeNames = recipes.map((recipe) => recipe.outputItem.name);
+      const materials: Array<{
+        itemId: string;
+        name: string;
+        tier: number;
+        quantity: number;
+        balanceAfter: number;
+      }> = [];
+      for (const material of materialTotals.values()) {
+        const inventoryItem = await tx.inventoryItem.upsert({
+          where: {
+            characterId_itemId: {
+              characterId,
+              itemId: material.itemId,
+            },
+          },
+          create: {
+            characterId,
+            itemId: material.itemId,
+            type: InventoryItemType.MATERIAL,
+            quantity: material.quantity,
+          },
+          update: {
+            quantity: { increment: material.quantity },
+          },
+          select: { quantity: true },
+        });
+
+        await recordEconomyEntry(tx, {
+          characterId,
+          direction: EconomyDirection.CREDIT,
+          resourceType: EconomyResourceType.ITEM,
+          quantity: material.quantity,
+          balanceAfter: inventoryItem.quantity,
+          tier: material.tier,
+          itemId: material.itemId,
+          reason: ECONOMY_REASONS.ADMIN_CRAFTING_MATERIALS_GRANT,
+          referenceType: ADMIN_CRAFTING_MATERIALS_REFERENCE,
+          referenceId: dto.requestId,
+          idempotencyKey: [
+            'admin',
+            'crafting-materials',
+            actorUserId,
+            dto.requestId,
+            material.itemId,
+          ].join(':'),
+          metadata: {
+            actorUserId,
+            reason,
+            recipeNames,
+            craftsPerRecipe: dto.craftsPerRecipe,
+          },
+        });
+
+        materials.push({
+          ...material,
+          balanceAfter: inventoryItem.quantity,
+        });
+      }
+
+      return {
+        character,
+        totalCrafts: recipes.length * dto.craftsPerRecipe,
+        recipeNames,
+        materials,
+        alreadyProcessed: false,
+      };
+    });
+
+    if (!result.alreadyProcessed) {
+      this.auditService.recordSafely({
+        actorUserId,
+        action: 'ADMIN_CRAFTING_MATERIALS_GRANTED',
+        entityType: 'Character',
+        entityId: characterId,
+        metadata: {
+          targetUserId: result.character.user.id,
+          reason,
+          requestId: dto.requestId,
+          totalCrafts: result.totalCrafts,
+          recipeNames: result.recipeNames,
+          materials: result.materials.map((material) => ({
+            itemId: material.itemId,
+            quantity: material.quantity,
+            balanceAfter: material.balanceAfter,
+          })),
+        },
+      });
+    }
+
+    return result;
+  }
+
   private async runSerializable<T>(
     operation: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
@@ -1024,7 +1264,7 @@ export class AdminService {
       }
     }
 
-    throw new Error('A concessão de Cash não pôde ser concluída.');
+    throw new Error('A operação administrativa não pôde ser concluída.');
   }
 
   async updateSuspension(
