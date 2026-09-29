@@ -7,6 +7,8 @@ const LOCAL_DEVELOPMENT_ORIGINS = [
   'http://127.0.0.1:5175',
 ];
 
+const OFFICIAL_PRODUCTION_ORIGINS = ['https://deadidle.pages.dev'];
+
 function normalizeOrigin(value: string): string {
   try {
     return new URL(value.trim()).origin;
@@ -23,6 +25,7 @@ export function buildAllowedCorsOrigins(params: {
   const production = params.nodeEnv?.trim().toLowerCase() === 'production';
   const rawOrigins = [
     ...(production ? [] : LOCAL_DEVELOPMENT_ORIGINS),
+    ...(production ? OFFICIAL_PRODUCTION_ORIGINS : []),
     params.frontendUrl,
     ...(params.configuredOrigins?.split(',') ?? []),
   ].filter((origin): origin is string => Boolean(origin?.trim()));

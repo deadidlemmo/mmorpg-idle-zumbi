@@ -9,8 +9,18 @@ describe('CORS policy', () => {
     });
 
     expect(allowedOrigins).toEqual(
-      new Set(['https://game.example.com', 'https://admin.example.com']),
+      new Set([
+        'https://deadidle.pages.dev',
+        'https://game.example.com',
+        'https://admin.example.com',
+      ]),
     );
+  });
+
+  it('mantem o dominio oficial disponivel sem variavel de frontend em producao', () => {
+    const allowedOrigins = buildAllowedCorsOrigins({ nodeEnv: 'production' });
+
+    expect(allowedOrigins).toEqual(new Set(['https://deadidle.pages.dev']));
   });
 
   it('bloqueia tuneis genericos em producao', () => {
