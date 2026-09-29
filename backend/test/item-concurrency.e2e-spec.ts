@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
+  ActivityStatus,
   CharacterStatus,
   CraftIngredientRole,
   InventoryItemType,
@@ -323,6 +324,126 @@ describe('Item operations concurrency (e2e)', () => {
       expect(craftingSessions).toBe(0);
     }
   });
+
+  it.each([false, true])(
+    'enfileira receitas iguais e diferentes sem sobrepor horarios (concorrente: %s)',
+    async (concurrent) => {
+      const { character, accessToken } = await createCharacterFixture('Fila');
+      const ingredient = await createItem({
+        name: 'Material para fila',
+        slot: ItemSlot.MATERIAL,
+        materialOrigin: MaterialOrigin.DESMANCHE,
+      });
+      const outputs = await Promise.all(
+        ['Armadura da fila', 'Elmo da fila'].map((name) =>
+          createItem({ name, slot: ItemSlot.ARMOR, isCraftable: true }),
+        ),
+      );
+      for (const output of outputs) {
+        await prisma.craftingRecipe.create({
+          data: {
+            outputItemId: output.id,
+            tier: 1,
+            ingredients: {
+              create: {
+                itemId: ingredient.id,
+                quantity: 2,
+                role: CraftIngredientRole.MAIN_COMPONENT,
+                origin: MaterialOrigin.DESMANCHE,
+              },
+            },
+          },
+        });
+      }
+      await prisma.inventoryItem.create({
+        data: {
+          characterId: character.id,
+          itemId: ingredient.id,
+          type: InventoryItemType.MATERIAL,
+          quantity: 10,
+        },
+      });
+      const enqueue = (itemId: string) =>
+        request(app.getHttpServer())
+          .post('/crafting/craft')
+          .set('Authorization', `Bearer ${accessToken}`)
+          .send({ characterId: character.id, itemId, quantity: 1 });
+
+      expect((await enqueue(outputs[0].id)).status).toBe(201);
+      const responses = concurrent
+        ? await Promise.all(outputs.map((output) => enqueue(output.id)))
+        : [await enqueue(outputs[0].id), await enqueue(outputs[1].id)];
+      expect(responses.map(({ status }) => status)).toEqual([201, 201]);
+
+      const sessions = await prisma.craftingSession.findMany({
+        where: { characterId: character.id, status: ActivityStatus.ACTIVE },
+        orderBy: { startedAt: 'asc' },
+      });
+      expect(sessions).toHaveLength(3);
+      for (let index = 1; index < sessions.length; index += 1) {
+        expect(sessions[index].startedAt).toEqual(
+          sessions[index - 1].completesAt,
+        );
+      }
+      expect(
+        await prisma.inventoryItem.findUnique({
+          where: {
+            characterId_itemId: {
+              characterId: character.id,
+              itemId: ingredient.id,
+            },
+          },
+          select: { quantity: true },
+        }),
+      ).toEqual({ quantity: 4 });
+
+      const statusPath = `/crafting/character/${character.id}/status`;
+      const snapshot = await request(app.getHttpServer())
+        .get(statusPath)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(snapshot.body).toMatchObject({
+        queue: { totalEntries: 3, queuedEntries: 2 },
+        queuedSessions: [
+          { id: sessions[1].id, queuePosition: 2, queueState: 'QUEUED' },
+          { id: sessions[2].id, queuePosition: 3, queueState: 'QUEUED' },
+        ],
+      });
+
+      // Complete the persisted queue without waiting for wall-clock timers.
+      await prisma.craftingSession.updateMany({
+        where: { characterId: character.id },
+        data: { completesAt: new Date(Date.now() - 1000) },
+      });
+      for (let reload = 0; reload < 2; reload += 1) {
+        await request(app.getHttpServer())
+          .get(statusPath)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .expect(200);
+      }
+      const craftedItems = await prisma.inventoryItem.findMany({
+        where: {
+          characterId: character.id,
+          itemId: { in: outputs.map(({ id }) => id) },
+        },
+        select: { itemId: true, quantity: true },
+      });
+      expect(craftedItems).toEqual(
+        expect.arrayContaining([
+          { itemId: outputs[0].id, quantity: 2 },
+          { itemId: outputs[1].id, quantity: 1 },
+        ]),
+      );
+      expect(
+        await prisma.craftingSession.count({
+          where: {
+            characterId: character.id,
+            status: ActivityStatus.COMPLETED,
+          },
+        }),
+      ).toBe(3);
+    },
+  );
 
   it('rejeita pilhas com quantidade zero no PostgreSQL', async () => {
     const { character } = await createCharacterFixture('Restricao');

@@ -556,6 +556,7 @@ Campos/eventos como `eventKey`, `sequence`, `snapshotSequence`, `latestEventSequ
 - Socket.IO em `/crafting`.
 - Usa `CraftingRecipe`, `CraftingIngredient`, `CraftingSession` e `CharacterCraftingSkill`.
 - A fila de criação persiste até 20 lotes sequenciais, reserva materiais ao enfileirar e reconcilia conclusões após F5 ou retorno offline.
+- A migration `20260929163000_allow_persistent_crafting_queue` remove o índice antigo de uma única criação ativa. Aplique `npx prisma migrate deploy` no banco usado pelo backend antes de disponibilizar a fila; reiniciar apenas o processo não atualiza essa restrição. O bloqueio transacional do personagem mantém os lotes sequenciais.
 - O painel administrativo pode conceder um kit idempotente e auditado para até 20 criações por `POST /admin/characters/:id/crafting-materials/grant`.
 - Cap identificado em config: 100.
 - Crafting e atividade exclusiva.
