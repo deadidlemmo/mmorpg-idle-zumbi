@@ -1523,8 +1523,16 @@
   position: relative;
   border-color: rgba(191, 166, 83, 0.22) !important;
   background:
-    radial-gradient(circle at 13% 22%, rgba(232, 184, 78, 0.085), transparent 8rem),
-    radial-gradient(circle at 70% 16%, rgba(110, 159, 67, 0.065), transparent 10rem),
+    radial-gradient(
+      circle at 13% 22%,
+      rgba(232, 184, 78, 0.085),
+      transparent 8rem
+    ),
+    radial-gradient(
+      circle at 70% 16%,
+      rgba(110, 159, 67, 0.065),
+      transparent 10rem
+    ),
     linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent 58%),
     repeating-linear-gradient(
       135deg,
@@ -1601,6 +1609,154 @@
   overflow: hidden !important;
   text-align: center !important;
   white-space: nowrap !important;
+}
+
+.crafting-queue-panel {
+  overflow: hidden;
+  border: 1px solid rgba(191, 166, 83, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent 60%),
+    rgba(5, 11, 8, 0.82);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+}
+
+.crafting-queue-panel__header {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.62rem;
+  border-bottom: 1px solid rgba(168, 202, 142, 0.14);
+  padding: 0.72rem 0.78rem;
+}
+
+.crafting-queue-panel__icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(168, 202, 142, 0.22);
+  border-radius: 7px;
+  background: rgba(68, 105, 49, 0.2);
+  color: #bde388;
+}
+
+.crafting-queue-panel__header > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.crafting-queue-panel__header strong,
+.crafting-queue-item__body strong {
+  overflow: hidden;
+  color: #fff6dc;
+  font-family: var(--font-title);
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crafting-queue-panel__header strong {
+  font-size: 0.78rem;
+}
+
+.crafting-queue-panel__header small,
+.crafting-queue-item__body small {
+  overflow: hidden;
+  color: rgba(226, 231, 208, 0.62);
+  font-size: 0.66rem;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crafting-queue-panel__header em {
+  border: 1px solid rgba(232, 184, 78, 0.2);
+  border-radius: 6px;
+  padding: 0.26rem 0.44rem;
+  background: rgba(93, 72, 25, 0.18);
+  color: #e8cf87;
+  font-size: 0.64rem;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.crafting-queue-list {
+  display: grid;
+  max-height: 19rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.crafting-queue-item {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 26px 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.58rem 0.72rem;
+}
+
+.crafting-queue-item + .crafting-queue-item {
+  border-top: 1px solid rgba(168, 202, 142, 0.1);
+}
+
+.crafting-queue-item__position {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(168, 202, 142, 0.16);
+  border-radius: 50%;
+  color: rgba(212, 232, 184, 0.76);
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.crafting-queue-item__art {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(191, 166, 83, 0.18);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.crafting-queue-item__art img {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+}
+
+.crafting-queue-item__body {
+  display: grid;
+  min-width: 0;
+  gap: 0.16rem;
+}
+
+.crafting-queue-item__body strong {
+  font-size: 0.72rem;
+}
+
+.crafting-queue-item__duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+  color: rgba(232, 207, 135, 0.72);
+  font-size: 0.62rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .crafting-quantity {
@@ -1769,6 +1925,14 @@
   .crafting-activity-card,
   .crafting-skill-card {
     padding: 14px;
+  }
+
+  .crafting-queue-item {
+    grid-template-columns: 24px 38px minmax(0, 1fr);
+  }
+
+  .crafting-queue-item__duration {
+    display: none;
   }
 
   .crafting-details-modal {

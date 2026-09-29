@@ -1,5 +1,6 @@
 import {
   CRAFTING_DURATION_SECONDS_BY_TIER,
+  CRAFTING_QUEUE_MAX_ENTRIES,
   getCraftingDurationSecondsForTier,
 } from './crafting.config';
 
@@ -17,5 +18,9 @@ describe('crafting config', () => {
   it('scales duration by batch quantity', () => {
     expect(getCraftingDurationSecondsForTier(1, 3)).toBe(45);
     expect(getCraftingDurationSecondsForTier(3, 2)).toBe(120);
+  });
+
+  it('limits the persistent queue to a bounded number of entries', () => {
+    expect(CRAFTING_QUEUE_MAX_ENTRIES).toBe(20);
   });
 });

@@ -22,6 +22,7 @@ type ActivityGuardParams = {
   client?: PrismaService | Prisma.TransactionClient;
   lockCharacter?: boolean;
   allowActiveGathering?: boolean;
+  allowActiveCrafting?: boolean;
   worldBossEventId?: string;
 };
 
@@ -427,7 +428,7 @@ export class ActivityGuardService {
       'Personagens derrotados ou com 0 de HP não podem iniciar criação. Cure o personagem antes.',
     );
 
-    if (state.hasActiveCrafting) {
+    if (state.hasActiveCrafting && !params.allowActiveCrafting) {
       throw new ConflictException({
         message:
           'Este personagem já possui uma fabricação em andamento. Aguarde finalizar antes de iniciar outra.',

@@ -195,15 +195,27 @@ export interface CraftingSessionViewModel {
   craftingXpGained: number;
   durationSeconds: number;
   remainingSeconds: number;
+  startsInSeconds: number;
   progressPercent: number;
   startedAt: string;
   completesAt: string;
   completedAt?: string | null;
+  queuePosition?: number | null;
+  queueState: "CRAFTING" | "QUEUED" | "COMPLETED" | "STOPPED" | (string & {});
   timeline?: ActivityTimelineSnapshot | null;
   outputItem: Pick<
     CraftingOutputItemViewModel,
     "id" | "name" | "description" | "tier" | "rarity" | "slot" | "family"
   >;
+}
+
+export interface CraftingQueueViewModel {
+  totalEntries: number;
+  queuedEntries: number;
+  maxEntries: number;
+  availableEntries: number;
+  totalRemainingSeconds: number;
+  completesAt?: string | null;
 }
 
 export interface CraftingRecipeViewModel {
@@ -254,6 +266,11 @@ export interface CraftingRecipesResponse {
     craftableOnly: boolean;
     classId: string | null;
   };
+  limits: {
+    maxIdleCraftingDurationSeconds: number;
+    maxIdleCraftingDurationHours: number;
+    maxQueueEntries: number;
+  };
   summary: {
     totalRecipes: number;
     craftableRecipes: number;
@@ -262,6 +279,8 @@ export interface CraftingRecipesResponse {
     equippedRecipes: number;
   };
   activeSession?: CraftingSessionViewModel | null;
+  queuedSessions?: CraftingSessionViewModel[];
+  queue?: CraftingQueueViewModel;
   completedSessions?: CraftingSessionViewModel[];
   recipes: CraftingRecipeViewModel[];
 }
@@ -271,8 +290,11 @@ export interface CraftingStatusResponse {
   character: CraftingRecipesResponse["character"];
   craftingSkill: CraftingSkillViewModel;
   activeSession?: CraftingSessionViewModel | null;
+  queuedSessions?: CraftingSessionViewModel[];
+  queue?: CraftingQueueViewModel;
   completedSessions?: CraftingSessionViewModel[];
   stoppedSession?: CraftingSessionViewModel | null;
+  stoppedSessions?: CraftingSessionViewModel[];
   message?: string;
 }
 
@@ -303,6 +325,7 @@ export interface CraftItemResponse {
   }>;
   craftingSkill?: CraftingSkillViewModel | null;
   craftingSession?: CraftingSessionViewModel | null;
+  queue?: CraftingQueueViewModel;
   craftingProgress?: {
     xpGained: number;
     previousLevel: number;

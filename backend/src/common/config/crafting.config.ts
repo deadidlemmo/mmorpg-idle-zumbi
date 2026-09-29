@@ -1,6 +1,7 @@
 export const CRAFTING_LEVEL_CAP = 100;
 export const CRAFTING_LEVELS_PER_TIER = 10;
 export const CRAFTING_TARGET_CRAFTS_PER_TIER = 45;
+export const CRAFTING_QUEUE_MAX_ENTRIES = 20;
 export const CRAFTING_DURATION_SECONDS_BY_TIER: Record<number, number> = {
   1: 15,
   2: 30,

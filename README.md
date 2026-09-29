@@ -555,6 +555,7 @@ Campos/eventos como `eventKey`, `sequence`, `snapshotSequence`, `latestEventSequ
 - REST protegido em `/crafting`.
 - Socket.IO em `/crafting`.
 - Usa `CraftingRecipe`, `CraftingIngredient`, `CraftingSession` e `CharacterCraftingSkill`.
+- A fila de criação persiste até 20 lotes sequenciais, reserva materiais ao enfileirar e reconcilia conclusões após F5 ou retorno offline.
 - Cap identificado em config: 100.
 - Crafting e atividade exclusiva.
 

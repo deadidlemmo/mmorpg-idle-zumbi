@@ -55,6 +55,7 @@ export interface CraftingRealtimeState {
   characterId: string;
   status: CraftingStatusResponse | null;
   session: CraftingSessionViewModel | null;
+  queuedSessions: CraftingSessionViewModel[];
   craftingSkill: CraftingSkillViewModel | null;
   completedSessions: CraftingSessionViewModel[];
   isActive: boolean;
@@ -405,8 +406,7 @@ export function CraftingRealtimeProvider({
     }
 
     try {
-      const requestStartedAtMonotonicMs =
-        getActivityTimelineMonotonicNowMs();
+      const requestStartedAtMonotonicMs = getActivityTimelineMonotonicNowMs();
       const response = await getCraftingStatusRequest(characterId);
 
       applyStatus(
@@ -730,6 +730,7 @@ export function CraftingRealtimeProvider({
       characterId,
       status,
       session,
+      queuedSessions: status?.queuedSessions ?? [],
       craftingSkill:
         status?.craftingSkill ?? status?.character.craftingSkill ?? null,
       completedSessions: status?.completedSessions ?? [],

@@ -11,6 +11,7 @@ import {
   Gauge,
   Hammer,
   HeartPulse,
+  ListOrdered,
   Package,
   RefreshCw,
   Search,
@@ -48,6 +49,7 @@ import type {
   CraftingIngredientViewModel,
   CraftingOrigin,
   CraftingOutputItemViewModel,
+  CraftingQueueViewModel,
   CraftingRecipeViewModel,
   CraftingRecipesResponse,
   CraftingSessionViewModel,
@@ -437,6 +439,7 @@ function recipeMatchesSearch(recipe: CraftingRecipeViewModel, search: string) {
 
 function getRecipeStatusLabel(recipe: CraftingRecipeViewModel) {
   if (!recipe.isUnlocked) return `Criação Nv. ${recipe.requiredCraftingLevel}`;
+  if (recipe.lockReason) return recipe.lockReason;
   if (recipe.canCraft) return "Pronta";
   if (recipe.ownedQuantity > 0) return "Já possui";
 
@@ -526,12 +529,14 @@ function RecipeCard({
   onSelect,
   onCraft,
   isBusy,
+  hasActiveQueue,
 }: {
   recipe: CraftingRecipeViewModel;
   isSelected: boolean;
   onSelect: (recipe: CraftingRecipeViewModel) => void;
   onCraft: (recipe: CraftingRecipeViewModel) => void;
   isBusy: boolean;
+  hasActiveQueue: boolean;
 }) {
   const progressPercent = clampPercent(recipe.progress.percent);
 
@@ -616,7 +621,11 @@ function RecipeCard({
           disabled={!recipe.canCraft || isBusy}
         >
           <Hammer aria-hidden="true" size={14} />
-          {recipe.isUnlocked ? "Criar" : "Bloqueado"}
+          {recipe.isUnlocked
+            ? hasActiveQueue
+              ? "Enfileirar"
+              : "Criar"
+            : "Bloqueado"}
         </button>
       </div>
     </article>
@@ -701,6 +710,7 @@ function CraftingDetailsModal({
   isBusy,
   craftingLevel,
   craftingSkill,
+  hasActiveQueue,
   onClose,
 }: {
   isOpen: boolean;
@@ -712,6 +722,7 @@ function CraftingDetailsModal({
   isBusy: boolean;
   craftingLevel: number;
   craftingSkill?: CraftingSkillViewModel | null;
+  hasActiveQueue: boolean;
   onClose: () => void;
 }) {
   if (!isOpen || !recipe) {
@@ -1072,10 +1083,16 @@ function CraftingDetailsModal({
               {!recipe.isUnlocked
                 ? "Nível insuficiente"
                 : recipe.canCraft
-                  ? safeQuantity > 1
-                    ? `Iniciar x${safeQuantity}`
-                    : "Iniciar criação"
-                  : "Materiais insuficientes"}
+                  ? hasActiveQueue
+                    ? safeQuantity > 1
+                      ? `Adicionar x${safeQuantity} à fila`
+                      : "Adicionar à fila"
+                    : safeQuantity > 1
+                      ? `Iniciar x${safeQuantity}`
+                      : "Iniciar criação"
+                  : recipe.lockReason
+                    ? "Fila indisponível"
+                    : "Materiais insuficientes"}
             </button>
           </div>
         </section>
@@ -1168,6 +1185,89 @@ function CraftingActivityPanel({
           </div>
         }
       />
+    </section>
+  );
+}
+
+function CraftingQueuePanel({
+  sessions,
+  queue,
+  nowMs,
+}: {
+  sessions: CraftingSessionViewModel[];
+  queue?: CraftingQueueViewModel | null;
+  nowMs: number;
+}) {
+  if (sessions.length <= 0) {
+    return null;
+  }
+
+  const queueCompletesAtMs = queue?.completesAt
+    ? Date.parse(queue.completesAt)
+    : Number.NaN;
+  const totalRemainingSeconds = Number.isFinite(queueCompletesAtMs)
+    ? Math.max(0, Math.ceil((queueCompletesAtMs - nowMs) / 1000))
+    : (queue?.totalRemainingSeconds ?? 0);
+
+  return (
+    <section className="crafting-right-section crafting-queue-section">
+      <div className="crafting-right-section__heading">
+        <span className="crafting-page__eyebrow">Fila de criação</span>
+      </div>
+
+      <div className="crafting-queue-panel" aria-label="Próximas criações">
+        <header className="crafting-queue-panel__header">
+          <span className="crafting-queue-panel__icon" aria-hidden="true">
+            <ListOrdered size={18} />
+          </span>
+          <span>
+            <strong>{formatNumber(sessions.length)} aguardando</strong>
+            <small>
+              Fila completa em {formatDuration(totalRemainingSeconds)}
+            </small>
+          </span>
+          <em>
+            {formatNumber(queue?.totalEntries ?? sessions.length + 1)} /{" "}
+            {formatNumber(queue?.maxEntries ?? sessions.length + 1)}
+          </em>
+        </header>
+
+        <ol className="crafting-queue-list">
+          {sessions.map((session, index) => {
+            const startsAtMs = Date.parse(session.startedAt);
+            const startsInSeconds = Number.isFinite(startsAtMs)
+              ? Math.max(0, Math.ceil((startsAtMs - nowMs) / 1000))
+              : session.startsInSeconds;
+            const outputImageUrl = getEquipmentItemImageUrl(session.outputItem);
+
+            return (
+              <li key={session.id} className="crafting-queue-item">
+                <span className="crafting-queue-item__position">
+                  {formatNumber(session.queuePosition ?? index + 2)}
+                </span>
+                <span className="crafting-queue-item__art" aria-hidden="true">
+                  <img
+                    src={outputImageUrl ?? craftingSkillIcon}
+                    alt=""
+                    draggable={false}
+                  />
+                </span>
+                <span className="crafting-queue-item__body">
+                  <strong>{session.outputItem.name}</strong>
+                  <small>
+                    Qtd. {formatNumber(session.outputQuantity)} · começa em{" "}
+                    {formatDuration(startsInSeconds)}
+                  </small>
+                </span>
+                <span className="crafting-queue-item__duration">
+                  <Clock3 aria-hidden="true" size={12} />
+                  {formatDuration(session.durationSeconds)}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </section>
   );
 }
@@ -1316,6 +1416,11 @@ export function CraftingPage() {
   const realtimeCraftingSession = craftingRealtimeState.session ?? null;
   const activeCraftingSession =
     realtimeCraftingSession ?? recipesResponse?.activeSession ?? null;
+  const queuedCraftingSessions = craftingRealtimeState.status
+    ? craftingRealtimeState.queuedSessions
+    : (recipesResponse?.queuedSessions ?? []);
+  const craftingQueue =
+    craftingRealtimeState.status?.queue ?? recipesResponse?.queue ?? null;
   const activeCraftingSessionId = activeCraftingSession?.id ?? null;
   const isRealtimeCraftingSession =
     Boolean(realtimeCraftingSession) &&
@@ -1564,13 +1669,6 @@ export function CraftingPage() {
   async function handleCraft(recipe: CraftingRecipeViewModel) {
     if (!safeCharacterId || !recipe.canCraft || isCrafting) return;
 
-    if (activeCraftingSession) {
-      setErrorMessage(
-        "Aguarde a fabricação atual terminar antes de iniciar outra.",
-      );
-      return;
-    }
-
     const safeQuantity = Math.max(
       1,
       Math.min(Math.floor(craftQuantity || 1), recipe.maxCraftableTimes || 1),
@@ -1589,11 +1687,14 @@ export function CraftingPage() {
       const sessionDuration =
         result.craftingSession?.durationSeconds ??
         getCraftingDurationForQuantity(recipe, safeQuantity);
+      const queuePosition = result.craftingSession?.queuePosition ?? 1;
+      const queueRemainingSeconds =
+        result.queue?.totalRemainingSeconds ?? sessionDuration;
 
       setFeedback(
-        `Fabricação iniciada: ${result.craftedItem.name}${
-          safeQuantity > 1 ? ` x${safeQuantity}` : ""
-        }. Pronto em ${formatDuration(sessionDuration)}.`,
+        queuePosition > 1
+          ? `${result.craftedItem.name} adicionado à posição ${queuePosition} da fila. A fila termina em ${formatDuration(queueRemainingSeconds)}.`
+          : `Fabricação iniciada: ${result.craftedItem.name}. Pronto em ${formatDuration(sessionDuration)}.`,
       );
       setIsDetailsModalOpen(false);
       requestCraftingSnapshot();
@@ -1795,7 +1896,8 @@ export function CraftingPage() {
                   isSelected={recipe.recipeId === selectedRecipe?.recipeId}
                   onSelect={handleSelectRecipe}
                   onCraft={(nextRecipe) => void handleCraft(nextRecipe)}
-                  isBusy={isCrafting || Boolean(activeCraftingSession)}
+                  isBusy={isCrafting}
+                  hasActiveQueue={Boolean(activeCraftingSession)}
                 />
               ))}
             </div>
@@ -1818,6 +1920,12 @@ export function CraftingPage() {
               />
             ) : null}
 
+            <CraftingQueuePanel
+              sessions={queuedCraftingSessions}
+              queue={craftingQueue}
+              nowMs={nowMs}
+            />
+
             <CraftingSkillPanel
               skill={currentCraftingSkill}
               level={currentCraftingLevel}
@@ -1836,9 +1944,10 @@ export function CraftingPage() {
           quantity={craftQuantity}
           onQuantityChange={setCraftQuantity}
           onCraft={(recipe) => void handleCraft(recipe)}
-          isBusy={isCrafting || Boolean(activeCraftingSession)}
+          isBusy={isCrafting}
           craftingLevel={currentCraftingLevel}
           craftingSkill={currentCraftingSkill}
+          hasActiveQueue={Boolean(activeCraftingSession)}
           onClose={() => setIsDetailsModalOpen(false)}
         />
       </section>

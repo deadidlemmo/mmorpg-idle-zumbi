@@ -17,6 +17,7 @@ import {
 import type { CharacterCraftingSkill, Prisma } from '@prisma/client';
 import {
   CRAFTING_LEVEL_CAP,
+  CRAFTING_QUEUE_MAX_ENTRIES,
   getCraftingDurationSecondsForTier,
   getCraftingXpProgressPercent,
   getCraftingXpRewardForTier,
@@ -148,6 +149,15 @@ type CraftingSessionSnapshot = {
   };
 };
 
+type CraftingQueueSummary = {
+  totalEntries: number;
+  queuedEntries: number;
+  maxEntries: number;
+  availableEntries: number;
+  totalRemainingSeconds: number;
+  completesAt: Date | null;
+};
+
 @Injectable()
 export class CraftingService {
   constructor(
@@ -231,10 +241,21 @@ export class CraftingService {
     const maxIdleCraftingDurationSeconds =
       getIdleProgressLimitSeconds(premiumActive);
 
+    const serverNow = new Date();
     const resolvedCraftingSessions =
       await this.resolveCompletedCraftingSessions(userId, characterId);
-    const activeCraftingSession =
-      await this.findActiveCraftingSession(characterId);
+    const openCraftingSessions =
+      await this.findOpenCraftingSessions(characterId);
+    const activeCraftingSession = openCraftingSessions[0] ?? null;
+    const queuedCraftingSessions = openCraftingSessions.slice(1);
+    const craftingQueue = this.buildCraftingQueueSummary(
+      openCraftingSessions,
+      serverNow,
+    );
+    const availableQueueDurationSeconds = Math.max(
+      0,
+      maxIdleCraftingDurationSeconds - craftingQueue.totalRemainingSeconds,
+    );
 
     const craftingSkill = await this.getOrCreateCraftingSkill(characterId);
     const craftingSkillViewModel =
@@ -476,7 +497,6 @@ export class CraftingService {
         recipe.outputItem.tier,
       );
       const isUnlocked = craftingSkill.level >= requiredCraftingLevel;
-      const canCraft = hasRequiredMaterials && isUnlocked;
       const craftingXpReward = applyPremiumXpBonus(
         getCraftingXpRewardForTier(recipe.outputItem.tier),
         premiumActive,
@@ -484,6 +504,15 @@ export class CraftingService {
       const craftingDurationSeconds = getCraftingDurationSecondsForTier(
         recipe.outputItem.tier,
       );
+      const queueHasCapacity =
+        craftingQueue.totalEntries < CRAFTING_QUEUE_MAX_ENTRIES;
+      const queueHasDuration =
+        availableQueueDurationSeconds >= craftingDurationSeconds;
+      const canCraft =
+        hasRequiredMaterials &&
+        isUnlocked &&
+        queueHasCapacity &&
+        queueHasDuration;
 
       const totalRequired = ingredients.reduce(
         (total, ingredient) => total + ingredient.required,
@@ -548,11 +577,11 @@ export class CraftingService {
 
       const maxCraftableTimesByDuration =
         craftingDurationSeconds > 0
-          ? Math.floor(maxIdleCraftingDurationSeconds / craftingDurationSeconds)
+          ? Math.floor(availableQueueDurationSeconds / craftingDurationSeconds)
           : 0;
 
       const maxCraftableTimes =
-        ingredients.length === 0
+        ingredients.length === 0 || !queueHasCapacity
           ? 0
           : Math.min(
               maxCraftableTimesByDuration,
@@ -629,9 +658,13 @@ export class CraftingService {
         requiredCharacterLevel: requiredCraftingLevel,
         craftingXpReward,
         craftingDurationSeconds,
-        lockReason: isUnlocked
-          ? null
-          : `Requer nível ${requiredCraftingLevel} de criação.`,
+        lockReason: !isUnlocked
+          ? `Requer nível ${requiredCraftingLevel} de criação.`
+          : !queueHasCapacity
+            ? `A fila atingiu o limite de ${CRAFTING_QUEUE_MAX_ENTRIES} entradas.`
+            : !queueHasDuration
+              ? 'A fila atingiu o tempo máximo de criação idle.'
+              : null,
         canCraft,
         maxCraftableTimes: isUnlocked ? maxCraftableTimes : 0,
         maxOutputQuantity: isUnlocked
@@ -794,6 +827,7 @@ export class CraftingService {
       limits: {
         maxIdleCraftingDurationSeconds,
         maxIdleCraftingDurationHours: maxIdleCraftingDurationSeconds / 3600,
+        maxQueueEntries: CRAFTING_QUEUE_MAX_ENTRIES,
       },
       summary: {
         totalRecipes: visibleRecipes.length,
@@ -808,10 +842,18 @@ export class CraftingService {
           .length,
       },
       activeSession: activeCraftingSession
-        ? this.buildCraftingSessionViewModel(activeCraftingSession)
+        ? this.buildCraftingSessionViewModel(
+            activeCraftingSession,
+            serverNow,
+            1,
+          )
         : null,
+      queuedSessions: queuedCraftingSessions.map((session, index) =>
+        this.buildCraftingSessionViewModel(session, serverNow, index + 2),
+      ),
+      queue: craftingQueue,
       completedSessions: resolvedCraftingSessions.map((session) =>
-        this.buildCraftingSessionViewModel(session),
+        this.buildCraftingSessionViewModel(session, serverNow),
       ),
       recipes: visibleRecipes,
     };
@@ -980,7 +1022,11 @@ export class CraftingService {
       userId,
       characterId,
     );
-    const activeSession = await this.findActiveCraftingSession(characterId);
+    const serverNow = new Date();
+    const openCraftingSessions =
+      await this.findOpenCraftingSessions(characterId);
+    const activeSession = openCraftingSessions[0] ?? null;
+    const queuedSessions = openCraftingSessions.slice(1);
     const craftingSkill = await this.getOrCreateCraftingSkill(characterId);
     const craftingSkillViewModel =
       this.buildCraftingSkillViewModel(craftingSkill);
@@ -999,10 +1045,14 @@ export class CraftingService {
       },
       craftingSkill: craftingSkillViewModel,
       activeSession: activeSession
-        ? this.buildCraftingSessionViewModel(activeSession)
+        ? this.buildCraftingSessionViewModel(activeSession, serverNow, 1)
         : null,
+      queuedSessions: queuedSessions.map((session, index) =>
+        this.buildCraftingSessionViewModel(session, serverNow, index + 2),
+      ),
+      queue: this.buildCraftingQueueSummary(openCraftingSessions, serverNow),
       completedSessions: completedSessions.map((session) =>
-        this.buildCraftingSessionViewModel(session),
+        this.buildCraftingSessionViewModel(session, serverNow),
       ),
     };
   }
@@ -1053,6 +1103,7 @@ export class CraftingService {
     await this.activityGuard.ensureCanStartCrafting({
       characterId: dto.characterId,
       userId,
+      allowActiveCrafting: true,
     });
 
     const recipe = await this.prisma.craftingRecipe.findFirst({
@@ -1169,16 +1220,63 @@ export class CraftingService {
       });
     }
 
-    const startedAt = new Date();
-    const completesAt = new Date(startedAt.getTime() + durationSeconds * 1000);
-
     const craftResult = await this.prisma.$transaction(async (tx) => {
       await this.activityGuard.ensureCanStartCrafting({
         characterId: dto.characterId,
         userId,
         client: tx,
         lockCharacter: true,
+        allowActiveCrafting: true,
       });
+
+      const queueNow = new Date();
+      const openCraftingSessions = await tx.craftingSession.findMany({
+        where: {
+          characterId: dto.characterId,
+          status: ActivityStatus.ACTIVE,
+          completesAt: {
+            gt: queueNow,
+          },
+        },
+        orderBy: [{ startedAt: 'asc' }, { createdAt: 'asc' }],
+        select: {
+          id: true,
+          completesAt: true,
+        },
+      });
+
+      if (openCraftingSessions.length >= CRAFTING_QUEUE_MAX_ENTRIES) {
+        throw new BadRequestException(
+          `A fila de criação comporta no máximo ${CRAFTING_QUEUE_MAX_ENTRIES} entradas.`,
+        );
+      }
+
+      const queueTail = openCraftingSessions.at(-1) ?? null;
+      const startedAt = new Date(
+        Math.max(queueNow.getTime(), queueTail?.completesAt.getTime() ?? 0),
+      );
+      const completesAt = new Date(
+        startedAt.getTime() + durationSeconds * 1000,
+      );
+      const totalQueueRemainingSeconds = Math.max(
+        0,
+        Math.ceil((completesAt.getTime() - queueNow.getTime()) / 1000),
+      );
+
+      if (totalQueueRemainingSeconds > maxIdleCraftingDurationSeconds) {
+        throw new BadRequestException({
+          message:
+            'Esta entrada excede o tempo máximo de criação idle disponível na fila.',
+          durationSeconds,
+          queuedDurationSeconds: Math.max(
+            0,
+            totalQueueRemainingSeconds - durationSeconds,
+          ),
+          totalQueueRemainingSeconds,
+          maxIdleCraftingDurationSeconds,
+          maxIdleCraftingDurationHours: maxIdleCraftingDurationSeconds / 3600,
+        });
+      }
 
       const activeCraftingSkill = await this.getOrCreateCraftingSkill(
         dto.characterId,
@@ -1256,11 +1354,24 @@ export class CraftingService {
       return {
         craftingSkill: activeCraftingSkill,
         craftingSession,
+        queuePosition: openCraftingSessions.length + 1,
+        queue: {
+          totalEntries: openCraftingSessions.length + 1,
+          queuedEntries: openCraftingSessions.length,
+          maxEntries: CRAFTING_QUEUE_MAX_ENTRIES,
+          availableEntries:
+            CRAFTING_QUEUE_MAX_ENTRIES - openCraftingSessions.length - 1,
+          totalRemainingSeconds: totalQueueRemainingSeconds,
+          completesAt,
+        } satisfies CraftingQueueSummary,
       };
     });
 
     return {
-      message: 'Fabricação iniciada.',
+      message:
+        craftResult.queuePosition === 1
+          ? 'Fabricação iniciada.'
+          : 'Item adicionado à fila de criação.',
       character: {
         id: character.id,
         name: character.name,
@@ -1287,13 +1398,16 @@ export class CraftingService {
       ),
       craftingSession: this.buildCraftingSessionViewModel(
         craftResult.craftingSession,
+        new Date(),
+        craftResult.queuePosition,
       ),
+      queue: craftResult.queue,
     };
   }
 
   async stop(userId: string, characterId: string) {
     if (!characterId) {
-      throw new BadRequestException('O characterId Ã© obrigatÃ³rio.');
+      throw new BadRequestException('O characterId é obrigatório.');
     }
 
     const character = await this.prisma.character.findUnique({
@@ -1309,34 +1423,39 @@ export class CraftingService {
     });
 
     if (!character) {
-      throw new NotFoundException('Personagem nÃ£o encontrado.');
+      throw new NotFoundException('Personagem não encontrado.');
     }
 
     if (character.userId !== userId) {
       throw new ForbiddenException(
-        'VocÃª nÃ£o pode encerrar a criaÃ§Ã£o deste personagem.',
+        'Você não pode encerrar a criação deste personagem.',
       );
     }
 
     if (character.status !== CharacterStatus.ACTIVE) {
       throw new BadRequestException(
-        'Apenas personagens ativos podem encerrar criaÃ§Ãµes.',
+        'Apenas personagens ativos podem encerrar criações.',
       );
     }
 
     await this.resolveCompletedCraftingSessions(userId, characterId);
 
-    const activeSession = await this.findActiveCraftingSession(characterId);
+    const openCraftingSessions =
+      await this.findOpenCraftingSessions(characterId);
+    const activeSession = openCraftingSessions[0] ?? null;
 
     if (!activeSession) {
-      throw new BadRequestException('Nenhuma criaÃ§Ã£o ativa para encerrar.');
+      throw new BadRequestException('Nenhuma criação ativa para encerrar.');
     }
 
     const stoppedAt = new Date();
     const stopResult = await this.prisma.craftingSession.updateMany({
       where: {
-        id: activeSession.id,
+        characterId,
         status: ActivityStatus.ACTIVE,
+        completesAt: {
+          gt: stoppedAt,
+        },
       },
       data: {
         status: ActivityStatus.STOPPED,
@@ -1346,31 +1465,44 @@ export class CraftingService {
 
     if (stopResult.count <= 0) {
       throw new ConflictException(
-        'Esta criaÃ§Ã£o jÃ¡ foi encerrada por outra aÃ§Ã£o.',
+        'Esta criação já foi encerrada por outra ação.',
       );
     }
 
     return {
       ...(await this.getCharacterCraftingStatus(userId, characterId)),
-      message:
-        'CriaÃ§Ã£o encerrada. Materiais consumidos nÃ£o foram recuperados.',
-      stoppedSession: this.buildCraftingSessionViewModel({
-        ...activeSession,
-        status: ActivityStatus.STOPPED,
-        completedAt: stoppedAt,
-      }),
+      message: 'Criação encerrada. Materiais consumidos não foram recuperados.',
+      stoppedSession: this.buildCraftingSessionViewModel(
+        {
+          ...activeSession,
+          status: ActivityStatus.STOPPED,
+          completedAt: stoppedAt,
+        },
+        stoppedAt,
+      ),
+      stoppedSessions: openCraftingSessions.map((session) =>
+        this.buildCraftingSessionViewModel(
+          {
+            ...session,
+            status: ActivityStatus.STOPPED,
+            completedAt: stoppedAt,
+          },
+          stoppedAt,
+        ),
+      ),
     };
   }
 
-  private async findActiveCraftingSession(characterId: string) {
-    return this.prisma.craftingSession.findFirst({
+  private async findOpenCraftingSessions(characterId: string) {
+    return this.prisma.craftingSession.findMany({
       where: {
         characterId,
         status: ActivityStatus.ACTIVE,
+        completesAt: {
+          gt: new Date(),
+        },
       },
-      orderBy: {
-        startedAt: 'desc',
-      },
+      orderBy: [{ startedAt: 'asc' }, { createdAt: 'asc' }],
       include: {
         outputItem: {
           select: {
@@ -1548,18 +1680,32 @@ export class CraftingService {
   private buildCraftingSessionViewModel(
     session: CraftingSessionSnapshot,
     serverNow = new Date(),
+    queuePosition?: number,
   ) {
     const nowMs = serverNow.getTime();
     const startedAtMs = session.startedAt.getTime();
     const completesAtMs = session.completesAt.getTime();
     const totalMs = Math.max(1, completesAtMs - startedAtMs);
-    const elapsedMs =
+    const normalizedQueuePosition =
       session.status === ActivityStatus.ACTIVE
+        ? Math.max(1, Math.floor(queuePosition ?? 1))
+        : null;
+    const isQueued =
+      session.status === ActivityStatus.ACTIVE &&
+      (normalizedQueuePosition ?? 1) > 1;
+    const elapsedMs =
+      session.status === ActivityStatus.ACTIVE && !isQueued
         ? Math.max(0, nowMs - startedAtMs)
-        : totalMs;
+        : session.status === ActivityStatus.ACTIVE
+          ? 0
+          : totalMs;
     const remainingSeconds =
       session.status === ActivityStatus.ACTIVE
         ? Math.max(0, Math.ceil((completesAtMs - nowMs) / 1000))
+        : 0;
+    const startsInSeconds =
+      session.status === ActivityStatus.ACTIVE
+        ? Math.max(0, Math.ceil((startedAtMs - nowMs) / 1000))
         : 0;
 
     return {
@@ -1573,6 +1719,7 @@ export class CraftingService {
       craftingXpGained: session.craftingXpGained,
       durationSeconds: session.durationSeconds,
       remainingSeconds,
+      startsInSeconds,
       progressPercent: Math.max(
         0,
         Math.min(100, Math.floor((elapsedMs / totalMs) * 100)),
@@ -1580,9 +1727,16 @@ export class CraftingService {
       startedAt: session.startedAt,
       completesAt: session.completesAt,
       completedAt: session.completedAt,
+      queuePosition: normalizedQueuePosition,
+      queueState:
+        session.status === ActivityStatus.ACTIVE
+          ? isQueued
+            ? 'QUEUED'
+            : 'CRAFTING'
+          : session.status,
       outputItem: session.outputItem,
       timeline:
-        session.status === ActivityStatus.ACTIVE
+        session.status === ActivityStatus.ACTIVE && !isQueued
           ? buildActivityTimelineSnapshot({
               activityInstanceId: session.id,
               cycleId: `${session.id}:crafting`,
@@ -1594,6 +1748,30 @@ export class CraftingService {
               version: 1,
             })
           : null,
+    };
+  }
+
+  private buildCraftingQueueSummary(
+    sessions: CraftingSessionSnapshot[],
+    serverNow = new Date(),
+  ): CraftingQueueSummary {
+    const lastSession = sessions[sessions.length - 1] ?? null;
+    const totalEntries = sessions.length;
+
+    return {
+      totalEntries,
+      queuedEntries: Math.max(0, totalEntries - 1),
+      maxEntries: CRAFTING_QUEUE_MAX_ENTRIES,
+      availableEntries: Math.max(0, CRAFTING_QUEUE_MAX_ENTRIES - totalEntries),
+      totalRemainingSeconds: lastSession
+        ? Math.max(
+            0,
+            Math.ceil(
+              (lastSession.completesAt.getTime() - serverNow.getTime()) / 1000,
+            ),
+          )
+        : 0,
+      completesAt: lastSession?.completesAt ?? null,
     };
   }
 
