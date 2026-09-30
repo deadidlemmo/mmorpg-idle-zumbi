@@ -67,6 +67,10 @@ import {
 import { AutoCombatRealtimeContext } from "./autoCombatRealtime.context";
 import type { AutoCombatRealtimeContextValue } from "./autoCombatRealtime.types";
 import {
+  isHistoricalAutoCombatEvent,
+  isHistoricalAutoCombatStatus,
+} from "./autoCombatCatchUp";
+import {
   isAutoCombatDefeatEvent,
   isAutoCombatDefeatStatus,
 } from "./autoCombatDefeat";
@@ -912,7 +916,7 @@ export function AutoCombatRealtimeProvider({
   const enterSnapshotSynchronization = useCallback(
     (options?: SnapshotSynchronizationOptions) => {
       snapshotSynchronizationRef.current = true;
-      flushVisualQueueWithoutAnimation();
+      clearScheduledActiveEvent();
 
       dispatch({
         type: "SET_SYNCHRONIZING",
@@ -920,7 +924,7 @@ export function AutoCombatRealtimeProvider({
         clearCombatView: options?.clearCombatView ?? true,
       });
     },
-    [flushVisualQueueWithoutAnimation],
+    [clearScheduledActiveEvent],
   );
 
   const terminateDefeatedPresentation = useCallback(
@@ -999,6 +1003,51 @@ export function AutoCombatRealtimeProvider({
     ) => {
       if (!normalizedCharacterId) return;
 
+      if (isAutoCombatDefeatStatus(status)) {
+        terminateDefeatedPresentation({
+          source: "status",
+          status,
+        });
+        return;
+      }
+
+      const session = getStatusSession(status);
+      const incomingSequenceFloor = Math.max(
+        Number(session?.latestEventSequence) || 0,
+        Number(session?.snapshotSequence) || 0,
+      );
+      const incomingServerTimeMs = status?.serverNow
+        ? new Date(status.serverNow).getTime()
+        : NaN;
+      const currentServerTimeMs = stateRef.current.status?.serverNow
+        ? new Date(stateRef.current.status.serverNow).getTime()
+        : NaN;
+      const currentSequenceFloor = Math.max(
+        stateRef.current.snapshotSequence ?? 0,
+        snapshotSequenceFloorRef.current,
+      );
+      if (
+        session?.id === stateRef.current.session?.id &&
+        ((incomingSequenceFloor > 0 &&
+          incomingSequenceFloor < currentSequenceFloor) ||
+          (incomingSequenceFloor <= currentSequenceFloor &&
+            Number.isFinite(incomingServerTimeMs) &&
+            Number.isFinite(currentServerTimeMs) &&
+            incomingServerTimeMs < currentServerTimeMs))
+      ) {
+        return;
+      }
+
+      if (isHistoricalAutoCombatStatus(status)) {
+        snapshotSequenceFloorRef.current = Math.max(
+          snapshotSequenceFloorRef.current,
+          incomingSequenceFloor,
+        );
+        clearHuntingTimeline();
+        enterSnapshotSynchronization({ clearCombatView: true });
+        return;
+      }
+
       const huntingTimelineSnapshot = huntingTimelineEnabled
         ? getAutoCombatHuntingTimelineSnapshot(status)
         : null;
@@ -1013,14 +1062,6 @@ export function AutoCombatRealtimeProvider({
         );
       } else {
         clearHuntingTimeline();
-      }
-
-      if (isAutoCombatDefeatStatus(status)) {
-        terminateDefeatedPresentation({
-          source: "status",
-          status,
-        });
-        return;
       }
 
       if (isStatusActive(status)) {
@@ -1039,11 +1080,6 @@ export function AutoCombatRealtimeProvider({
         terminalDefeatSessionRef.current = null;
       }
 
-      const session = getStatusSession(status);
-      const incomingSequenceFloor = Math.max(
-        Number(session?.latestEventSequence) || 0,
-        Number(session?.snapshotSequence) || 0,
-      );
       snapshotSequenceFloorRef.current =
         session?.id && session.id !== stateRef.current.session?.id
           ? incomingSequenceFloor
@@ -1062,6 +1098,7 @@ export function AutoCombatRealtimeProvider({
     [
       applyHuntingTimelineSnapshot,
       clearHuntingTimeline,
+      enterSnapshotSynchronization,
       huntingTimelineEnabled,
       normalizedCharacterId,
       terminateDefeatedPresentation,
@@ -1938,6 +1975,15 @@ export function AutoCombatRealtimeProvider({
         return;
       }
 
+      if (isHistoricalAutoCombatEvent(payload)) {
+        telemetryReporterRef.current({
+          kind: "EVENT_DISPOSITION",
+          eventType: String(payload.type ?? "UNKNOWN").toUpperCase(),
+          disposition: "SUPPRESSED",
+          dispositionReason: "HISTORICAL_CYCLE",
+        });
+        return;
+      }
 
       const eventSequence = getLooseEventSequence(payload);
       if (
@@ -2139,6 +2185,17 @@ export function AutoCombatRealtimeProvider({
     socketState.isConnected,
     socketState.isJoined,
   ]);
+
+  useEffect(() => {
+    if (!autoLoad || !normalizedCharacterId || !state.isSynchronizing) return;
+
+    const intervalId = window.setInterval(() => {
+      if (!canRunNetworkRefresh() || isLoadingRef.current) return;
+      void reload({ reason: "catch-up-snapshot" });
+    }, 1_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [autoLoad, normalizedCharacterId, reload, state.isSynchronizing]);
 
   useEffect(() => {
     if (!autoLoad || !normalizedCharacterId) return;

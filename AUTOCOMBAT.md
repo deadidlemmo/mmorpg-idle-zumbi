@@ -466,6 +466,10 @@ Regras:
 - Apos F5, reconstruir a tela por status e eventos recentes.
 - Apos reconnect, buscar snapshot/status e aplicar eventos faltantes.
 - Apos alt-tab longo ou retorno offline, processar/reconciliar pelo backend.
+- Durante o catch-up, o frontend descarta eventos visuais pendentes e nao exibe
+  ciclos de rastreio/combate ja vencidos. REST e socket so liberam o Phaser
+  quando um snapshot do ciclo atual ou terminal for recebido; XP, loot e HP
+  continuam sendo calculados e persistidos pelo backend.
 - Se houver gap de eventos, usar snapshot; nao tentar "inventar" eventos no frontend.
 - As barras da pagina e do topo devem usar a mesma ancora absoluta do servidor.
 - Latencia, F5, reconnect ou alt-tab nao reiniciam um ciclo no frontend: o

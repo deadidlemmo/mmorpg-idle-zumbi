@@ -1263,22 +1263,8 @@ export function AutoCombatPage() {
     (isBackendHuntFlow || showInlineHuntBattle);
   const showHuntTrackerCard =
     showTrackedHuntStage && isBackendHuntingPhase && !showInlineHuntBattle;
-  const hasCombatSnapshotWhileSynchronizing = Boolean(
-    canRenderRestActiveSnapshot ||
-    visualRealtimeCombat?.mobId ||
-    visualRealtimeCombat?.mobName ||
-    visualRealtimeCombat?.mobMaxHp ||
-    visualRealtimeCombat?.battleProgressSeconds ||
-    visualRealtimeCombat?.cycleStartedAt ||
-    effectiveStatus?.currentMob?.id ||
-    effectiveStatus?.currentMob?.name ||
-    effectiveStatus?.battleProgress?.cycleStartedAt ||
-    effectiveSession?.battleProgress?.cycleStartedAt,
-  );
   const isCombatViewSynchronizing =
-    showActiveSession &&
-    isRealtimeSynchronizing &&
-    !hasCombatSnapshotWhileSynchronizing;
+    showActiveSession && isRealtimeSynchronizing;
   const [sessionClockNowMs, setSessionClockNowMs] = useState(() => Date.now());
   const [suppressProgressTransition, setSuppressProgressTransition] =
     useState(false);

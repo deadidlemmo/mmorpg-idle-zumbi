@@ -432,6 +432,63 @@ test("ressincronizacao limpa mob visual antigo sem apagar sessao ativa", () => {
   assert.equal(syncing.eventQueue.length, 0);
 });
 
+test("retorno idle descarta abates pendentes e aplica apenas o mob do snapshot atual", () => {
+  const oldHit = makeHit(1, 0);
+  const oldDefeat: AutoCombatRealtimeEvent = {
+    ...oldHit,
+    type: "MOB_DEFEATED",
+    sequence: 2,
+    totalKills: 1,
+    xpGained: 50,
+  };
+  const state: AutoCombatRealtimeState = {
+    ...makeState(),
+    activeEvent: oldHit,
+    eventQueue: [oldDefeat],
+  };
+
+  const syncing = autoCombatRealtimeReducer(state, {
+    type: "SET_SYNCHRONIZING",
+    isSynchronizing: true,
+    clearCombatView: true,
+  });
+
+  assert.equal(syncing.activeEvent, null);
+  assert.deepEqual(syncing.eventQueue, []);
+  assert.equal(syncing.character?.currentHp, 100);
+  assert.equal(syncing.battleLogEvents.length, 0);
+
+  const current = autoCombatRealtimeReducer(syncing, {
+    type: "HYDRATE_STATUS",
+    characterId: "char-1",
+    status: {
+      active: true,
+      serverNow: "2026-09-30T12:00:00.000Z",
+      snapshotSequence: 3,
+      character: { id: "char-1", currentHp: 85, maxHp: 100 },
+      session: {
+        id: "session-1",
+        status: "ACTIVE",
+        phase: "COMBAT_ACTIVE",
+        snapshotSequence: 3,
+        currentEnemyInstanceId: "enemy-current",
+      },
+      currentMob: {
+        id: "mob-current",
+        name: "Ameaça atual",
+        enemyInstanceId: "enemy-current",
+        currentHp: 100,
+        maxHp: 100,
+      },
+    } as never,
+  });
+
+  assert.equal(current.isSynchronizing, false);
+  assert.equal(current.mob?.id, "mob-current");
+  assert.equal(current.character?.currentHp, 85);
+  assert.deepEqual(current.eventQueue, []);
+});
+
 test("snapshot de caca limpa atomicamente a apresentacao da batalha anterior", () => {
   const queuedEvent = makeHit(2, 40);
   const state: AutoCombatRealtimeState = {
@@ -513,6 +570,8 @@ test("ressincronizacao de visibilidade preserva o mob e a ancora do ciclo atual"
     },
     visualCycleEnemyInstanceId: "enemy-1",
     visualCycleStartedAtMs,
+    activeEvent: makeHit(1, 80),
+    eventQueue: [makeHit(2, 60)],
   };
   const syncing = autoCombatRealtimeReducer(state, {
     type: "SET_SYNCHRONIZING",
@@ -548,6 +607,9 @@ test("ressincronizacao de visibilidade preserva o mob e a ancora do ciclo atual"
       },
     } as never,
   });
+
+  assert.equal(syncing.activeEvent, null);
+  assert.deepEqual(syncing.eventQueue, []);
 
   assert.equal(syncing.mob?.enemyInstanceId, "enemy-1");
   assert.equal(hydrated.visualCycleEnemyInstanceId, "enemy-1");

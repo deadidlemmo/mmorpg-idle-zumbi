@@ -3208,6 +3208,7 @@ export function autoCombatRealtimeReducer(
       const hasCombatViewToClear = Boolean(
         state.mob ||
         state.visual ||
+        state.pendingTerminalStatus ||
         state.activeEvent ||
         state.eventQueue.length > 0 ||
         state.queuedEventKeys.length > 0 ||
@@ -3218,6 +3219,12 @@ export function autoCombatRealtimeReducer(
 
       if (
         state.isSynchronizing === action.isSynchronizing &&
+        !state.activeEvent &&
+        state.eventQueue.length === 0 &&
+        state.queuedEventKeys.length === 0 &&
+        state.queuedGenericFingerprints.length === 0 &&
+        state.queuedMobSpawnFingerprints.length === 0 &&
+        state.queuedPotionUsedFingerprints.length === 0 &&
         (!shouldClearCombatView || !hasCombatViewToClear)
       ) {
         return state;
@@ -3226,18 +3233,18 @@ export function autoCombatRealtimeReducer(
       return {
         ...state,
         isSynchronizing: action.isSynchronizing,
+        activeEvent: null,
+        activeEventImpactApplied: false,
+        eventQueue: [],
+        queuedEventKeys: [],
+        queuedGenericFingerprints: [],
+        queuedMobSpawnFingerprints: [],
+        queuedPotionUsedFingerprints: [],
         ...(shouldClearCombatView
           ? {
               mob: null,
               visual: null,
               pendingTerminalStatus: null,
-              activeEvent: null,
-              activeEventImpactApplied: false,
-              eventQueue: [],
-              queuedEventKeys: [],
-              queuedGenericFingerprints: [],
-              queuedMobSpawnFingerprints: [],
-              queuedPotionUsedFingerprints: [],
             }
           : null),
         updatedAt: now(),

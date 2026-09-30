@@ -90,7 +90,7 @@ export function HuntingPerformancePanel({
     >
       <div className="auto-combat-hunting-scene__tracked-heading">
         <span><Gauge aria-hidden="true" /> Ritmo</span>
-        <strong>{metrics.averageTtkSeconds === null ? "TTK —" : `TTK ~${formatHuntingDuration(metrics.averageTtkSeconds)}`}</strong>
+        <strong>{metrics.averageTtkSeconds === null ? "TTK —" : `TTK ${formatHuntingDuration(metrics.averageTtkSeconds)}`}</strong>
         <button
           type="button"
           onClick={() => setIsCollapsed((current) => !current)}
@@ -106,14 +106,15 @@ export function HuntingPerformancePanel({
         <div className="auto-combat-hunting-scene__performance-body">
           <dl className="auto-combat-hunting-scene__performance-metrics">
             <div><dt>Rastreio</dt><dd>{formatHuntingDuration(metrics.trackingSeconds)}</dd></div>
-            <div><dt>TTK médio</dt><dd>{metrics.averageTtkSeconds === null ? "—" : `~${formatHuntingDuration(metrics.averageTtkSeconds)}`}</dd></div>
+            <div><dt>TTK médio</dt><dd>{metrics.averageTtkSeconds === null ? "—" : formatHuntingDuration(metrics.averageTtkSeconds)}</dd></div>
             {currentTtk ? <div><dt>Alvo atual</dt><dd>{currentTtk}</dd></div> : null}
-            <div><dt>Ciclo</dt><dd>{metrics.cycleSeconds === null ? "—" : `~${formatHuntingDuration(metrics.cycleSeconds)}`}</dd></div>
-            <div><dt>Ameaças/h</dt><dd>{metrics.encountersPerHour === null ? "—" : `~${numberFormatter.format(metrics.encountersPerHour)}`}</dd></div>
-            <div><dt>EXP combate/h</dt><dd>{metrics.xpPerHour === null ? "—" : `~${numberFormatter.format(metrics.xpPerHour)}`}</dd></div>
+            <div><dt>Ciclo</dt><dd>{metrics.cycleSeconds === null ? "—" : formatHuntingDuration(metrics.cycleSeconds)}</dd></div>
+            <div><dt>Ameaças/h</dt><dd>{metrics.encountersPerHour === null ? "—" : numberFormatter.format(metrics.encountersPerHour)}</dd></div>
+            <div><dt>EXP combate/h</dt><dd>{metrics.xpPerHour === null ? "—" : numberFormatter.format(metrics.xpPerHour)}</dd></div>
           </dl>
           {isLoading ? <span className="auto-combat-hunting-scene__performance-note">Calculando estimativa…</span> : null}
           {!isLoading && !projection ? <span className="auto-combat-hunting-scene__performance-note">Estimativa indisponível</span> : null}
+          {!isLoading && projection ? <span className="auto-combat-hunting-scene__performance-note">Projeção para esta área</span> : null}
           <div className="auto-combat-hunting-scene__performance-upgrades">
             <strong>{bottleneck === "rastreio" ? "Rastreio limita o ritmo" : bottleneck === "combate" ? "Combate limita o ritmo" : "Melhore seu ritmo"}</strong>
             <span>Caça Nv. {huntingLevel} · evolui ao rastrear</span>
