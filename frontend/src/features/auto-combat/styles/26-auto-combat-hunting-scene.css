@@ -225,6 +225,102 @@
   min-height: 0;
 }
 
+.auto-combat-hunting-scene__performance {
+  position: absolute;
+  z-index: 6;
+  top: 3.45rem;
+  right: calc(182px + 1.15rem);
+  width: 210px;
+  max-height: calc(100% - 4.1rem);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.auto-combat-hunting-scene__performance-body {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.auto-combat-hunting-scene__performance-metrics {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0.18rem 0.48rem 0.24rem;
+  font-size: 0.65rem;
+}
+
+.auto-combat-hunting-scene__performance-metrics > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.23rem 0;
+  border-bottom: 1px solid rgba(185, 205, 112, 0.15);
+}
+
+.auto-combat-hunting-scene__performance-metrics dt {
+  color: #b9c4b0;
+}
+
+.auto-combat-hunting-scene__performance-metrics dd {
+  margin: 0;
+  color: #f2d58d;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.auto-combat-hunting-scene__performance-note {
+  display: block;
+  padding: 0.18rem 0.48rem;
+  color: #b9c4b0;
+  font-size: 0.58rem;
+}
+
+.auto-combat-hunting-scene__performance-upgrades {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.45rem 0.48rem 0.5rem;
+  border-top: 1px solid rgba(185, 205, 112, 0.26);
+  font-size: 0.62rem;
+}
+
+.auto-combat-hunting-scene__performance-upgrades > strong {
+  color: #d6e898;
+  font-size: 0.64rem;
+}
+
+.auto-combat-hunting-scene__performance-upgrades > span {
+  color: #b9c4b0;
+}
+
+.auto-combat-hunting-scene__performance-upgrades nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.2rem 0.45rem;
+  margin-top: 0.2rem;
+}
+
+.auto-combat-hunting-scene__performance-upgrades a {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.1rem;
+  color: #a7d9d5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.auto-combat-hunting-scene__performance-upgrades a:hover,
+.auto-combat-hunting-scene__performance-upgrades a:focus-visible {
+  color: #e8fffb;
+  text-decoration: underline;
+}
+
+.auto-combat-hunting-scene__performance-upgrades a svg {
+  flex: 0 0 auto;
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
 .auto-combat-hunting-scene__tracked-heading {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 22px;
@@ -675,6 +771,12 @@
   overflow: hidden;
 }
 
+.auto-combat-hunting-scene--compact .auto-combat-hunting-scene__performance {
+  top: 3.45rem;
+  right: 0.5rem;
+  max-height: calc(100% - 12rem);
+}
+
 .auto-combat-hunting-scene--compact .auto-combat-hunting-scene__session-panel {
   display: flex;
   min-width: 0;
@@ -808,6 +910,14 @@
     gap: 0.35rem;
     width: 114px;
     max-height: calc(100% - 11.5rem);
+  }
+
+  .auto-combat-hunting-scene--compact .auto-combat-hunting-scene__performance {
+    top: 3.2rem;
+    right: auto;
+    left: 0.4rem;
+    width: min(210px, calc(100% - 130px));
+    max-height: calc(100% - 12rem);
   }
 
   .auto-combat-hunting-scene--compact .auto-combat-hunting-scene__session-panel {
@@ -990,6 +1100,11 @@
 }
 
 @media (max-height: 500px) and (min-width: 621px) {
+  .auto-combat-hunting-scene--compact.auto-combat-hunting-scene--immersive .auto-combat-hunting-scene__performance {
+    right: calc(168px + 1.15rem);
+    max-height: calc(100% - 4.1rem);
+  }
+
   .auto-combat-hunting-scene--compact.auto-combat-hunting-scene--immersive .auto-combat-hunting-scene__session-panels {
     top: 3.45rem;
     right: 0.6rem;

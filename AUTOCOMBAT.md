@@ -415,6 +415,16 @@ Snapshots iniciais e historico apos F5 nao reproduzem ganhos passados. O
 controle de som da barra superior guarda a preferencia no navegador; o audio
 nao toca com a aba oculta e pode exigir a primeira interacao do jogador.
 
+### Ritmo da caca no HUD
+
+O painel recolhivel `Ritmo` da cena animada mostra o tempo de rastreio do
+status atual e uma estimativa de TTK medio, ciclo, encontros por hora e EXP de
+combate por hora para o submapa. A estimativa usa o endpoint de preview com
+janela curta, sem alterar a sessao; o TTK do alvo atual vem da batalha ativa.
+Nivel de Caca reduz o rastreio, enquanto equipamento, criacao, coleta e
+mascotes oferecem caminhos para melhorar os atributos de combate. Os valores
+por hora sao potenciais projetados, nao recompensas garantidas.
+
 ## Reconciliacao frontend
 
 O frontend combina:

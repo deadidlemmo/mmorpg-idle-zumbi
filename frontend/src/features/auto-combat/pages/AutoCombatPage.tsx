@@ -4972,6 +4972,7 @@ export function AutoCombatPage() {
                       characterAppearance={layoutCharacter.appearance}
                       autoOpenKey={huntingImmersiveRequestKey}
                       currentMapId={resolvedActiveSessionMapId}
+                      currentSubMapId={activeSessionSubMapId}
                       isProcessing={hasPendingHuntProcessing}
                       isThreatReady={
                         isBackendEncounterReadyPhase || showInlineHuntBattle
@@ -5008,6 +5009,8 @@ export function AutoCombatPage() {
                       huntingXpGained={huntingXpGained}
                       huntSessionKey={topBarHuntingQueueKey}
                       characterLevel={currentCharacterLevel}
+                      huntingLevel={huntingLevel}
+                      secondsPerFind={reportedHuntingSecondsPerFind}
                       characterXpGained={totalXpGained}
                       characterXpSessionKey={
                         effectiveSession?.id ?? "active-session"

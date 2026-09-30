@@ -93,6 +93,7 @@ import type {
   SuburbioHuntingState,
 } from "./phaser/createSuburbioHuntingGame";
 import { DISTRITO_FERRUGEM_MOB_SPRITES } from "./distritoFerrugemMobSprites";
+import { HuntingPerformancePanel } from "./HuntingPerformancePanel";
 
 const SUBURBIO_DEFAULT_AREA_LABEL = "Subúrbio Silencioso · Distrito aberto";
 const FERRUGEM_DEFAULT_AREA_LABEL = "Distrito da Ferrugem · Pátio de Carga";
@@ -313,6 +314,7 @@ type AutoCombatHuntingSceneProps = {
   characterAvatarUrl?: string | null;
   characterAppearance?: ResolvedCharacterAppearance | null;
   currentMapId: string | null;
+  currentSubMapId: string | null;
   isProcessing: boolean;
   isThreatReady: boolean;
   isCombatActive: boolean;
@@ -335,6 +337,8 @@ type AutoCombatHuntingSceneProps = {
   huntSessionKey: string;
   autoOpenKey?: number;
   characterLevel: number;
+  huntingLevel: number;
+  secondsPerFind: number;
   characterXpGained: number;
   characterXpSessionKey: string;
   characterXpLabel: string;
@@ -375,6 +379,7 @@ export function AutoCombatHuntingScene({
   characterAvatarUrl,
   characterAppearance,
   currentMapId,
+  currentSubMapId,
   isProcessing,
   isThreatReady,
   isCombatActive,
@@ -397,6 +402,8 @@ export function AutoCombatHuntingScene({
   huntSessionKey,
   autoOpenKey = 0,
   characterLevel,
+  huntingLevel,
+  secondsPerFind,
   characterXpGained,
   characterXpSessionKey,
   characterXpLabel,
@@ -905,6 +912,17 @@ export function AutoCombatHuntingScene({
         className="auto-combat-hunting-scene__loot-feed"
         aria-live="polite"
         aria-atomic="true"
+      />
+
+      <HuntingPerformancePanel
+        characterId={characterId}
+        currentMapId={currentMapId}
+        currentSubMapId={currentSubMapId}
+        characterLevel={characterLevel}
+        huntingLevel={huntingLevel}
+        secondsPerFind={secondsPerFind}
+        isCombatActive={isCombatActive}
+        currentCombatDurationMs={battleDurationMs}
       />
 
       <div className="auto-combat-hunting-scene__session-panels">
