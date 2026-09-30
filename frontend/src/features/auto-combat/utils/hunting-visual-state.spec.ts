@@ -6,7 +6,27 @@ import {
   createHuntingVisualMachineState,
   getHuntingCycleProgressPercent,
   getHuntingVisualPhaseLabel,
+  shouldWalkHuntingActor,
 } from "./hunting-visual-state";
+
+test("so caminha antes do encontro e depois da apresentacao da morte", () => {
+  const state = {
+    phase: "walking" as const,
+    isChangingArea: false,
+    isDeathPresenting: false,
+    isProcessing: false,
+    isThreatReady: false,
+    isCombatActive: false,
+  };
+
+  assert.equal(shouldWalkHuntingActor(state), true);
+  assert.equal(shouldWalkHuntingActor({ ...state, isProcessing: true }), false);
+  assert.equal(shouldWalkHuntingActor({ ...state, isThreatReady: true }), false);
+  assert.equal(shouldWalkHuntingActor({ ...state, isCombatActive: true }), false);
+  assert.equal(shouldWalkHuntingActor({ ...state, isDeathPresenting: true }), false);
+  assert.equal(shouldWalkHuntingActor({ ...state, phase: "investigating" }), false);
+  assert.equal(shouldWalkHuntingActor({ ...state, phase: "continuing" }), true);
+});
 
 test("calcula o ciclo visual remoto e continua entre atualizacoes", () => {
   assert.equal(

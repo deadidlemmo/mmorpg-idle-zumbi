@@ -40,7 +40,6 @@ import sindicoWalk from "../../../assets/images/auto-combat/mobs/sindico-devorad
 import leonAttack from "../../../assets/images/auto-combat/characters/leon-v1/leon-attack.png";
 import leonDeath from "../../../assets/images/auto-combat/characters/leon-v1/leon-death.png";
 import leonHurt from "../../../assets/images/auto-combat/characters/leon-v1/leon-hurt.png";
-import leonInvestigate from "../../../assets/images/auto-combat/characters/leon-v1/leon-investigate.png";
 import leonWalk from "../../../assets/images/auto-combat/characters/leon-v1/leon-walk.png";
 import suburbioPilotEnvironment from "../../../assets/images/auto-combat/pilot/suburbio-pilot-environment.png";
 import suburbioPilotHouseOne from "../../../assets/images/auto-combat/pilot/suburbio-pilot-house-one.png";
@@ -166,7 +165,6 @@ const COMMON_CHARACTER_ASSETS = {
   survivorAttack: leonAttack,
   survivorDeath: leonDeath,
   survivorHurt: leonHurt,
-  survivorInvestigate: leonInvestigate,
   infected: suburbioInfected,
 } as const;
 
@@ -653,6 +651,7 @@ export function AutoCombatHuntingScene({
       combatEventKey,
       combatEventType,
       isCombatActive,
+      isProcessing,
       isImmersive,
       isSynchronizing,
       isThreatReady,
@@ -674,6 +673,7 @@ export function AutoCombatHuntingScene({
       combatEventKey,
       combatEventType,
       isCombatActive,
+      isProcessing,
       isImmersive,
       isSynchronizing,
       isThreatReady,

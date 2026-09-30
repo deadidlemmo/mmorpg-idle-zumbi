@@ -430,12 +430,15 @@ export function findHuntingCombatFormation(
     (-Math.PI * 3) / 4,
     Math.PI,
   ];
+  const minimumTargetDistance = Math.min(targetDistance, 72);
   const targetDistances = [
     targetDistance,
-    Math.max(48, targetDistance - 8),
-    Math.max(40, targetDistance - 16),
-    32,
-  ];
+    Math.max(minimumTargetDistance, targetDistance - 8),
+    Math.max(minimumTargetDistance, targetDistance - 16),
+    minimumTargetDistance,
+  ].filter(
+    (distance, index, distances) => distances.indexOf(distance) === index,
+  );
 
   for (const distance of targetDistances) {
     for (const offset of angleOffsets) {

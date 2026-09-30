@@ -126,3 +126,23 @@ export function getHuntingVisualPhaseLabel(phase: HuntingVisualPhase) {
   };
   return labels[phase];
 }
+
+export function shouldWalkHuntingActor(params: {
+  phase: HuntingVisualPhase;
+  isChangingArea: boolean;
+  isDeathPresenting: boolean;
+  isProcessing: boolean;
+  isThreatReady: boolean;
+  isCombatActive: boolean;
+}) {
+  return (
+    !params.isChangingArea &&
+    !params.isDeathPresenting &&
+    !params.isProcessing &&
+    !params.isThreatReady &&
+    !params.isCombatActive &&
+    params.phase !== "investigating" &&
+    params.phase !== "alert" &&
+    params.phase !== "found"
+  );
+}

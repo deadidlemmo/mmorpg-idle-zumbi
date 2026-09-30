@@ -261,12 +261,31 @@ test("bloqueia paredes, carros, arvores, moveis e portas fechadas", () => {
 });
 
 test("posiciona o combate sem atravessar paredes ou objetos", () => {
-  for (const area of [exterior.area, interior.area]) {
+  for (const area of [
+    exterior.area,
+    interior.area,
+    ferrugemExterior.area,
+    ferrugemInterior.area,
+  ]) {
     for (const actor of area.navigationPoints) {
       for (const direction of ["down", "left", "right", "up"] as const) {
-        const formation = findHuntingCombatFormation(area, actor, direction);
+        const formation = findHuntingCombatFormation(
+          area,
+          actor,
+          direction,
+          96,
+          160,
+        );
+        const combatDistance = Math.hypot(
+          formation.target.x - actor.x,
+          formation.target.y - actor.y,
+        );
         assert.equal(isHuntingPointWalkable(area, formation.target), true);
         assert.equal(isHuntingPointWalkable(area, formation.spawn), true);
+        assert.ok(
+          combatDistance === 0 || combatDistance >= 72,
+          `${area.id}:${actor.id}:${direction}:${combatDistance}`,
+        );
         assert.equal(
           isHuntingSegmentWalkable(area, actor, formation.target),
           true,
