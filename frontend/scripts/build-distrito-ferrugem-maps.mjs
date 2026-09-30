@@ -192,16 +192,19 @@ function buildExterior() {
   blockRect(collision, 0, MAP_HEIGHT - 1, MAP_WIDTH, 1);
   blockRect(collision, 0, 0, 1, MAP_HEIGHT);
   blockRect(collision, MAP_WIDTH - 1, 0, 1, MAP_HEIGHT);
-  blockRect(collision, 12, 0, 25, 7);
-  unblockRect(collision, 23, 6, 5, 2);
-  blockRect(collision, 1, 7, 6, 12);
-  blockRect(collision, 14, 10, 12, 5);
-  blockRect(collision, 35, 8, 12, 4);
+  // A arte v2 mostra estruturas maiores que os bloqueios originais.
+  blockRect(collision, 12, 0, 28, 7); // fabrica e tubulacao
+  unblockRect(collision, 25, 6, 5, 2);
+  blockRect(collision, 0, 0, 7, 19); // patio cercado e vagao oeste
+  blockRect(collision, 14, 10, 12, 6); // conteineres e empilhadeira
+  blockRect(collision, 35, 7, 12, 5); // ponte rolante e carga suspensa
+  blockRect(collision, 30, 14, 10, 1); // telhado do galpao menor
   blockRect(collision, 29, 15, 12, 6);
+  blockRect(collision, 0, 20, 9, 4); // vagao sobre os trilhos
   blockRect(collision, 1, 23, 16, 8);
   blockRect(collision, 29, 25, 18, 6);
   blockRect(collision, 37, 20, 10, 4);
-  blockRect(collision, 18, 27, 4, 4);
+  blockRect(collision, 13, 26, 20, 6); // conteineres e cerca sul
   return buildMap({
     areaId: "distrito-ferrugem",
     label: "Distrito da Ferrugem - Pátio de Carga",
@@ -209,7 +212,7 @@ function buildExterior() {
     portalNodeId: "galpao-entrada",
     collision,
     navigation: [
-      point(1, "patio-sul", 24, 28),
+      point(1, "patio-sul", 25, 25),
       point(2, "trilhos-oeste", 9, 19),
       point(3, "carga-central", 25, 21),
       point(4, "oficina-leste", 43, 15),
@@ -238,15 +241,20 @@ function buildInterior() {
   blockRect(collision, 0, MAP_HEIGHT - 1, MAP_WIDTH, 1);
   blockRect(collision, 0, 0, 1, MAP_HEIGHT);
   blockRect(collision, MAP_WIDTH - 1, 0, 1, MAP_HEIGHT);
-  blockRect(collision, 15, 4, 6, 10);
-  blockRect(collision, 23, 4, 6, 10);
-  blockRect(collision, 31, 4, 6, 10);
+  blockRect(collision, 0, 0, 10, 10); // sala de controle cercada
+  blockRect(collision, 14, 2, 7, 10); // tres prensas
+  blockRect(collision, 22, 2, 7, 10);
+  blockRect(collision, 30, 2, 6, 10);
+  blockRect(collision, 37, 5, 6, 7); // gerador superior
   blockRect(collision, 1, 10, 8, 17);
-  blockRect(collision, 18, 15, 13, 9);
+  blockRect(collision, 10, 14, 4, 8); // grades e tambores oeste
+  blockRect(collision, 16, 14, 6, 9); // bancada central
+  blockRect(collision, 22, 13, 9, 10); // linha de maquinas central
   blockRect(collision, 35, 13, 9, 9);
-  blockRect(collision, 1, 27, 12, 4);
+  blockRect(collision, 37, 20, 7, 5); // pilhas no corredor leste
+  blockRect(collision, 0, 25, 13, 6);
   blockRect(collision, 31, 25, 16, 6);
-  blockRect(collision, 13, 27, 7, 4);
+  blockRect(collision, 13, 26, 7, 5);
   blockRect(collision, 28, 28, 3, 3);
   unblockRect(collision, 23, 30, 5, 2);
   return buildMap({
@@ -258,9 +266,9 @@ function buildInterior() {
     navigation: [
       point(1, "saida", 25, 28, false),
       point(2, "corredor-sul", 23, 25),
-      point(3, "prensas-oeste", 12, 16),
+      point(3, "prensas-oeste", 14, 16),
       point(4, "prensas-norte", 12, 7),
-      point(5, "linha-norte", 39, 8),
+      point(5, "linha-norte", 44, 10),
       point(6, "maquinas-leste", 44, 23),
       point(7, "centro-operacional", 33, 24),
     ],

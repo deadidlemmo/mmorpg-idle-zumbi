@@ -5,6 +5,7 @@ import {
   chooseRandomHuntingDestination,
   createHuntingAreaFromTiledMap,
   findHuntingCombatFormation,
+  findNearestHuntingWalkablePoint,
   findHuntingPath,
   getHuntingNavigationPoint,
   getHuntingPortal,
@@ -393,4 +394,41 @@ test("valida as duas areas industriais e seus portais reciprocos", () => {
   assert.equal(enter?.toNodeId, "saida");
   assert.equal(exit?.toAreaId, HUNTING_AREA_IDS.rustDistrict);
   assert.equal(exit?.toNodeId, "galpao-entrada");
+});
+
+test("impede caminhar sobre telhados, vagões, máquinas e depósitos do Distrito da Ferrugem", () => {
+  const blockedTiles = [
+    [ferrugemExterior.area, [[34, 14], [20, 11], [5, 20], [38, 4], [20, 28]]],
+    [ferrugemInterior.area, [[5, 5], [16, 2], [24, 3], [33, 3], [39, 8], [38, 22]]],
+  ] as const;
+  for (const [area, positions] of blockedTiles) {
+    for (const [column, row] of positions) {
+      assert.equal(isHuntingTileWalkable(area, column, row), false, `${area.id}:${column},${row}`);
+    }
+  }
+  assert.equal(isHuntingTileWalkable(ferrugemExterior.area, 24, 6), false);
+  assert.equal(isHuntingTileWalkable(ferrugemExterior.area, 25, 6), true);
+  assert.equal(isHuntingTileWalkable(ferrugemExterior.area, 29, 6), true);
+  assert.equal(isHuntingTileWalkable(ferrugemExterior.area, 30, 6), false);
+  for (const area of [ferrugemExterior.area, ferrugemInterior.area]) {
+    for (const start of area.navigationPoints) {
+      for (const destination of area.navigationPoints) {
+        if (start.id === destination.id) continue;
+        assertPathIsWalkable(area, findHuntingPath(area, start, destination));
+      }
+    }
+  }
+});
+
+test("recupera a posição antiga de um terceiro sem deixá-lo sobre o telhado", () => {
+  const area = ferrugemExterior.area;
+  const invalidRoofPosition = { x: 34.5 * 32, y: 14.5 * 32 };
+  assert.equal(isHuntingPointWalkable(area, invalidRoofPosition), false);
+  const recovered = findNearestHuntingWalkablePoint(area, invalidRoofPosition);
+  assert.ok(recovered);
+  assert.equal(isHuntingPointWalkable(area, recovered), true);
+  assert.ok(Math.hypot(recovered.x - invalidRoofPosition.x, recovered.y - invalidRoofPosition.y) < 250);
+  const validSpawn = getHuntingNavigationPoint(area, area.spawnNodeId);
+  assert.ok(validSpawn);
+  assert.deepEqual(findNearestHuntingWalkablePoint(area, validSpawn), validSpawn);
 });

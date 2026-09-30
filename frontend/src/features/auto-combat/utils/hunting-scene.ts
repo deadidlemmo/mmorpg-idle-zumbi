@@ -373,6 +373,37 @@ export function isHuntingPointWalkable(
   return true;
 }
 
+export function findNearestHuntingWalkablePoint(
+  area: HuntingWorldArea,
+  point: HuntingCoordinate,
+  maxRadius = 8,
+): HuntingCoordinate | null {
+  if (isHuntingPointWalkable(area, point)) return point;
+  const origin = worldToHuntingTile(area, point);
+  for (let radius = 0; radius <= maxRadius; radius += 1) {
+    const candidates: HuntingCoordinate[] = [];
+    for (let row = origin.row - radius; row <= origin.row + radius; row += 1) {
+      for (let column = origin.column - radius; column <= origin.column + radius; column += 1) {
+        if (Math.max(Math.abs(column - origin.column), Math.abs(row - origin.row)) !== radius) {
+          continue;
+        }
+        if (!isHuntingTileWalkable(area, column, row)) continue;
+        const candidate = huntingTileCenter(area, column, row);
+        if (isHuntingPointWalkable(area, candidate)) candidates.push(candidate);
+      }
+    }
+    if (candidates.length) {
+      return candidates.reduce((nearest, candidate) =>
+        Math.hypot(candidate.x - point.x, candidate.y - point.y) <
+        Math.hypot(nearest.x - point.x, nearest.y - point.y)
+          ? candidate
+          : nearest,
+      );
+    }
+  }
+  return null;
+}
+
 export function resolveHuntingStartingPoint(
   area: HuntingWorldArea,
   pose: { areaId: HuntingAreaId; tileX: number; tileY: number } | null,
