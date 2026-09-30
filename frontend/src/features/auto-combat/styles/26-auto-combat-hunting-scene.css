@@ -117,9 +117,9 @@
 .auto-combat-hunting-scene__loot-feed {
   position: absolute;
   z-index: 8;
-  top: 0.7rem;
-  right: 4.25rem;
-  width: min(19rem, calc(100% - 1.4rem));
+  top: 4.1rem;
+  left: 0.7rem;
+  width: min(19rem, max(6rem, calc(100% - 27rem)));
   min-height: 0;
   pointer-events: none;
   contain: layout paint;
@@ -833,9 +833,7 @@
 .auto-combat-hunting-scene--compact .auto-combat-hunting-scene__tracked-empty { align-self: center; }
 
 .auto-combat-hunting-scene--compact .auto-combat-hunting-scene__loot-feed {
-  top: auto;
-  right: 0.5rem;
-  bottom: calc(57px + 0.7rem);
+  width: min(19rem, max(6rem, calc(100% - 14.5rem)));
 }
 
 .auto-combat-hunting-scene--compact .auto-combat-hunting-scene__player-panel {
@@ -976,12 +974,9 @@
   }
 
   .auto-combat-hunting-scene--compact .auto-combat-hunting-scene__loot-feed {
-    top: 3.35rem;
-    right: 0.4rem;
-    bottom: auto;
+    top: calc(3.2rem + 160px + 0.5rem);
     left: 0.4rem;
-    width: auto;
-    padding-right: 120px;
+    width: min(19rem, calc(100% - 130px));
   }
 
   .auto-combat-hunting-scene--compact .auto-combat-hunting-scene__player-panel {
@@ -1100,6 +1095,10 @@
 }
 
 @media (max-height: 500px) and (min-width: 621px) {
+  .auto-combat-hunting-scene--compact.auto-combat-hunting-scene--immersive .auto-combat-hunting-scene__loot-feed {
+    width: min(19rem, max(6rem, calc(100% - 26rem)));
+  }
+
   .auto-combat-hunting-scene--compact.auto-combat-hunting-scene--immersive .auto-combat-hunting-scene__performance {
     right: calc(168px + 1.15rem);
     max-height: calc(100% - 4.1rem);
