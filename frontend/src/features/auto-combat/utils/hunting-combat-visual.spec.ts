@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   getHuntingCombatAnimationTimeScale,
+  getHuntingCombatStrikeTiming,
   getHuntingCombatVisualStep,
   getHuntingMobDeathPresentationDuration,
   normalizeHuntingMobName,
@@ -79,6 +80,24 @@ test("morte confirmada sempre prevalece sobre a etapa calculada", () => {
     }),
     { cue: "defeated", key: "defeated" },
   );
+});
+
+test("impacto cabe em TTK curto e respeita movimento reduzido", () => {
+  assert.deepEqual(getHuntingCombatStrikeTiming(100, false), {
+    impactDelayMs: 18,
+    lungeDurationMs: 30,
+    recoilDurationMs: 65,
+  });
+  assert.deepEqual(getHuntingCombatStrikeTiming(3_000, false), {
+    impactDelayMs: 80,
+    lungeDurationMs: 80,
+    recoilDurationMs: 65,
+  });
+  assert.deepEqual(getHuntingCombatStrikeTiming(100, true), {
+    impactDelayMs: 0,
+    lungeDurationMs: 0,
+    recoilDurationMs: 0,
+  });
 });
 
 test("mantem a morte visivel sem atrasar a regra do combate", () => {

@@ -31,6 +31,7 @@ import {
 } from "../../../performance/performanceDiagnostics";
 import {
   getHuntingCombatAnimationTimeScale,
+  getHuntingCombatStrikeTiming,
   getHuntingCombatVisualStep,
   getHuntingMobDeathPresentationDuration,
   normalizeHuntingMobName,
@@ -259,6 +260,7 @@ type RemotePlayerEntity = {
   combatMobDefeated: boolean;
   combatNextIntroAt: number;
   combatEventPresentationUntil: number;
+  combatImpactTimer: Phaser.Time.TimerEvent | null;
   targetPoint: HuntingCoordinate;
   lastMovementDirection: MovementDirection;
   visualState: HuntingVisualPresenceState;
@@ -364,9 +366,14 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   private threatDeathFadeTween: Phaser.Tweens.Tween | null = null;
   private actorLungeTween: Phaser.Tweens.Tween | null = null;
   private threatLungeTween: Phaser.Tweens.Tween | null = null;
+  private actorRecoilTween: Phaser.Tweens.Tween | null = null;
+  private threatRecoilTween: Phaser.Tweens.Tween | null = null;
+  private combatImpactTimer: Phaser.Time.TimerEvent | null = null;
   private threatApproachTween: Phaser.Tweens.Tween | null = null;
   private actorHitTween: Phaser.Tweens.Tween | null = null;
   private threatHitTween: Phaser.Tweens.Tween | null = null;
+  private actorHitResetTimer: Phaser.Time.TimerEvent | null = null;
+  private threatHitResetTimer: Phaser.Time.TimerEvent | null = null;
   private actorHitFeedbackActive = false;
   private threatHitFeedbackActive = false;
   private threatPortraitBubble: Phaser.GameObjects.Container | null = null;
@@ -1733,18 +1740,28 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   }
 
   private resetCombatVisualState() {
+    this.combatImpactTimer?.remove(false);
+    this.combatImpactTimer = null;
     this.actorCombatAnimationToken += 1;
     this.threatCombatAnimationToken += 1;
     this.actorLungeTween?.stop();
     this.threatLungeTween?.stop();
+    this.actorRecoilTween?.stop();
+    this.threatRecoilTween?.stop();
     this.threatApproachTween?.stop();
     this.actorHitTween?.stop();
     this.threatHitTween?.stop();
+    this.actorHitResetTimer?.remove(false);
+    this.threatHitResetTimer?.remove(false);
     this.actorLungeTween = null;
     this.threatLungeTween = null;
+    this.actorRecoilTween = null;
+    this.threatRecoilTween = null;
     this.threatApproachTween = null;
     this.actorHitTween = null;
     this.threatHitTween = null;
+    this.actorHitResetTimer = null;
+    this.threatHitResetTimer = null;
     this.actorHitFeedbackActive = false;
     this.threatHitFeedbackActive = false;
     this.actorCombatOffsetX = 0;
@@ -1784,6 +1801,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       this.state.battleCycleKey ??
       `${this.state.mobName ?? "mob"}:${this.state.mobMaxHp}`;
     if (!force && this.combatCycleKey === cycleKey) return;
+
+    this.combatImpactTimer?.remove(false);
+    this.combatImpactTimer = null;
 
     const progress = Phaser.Math.Clamp(
       (Number(this.state.battleProgressPercent) || 0) / 100,
@@ -1832,14 +1852,10 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     switch (step.cue) {
       case "player-attack":
       case "finisher":
-        this.playActorCombatLunge();
-        this.playActorCombatAnimation("attack");
-        this.playThreatCombatAnimation("hurt");
+        this.playCombatStrike("actor");
         break;
       case "mob-attack":
-        this.playThreatCombatLunge();
-        this.playThreatCombatAnimation("attack");
-        this.playActorCombatAnimation("hurt");
+        this.playCombatStrike("threat");
         break;
       case "defeated":
         this.playThreatCombatAnimation("death");
@@ -1867,16 +1883,21 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       this.threatSprite.x - this.actorBody.x,
       this.threatSprite.y - this.actorBody.y,
     ) || 1;
-    const targetX = ((this.threatSprite.x - this.actorBody.x) / distance) * 9;
-    const targetY = ((this.threatSprite.y - this.actorBody.y) / distance) * 9;
+    const targetX = ((this.threatSprite.x - this.actorBody.x) / distance) * 20;
+    const targetY = ((this.threatSprite.y - this.actorBody.y) / distance) * 20;
     const offset = { value: 0 };
+    this.actorRecoilTween?.stop();
+    this.actorRecoilTween = null;
     this.actorLungeTween?.stop();
     this.actorCombatOffsetX = 0;
     this.actorCombatOffsetY = 0;
     this.actorLungeTween = this.tweens.add({
       targets: offset,
       value: 1,
-      duration: 90,
+      duration: getHuntingCombatStrikeTiming(
+        this.state.battleDurationMs,
+        false,
+      ).lungeDurationMs,
       yoyo: true,
       ease: "Sine.easeOut",
       onUpdate: () => {
@@ -1902,18 +1923,124 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       this.actorBody.x - origin.x,
       this.actorBody.y - origin.y,
     ) || 1;
+    this.threatRecoilTween?.stop();
+    this.threatRecoilTween = null;
     this.threatLungeTween?.stop();
     threat.setPosition(origin.x, origin.y);
     this.threatLungeTween = this.tweens.add({
       targets: threat,
-      x: origin.x + ((this.actorBody.x - origin.x) / distance) * 10,
-      y: origin.y + ((this.actorBody.y - origin.y) / distance) * 10,
-      duration: 100,
+      x: origin.x + ((this.actorBody.x - origin.x) / distance) * 20,
+      y: origin.y + ((this.actorBody.y - origin.y) / distance) * 20,
+      duration: getHuntingCombatStrikeTiming(
+        this.state.battleDurationMs,
+        false,
+      ).lungeDurationMs,
       yoyo: true,
       ease: "Sine.easeOut",
       onComplete: () => {
         threat.setPosition(origin.x, origin.y);
         this.threatLungeTween = null;
+      },
+    });
+  }
+
+  private playCombatStrike(attacker: "actor" | "threat") {
+    if (!this.actorSprite || !this.threatSprite || this.threatDefeated) return;
+    this.combatImpactTimer?.remove(false);
+    this.combatImpactTimer = null;
+
+    if (attacker === "actor") {
+      this.playActorCombatLunge();
+      this.playActorCombatAnimation("attack");
+    } else {
+      this.playThreatCombatLunge();
+      this.playThreatCombatAnimation("attack");
+    }
+
+    const cycleKey = this.combatCycleKey;
+    const target = this.threatSprite;
+    const actor = this.actorSprite;
+    const impact = () => {
+      this.combatImpactTimer = null;
+      if (
+        !this.state.isCombatActive ||
+        this.combatCycleKey !== cycleKey ||
+        this.threatSprite !== target ||
+        this.actorSprite !== actor ||
+        this.threatDefeated ||
+        this.playerDefeated
+      ) return;
+      if (attacker === "actor") {
+        this.playThreatCombatRecoil();
+        this.playThreatCombatAnimation("hurt");
+      } else {
+        this.playActorCombatRecoil();
+        this.playActorCombatAnimation("hurt");
+      }
+    };
+    const { impactDelayMs } = getHuntingCombatStrikeTiming(
+      this.state.battleDurationMs,
+      this.state.prefersReducedMotion,
+    );
+    if (impactDelayMs === 0) impact();
+    else this.combatImpactTimer = this.time.delayedCall(impactDelayMs, impact);
+  }
+
+  private playActorCombatRecoil() {
+    if (!this.actorBody || !this.threatSprite || this.state.prefersReducedMotion) return;
+    const dx = this.actorBody.x - this.threatSprite.x;
+    const dy = this.actorBody.y - this.threatSprite.y;
+    const distance = Math.hypot(dx, dy) || 1;
+    this.actorLungeTween?.stop();
+    this.actorRecoilTween?.stop();
+    this.actorCombatOffsetX = 0;
+    this.actorCombatOffsetY = 0;
+    const offset = { value: 0 };
+    this.actorRecoilTween = this.tweens.add({
+      targets: offset,
+      value: 1,
+      duration: getHuntingCombatStrikeTiming(
+        this.state.battleDurationMs,
+        false,
+      ).recoilDurationMs,
+      yoyo: true,
+      ease: "Sine.easeOut",
+      onUpdate: () => {
+        this.actorCombatOffsetX = (dx / distance) * 8 * offset.value;
+        this.actorCombatOffsetY = (dy / distance) * 8 * offset.value;
+      },
+      onComplete: () => {
+        this.actorCombatOffsetX = 0;
+        this.actorCombatOffsetY = 0;
+        this.actorRecoilTween = null;
+      },
+    });
+  }
+
+  private playThreatCombatRecoil() {
+    if (!this.actorBody || !this.threatSprite || this.state.prefersReducedMotion) return;
+    this.finishThreatApproach();
+    const threat = this.threatSprite;
+    const origin = this.combatTargetPoint ?? { x: threat.x, y: threat.y };
+    const dx = origin.x - this.actorBody.x;
+    const dy = origin.y - this.actorBody.y;
+    const distance = Math.hypot(dx, dy) || 1;
+    this.threatLungeTween?.stop();
+    this.threatRecoilTween?.stop();
+    threat.setPosition(origin.x, origin.y);
+    this.threatRecoilTween = this.tweens.add({
+      targets: threat,
+      x: origin.x + (dx / distance) * 8,
+      y: origin.y + (dy / distance) * 8,
+      duration: getHuntingCombatStrikeTiming(
+        this.state.battleDurationMs,
+        false,
+      ).recoilDurationMs,
+      yoyo: true,
+      ease: "Sine.easeOut",
+      onComplete: () => {
+        threat.setPosition(origin.x, origin.y);
+        this.threatRecoilTween = null;
       },
     });
   }
@@ -1942,14 +2069,10 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         break;
       case "PLAYER_HIT":
         this.finishThreatApproach();
-        this.playActorCombatLunge();
-        this.playActorCombatAnimation("attack");
-        this.playThreatCombatAnimation("hurt");
+        this.playCombatStrike("actor");
         break;
       case "MOB_HIT":
-        this.playThreatCombatLunge();
-        this.playThreatCombatAnimation("attack");
-        this.playActorCombatAnimation("hurt");
+        this.playCombatStrike("threat");
         break;
       case "MOB_DEFEATED":
         this.playThreatCombatAnimation("death");
@@ -2003,13 +2126,17 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const isActor = target === "actor";
     if (isActor) {
       this.actorHitTween?.stop();
+      this.actorHitResetTimer?.remove(false);
+      this.actorHitResetTimer = null;
       this.actorHitFeedbackActive = true;
     } else {
       this.threatHitTween?.stop();
+      this.threatHitResetTimer?.remove(false);
+      this.threatHitResetTimer = null;
       this.threatHitFeedbackActive = true;
     }
-    sprite.setTint(0xffaaa4).setTintMode(Phaser.TintModes.MULTIPLY);
-    sprite.setAngle(this.state.prefersReducedMotion ? 0 : -1.5);
+    sprite.setTint(0xffd1c5).setTintMode(Phaser.TintModes.MULTIPLY);
+    sprite.setAngle(this.state.prefersReducedMotion ? 0 : -1);
     this.createHitSpark(sprite);
 
     const finish = () => {
@@ -2018,24 +2145,27 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       sprite.setAngle(0).setAlpha(1);
       if (isActor) {
         this.actorHitTween = null;
+        this.actorHitResetTimer = null;
         this.actorHitFeedbackActive = false;
       } else {
         this.threatHitTween = null;
+        this.threatHitResetTimer = null;
         this.threatHitFeedbackActive = false;
       }
     };
     if (this.state.prefersReducedMotion) {
-      this.time.delayedCall(90, finish);
+      const timer = this.time.delayedCall(90, finish);
+      if (isActor) this.actorHitResetTimer = timer;
+      else this.threatHitResetTimer = timer;
       return;
     }
 
     const tween = this.tweens.add({
       targets: sprite,
-      angle: 1.5,
-      alpha: 0.88,
-      duration: 42,
+      angle: 1,
+      alpha: 0.95,
+      duration: 45,
       yoyo: true,
-      repeat: 1,
       ease: "Sine.easeInOut",
       onComplete: finish,
     });
@@ -2043,29 +2173,36 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     else this.threatHitTween = tween;
   }
 
-  private createHitSpark(sprite: Phaser.GameObjects.Sprite) {
+  private createHitSpark(
+    sprite: Phaser.GameObjects.Sprite,
+    source?: Phaser.GameObjects.Sprite | null,
+  ) {
     if (this.state.prefersReducedMotion) return;
+    const attacker = source === undefined ? (sprite === this.actorSprite
+      ? this.threatSprite
+      : this.actorSprite) : source;
+    const contactX = attacker
+      ? Phaser.Math.Linear(sprite.x, attacker.x, 0.23)
+      : sprite.x;
     const spark = this.add.graphics();
-    spark.lineStyle(2, 0xffd27a, 0.95);
+    spark.lineStyle(1.5, 0xffd995, 0.82);
     spark.beginPath();
-    spark.moveTo(-7, 0);
-    spark.lineTo(7, 0);
-    spark.moveTo(0, -7);
-    spark.lineTo(0, 7);
+    spark.moveTo(-5, 4);
+    spark.lineTo(5, -4);
+    spark.moveTo(-3, -3);
+    spark.lineTo(3, 3);
     spark.strokePath();
-    spark.lineStyle(1, 0xff746b, 0.8);
-    spark.strokeCircle(0, 0, 5);
     spark
-      .setPosition(sprite.x, sprite.y - sprite.displayHeight * 0.48)
+      .setPosition(contactX, sprite.y - sprite.displayHeight * 0.48)
       .setDepth(sprite.depth + 25)
-      .setScale(0.55)
+      .setScale(0.65)
       .setBlendMode(Phaser.BlendModes.ADD);
     this.tweens.add({
       targets: spark,
       alpha: 0,
-      scale: 1.35,
-      angle: 22,
-      duration: 140,
+      scale: 1.15,
+      angle: 12,
+      duration: 125,
       ease: "Quad.easeOut",
       onComplete: () => spark.destroy(),
     });
@@ -2074,6 +2211,16 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   private playActorCombatAnimation(animation: "attack" | "hurt" | "death") {
     if (!this.actorSprite || this.playerDefeated) return;
     const isDeath = animation === "death";
+    if (isDeath) {
+      this.combatImpactTimer?.remove(false);
+      this.combatImpactTimer = null;
+      this.actorHitResetTimer?.remove(false);
+      this.actorHitResetTimer = null;
+      this.actorLungeTween?.stop();
+      this.actorRecoilTween?.stop();
+      this.actorCombatOffsetX = 0;
+      this.actorCombatOffsetY = 0;
+    }
     const animationToken = ++this.actorCombatAnimationToken;
     this.actorCombatAnimationLocked = true;
     if (isDeath) this.playerDefeated = true;
@@ -2145,6 +2292,13 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
 
     this.threatCombatAnimationLocked = true;
     if (isDeath) {
+      this.combatImpactTimer?.remove(false);
+      this.combatImpactTimer = null;
+      this.threatHitResetTimer?.remove(false);
+      this.threatHitResetTimer = null;
+      this.threatLungeTween?.stop();
+      this.threatRecoilTween?.stop();
+      this.finishThreatApproach();
       this.threatDeathFadeTween?.stop();
       this.threatDeathFadeTween = null;
       this.threatHitTween?.stop();
@@ -2395,6 +2549,19 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       )[0];
     const threatNode = combatFormation?.target ?? sortedThreatNodes[0] ?? fallbackThreatNode;
     if (!threatNode) return;
+    const shouldApproach = Boolean(
+      presentCombatEvent &&
+      !this.state.prefersReducedMotion &&
+      combatFormation &&
+      (this.state.isThreatReady || this.state.battleProgressPercent < 15) &&
+      Math.hypot(
+        combatFormation.spawn.x - threatNode.x,
+        combatFormation.spawn.y - threatNode.y,
+      ) > 4,
+    );
+    const threatStart = shouldApproach && combatFormation
+      ? combatFormation.spawn
+      : threatNode;
     this.combatTargetPoint = combatFormation?.target ?? null;
     this.updateMovementDirection(
       (combatFormation?.target.x ?? threatNode.x) - this.actorBody.x,
@@ -2417,19 +2584,19 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const threatDepthBase = shouldAnchorToCombatFormation
       ? COMBAT_ACTOR_DEPTH_BASE
       : ACTOR_DEPTH_BASE;
-    const shadow = this.createMobShadow(threatNode.x, threatNode.y)
+    const shadow = this.createMobShadow(threatStart.x, threatStart.y)
       .setAlpha(0)
       .setDepth(threatDepthBase + Math.round(threatNode.y) - 2);
     const threat = this.add
-      .sprite(threatNode.x, threatNode.y, threatTexture, threatFrame)
+      .sprite(threatStart.x, threatStart.y, threatTexture, threatFrame)
       .setOrigin(0.5, 1)
       .setDisplaySize(threatDisplayWidth, threatDisplayHeight)
       .setAlpha(0)
       .setDepth(threatDepthBase + Math.round(threatNode.y));
     const marker = this.add
       .rectangle(
-        threatNode.x,
-        threatNode.y - threatDisplayHeight - 2,
+        threatStart.x,
+        threatStart.y - threatDisplayHeight - 2,
         16,
         16,
         0xc84e43,
@@ -2440,8 +2607,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       .setDepth(WORLD_OVERLAY_DEPTH + 5);
     const nameLabel = this.add
       .text(
-        threatNode.x,
-        threatNode.y - threatDisplayHeight + 8,
+        threatStart.x,
+        threatStart.y - threatDisplayHeight + 8,
         this.state.mobName ?? "Ameaça",
         {
           color: "#f0d48b",
@@ -2462,6 +2629,31 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     this.threatMobName = this.state.mobName ?? null;
     this.threatMarker = marker;
     this.threatNameLabel = nameLabel;
+    if (shouldApproach) {
+      if (mobSpriteAsset) {
+        threat.play(
+          this.mobAnimationKey(mobSpriteAsset, "walk", this.threatDirection),
+          true,
+        );
+      }
+      this.threatApproachTween = this.tweens.add({
+        targets: threat,
+        x: threatNode.x,
+        y: threatNode.y,
+        duration: 190,
+        ease: "Cubic.easeOut",
+        onUpdate: () => {
+          marker.setPosition(threat.x, threat.y - threatDisplayHeight - 2);
+          if (!this.state.isCombatActive) {
+            nameLabel.setPosition(threat.x, threat.y - threatDisplayHeight + 8);
+          }
+        },
+        onComplete: () => {
+          this.threatApproachTween = null;
+          this.setThreatCombatIdle();
+        },
+      });
+    }
     this.tweens.add({
       targets: [threat, marker, nameLabel],
       alpha: 1,
@@ -2809,6 +3001,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const activeIds = new Set(playersInArea.map((player) => player.id));
     for (const [playerId, entity] of this.remotePlayers) {
       if (activeIds.has(playerId)) continue;
+      entity.combatImpactTimer?.remove(false);
+      this.tweens.killTweensOf(entity.sprite);
+      if (entity.combatMobSprite) this.tweens.killTweensOf(entity.combatMobSprite);
       entity.sprite.destroy();
       entity.shadow.destroy();
       entity.searchCue.destroy();
@@ -2898,6 +3093,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           combatMobDefeated: false,
           combatNextIntroAt: 0,
           combatEventPresentationUntil: 0,
+          combatImpactTimer: null,
           targetPoint: spawn,
           lastMovementDirection: initialDirection,
           visualState: player.visualState,
@@ -2912,6 +3108,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       const sourceChanged = entity.idle !== player.idle;
       const anchorChanged = entity.anchor.x !== anchor.x || entity.anchor.y !== anchor.y;
       if (sourceChanged || player.updatedAt >= entity.updatedAt) {
+        const wasInCombat = entity.visualState === "combat";
         const enteringCombat =
           player.visualState === "combat" && entity.visualState !== "combat";
         const combatCycleChanged =
@@ -2954,6 +3151,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           Number(player.combatDurationMs) || 0,
         );
         if (combatCycleChanged || enteringCombat) {
+          entity.combatImpactTimer?.remove(false);
+          entity.combatImpactTimer = null;
           entity.combatTimelineStartedAt = this.time.now - combatProgressMs;
           entity.lastCombatVisualStepKey = "";
           entity.lastPresentedCombatEventKey = null;
@@ -2991,6 +3190,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         entity.combatEventKey = player.combatEventKey ?? null;
         entity.updatedAt = player.updatedAt;
         if (player.visualState !== "combat") {
+          entity.combatImpactTimer?.remove(false);
+          entity.combatImpactTimer = null;
+          if (wasInCombat) entity.sprite.clearTint().setAlpha(1).setAngle(0);
           entity.combatProgressMs = 0;
           entity.combatDurationMs = 0;
           entity.lastCombatVisualStepKey = "";
@@ -3244,6 +3446,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const mobAsset = entity.combatMobAsset;
     if (!mobSprite || !mobAsset) return false;
 
+    entity.combatImpactTimer?.remove(false);
+    entity.combatImpactTimer = null;
+
     const now = this.time.now;
     const deathDuration = this.state.prefersReducedMotion
       ? 260
@@ -3316,6 +3521,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       entity.combatMobIntroTo = null;
     }
     if (entity.visualState !== "combat" || !entity.combatMobName) {
+      entity.combatImpactTimer?.remove(false);
+      entity.combatImpactTimer = null;
       entity.combatMobSprite?.destroy();
       entity.combatMobShadow?.destroy();
       entity.combatMobSprite = null;
@@ -3472,6 +3679,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         return;
       }
       if (entity.combatEventType === "PLAYER_DEFEATED") {
+        entity.combatImpactTimer?.remove(false);
+        entity.combatImpactTimer = null;
         entity.combatEventPresentationUntil = now + 950;
         this.playRemoteAnimation(
           entity.sprite,
@@ -3557,30 +3766,72 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         true,
       );
       entity.sprite.anims.timeScale = animationTimeScale;
-      mobSprite.play(this.mobAnimationKey(mobAsset, "hurt", mobDirection), true);
-      mobSprite.anims.timeScale = animationTimeScale;
-      this.tweens.add({
-        targets: mobSprite,
-        alpha: 0.58,
-        yoyo: true,
-        duration: 90,
+      this.queueRemoteCombatImpact(entity, mobSprite, () => {
+        mobSprite.play(this.mobAnimationKey(mobAsset, "hurt", mobDirection), true);
+        mobSprite.anims.timeScale = animationTimeScale;
+        this.playRemoteHitFeedback(mobSprite, entity.sprite);
       });
       return;
     }
 
     mobSprite.play(this.mobAnimationKey(mobAsset, "attack", mobDirection), true);
     mobSprite.anims.timeScale = animationTimeScale;
-    this.playRemoteAnimation(
-      entity.sprite,
-      this.survivorCombatAnimationKey("hurt", entity.lastMovementDirection),
-      true,
+    this.queueRemoteCombatImpact(entity, mobSprite, () => {
+      this.playRemoteAnimation(
+        entity.sprite,
+        this.survivorCombatAnimationKey("hurt", entity.lastMovementDirection),
+        true,
+      );
+      entity.sprite.anims.timeScale = animationTimeScale;
+      this.playRemoteHitFeedback(entity.sprite, mobSprite);
+    });
+  }
+
+  private queueRemoteCombatImpact(
+    entity: RemotePlayerEntity,
+    mobSprite: Phaser.GameObjects.Sprite,
+    impact: () => void,
+  ) {
+    entity.combatImpactTimer?.remove(false);
+    entity.combatImpactTimer = null;
+    const cycleKey = entity.combatCycleKey;
+    const presentImpact = () => {
+      entity.combatImpactTimer = null;
+      if (
+        entity.visualState !== "combat" ||
+        entity.combatCycleKey !== cycleKey ||
+        entity.combatMobSprite !== mobSprite ||
+        entity.combatMobDefeated ||
+        !entity.sprite.active ||
+        !mobSprite.active
+      ) return;
+      impact();
+    };
+    const { impactDelayMs } = getHuntingCombatStrikeTiming(
+      entity.combatDurationMs,
+      this.state.prefersReducedMotion,
     );
-    entity.sprite.anims.timeScale = animationTimeScale;
+    if (impactDelayMs === 0) presentImpact();
+    else entity.combatImpactTimer = this.time.delayedCall(impactDelayMs, presentImpact);
+  }
+
+  private playRemoteHitFeedback(
+    victim: Phaser.GameObjects.Sprite,
+    attacker: Phaser.GameObjects.Sprite,
+  ) {
+    if (this.state.prefersReducedMotion) return;
+    this.tweens.killTweensOf(victim);
+    victim.setAlpha(1).setTint(0xffd1c5).setTintMode(Phaser.TintModes.MULTIPLY);
+    victim.setAngle(-1);
+    this.createHitSpark(victim, attacker);
     this.tweens.add({
-      targets: entity.sprite,
-      alpha: 0.58,
+      targets: victim,
+      angle: 1,
+      alpha: 0.95,
+      duration: 45,
       yoyo: true,
-      duration: 90,
+      ease: "Sine.easeInOut",
+      onComplete: () => victim.clearTint().setAlpha(1).setAngle(0),
     });
   }
 

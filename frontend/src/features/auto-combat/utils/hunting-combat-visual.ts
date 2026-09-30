@@ -67,6 +67,23 @@ export function getHuntingCombatAnimationTimeScale(durationMs: number) {
   return clamp(900 / safeDurationMs, 1, 3);
 }
 
+export function getHuntingCombatStrikeTiming(
+  durationMs: number,
+  prefersReducedMotion: boolean,
+) {
+  if (prefersReducedMotion) {
+    return { impactDelayMs: 0, lungeDurationMs: 0, recoilDurationMs: 0 };
+  }
+
+  const safeDurationMs = Math.max(1, Number(durationMs) || 1);
+  const impactDelayMs = clamp(Math.round(safeDurationMs * 0.1), 18, 80);
+  return {
+    impactDelayMs,
+    lungeDurationMs: Math.max(30, impactDelayMs),
+    recoilDurationMs: 65,
+  };
+}
+
 export function getHuntingMobDeathPresentationDuration(
   prefersReducedMotion: boolean,
 ) {
