@@ -41,6 +41,22 @@ import leonAttack from "../../../assets/images/auto-combat/characters/leon-v1/le
 import leonDeath from "../../../assets/images/auto-combat/characters/leon-v1/leon-death.png";
 import leonHurt from "../../../assets/images/auto-combat/characters/leon-v1/leon-hurt.png";
 import leonWalk from "../../../assets/images/auto-combat/characters/leon-v1/leon-walk.png";
+import lutadorAttack from "../../../assets/images/auto-combat/characters/lutador-v1/lutador-attack.png";
+import lutadorDeath from "../../../assets/images/auto-combat/characters/lutador-v1/lutador-death.png";
+import lutadorHurt from "../../../assets/images/auto-combat/characters/lutador-v1/lutador-hurt.png";
+import lutadorWalk from "../../../assets/images/auto-combat/characters/lutador-v1/lutador-walk.png";
+import atiradorAttack from "../../../assets/images/auto-combat/characters/atirador-v1/atirador-attack.png";
+import atiradorDeath from "../../../assets/images/auto-combat/characters/atirador-v1/atirador-death.png";
+import atiradorHurt from "../../../assets/images/auto-combat/characters/atirador-v1/atirador-hurt.png";
+import atiradorWalk from "../../../assets/images/auto-combat/characters/atirador-v1/atirador-walk.png";
+import medicoAttack from "../../../assets/images/auto-combat/characters/medico-v1/medico-attack.png";
+import medicoDeath from "../../../assets/images/auto-combat/characters/medico-v1/medico-death.png";
+import medicoHurt from "../../../assets/images/auto-combat/characters/medico-v1/medico-hurt.png";
+import medicoWalk from "../../../assets/images/auto-combat/characters/medico-v1/medico-walk.png";
+import assassinoAttack from "../../../assets/images/auto-combat/characters/assassino-v1/assassino-attack.png";
+import assassinoDeath from "../../../assets/images/auto-combat/characters/assassino-v1/assassino-death.png";
+import assassinoHurt from "../../../assets/images/auto-combat/characters/assassino-v1/assassino-hurt.png";
+import assassinoWalk from "../../../assets/images/auto-combat/characters/assassino-v1/assassino-walk.png";
 import suburbioPilotEnvironment from "../../../assets/images/auto-combat/pilot/suburbio-pilot-environment.png";
 import suburbioPilotHouseOne from "../../../assets/images/auto-combat/pilot/suburbio-pilot-house-one.png";
 import suburbioPilotHouseTwo from "../../../assets/images/auto-combat/pilot/suburbio-pilot-house-two.png";
@@ -74,6 +90,7 @@ import {
   getPerformanceExperiment,
 } from "../../performance/performanceDiagnostics";
 import { mergeHuntingVisualPlayers } from "../utils/hunting-presence";
+import type { CombatClassKey } from "../utils/characterCombatClass";
 import { resolveHuntingXpFeedback, type HuntingXpBaseline } from "../utils/hunting-xp-feedback";
 import {
   HUNTING_AREA_IDS,
@@ -161,11 +178,24 @@ const SUBURBIO_MOB_SPRITES: readonly MobCombatSpriteAssets[] = [
   },
 ];
 
+const CLASS_CHARACTER_ASSETS: Readonly<Record<CombatClassKey, Readonly<{
+  walk: string;
+  attack: string;
+  hurt: string;
+  death: string;
+}>>> = {
+  lutador: { walk: lutadorWalk, attack: lutadorAttack, hurt: lutadorHurt, death: lutadorDeath },
+  atirador: { walk: atiradorWalk, attack: atiradorAttack, hurt: atiradorHurt, death: atiradorDeath },
+  medico: { walk: medicoWalk, attack: medicoAttack, hurt: medicoHurt, death: medicoDeath },
+  assassino: { walk: assassinoWalk, attack: assassinoAttack, hurt: assassinoHurt, death: assassinoDeath },
+};
+
 const COMMON_CHARACTER_ASSETS = {
   survivor: leonWalk,
   survivorAttack: leonAttack,
   survivorDeath: leonDeath,
   survivorHurt: leonHurt,
+  classSurvivors: CLASS_CHARACTER_ASSETS,
   infected: suburbioInfected,
 } as const;
 
@@ -664,6 +694,7 @@ export function AutoCombatHuntingScene({
   const sceneState = useMemo<SuburbioHuntingState>(
     () => ({
       characterName,
+      characterClassName,
       battleCycleKey,
       battleDurationMs,
       battleProgressPercent,
@@ -686,6 +717,7 @@ export function AutoCombatHuntingScene({
     }),
     [
       characterName,
+      characterClassName,
       battleCycleKey,
       battleDurationMs,
       battleProgressPercent,

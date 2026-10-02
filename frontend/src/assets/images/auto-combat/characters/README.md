@@ -1,8 +1,9 @@
 # Contrato de sprites dos personagens
 
-Cada avatar jogavel que aparecer no mapa deve possuir uma pasta propria e um
-manifesto `*.animations.json`. O `actorKey` liga essa pasta ao `avatarKey` ou ao
-asset cosmético canônico do personagem.
+O combate no mapa usa uma pasta e um manifesto `*.animations.json` por classe:
+`lutador`, `atirador`, `medico` e `assassino`. O `actorKey` identifica a classe;
+os retratos continuam representando a identidade de cada personagem. Nao ha
+folhas diferentes por tier ou por item equipado.
 
 ## Grade obrigatoria
 
@@ -23,9 +24,11 @@ asset cosmético canônico do personagem.
 | `hurt` | 2 | reacao ao dano |
 | `death` | 6 | queda e quadro final persistente |
 
-O retrato continua sendo a fonte de identidade visual: cabelo, rosto, roupa,
-apresentacao e representacao. Armas e equipamentos nao fazem parte dessas
-folhas por enquanto.
+As folhas de caminhada, ataque, dano e morte mantem os equipamentos visuais
+da classe. Lutador usa maca e escudo; Atirador, rifle; Medico, desfibrilador e
+injetores; Assassino, adagas e bombas. `investigate` permanece no manifesto
+como fallback compartilhado; no mapa a busca usa a pose da propria classe e
+um indicador visual. Classes desconhecidas usam as folhas legadas de Leon.
 
 Execute `npm run sprites:audit:characters` depois de adicionar ou alterar uma
 folha. Saidas geradas com personagens isolados em uma grade 4x4 podem ser

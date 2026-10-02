@@ -71,7 +71,11 @@ describe('HuntingVisualPositionService', () => {
         estimatedKillTimeMs: 4_000,
         estimatedKillTimeSeconds: 4,
         currentMob: { name: 'Errante do Subúrbio' },
-        character: { id: 'character-2', name: 'Aliado' },
+        character: {
+          id: 'character-2',
+          name: 'Aliado',
+          class: { name: 'Médico' },
+        },
       },
       {
         id: 'peer-2',
@@ -82,7 +86,11 @@ describe('HuntingVisualPositionService', () => {
         estimatedKillTimeMs: null,
         estimatedKillTimeSeconds: null,
         currentMob: null,
-        character: { id: 'character-3', name: 'Sem pose' },
+        character: {
+          id: 'character-3',
+          name: 'Sem pose',
+          class: { name: 'Lutador' },
+        },
       },
     ]);
     const get = jest
@@ -113,6 +121,7 @@ describe('HuntingVisualPositionService', () => {
         {
           characterId: 'character-2',
           displayName: 'Aliado',
+          className: 'Médico',
           ...pose,
           online: false,
           visualState: 'combat',
@@ -147,7 +156,9 @@ describe('HuntingVisualPositionService', () => {
         estimatedKillTimeMs: true,
         estimatedKillTimeSeconds: true,
         currentMob: { select: { name: true } },
-        character: { select: { id: true, name: true } },
+        character: {
+          select: { id: true, name: true, class: { select: { name: true } } },
+        },
       },
     });
   });

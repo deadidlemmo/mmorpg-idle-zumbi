@@ -267,7 +267,10 @@ describe('AutoCombatGateway realtime transport', () => {
             id: 'session',
             mapId: query.where.characterId === 'other' ? 'other-map' : 'map-1',
             subMapId: 'submap-1',
-            character: { name: query.where.characterId },
+            character: {
+              name: query.where.characterId,
+              class: { name: 'Atirador' },
+            },
           });
         });
       const save = jest.fn().mockResolvedValue(undefined);
@@ -348,7 +351,7 @@ describe('AutoCombatGateway realtime transport', () => {
       const client = socket('first');
       await gateway.handleHuntingVisualJoin(
         client as never,
-        pose('first') as never,
+        { ...pose('first'), className: 'Assassino' } as never,
       );
       expect(save).toHaveBeenCalledWith('session', pose('first'));
       expect(findFirstQueries[0]?.where.phase?.in).toEqual([
@@ -372,6 +375,7 @@ describe('AutoCombatGateway realtime transport', () => {
       expect(save).toHaveBeenLastCalledWith('session', {
         ...nextPose,
         displayName: 'first',
+        className: 'Atirador',
         mapId: 'map-1',
         subMapId: 'submap-1',
         updatedAt: expect.any(Number) as number,
@@ -399,7 +403,12 @@ describe('AutoCombatGateway realtime transport', () => {
       );
       expect(second.emit).toHaveBeenCalledWith('auto-combat:visual:snapshot', {
         areaId: 'suburbio',
-        players: [expect.objectContaining({ characterId: 'first' })],
+        players: [
+          expect.objectContaining({
+            characterId: 'first',
+            className: 'Atirador',
+          }),
+        ],
       });
       await gateway.handleDisconnect(first as never);
       expect(first.to).toHaveBeenCalledWith(

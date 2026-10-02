@@ -39,6 +39,7 @@ export type HuntingVisualPose = {
 
 export type HuntingVisualPresence = HuntingVisualPose & {
   displayName: string;
+  className?: string | null;
   mapId: string;
   subMapId: string | null;
   updatedAt: number;

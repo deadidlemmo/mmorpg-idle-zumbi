@@ -76,6 +76,7 @@ type HuntingVisualPose = {
 };
 type HuntingVisualPresence = HuntingVisualPose & {
   displayName: string;
+  className?: string | null;
   mapId: string;
   subMapId: string;
   updatedAt: number;
@@ -519,7 +520,9 @@ export class AutoCombatGateway
         estimatedKillTimeMs: true,
         estimatedKillTimeSeconds: true,
         currentMob: { select: { name: true } },
-        character: { select: { name: true } },
+        character: {
+          select: { name: true, class: { select: { name: true } } },
+        },
       },
     });
     if (!session) {
@@ -536,6 +539,7 @@ export class AutoCombatGateway
       ...canonicalPose,
       ...this.getHuntingVisualCombatTiming(combatState),
       displayName: session.character.name,
+      className: session.character.class?.name ?? null,
       mapId: session.mapId,
       subMapId: session.subMapId,
       updatedAt: Date.now(),

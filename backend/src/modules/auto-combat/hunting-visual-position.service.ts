@@ -136,7 +136,9 @@ export class HuntingVisualPositionService {
         estimatedKillTimeMs: true,
         estimatedKillTimeSeconds: true,
         currentMob: { select: { name: true } },
-        character: { select: { id: true, name: true } },
+        character: {
+          select: { id: true, name: true, class: { select: { name: true } } },
+        },
       },
     });
     const players = await Promise.all(
@@ -155,6 +157,7 @@ export class HuntingVisualPositionService {
         return {
           characterId: session.character.id,
           displayName: session.character.name,
+          className: session.character.class?.name ?? null,
           ...pose,
           online: onlineIds.has(session.character.id),
           visualState: isCombatActive

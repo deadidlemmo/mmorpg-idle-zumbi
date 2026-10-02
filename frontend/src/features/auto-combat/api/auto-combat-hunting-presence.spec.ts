@@ -185,6 +185,25 @@ test("preserva o alvo e o ciclo da batalha na presenca ao vivo", () => {
   ]);
 });
 
+test("preserva a classe canonica do REST quando a pose ao vivo a omite", () => {
+  const rest: HuntingVisualPresence = {
+    characterId: "remote-medico",
+    displayName: "Médico",
+    className: "Médico",
+    mapId: "map-1",
+    subMapId: null,
+    areaId: "suburbio",
+    tileX: 8,
+    tileY: 9,
+    direction: "right",
+    visualState: "walking",
+    moving: false,
+    updatedAt: 1,
+  };
+  const live = { ...rest, className: undefined, tileX: 9, updatedAt: 2 };
+  assert.equal(mergeHuntingVisualPlayers([rest], [live])[0]?.className, "Médico");
+});
+
 test("mantem o combate do snapshot REST ativo enquanto o socket reconcilia", () => {
   const combatPresence: HuntingVisualPresence = {
     characterId: "remote-combat",
