@@ -1,16 +1,30 @@
 # MMORPG Idle Zumbi
 
-**Sobreviva, evolua e construa seu caminho em um mundo pós-apocalíptico.** Um jogo web de progressão idle com exploração, combate, coleta e sistemas sociais.
+<p align="center">
+  <img src="frontend/src/assets/images/brand/dead-idle-logo-horizontal.webp" alt="Dead Idle — MMORPG Idle Zumbi" width="560" />
+</p>
 
-**[Jogar agora](https://deadidle.pages.dev/)** · [Funcionalidades](#descricao) · [Tecnologias](#stack-utilizada) · [Instalação](#pre-requisitos)
+<p align="center"><strong>Sobreviva, evolua e reconstrua em um mundo pós-apocalíptico.</strong></p>
 
-| Para quem joga | Para quem desenvolve |
-| --- | --- |
-| Personagens, classes, mapas, combate, crafting, incursões e chefes globais. | Aplicação full stack com React, NestJS, Prisma, PostgreSQL, Redis e comunicação em tempo real. |
+<p align="center">
+  <a href="https://deadidle.pages.dev/">Jogar agora</a> ·
+  <a href="#o-que-voce-encontra-no-jogo">Conhecer o jogo</a> ·
+  <a href="#stack-utilizada">Tecnologias</a> ·
+  <a href="#instalacao">Executar localmente</a>
+</p>
 
-> Projeto em evolução. As instruções técnicas e o estado da implementação estão detalhados abaixo.
+## O que você encontra no jogo
 
-Ultima revisao: 2026-08-20.
+- **Progressão persistente:** personagens, classes, atributos, equipamentos e inventário.
+- **Atividades idle:** combate automático, caça, coleta e criação de itens.
+- **Desafios em grupo:** incursões, chefes globais, missões e conquistas.
+- **Estado sincronizado:** API e Socket.IO coordenam atividades e eventos em tempo real.
+
+O jogo está disponível em **[deadidle.pages.dev](https://deadidle.pages.dev/)**. O repositório reúne o frontend React, a API NestJS, o schema Prisma e a infraestrutura local com PostgreSQL e Redis.
+
+> Projeto em evolução. A demonstração pública mostra a interface atual; os detalhes de instalação, arquitetura e validação estão abaixo.
+
+Documentação técnica revisada em 2026-08-20; apresentação atualizada em 2026-10-06.
 
 Este README foi refeito a partir do estado real do working tree local. O codigo, o schema Prisma, as migrations, os `package.json` e os arquivos de configuracao continuam sendo a fonte da verdade. Quando algo nao foi identificado diretamente no repositorio, isso esta marcado como "confirmar manualmente".
 
