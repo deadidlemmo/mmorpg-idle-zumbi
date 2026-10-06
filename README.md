@@ -1,5 +1,15 @@
 # MMORPG Idle Zumbi
 
+**Sobreviva, evolua e construa seu caminho em um mundo pós-apocalíptico.** Um jogo web de progressão idle com exploração, combate, coleta e sistemas sociais.
+
+**[Jogar agora](https://deadidle.pages.dev/)** · [Funcionalidades](#descricao) · [Tecnologias](#stack-utilizada) · [Instalação](#pre-requisitos)
+
+| Para quem joga | Para quem desenvolve |
+| --- | --- |
+| Personagens, classes, mapas, combate, crafting, incursões e chefes globais. | Aplicação full stack com React, NestJS, Prisma, PostgreSQL, Redis e comunicação em tempo real. |
+
+> Projeto em evolução. As instruções técnicas e o estado da implementação estão detalhados abaixo.
+
 Ultima revisao: 2026-08-20.
 
 Este README foi refeito a partir do estado real do working tree local. O codigo, o schema Prisma, as migrations, os `package.json` e os arquivos de configuracao continuam sendo a fonte da verdade. Quando algo nao foi identificado diretamente no repositorio, isso esta marcado como "confirmar manualmente".
