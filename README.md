@@ -1,7 +1,7 @@
-# MMORPG Idle Zumbi
+# Dead Idle MMO
 
 <p align="center">
-  <img src="frontend/src/assets/images/brand/dead-idle-logo-horizontal.webp" alt="Dead Idle — MMORPG Idle Zumbi" width="560" />
+  <img src="frontend/src/assets/images/brand/dead-idle-logo-horizontal.webp" alt="Dead Idle MMO" width="560" />
 </p>
 
 <p align="center"><strong>Sobreviva, evolua e reconstrua em um mundo pós-apocalíptico.</strong></p>
@@ -30,7 +30,7 @@ Este README foi refeito a partir do estado real do working tree local. O codigo,
 
 ## Descricao
 
-MMORPG Idle Zumbi e um jogo web full stack de sobrevivencia zumbi com progressao idle/MMORPG. O jogador cria personagens, escolhe classe, navega por mapas, enfrenta mobs, usa auto-combate com fase de caca, coleta materiais, cria itens, gerencia inventario/equipamentos, participa de incursions e world bosses, conclui missoes/conquistas e interage com aliados. Beneficios premium existem no dominio, mas a compra comercial ainda nao esta habilitada.
+Dead Idle MMO e um jogo web full stack de sobrevivencia zumbi com progressao idle/MMORPG. O jogador cria personagens, escolhe classe, navega por mapas, enfrenta mobs, usa auto-combate com fase de caca, coleta materiais, cria itens, gerencia inventario/equipamentos, participa de incursions e world bosses, conclui missoes/conquistas e interage com aliados. Beneficios premium existem no dominio, mas a compra comercial ainda nao esta habilitada.
 
 O projeto esta dividido em:
 
