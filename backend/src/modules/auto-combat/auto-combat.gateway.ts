@@ -51,7 +51,9 @@ type HuntingVisualAreaId =
   | 'suburbio'
   | 'casa-abandonada'
   | 'distrito-ferrugem'
-  | 'galpao-ferrugem';
+  | 'galpao-ferrugem'
+  | 'hospital-patio'
+  | 'hospital-interior';
 type HuntingVisualDirection = 'up' | 'down' | 'left' | 'right';
 type HuntingVisualState =
   | 'walking'
@@ -111,6 +113,8 @@ const HUNTING_VISUAL_BOUNDS: Record<HuntingVisualAreaId, [number, number]> = {
   'casa-abandonada': [44, 28],
   'distrito-ferrugem': [48, 32],
   'galpao-ferrugem': [48, 32],
+  'hospital-patio': [48, 32],
+  'hospital-interior': [48, 32],
 };
 const HUNTING_VISUAL_STATES: HuntingVisualState[] = [
   'walking',

@@ -18,6 +18,7 @@ import {
   resolveHuntingStartingPoint,
   isAnimatedHuntingSceneMap,
   isDistritoFerrugemTierTwoScene,
+  isHospitalSantaRuinaTierThreeScene,
   isSuburbioSilenciosoTierOneScene,
   validateHuntingArea,
   worldToHuntingTile,
@@ -40,6 +41,8 @@ const exterior = loadTiledArea("suburbio-silencioso-pilot.tmj");
 const interior = loadTiledArea("suburbio-silencioso-t1-interior.tmj");
 const ferrugemExterior = loadTiledArea("distrito-ferrugem-t2-exterior.tmj");
 const ferrugemInterior = loadTiledArea("distrito-ferrugem-t2-interior.tmj");
+const hospitalExterior = loadTiledArea("hospital-santa-ruina-t3-exterior.tmj");
+const hospitalInterior = loadTiledArea("hospital-santa-ruina-t3-interior.tmj");
 
 test("habilita a cena animada para os mapas tier 1 e tier 2 suportados", () => {
   assert.equal(
@@ -431,4 +434,38 @@ test("recupera a posição antiga de um terceiro sem deixá-lo sobre o telhado",
   const validSpawn = getHuntingNavigationPoint(area, area.spawnNodeId);
   assert.ok(validSpawn);
   assert.deepEqual(findNearestHuntingWalkablePoint(area, validSpawn), validSpawn);
+});
+
+test("habilita a cena animada do Hospital Santa Ruína somente no tier 3", () => {
+  assert.equal(isHospitalSantaRuinaTierThreeScene({ mapName: "Hospital Santa Ruína", tier: 3 }), true);
+  assert.equal(isAnimatedHuntingSceneMap({ mapName: "Hospital Santa Ruína", tier: 3 }), true);
+  assert.equal(isAnimatedHuntingSceneMap({ mapName: "Hospital Santa Ruína", tier: 2 }), false);
+});
+
+test("valida caminhos, colisões e portais das duas áreas do hospital", () => {
+  for (const area of [hospitalExterior.area, hospitalInterior.area]) {
+    assert.deepEqual(validateHuntingArea(area), []);
+    for (const start of area.navigationPoints) {
+      for (const destination of area.navigationPoints) {
+        if (start.id === destination.id) continue;
+        assertPathIsWalkable(area, findHuntingPath(area, start, destination));
+      }
+    }
+  }
+  const enter = getHuntingPortal(hospitalExterior.area, hospitalExterior.area.portalNodeId);
+  const exit = getHuntingPortal(hospitalInterior.area, hospitalInterior.area.portalNodeId);
+  assert.equal(enter?.toAreaId, HUNTING_AREA_IDS.hospitalInterior);
+  assert.equal(enter?.toNodeId, "saida-patio");
+  assert.equal(exit?.toAreaId, HUNTING_AREA_IDS.hospitalCourtyard);
+  assert.equal(exit?.toNodeId, "entrada-emergencia");
+  for (const [area, tiles] of [
+    [hospitalExterior.area, [[5, 5], [5, 18], [23, 15], [41, 18]]],
+    [hospitalInterior.area, [[5, 5], [23, 16], [40, 15], [40, 25]]],
+  ] as const) {
+    for (const [column, row] of tiles) {
+      assert.equal(isHuntingTileWalkable(area, column, row), false, `${area.id}:${column},${row}`);
+    }
+  }
+  assert.equal(isHuntingTileWalkable(hospitalExterior.area, 24, 7), true);
+  assert.equal(isHuntingTileWalkable(hospitalInterior.area, 24, 30), true);
 });

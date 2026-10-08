@@ -77,6 +77,13 @@ import ferrugemExteriorTilemapRaw from "../../../assets/maps/auto-combat/distrit
 import ferrugemExteriorTilemapUrl from "../../../assets/maps/auto-combat/distrito-ferrugem-t2-exterior.tmj?url";
 import ferrugemInteriorTilemapRaw from "../../../assets/maps/auto-combat/distrito-ferrugem-t2-interior.tmj?raw";
 import ferrugemInteriorTilemapUrl from "../../../assets/maps/auto-combat/distrito-ferrugem-t2-interior.tmj?url";
+import hospitalExteriorBackground from "../../../assets/images/auto-combat/hospital/hospital-exterior.webp";
+import hospitalInteriorBackground from "../../../assets/images/auto-combat/hospital/hospital-interior.webp";
+import hospitalNavigationMask from "../../../assets/images/auto-combat/hospital/hospital-navigation-mask.png";
+import hospitalExteriorTilemapRaw from "../../../assets/maps/auto-combat/hospital-santa-ruina-t3-exterior.tmj?raw";
+import hospitalExteriorTilemapUrl from "../../../assets/maps/auto-combat/hospital-santa-ruina-t3-exterior.tmj?url";
+import hospitalInteriorTilemapRaw from "../../../assets/maps/auto-combat/hospital-santa-ruina-t3-interior.tmj?raw";
+import hospitalInteriorTilemapUrl from "../../../assets/maps/auto-combat/hospital-santa-ruina-t3-interior.tmj?url";
 import { getAutoCombatSocket, type HuntingVisualPose, type HuntingVisualPresence } from "../../../services/websocket/socketClient";
 import { playGameSound } from "../../../services/audio/gameAudio";
 import { CharacterPortrait } from "../../cosmetics/components/CharacterPortrait";
@@ -95,6 +102,7 @@ import { resolveHuntingXpFeedback, type HuntingXpBaseline } from "../utils/hunti
 import {
   HUNTING_AREA_IDS,
   isDistritoFerrugemTierTwoScene,
+  isHospitalSantaRuinaTierThreeScene,
   type HuntingTiledMapSource,
 } from "../utils/hunting-scene";
 import {
@@ -114,6 +122,7 @@ import { HuntingPerformancePanel } from "./HuntingPerformancePanel";
 
 const SUBURBIO_DEFAULT_AREA_LABEL = "Subúrbio Silencioso · Distrito aberto";
 const FERRUGEM_DEFAULT_AREA_LABEL = "Distrito da Ferrugem · Pátio de Carga";
+const HOSPITAL_DEFAULT_AREA_LABEL = "Hospital Santa Ruína · Triagem Vazia";
 const SUBURBIO_EXTERIOR_TILEMAP = JSON.parse(
   suburbioExteriorTilemapRaw,
 ) as HuntingTiledMapSource;
@@ -125,6 +134,12 @@ const FERRUGEM_EXTERIOR_TILEMAP = JSON.parse(
 ) as HuntingTiledMapSource;
 const FERRUGEM_INTERIOR_TILEMAP = JSON.parse(
   ferrugemInteriorTilemapRaw,
+) as HuntingTiledMapSource;
+const HOSPITAL_EXTERIOR_TILEMAP = JSON.parse(
+  hospitalExteriorTilemapRaw,
+) as HuntingTiledMapSource;
+const HOSPITAL_INTERIOR_TILEMAP = JSON.parse(
+  hospitalInteriorTilemapRaw,
 ) as HuntingTiledMapSource;
 
 const SUBURBIO_MOB_SPRITES: readonly MobCombatSpriteAssets[] = [
@@ -338,6 +353,59 @@ const FERRUGEM_SCENE_ASSETS: HuntingSceneAssets = {
   ],
 };
 
+const HOSPITAL_SCENE_ASSETS: HuntingSceneAssets = {
+  ...COMMON_CHARACTER_ASSETS,
+  mobs: [],
+  initialAreaId: HUNTING_AREA_IDS.hospitalCourtyard,
+  secondaryAreaId: HUNTING_AREA_IDS.hospitalInterior,
+  areas: [
+    {
+      id: HUNTING_AREA_IDS.hospitalCourtyard,
+      combatRespectsOcclusion: true,
+      spriteScale: 0.82,
+      tilemapKey: "hospital-hunting-exterior-tiled",
+      tilemapUrl: hospitalExteriorTilemapUrl,
+      tilemapSource: HOSPITAL_EXTERIOR_TILEMAP,
+      tilesets: [{
+        textureKey: "hospital-navigation-mask-texture",
+        tiledName: "hospital-navigation-mask",
+        url: hospitalNavigationMask,
+      }],
+      background: {
+        textureKey: "hospital-exterior-background",
+        url: hospitalExteriorBackground,
+      },
+      depthRegions: [
+        { x: 0, y: 0, width: 1536, height: 256, depthY: 256 },
+        { x: 0, y: 256, width: 384, height: 560, depthY: 816 },
+        { x: 1152, y: 256, width: 384, height: 560, depthY: 816 },
+        { x: 544, y: 416, width: 448, height: 192, depthY: 608 },
+      ],
+    },
+    {
+      id: HUNTING_AREA_IDS.hospitalInterior,
+      combatRespectsOcclusion: true,
+      spriteScale: 0.82,
+      tilemapKey: "hospital-hunting-interior-tiled",
+      tilemapUrl: hospitalInteriorTilemapUrl,
+      tilemapSource: HOSPITAL_INTERIOR_TILEMAP,
+      tilesets: [{
+        textureKey: "hospital-navigation-mask-texture",
+        tiledName: "hospital-navigation-mask",
+        url: hospitalNavigationMask,
+      }],
+      background: {
+        textureKey: "hospital-interior-background",
+        url: hospitalInteriorBackground,
+      },
+      depthRegions: [
+        { x: 0, y: 0, width: 1536, height: 288, depthY: 288 },
+        { x: 608, y: 416, width: 352, height: 192, depthY: 608 },
+      ],
+    },
+  ],
+};
+
 export type AutoCombatHuntingLootEntry = Readonly<{
   key: string;
   itemName: string;
@@ -465,12 +533,16 @@ export function AutoCombatHuntingScene({
     mapName,
     tier: mapTier,
   });
-  const sceneAssets = usesFerrugemScene
-    ? FERRUGEM_SCENE_ASSETS
-    : SUBURBIO_SCENE_ASSETS;
-  const defaultAreaLabel = usesFerrugemScene
-    ? FERRUGEM_DEFAULT_AREA_LABEL
-    : SUBURBIO_DEFAULT_AREA_LABEL;
+  const usesHospitalScene = isHospitalSantaRuinaTierThreeScene({
+    mapName,
+    tier: mapTier,
+  });
+  const sceneAssets = usesHospitalScene
+    ? HOSPITAL_SCENE_ASSETS
+    : usesFerrugemScene ? FERRUGEM_SCENE_ASSETS : SUBURBIO_SCENE_ASSETS;
+  const defaultAreaLabel = usesHospitalScene
+    ? HOSPITAL_DEFAULT_AREA_LABEL
+    : usesFerrugemScene ? FERRUGEM_DEFAULT_AREA_LABEL : SUBURBIO_DEFAULT_AREA_LABEL;
   const hostRef = useRef<HTMLDivElement>(null);
   const lootHudRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<SuburbioHuntingController | null>(null);
@@ -906,7 +978,8 @@ export function AutoCombatHuntingScene({
     <section
       className={`auto-combat-hunting-scene auto-combat-hunting-scene--${stateClassName} auto-combat-hunting-scene--phase-${visualPhase}${isImmersive ? " auto-combat-hunting-scene--immersive" : ""}${isCompact ? " auto-combat-hunting-scene--compact" : ""}${performanceDiagnostics && !performanceExperiment.noticeEffects ? " auto-combat-hunting-scene--perf-no-notice-fx" : ""}${performanceDiagnostics && performanceExperiment.mapMode === "hidden" ? " auto-combat-hunting-scene--perf-canvas-hidden" : ""}`}
       aria-label={`Rastreio em ${
-        usesFerrugemScene ? "Distrito da Ferrugem" : "Subúrbio Silencioso"
+        usesHospitalScene ? "Hospital Santa Ruína" :
+          usesFerrugemScene ? "Distrito da Ferrugem" : "Subúrbio Silencioso"
       }`}
       aria-busy={engineStatus === "loading"}
     >

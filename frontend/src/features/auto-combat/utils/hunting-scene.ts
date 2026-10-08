@@ -27,13 +27,24 @@ export function isDistritoFerrugemTierTwoScene(params: {
   );
 }
 
+export function isHospitalSantaRuinaTierThreeScene(params: {
+  mapName?: string | null;
+  tier?: number | null;
+}) {
+  return (
+    normalizeSceneMapName(params.mapName) === "hospital-santa-ruina" &&
+    Number(params.tier) === 3
+  );
+}
+
 export function isAnimatedHuntingSceneMap(params: {
   mapName?: string | null;
   tier?: number | null;
 }) {
   return (
     isSuburbioSilenciosoTierOneScene(params) ||
-    isDistritoFerrugemTierTwoScene(params)
+    isDistritoFerrugemTierTwoScene(params) ||
+    isHospitalSantaRuinaTierThreeScene(params)
   );
 }
 
@@ -42,6 +53,8 @@ export const HUNTING_AREA_IDS = {
   abandonedHouse: "casa-abandonada",
   rustDistrict: "distrito-ferrugem",
   rustWarehouse: "galpao-ferrugem",
+  hospitalCourtyard: "hospital-patio",
+  hospitalInterior: "hospital-interior",
 } as const;
 
 export type HuntingAreaId =

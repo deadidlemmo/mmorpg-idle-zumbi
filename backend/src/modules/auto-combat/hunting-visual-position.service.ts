@@ -13,7 +13,9 @@ export type StoredHuntingVisualPose = {
     | 'suburbio'
     | 'casa-abandonada'
     | 'distrito-ferrugem'
-    | 'galpao-ferrugem';
+    | 'galpao-ferrugem'
+    | 'hospital-patio'
+    | 'hospital-interior';
   tileX: number;
   tileY: number;
   direction: 'up' | 'down' | 'left' | 'right';
@@ -25,6 +27,8 @@ const AREA_BOUNDS = {
   'casa-abandonada': [44, 28],
   'distrito-ferrugem': [48, 32],
   'galpao-ferrugem': [48, 32],
+  'hospital-patio': [48, 32],
+  'hospital-interior': [48, 32],
 } as const;
 
 export function parseStoredHuntingVisualPose(
@@ -36,7 +40,9 @@ export function parseStoredHuntingVisualPose(
     pose.areaId !== 'suburbio' &&
     pose.areaId !== 'casa-abandonada' &&
     pose.areaId !== 'distrito-ferrugem' &&
-    pose.areaId !== 'galpao-ferrugem'
+    pose.areaId !== 'galpao-ferrugem' &&
+    pose.areaId !== 'hospital-patio' &&
+    pose.areaId !== 'hospital-interior'
   )
     return null;
   const [width, height] = AREA_BOUNDS[pose.areaId];

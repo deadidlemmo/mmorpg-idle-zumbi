@@ -406,6 +406,13 @@ some e a cena volta a usar a posicao, direcao e animacao reais. `Idle` indica
 ausencia de pose ao vivo nesta cena, nao comprova que a conta esteja
 desconectada. Jogadores sem pose salva nao recebem posicao inventada.
 
+O Hospital Santa Ruina (tier 3) usa duas areas visuais Tiled de 48x32 tiles:
+patio/triagem e interior/isolamento. Os `.tmj` e fundos WebP sao gerados por
+`node frontend/scripts/build-hospital-santa-ruina-maps.mjs` a partir das imagens
+em `frontend/src/assets/images/auto-combat/hospital/source/`. O gerador define
+colisoes, rotas, spawn e portais reciprocos. A troca de area so altera a cena
+visual; os submapas e os encontros continuam definidos pelo backend.
+
 ### Audio da apresentacao
 
 O rastreio reproduz o efeito de busca ao entrar na fase de investigacao, com

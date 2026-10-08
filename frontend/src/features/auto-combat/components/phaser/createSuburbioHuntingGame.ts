@@ -60,6 +60,9 @@ const SURVIVOR_HURT_TEXTURE = "suburbio-hunting-leon-hurt";
 const SURVIVOR_DEATH_TEXTURE = "suburbio-hunting-leon-death";
 const INFECTED_TEXTURE = "suburbio-hunting-infected-gba";
 const SURVIVOR_SPEED = 96;
+const SURVIVOR_WALK_FRAME_RATE = 8;
+const SURVIVOR_GAIT_RADIANS_PER_MS = (Math.PI * 4) / 1000;
+const REMOTE_WALK_VISUAL_HOLD_MS = 280;
 const SURVIVOR_FRAME_WIDTH = 112;
 const SURVIVOR_FRAME_HEIGHT = 96;
 const INFECTED_FRAME_WIDTH = 32;
@@ -285,6 +288,7 @@ type RemotePlayerEntity = {
   lastMovementDirection: MovementDirection;
   visualState: HuntingVisualPresenceState;
   moving: boolean;
+  walkingVisualUntil: number;
   updatedAt: number;
   idle: boolean;
   anchor: HuntingCoordinate;
@@ -1062,7 +1066,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
             start,
             end: start + 3,
           }),
-          frameRate: 12,
+          frameRate: SURVIVOR_WALK_FRAME_RATE,
           repeat: -1,
         });
       }
@@ -1079,7 +1083,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           this.classSurvivorTextureKey(classKey, "walk"),
           start,
           4,
-          12,
+          SURVIVOR_WALK_FRAME_RATE,
           -1,
         );
         this.createDirectionalAnimation(
@@ -1376,6 +1380,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       this.lastMovementDirection
     ];
     const walkTexture = this.survivorTexture("walk", this.state.characterClassName);
+    const showsGait = isWalking && !this.state.prefersReducedMotion &&
+      !this.state.isCombatActive && !this.actorCombatAnimationLocked &&
+      !this.playerDefeated;
     if (this.playerDefeated || this.actorCombatAnimationLocked) {
       // A animacao de combate controla a textura ate concluir.
     } else if (this.state.isCombatActive) {
@@ -1413,7 +1420,11 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     }
     this.actorSprite.setPosition(
       this.actorBody.x + this.actorCombatOffsetX,
-      this.actorBody.y + this.actorCombatOffsetY,
+      this.actorBody.y + this.actorCombatOffsetY -
+        (showsGait ? Math.abs(Math.sin(this.time.now * SURVIVOR_GAIT_RADIANS_PER_MS)) * 1.8 : 0),
+    );
+    this.actorSprite.setAngle(
+      showsGait ? Math.sin(this.time.now * SURVIVOR_GAIT_RADIANS_PER_MS) * 1.8 : 0,
     );
     this.actorSprite.setDepth(actorDepth);
     this.actorShadow
@@ -3222,6 +3233,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           lastMovementDirection: initialDirection,
           visualState: player.visualState,
           moving: player.idle ? false : player.moving,
+          walkingVisualUntil: 0,
           updatedAt: player.updatedAt,
           idle: player.idle,
           anchor,
@@ -3375,7 +3387,12 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
 
   private walkRemotePlayers(delta: number) {
     for (const entity of this.remotePlayers.values()) {
-      const isWalking = entity.idle ? false : this.walkRemotePlayer(entity, delta);
+      const moved = entity.idle ? false : this.walkRemotePlayer(entity, delta);
+      if (moved) entity.walkingVisualUntil = this.time.now + REMOTE_WALK_VISUAL_HOLD_MS;
+      const isWalking = moved || (
+        !entity.idle && entity.moving && entity.visualState !== "combat" &&
+        this.time.now < entity.walkingVisualUntil
+      );
       this.syncRemotePlayerVisual(entity, isWalking, entity.visualState);
       this.syncRemoteCombatVisual(entity);
     }
@@ -3467,6 +3484,12 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         .setTexture(walkTexture)
         .setFrame(directionStart);
     }
+    entity.sprite.setAngle(
+      isWalking && entity.sprite.anims.isPlaying &&
+        !this.state.prefersReducedMotion
+        ? Math.sin(this.time.now * SURVIVOR_GAIT_RADIANS_PER_MS) * 1.8
+        : 0,
+    );
     const depth = this.getActorDepthBase(visualPhase === "combat", entity.areaId) +
       Math.round(entity.sprite.y);
     entity.sprite.setDepth(depth);

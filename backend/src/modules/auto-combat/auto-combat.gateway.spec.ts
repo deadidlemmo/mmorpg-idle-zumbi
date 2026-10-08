@@ -540,6 +540,23 @@ describe('AutoCombatGateway realtime transport', () => {
       expect((client.data.rooms as Set<string>).size).toBe(1);
     });
 
+    it('troca entre patio e interior do hospital sem duplicar presença', async () => {
+      const { gateway, socket, pose } = setup();
+      const client = socket('first');
+      for (const areaId of ['hospital-patio', 'hospital-interior']) {
+        await gateway.handleHuntingVisualJoin(
+          client as never,
+          { ...pose('first'), areaId, tileX: 24, tileY: 27 } as never,
+        );
+        expect(
+          (client.data.rooms as Set<string>).has(
+            `auto-combat:visual:map-1:submap-1:${areaId}`,
+          ),
+        ).toBe(true);
+        expect((client.data.rooms as Set<string>).size).toBe(1);
+      }
+    });
+
     it('congela a posição publicada enquanto o combate estiver ativo', async () => {
       const { gateway, socket, pose } = setup();
       const client = socket('first');

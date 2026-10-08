@@ -210,4 +210,25 @@ describe('HuntingVisualPositionService', () => {
       }),
     ).toBeNull();
   });
+
+  it('aceita as poses das duas areas do Hospital Santa Ruína', () => {
+    for (const areaId of ['hospital-patio', 'hospital-interior']) {
+      expect(
+        parseStoredHuntingVisualPose({
+          areaId,
+          tileX: 24.5,
+          tileY: 27.5,
+          direction: 'down',
+        }),
+      ).toEqual({ areaId, tileX: 24.5, tileY: 27.5, direction: 'down' });
+      expect(
+        parseStoredHuntingVisualPose({
+          areaId,
+          tileX: 48,
+          tileY: 27.5,
+          direction: 'down',
+        }),
+      ).toBeNull();
+    }
+  });
 });
