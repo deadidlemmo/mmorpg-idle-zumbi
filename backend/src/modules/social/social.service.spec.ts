@@ -174,6 +174,7 @@ describe('SocialService', () => {
       userId: { not: 'user-viewer' },
       name: { equals: 'Sobrevivente', mode: 'insensitive' },
     });
+    expect(exactSearchCall.where).not.toHaveProperty('excludeFromRankings');
     expect(exactSearchCall.where.user.NOT).toEqual([
       { email: { endsWith: '@local.test', mode: 'insensitive' } },
       { email: { endsWith: '@dead-idle.test', mode: 'insensitive' } },
@@ -182,6 +183,7 @@ describe('SocialService', () => {
       userId: { not: 'user-viewer' },
       name: { contains: 'Sobrevivente', mode: 'insensitive' },
     });
+    expect(partialSearchCall.where).not.toHaveProperty('excludeFromRankings');
   });
 
   it('usa a mesma chave para pedidos nos dois sentidos', async () => {
@@ -204,6 +206,12 @@ describe('SocialService', () => {
     prisma.friendship.create.mockResolvedValue({ id: 'friendship-1' });
 
     await service.sendRequest('user-viewer', 'character-target');
+
+    const requestCalls = prisma.character.findFirst.mock.calls as unknown[][];
+    const requestQuery = requestCalls[0]?.[0] as {
+      where: Record<string, unknown>;
+    };
+    expect(requestQuery.where).not.toHaveProperty('excludeFromRankings');
 
     expect(prisma.friendship.create).toHaveBeenCalledWith({
       data: {
@@ -247,6 +255,7 @@ describe('SocialService', () => {
     expect(rankingCall).toMatchObject({
       where: {
         origin: MaterialOrigin.CONTENCAO,
+        character: { excludeFromRankings: false },
       },
       take: 25,
     });
@@ -260,6 +269,29 @@ describe('SocialService', () => {
       score: { level: 8, totalXp: 1_450 },
       appearance: { profileBanner: { key: 'banner-helix' } },
     });
+  });
+
+  it('aplica a exclusao a todas as categorias de ranking', async () => {
+    for (const [category, model] of [
+      ['LEVEL', prisma.character],
+      ['CRAFTING', prisma.characterCraftingSkill],
+      ['HUNTING', prisma.characterHuntingSkill],
+      ['COLETA', prisma.characterGatheringSkill],
+    ] as const) {
+      model.findMany.mockResolvedValueOnce([]);
+      await service.getRanking(category, 10);
+      const calls = model.findMany.mock.calls as unknown[][];
+      const query = calls.at(-1)?.[0] as {
+        where: {
+          excludeFromRankings?: boolean;
+          character?: { excludeFromRankings: boolean };
+        };
+      };
+      expect(
+        query.where.character?.excludeFromRankings ??
+          query.where.excludeFromRankings,
+      ).toBe(false);
+    }
   });
 
   it('permite aceitar o pedido apenas ao destinatário', async () => {

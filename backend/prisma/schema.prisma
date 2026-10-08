@@ -530,6 +530,8 @@ model Character {
   level Int @default(1)
   xp    Int @default(0)
 
+  excludeFromRankings Boolean @default(false)
+
   gold Int @default(0)
   cash Int @default(0)
 

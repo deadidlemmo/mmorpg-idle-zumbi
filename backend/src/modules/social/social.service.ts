@@ -64,10 +64,15 @@ const publicSocialUserWhere = {
   ],
 } satisfies Prisma.UserWhereInput;
 
-const rankableCharacterWhere = {
+const publicCharacterWhere = {
   deletedAt: null,
   status: CharacterStatus.ACTIVE,
   user: publicSocialUserWhere,
+} satisfies Prisma.CharacterWhereInput;
+
+const rankableCharacterWhere = {
+  ...publicCharacterWhere,
+  excludeFromRankings: false,
 } satisfies Prisma.CharacterWhereInput;
 
 type FriendshipWithUsers = Prisma.FriendshipGetPayload<{
@@ -253,7 +258,7 @@ export class SocialService {
     const normalizedNickname = nickname.trim().replace(/\s+/g, ' ');
     const normalizedComparison = normalizedNickname.toLocaleLowerCase('pt-BR');
     const searchBaseWhere = {
-      ...rankableCharacterWhere,
+      ...publicCharacterWhere,
       userId: { not: userId },
     } satisfies Prisma.CharacterWhereInput;
     const [exactCandidates, partialCandidates] = await Promise.all([
@@ -356,7 +361,7 @@ export class SocialService {
     const target = await this.prisma.character.findFirst({
       where: {
         id: targetCharacterId,
-        ...rankableCharacterWhere,
+        ...publicCharacterWhere,
       },
       select: { userId: true },
     });

@@ -590,6 +590,7 @@ Campos/eventos como `eventKey`, `sequence`, `snapshotSequence`, `latestEventSequ
 - Mochila: `InventoryItem`.
 - Banco: `BankItem`.
 - Equipamentos: `Equipment`.
+- `Character.excludeFromRankings` remove apenas o personagem dos rankings publicos; busca, amizades e acesso a mapas permanecem normais.
 - Equipar/desequipar deve validar ownership, posse do item, slot, tier, classe, requisitos e espaco no inventario.
 - Venda ao mercado negro usa `/inventory/black-market/sell`.
 
