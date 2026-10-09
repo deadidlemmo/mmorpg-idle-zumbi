@@ -118,6 +118,7 @@ import type {
   SuburbioHuntingState,
 } from "./phaser/createSuburbioHuntingGame";
 import { DISTRITO_FERRUGEM_MOB_SPRITES } from "./distritoFerrugemMobSprites";
+import { HOSPITAL_SANTA_RUINA_MOB_SPRITES } from "./hospitalSantaRuinaMobSprites";
 import { HuntingPerformancePanel } from "./HuntingPerformancePanel";
 
 const SUBURBIO_DEFAULT_AREA_LABEL = "Subúrbio Silencioso · Distrito aberto";
@@ -355,7 +356,8 @@ const FERRUGEM_SCENE_ASSETS: HuntingSceneAssets = {
 
 const HOSPITAL_SCENE_ASSETS: HuntingSceneAssets = {
   ...COMMON_CHARACTER_ASSETS,
-  mobs: [],
+  mobs: HOSPITAL_SANTA_RUINA_MOB_SPRITES,
+  mobDisplayScale: 1.14,
   initialAreaId: HUNTING_AREA_IDS.hospitalCourtyard,
   secondaryAreaId: HUNTING_AREA_IDS.hospitalInterior,
   areas: [

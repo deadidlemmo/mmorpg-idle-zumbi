@@ -48,6 +48,25 @@ export function isAnimatedHuntingSceneMap(params: {
   );
 }
 
+export function getHuntingSceneCameraZoom(params: {
+  viewportWidth: number;
+  viewportHeight: number;
+  worldWidth: number;
+  worldHeight: number;
+  isImmersive: boolean;
+}) {
+  const viewportWidth = Math.max(1, params.viewportWidth);
+  const viewportHeight = Math.max(1, params.viewportHeight);
+  const coverZoom = Math.max(
+    viewportWidth / Math.max(1, params.worldWidth),
+    viewportHeight / Math.max(1, params.worldHeight),
+  );
+  const minimumZoom = viewportWidth <= 600
+    ? params.isImmersive ? 1.08 : 0.92
+    : params.isImmersive ? 0 : 0.7;
+  return Math.max(minimumZoom, coverZoom);
+}
+
 export const HUNTING_AREA_IDS = {
   outdoor: "suburbio",
   abandonedHouse: "casa-abandonada",

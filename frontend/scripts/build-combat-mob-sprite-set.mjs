@@ -3,6 +3,9 @@ import path from "node:path";
 import sharp from "sharp";
 
 const [inputPath, outputDirectory, assetPrefix, mobKey] = process.argv.slice(2);
+const walkGait = process.argv
+  .find((argument) => argument.startsWith("--walk-gait="))
+  ?.slice("--walk-gait=".length);
 const frameWidth = 112;
 const frameHeight = 96;
 const directionCount = 4;
@@ -11,6 +14,9 @@ if (!inputPath || !outputDirectory || !assetPrefix || !mobKey) {
   throw new Error(
     "Uso: node scripts/build-combat-mob-sprite-set.mjs <poses.png> <diretorio> <prefixo> <mob-key>",
   );
+}
+if (walkGait && !["humanoid", "ground", "flying"].includes(walkGait)) {
+  throw new Error(`Tipo de caminhada invalido: ${walkGait}.`);
 }
 
 const resolvedInput = path.resolve(inputPath);
@@ -75,6 +81,54 @@ async function shiftedFrame(input, x = 0, y = 0, opacity = 1) {
     .toBuffer();
 }
 
+async function gaitFrame(input, frame) {
+  if (!walkGait) {
+    const offsets = [
+      { x: -1, y: 0 },
+      { x: 0, y: -2 },
+      { x: 1, y: 0 },
+      { x: 0, y: -1 },
+    ];
+    return shiftedFrame(input, offsets[frame].x, offsets[frame].y);
+  }
+
+  const { data, info } = await sharp(input)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const output = Buffer.alloc(data.length);
+  const phase = [-1, 0, 1, 0][frame];
+  const bob = [0, 2, 0, 1][frame];
+  for (let y = 0; y < frameHeight; y += 1) {
+    for (let x = 0; x < frameWidth; x += 1) {
+      const lowerBody = Math.max(0, Math.min(1, (y - 39) / 49));
+      let displacementX = 0;
+      let displacementY = bob;
+      if (walkGait === "humanoid") {
+        const side = x < frameWidth / 2 ? -1 : 1;
+        displacementX = phase * (side * 4 * lowerBody + (1 - lowerBody));
+        displacementY += phase * side * 2 * lowerBody;
+      } else if (walkGait === "ground") {
+        displacementX = phase * (1 + 2 * lowerBody);
+        displacementY += phase * 2 * Math.sin(x / 13) * lowerBody;
+      } else {
+        const wing = Math.max(0, Math.min(1, (Math.abs(x - 56) - 14) / 30));
+        displacementX = phase * 2 * wing;
+        displacementY += phase * 4 * wing;
+      }
+      const sourceX = Math.round(x - displacementX);
+      const sourceY = Math.round(y + displacementY);
+      if (sourceX < 0 || sourceX >= frameWidth || sourceY < 0 || sourceY >= frameHeight) {
+        continue;
+      }
+      const sourceOffset = (sourceY * frameWidth + sourceX) * info.channels;
+      const targetOffset = (y * frameWidth + x) * info.channels;
+      data.copy(output, targetOffset, sourceOffset, sourceOffset + info.channels);
+    }
+  }
+  return sharp(output, { raw: info }).png().toBuffer();
+}
+
 async function buildSheet(name, framesPerDirection, resolveFrame) {
   const composites = [];
   for (let row = 0; row < directionCount; row += 1) {
@@ -105,16 +159,9 @@ async function buildSheet(name, framesPerDirection, resolveFrame) {
 
 await fs.mkdir(resolvedOutput, { recursive: true });
 
-const walkOffsets = [
-  { x: -1, y: 0 },
-  { x: 0, y: -2 },
-  { x: 1, y: 0 },
-  { x: 0, y: -1 },
-];
-const walk = await buildSheet("walk", 4, (row, frame) => {
-  const offset = walkOffsets[frame];
-  return shiftedFrame(poses[row][0], offset.x, offset.y);
-});
+const walk = await buildSheet("walk", 4, (row, frame) =>
+  gaitFrame(poses[row][0], frame),
+);
 const attack = await buildSheet("attack", 4, (row, frame) => {
   if (frame === 0 || frame === 3) return shiftedFrame(poses[row][0]);
   const offset = directionOffset(row, frame === 2 ? 3 : 1);

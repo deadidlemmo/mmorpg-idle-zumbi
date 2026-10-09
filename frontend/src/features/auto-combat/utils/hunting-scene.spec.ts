@@ -7,6 +7,7 @@ import {
   findHuntingCombatFormation,
   findNearestHuntingWalkablePoint,
   findHuntingPath,
+  getHuntingSceneCameraZoom,
   getHuntingNavigationPoint,
   getHuntingPortal,
   HUNTING_AREA_IDS,
@@ -43,6 +44,22 @@ const ferrugemExterior = loadTiledArea("distrito-ferrugem-t2-exterior.tmj");
 const ferrugemInterior = loadTiledArea("distrito-ferrugem-t2-interior.tmj");
 const hospitalExterior = loadTiledArea("hospital-santa-ruina-t3-exterior.tmj");
 const hospitalInterior = loadTiledArea("hospital-santa-ruina-t3-interior.tmj");
+
+test("aproxima atores em telas estreitas sem alterar o zoom de desktop", () => {
+  const area = { worldWidth: 1536, worldHeight: 1024 };
+  assert.equal(getHuntingSceneCameraZoom({
+    ...area, viewportWidth: 390, viewportHeight: 844, isImmersive: true,
+  }), 1.08);
+  assert.equal(getHuntingSceneCameraZoom({
+    ...area, viewportWidth: 390, viewportHeight: 220, isImmersive: false,
+  }), 0.92);
+  assert.equal(getHuntingSceneCameraZoom({
+    ...area, viewportWidth: 1280, viewportHeight: 720, isImmersive: true,
+  }), 1280 / 1536);
+  assert.equal(getHuntingSceneCameraZoom({
+    ...area, viewportWidth: 1600, viewportHeight: 1100, isImmersive: false,
+  }), 1100 / 1024);
+});
 
 test("habilita a cena animada para os mapas tier 1 e tier 2 suportados", () => {
   assert.equal(

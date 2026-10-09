@@ -5,6 +5,7 @@ import {
   findHuntingCombatFormation,
   findNearestHuntingWalkablePoint,
   findHuntingPath,
+  getHuntingSceneCameraZoom,
   getHuntingNavigationPoint,
   getHuntingPortal,
   huntingTileCenter,
@@ -83,7 +84,6 @@ const MOB_SHADOW_ALPHA = 0.88;
 const SURVIVOR_SHADOW_WIDTH = 26;
 const SURVIVOR_SHADOW_HEIGHT = 7;
 const SURVIVOR_NAME_OFFSET_Y = 78;
-const CARD_MIN_ZOOM = 0.7;
 const LOCAL_NAME_FONT_SIZE = 11;
 const REMOTE_NAME_FONT_SIZE = 10;
 const MIN_NAME_SCREEN_SIZE = 11;
@@ -243,6 +243,7 @@ export type HuntingSceneAssets = Readonly<{
   }>>>;
   infected: string;
   mobs: readonly MobCombatSpriteAssets[];
+  mobDisplayScale?: number;
 }>;
 
 type HuntingTilemapLayer = Phaser.Tilemaps.TilemapLayer;
@@ -765,6 +766,10 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     return this.assets.areas.find((area) => area.id === areaId)?.spriteScale ?? 1;
   }
 
+  private getMobDisplayScale() {
+    return this.getSpriteScale() * (this.assets.mobDisplayScale ?? 1);
+  }
+
   private getActorDepthBase(inCombat: boolean, areaId: HuntingAreaId = this.activeAreaId) {
     if (!inCombat) return ACTOR_DEPTH_BASE;
     return this.assets.areas.find((area) => area.id === areaId)?.combatRespectsOcclusion
@@ -1042,7 +1047,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   }
 
   private createMobShadow(x: number, y: number) {
-    const spriteScale = this.getSpriteScale();
+    const spriteScale = this.getMobDisplayScale();
     return this.add
       .image(x, y + 3, MOB_SHADOW_TEXTURE)
       .setDisplaySize(MOB_SHADOW_WIDTH * spriteScale, MOB_SHADOW_HEIGHT * spriteScale)
@@ -2705,7 +2710,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const threatDisplayHeight = mobSpriteAsset
       ? MOB_DISPLAY_HEIGHT
       : FALLBACK_MOB_DISPLAY_HEIGHT;
-    const spriteScale = this.getSpriteScale();
+    const spriteScale = this.getMobDisplayScale();
     const renderedThreatHeight = threatDisplayHeight * spriteScale;
     const threatDepthBase = this.getActorDepthBase(shouldAnchorToCombatFormation);
     const shadow = this.createMobShadow(threatStart.x, threatStart.y)
@@ -3739,8 +3744,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         )
         .setOrigin(0.5, 1)
         .setDisplaySize(
-          MOB_DISPLAY_WIDTH * this.getSpriteScale(),
-          MOB_DISPLAY_HEIGHT * this.getSpriteScale(),
+          MOB_DISPLAY_WIDTH * this.getMobDisplayScale(),
+          MOB_DISPLAY_HEIGHT * this.getMobDisplayScale(),
         )
         .setAlpha(1);
       entity.combatMobAsset = mobAsset;
@@ -4044,12 +4049,13 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const viewportWidth = Math.max(1, this.scale.gameSize.width);
     const viewportHeight = Math.max(1, this.scale.gameSize.height);
     const area = this.getArea();
-    const widthZoom = viewportWidth / area.width;
-    const heightZoom = viewportHeight / area.height;
-    const coverZoom = Math.max(widthZoom, heightZoom);
-    const zoom = this.state.isImmersive
-      ? coverZoom
-      : Math.max(CARD_MIN_ZOOM, coverZoom);
+    const zoom = getHuntingSceneCameraZoom({
+      viewportWidth,
+      viewportHeight,
+      worldWidth: area.width,
+      worldHeight: area.height,
+      isImmersive: this.state.isImmersive,
+    });
     this.cameras.main.setZoom(zoom);
     this.actorNameLabel?.setScale(
       this.getNameLabelScale(LOCAL_NAME_FONT_SIZE),
