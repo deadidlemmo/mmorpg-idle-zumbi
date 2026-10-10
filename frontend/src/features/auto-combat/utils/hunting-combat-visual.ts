@@ -131,3 +131,10 @@ export function shouldPresentHuntingMobDeath(params: {
 
   return !params.isCombatActive;
 }
+
+export function shouldResetHuntingCombatVisuals(params: {
+  wasCombatActive: boolean;
+  combatCycleKey: string | null;
+}) {
+  return params.wasCombatActive || params.combatCycleKey !== null;
+}

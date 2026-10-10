@@ -39,6 +39,7 @@ import {
   normalizeHuntingMobName,
   shouldReplaceHuntingThreat,
   shouldPresentHuntingMobDeath,
+  shouldResetHuntingCombatVisuals,
 } from "../../utils/hunting-combat-visual";
 import { getRemotePlayerInterpolationSpeed } from "../../utils/hunting-presence";
 import {
@@ -290,6 +291,7 @@ type RemotePlayerEntity = {
   visualState: HuntingVisualPresenceState;
   moving: boolean;
   walkingVisualUntil: number;
+  hitFeedbackActive: boolean;
   updatedAt: number;
   idle: boolean;
   anchor: HuntingCoordinate;
@@ -1428,9 +1430,11 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       this.actorBody.y + this.actorCombatOffsetY -
         (showsGait ? Math.abs(Math.sin(this.time.now * SURVIVOR_GAIT_RADIANS_PER_MS)) * 1.8 : 0),
     );
-    this.actorSprite.setAngle(
-      showsGait ? Math.sin(this.time.now * SURVIVOR_GAIT_RADIANS_PER_MS) * 1.8 : 0,
-    );
+    if (!this.actorHitFeedbackActive) {
+      this.actorSprite.setAngle(
+        showsGait ? Math.sin(this.time.now * SURVIVOR_GAIT_RADIANS_PER_MS) * 1.8 : 0,
+      );
+    }
     this.actorSprite.setDepth(actorDepth);
     this.actorShadow
       .setPosition(this.actorBody.x, this.actorBody.y + 2)
@@ -1695,7 +1699,12 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       this.hideThreat();
     }
     if (!state.isCombatActive) {
-      this.resetCombatVisualState();
+      if (shouldResetHuntingCombatVisuals({
+        wasCombatActive,
+        combatCycleKey: this.combatCycleKey,
+      })) {
+        this.resetCombatVisualState();
+      }
     } else {
       this.syncCombatCycleAnchor(
         !wasCombatActive ||
@@ -1870,6 +1879,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     this.combatImpactTimer = null;
     this.actorCombatAnimationToken += 1;
     this.threatCombatAnimationToken += 1;
+    this.actorSprite?.off(Phaser.Animations.Events.ANIMATION_COMPLETE);
+    this.threatSprite?.off(Phaser.Animations.Events.ANIMATION_COMPLETE);
     this.actorLungeTween?.stop();
     this.threatLungeTween?.stop();
     this.actorRecoilTween?.stop();
@@ -2377,9 +2388,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       return;
     }
 
+    this.actorSprite.off(Phaser.Animations.Events.ANIMATION_COMPLETE);
     this.actorSprite.play(
       this.survivorCombatAnimationKey(animation, this.lastMovementDirection, this.state.characterClassName),
-      true,
     );
     this.actorSprite.anims.timeScale = getHuntingCombatAnimationTimeScale(
       this.state.battleDurationMs,
@@ -2460,9 +2471,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       return;
     }
 
+    this.threatSprite.off(Phaser.Animations.Events.ANIMATION_COMPLETE);
     this.threatSprite.play(
       this.mobAnimationKey(mobSpriteAsset, animation, this.threatDirection),
-      true,
     );
     this.threatSprite.anims.timeScale = isDeath
       ? 1
@@ -3174,7 +3185,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
               spawn.x,
               spawn.y,
               this.survivorTexture("walk", player.className),
-              initialDirection === "left" ? 4 : 8,
+              this.directionStart(initialDirection, 4),
             )
             .setOrigin(0.5, 1)
             .setDisplaySize(
@@ -3239,6 +3250,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           visualState: player.visualState,
           moving: player.idle ? false : player.moving,
           walkingVisualUntil: 0,
+          hitFeedbackActive: false,
           updatedAt: player.updatedAt,
           idle: player.idle,
           anchor,
@@ -3338,7 +3350,11 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         if (player.visualState !== "combat") {
           entity.combatImpactTimer?.remove(false);
           entity.combatImpactTimer = null;
-          if (wasInCombat) entity.sprite.clearTint().setAlpha(1).setAngle(0);
+          if (wasInCombat) {
+            this.tweens.killTweensOf(entity.sprite);
+            entity.hitFeedbackActive = false;
+            entity.sprite.clearTint().setAlpha(1).setAngle(0);
+          }
           entity.combatProgressMs = 0;
           entity.combatDurationMs = 0;
           entity.lastCombatVisualStepKey = "";
@@ -3473,7 +3489,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         .stop()
         .setTexture(walkTexture)
         .setFrame(directionStart);
-    } else if (visualPhase === "investigating" || visualPhase === "alert") {
+    } else if ((visualPhase === "investigating" || visualPhase === "alert") && !isWalking) {
       entity.sprite
         .stop()
         .setTexture(walkTexture)
@@ -3489,12 +3505,14 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         .setTexture(walkTexture)
         .setFrame(directionStart);
     }
-    entity.sprite.setAngle(
-      isWalking && entity.sprite.anims.isPlaying &&
-        !this.state.prefersReducedMotion
-        ? Math.sin(this.time.now * SURVIVOR_GAIT_RADIANS_PER_MS) * 1.8
-        : 0,
-    );
+    if (!entity.hitFeedbackActive) {
+      entity.sprite.setAngle(
+        isWalking && entity.sprite.anims.isPlaying &&
+          !this.state.prefersReducedMotion
+          ? Math.sin(this.time.now * SURVIVOR_GAIT_RADIANS_PER_MS) * 1.8
+          : 0,
+      );
+    }
     const depth = this.getActorDepthBase(visualPhase === "combat", entity.areaId) +
       Math.round(entity.sprite.y);
     entity.sprite.setDepth(depth);
@@ -3677,6 +3695,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       entity.combatDeathPresentationUntil <= now
     ) {
       entity.combatDeathPresentationUntil = 0;
+      if (entity.combatMobSprite) this.tweens.killTweensOf(entity.combatMobSprite);
+      if (entity.combatMobShadow) this.tweens.killTweensOf(entity.combatMobShadow);
       entity.combatMobSprite?.destroy();
       entity.combatMobShadow?.destroy();
       entity.combatMobSprite = null;
@@ -3689,6 +3709,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     if (entity.visualState !== "combat" || !entity.combatMobName) {
       entity.combatImpactTimer?.remove(false);
       entity.combatImpactTimer = null;
+      if (entity.combatMobSprite) this.tweens.killTweensOf(entity.combatMobSprite);
+      if (entity.combatMobShadow) this.tweens.killTweensOf(entity.combatMobShadow);
       entity.combatMobSprite?.destroy();
       entity.combatMobShadow?.destroy();
       entity.combatMobSprite = null;
@@ -3723,6 +3745,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     }
 
     if (!entity.combatMobSprite || entity.combatMobAsset?.key !== mobAsset.key) {
+      if (entity.combatMobSprite) this.tweens.killTweensOf(entity.combatMobSprite);
+      if (entity.combatMobShadow) this.tweens.killTweensOf(entity.combatMobShadow);
       entity.combatMobSprite?.destroy();
       entity.combatMobShadow?.destroy();
       const skipIntro = this.state.prefersReducedMotion ||
@@ -3938,14 +3962,14 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       );
       entity.sprite.anims.timeScale = animationTimeScale;
       this.queueRemoteCombatImpact(entity, mobSprite, () => {
-        mobSprite.play(this.mobAnimationKey(mobAsset, "hurt", mobDirection), true);
+        mobSprite.play(this.mobAnimationKey(mobAsset, "hurt", mobDirection));
         mobSprite.anims.timeScale = animationTimeScale;
-        this.playRemoteHitFeedback(mobSprite, entity.sprite);
+        this.playRemoteHitFeedback(entity, mobSprite, entity.sprite);
       });
       return;
     }
 
-    mobSprite.play(this.mobAnimationKey(mobAsset, "attack", mobDirection), true);
+    mobSprite.play(this.mobAnimationKey(mobAsset, "attack", mobDirection));
     mobSprite.anims.timeScale = animationTimeScale;
     this.queueRemoteCombatImpact(entity, mobSprite, () => {
       this.playRemoteAnimation(
@@ -3958,7 +3982,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         true,
       );
       entity.sprite.anims.timeScale = animationTimeScale;
-      this.playRemoteHitFeedback(entity.sprite, mobSprite);
+      this.playRemoteHitFeedback(entity, entity.sprite, mobSprite);
     });
   }
 
@@ -3991,11 +4015,13 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   }
 
   private playRemoteHitFeedback(
+    entity: RemotePlayerEntity,
     victim: Phaser.GameObjects.Sprite,
     attacker: Phaser.GameObjects.Sprite,
   ) {
     if (this.state.prefersReducedMotion) return;
     this.tweens.killTweensOf(victim);
+    if (victim === entity.sprite) entity.hitFeedbackActive = true;
     victim.setAlpha(1).setTint(0xffd1c5).setTintMode(Phaser.TintModes.MULTIPLY);
     victim.setAngle(-1);
     this.createHitSpark(victim, attacker);
@@ -4006,7 +4032,11 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       duration: 45,
       yoyo: true,
       ease: "Sine.easeInOut",
-      onComplete: () => victim.clearTint().setAlpha(1).setAngle(0),
+      onComplete: () => {
+        if (!victim.active) return;
+        victim.clearTint().setAlpha(1).setAngle(0);
+        if (victim === entity.sprite) entity.hitFeedbackActive = false;
+      },
     });
   }
 

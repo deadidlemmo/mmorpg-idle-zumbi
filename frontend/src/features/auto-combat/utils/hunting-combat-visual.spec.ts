@@ -9,7 +9,23 @@ import {
   normalizeHuntingMobName,
   shouldReplaceHuntingThreat,
   shouldPresentHuntingMobDeath,
+  shouldResetHuntingCombatVisuals,
 } from "./hunting-combat-visual";
+
+test("atualizacoes de rastreio nao reiniciam a animacao de caminhada", () => {
+  assert.equal(
+    shouldResetHuntingCombatVisuals({ wasCombatActive: false, combatCycleKey: null }),
+    false,
+  );
+  assert.equal(
+    shouldResetHuntingCombatVisuals({ wasCombatActive: true, combatCycleKey: null }),
+    true,
+  );
+  assert.equal(
+    shouldResetHuntingCombatVisuals({ wasCombatActive: false, combatCycleKey: "ciclo-1" }),
+    true,
+  );
+});
 
 test("preserva a separacao do apostrofo ao resolver o morcego", () => {
   assert.equal(
