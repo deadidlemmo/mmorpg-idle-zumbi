@@ -18,9 +18,9 @@ folhas diferentes por tier ou por item equipado.
 
 | Folha | Quadros por direcao | Uso |
 | --- | ---: | --- |
-| `walk` | 4 | caminhada e retomada do rastreio |
+| `walk` | 8 nas classes, 4 no fallback Leon | caminhada e retomada do rastreio |
 | `investigate` | 4 | notar, abaixar, inspecionar e entrar em alerta |
-| `attack` | 4 | ataque e quadro de impacto |
+| `attack` | 8 nas classes, 4 no fallback Leon | ataque e quadro de impacto |
 | `hurt` | 2 | reacao ao dano |
 | `death` | 6 | queda e quadro final persistente |
 
@@ -32,4 +32,6 @@ um indicador visual. Classes desconhecidas usam as folhas legadas de Leon.
 
 Execute `npm run sprites:audit:characters` depois de adicionar ou alterar uma
 folha. Saidas geradas com personagens isolados em uma grade 4x4 podem ser
-normalizadas com `scripts/prepare-generated-character-sprite.mjs`.
+normalizadas com `scripts/prepare-generated-character-sprite.mjs`. Para as
+folhas 8x4 de caminhada e ataque, use
+`scripts/prepare-generated-character-sprite-8.mjs`.

@@ -18,6 +18,15 @@ export function getCombatClassKey(className: string | null | undefined): CombatC
   return COMBAT_CLASS_KEYS.find((key) => key === normalized) ?? null;
 }
 
+export function getSurvivorAnimationFrameCount(
+  animation: "walk" | "attack" | "hurt" | "death",
+  className?: string | null,
+): number {
+  if (animation === "hurt") return 2;
+  if (animation === "death") return 6;
+  return getCombatClassKey(className) ? 8 : 4;
+}
+
 export function getCombatClassLungeDistance(className: string | null | undefined): number {
   switch (getCombatClassKey(className)) {
     case "atirador":

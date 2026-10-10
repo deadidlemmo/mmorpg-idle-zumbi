@@ -53,6 +53,7 @@ test("comprime aproximacao, troca de golpes e finalizacao em TTK subsegundo", ()
   );
   assert.ok(getHuntingCombatAnimationTimeScale(800) * 150 >= 4_000 / 9);
   assert.ok(getHuntingCombatAnimationTimeScale(1_200) * 200 >= 4_000 / 9);
+  assert.ok((8_000 / 18) / getHuntingCombatAnimationTimeScale(800) <= 150);
 });
 
 test("alterna golpes em batalhas longas sem alterar o resultado do combate", () => {

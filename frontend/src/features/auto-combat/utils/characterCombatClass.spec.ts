@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   getCombatClassKey,
   getCombatClassLungeDistance,
+  getSurvivorAnimationFrameCount,
   getSurvivorCombatAnimationKey,
   isSurvivorCombatAnimationKey,
 } from "./characterCombatClass";
@@ -21,6 +22,17 @@ test("o atirador nao avanca sobre o alvo durante o disparo", () => {
   assert.equal(getCombatClassLungeDistance("Médico"), 10);
   assert.equal(getCombatClassLungeDistance("Assassino"), 18);
   assert.equal(getCombatClassLungeDistance("Lutador"), 20);
+});
+
+test("usa oito quadros de caminhada e ataque apenas nas classes jogaveis", () => {
+  for (const className of ["Lutador", "Atirador", "Médico", "Assassino"]) {
+    assert.equal(getSurvivorAnimationFrameCount("walk", className), 8);
+    assert.equal(getSurvivorAnimationFrameCount("attack", className), 8);
+    assert.equal(getSurvivorAnimationFrameCount("hurt", className), 2);
+    assert.equal(getSurvivorAnimationFrameCount("death", className), 6);
+  }
+  assert.equal(getSurvivorAnimationFrameCount("walk", null), 4);
+  assert.equal(getSurvivorAnimationFrameCount("attack", "desconhecida"), 4);
 });
 
 test("a animacao de combate por classe permanece reconhecivel durante os frames remotos", () => {

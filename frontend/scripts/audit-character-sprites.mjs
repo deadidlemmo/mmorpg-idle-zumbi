@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import sharp from "sharp";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -40,6 +41,13 @@ for (const directory of actorDirectories) {
       throw new Error(`${manifestName}: animacao obrigatoria ausente: ${animationName}.`);
     }
     const sheetPath = path.join(actorDirectory, animation.sheet);
+    if (
+      manifest.actorKey.startsWith("class-") &&
+      (animationName === "walk" || animationName === "attack") &&
+      animation.framesPerDirection !== 8
+    ) {
+      throw new Error(`${animation.sheet}: a classe precisa de oito quadros por direcao.`);
+    }
     const metadata = await sharp(sheetPath).metadata();
     const expectedWidth =
       manifest.frame.width * animation.framesPerDirection;
@@ -61,6 +69,26 @@ for (const directory of actorDirectories) {
       throw new Error(
         `${animation.sheet}: a folha precisa combinar transparencia real e pixels opacos.`,
       );
+    }
+    if (animation.framesPerDirection === 8) {
+      for (let row = 0; row < directionCount; row += 1) {
+        const signatures = new Set();
+        for (let column = 0; column < 8; column += 1) {
+          const frame = await sharp(sheetPath)
+            .extract({
+              left: column * manifest.frame.width,
+              top: row * manifest.frame.height,
+              width: manifest.frame.width,
+              height: manifest.frame.height,
+            })
+            .raw()
+            .toBuffer();
+          signatures.add(createHash("sha256").update(frame).digest("hex"));
+        }
+        if (signatures.size < 6) {
+          throw new Error(`${animation.sheet}: quadros repetidos na direcao ${row + 1}.`);
+        }
+      }
     }
   }
   console.log(`${manifest.actorKey}: contrato visual valido.`);
