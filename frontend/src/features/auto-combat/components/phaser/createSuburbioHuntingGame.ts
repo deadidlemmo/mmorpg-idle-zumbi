@@ -64,7 +64,7 @@ const SURVIVOR_DEATH_TEXTURE = "suburbio-hunting-leon-death";
 const INFECTED_TEXTURE = "suburbio-hunting-infected-gba";
 const SURVIVOR_SPEED = 96;
 const SURVIVOR_WALK_FRAME_RATE = 8;
-const SURVIVOR_GAIT_RADIANS_PER_MS = (Math.PI * 4) / 1000;
+const CLASS_SURVIVOR_WALK_FRAME_RATE = 12;
 const REMOTE_WALK_VISUAL_HOLD_MS = 280;
 const SURVIVOR_FRAME_WIDTH = 112;
 const SURVIVOR_FRAME_HEIGHT = 96;
@@ -83,8 +83,18 @@ const MOB_SHADOW_TEXTURE_HEIGHT = 24;
 const MOB_SHADOW_WIDTH = 54;
 const MOB_SHADOW_HEIGHT = 13;
 const MOB_SHADOW_ALPHA = 0.88;
-const SURVIVOR_SHADOW_WIDTH = 26;
-const SURVIVOR_SHADOW_HEIGHT = 7;
+const SURVIVOR_SHADOW_TEXTURE = "auto-combat-survivor-ground-shadow-v1";
+const SURVIVOR_SHADOW_TEXTURE_WIDTH = 72;
+const SURVIVOR_SHADOW_TEXTURE_HEIGHT = 28;
+const SURVIVOR_SHADOW_WIDTH = 48;
+const SURVIVOR_SHADOW_HEIGHT = 16;
+const SURVIVOR_SHADOW_ALPHA = 0.76;
+const SURVIVOR_SHADOW_OFFSET_X = 6;
+const SURVIVOR_SHADOW_OFFSET_Y = 3;
+const SURVIVOR_CAST_SHADOW_ALPHA = 0.29;
+const SURVIVOR_CAST_SHADOW_ANGLE = 110;
+const SURVIVOR_CAST_SHADOW_WIDTH_RATIO = 0.85;
+const SURVIVOR_CAST_SHADOW_HEIGHT_RATIO = 0.82;
 const SURVIVOR_NAME_OFFSET_Y = 78;
 const LOCAL_NAME_FONT_SIZE = 11;
 const REMOTE_NAME_FONT_SIZE = 10;
@@ -262,7 +272,8 @@ type RemotePlayerEntity = {
   areaId: HuntingAreaId;
   className: string | null;
   sprite: Phaser.GameObjects.Sprite;
-  shadow: Phaser.GameObjects.Ellipse;
+  shadow: Phaser.GameObjects.Image;
+  castShadow: Phaser.GameObjects.Image;
   searchCue: Phaser.GameObjects.Graphics;
   nameLabel: Phaser.GameObjects.Text;
   idleLabel: Phaser.GameObjects.Text;
@@ -352,7 +363,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   private readonly areaVisuals = new Map<HuntingAreaId, AreaVisual>();
   private actorBody: Phaser.GameObjects.Zone | null = null;
   private actorSprite: Phaser.GameObjects.Sprite | null = null;
-  private actorShadow: Phaser.GameObjects.Ellipse | null = null;
+  private actorShadow: Phaser.GameObjects.Image | null = null;
+  private actorCastShadow: Phaser.GameObjects.Image | null = null;
   private actorNameLabel: Phaser.GameObjects.Text | null = null;
   private actorSearchCue: Phaser.GameObjects.Graphics | null = null;
   private playerMarker: Phaser.GameObjects.Ellipse | null = null;
@@ -546,6 +558,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
 
   create() {
     this.createMobShadowTexture();
+    this.createSurvivorShadowTexture();
     for (const area of this.assets.areas) {
       this.areas.set(area.id, createHuntingAreaFromTiledMap(area.tilemapSource));
       this.areaVisuals.set(area.id, this.createAreaVisual(area));
@@ -566,16 +579,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       area.agentHalfWidth * 2,
       area.agentHalfHeight * 2,
     );
-    this.actorShadow = this.add
-      .ellipse(
-        start.x,
-        start.y + 2,
-        SURVIVOR_SHADOW_WIDTH,
-        SURVIVOR_SHADOW_HEIGHT,
-        0x07100d,
-        0.58,
-      )
-      .setScale(spriteScale)
+    this.actorShadow = this.createSurvivorShadow(start.x, start.y)
       .setDepth(ACTOR_DEPTH_BASE - 2);
     this.actorSprite = this.add
       .sprite(
@@ -590,6 +594,12 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDisplaySize(SURVIVOR_DISPLAY_WIDTH * spriteScale, SURVIVOR_DISPLAY_HEIGHT * spriteScale)
       .setDepth(ACTOR_DEPTH_BASE);
+    this.actorCastShadow = this.createSurvivorCastShadow(
+      start.x,
+      start.y,
+      this.actorSprite.texture.key,
+      this.actorSprite.frame.name,
+    ).setDepth(ACTOR_DEPTH_BASE - 1);
     this.playerMarker = this.add
       .ellipse(start.x, start.y + 1, 26, 12)
       .setStrokeStyle(2, 0xc5d66f, 0.9)
@@ -670,7 +680,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
-    if (!this.actorBody || !this.actorSprite || !this.actorShadow) return;
+    if (!this.actorBody || !this.actorSprite || !this.actorShadow || !this.actorCastShadow) return;
     const updateStartedAt = this.diagnostics ? performance.now() : 0;
     this.syncThreatShadow();
     if (this.diagnostics && time - this.lastDiagnosticsAt >= 500) {
@@ -1057,6 +1067,89 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     texture.refresh();
   }
 
+  private createSurvivorShadowTexture() {
+    if (this.textures.exists(SURVIVOR_SHADOW_TEXTURE)) return;
+    const texture = this.textures.createCanvas(
+      SURVIVOR_SHADOW_TEXTURE,
+      SURVIVOR_SHADOW_TEXTURE_WIDTH,
+      SURVIVOR_SHADOW_TEXTURE_HEIGHT,
+    );
+    if (!texture) return;
+
+    const context = texture.context;
+    context.clearRect(0, 0, SURVIVOR_SHADOW_TEXTURE_WIDTH, SURVIVOR_SHADOW_TEXTURE_HEIGHT);
+    context.save();
+    context.translate(34, 14);
+    context.scale(1, 0.38);
+    const cast = context.createRadialGradient(-6, 0, 3, 5, 0, 34);
+    cast.addColorStop(0, "rgba(0, 0, 0, 0.7)");
+    cast.addColorStop(0.36, "rgba(0, 0, 0, 0.46)");
+    cast.addColorStop(0.72, "rgba(0, 0, 0, 0.17)");
+    cast.addColorStop(1, "rgba(0, 0, 0, 0)");
+    context.fillStyle = cast;
+    context.beginPath();
+    context.arc(0, 0, 34, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+    texture.refresh();
+  }
+
+  private createSurvivorShadow(x: number, y: number) {
+    const spriteScale = this.getSpriteScale();
+    return this.add
+      .image(
+        x + SURVIVOR_SHADOW_OFFSET_X * spriteScale,
+        y + SURVIVOR_SHADOW_OFFSET_Y * spriteScale,
+        SURVIVOR_SHADOW_TEXTURE,
+      )
+      .setDisplaySize(
+        SURVIVOR_SHADOW_WIDTH * spriteScale,
+        SURVIVOR_SHADOW_HEIGHT * spriteScale,
+      )
+      .setAlpha(SURVIVOR_SHADOW_ALPHA)
+      .setBlendMode(Phaser.BlendModes.MULTIPLY);
+  }
+
+  private createSurvivorCastShadow(
+    x: number,
+    y: number,
+    texture: string,
+    frame: string | number,
+  ) {
+    const spriteScale = this.getSpriteScale();
+    return this.add
+      .image(x, y + 2 * spriteScale, texture, frame)
+      .setOrigin(0.5, 1)
+      .setDisplaySize(
+        SURVIVOR_DISPLAY_WIDTH * SURVIVOR_CAST_SHADOW_WIDTH_RATIO * spriteScale,
+        SURVIVOR_DISPLAY_HEIGHT * SURVIVOR_CAST_SHADOW_HEIGHT_RATIO * spriteScale,
+      )
+      .setAngle(SURVIVOR_CAST_SHADOW_ANGLE)
+      .setTint(0x020805)
+      .setTintMode(Phaser.TintModes.FILL)
+      .setAlpha(SURVIVOR_CAST_SHADOW_ALPHA)
+      .setBlendMode(Phaser.BlendModes.MULTIPLY);
+  }
+
+  private syncSurvivorCastShadow(
+    castShadow: Phaser.GameObjects.Image,
+    sprite: Phaser.GameObjects.Sprite,
+    groundX: number,
+    groundY: number,
+    depth: number,
+  ) {
+    if (
+      castShadow.texture.key !== sprite.texture.key ||
+      castShadow.frame.name !== sprite.frame.name
+    ) {
+      castShadow.setTexture(sprite.texture.key, sprite.frame.name);
+    }
+    castShadow
+      .setPosition(groundX, groundY)
+      .setDepth(depth)
+      .setVisible(sprite.visible && sprite.alpha > 0);
+  }
+
   private createMobShadow(x: number, y: number) {
     const spriteScale = this.getMobDisplayScale();
     return this.add
@@ -1100,7 +1193,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           this.classSurvivorTextureKey(classKey, "walk"),
           classStart,
           8,
-          16,
+          CLASS_SURVIVOR_WALK_FRAME_RATE,
           -1,
         );
         this.createDirectionalAnimation(
@@ -1388,6 +1481,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       !this.actorBody ||
       !this.actorSprite ||
       !this.actorShadow ||
+      !this.actorCastShadow ||
       !this.actorNameLabel ||
       !this.playerMarker
     ) {
@@ -1398,9 +1492,6 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       getSurvivorAnimationFrameCount("walk", this.state.characterClassName),
     );
     const walkTexture = this.survivorTexture("walk", this.state.characterClassName);
-    const showsGait = isWalking && !this.state.prefersReducedMotion &&
-      !this.state.isCombatActive && !this.actorCombatAnimationLocked &&
-      !this.playerDefeated;
     if (this.playerDefeated || this.actorCombatAnimationLocked) {
       // A animacao de combate controla a textura ate concluir.
     } else if (this.state.isCombatActive) {
@@ -1438,18 +1529,25 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     }
     this.actorSprite.setPosition(
       this.actorBody.x + this.actorCombatOffsetX,
-      this.actorBody.y + this.actorCombatOffsetY -
-        (showsGait ? Math.abs(Math.sin(this.time.now * SURVIVOR_GAIT_RADIANS_PER_MS)) * 1.8 : 0),
+      this.actorBody.y + this.actorCombatOffsetY,
     );
     if (!this.actorHitFeedbackActive) {
-      this.actorSprite.setAngle(
-        showsGait ? Math.sin(this.time.now * SURVIVOR_GAIT_RADIANS_PER_MS) * 1.8 : 0,
-      );
+      this.actorSprite.setAngle(0);
     }
     this.actorSprite.setDepth(actorDepth);
     this.actorShadow
-      .setPosition(this.actorBody.x, this.actorBody.y + 2)
+      .setPosition(
+        this.actorSprite.x + SURVIVOR_SHADOW_OFFSET_X * this.getSpriteScale(),
+        this.actorSprite.y + SURVIVOR_SHADOW_OFFSET_Y * this.getSpriteScale(),
+      )
       .setDepth(actorDepth - 2);
+    this.syncSurvivorCastShadow(
+      this.actorCastShadow,
+      this.actorSprite,
+      this.actorSprite.x,
+      this.actorSprite.y + 2 * this.getSpriteScale(),
+      actorDepth - 1,
+    );
     this.playerMarker.setPosition(this.actorBody.x, this.actorBody.y + 1);
     this.actorNameLabel.setPosition(
       this.actorBody.x,
@@ -3132,7 +3230,14 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
                 SURVIVOR_DISPLAY_WIDTH * spriteScale,
                 SURVIVOR_DISPLAY_HEIGHT * spriteScale,
               );
-              this.actorShadow?.setScale(spriteScale);
+              this.actorShadow?.setDisplaySize(
+                SURVIVOR_SHADOW_WIDTH * spriteScale,
+                SURVIVOR_SHADOW_HEIGHT * spriteScale,
+              );
+              this.actorCastShadow?.setDisplaySize(
+                SURVIVOR_DISPLAY_WIDTH * SURVIVOR_CAST_SHADOW_WIDTH_RATIO * spriteScale,
+                SURVIVOR_DISPLAY_HEIGHT * SURVIVOR_CAST_SHADOW_HEIGHT_RATIO * spriteScale,
+              );
               this.playerMarker?.setScale(spriteScale);
               this.syncRemotePlayers(this.state.otherPlayers);
               this.cameras.main.stopFollow();
@@ -3171,10 +3276,17 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     for (const [playerId, entity] of this.remotePlayers) {
       if (activeIds.has(playerId)) continue;
       entity.combatImpactTimer?.remove(false);
-      this.tweens.killTweensOf(entity.sprite);
+      this.tweens.killTweensOf([
+        entity.sprite,
+        entity.shadow,
+        entity.castShadow,
+        entity.nameLabel,
+        entity.idleLabel,
+      ]);
       if (entity.combatMobSprite) this.tweens.killTweensOf(entity.combatMobSprite);
       entity.sprite.destroy();
       entity.shadow.destroy();
+      entity.castShadow.destroy();
       entity.searchCue.destroy();
       entity.nameLabel.destroy();
       entity.idleLabel.destroy();
@@ -3189,29 +3301,28 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         const anchor = this.getRemotePlayerSpawn(area, player);
         const spawn = anchor;
         const initialDirection = player.direction;
+        const walkTexture = this.survivorTexture("walk", player.className);
+        const walkFrame = this.directionStart(
+          initialDirection,
+          getSurvivorAnimationFrameCount("walk", player.className),
+        );
         entity = {
           areaId: this.activeAreaId,
-          shadow: this.add
-            .ellipse(
-              spawn.x,
-              spawn.y + 2,
-              SURVIVOR_SHADOW_WIDTH,
-              SURVIVOR_SHADOW_HEIGHT,
-              0x07100d,
-              0.42,
-            )
-            .setScale(this.getSpriteScale())
+          shadow: this.createSurvivorShadow(spawn.x, spawn.y)
             .setDepth(ACTOR_DEPTH_BASE + Math.round(spawn.y) - 2),
+          castShadow: this.createSurvivorCastShadow(
+            spawn.x,
+            spawn.y,
+            walkTexture,
+            walkFrame,
+          ).setDepth(ACTOR_DEPTH_BASE + Math.round(spawn.y) - 1),
           searchCue: this.createSearchCue(),
           sprite: this.add
             .sprite(
               spawn.x,
               spawn.y,
-              this.survivorTexture("walk", player.className),
-              this.directionStart(
-                initialDirection,
-                getSurvivorAnimationFrameCount("walk", player.className),
-              ),
+              walkTexture,
+              walkFrame,
             )
             .setOrigin(0.5, 1)
             .setDisplaySize(
@@ -3471,14 +3582,19 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     const distance = Math.hypot(target.x - current.x, target.y - current.y);
     if (!force && distance <= HUNTING_TILE_SIZE * 8 &&
       isHuntingSegmentWalkable(this.getArea(entity.areaId), current, target)) return;
-    this.tweens.killTweensOf([entity.sprite, entity.shadow, entity.nameLabel, entity.idleLabel]);
+    this.tweens.killTweensOf([entity.sprite, entity.shadow, entity.castShadow, entity.nameLabel, entity.idleLabel]);
     entity.sprite.setPosition(target.x, target.y).setAlpha(0);
-    entity.shadow.setPosition(target.x, target.y + 2).setAlpha(0);
+    entity.castShadow.setPosition(target.x, target.y + 2 * this.getSpriteScale()).setAlpha(0);
+    entity.shadow.setPosition(
+      target.x + SURVIVOR_SHADOW_OFFSET_X * this.getSpriteScale(),
+      target.y + SURVIVOR_SHADOW_OFFSET_Y * this.getSpriteScale(),
+    ).setAlpha(0);
     entity.nameLabel.setPosition(target.x, target.y - SURVIVOR_NAME_OFFSET_Y * this.getSpriteScale()).setAlpha(0);
     entity.idleLabel.setPosition(target.x, target.y + 10).setAlpha(0);
     const duration = this.state.prefersReducedMotion ? 0 : 180;
     this.tweens.add({ targets: entity.sprite, alpha: 1, duration });
-    this.tweens.add({ targets: entity.shadow, alpha: 0.42, duration });
+    this.tweens.add({ targets: entity.shadow, alpha: SURVIVOR_SHADOW_ALPHA, duration });
+    this.tweens.add({ targets: entity.castShadow, alpha: SURVIVOR_CAST_SHADOW_ALPHA, duration });
     this.tweens.add({ targets: entity.nameLabel, alpha: 1, duration });
     this.tweens.add({ targets: entity.idleLabel, alpha: 1, duration });
   }
@@ -3550,19 +3666,24 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         .setFrame(directionStart);
     }
     if (!entity.hitFeedbackActive) {
-      entity.sprite.setAngle(
-        isWalking && entity.sprite.anims.isPlaying &&
-          !this.state.prefersReducedMotion
-          ? Math.sin(this.time.now * SURVIVOR_GAIT_RADIANS_PER_MS) * 1.8
-          : 0,
-      );
+      entity.sprite.setAngle(0);
     }
     const depth = this.getActorDepthBase(visualPhase === "combat", entity.areaId) +
       Math.round(entity.sprite.y);
     entity.sprite.setDepth(depth);
     entity.shadow
-      .setPosition(entity.sprite.x, entity.sprite.y + 2)
+      .setPosition(
+        entity.sprite.x + SURVIVOR_SHADOW_OFFSET_X * this.getSpriteScale(),
+        entity.sprite.y + SURVIVOR_SHADOW_OFFSET_Y * this.getSpriteScale(),
+      )
       .setDepth(depth - 2);
+    this.syncSurvivorCastShadow(
+      entity.castShadow,
+      entity.sprite,
+      entity.sprite.x,
+      entity.sprite.y + 2 * this.getSpriteScale(),
+      depth - 1,
+    );
     entity.nameLabel.setPosition(
       entity.sprite.x,
       entity.sprite.y - SURVIVOR_NAME_OFFSET_Y * this.getSpriteScale(),

@@ -14,6 +14,11 @@ folhas diferentes por tier ou por item equipado.
 - fundo: alpha real, sem matte, sombra ou cenario incorporado;
 - escala e linha dos pes iguais em todas as folhas.
 
+A caminhada das classes usa 12 quadros por segundo. O Phaser combina uma sombra
+de contato nos pes com a silhueta achatada do quadro atual, projetada no chao.
+As sombras acompanham a escala do personagem e nao devem ser incorporadas aos
+quadros da folha.
+
 ## Folhas obrigatorias
 
 | Folha | Quadros por direcao | Uso |
