@@ -1736,7 +1736,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       `${String(state.combatEventType ?? "").toUpperCase()}:${state.mobCurrentHp}:${state.playerCurrentHp}`;
     this.updateVisualMachine(this.time.now, true);
     this.actorNameLabel?.setText(state.characterName);
-    this.syncRemotePlayers(state.otherPlayers);
+    this.syncRemotePlayers(state.otherPlayers, true);
 
     if (state.isThreatReady || state.isCombatActive) {
       this.revealThreat(false);
@@ -3136,7 +3136,10 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     });
   }
 
-  private syncRemotePlayers(players: readonly HuntingVisualPlayer[]) {
+  private syncRemotePlayers(
+    players: readonly HuntingVisualPlayer[],
+    reconcileSnapshot = false,
+  ) {
     const playersInArea = players.filter(
       (player) =>
         player.areaId === this.activeAreaId &&
@@ -3271,7 +3274,8 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         const combatCycleChanged =
           entity.combatCycleKey !== (player.combatCycleKey ?? null);
         const shouldAnimateCombatCycleChange = Boolean(
-          player.visualState === "combat" &&
+          !reconcileSnapshot &&
+            player.visualState === "combat" &&
             entity.visualState === "combat" &&
             entity.combatCycleKey &&
             player.combatCycleKey &&
@@ -3346,6 +3350,22 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         }
         entity.combatEventType = player.combatEventType ?? null;
         entity.combatEventKey = player.combatEventKey ?? null;
+        if (reconcileSnapshot) {
+          entity.lastPresentedCombatEventKey = entity.combatEventKey;
+          entity.combatEventPresentationUntil = 0;
+          if (combatCycleChanged || entity.combatMobDefeated) {
+            if (entity.combatMobSprite) this.tweens.killTweensOf(entity.combatMobSprite);
+            if (entity.combatMobShadow) this.tweens.killTweensOf(entity.combatMobShadow);
+            entity.combatMobSprite?.destroy();
+            entity.combatMobShadow?.destroy();
+            entity.combatMobSprite = null;
+            entity.combatMobShadow = null;
+            entity.combatMobAsset = null;
+            entity.combatMobDefeated = false;
+            entity.combatDeathPresentationUntil = 0;
+            entity.combatNextIntroAt = 0;
+          }
+        }
         entity.updatedAt = player.updatedAt;
         if (player.visualState !== "combat") {
           entity.combatImpactTimer?.remove(false);

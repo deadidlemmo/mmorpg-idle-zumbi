@@ -64,7 +64,9 @@ export function getHuntingCombatVisualStep(params: {
 
 export function getHuntingCombatAnimationTimeScale(durationMs: number) {
   const safeDurationMs = Math.max(1, Number(durationMs) || 1);
-  return clamp(900 / safeDurationMs, 1, 3);
+  const cadenceMs = clamp(safeDurationMs / 6, 150, 850);
+  // The slowest strike sheet has four frames at 9 fps.
+  return clamp((4_000 / 9) / cadenceMs, 1, 4);
 }
 
 export function getHuntingCombatStrikeTiming(
