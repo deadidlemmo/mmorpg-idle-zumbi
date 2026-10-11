@@ -40,3 +40,5 @@ folha. Saidas geradas com personagens isolados em uma grade 4x4 podem ser
 normalizadas com `scripts/prepare-generated-character-sprite.mjs`. Para as
 folhas 8x4 de caminhada e ataque, use
 `scripts/prepare-generated-character-sprite-8.mjs`.
+O normalizador alinha a linha dos pes e ajusta a escala por direcao; o auditor
+rejeita folhas cuja altura ou linha dos pes salte entre os quadros.

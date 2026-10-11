@@ -19,6 +19,28 @@ const { data, info } = await sharp(path.resolve(inputPath))
   .raw()
   .toBuffer({ resolveWithObject: true });
 const frames = [];
+const rowPitch = info.height / ROWS;
+const rowSeams = [0];
+for (let boundary = 1; boundary < ROWS; boundary += 1) {
+  const expected = Math.round(boundary * rowPitch);
+  const searchRadius = Math.round(rowPitch * 0.22);
+  let best = expected;
+  let bestScore = Number.POSITIVE_INFINITY;
+  for (let y = expected - searchRadius; y <= expected + searchRadius; y += 1) {
+    if (y <= rowSeams[boundary - 1] || y >= info.height) continue;
+    let occupied = 0;
+    for (let x = 0; x < info.width; x += 1) {
+      if (data[(y * info.width + x) * 4 + 3] >= 16) occupied += 1;
+    }
+    const score = occupied * rowPitch + Math.abs(y - expected);
+    if (score < bestScore) {
+      bestScore = score;
+      best = y;
+    }
+  }
+  rowSeams.push(best);
+}
+rowSeams.push(info.height);
 
 function clearSmallComponents(left, top, right, bottom) {
   const width = right - left;
@@ -67,8 +89,8 @@ function clearSmallComponents(left, top, right, bottom) {
 }
 
 for (let row = 0; row < ROWS; row += 1) {
-  const cellTop = Math.round((row * info.height) / ROWS);
-  const cellBottom = Math.round(((row + 1) * info.height) / ROWS);
+  const cellTop = rowSeams[row];
+  const cellBottom = rowSeams[row + 1];
   const pitch = info.width / COLUMNS;
   const seams = [0];
   for (let boundary = 1; boundary < COLUMNS; boundary += 1) {
@@ -118,12 +140,16 @@ for (let row = 0; row < ROWS; row += 1) {
   }
 }
 
-const scale = Math.min(
-  (FRAME_WIDTH - 8) / Math.max(...frames.map((frame) => frame.width)),
-  (FRAME_HEIGHT - 6) / Math.max(...frames.map((frame) => frame.height)),
-);
+const rowScales = Array.from({ length: ROWS }, (_, row) => {
+  const rowFrames = frames.slice(row * COLUMNS, (row + 1) * COLUMNS);
+  return Math.min(
+    (FRAME_WIDTH - 8) / Math.max(...rowFrames.map((frame) => frame.width)),
+    (FRAME_HEIGHT - 6) / Math.max(...rowFrames.map((frame) => frame.height)),
+  );
+});
 const overlays = await Promise.all(
   frames.map(async (frame, index) => {
+    const scale = rowScales[Math.floor(index / COLUMNS)];
     const width = Math.max(1, Math.round(frame.width * scale));
     const height = Math.max(1, Math.round(frame.height * scale));
     const image = await sharp(data, { raw: info })

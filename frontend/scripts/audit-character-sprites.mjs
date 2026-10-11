@@ -71,6 +71,8 @@ for (const directory of actorDirectories) {
       );
     }
     if (animation.framesPerDirection === 8) {
+      const walkHeights = [];
+      const walkFootLines = [];
       for (let row = 0; row < directionCount; row += 1) {
         const signatures = new Set();
         for (let column = 0; column < 8; column += 1) {
@@ -84,10 +86,29 @@ for (const directory of actorDirectories) {
             .raw()
             .toBuffer();
           signatures.add(createHash("sha256").update(frame).digest("hex"));
+          if (animationName === "walk") {
+            let top = manifest.frame.height;
+            let bottom = -1;
+            for (let y = 0; y < manifest.frame.height; y += 1) {
+              for (let x = 0; x < manifest.frame.width; x += 1) {
+                if (frame[(y * manifest.frame.width + x) * 4 + 3] < 16) continue;
+                top = Math.min(top, y);
+                bottom = Math.max(bottom, y);
+              }
+            }
+            walkHeights.push(bottom - top + 1);
+            walkFootLines.push(bottom);
+          }
         }
         if (signatures.size < 6) {
           throw new Error(`${animation.sheet}: quadros repetidos na direcao ${row + 1}.`);
         }
+      }
+      if (animationName === "walk" && (
+        Math.max(...walkHeights) - Math.min(...walkHeights) > 8 ||
+        Math.max(...walkFootLines) - Math.min(...walkFootLines) > 1
+      )) {
+        throw new Error(`${animation.sheet}: escala ou linha dos pes varia entre os quadros.`);
       }
     }
   }
