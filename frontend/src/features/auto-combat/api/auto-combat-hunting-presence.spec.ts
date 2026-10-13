@@ -204,6 +204,26 @@ test("preserva a classe canonica do REST quando a pose ao vivo a omite", () => {
   assert.equal(mergeHuntingVisualPlayers([rest], [live])[0]?.className, "Médico");
 });
 
+test("preserva o avatar do snapshot REST quando a pose ao vivo o omite", () => {
+  const rest: HuntingVisualPresence = {
+    characterId: "remote-atirador",
+    displayName: "Atirador",
+    className: "Atirador",
+    avatarKey: "atirador-01",
+    mapId: "map-1",
+    subMapId: null,
+    areaId: "suburbio",
+    tileX: 8,
+    tileY: 9,
+    direction: "right",
+    visualState: "walking",
+    moving: true,
+    updatedAt: 1,
+  };
+  const live = { ...rest, avatarKey: undefined, tileX: 9, updatedAt: 2 };
+  assert.equal(mergeHuntingVisualPlayers([rest], [live])[0]?.avatarKey, "atirador-01");
+});
+
 test("mantem o combate do snapshot REST ativo enquanto o socket reconcilia", () => {
   const combatPresence: HuntingVisualPresence = {
     characterId: "remote-combat",

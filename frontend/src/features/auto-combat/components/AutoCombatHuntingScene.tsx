@@ -49,6 +49,18 @@ import atiradorAttack from "../../../assets/images/auto-combat/characters/atirad
 import atiradorDeath from "../../../assets/images/auto-combat/characters/atirador-v1/atirador-death.png";
 import atiradorHurt from "../../../assets/images/auto-combat/characters/atirador-v1/atirador-hurt.png";
 import atiradorWalk from "../../../assets/images/auto-combat/characters/atirador-v1/atirador-walk-v3.png";
+import avatarAtirador01Attack from "../../../assets/images/auto-combat/characters/atirador-01-v1/atirador-01-attack.png";
+import avatarAtirador01Death from "../../../assets/images/auto-combat/characters/atirador-01-v1/atirador-01-death.png";
+import avatarAtirador01Hurt from "../../../assets/images/auto-combat/characters/atirador-01-v1/atirador-01-hurt.png";
+import avatarAtirador01Walk from "../../../assets/images/auto-combat/characters/atirador-01-v1/atirador-01-walk.png";
+import avatarAtirador02Attack from "../../../assets/images/auto-combat/characters/atirador-02-v1/atirador-02-attack.png";
+import avatarAtirador02Death from "../../../assets/images/auto-combat/characters/atirador-02-v1/atirador-02-death.png";
+import avatarAtirador02Hurt from "../../../assets/images/auto-combat/characters/atirador-02-v1/atirador-02-hurt.png";
+import avatarAtirador02Walk from "../../../assets/images/auto-combat/characters/atirador-02-v1/atirador-02-walk.png";
+import avatarLutador01Attack from "../../../assets/images/auto-combat/characters/lutador-01-v1/lutador-01-attack.png";
+import avatarLutador01Death from "../../../assets/images/auto-combat/characters/lutador-01-v1/lutador-01-death.png";
+import avatarLutador01Hurt from "../../../assets/images/auto-combat/characters/lutador-01-v1/lutador-01-hurt.png";
+import avatarLutador01Walk from "../../../assets/images/auto-combat/characters/lutador-01-v1/lutador-01-walk.png";
 import medicoAttack from "../../../assets/images/auto-combat/characters/medico-v1/medico-attack-v2.png";
 import medicoDeath from "../../../assets/images/auto-combat/characters/medico-v1/medico-death.png";
 import medicoHurt from "../../../assets/images/auto-combat/characters/medico-v1/medico-hurt.png";
@@ -206,12 +218,34 @@ const CLASS_CHARACTER_ASSETS: Readonly<Record<CombatClassKey, Readonly<{
   assassino: { walk: assassinoWalk, attack: assassinoAttack, hurt: assassinoHurt, death: assassinoDeath },
 };
 
+const AVATAR_CHARACTER_ASSETS = {
+  "atirador-01": {
+    walk: avatarAtirador01Walk,
+    attack: avatarAtirador01Attack,
+    hurt: avatarAtirador01Hurt,
+    death: avatarAtirador01Death,
+  },
+  "atirador-02": {
+    walk: avatarAtirador02Walk,
+    attack: avatarAtirador02Attack,
+    hurt: avatarAtirador02Hurt,
+    death: avatarAtirador02Death,
+  },
+  "lutador-01": {
+    walk: avatarLutador01Walk,
+    attack: avatarLutador01Attack,
+    hurt: avatarLutador01Hurt,
+    death: avatarLutador01Death,
+  },
+} as const;
+
 const COMMON_CHARACTER_ASSETS = {
   survivor: leonWalk,
   survivorAttack: leonAttack,
   survivorDeath: leonDeath,
   survivorHurt: leonHurt,
   classSurvivors: CLASS_CHARACTER_ASSETS,
+  avatarSurvivors: AVATAR_CHARACTER_ASSETS,
   infected: suburbioInfected,
 } as const;
 
@@ -769,6 +803,7 @@ export function AutoCombatHuntingScene({
     () => ({
       characterName,
       characterClassName,
+      characterAvatarKey: characterAppearance?.avatarKey ?? characterAvatarKey ?? null,
       battleCycleKey,
       battleDurationMs,
       battleProgressPercent,
@@ -792,6 +827,8 @@ export function AutoCombatHuntingScene({
     [
       characterName,
       characterClassName,
+      characterAppearance?.avatarKey,
+      characterAvatarKey,
       battleCycleKey,
       battleDurationMs,
       battleProgressPercent,

@@ -2,15 +2,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 
-const [inputPath, outputPath] = process.argv.slice(2);
-const COLUMNS = 8;
+const [inputPath, outputPath, columnsArg] = process.argv.slice(2);
+const COLUMNS = columnsArg === undefined ? 8 : Number(columnsArg);
 const ROWS = 4;
 const FRAME_WIDTH = 112;
 const FRAME_HEIGHT = 96;
 
-if (!inputPath || !outputPath) {
+if (!inputPath || !outputPath || ![2, 6, 8].includes(COLUMNS)) {
   throw new Error(
-    "Uso: node scripts/prepare-generated-character-sprite-8.mjs <entrada.png> <saida.png>",
+    "Uso: node scripts/prepare-generated-character-sprite-8.mjs <entrada.png> <saida.png> [2|6|8]",
   );
 }
 

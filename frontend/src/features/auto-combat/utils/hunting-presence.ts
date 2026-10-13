@@ -30,7 +30,8 @@ export function mergeHuntingVisualPlayers(
   for (const live of livePlayers) {
     const rest = restById.get(live.characterId);
     const className = live.className ?? rest?.className;
-    const identifiedLive = className ? { ...live, className } : live;
+    const avatarKey = live.avatarKey ?? rest?.avatarKey;
+    const identifiedLive = { ...live, className, avatarKey };
     const sameCombat =
       rest?.visualState === "combat" &&
       live.visualState === "combat" &&
@@ -55,6 +56,7 @@ export function mergeHuntingVisualPlayers(
     id: player.characterId,
     displayName: player.displayName,
     ...(player.className ? { className: player.className } : {}),
+    ...(player.avatarKey ? { avatarKey: player.avatarKey } : {}),
     areaId: player.areaId,
     worldX: player.tileX * 32,
     worldY: player.tileY * 32,

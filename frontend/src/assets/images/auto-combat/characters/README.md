@@ -1,8 +1,9 @@
 # Contrato de sprites dos personagens
 
 O combate no mapa usa uma pasta e um manifesto `*.animations.json` por classe:
-`lutador`, `atirador`, `medico` e `assassino`. O `actorKey` identifica a classe;
-os retratos continuam representando a identidade de cada personagem. Nao ha
+`lutador`, `atirador`, `medico` e `assassino`. O `actorKey` identifica a classe.
+Os avatares `atirador-01`, `atirador-02` e `lutador-01` possuem folhas proprias
+em suas pastas `-v1`; os demais continuam usando a folha da classe. Nao ha
 folhas diferentes por tier ou por item equipado.
 
 ## Grade obrigatoria
@@ -40,5 +41,7 @@ folha. Saidas geradas com personagens isolados em uma grade 4x4 podem ser
 normalizadas com `scripts/prepare-generated-character-sprite.mjs`. Para as
 folhas 8x4 de caminhada e ataque, use
 `scripts/prepare-generated-character-sprite-8.mjs`.
+Este ultimo aceita um terceiro argumento opcional (`2`, `6` ou `8`) para
+normalizar as folhas de dano e morte com a mesma escala e linha dos pes.
 O normalizador alinha a linha dos pes e ajusta a escala por direcao; o auditor
 rejeita folhas cuja altura ou linha dos pes salte entre os quadros.

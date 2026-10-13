@@ -42,6 +42,8 @@ export type HuntingVisualPeersResponse = {
   players: Array<{
     characterId: string;
     displayName: string;
+    className?: string | null;
+    avatarKey?: string | null;
     areaId: LocalHuntingPose["areaId"];
     tileX: number;
     tileY: number;

@@ -74,6 +74,8 @@ describe('HuntingVisualPositionService', () => {
         character: {
           id: 'character-2',
           name: 'Aliado',
+          avatarKey: 'medico-01',
+          appearance: null,
           class: { name: 'Médico' },
         },
       },
@@ -122,6 +124,7 @@ describe('HuntingVisualPositionService', () => {
           characterId: 'character-2',
           displayName: 'Aliado',
           className: 'Médico',
+          avatarKey: 'medico-01',
           ...pose,
           online: false,
           visualState: 'combat',
@@ -157,7 +160,15 @@ describe('HuntingVisualPositionService', () => {
         estimatedKillTimeSeconds: true,
         currentMob: { select: { name: true } },
         character: {
-          select: { id: true, name: true, class: { select: { name: true } } },
+          select: {
+            id: true,
+            name: true,
+            avatarKey: true,
+            appearance: {
+              select: { avatarCosmetic: { select: { assetKey: true } } },
+            },
+            class: { select: { name: true } },
+          },
         },
       },
     });

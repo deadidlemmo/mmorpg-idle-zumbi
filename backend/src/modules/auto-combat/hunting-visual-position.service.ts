@@ -143,7 +143,15 @@ export class HuntingVisualPositionService {
         estimatedKillTimeSeconds: true,
         currentMob: { select: { name: true } },
         character: {
-          select: { id: true, name: true, class: { select: { name: true } } },
+          select: {
+            id: true,
+            name: true,
+            avatarKey: true,
+            appearance: {
+              select: { avatarCosmetic: { select: { assetKey: true } } },
+            },
+            class: { select: { name: true } },
+          },
         },
       },
     });
@@ -164,6 +172,9 @@ export class HuntingVisualPositionService {
           characterId: session.character.id,
           displayName: session.character.name,
           className: session.character.class?.name ?? null,
+          avatarKey:
+            session.character.appearance?.avatarCosmetic?.assetKey ??
+            session.character.avatarKey,
           ...pose,
           online: onlineIds.has(session.character.id),
           visualState: isCombatActive

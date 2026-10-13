@@ -151,6 +151,7 @@ export type HuntingVisualPlayer = Readonly<{
   id: string;
   displayName: string;
   className?: string | null;
+  avatarKey?: string | null;
   worldX?: number;
   worldY?: number;
   areaId: HuntingAreaId;
@@ -183,6 +184,7 @@ export type LocalHuntingPose = Readonly<{
 export type SuburbioHuntingState = Readonly<{
   characterName: string;
   characterClassName: string;
+  characterAvatarKey?: string | null;
   battleCycleKey?: string | null;
   battleDurationMs: number;
   battleProgressPercent: number;
@@ -253,6 +255,12 @@ export type HuntingSceneAssets = Readonly<{
     hurt: string;
     death: string;
   }>>>;
+  avatarSurvivors: Readonly<Record<string, Readonly<{
+    walk: string;
+    attack: string;
+    hurt: string;
+    death: string;
+  }>>>;
   infected: string;
   mobs: readonly MobCombatSpriteAssets[];
   mobDisplayScale?: number;
@@ -271,6 +279,7 @@ type AreaVisual = Readonly<{
 type RemotePlayerEntity = {
   areaId: HuntingAreaId;
   className: string | null;
+  avatarKey: string | null;
   sprite: Phaser.GameObjects.Sprite;
   shadow: Phaser.GameObjects.Image;
   castShadow: Phaser.GameObjects.Image;
@@ -517,6 +526,15 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         endFrame: 23,
       });
     }
+    for (const [avatarKey, sheets] of Object.entries(this.assets.avatarSurvivors)) {
+      for (const [animation, endFrame] of [["walk", 31], ["attack", 31], ["hurt", 7], ["death", 23]] as const) {
+        this.load.spritesheet(this.avatarSurvivorTextureKey(avatarKey, animation), sheets[animation], {
+          frameWidth: SURVIVOR_FRAME_WIDTH,
+          frameHeight: SURVIVOR_FRAME_HEIGHT,
+          endFrame,
+        });
+      }
+    }
     this.load.spritesheet(SURVIVOR_HURT_TEXTURE, this.assets.survivorHurt, {
       frameWidth: SURVIVOR_FRAME_WIDTH,
       frameHeight: SURVIVOR_FRAME_HEIGHT,
@@ -585,7 +603,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       .sprite(
         start.x,
         start.y,
-        this.survivorTexture("walk", this.state.characterClassName),
+        this.survivorTexture("walk", this.state.characterClassName, this.state.characterAvatarKey),
         this.directionStart(
           this.lastMovementDirection,
           getSurvivorAnimationFrameCount("walk", this.state.characterClassName),
@@ -1218,6 +1236,26 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           8,
         );
       }
+      for (const avatarKey of Object.keys(this.assets.avatarSurvivors)) {
+        const avatarStart = (start / 4) * 8;
+        this.createDirectionalAnimation(
+          this.avatarWalkAnimationKey(avatarKey, direction),
+          this.avatarSurvivorTextureKey(avatarKey, "walk"),
+          avatarStart,
+          8,
+          CLASS_SURVIVOR_WALK_FRAME_RATE,
+          -1,
+        );
+        for (const [animation, frameCount, frameRate] of [["attack", 8, 18], ["hurt", 2, 8], ["death", 6, 8]] as const) {
+          this.createDirectionalAnimation(
+            this.avatarCombatAnimationKey(avatarKey, animation, direction),
+            this.avatarSurvivorTextureKey(avatarKey, animation),
+            (start / 4) * frameCount,
+            frameCount,
+            frameRate,
+          );
+        }
+      }
       this.createDirectionalAnimation(
         this.survivorCombatAnimationKey("hurt", direction),
         SURVIVOR_HURT_TEXTURE,
@@ -1293,10 +1331,32 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     return `suburbio-survivor-${classKey}-${animation}`;
   }
 
+  private supportedAvatarKey(className: string | null | undefined, avatarKey: string | null | undefined) {
+    const classKey = getCombatClassKey(className);
+    return classKey && avatarKey?.startsWith(`${classKey}-`) && this.assets.avatarSurvivors[avatarKey]
+      ? avatarKey
+      : null;
+  }
+
+  private avatarSurvivorTextureKey(avatarKey: string, animation: "walk" | "attack" | "hurt" | "death") {
+    return `suburbio-avatar-${avatarKey}-${animation}`;
+  }
+
+  private avatarWalkAnimationKey(avatarKey: string, direction: MovementDirection) {
+    return `suburbio-survivor-walk-avatar-${avatarKey}-${direction}`;
+  }
+
+  private avatarCombatAnimationKey(avatarKey: string, animation: "attack" | "hurt" | "death", direction: MovementDirection) {
+    return `suburbio-survivor-${animation}-avatar-${avatarKey}-${direction}`;
+  }
+
   private survivorTexture(
     animation: "walk" | "attack" | "hurt" | "death",
     className: string | null | undefined,
+    avatarKey?: string | null,
   ) {
+    const supportedAvatar = this.supportedAvatarKey(className, avatarKey);
+    if (supportedAvatar) return this.avatarSurvivorTextureKey(supportedAvatar, animation);
     const classKey = getCombatClassKey(className);
     if (classKey) return this.classSurvivorTextureKey(classKey, animation);
     if (animation === "walk") return SURVIVOR_TEXTURE;
@@ -1304,7 +1364,9 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     return animation === "hurt" ? SURVIVOR_HURT_TEXTURE : SURVIVOR_DEATH_TEXTURE;
   }
 
-  private animationKey(direction: MovementDirection, className?: string | null) {
+  private animationKey(direction: MovementDirection, className?: string | null, avatarKey?: string | null) {
+    const supportedAvatar = this.supportedAvatarKey(className, avatarKey);
+    if (supportedAvatar) return this.avatarWalkAnimationKey(supportedAvatar, direction);
     const classKey = getCombatClassKey(className);
     return classKey
       ? `suburbio-survivor-walk-${classKey}-${direction}`
@@ -1315,7 +1377,10 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     animation: "attack" | "hurt" | "death",
     direction: MovementDirection,
     className?: string | null,
+    avatarKey?: string | null,
   ) {
+    const supportedAvatar = this.supportedAvatarKey(className, avatarKey);
+    if (supportedAvatar) return this.avatarCombatAnimationKey(supportedAvatar, animation, direction);
     return getSurvivorCombatAnimationKey(animation, direction, className);
   }
 
@@ -1491,7 +1556,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       this.lastMovementDirection,
       getSurvivorAnimationFrameCount("walk", this.state.characterClassName),
     );
-    const walkTexture = this.survivorTexture("walk", this.state.characterClassName);
+    const walkTexture = this.survivorTexture("walk", this.state.characterClassName, this.state.characterAvatarKey);
     if (this.playerDefeated || this.actorCombatAnimationLocked) {
       // A animacao de combate controla a textura ate concluir.
     } else if (this.state.isCombatActive) {
@@ -1509,7 +1574,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         .setFrame(directionStart);
     } else if (isWalking && !this.state.prefersReducedMotion) {
       this.actorSprite.play(
-        this.animationKey(this.lastMovementDirection, this.state.characterClassName),
+        this.animationKey(this.lastMovementDirection, this.state.characterClassName, this.state.characterAvatarKey),
         true,
       );
     } else {
@@ -2026,7 +2091,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         .stop()
         .clearTint()
         .setAlpha(1)
-        .setTexture(this.survivorTexture("walk", this.state.characterClassName))
+        .setTexture(this.survivorTexture("walk", this.state.characterClassName, this.state.characterAvatarKey))
         .setFrame(this.directionStart(
           this.lastMovementDirection,
           getSurvivorAnimationFrameCount("walk", this.state.characterClassName),
@@ -2350,7 +2415,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     this.actorSprite
       .stop()
       .setAlpha(1)
-      .setTexture(this.survivorTexture("walk", this.state.characterClassName))
+      .setTexture(this.survivorTexture("walk", this.state.characterClassName, this.state.characterAvatarKey))
       .setFrame(this.directionStart(
         this.lastMovementDirection,
         getSurvivorAnimationFrameCount("walk", this.state.characterClassName),
@@ -2487,7 +2552,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       animation,
       this.state.characterClassName,
     );
-    const texture = this.survivorTexture(animation, this.state.characterClassName);
+    const texture = this.survivorTexture(animation, this.state.characterClassName, this.state.characterAvatarKey);
     if (animation === "hurt") this.playHitFeedback(this.actorSprite, "actor");
 
     if (this.state.prefersReducedMotion) {
@@ -2508,7 +2573,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
 
     this.actorSprite.off(Phaser.Animations.Events.ANIMATION_COMPLETE);
     this.actorSprite.play(
-      this.survivorCombatAnimationKey(animation, this.lastMovementDirection, this.state.characterClassName),
+      this.survivorCombatAnimationKey(animation, this.lastMovementDirection, this.state.characterClassName, this.state.characterAvatarKey),
     );
     this.actorSprite.anims.timeScale = getHuntingCombatAnimationTimeScale(
       this.state.battleDurationMs,
@@ -3301,7 +3366,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         const anchor = this.getRemotePlayerSpawn(area, player);
         const spawn = anchor;
         const initialDirection = player.direction;
-        const walkTexture = this.survivorTexture("walk", player.className);
+        const walkTexture = this.survivorTexture("walk", player.className, player.avatarKey);
         const walkFrame = this.directionStart(
           initialDirection,
           getSurvivorAnimationFrameCount("walk", player.className),
@@ -3383,6 +3448,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           combatImpactTimer: null,
           targetPoint: spawn,
           className: player.className ?? null,
+          avatarKey: player.avatarKey ?? null,
           lastMovementDirection: initialDirection,
           visualState: player.visualState,
           moving: player.idle ? false : player.moving,
@@ -3421,6 +3487,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
         );
         entity.idle = player.idle;
         entity.className = player.className ?? entity.className;
+        entity.avatarKey = player.avatarKey ?? null;
         entity.anchor = player.visualState === "combat" && combatPositionWalkable
           ? { x: entity.sprite.x, y: entity.sprite.y }
           : anchor;
@@ -3636,7 +3703,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
       entity.lastMovementDirection,
       getSurvivorAnimationFrameCount("walk", entity.className),
     );
-    const walkTexture = this.survivorTexture("walk", entity.className);
+    const walkTexture = this.survivorTexture("walk", entity.className, entity.avatarKey);
     const activeAnimationKey = entity.sprite.anims.currentAnim?.key ?? "";
     const hasActiveCombatAnimation =
       entity.sprite.anims.isPlaying &&
@@ -3657,7 +3724,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
     } else if (isWalking && !this.state.prefersReducedMotion) {
       this.playRemoteAnimation(
         entity.sprite,
-        this.animationKey(entity.lastMovementDirection, entity.className),
+        this.animationKey(entity.lastMovementDirection, entity.className, entity.avatarKey),
       );
     } else {
       entity.sprite
@@ -4046,6 +4113,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
             "death",
             entity.lastMovementDirection,
             entity.className,
+            entity.avatarKey,
           ),
           true,
         );
@@ -4122,6 +4190,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           "attack",
           entity.lastMovementDirection,
           entity.className,
+          entity.avatarKey,
         ),
         true,
       );
@@ -4143,6 +4212,7 @@ class SuburbioHuntingPhaserScene extends Phaser.Scene {
           "hurt",
           entity.lastMovementDirection,
           entity.className,
+          entity.avatarKey,
         ),
         true,
       );

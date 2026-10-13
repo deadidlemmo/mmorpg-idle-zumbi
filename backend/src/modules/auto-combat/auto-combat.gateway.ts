@@ -79,6 +79,7 @@ type HuntingVisualPose = {
 type HuntingVisualPresence = HuntingVisualPose & {
   displayName: string;
   className?: string | null;
+  avatarKey?: string | null;
   mapId: string;
   subMapId: string;
   updatedAt: number;
@@ -525,7 +526,14 @@ export class AutoCombatGateway
         estimatedKillTimeSeconds: true,
         currentMob: { select: { name: true } },
         character: {
-          select: { name: true, class: { select: { name: true } } },
+          select: {
+            name: true,
+            avatarKey: true,
+            appearance: {
+              select: { avatarCosmetic: { select: { assetKey: true } } },
+            },
+            class: { select: { name: true } },
+          },
         },
       },
     });
@@ -544,6 +552,9 @@ export class AutoCombatGateway
       ...this.getHuntingVisualCombatTiming(combatState),
       displayName: session.character.name,
       className: session.character.class?.name ?? null,
+      avatarKey:
+        session.character.appearance?.avatarCosmetic?.assetKey ??
+        session.character.avatarKey,
       mapId: session.mapId,
       subMapId: session.subMapId,
       updatedAt: Date.now(),

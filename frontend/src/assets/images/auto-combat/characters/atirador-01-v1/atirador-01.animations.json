@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "actorKey": "avatar-atirador-01",
+  "frame": { "width": 112, "height": 96, "originX": 0.5, "originY": 1 },
+  "footHitbox": { "width": 18, "height": 12, "offsetX": 47, "offsetY": 81 },
+  "directionRows": { "south": 0, "west": 1, "east": 2, "north": 3 },
+  "animations": {
+    "walk": { "sheet": "atirador-01-walk.png", "framesPerDirection": 8, "frameRate": 12, "repeat": -1 },
+    "investigate": { "sheet": "../leon-v1/leon-investigate.png", "framesPerDirection": 4, "frameRate": 7, "repeat": 0, "alertFrame": 3 },
+    "attack": { "sheet": "atirador-01-attack.png", "framesPerDirection": 8, "frameRate": 18, "repeat": 0, "impactFrame": 4 },
+    "hurt": { "sheet": "atirador-01-hurt.png", "framesPerDirection": 2, "frameRate": 8, "repeat": 0 },
+    "death": { "sheet": "atirador-01-death.png", "framesPerDirection": 6, "frameRate": 8, "repeat": 0, "holdFinalFrame": true }
+  }
+}
